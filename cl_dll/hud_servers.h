@@ -1,3 +1,10 @@
+//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//
+// Purpose: 
+//
+// $NoKeywords: $
+//=============================================================================
+
 #if !defined( HUD_SERVERSH )
 #define HUD_SERVERSH
 #pragma once

@@ -1,3 +1,10 @@
+//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//
+// Purpose: 
+//
+// $NoKeywords: $
+//=============================================================================
+
 #if !defined ( STUDIOMODELRENDERER_H )
 #define STUDIOMODELRENDERER_H
 #if defined( _WIN32 )

@@ -1,6 +1,6 @@
-/***
+	/***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -2849,6 +2849,13 @@ int CBasePlayer::Restore( CRestore &restore )
 	}
 
 	RenewItems();
+
+#if defined( CLIENT_WEAPONS )
+	// HACK:	This variable is saved/restored in CBaseMonster as a time variable, but we're using it
+	//			as just a counter.  Ideally, this needs its own variable that's saved as a plain float.
+	//			Barring that, we clear it out here instead of using the incorrect restored time value.
+	m_flNextAttack = UTIL_WeaponTimeBase();
+#endif
 
 	return status;
 }

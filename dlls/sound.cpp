@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -1386,10 +1386,6 @@ void SENTENCEG_Init()
 int SENTENCEG_Lookup(const char *sample, char *sentencenum)
 {
 	char sznum[8];
-
-//#ifdef GERMANY
-//	return -1; // no constructed sentences in international versions
-//#endif // GERMANY
 
 	int i;
 	// this is a sentence name; lookup sentence number

@@ -1,3 +1,10 @@
+//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//
+// Purpose: 
+//
+// $NoKeywords: $
+//=============================================================================
+
 // com_weapons.h
 // Shared weapons common function prototypes
 #if !defined( COM_WEAPONSH )

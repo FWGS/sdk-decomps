@@ -1,3 +1,10 @@
+//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//
+// Purpose: 
+//
+// $NoKeywords: $
+//=============================================================================
+
 // pm_movevars.h
 #if !defined( PM_MOVEVARSH )
 #define PM_MOVEVARSH

@@ -6,15 +6,28 @@
 //=============================================================================
 
 // There are hud.h's coming out of the woodwork so this ensures that we get the right one.
-#include "../cl_dll/hud.h"
+#if defined( DMC_BUILD )
+	#include "../dmc/cl_dll/hud.h"
+	#include "../dmc/cl_dll/cl_util.h"
+#else
+	#include "../cl_dll/hud.h"
+	#include "../cl_dll/cl_util.h"
+#endif
 
-#include "../cl_dll/cl_util.h"
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
-#include "../cl_dll/parsemsg.h"
-#include "../cl_dll/hud_servers.h"
-#include "../cl_dll/demo.h"
+
+#if defined( DMC_BUILD )
+	#include "../dmc/cl_dll/parsemsg.h"
+	#include "../dmc/cl_dll/hud_servers.h"
+	#include "../dmc/cl_dll/demo.h"
+#else
+	#include "../cl_dll/parsemsg.h"
+	#include "../cl_dll/hud_servers.h"
+	#include "../cl_dll/demo.h"
+#endif
+
 #include "demo_api.h"
 #include "voice_status.h"
 #include "r_efx.h"
@@ -26,13 +39,9 @@
 #include "vgui_helpers.h"
 #include "vgui_mousecode.h"
 
-
-
 using namespace vgui;
 
-
 extern int cam_thirdperson;
-
 
 #define VOICE_MODEL_INTERVAL		0.3
 #define SCOREBOARD_BLINK_FREQUENCY	0.3	// How often to blink the scoreboard icons.
