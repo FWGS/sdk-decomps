@@ -120,7 +120,7 @@ void CBubbling::Spawn( void )
 
 	if ( !(pev->spawnflags & SF_BUBBLES_STARTOFF) )
 	{
-		SetThink( FizzThink );
+		SetThink(&CBubbling:: FizzThink );
 		SetNextThink( 2.0 );
 		m_state = 1;
 	}
@@ -140,7 +140,7 @@ void CBubbling::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE use
 
 	if ( m_state )
 	{
-		SetThink( FizzThink );
+		SetThink(&CBubbling:: FizzThink );
 		SetNextThink( 0.1 );
 	}
 	else
@@ -461,7 +461,7 @@ LINK_ENTITY_TO_CLASS( trip_beam, CTripBeam );
 void CTripBeam::Spawn( void )
 {
 	CLightning::Spawn();
-	SetTouch( TriggerTouch );
+	SetTouch(&CTripBeam:: TriggerTouch );
 	pev->solid = SOLID_TRIGGER;
 	RelinkBeam();
 }
@@ -493,7 +493,7 @@ void CLightning::Spawn( void )
 {
 	if ( FStringNull( m_iszSpriteName ) )
 	{
-		SetThink( SUB_Remove );
+		SetThink(&CLightning:: SUB_Remove );
 		return;
 	}
 	pev->solid = SOLID_NOT;							// Remove model & collisions
@@ -515,7 +515,7 @@ void CLightning::Spawn( void )
 		SetThink( NULL );
 		if ( pev->dmg != 0 || !FStringNull(pev->target) )
 		{
-			SetThink( TripThink );
+			SetThink(&CLightning:: TripThink );
 			SetNextThink( 0.1 );
 		}
 		if ( pev->targetname )
@@ -529,7 +529,7 @@ void CLightning::Spawn( void )
 			else
 				m_active = 1;
 		
-			SetUse( ToggleUse );
+			SetUse(&CLightning:: ToggleUse );
 		}
 	}
 	else
@@ -537,11 +537,11 @@ void CLightning::Spawn( void )
 		m_active = 0;
 		if ( !FStringNull(pev->targetname) )
 		{
-			SetUse( StrikeUse );
+			SetUse(&CLightning:: StrikeUse );
 		}
 		if ( FStringNull(pev->targetname) || FBitSet(pev->spawnflags, SF_BEAM_STARTON) )
 		{
-			SetThink( StrikeThink );
+			SetThink(&CLightning:: StrikeThink );
 			SetNextThink( 1.0 );
 		}
 	}
@@ -664,7 +664,7 @@ void CLightning::StrikeUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_T
 	}
 	else
 	{
-		SetThink( StrikeThink );
+		SetThink(&CLightning:: StrikeThink );
 		SetNextThink( 0.1 );
 	}
 
@@ -1085,13 +1085,13 @@ void CLaser::Spawn( void )
 {
 	if ( FStringNull( pev->model ) )
 	{
-		SetThink( SUB_Remove );
+		SetThink(&CLaser:: SUB_Remove );
 		return;
 	}
 	pev->solid = SOLID_NOT;							// Remove model & collisions
 	Precache( );
 
-	SetThink( StrikeThink );
+	SetThink(&CLaser:: StrikeThink );
 	pev->flags |= FL_CUSTOMENTITY;
 
 	if ( m_iszSpriteName )
@@ -1457,7 +1457,7 @@ void CSprite::Expand( float scaleSpeed, float fadeSpeed )
 {
 	pev->speed = scaleSpeed;
 	pev->health = fadeSpeed;
-	SetThink( ExpandThink );
+	SetThink(&CSprite:: ExpandThink );
 
 	SetNextThink( 0 );
 	m_lastTime		= gpGlobals->time;
@@ -1512,7 +1512,7 @@ void CSprite::TurnOn( void )
 	pev->effects = 0;
 	if ( (pev->framerate && m_maxFrame > 1.0) || (pev->spawnflags & SF_SPRITE_ONCE) )
 	{
-		SetThink( AnimateThink );
+		SetThink(&CSprite:: AnimateThink );
 		SetNextThink( 0 );
 		m_lastTime = gpGlobals->time;
 	}
@@ -1864,7 +1864,7 @@ void CGibShooter::KeyValue( KeyValueData *pkvd )
 void CGibShooter::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	m_hActivator = pActivator;
-	SetThink( ShootThink );
+	SetThink(&CGibShooter:: ShootThink );
 	SetNextThink( 0 );
 }
 
@@ -1996,7 +1996,7 @@ void CGibShooter :: ShootThink ( void )
 		}
 		else
 		{
-			SetThink ( SUB_Remove );
+			SetThink(&CGibShooter :: SUB_Remove );
 			SetNextThink( 0 );
 		}
 	}
@@ -2155,7 +2155,7 @@ CBaseEntity *CEnvShooter :: CreateGib ( Vector vecPos, Vector vecVel )
 			pGib->pev->movetype = MOVETYPE_TOSS;
 			pGib->pev->solid = SOLID_BBOX;
 			UTIL_SetSize ( pGib->pev, Vector ( 0, 0 ,0 ), Vector ( 0, 0, 0 ) );
-			pGib->SetTouch(CGib::StickyGibTouch);
+			pGib->SetTouch(&CGib::StickyGibTouch);
 		}
 		if ( pev->body > 0 )
 			pGib->pev->body = RANDOM_LONG( 0, pev->body-1 );
@@ -2226,11 +2226,11 @@ CBaseEntity *CEnvShooter :: CreateGib ( Vector vecPos, Vector vecVel )
 			if (m_flGibLife)
 			{
 				pShot->pev->dmgtime = gpGlobals->time + m_flGibLife;
-				pShot->SetThink( CSprite::AnimateUntilDead );
+				pShot->SetThink(& CSprite::AnimateUntilDead );
 			}
 			else
 			{
-				pShot->SetThink( CSprite::AnimateThink );
+				pShot->SetThink(& CSprite::AnimateThink );
 			}
 			pShot->SetNextThink( 0 );
 			pShot->m_lastTime = gpGlobals->time;
@@ -2241,7 +2241,7 @@ CBaseEntity *CEnvShooter :: CreateGib ( Vector vecPos, Vector vecVel )
 	// if it's not animating
 	if (m_flGibLife)
 	{
-		pShot->SetThink(SUB_Remove);
+		pShot->SetThink(&CShot::SUB_Remove);
 		pShot->SetNextThink(m_flGibLife);
 	}
 	return pShot;
@@ -2347,7 +2347,7 @@ void CTestEffect::TestThink( void )
 
 void CTestEffect::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	SetThink( TestThink );
+	SetThink(&CTestEffect:: TestThink );
 	SetNextThink( 0.1 );
 	m_flStartTime = gpGlobals->time;
 }
@@ -2817,7 +2817,7 @@ void CEnvFunnel::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE us
 
 	if (!(pev->spawnflags & SF_FUNNEL_REPEATABLE))
 	{
-		SetThink( SUB_Remove );
+		SetThink(&CEnvFunnel:: SUB_Remove );
 		SetNextThink( 0 );
 	}
 }
@@ -2871,7 +2871,7 @@ void CEnvQuakeFx::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE u
 
 	if (!(pev->spawnflags & SF_QUAKEFX_REPEATABLE))
 	{
-		SetThink( SUB_Remove );
+		SetThink(&CEnvQuakeFx:: SUB_Remove );
 		SetNextThink( 0 );
 	}
 }
@@ -2983,7 +2983,7 @@ void CEnvBeamTrail::Spawn( void )
 
 	if (!(pev->spawnflags & SF_BEAMTRAIL_OFF))
 	{
-		SetThink(StartTrailThink);
+		SetThink(&CEnvBeamTrail::StartTrailThink);
 		UTIL_DesiredThink( this );
 	}
 }
@@ -3502,7 +3502,7 @@ void CEnvWarpBall::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE 
 			pBeam->SetBrightness( 150 );
 			pBeam->SetWidth( 18 );
 			pBeam->SetScrollRate( 35 );
-			pBeam->SetThink( SUB_Remove );
+			pBeam->SetThink(&CBeam:: SUB_Remove );
 			pBeam->SetNextThink( 1 );
 		}
 		iTimes++;
@@ -3669,7 +3669,7 @@ void CEnvShockwave::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 
 	if (!(pev->spawnflags & SF_SHOCKWAVE_REPEATABLE))
 	{
-		SetThink( SUB_Remove );
+		SetThink(&CEnvShockwave:: SUB_Remove );
 		SetNextThink( 0 );
 	}
 }
@@ -3709,7 +3709,7 @@ void CEnvDLight::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE us
 
 	if (pev->spawnflags & SF_DLIGHT_ONLYONCE)
 	{
-		SetThink( SUB_Remove );
+		SetThink(&CEnvDLight:: SUB_Remove );
 		SetNextThink( 0 );
 	}
 }
@@ -3757,7 +3757,7 @@ void CEnvELight::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE us
 
 	if (pev->spawnflags & SF_ELIGHT_ONLYONCE)
 	{
-		SetThink( SUB_Remove );
+		SetThink(&CEnvELight:: SUB_Remove );
 		SetNextThink( 0 );
 	}
 }
@@ -3931,7 +3931,7 @@ void CItemSoda::Spawn( void )
 	SET_MODEL ( ENT(pev), "models/can.mdl" );
 	UTIL_SetSize ( pev, Vector ( 0, 0, 0 ), Vector ( 0, 0, 0 ) );
 	
-	SetThink (CanThink);
+	SetThink(&CItemSoda::CanThink);
 	SetNextThink( 0.5 );
 }
 
@@ -3942,7 +3942,7 @@ void CItemSoda::CanThink ( void )
 	pev->solid = SOLID_TRIGGER;
 	UTIL_SetSize ( pev, Vector ( -8, -8, 0 ), Vector ( 8, 8, 8 ) );
 	SetThink ( NULL );
-	SetTouch ( CanTouch );
+	SetTouch(&CItemSoda:: CanTouch );
 }
 
 void CItemSoda::CanTouch ( CBaseEntity *pOther )
@@ -3966,7 +3966,7 @@ void CItemSoda::CanTouch ( CBaseEntity *pOther )
 	pev->movetype = MOVETYPE_NONE;
 	pev->effects = EF_NODRAW;
 	SetTouch ( NULL );
-	SetThink ( SUB_Remove );
+	SetThink(&CItemSoda:: SUB_Remove );
 	SetNextThink( 0 );
 }  
 
@@ -4074,7 +4074,7 @@ void CEnvFog :: Spawn ( void )
 
 	if (pev->spawnflags & SF_FOG_ACTIVE)
 	{
-		SetThink( TurnOn );
+		SetThink(&CEnvFog :: TurnOn );
 		UTIL_DesiredThink( this );
 	}
 
@@ -4091,7 +4091,7 @@ void CEnvFog :: Precache ( void )
 {
 	if (pev->spawnflags & SF_FOG_ACTIVE)
 	{
-		SetThink( ResumeThink );
+		SetThink(&CEnvFog :: ResumeThink );
 		SetNextThink( 0.1 );
 	}
 }
@@ -4109,7 +4109,7 @@ void CEnvFog :: TurnOn ( void )
 		pev->spawnflags |= SF_FOG_FADING;
 		SendData( pev->rendercolor, m_iFadeIn, m_iStartDist, m_iEndDist);
 		SetNextThink( m_iFadeIn );
-		SetThink( FadeInDone );
+		SetThink(&CEnvFog :: FadeInDone );
 	}
 	else
 	{
@@ -4118,7 +4118,7 @@ void CEnvFog :: TurnOn ( void )
 		if (m_fHoldTime)
 		{
 			SetNextThink( m_fHoldTime );
-			SetThink( TurnOff );
+			SetThink(&CEnvFog :: TurnOff );
 		}
 	}
 }
@@ -4134,7 +4134,7 @@ void CEnvFog :: TurnOff ( void )
 		pev->spawnflags |= SF_FOG_FADING;
 		SendData( pev->rendercolor, -m_iFadeOut, m_iStartDist, m_iEndDist);
 		SetNextThink( m_iFadeOut );
-		SetThink( FadeOutDone );
+		SetThink(&CEnvFog :: FadeOutDone );
 	}
 	else
 	{
@@ -4151,7 +4151,7 @@ void CEnvFog :: TurnOff ( void )
 void CEnvFog :: ResumeThink ( void )
 {
 //	ALERT(at_console, "Fog resume %f\n", gpGlobals->time);
-	SetThink(FadeInDone);
+	SetThink(&CEnvFog ::FadeInDone);
 	SetNextThink(0.1);
 }
 
@@ -4163,7 +4163,7 @@ void CEnvFog :: FadeInDone ( void )
 	if (m_fHoldTime)
 	{
 		SetNextThink( m_fHoldTime );
-		SetThink( TurnOff );
+		SetThink(&CEnvFog :: TurnOff );
 	}
 }
 
