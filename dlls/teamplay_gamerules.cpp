@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
+*	Copyright (c) 1999, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -68,6 +68,9 @@ CHalfLifeTeamplay :: CHalfLifeTeamplay()
 
 extern cvar_t timeleft, fragsleft;
 
+#include "voice_gamemgr.h"
+extern CVoiceGameMgr	g_VoiceGameMgr;
+
 void CHalfLifeTeamplay :: Think ( void )
 {
 	///// Check game rules /////
@@ -76,6 +79,8 @@ void CHalfLifeTeamplay :: Think ( void )
 
 	int frags_remaining = 0;
 	int time_remaining = 0;
+
+	g_VoiceGameMgr.Update(gpGlobals->frametime);
 
 	if ( g_fGameOver )   // someone else quit the game already
 	{
@@ -140,6 +145,9 @@ void CHalfLifeTeamplay :: Think ( void )
 //=========================================================
 BOOL CHalfLifeTeamplay :: ClientCommand( CBasePlayer *pPlayer, const char *pcmd )
 {
+	if(g_VoiceGameMgr.ClientCommand(pPlayer, pcmd))
+		return TRUE;
+
 	if ( FStrEq( pcmd, "menuselect" ) )
 	{
 		if ( CMD_ARGC() < 2 )
@@ -158,7 +166,8 @@ BOOL CHalfLifeTeamplay :: ClientCommand( CBasePlayer *pPlayer, const char *pcmd 
 extern int gmsgGameMode;
 extern int gmsgSayText;
 extern int gmsgTeamInfo;
-
+extern int gmsgTeamNames;
+extern int gmsgScoreInfo;
 
 void CHalfLifeTeamplay :: UpdateGameMode( CBasePlayer *pPlayer )
 {
@@ -201,8 +210,19 @@ const char *CHalfLifeTeamplay::SetDefaultPlayerTeam( CBasePlayer *pPlayer )
 //=========================================================
 void CHalfLifeTeamplay::InitHUD( CBasePlayer *pPlayer )
 {
+	int i;
+
 	SetDefaultPlayerTeam( pPlayer );
 	CHalfLifeMultiplay::InitHUD( pPlayer );
+
+	// Send down the team names
+	MESSAGE_BEGIN( MSG_ONE, gmsgTeamNames, NULL, pPlayer->edict() );  
+		WRITE_BYTE( num_teams );
+		for ( i = 0; i < num_teams; i++ )
+		{
+			WRITE_STRING( team_names[ i ] );
+		}
+	MESSAGE_END();
 
 	RecountTeams();
 
@@ -224,7 +244,7 @@ void CHalfLifeTeamplay::InitHUD( CBasePlayer *pPlayer )
 	RecountTeams();
 	// update this player with all the other players team info
 	// loop through all active players and send their team info to the new client
-	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	for ( i = 1; i <= gpGlobals->maxClients; i++ )
 	{
 		CBaseEntity *plr = UTIL_PlayerByIndex( i );
 		if ( plr && IsValidTeam( plr->TeamID() ) )
@@ -276,6 +296,14 @@ void CHalfLifeTeamplay::ChangePlayerTeam( CBasePlayer *pPlayer, const char *pTea
 		WRITE_BYTE( clientIndex );
 		WRITE_STRING( pPlayer->m_szTeamName );
 	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_ALL, gmsgScoreInfo );
+		WRITE_BYTE( clientIndex );
+		WRITE_SHORT( pPlayer->pev->frags );
+		WRITE_SHORT( pPlayer->m_iDeaths );
+		WRITE_SHORT( 0 );
+		WRITE_SHORT( g_pGameRules->GetTeamIndex( pPlayer->m_szTeamName ) + 1 );
+	MESSAGE_END();
 }
 
 
@@ -318,7 +346,12 @@ void CHalfLifeTeamplay::ClientUserInfoChanged( CBasePlayer *pPlayer, char *infob
 	sprintf( text, "* %s has changed to team \'%s\'\n", STRING(pPlayer->pev->netname), mdls );
 	UTIL_SayTextAll( text, pPlayer );
 
-	UTIL_LogPrintf( "\"%s<%i>\" changed to team %s\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), mdls );
+	UTIL_LogPrintf( "\"%s<%i><%u><%s>\" joined team \"%s\"\n", 
+		STRING(pPlayer->pev->netname),
+		GETPLAYERUSERID( pPlayer->edict() ),
+		GETPLAYERWONID( pPlayer->edict() ),
+		pPlayer->m_szTeamName,
+		mdls );
 
 	ChangePlayerTeam( pPlayer, mdls, TRUE, TRUE );
 	// recound stuff
@@ -381,7 +414,7 @@ BOOL CHalfLifeTeamplay::FPlayerCanTakeDamage( CBasePlayer *pPlayer, CBaseEntity 
 	if ( pAttacker && PlayerRelationship( pPlayer, pAttacker ) == GR_TEAMMATE )
 	{
 		// my teammate hit me.
-		if ( (CVAR_GET_FLOAT("mp_friendlyfire") == 0) && (pAttacker != pPlayer) )
+		if ( (friendlyfire.value == 0) && (pAttacker != pPlayer) )
 		{
 			// friendly fire is off, and this hit came from someone other than myself,  then don't get hurt
 			return FALSE;

@@ -57,6 +57,8 @@ int CHudSayText :: Init( void )
 
 	CVAR_CREATE( "hud_saytext_time", "5", 0 );
 
+	m_iFlags |= HUD_INTERMISSION; // is always drawn during an intermission
+
 	return 1;
 }
 
@@ -164,7 +166,11 @@ int CHudSayText :: MsgFunc_SayText( const char *pszName, int iSize, void *pbuf )
 void CHudSayText :: SayTextPrint( const char *pszBuf, int iBufSize, int clientIndex )
 {
 	if ( gViewPort && gViewPort->AllowedToPrintText() == FALSE )
+	{
+		// Print it straight to the console
+		ConsolePrint( pszBuf );
 		return;
+	}
 
 	// find an empty string slot
 	for ( int i = 0; i < MAX_LINES; i++ )

@@ -26,7 +26,6 @@ public:
 	virtual void keyTyped(KeyCode code,Panel* panel)=0;
 	virtual void keyReleased(KeyCode code,Panel* panel)=0;
 	virtual void keyFocusTicked(Panel* panel)=0;
- 	//virtual void hotKeyTyped(const HotKey* hotKey,Panel* panel)=0;
 };
 
 }

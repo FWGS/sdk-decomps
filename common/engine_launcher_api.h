@@ -86,6 +86,7 @@ typedef struct engine_api_s
 	void	( *QGL_D3DShared )				( struct tagD3DGlobals *d3dGShared );
 
 	int		( WINAPI *glSwapBuffers )		( HDC dc );
+	void	( *DirectorProc ) ( unsigned int cmd, void * params );
 #else
 	// NOT USED IN LINUX!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	void	( *GL_Init )					( void );
@@ -93,6 +94,7 @@ typedef struct engine_api_s
 	void	( *GL_Shutdown )				( void );
 	void	( *QGL_D3DShared )				( void );
 	void	( *glSwapBuffers )				( void );
+	void	( *DirectorProc )				( void );
 	// LINUX
 #endif
 

@@ -34,7 +34,8 @@ CRC32_t CRC32_Final(CRC32_t pulCRC);
 void CRC32_ProcessBuffer(CRC32_t *pulCRC, void *p, int len);
 void CRC32_ProcessByte(CRC32_t *pulCRC, unsigned char ch);
 int CRC_File(CRC32_t *crcvalue, char *pszFileName);
-unsigned char COM_BlockSequenceCRCByte(unsigned char *base, int length, int sequence);
+
+unsigned char COM_BlockSequenceCRCByte (unsigned char *base, int length, int sequence);
 
 void MD5Init(MD5Context_t *context);
 void MD5Update(MD5Context_t *context, unsigned char const *buf,

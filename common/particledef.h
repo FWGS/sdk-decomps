@@ -47,10 +47,10 @@ typedef struct particle_s
 	ptype_t		type;
 	void		(*deathfunc)( struct particle_s *particle );
 
-	// For pt_clientcusttom, we'll call this function each frame
+	// for pt_clientcusttom, we'll call this function each frame
 	void		(*callback)( struct particle_s *particle, float frametime );
-
-	// for deathfunc, etc.
+	
+	// For deathfunc, etc.
 	unsigned char context;
 } particle_t;
 

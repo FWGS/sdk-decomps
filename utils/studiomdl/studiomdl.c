@@ -2592,7 +2592,7 @@ int lookupActivity( char *szActivity )
 int Cmd_Sequence( )
 {
 	int depth = 0;
-	char smdfilename[4][1024];
+	char smdfilename[MAXSTUDIOGROUPS][1024];
 	int i;
 	int numblends = 0;
 	int start = 0;

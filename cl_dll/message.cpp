@@ -462,10 +462,11 @@ void CHudMessage::MessageAdd( const char *pName, float time )
 					{
 						return;
 					}
+
 					// get rid of any other messages in same location (only one displays at a time)
-					else if ( abs( tempMessage->y - m_pMessages[j]->y ) < 1 )
+					if ( fabs( tempMessage->y - m_pMessages[j]->y ) < 0.0001 )
 					{
-						if ( abs( tempMessage->x - m_pMessages[j]->x ) < 1 )
+						if ( fabs( tempMessage->x - m_pMessages[j]->x ) < 0.0001 )
 						{
 							m_pMessages[j] = NULL;
 						}

@@ -20,6 +20,8 @@ public:
 	LineBorder(int thickness);
 	LineBorder(Color color);
 	LineBorder(int thickness,Color color);
+
+	inline void setLineColor(int r, int g, int b, int a) {_color = Color(r,g,b,a);}
 private:
 	virtual void init(int thickness,Color color);
 protected:

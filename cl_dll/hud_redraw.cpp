@@ -108,6 +108,7 @@ int CHud :: Redraw( float flTime, int intermission )
 		else if ( !m_iIntermission && intermission )
 		{
 			gViewPort->HideCommandMenu();
+			gViewPort->HideVGUIMenu();
 			gViewPort->ShowScoreBoard();
 
 			// Take a screenshot if the client's got the cvar set

@@ -58,6 +58,7 @@
 #define K_KP_SLASH		172
 #define K_KP_MINUS		173
 #define K_KP_PLUS		174
+#define K_CAPSLOCK		175
 
 
 //

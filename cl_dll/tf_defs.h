@@ -1129,6 +1129,8 @@ float already_chosen_map;
 
 #define MENU_REFRESH_RATE 			25
 
+#define MENU_VOICETWEAK				50
+
 //============================
 // Timer Types
 #define TF_TIMER_ANY				0

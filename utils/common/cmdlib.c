@@ -39,6 +39,24 @@ qboolean		archive;
 char			archivedir[1024];
 
 
+void COM_FixSlashes( char *pname )
+{
+#if 0
+	while ( *pname ) {
+		if ( *pname == '/' )
+			*pname = '\\';
+		pname++;
+	}
+#else
+	while ( *pname ) {
+		if ( *pname == '\\' )
+			*pname = '/';
+		pname++;
+	}
+#endif
+}
+
+
 /*
 =================
 Error

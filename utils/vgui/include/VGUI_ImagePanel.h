@@ -13,6 +13,11 @@ class Image;
 class VGUIAPI ImagePanel : public Panel
 {
 public:
+	inline ImagePanel()
+	{
+		_image=null;
+	}
+
 	ImagePanel(Image* image);
 public:
 	virtual void setImage(Image* image);
