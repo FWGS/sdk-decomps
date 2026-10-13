@@ -400,6 +400,10 @@ SOURCE=.\leaf.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\speakers.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\gunman_pending.cpp
 # End Source File
 # Begin Source File
