@@ -23,6 +23,7 @@
 
 // For holograms, make them not solid so the player can walk through them
 #define	SF_GENERICMONSTER_NOTSOLID					4 
+#define	SF_GENERICMONSTER_POINTENTITY				32 // no size, flies, can't be hurt
 
 //=========================================================
 // Monster's Anim Events Go Here
@@ -37,8 +38,17 @@ public:
 	int  Classify ( void );
 	void HandleAnimEvent( MonsterEvent_t *pEvent );
 	int ISoundMask ( void );
+	int CanPlaySentence( BOOL fDisregardState );
 };
 LINK_ENTITY_TO_CLASS( monster_generic, CGenericMonster );
+
+//=========================================================
+// CanPlaySentence - scripts can always make it talk
+//=========================================================
+int CGenericMonster :: CanPlaySentence( BOOL fDisregardState )
+{
+	return TRUE;
+}
 
 //=========================================================
 // Classify - indicates this monster's place in the 
@@ -120,10 +130,21 @@ void CGenericMonster :: Spawn()
 
 	MonsterInit();
 
+	pev->takedamage = DAMAGE_YES;
+
 	if ( pev->spawnflags & SF_GENERICMONSTER_NOTSOLID )
 	{
 		pev->solid = SOLID_NOT;
 		pev->takedamage = DAMAGE_NO;
+	}
+
+	if ( pev->spawnflags & SF_GENERICMONSTER_POINTENTITY )
+	{
+		pev->solid = SOLID_NOT;
+		pev->takedamage = DAMAGE_NO;
+		pev->movetype = MOVETYPE_FLY;
+		UTIL_SetSize( pev, Vector( 0, 0, 0 ), Vector( 0, 0, 0 ) );
+		UTIL_SetOrigin( pev, pev->origin );
 	}
 }
 
@@ -134,6 +155,98 @@ void CGenericMonster :: Precache()
 {
 	PRECACHE_MODEL( (char *)STRING(pev->model) );
 }	
+
+//=========================================================
+// CFlashlightMonsterBeam - the light cone of a monster's
+// flashlight
+//=========================================================
+class CFlashlightMonsterBeam : public CBaseMonster
+{
+public:
+	void Spawn( void );
+	BOOL IsAlive( void ) { return FALSE; }
+
+	void EXPORT SetAdditive( void );
+	void EXPORT SetNormal( void );
+
+	static CFlashlightMonsterBeam *BeamCreate( CBaseEntity *pOwner );
+};
+LINK_ENTITY_TO_CLASS( flashlight_beam, CFlashlightMonsterBeam );
+
+//=========================================================
+// CFlashlightMonster - a generic monster holding a
+// flashlight
+//=========================================================
+class CFlashlightMonster : public CGenericMonster
+{
+public:
+	void Spawn( void );
+};
+LINK_ENTITY_TO_CLASS( monster_flashlight, CFlashlightMonster );
+
+void CFlashlightMonster :: Spawn( void )
+{
+	CGenericMonster::Spawn();
+	SetBodygroup( 2, 1 );
+}
+
+void CFlashlightMonsterBeam :: Spawn( void )
+{
+	pev->classname = MAKE_STRING( "flashlight_beam" );
+	PRECACHE_MODEL( "models/flashbeam.mdl" );
+	SET_MODEL( ENT(pev), "models/flashbeam.mdl" );
+
+	pev->solid = SOLID_NOT;
+	pev->movetype = MOVETYPE_FLY;
+	pev->takedamage = DAMAGE_NO;
+	pev->effects = 0;
+	pev->health = 60;
+	pev->rendermode = kRenderTransAdd;
+	pev->renderfx = kRenderFxNone;
+	pev->renderamt = 255;
+	pev->velocity = g_vecZero;
+	UTIL_SetSize( pev, Vector( 0, 0, 0 ), Vector( 0, 0, 0 ) );
+
+	SetTouch( NULL );
+}
+
+void CFlashlightMonsterBeam :: SetAdditive( void )
+{
+	pev->rendermode = kRenderTransAdd;
+	SetThink( SetNormal );
+	pev->nextthink = gpGlobals->time + 2.0;
+}
+
+void CFlashlightMonsterBeam :: SetNormal( void )
+{
+	pev->rendermode = kRenderNormal;
+	SetThink( SetAdditive );
+	pev->nextthink = gpGlobals->time + 2.0;
+}
+
+CFlashlightMonsterBeam *CFlashlightMonsterBeam :: BeamCreate( CBaseEntity *pOwner )
+{
+	CFlashlightMonsterBeam *pBeam = GetClassPtr( (CFlashlightMonsterBeam *)NULL );
+	if ( !pBeam )
+		return NULL;
+
+	pBeam->Spawn();
+	UTIL_SetOrigin( pBeam->pev, pOwner->pev->origin );
+	pBeam->pev->owner = pOwner->edict();
+	pBeam->pev->skin = ENTINDEX( pOwner->edict() );
+	pBeam->pev->body = 0;
+	pBeam->pev->aiment = pOwner->edict();
+	pBeam->pev->movetype = MOVETYPE_FOLLOW;
+	pBeam->pev->rendermode = kRenderNormal;
+	pBeam->pev->renderfx = kRenderFxNone;
+	pBeam->pev->renderamt = 255;
+	pBeam->pev->rendercolor.x = 255;
+	pBeam->pev->rendercolor.y = 255;
+	pBeam->pev->rendercolor.z = 255;
+	UTIL_SetOrigin( pBeam->pev, pBeam->pev->origin );
+
+	return pBeam;
+}
 
 //=========================================================
 // AI Schedules Specific to this monster
