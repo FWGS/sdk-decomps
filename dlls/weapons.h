@@ -92,7 +92,7 @@ public:
 #define WEAPON_CUST_FIRETYPE	31	// cust_1GaussPistolFireType
 #define WEAPON_CUST_SHELLS		32	// cust_2ShotgunShells
 
-#define	WEAPON_GLOCK			2	// SDK; the client's prediction code still has the glock
+#define	WEAPON_GLOCK			2	// SDK; only wpn_shared/hl_wpn_glock.cpp, which neither DLL builds
 
 #define WEAPON_ALLWEAPONS		(~(1<<WEAPON_FISTS))
 

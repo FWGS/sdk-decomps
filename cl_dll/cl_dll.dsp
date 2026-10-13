@@ -114,26 +114,197 @@ SOURCE="$(InputPath)"
 # Begin Source File
 
 SOURCE=.\ev_hldm.cpp
+
+!IF  "$(CFG)" == "cl_dll - Win32 Release"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\beamgun.cpp
+
+!IF  "$(CFG)" == "cl_dll - Win32 Release"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\dml.cpp
+
+!IF  "$(CFG)" == "cl_dll - Win32 Release"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\dmlgrenade.cpp
+
+!IF  "$(CFG)" == "cl_dll - Win32 Release"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\fists.cpp
+
+!IF  "$(CFG)" == "cl_dll - Win32 Release"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\gausspistol.cpp
+
+!IF  "$(CFG)" == "cl_dll - Win32 Release"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\minigun.cpp
+
+!IF  "$(CFG)" == "cl_dll - Win32 Release"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\shotgun.cpp
+
+!IF  "$(CFG)" == "cl_dll - Win32 Release"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\spchemicalgun.cpp
+
+!IF  "$(CFG)" == "cl_dll - Win32 Release"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=.\hl\hl_baseentity.cpp
+
+!IF  "$(CFG)" == "cl_dll - Win32 Release"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=.\hl\hl_events.cpp
+
+!IF  "$(CFG)" == "cl_dll - Win32 Release"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=.\hl\hl_objects.cpp
+
+!IF  "$(CFG)" == "cl_dll - Win32 Release"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=.\hl\hl_weapons.cpp
-# End Source File
-# Begin Source File
 
-SOURCE=..\dlls\wpn_shared\hl_wpn_glock.cpp
+!IF  "$(CFG)" == "cl_dll - Win32 Release"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
+
+# ADD CPP /D "CLIENT_DLL"
+
+!ENDIF 
+
 # End Source File
 # End Group
 # Begin Source File

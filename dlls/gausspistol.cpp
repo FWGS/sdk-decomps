@@ -30,6 +30,7 @@
 #include "gamerules.h"
 #include "decals.h"
 #include "gaussshots.h"
+#include "gausspistol.h"
 
 extern int gmsgWeapPickup;
 extern int gmsgSliderX;
@@ -628,58 +629,11 @@ LINK_ENTITY_TO_CLASS( guass_bolt, CBoltShot );	// sic
 //=========================================================
 // the weapon
 //=========================================================
-class CGaussPistol : public CBasePlayerWeapon
-{
-public:
-	int		Save( CSave &save );
-	int		Restore( CRestore &restore );
-	static	TYPEDESCRIPTION m_SaveData[];
-
-	void Spawn( void );
-	void Precache( void );
-	int iItemSlot( void ) { return 2; }
-	int GetItemInfo(ItemInfo *p);
-	int AddToPlayer( CBasePlayer *pPlayer );
-	void Customize( char cOption, int iValue );
-	void UpdateOwner( void );
-
-	BOOL Deploy( void );
-	void Holster( int skiplocal = 0  );
-	void InventoryFrame( void );
-
-	void PrimaryAttack( void );
-	void SecondaryAttack( void );
-	void WeaponIdle( void );
-
-	float GetFullChargeTime( void );
-	void FireRapid( void );
-	void FireBolt( void );
-	void ChargeSniper( void );
-	void FireSniper( void );
-	void FireSingle( void );
-
-	int m_fInAttack;
-	float m_flStartCharge;
-	float m_flPlayAftershock;
-	int m_iBeam;
-	float m_flNextAmmoBurn;
-	int m_iFireType;
-	int m_iUnused;
-	int m_iNormalShotCount;	// three quick shots, then a pause
-	int m_iSlidePos;
-	float m_flTimeGaussHolster;
-	float m_flSniperTime;	// when the sniper shot started charging
-	int m_fSniperAttack;
-	BOOL m_bCharged;
-	int m_fFirstIdle;
-	int m_iHaveSniperRifle;
-	int m_iHolstered;
-	unsigned short m_usSniperShot;
-};
 LINK_ENTITY_TO_CLASS( weapon_pistol, CGaussPistol );
 LINK_ENTITY_TO_CLASS( weapon_gausspistol, CGaussPistol );
 
 
+#ifndef CLIENT_DLL
 TYPEDESCRIPTION	CFastShot::m_SaveData[] =
 {
 	DEFINE_FIELD( CFastShot, m_iMaxFrame, FIELD_INTEGER ),
@@ -708,6 +662,7 @@ TYPEDESCRIPTION	CGaussPistol::m_SaveData[] =
 	DEFINE_FIELD( CGaussPistol, m_iHolstered, FIELD_INTEGER ),
 };
 IMPLEMENT_SAVERESTORE( CGaussPistol, CBasePlayerWeapon );
+#endif
 
 
 float CGaussPistol::GetFullChargeTime( void )
@@ -841,6 +796,7 @@ void CGaussPistol::Customize( char cOption, int iValue )
 	m_iSlidePos = iValue;
 }
 
+#ifndef CLIENT_DLL
 void CGaussPistol::UpdateOwner( void )
 {
 	MESSAGE_BEGIN( MSG_ONE, gmsgSliderX, NULL, m_pPlayer->pev );
@@ -848,6 +804,7 @@ void CGaussPistol::UpdateOwner( void )
 		WRITE_BYTE( m_iSlidePos );
 	MESSAGE_END();
 }
+#endif
 
 BOOL CGaussPistol::Deploy( )
 {

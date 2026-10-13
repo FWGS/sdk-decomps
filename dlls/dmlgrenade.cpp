@@ -33,6 +33,8 @@
 extern int gmsgWeapPickup;
 extern int gmsgSliderX;
 
+#include "dmlgrenade.h"
+
 enum dmlgrenade_e {
 	DMLGRENADE_IDLE = 0,
 	DMLGRENADE_IDLE2,
@@ -50,10 +52,12 @@ class CTripmineGrenade : public CGrenade
 	void Spawn( void );
 	void Precache( void );
 
+#ifndef CLIENT_DLL
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
 
 	static	TYPEDESCRIPTION m_SaveData[];
+#endif
 
 	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
 
@@ -97,9 +101,11 @@ public:
 	void Spawn( void );
 	void Precache( void );
 
+#ifndef CLIENT_DLL
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
+#endif
 
 	static CDmlHandGrenade *ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time, int iExplosion, int iPayload, int iDetonate );
 
@@ -120,6 +126,7 @@ public:
 LINK_ENTITY_TO_CLASS( DmlHandGrenade, CDmlHandGrenade );
 
 
+#ifndef CLIENT_DLL
 TYPEDESCRIPTION	CTripmineGrenade::m_SaveData[] =
 {
 	DEFINE_FIELD( CTripmineGrenade, m_flPowerUp, FIELD_TIME ),
@@ -137,51 +144,15 @@ TYPEDESCRIPTION	CTripmineGrenade::m_SaveData[] =
 };
 
 IMPLEMENT_SAVERESTORE(CTripmineGrenade,CGrenade);
+#endif
 
 
 //=========================================================
 // the weapon
 //=========================================================
-class CDmlGrenade : public CBasePlayerWeapon
-{
-public:
-	void Spawn( void );
-	void Precache( void );
-	int iItemSlot( void ) { return 7; }
-	int GetItemInfo(ItemInfo *p);
-	int AddToPlayer( CBasePlayer *pPlayer );
-	void UpdateOwner( void );
-	void Customize( char cOption, int iValue );
-
-	void PrimaryAttack( void );
-	BOOL Deploy( void );
-	BOOL CanHolster( void );
-	void Holster( int skiplocal = 0 );
-	void WeaponIdle( void );
-	void PlaceTripmine( void );
-
-	virtual int		Save( CSave &save );
-	virtual int		Restore( CRestore &restore );
-	static	TYPEDESCRIPTION m_SaveData[];
-
-	float		m_flStartThrow;
-	float		m_flReleaseThrow;
-	float		m_flTakeoutAnim;
-	int			m_iShell1;
-	int			m_iShell2;
-	float		m_flEjectShell1;
-	float		m_flEjectShell2;
-	dmlconfig_t	m_Config;
-	int			m_iModelIndexRocketExpl;
-	int			m_iModelIndexSmoke;
-	float		m_flTimePlacedTripmine;
-	float		m_flTimeNextCustomAnim;
-	float		m_flTimeWeaponIdleThrow;
-	int			m_bRetired;
-	int			m_fDeployTakeout;
-};
 LINK_ENTITY_TO_CLASS( weapon_dmlGrenade, CDmlGrenade );
 
+#ifndef CLIENT_DLL
 TYPEDESCRIPTION	CDmlGrenade::m_SaveData[] =
 {
 	DEFINE_FIELD( CDmlGrenade, m_flTimePlacedTripmine, FIELD_TIME ),
@@ -210,6 +181,7 @@ TYPEDESCRIPTION	CDmlHandGrenade::m_SaveData[] =
 	DEFINE_FIELD( CDmlHandGrenade, m_iDetonate, FIELD_INTEGER ),
 };
 IMPLEMENT_SAVERESTORE( CDmlHandGrenade, CGrenade );
+#endif
 
 
 //=========================================================
@@ -933,6 +905,7 @@ void CDmlGrenade::PlaceTripmine( void )
 }
 
 
+#ifndef CLIENT_DLL
 void CDmlGrenade::UpdateOwner( void )
 {
 	MESSAGE_BEGIN( MSG_ONE, gmsgSliderX, NULL, m_pPlayer->pev );
@@ -945,6 +918,7 @@ void CDmlGrenade::UpdateOwner( void )
 		WRITE_BYTE( m_Config.payload );
 	MESSAGE_END();
 }
+#endif
 
 
 //=========================================================

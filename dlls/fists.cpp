@@ -21,6 +21,7 @@
 #include "nodes.h"
 #include "player.h"
 #include "gamerules.h"
+#include "fists.h"
 
 
 #define	CROWBAR_BODYHIT_VOLUME 128
@@ -28,45 +29,16 @@
 
 extern int gmsgWeapPickup;
 
-class CFists : public CBasePlayerWeapon
-{
-public:
-	void Spawn( void );
-	void Precache( void );
-	int iItemSlot( void ) { return 1; }
-	void EXPORT SwingAgain( void );
-	void EXPORT Smack( void );
-	int GetItemInfo(ItemInfo *p);
-	int AddToPlayer( CBasePlayer *pPlayer );
-
-	void PrimaryAttack( void );
-	int Swing( int fFirst );
-	BOOL Deploy( void );
-	void WeaponIdle( void );
-	void Customize( char cOption, int iValue );
-
-	virtual int		Save( CSave &save );
-	virtual int		Restore( CRestore &restore );
-	static	TYPEDESCRIPTION m_SaveData[];
-
-	int m_iSwing;
-	TraceResult m_trHit;
-
-	float m_flNextIdle;
-	int m_iWeapon;			// 0 fists, 1 knife
-	float m_flDrawAnimTime;	// when to play the draw of the other weapon
-	float m_flLastRipple;
-	Vector m_vecLastRipplePos;
-	unsigned short m_usWaterRipple;
-};
 LINK_ENTITY_TO_CLASS( weapon_fists, CFists );
 
+#ifndef CLIENT_DLL
 TYPEDESCRIPTION	CFists::m_SaveData[] =
 {
 	DEFINE_FIELD( CFists, m_iWeapon, FIELD_INTEGER ),
 	DEFINE_FIELD( CFists, m_flDrawAnimTime, FIELD_TIME ),
 };
 IMPLEMENT_SAVERESTORE( CFists, CBasePlayerWeapon );
+#endif
 
 
 enum fists_e {

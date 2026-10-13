@@ -19,6 +19,16 @@
 #include "weapons.h"
 #include "nodes.h"
 #include "player.h"
+#include "effects.h"
+#include "dmlrocket.h"
+#include "chemgrenade.h"
+#include "dml.h"
+#include "dmlgrenade.h"
+#include "fists.h"
+#include "gausspistol.h"
+#include "minigun.h"
+#include "shotgun.h"
+#include "spchemicalgun.h"
 
 #include "usercmd.h"
 #include "entity_state.h"
@@ -45,8 +55,14 @@ static globalvars_t	Globals;
 
 static CBasePlayerWeapon *g_pWpns[ 32 ];
 
-// HLDM Weapon placeholder entities.
-CGlock g_Glock;
+// Weapon placeholder entities.
+CDml g_Dml;
+CDmlGrenade g_DmlGrenade;
+CFists g_Fists;
+CGaussPistol g_GaussPistol;
+CMinigun g_Minigun;
+CShotgun g_Shotgun;
+CSPChemicalGun g_ChemGun;
 
 /*
 ======================
@@ -550,7 +566,13 @@ void HUD_InitClientWeapons( void )
 	HUD_PrepEntity( &player		, NULL );
 
 	// Allocate slot(s) for each weapon that we are going to be predicting
-	HUD_PrepEntity( &g_Glock	, &player );
+	HUD_PrepEntity( &g_Dml		, &player );
+	HUD_PrepEntity( &g_DmlGrenade, &player );
+	HUD_PrepEntity( &g_Fists	, &player );
+	HUD_PrepEntity( &g_GaussPistol, &player );
+	HUD_PrepEntity( &g_Minigun	, &player );
+	HUD_PrepEntity( &g_Shotgun	, &player );
+	HUD_PrepEntity( &g_ChemGun	, &player );
 }
 
 /*
@@ -580,8 +602,32 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	// FIXME, make this a method in each weapon?  where you pass in an entity_state_t *?
 	switch ( from->client.m_iId )
 	{
-	case WEAPON_GLOCK:
-		pWeapon = &g_Glock;
+	case WEAPON_DML:
+		pWeapon = &g_Dml;
+		break;
+
+	case WEAPON_DMLGRENADE:
+		pWeapon = &g_DmlGrenade;
+		break;
+
+	case WEAPON_FISTS:
+		pWeapon = &g_Fists;
+		break;
+
+	case WEAPON_GAUSSPISTOL:
+		pWeapon = &g_GaussPistol;
+		break;
+
+	case WEAPON_MINIGUN:
+		pWeapon = &g_Minigun;
+		break;
+
+	case WEAPON_SHOTGUN:
+		pWeapon = &g_Shotgun;
+		break;
+
+	case WEAPON_SPCHEMICALGUN:
+		pWeapon = &g_ChemGun;
 		break;
 	}
 
@@ -630,7 +676,6 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	player.pev->deadflag = from->client.deadflag;
 	player.pev->waterlevel = from->client.waterlevel;
 	player.pev->maxspeed    = from->client.maxspeed;
-	player.pev->fov = from->client.fov;
 	player.pev->weaponanim = from->client.weaponanim;
 	player.pev->viewmodel = from->client.viewmodel;
 	player.m_flNextAttack = from->client.m_flNextAttack;
@@ -705,7 +750,6 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 
 	// Copy in results of predcition code
 	to->client.viewmodel				= player.pev->viewmodel;
-	to->client.fov						= player.pev->fov;
 	to->client.weaponanim				= player.pev->weaponanim;
 	to->client.m_flNextAttack			= player.m_flNextAttack;
 	to->client.maxspeed					= player.pev->maxspeed;
@@ -803,20 +847,8 @@ void _DLLEXPORT HUD_PostRunCmd( struct local_state_s *from, struct local_state_s
 {
 	g_runfuncs = runfuncs;
 
-	// Only run post think stuff for glock for the sample
-	//  implementation
-#if defined( CLIENT_WEAPONS )
-	if ( cl_lw && cl_lw->value &&
-		from->client.m_iId == WEAPON_GLOCK )
+	if ( cl_lw && cl_lw->value )
 	{
 		HUD_WeaponsPostThink( from, to, cmd, time, random_seed );
 	}
-	else
-#endif
-	{
-		to->client.fov = g_lastFOV;
-	}
-
-	// All games can use FOV state
-	g_lastFOV = to->client.fov;
 }

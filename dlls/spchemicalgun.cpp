@@ -28,6 +28,7 @@
 #include "soundent.h"
 #include "gamerules.h"
 #include "chemgrenade.h"
+#include "spchemicalgun.h"
 
 extern int gmsgWeapPickup;
 extern int gmsgSliderX;
@@ -42,45 +43,10 @@ enum chemgun_e {
 };
 
 
-class CSPChemicalGun : public CBasePlayerWeapon
-{
-public:
-	void Spawn( void );
-	void Precache( void );
-	int iItemSlot( void ) { return 8; }
-	int GetItemInfo(ItemInfo *p);
-	int AddToPlayer( CBasePlayer *pPlayer );
-	void UpdateOwner( void );
-	void Customize( char cOption, int iValue );
-	int PrimaryAmmoIndex( void );
-
-	void PrimaryAttack( void );
-	BOOL Deploy( void );
-	BOOL IsUseable( void );
-	void WeaponIdle( void );
-
-	void LaunchChemical( entvars_t *pevOwner, Vector vecSrc, Vector vecVelocity );
-	int CalcViscosity( void );
-	int CalcVolatility( void );
-	int CalcStability( void );
-	int CalcExplosion( void );
-
-	virtual int		Save( CSave &save );
-	virtual int		Restore( CRestore &restore );
-	static	TYPEDESCRIPTION m_SaveData[];
-
-	int		m_iPressure;
-	int		m_iUnusedA4;
-	float	m_flLastMixture;	// when the mixture was last changed
-	float	m_iVelocity;
-	int		m_iSplash;
-	Vector	m_vSpread;
-	chemicalmixture_t ChemicalMixture;
-	float	m_flTimeNextIdle;
-};
 LINK_ENTITY_TO_CLASS( weapon_chemgun, CSPChemicalGun );
 LINK_ENTITY_TO_CLASS( weapon_SPchemicalgun, CSPChemicalGun );
 
+#ifndef CLIENT_DLL
 TYPEDESCRIPTION	CSPChemicalGun::m_SaveData[] =
 {
 	DEFINE_FIELD( CSPChemicalGun, m_iVelocity, FIELD_FLOAT ),
@@ -92,6 +58,7 @@ TYPEDESCRIPTION	CSPChemicalGun::m_SaveData[] =
 	DEFINE_FIELD( CSPChemicalGun, m_vSpread, FIELD_VECTOR ),
 };
 IMPLEMENT_SAVERESTORE( CSPChemicalGun, CBasePlayerWeapon );
+#endif
 
 int CSPChemicalGun::PrimaryAmmoIndex( void )
 {

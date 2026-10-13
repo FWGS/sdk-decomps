@@ -79,16 +79,20 @@ class CBallLightning;
 class CBeamGun : public CBasePlayerWeapon
 {
 public:
+#ifndef CLIENT_DLL
 	int		Save( CSave &save );
 	int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
+#endif
 
 	void Spawn( void );
 	void Precache( void );
 	int iItemSlot( void ) { return 5; }
 	int GetItemInfo(ItemInfo *p);
 	int AddToPlayer( CBasePlayer *pPlayer );
+#ifndef CLIENT_DLL
 	void UpdateOwner( void );
+#endif
 	void InventoryFrame( void );
 	void Customize( char cOption, int iValue );
 
@@ -153,6 +157,7 @@ LINK_ENTITY_TO_CLASS( weapon_polarisblade, CBeamGun );
 LINK_ENTITY_TO_CLASS( weapon_beamgun, CBeamGun );
 
 
+#ifndef CLIENT_DLL
 TYPEDESCRIPTION	CBeamGun::m_SaveData[] =
 {
 	DEFINE_FIELD( CBeamGun, m_pBeam, FIELD_CLASSPTR ),
@@ -181,6 +186,7 @@ TYPEDESCRIPTION	CBeamGun::m_SaveData[] =
 	DEFINE_FIELD( CBeamGun, m_flStartAttack, FIELD_TIME ),
 };
 IMPLEMENT_SAVERESTORE( CBeamGun, CBasePlayerWeapon );
+#endif
 
 
 //=========================================================
@@ -767,6 +773,7 @@ void CBeamGun::ShotgunLightning( Vector vecSrc, Vector vecDir, TraceResult tr )
 }
 
 
+#ifndef CLIENT_DLL
 void CBeamGun::UpdateOwner( void )
 {
 	MESSAGE_BEGIN( MSG_ONE, gmsgSliderX, NULL, m_pPlayer->pev );
@@ -784,6 +791,7 @@ void CBeamGun::UpdateOwner( void )
 		WRITE_BYTE( Configuration.voltage - 1 );
 	MESSAGE_END();
 }
+#endif
 
 
 void CBeamGun::InventoryFrame( void )
@@ -815,6 +823,7 @@ void CBeamGun::InventoryFrame( void )
 
 		m_flNextTempDecreaseTime = gpGlobals->time + 0.2;
 
+#ifndef CLIENT_DLL
 		if ( bSendTemp )
 		{
 			MESSAGE_BEGIN( MSG_ONE, gmsgTempX, NULL, m_pPlayer->pev );
@@ -822,6 +831,7 @@ void CBeamGun::InventoryFrame( void )
 				WRITE_BYTE( m_iTemp );
 			MESSAGE_END();
 		}
+#endif
 	}
 }
 
@@ -1265,9 +1275,11 @@ public:
 	void Precache( void );
 	int  Classify ( void );
 	int  IRelationship ( CBaseEntity *pTarget );
+#ifndef CLIENT_DLL
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
+#endif
 
 	void EXPORT TrackTarget ( void );
 	void EXPORT TrackTouch ( CBaseEntity *pOther );
@@ -1288,6 +1300,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( tracer, CLightningTracer );
 
+#ifndef CLIENT_DLL
 TYPEDESCRIPTION	CLightningTracer::m_SaveData[] =
 {
 	DEFINE_FIELD( CLightningTracer, m_flStopAttack, FIELD_TIME ),
@@ -1295,6 +1308,7 @@ TYPEDESCRIPTION	CLightningTracer::m_SaveData[] =
 };
 
 IMPLEMENT_SAVERESTORE( CLightningTracer, CBaseMonster );
+#endif
 
 int CLightningTracer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
 {
@@ -1722,9 +1736,11 @@ public:
 	void Precache( void );
 	int  Classify ( void );
 	int  IRelationship ( CBaseEntity *pTarget );
+#ifndef CLIENT_DLL
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
+#endif
 
 	void EXPORT TrackTargetBug ( void );
 	void EXPORT DieTouchBug ( CBaseEntity *pOther );
@@ -1744,6 +1760,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( lightning_bug, CLightningBug );
 
+#ifndef CLIENT_DLL
 TYPEDESCRIPTION	CLightningBug::m_SaveData[] =
 {
 	DEFINE_FIELD( CLightningBug, m_flStopAttack, FIELD_TIME ),
@@ -1751,6 +1768,7 @@ TYPEDESCRIPTION	CLightningBug::m_SaveData[] =
 };
 
 IMPLEMENT_SAVERESTORE( CLightningBug, CBaseMonster );
+#endif
 
 int CLightningBug :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
 {

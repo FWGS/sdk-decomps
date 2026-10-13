@@ -22,6 +22,7 @@
 #include "player.h"
 #include "soundent.h"
 #include "gamerules.h"
+#include "minigun.h"
 
 extern int gmsgWeapPickup;
 extern int gmsgSliderX;
@@ -46,54 +47,10 @@ enum minigun_e
 #define MINIGUN_SPIN_UP			2
 #define MINIGUN_SPIN_DOWN		3
 
-class CMinigun : public CBasePlayerWeapon
-{
-public:
-	void Spawn( void );
-	void Precache( void );
-	int iItemSlot( void ) { return 4; }
-	int GetItemInfo(ItemInfo *p);
-	int AddToPlayer( CBasePlayer *pPlayer );
-	void UpdateOwner( void );
-
-	void PrimaryAttack( void );
-	BOOL Deploy( void );
-	void Reload( void );
-	void InventoryFrame( void );
-	void WeaponIdle( void );
-	void Customize( char cOption, int iValue );
-	void Holster( int skiplocal = 0 );
-
-	virtual int		Save( CSave &save );
-	virtual int		Restore( CRestore &restore );
-	static	TYPEDESCRIPTION m_SaveData[];
-
-	int m_iSpinState;
-	int m_iOverheating;
-	int m_iTemp;
-	float m_flTimeStartSpinning;
-	float m_flTimeStartOverheating;
-	float m_flNextTempChangeTime;
-	float m_flNextSpinAnimation;
-	float m_flNextIdleAnimTime;
-	float m_flNextTempDrop;
-	float m_flNextSpinCheck;
-	int m_iShell;
-	float m_flNextFireAnimTime;
-	int m_iMuzzleSprite;
-	int m_iSlidePos;
-	bool m_bWaterCooled;
-	float m_flTimeDrawBodyChange;
-	int m_fIdleStarted;
-	unsigned short m_usMinigun;
-	unsigned short m_usMinigunHeat;
-	int m_iGlowshell;
-	int m_iClientTemp;
-	float m_flNextConfigTime;
-};
 LINK_ENTITY_TO_CLASS( weapon_mechagun, CMinigun );
 LINK_ENTITY_TO_CLASS( weapon_minigun, CMinigun );
 
+#ifndef CLIENT_DLL
 TYPEDESCRIPTION	CMinigun::m_SaveData[] =
 {
 	DEFINE_FIELD( CMinigun, m_iTemp, FIELD_INTEGER ),
@@ -114,6 +71,7 @@ TYPEDESCRIPTION	CMinigun::m_SaveData[] =
 	DEFINE_FIELD( CMinigun, m_flNextSpinAnimation, FIELD_TIME ),	// sic, twice
 };
 IMPLEMENT_SAVERESTORE( CMinigun, CBasePlayerWeapon );
+#endif
 
 
 void CMinigun::Spawn( )
@@ -165,6 +123,7 @@ void CMinigun::Precache( void )
 	m_usMinigunHeat = PRECACHE_EVENT( 1, "events/gw_minigunHeat.sc" );
 }
 
+#ifndef CLIENT_DLL
 void CMinigun::UpdateOwner( void )
 {
 	MESSAGE_BEGIN( MSG_ONE, gmsgSliderX, NULL, m_pPlayer->pev );
@@ -177,6 +136,7 @@ void CMinigun::UpdateOwner( void )
 		WRITE_BYTE( m_iSlidePos );
 	MESSAGE_END();
 }
+#endif
 
 int CMinigun::GetItemInfo(ItemInfo *p)
 {
@@ -365,6 +325,7 @@ void CMinigun::InventoryFrame( void )
 			m_flNextTempDrop = gpGlobals->time + 0.2;
 	}
 
+#ifndef CLIENT_DLL
 	if ( bSendTemp )
 	{
 		m_iClientTemp = m_iTemp;
@@ -373,6 +334,7 @@ void CMinigun::InventoryFrame( void )
 			WRITE_BYTE( m_iTemp );
 		MESSAGE_END();
 	}
+#endif
 }
 
 

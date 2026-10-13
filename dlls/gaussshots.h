@@ -26,9 +26,11 @@ class CFastShot : public CGrenade
 public:
 	void Spawn( void );
 	void Precache( void );
+#ifndef CLIENT_DLL
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
+#endif
 
 	static CFastShot *Shoot( Vector vecSrc, Vector vecAngles, CBaseEntity *pOwner, float flDamage );
 
@@ -49,9 +51,11 @@ class CBoltShot : public CGrenade
 public:
 	void Spawn( void );
 	void Precache( void );
+#ifndef CLIENT_DLL
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
+#endif
 
 	static CBoltShot *Shoot( Vector vecSrc, Vector vecAngles, CBaseEntity *pOwner );
 

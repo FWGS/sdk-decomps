@@ -34,6 +34,8 @@ extern int gmsgWeapPickup;
 extern int gmsgSliderX;
 extern int gmsgDmlCross;
 
+#include "dml.h"
+
 enum dml_e {
 	DML_IDLE = 0,
 	DML_IDLEFIDGET,
@@ -288,58 +290,10 @@ void CClusterGrenade::ClusterSmokeThink( void )
 //=========================================================
 // the launcher
 //=========================================================
-class CDml : public CBasePlayerWeapon
-{
-public:
-	int		Save( CSave &save );
-	int		Restore( CRestore &restore );
-	static	TYPEDESCRIPTION m_SaveData[];
-
-	void Spawn( void );
-	void Precache( void );
-	int iItemSlot( void ) { return 6; }
-	int GetItemInfo(ItemInfo *p);
-	int AddToPlayer( CBasePlayer *pPlayer );
-	void UpdateOwner( void );
-	void InventoryFrame( void );
-	void Customize( char cOption, int iValue );
-
-	BOOL Deploy( void );
-	void Holster( int skiplocal = 0 );
-
-	void PrimaryAttack( void );
-	void FireSpiral( void );
-	void FireSingle( void );
-	void OffsetRocket( CBaseEntity *pRocket, int iSide );
-	CDmlRocket *CreateRocket( void );
-	void Reload( void );
-	void WeaponIdle( void );
-
-	void UpdateSpot( void );
-	CBaseEntity *FindTarget( bool fAutoaim );
-	Vector GetAutoaimVector( float flDelta );
-	Vector AutoaimDeflection( Vector &vecSrc, float flDist, float flDelta );
-	void SetBody( int iBody );
-
-	int				m_iSide;
-	int				m_iFirstSide;
-	int				m_iStyle;
-	float			m_iSpiralScalar_In;
-	float			m_iSpiralScalar_Up;
-	int				m_fSpotActive;
-	float			m_flNextConfigTime;
-	float			m_flLastAttack;
-	float			m_flNextSkinChange;
-	dmlconfig_t		m_Config;
-	CLaserSpot		*m_pSpot;
-	CBaseEntity		*m_pLockTarget;
-	int				m_fCrosshairOn;
-	int				m_fLocked;
-	int				m_iHomingState;
-};
 LINK_ENTITY_TO_CLASS( weapon_mule, CDml );
 LINK_ENTITY_TO_CLASS( weapon_dml, CDml );
 
+#ifndef CLIENT_DLL
 TYPEDESCRIPTION	CDml::m_SaveData[] =
 {
 	DEFINE_FIELD( CDml, m_iSide, FIELD_INTEGER ),
@@ -358,6 +312,7 @@ TYPEDESCRIPTION	CDml::m_SaveData[] =
 	DEFINE_FIELD( CDml, m_iHomingState, FIELD_INTEGER ),
 };
 IMPLEMENT_SAVERESTORE( CDml, CBasePlayerWeapon );
+#endif
 
 
 void CDml::Spawn( )
@@ -403,6 +358,7 @@ void CDml::Precache( void )
 }
 
 
+#ifndef CLIENT_DLL
 void CDml::UpdateOwner( void )
 {
 	MESSAGE_BEGIN( MSG_ONE, gmsgSliderX, NULL, m_pPlayer->pev );
@@ -425,6 +381,7 @@ void CDml::UpdateOwner( void )
 		WRITE_BYTE( m_Config.payload );
 	MESSAGE_END();
 }
+#endif
 
 
 int CDml::AddToPlayer( CBasePlayer *pPlayer )

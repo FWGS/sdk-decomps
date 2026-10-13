@@ -22,6 +22,7 @@
 #include "player.h"
 #include "gamerules.h"
 #include "soundent.h"
+#include "shotgun.h"
 
 extern int gmsgWeapPickup;
 extern int gmsgSliderX;
@@ -38,39 +39,10 @@ enum shotgun_e {
 	SHOTGUN_CUSTOMIZE
 };
 
-class CShotgun : public CBasePlayerWeapon
-{
-public:
-	int		Save( CSave &save );
-	int		Restore( CRestore &restore );
-	static	TYPEDESCRIPTION m_SaveData[];
-
-	void Spawn( void );
-	void Precache( void );
-	int iItemSlot( ) { return 3; }
-	int GetItemInfo(ItemInfo *p);
-	int AddToPlayer( CBasePlayer *pPlayer );
-	void UpdateOwner( void );
-
-	void PrimaryAttack( void );
-	BOOL Deploy( );
-	void WeaponIdle( void );
-	void Customize( char cOption, int iValue );
-	int m_fInReload;
-	float m_flNextReload;
-	int m_iShell;
-	float m_flPumpTime;
-	float m_flNextCustomizeAnim;
-	Vector m_vecSpread;
-	int m_iSlidePos;		// spread setting
-	int m_iNumPellets;
-	int m_iNumShells;		// shells per shot
-private:
-	unsigned short m_usShotgun;
-};
 LINK_ENTITY_TO_CLASS( weapon_shotgun, CShotgun );
 
 
+#ifndef CLIENT_DLL
 TYPEDESCRIPTION	CShotgun::m_SaveData[] = 
 {
 	DEFINE_FIELD( CShotgun, m_vecSpread, FIELD_VECTOR ),
@@ -78,6 +50,7 @@ TYPEDESCRIPTION	CShotgun::m_SaveData[] =
 	DEFINE_FIELD( CShotgun, m_iNumShells, FIELD_INTEGER ),
 };
 IMPLEMENT_SAVERESTORE( CShotgun, CBasePlayerWeapon );
+#endif
 
 
 
@@ -113,6 +86,7 @@ void CShotgun::Precache( void )
 	m_usShotgun = PRECACHE_EVENT( 1, "events/gw_shotgun.sc" );
 }
 
+#ifndef CLIENT_DLL
 void CShotgun::UpdateOwner( void )
 {
 	MESSAGE_BEGIN( MSG_ONE, gmsgSliderX, NULL, m_pPlayer->pev );
@@ -125,6 +99,7 @@ void CShotgun::UpdateOwner( void )
 		WRITE_BYTE( m_iNumShells );
 	MESSAGE_END();
 }
+#endif
 
 int CShotgun::AddToPlayer( CBasePlayer *pPlayer )
 {

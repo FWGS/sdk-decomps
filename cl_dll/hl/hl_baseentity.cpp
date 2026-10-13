@@ -27,6 +27,12 @@ This file contains "stubs" of class member implementations so that we can predic
 #include	"player.h"
 #include	"weapons.h"
 #include	"nodes.h"
+#include	"soundent.h"
+#include	"effects.h"
+#include	"skill.h"
+#include	"gamerules.h"
+#include	"dmlrocket.h"
+#include	"chemgrenade.h"
 
 // Globals used by game logic
 const Vector g_vecZero = Vector( 0, 0, 0 );
@@ -35,6 +41,16 @@ enginefuncs_t g_engfuncs;
 globalvars_t  *gpGlobals;
 
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
+
+// Gunman's weapons use these
+skilldata_t gSkillData;
+CGameRules *g_pGameRules;
+int g_iSkillLevel;
+int gEvilImpulse101;
+int gmsgSliderX;
+int gmsgTempX;
+int gmsgZoom;
+int gmsgDmlCross;
 
 void EMIT_SOUND_DYN(edict_t *entity, int channel, const char *sample, float volume, float attenuation, int flags, int pitch) { }
 
@@ -339,3 +355,39 @@ void CBasePlayerAmmo :: DefaultTouch( CBaseEntity *pOther ) { }
 int CBasePlayerWeapon::ExtractAmmo( CBasePlayerWeapon *pWeapon ) { return 0; }
 int CBasePlayerWeapon::ExtractClipAmmo( CBasePlayerWeapon *pWeapon ) { return 0; }	
 void CBasePlayerWeapon::RetireWeapon( void ) { }
+
+// Gunman's weapons call these
+void CBasePlayer::GiveNamedItem( const char *pszName ) { }
+BOOL CBasePlayer::HasNamedPlayerItem( const char *pszItemName ) { return FALSE; }
+void CBaseMonster :: Precache( void ) { }
+void CGrenade::BounceTouch( CBaseEntity *pOther ) { }
+CBaseEntity * EHANDLE :: operator = (CBaseEntity *pEntity) { return NULL; }
+EHANDLE :: operator int ( ) { return 0; }
+EHANDLE :: operator CBaseEntity *() { return NULL; }
+CBaseEntity * EHANDLE :: operator -> () { return NULL; }
+void CSoundEnt :: InsertSound ( int iType, const Vector &vecOrigin, int iVolume, float flDuration ) { }
+CSprite *CSprite::SpriteCreate( const char *pSpriteName, const Vector &origin, BOOL animate ) { return NULL; }
+void CSprite::AnimateUntilDead( void ) { }
+void CSprite::Expand( float scaleSpeed, float fadeSpeed ) { }
+CBeam *CBeam::BeamCreate( const char *pSpriteName, int width ) { return NULL; }
+void CBeam::PointEntInit( const Vector &start, int endIndex ) { }
+void CBeam::RelinkBeam( void ) { }
+CDmlRocket *CDmlRocket::CreateSpiralRocket( const Vector &vecOrigin, const Vector &vecAngles, edict_t *pentOwner, int iFlightpath, int iPayload, int iDetonate ) { return NULL; }
+CDmlRocket *CDmlRocket::CreateDmlRocket( const Vector &vecOrigin, const Vector &vecAngles, edict_t *pentOwner, int iFlightpath, int iPayload, int iDetonate ) { return NULL; }
+CChemGrenade *CChemGrenade::ShootSticky( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, chemicalmixture_t mixture ) { return NULL; }
+CChemGrenade *CChemGrenade::ShootBouncy( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, chemicalmixture_t mixture ) { return NULL; }
+CChemGrenade *CChemGrenade::ShootSplatter( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, chemicalmixture_t mixture ) { return NULL; }
+void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType ) { }
+float TEXTURETYPE_PlaySound(TraceResult *ptr,  Vector vecSrc, Vector vecEnd, int iBulletType) { return 0.0; }
+void UTIL_SetSize( entvars_t *pev, const Vector &vecMin, const Vector &vecMax ) { }
+void UTIL_Remove( CBaseEntity *pEntity ) { }
+Vector UTIL_VecToAngles( const Vector &vec ) { return g_vecZero; }
+void UTIL_MakeAimVectors( const Vector &vecAngles ) { }
+CBaseEntity *UTIL_FindEntityByClassname( CBaseEntity *pStartEntity, const char *szName ) { return NULL; }
+int UTIL_EntitiesInBox( CBaseEntity **pList, int listMax, const Vector &mins, const Vector &maxs, int flagMask ) { return 0; }
+void UTIL_ScreenFade( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha, int flags ) { }
+void UTIL_TraceHull( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, int hullNumber, edict_t *pentIgnore, TraceResult *ptr ) { }
+TraceResult UTIL_GetGlobalTrace( void ) { TraceResult tr; return tr; }
+int UTIL_PointContents( const Vector &vec ) { return 0; }
+float UTIL_WaterLevel( const Vector &position, float minz, float maxz ) { return 0; }
+BOOL UTIL_PercentChance( int iPercent ) { return FALSE; }
