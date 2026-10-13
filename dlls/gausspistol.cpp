@@ -970,6 +970,7 @@ void CGaussPistol::FireBolt( void )
 
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
+	Vector vecAiming = gpGlobals->v_forward;	// sic: unused
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
 
 	CBoltShot::Shoot( vecSrc, m_pPlayer->pev->v_angle, m_pPlayer );
