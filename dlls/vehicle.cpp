@@ -390,7 +390,7 @@ void CVehicleTank::WithPlayerThink( void )
 
 	if ( m_iGasState == TANK_GAS_REFUEL )
 	{
-		EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_STATIC, "tank/startup.wav", m_fTankSoundAdj, 0.8, 0, PITCH_NORM );
+		EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_STATIC, "tank/startup.wav", m_fTankSoundAdj, 0.8 );
 		m_iGasState = TANK_GAS_FULL;
 		m_pPlayer->pev->view_ofs = g_vecZero;
 	}
@@ -415,7 +415,7 @@ void CVehicleTank::WithPlayerThink( void )
 	float flInterval = gpGlobals->time - m_flTimeHolder;
 	m_flTimeHolder = gpGlobals->time;
 
-	Move( flInterval );
+	MoveTank( flInterval );
 	UpdatePlayer( flInterval );
 
 	if ( gpGlobals->time > m_flNextHullCheck )
@@ -432,8 +432,8 @@ void CVehicleTank::WithPlayerThink( void )
 
 	// the parts move with velocities that carry them onto the tank
 	m_pBodyBSP->pev->velocity = pev->origin - m_pBodyBSP->pev->origin + m_pBodyBSP->pev->velocity;
-	m_pTurretBSP->pev->velocity = Vector( pev->origin.x, pev->origin.y, pev->origin.z + 70 ) - m_pTurretBSP->pev->origin + m_pTurretBSP->pev->velocity;
-	m_pBarrelBSP->pev->velocity = Vector( pev->origin.x, pev->origin.y, pev->origin.z + 82 ) - m_pBarrelBSP->pev->origin + m_pBarrelBSP->pev->velocity;
+	m_pTurretBSP->pev->velocity = pev->origin + Vector( 0, 0, 70 ) - m_pTurretBSP->pev->origin + m_pTurretBSP->pev->velocity;
+	m_pBarrelBSP->pev->velocity = pev->origin + Vector( 0, 0, 82 ) - m_pBarrelBSP->pev->origin + m_pBarrelBSP->pev->velocity;
 }
 
 //=========================================================
@@ -659,9 +659,9 @@ void CVehicleTank::SetTankAnim( int iAnim )
 }
 
 //=========================================================
-// Move - turns and tilts the tank to the ground, then drives
+// MoveTank - turns and tilts the tank to the ground, then drives
 //=========================================================
-void CVehicleTank::Move( float flInterval )
+void CVehicleTank::MoveTank( float flInterval )
 {
 	static int s_iStuck = 0;
 	BOOL bRestore = FALSE;

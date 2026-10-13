@@ -93,7 +93,7 @@ public:
 
 	int TankControls( void );
 	void SetTankAnim( int iAnim );
-	void Move( float flInterval );
+	void MoveTank( float flInterval );
 	void Drive( float flInterval );
 	int UpdatePlayer( float flInterval );
 	void UpdateControllers( void );
