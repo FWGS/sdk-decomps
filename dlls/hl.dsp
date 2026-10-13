@@ -404,6 +404,10 @@ SOURCE=.\dml.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\dmlgrenade.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\fists.cpp
 # End Source File
 # Begin Source File

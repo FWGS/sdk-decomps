@@ -45,15 +45,6 @@ enum dml_e {
 	DML_DRAW
 };
 
-// what the customization sliders set
-typedef struct
-{
-	int		launch;		// 1 at once, 2 when locked on
-	int		flightpath;	// 1 guided (laser spot), 2 homing, 3 spiral
-	int		detonate;
-	int		payload;
-} dmlconfig_t;
-
 LINK_ENTITY_TO_CLASS( laser_spot, CLaserSpot );
 LINK_ENTITY_TO_CLASS( dml_cluster, CClusterGrenade );
 

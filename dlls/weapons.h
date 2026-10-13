@@ -66,7 +66,8 @@ public:
 #define WEAPON_CUST_FREQUENCY	2	// cust_1BeamFrequency
 #define WEAPON_CUST_CURRENT		3	// cust_2BeamCurrent
 #define WEAPON_CUST_VOLTAGE		4	// cust_3BeamVoltage
-#define WEAPON_CUST_DMLGRENADE	6	// cust_1DMLGrenDetonate, cust_2DMLGrenPayload
+#define WEAPON_CUST_GRENDETONATE	5	// cust_1DMLGrenDetonate
+#define WEAPON_CUST_GRENPAYLOAD	6	// cust_2DMLGrenPayload
 #define WEAPON_AICORE			7
 #define WEAPON_CUST_KNIFE		8	// cust_1fistsKnife
 #define WEAPON_CUST_LAUNCH		9	// cust_1DMLLaunch

@@ -18,6 +18,15 @@
 #ifndef DMLROCKET_H
 #define DMLROCKET_H
 
+// what the DML's and the DML grenade's customization sliders set
+typedef struct
+{
+	int		launch;		// 1 at once, 2 when locked on
+	int		flightpath;	// 1 guided (laser spot), 2 homing, 3 spiral
+	int		detonate;
+	int		payload;
+} dmlconfig_t;
+
 // the cluster bomb payload
 class CClusterGrenade : public CGrenade
 {
