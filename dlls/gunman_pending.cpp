@@ -8,6 +8,8 @@
 #include	"cbase.h"
 #include	"monsters.h"
 #include	"weapons.h"
+#include	"player.h"
+#include	"vehicle.h"
 
 // Gib models, by the iGibModel and iPrecacheGib fields of gMonsterTypes.
 gibmodel_t gGibModels[] =
@@ -99,4 +101,10 @@ void DrawDebugBeam( Vector vecStart, Vector vecEnd, int r, int g, int b )
 		WRITE_BYTE( 255 );	// brightness
 		WRITE_BYTE( 10 );	// speed
 	MESSAGE_END();
+}
+
+// The tank lets its driver out (retail 0x1009e950). Stub until the vehicle
+// code is reconstructed.
+void CVehicleTank::EjectPlayer( void )
+{
 }

@@ -27,6 +27,7 @@
 #include "saverestore.h"
 #include "trains.h"			// trigger_camera has train functionality
 #include "gamerules.h"
+#include "vehicle.h"
 
 #define	SF_TRIGGER_PUSH_START_OFF	2//spawnflag that makes trigger_push spawn turned OFF
 #define SF_TRIGGER_HURT_TARGETONCE	1// Only fire hurt target once
@@ -178,8 +179,89 @@ void CAutoTrigger::Think( void )
 	if ( !m_globalstate || gGlobalState.EntityGetState( m_globalstate ) == GLOBAL_ON )
 	{
 		SUB_UseTargets( this, triggerType, 0 );
-		if ( pev->spawnflags & SF_AUTO_FIREONCE )
-			UTIL_Remove( this );
+		UTIL_Remove( this );
+	}
+}
+
+
+
+//=========================================================
+// trigger_multipleauto - trigger_auto that stays around
+//=========================================================
+class CMultipleAutoTrigger : public CBaseDelay
+{
+public:
+	void KeyValue( KeyValueData *pkvd );
+	void Spawn( void );
+	void Precache( void );
+	void Think( void );
+
+	int ObjectCaps( void ) { return CBaseDelay::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+
+	static	TYPEDESCRIPTION m_SaveData[];
+
+private:
+	int			m_globalstate;
+	USE_TYPE	triggerType;
+};
+LINK_ENTITY_TO_CLASS( trigger_multipleauto, CMultipleAutoTrigger );
+
+TYPEDESCRIPTION	CMultipleAutoTrigger::m_SaveData[] = 
+{
+	DEFINE_FIELD( CMultipleAutoTrigger, m_globalstate, FIELD_STRING ),
+	DEFINE_FIELD( CMultipleAutoTrigger, triggerType, FIELD_INTEGER ),
+};
+
+IMPLEMENT_SAVERESTORE(CMultipleAutoTrigger,CBaseDelay);
+
+void CMultipleAutoTrigger::KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "globalstate"))
+	{
+		m_globalstate = ALLOC_STRING( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "triggerstate"))
+	{
+		int type = atoi( pkvd->szValue );
+		switch( type )
+		{
+		case 0:
+			triggerType = USE_OFF;
+			break;
+		case 2:
+			triggerType = USE_TOGGLE;
+			break;
+		default:
+			triggerType = USE_ON;
+			break;
+		}
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CBaseDelay::KeyValue( pkvd );
+}
+
+
+void CMultipleAutoTrigger::Spawn( void )
+{
+	Precache();
+}
+
+
+void CMultipleAutoTrigger::Precache( void )
+{
+	pev->nextthink = gpGlobals->time + 0.1;
+}
+
+
+void CMultipleAutoTrigger::Think( void )
+{
+	if ( !m_globalstate || gGlobalState.EntityGetState( m_globalstate ) == GLOBAL_ON )
+	{
+		SUB_UseTargets( this, triggerType, 0 );
 	}
 }
 
@@ -1525,6 +1607,10 @@ void CChangeLevel :: ChangeLevelNow( CBaseEntity *pActivator )
 //
 void CChangeLevel :: TouchChangeLevel( CBaseEntity *pOther )
 {
+	// a tank takes its driver along
+	if (FClassnameIs(pOther->pev, "vehicle_tank") && ((CVehicleTank *)pOther)->m_pPlayer)
+		pOther = ((CVehicleTank *)pOther)->m_pPlayer;
+
 	if (!FClassnameIs(pOther->pev, "player"))
 		return;
 
@@ -1941,6 +2027,109 @@ LINK_ENTITY_TO_CLASS( info_teleport_destination, CPointEntity );
 
 
 
+//=========================================================
+// trigger_gunmanteleport - moves the player here when used
+//=========================================================
+class CGunmanTriggerTeleport : public CPointEntity
+{
+public:
+	void Spawn( void );
+	void EXPORT TeleportUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+};
+LINK_ENTITY_TO_CLASS( trigger_gunmanteleport, CGunmanTriggerTeleport );
+
+void CGunmanTriggerTeleport :: Spawn( void )
+{
+	SetUse( TeleportUse );
+	SetThink( NULL );
+}
+
+void CGunmanTriggerTeleport :: TeleportUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	edict_t *pentPlayer = g_engfuncs.pfnPEntityOfEntIndex( 1 );
+
+	if ( !FNullEnt( pentPlayer ) )
+	{
+		CBaseEntity *pPlayer = CBaseEntity::Instance( pentPlayer );
+
+		if ( pPlayer )
+		{
+			pPlayer->pev->flags &= ~FL_ONGROUND;
+			UTIL_SetOrigin( pPlayer->pev, pev->origin );
+			pPlayer->pev->velocity = pPlayer->pev->basevelocity = g_vecZero;
+		}
+	}
+}
+
+
+
+//=========================================================
+// trigger_kill - kills its target when used
+//=========================================================
+class CGunmanTriggerKill : public CPointEntity
+{
+public:
+	CGunmanTriggerKill();
+	void Spawn( void );
+	void KeyValue( KeyValueData *pkvd );
+	void EXPORT KillUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	int		m_iDamageType;
+};
+LINK_ENTITY_TO_CLASS( trigger_kill, CGunmanTriggerKill );
+
+TYPEDESCRIPTION	CGunmanTriggerKill::m_SaveData[] = 
+{
+	DEFINE_FIELD( CGunmanTriggerKill, m_iDamageType, FIELD_INTEGER ),
+};
+
+IMPLEMENT_SAVERESTORE(CGunmanTriggerKill,CPointEntity);
+
+CGunmanTriggerKill :: CGunmanTriggerKill()
+{
+	m_iDamageType = 0;
+}
+
+void CGunmanTriggerKill :: KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "shouldgib"))
+	{
+		if ( atoi( pkvd->szValue ) )
+			m_iDamageType |= DMG_ALWAYSGIB;
+		pkvd->fHandled = TRUE;
+	}
+	else
+		pkvd->fHandled = FALSE;
+}
+
+void CGunmanTriggerKill :: Spawn( void )
+{
+	SetUse( KillUse );
+	SetThink( NULL );
+}
+
+void CGunmanTriggerKill :: KillUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	entvars_t *pevKiller;
+	CBaseEntity *pEntity = UTIL_FindEntityByString( NULL, "targetname", STRING( pev->target ) );
+
+	if ( pEntity && pEntity->pev->takedamage )
+	{
+		if ( pActivator )
+			pevKiller = pActivator->pev;
+		else
+			pevKiller = pev;
+
+		pEntity->TakeDamage( pevKiller, pevKiller, pEntity->pev->health + 1, m_iDamageType | DMG_CRUSH );
+	}
+}
+
+
+
 class CTriggerSave : public CBaseTrigger
 {
 public:
@@ -1965,6 +2154,10 @@ void CTriggerSave::SaveTouch( CBaseEntity *pOther )
 {
 	if ( !UTIL_IsMasterTriggered( m_sMaster, pOther ) )
 		return;
+
+	// a tank saves for its driver
+	if (FClassnameIs(pOther->pev, "vehicle_tank") && ((CVehicleTank *)pOther)->m_pPlayer)
+		pOther = ((CVehicleTank *)pOther)->m_pPlayer;
 
 	// Only save on clients
 	if ( !pOther->IsPlayer() )
@@ -1991,7 +2184,7 @@ LINK_ENTITY_TO_CLASS( trigger_endsection, CTriggerEndSection );
 void CTriggerEndSection::EndSectionUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	// Only save on clients
-	if ( pActivator && !pActivator->IsNetClient() )
+	if ( !pActivator->IsNetClient() )
 		return;
     
 	SetUse( NULL );
@@ -2144,6 +2337,7 @@ void CTriggerChangeTarget::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, U
 class CTriggerCamera : public CBaseDelay
 {
 public:
+	CTriggerCamera();
 	void Spawn( void );
 	void KeyValue( KeyValueData *pkvd );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
@@ -2168,6 +2362,8 @@ public:
 	float m_acceleration;
 	float m_deceleration;
 	int	  m_state;
+	BOOL  m_bInstantInitialAngle;	// turn to the target at once
+	BOOL  m_iOverRideHack;			// 1: never give the view back; 2: give it back on spawn
 	
 };
 LINK_ENTITY_TO_CLASS( trigger_camera, CTriggerCamera );
@@ -2188,12 +2384,33 @@ TYPEDESCRIPTION	CTriggerCamera::m_SaveData[] =
 	DEFINE_FIELD( CTriggerCamera, m_acceleration, FIELD_FLOAT ),
 	DEFINE_FIELD( CTriggerCamera, m_deceleration, FIELD_FLOAT ),
 	DEFINE_FIELD( CTriggerCamera, m_state, FIELD_INTEGER ),
+	DEFINE_FIELD( CTriggerCamera, m_bInstantInitialAngle, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CTriggerCamera, m_iOverRideHack, FIELD_BOOLEAN ),
 };
 
 IMPLEMENT_SAVERESTORE(CTriggerCamera,CBaseDelay);
 
+CTriggerCamera::CTriggerCamera()
+{
+	m_bInstantInitialAngle = FALSE;
+	m_iOverRideHack = FALSE;
+}
+
 void CTriggerCamera::Spawn( void )
 {
+	if ( m_iOverRideHack == 2 )
+	{
+		if (m_hPlayer->IsAlive( ))
+		{
+			SET_VIEW( m_hPlayer->edict(), m_hPlayer->edict() );
+			((CBasePlayer *)((CBaseEntity *)m_hPlayer))->EnableControl(TRUE);
+		}
+		SUB_UseTargets( this, USE_TOGGLE, 0 );
+		pev->avelocity = Vector( 0, 0, 0 );
+		m_state = 0;
+		return;
+	}
+
 	pev->movetype = MOVETYPE_NOCLIP;
 	pev->solid = SOLID_NOT;							// Remove model & collisions
 	pev->renderamt = 0;								// The engine won't draw this model if this is set to 0 and blending is on
@@ -2229,6 +2446,16 @@ void CTriggerCamera :: KeyValue( KeyValueData *pkvd )
 		m_deceleration = atof( pkvd->szValue );
 		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "instantangle"))
+	{
+		m_bInstantInitialAngle = atoi( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "overridehack"))
+	{
+		m_iOverRideHack = atoi( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
 	else
 		CBaseDelay::KeyValue( pkvd );
 }
@@ -2238,13 +2465,17 @@ void CTriggerCamera :: KeyValue( KeyValueData *pkvd )
 void CTriggerCamera::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	if ( !ShouldToggle( useType, m_state ) )
+	{
+		ALERT( at_console, "first togled broke\n" );
 		return;
+	}
 
 	// Toggle state
 	m_state = !m_state;
 	if (m_state == 0)
 	{
 		m_flReturnTime = gpGlobals->time;
+		ALERT( at_console, "camera toggled\n" );
 		return;
 	}
 	if ( !pActivator || !pActivator->IsPlayer() )
@@ -2270,6 +2501,7 @@ void CTriggerCamera::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 	// Nothing to look at!
 	if ( m_hTarget == NULL )
 	{
+		ALERT( at_console, "camera notarget fail\n" );
 		return;
 	}
 
@@ -2295,12 +2527,15 @@ void CTriggerCamera::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 			m_targetSpeed = m_pentPath->pev->speed;
 		
 		m_flStopTime += m_pentPath->GetDelay();
+		m_moveDistance = (m_pentPath->pev->origin - pev->origin).Length();
 	}
+	else
+		m_moveDistance = 0;
 
 	// copy over player information
 	if (FBitSet (pev->spawnflags, SF_CAMERA_PLAYER_POSITION ) )
 	{
-		UTIL_SetOrigin( pev, pActivator->pev->origin + pActivator->pev->view_ofs );
+		UTIL_SetOrigin( pev, pActivator->pev->view_ofs + pActivator->pev->origin );
 		pev->angles.x = -pActivator->pev->angles.x;
 		pev->angles.y = pActivator->pev->angles.y;
 		pev->angles.z = 0;
@@ -2319,7 +2554,16 @@ void CTriggerCamera::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 	SetThink( FollowTarget );
 	pev->nextthink = gpGlobals->time;
 
-	m_moveDistance = 0;
+	if ( m_hTarget != NULL && m_bInstantInitialAngle == TRUE )
+	{
+		Vector vecGoal = UTIL_VecToAngles( m_hTarget->pev->origin - pev->origin );
+		vecGoal.x = -vecGoal.x;
+		pev->angles = vecGoal;
+		pev->fixangle = TRUE;
+		pev->avelocity = Vector( 0, 0, 0 );
+		m_bInstantInitialAngle = FALSE;
+	}
+
 	Move();
 }
 
@@ -2329,17 +2573,20 @@ void CTriggerCamera::FollowTarget( )
 	if (m_hPlayer == NULL)
 		return;
 
-	if (m_hTarget == NULL || m_flReturnTime < gpGlobals->time)
+	if ( m_iOverRideHack != 1 )
 	{
-		if (m_hPlayer->IsAlive( ))
+		if (m_hTarget == NULL || m_flReturnTime < gpGlobals->time)
 		{
-			SET_VIEW( m_hPlayer->edict(), m_hPlayer->edict() );
-			((CBasePlayer *)((CBaseEntity *)m_hPlayer))->EnableControl(TRUE);
+			if (m_hPlayer->IsAlive( ))
+			{
+				SET_VIEW( m_hPlayer->edict(), m_hPlayer->edict() );
+				((CBasePlayer *)((CBaseEntity *)m_hPlayer))->EnableControl(TRUE);
+			}
+			SUB_UseTargets( this, USE_TOGGLE, 0 );
+			pev->avelocity = Vector( 0, 0, 0 );
+			m_state = 0;
+			return;
 		}
-		SUB_UseTargets( this, USE_TOGGLE, 0 );
-		pev->avelocity = Vector( 0, 0, 0 );
-		m_state = 0;
-		return;
 	}
 
 	Vector vecGoal = UTIL_VecToAngles( m_hTarget->pev->origin - pev->origin );
@@ -2426,4 +2673,33 @@ void CTriggerCamera::Move()
 
 	float fraction = 2 * gpGlobals->frametime;
 	pev->velocity = ((pev->movedir * pev->speed) * fraction) + (pev->velocity * (1-fraction));
+}
+
+
+//=========================================================
+// trigger_tankeject - throws the driver out of the target tank
+//=========================================================
+class CVehicleTriggerEject : public CBaseTrigger
+{
+public:
+	void Spawn( void );
+	void EXPORT UseEject( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	int ObjectCaps( void ) { return CBaseTrigger::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+};
+LINK_ENTITY_TO_CLASS( trigger_tankeject, CVehicleTriggerEject );
+
+void CVehicleTriggerEject::Spawn( void )
+{
+	SetUse( UseEject );
+}
+
+void CVehicleTriggerEject::UseEject( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	edict_t *pentTank = FIND_ENTITY_BY_TARGETNAME( NULL, STRING( pev->target ) );
+
+	if ( !FClassnameIs( VARS( pentTank ), "vehicle_tank" ) )
+		return;
+
+	CVehicleTank *pTank = (CVehicleTank *)CBaseEntity::Instance( pentTank );
+	pTank->EjectPlayer();
 }
