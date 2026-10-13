@@ -130,9 +130,9 @@ public:
 	
 	virtual int	 BloodColor( void ) { return m_bloodColor; }
 
-	virtual CBaseMonster *MyMonsterPointer( void ) { return this; }
 	virtual int MonsterType( void ) { return 0; }	// index into the species table: gibs, blood, movetype
 	virtual void PrecacheSounds( void ) {}
+	virtual CBaseMonster *MyMonsterPointer( void ) { return this; }
 	virtual void Look ( int iDistance );// basic sight function for monsters
 	virtual void RunAI ( void );// core ai function!	
 	void Listen ( void );
@@ -325,10 +325,6 @@ public:
 
 	virtual int HeavyDamageThreshold( void ) { return 20; }	// bits_COND_HEAVY_DAMAGE at or above this
 	virtual int LightDamageThreshold( void ) { return 0; }	// bits_COND_LIGHT_DAMAGE above this
-	virtual const char *SentenceGroup( int index ) { return NULL; }
-	virtual void RangeAttackSound( void ) {}
-	virtual void MeleeAttackSound( void ) {}
-	virtual void GibSound( void );
 
 	virtual int TakeHealth( float flHealth, int bitsDamageType );
 	virtual int TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType);
@@ -341,6 +337,10 @@ public:
 	void RouteClear( void );
 	void RouteNew( void );
 	
+	virtual const char *SentenceGroup( int index ) { return NULL; }
+	virtual void RangeAttackSound( void ) {}
+	virtual void MeleeAttackSound( void ) {}
+	virtual void GibSound( void );
 	virtual void DeathSound ( void ) { return; };
 	virtual void AlertSound ( void ) { return; };
 	virtual void IdleSound ( void ) { return; };
