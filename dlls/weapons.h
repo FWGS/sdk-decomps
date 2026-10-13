@@ -63,7 +63,9 @@ public:
 
 #define WEAPON_NONE				0
 #define WEAPON_FISTS			1
-#define WEAPON_CUST_BEAM		2	// cust_1BeamFrequency, cust_2BeamCurrent, cust_3BeamVoltage
+#define WEAPON_CUST_FREQUENCY	2	// cust_1BeamFrequency
+#define WEAPON_CUST_CURRENT		3	// cust_2BeamCurrent
+#define WEAPON_CUST_VOLTAGE		4	// cust_3BeamVoltage
 #define WEAPON_CUST_DMLGRENADE	6	// cust_1DMLGrenDetonate, cust_2DMLGrenPayload
 #define WEAPON_AICORE			7
 #define WEAPON_CUST_KNIFE		8	// cust_1fistsKnife
@@ -365,6 +367,14 @@ public:
 	int		m_fInReload;										// Are we in the middle of a reload;
 
 	int		m_iDefaultAmmo;// how much ammo you get when you pick up this weapon as placed by a level designer.
+};
+
+// Customization items (cust_*): settings for a weapon, picked on the
+// customization screen. They are never drawn. Name ours.
+class CBaseCustomization : public CBasePlayerWeapon
+{
+public:
+	void Precache( void ) { PRECACHE_MODEL( "models/w_crowbar.mdl" ); }
 };
 
 

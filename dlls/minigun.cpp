@@ -547,7 +547,7 @@ void CMinigun::Holster( int skiplocal )
 //=========================================================
 // customization items
 //=========================================================
-class CCust1MinigunSpin : public CBasePlayerWeapon
+class CCust1MinigunSpin : public CBaseCustomization
 {
 public:
 	void Spawn( void );
@@ -587,7 +587,7 @@ int CCust1MinigunSpin::GetItemInfo(ItemInfo *p)
 }
 
 
-class CCust2MinigunCooled : public CBasePlayerWeapon
+class CCust2MinigunCooled : public CBaseCustomization
 {
 public:
 	void Spawn( void );

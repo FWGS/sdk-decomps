@@ -396,6 +396,10 @@ SOURCE=.\aicore.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\beamgun.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\fists.cpp
 # End Source File
 # Begin Source File

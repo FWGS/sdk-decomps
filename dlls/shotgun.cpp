@@ -403,7 +403,7 @@ void CShotgun::WeaponIdle( void )
 //=========================================================
 // customization items
 //=========================================================
-class CCust1ShotgunSpread : public CBasePlayerWeapon
+class CCust1ShotgunSpread : public CBaseCustomization
 {
 public:
 	void Spawn( void );
@@ -443,7 +443,7 @@ int CCust1ShotgunSpread::GetItemInfo(ItemInfo *p)
 }
 
 
-class CCust2ShotgunShells : public CBasePlayerWeapon
+class CCust2ShotgunShells : public CBaseCustomization
 {
 public:
 	void Spawn( void );

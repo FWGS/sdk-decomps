@@ -539,7 +539,7 @@ void CFists::Customize( char cOption, int iValue )
 //=========================================================
 // the knife customization item
 //=========================================================
-class CCust1fistsKnife : public CBasePlayerWeapon
+class CCust1fistsKnife : public CBaseCustomization
 {
 public:
 	void Spawn( void );
