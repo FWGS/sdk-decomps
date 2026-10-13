@@ -901,17 +901,18 @@ void CVehicleTank::HullCheck( void )
 	CPlane planeRight;
 	CPlane planeTop;
 	CPlane planeBottom;
+	Vector vecRight, vecLeft, vecFront, vecBack, vecTop, vecBottom;
 
 	UTIL_MakeVectors( m_pBodyBSP->pev->angles );
 
 	float flExtra = pev->velocity.Length() / 5 + 16;
 
-	Vector vecRight = pev->origin + gpGlobals->v_right * ( VehicleWidth() + flExtra );
-	Vector vecLeft = pev->origin - gpGlobals->v_right * ( VehicleWidth() + flExtra );
-	Vector vecFront = pev->origin + gpGlobals->v_forward * ( VehicleLength() + flExtra );
-	Vector vecBack = pev->origin - gpGlobals->v_forward * ( VehicleLength() + flExtra );
-	Vector vecTop = pev->origin + gpGlobals->v_up * 24;
-	Vector vecBottom = Vector( pev->origin.x, pev->origin.y, pev->origin.z - 36 );
+	vecRight = pev->origin + gpGlobals->v_right * ( VehicleWidth() + flExtra );
+	vecLeft = pev->origin - gpGlobals->v_right * ( VehicleWidth() + flExtra );
+	vecFront = pev->origin + gpGlobals->v_forward * ( VehicleLength() + flExtra );
+	vecBack = pev->origin - gpGlobals->v_forward * ( VehicleLength() + flExtra );
+	vecTop = pev->origin + gpGlobals->v_up * 24;
+	vecBottom = pev->origin - Vector( 0, 0, 36 );
 
 	planeFront.InitializePlane( -gpGlobals->v_forward, vecFront );
 	planeBack.InitializePlane( gpGlobals->v_forward, vecBack );
@@ -925,7 +926,10 @@ void CVehicleTank::HullCheck( void )
 	CBaseEntity *pEntity = NULL;
 	while ( ( pEntity = UTIL_FindEntityInSphere( pEntity, pev->origin, flRadius ) ) != NULL )
 	{
-		if ( pEntity != m_pBodyBSP && pEntity != m_pTurretBSP && pEntity != m_pBarrelBSP && pEntity && pEntity->pev->takedamage && pEntity != this
+		if ( pEntity == m_pBodyBSP || pEntity == m_pTurretBSP || pEntity == m_pBarrelBSP )
+			continue;
+
+		if ( pEntity && pEntity->pev->takedamage && pEntity != this
 			&& planeFront.PointInFront( pEntity->pev->origin ) && planeBack.PointInFront( pEntity->pev->origin )
 			&& planeRight.PointInFront( pEntity->pev->origin ) && planeLeft.PointInFront( pEntity->pev->origin )
 			&& planeTop.PointInFront( pEntity->pev->origin ) && planeBottom.PointInFront( pEntity->pev->origin ) )
