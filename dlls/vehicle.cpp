@@ -462,14 +462,14 @@ int CVehicleTank::TankControls( void )
 		float flSpeed = m_flSpeed;
 		if ( flSpeed < 0 )
 			flSpeed *= -1;
-		flSpeed *= 0.004;
+		flSpeed /= 250;
 
 		float flVol = flSpeed * 0.3;
 		if ( m_iGasState )
 			flVol += 0.3;
 		EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_VOICE, "tank/engineidle.wav", flVol * m_fTankSoundAdj, 0.8, SND_CHANGE_VOL, PITCH_NORM );
 
-		float flTurn = m_fYawAccel * 0.01;
+		float flTurn = m_fYawAccel / 100;
 		if ( flTurn < 0 )
 			flTurn *= -1;
 		if ( flTurn < flSpeed )
@@ -589,7 +589,7 @@ void CVehicleTank::SetTankAnim( int iAnim )
 	case TANK_BUMPFRONTRIGHT:
 		if ( m_flNextRamSound < gpGlobals->time )
 		{
-			EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_STATIC, "tank/ramwall.wav", ( abs( (int)( m_flLastSpeed * 0.004 ) ) * 0.5 + 0.3 ) * m_fTankSoundAdj, 0.8, 0, PITCH_NORM );
+			EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_STATIC, "tank/ramwall.wav", ( abs( (int)( m_flLastSpeed / 250 ) ) * 0.5 + 0.3 ) * m_fTankSoundAdj, 0.8, 0, PITCH_NORM );
 			m_fNextMGunAttack = gpGlobals->time + 0.8;
 			if ( m_pPlayer )
 			{
@@ -609,7 +609,7 @@ void CVehicleTank::SetTankAnim( int iAnim )
 	case TANK_BUMPBACKRIGHT:
 		if ( m_flNextRamSound < gpGlobals->time )
 		{
-			EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_STATIC, "tank/ramwall.wav", ( abs( (int)( m_flLastSpeed * 0.004 ) ) * 0.5 + 0.3 ) * m_fTankSoundAdj, 0.8, 0, PITCH_NORM );
+			EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_STATIC, "tank/ramwall.wav", ( abs( (int)( m_flLastSpeed / 250 ) ) * 0.5 + 0.3 ) * m_fTankSoundAdj, 0.8, 0, PITCH_NORM );
 			m_fNextMGunAttack = gpGlobals->time + 0.8;
 			if ( m_pPlayer )
 			{
@@ -628,7 +628,7 @@ void CVehicleTank::SetTankAnim( int iAnim )
 	case TANK_BUMPRIGHT:
 		if ( m_flNextRamSound < gpGlobals->time )
 		{
-			EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_STATIC, "tank/ramwall.wav", ( abs( (int)( m_flLastSpeed * 0.004 ) ) * 0.5 + 0.3 ) * m_fTankSoundAdj, 0.8, 0, PITCH_NORM );
+			EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_STATIC, "tank/ramwall.wav", ( abs( (int)( m_flLastSpeed / 250 ) ) * 0.5 + 0.3 ) * m_fTankSoundAdj, 0.8, 0, PITCH_NORM );
 			m_fNextMGunAttack = gpGlobals->time + 0.8;
 			pev->sequence = iAnim;
 			pev->frame = 0;
@@ -1430,7 +1430,7 @@ int CVehicleTank::CanExit( void )
 		return 1;
 
 	if ( m_flNextOjectionDeniedSound < gpGlobals->time )
-		m_flNextOjectionDeniedSound = gpGlobals->time + 3.0;
+		m_flNextOjectionDeniedSound = gpGlobals->time + 3;
 
 	return 0;
 }
@@ -1670,7 +1670,7 @@ void CVehicleTankBSP::Spawn( void )
 	UTIL_SetOrigin( pev, pev->origin );
 
 	SetThink( WaitThink );
-	pev->nextthink = pev->ltime + 1.0;
+	pev->nextthink = pev->ltime + 1;
 	SetUse( TankBSPUse );
 
 	m_pPlayer = NULL;
@@ -1716,7 +1716,7 @@ void CVehicleTankBSP::TankBSPUse( CBaseEntity *pActivator, CBaseEntity *pCaller,
 
 void CVehicleTankBSP::WaitThink( void )
 {
-	pev->nextthink = pev->ltime + 10.0;
+	pev->nextthink = pev->ltime + 10;
 }
 
 void CVehicleTankBSP::Blocked( CBaseEntity *pOther )
@@ -1872,7 +1872,7 @@ void CVehicleTriggerTankGas::TouchTank( CBaseEntity *pOther )
 // effects helpers
 //=========================================================
 
-// a fireball (nothing calls it)
+// an explosion (nothing calls it)
 void ExplosionAt( Vector vecOrigin )
 {
 	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, vecOrigin );
@@ -1880,10 +1880,10 @@ void ExplosionAt( Vector vecOrigin )
 		WRITE_COORD( vecOrigin.x );
 		WRITE_COORD( vecOrigin.y );
 		WRITE_COORD( vecOrigin.z );
-		WRITE_SHORT( g_sModelIndexFireball );
+		WRITE_SHORT( g_sModelIndexWExplosion );
 		WRITE_BYTE( 10 );	// scale * 10
 		WRITE_BYTE( 10 );	// framerate
-		WRITE_BYTE( TE_EXPLFLAG_NOPARTICLES );
+		WRITE_BYTE( TE_EXPLFLAG_NOSOUND );
 	MESSAGE_END();
 }
 
@@ -2084,7 +2084,7 @@ void CVehicleTankShell::ShellSmokeThink( void )
 	CSprite *pSprite = CSprite::SpriteCreate( "sprites/part2.spr", pev->origin, TRUE );
 	pSprite->SetScale( 7.0 );
 	pSprite->AnimateAndDie( 20 );
-	pSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxNoDissipation );
+	pSprite->SetTransparency( kRenderTransAlpha, 255, 255, 255, 255, kRenderFxNoDissipation );
 	pSprite->pev->frame = 0;
 	UTIL_SetOrigin( pSprite->pev, pev->origin );
 	pSprite->pev->origin.z += 16;
@@ -2392,7 +2392,7 @@ void CVehicleTankRocket::RocketTouch( CBaseEntity *pOther )
 		CSprite *pSprite = CSprite::SpriteCreate( "sprites/part2.spr", pev->origin, TRUE );
 		pSprite->SetScale( 7.0 );
 		pSprite->AnimateAndDie( 10 );
-		pSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxNoDissipation );
+		pSprite->SetTransparency( kRenderTransAlpha, 255, 255, 255, 255, kRenderFxNoDissipation );
 		pSprite->pev->frame = 0;
 		UTIL_SetOrigin( pSprite->pev, pev->origin );
 		pSprite->pev->origin.z += 16;
@@ -2431,7 +2431,7 @@ void CVehicleTankRocket::RocketSmokeThink( void )
 	{
 		m_pSmoke = CSprite::SpriteCreate( "sprites/smokering.spr", pev->origin, FALSE );
 		m_pSmoke->pev->scale = 0.2;
-		m_pSmoke->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxNoDissipation );
+		m_pSmoke->SetTransparency( kRenderTransAlpha, 255, 255, 255, 255, kRenderFxNoDissipation );
 		m_pSmoke->pev->frame = 0;
 		UTIL_SetOrigin( m_pSmoke->pev, pev->origin );
 	}
@@ -2442,7 +2442,7 @@ void CVehicleTankRocket::RocketSmokeThink( void )
 
 	pev->nextthink = gpGlobals->time + 0.1;
 
-	if ( m_pSmoke->pev->scale > 3.0 )
+	if ( m_pSmoke->pev->scale > 3 )
 	{
 		UTIL_Remove( m_pSmoke );
 		m_pSmoke = NULL;
