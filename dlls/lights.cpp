@@ -139,18 +139,62 @@ LINK_ENTITY_TO_CLASS( light_spot, CLight );
 class CEnvLight : public CLight
 {
 public:
+	CEnvLight();
 	void	KeyValue( KeyValueData* pkvd ); 
 	void	Spawn( void );
+	void	Precache( void );
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	Vector	m_vecColors;
 };
 
 LINK_ENTITY_TO_CLASS( light_environment, CEnvLight );
+
+TYPEDESCRIPTION	CEnvLight::m_SaveData[] = 
+{
+	DEFINE_FIELD( CEnvLight, m_vecColors, FIELD_VECTOR ),
+};
+
+IMPLEMENT_SAVERESTORE( CEnvLight, CLight );
+
+CEnvLight::CEnvLight()
+{
+	m_vecColors = g_vecZero;
+}
+
+void CEnvLight::Precache( void )
+{
+	// restore the sky after a save game
+	if ( m_vecColors != g_vecZero )
+	{
+		char szVector[64];
+		UTIL_MakeAimVectors( pev->angles );
+
+		sprintf( szVector, "%f", gpGlobals->v_forward.x );
+		CVAR_SET_STRING( "sv_skyvec_x", szVector );
+		sprintf( szVector, "%f", gpGlobals->v_forward.y );
+		CVAR_SET_STRING( "sv_skyvec_y", szVector );
+		sprintf( szVector, "%f", gpGlobals->v_forward.z );
+		CVAR_SET_STRING( "sv_skyvec_z", szVector );
+
+		char szColor[64];
+		sprintf( szColor, "%d", (int)m_vecColors.x );
+		CVAR_SET_STRING( "sv_skycolor_r", szColor );
+		sprintf( szColor, "%d", (int)m_vecColors.y );
+		CVAR_SET_STRING( "sv_skycolor_g", szColor );
+		sprintf( szColor, "%d", (int)m_vecColors.z );
+		CVAR_SET_STRING( "sv_skycolor_b", szColor );
+	}
+}
 
 void CEnvLight::KeyValue( KeyValueData* pkvd )
 {
 	if (FStrEq(pkvd->szKeyName, "_light"))
 	{
 		int r, g, b, v, j;
-		char szColor[64];
 		j = sscanf( pkvd->szValue, "%d %d %d %d\n", &r, &g, &b, &v );
 		if (j == 1)
 		{
@@ -168,13 +212,9 @@ void CEnvLight::KeyValue( KeyValueData* pkvd )
 		g = pow( g / 114.0, 0.6 ) * 264;
 		b = pow( b / 114.0, 0.6 ) * 264;
 
+		m_vecColors = Vector( r, g, b );
+
 		pkvd->fHandled = TRUE;
-		sprintf( szColor, "%d", r );
-		CVAR_SET_STRING( "sv_skycolor_r", szColor );
-		sprintf( szColor, "%d", g );
-		CVAR_SET_STRING( "sv_skycolor_g", szColor );
-		sprintf( szColor, "%d", b );
-		CVAR_SET_STRING( "sv_skycolor_b", szColor );
 	}
 	else
 	{
@@ -188,12 +228,23 @@ void CEnvLight :: Spawn( void )
 	char szVector[64];
 	UTIL_MakeAimVectors( pev->angles );
 
+	pev->classname = MAKE_STRING( "light_environment" );
+	pev->targetname = pev->classname;
+
 	sprintf( szVector, "%f", gpGlobals->v_forward.x );
 	CVAR_SET_STRING( "sv_skyvec_x", szVector );
 	sprintf( szVector, "%f", gpGlobals->v_forward.y );
 	CVAR_SET_STRING( "sv_skyvec_y", szVector );
 	sprintf( szVector, "%f", gpGlobals->v_forward.z );
 	CVAR_SET_STRING( "sv_skyvec_z", szVector );
+
+	char szColor[64];
+	sprintf( szColor, "%d", (int)m_vecColors.x );
+	CVAR_SET_STRING( "sv_skycolor_r", szColor );
+	sprintf( szColor, "%d", (int)m_vecColors.y );
+	CVAR_SET_STRING( "sv_skycolor_g", szColor );
+	sprintf( szColor, "%d", (int)m_vecColors.z );
+	CVAR_SET_STRING( "sv_skycolor_b", szColor );
 
 	CLight::Spawn( );
 }
