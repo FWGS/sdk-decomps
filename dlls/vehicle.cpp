@@ -1197,33 +1197,34 @@ BOOL CVehicleTank::CornersBlocked( Vector vecVelocity, float flInterval, float f
 //=========================================================
 Vector CVehicleTank::PushAway( void )
 {
-	if ( m_vecCollision == g_vecZero )
-		return g_vecZero;
+	if ( m_vecCollision != g_vecZero )
+	{
+		UTIL_MakeVectors( pev->angles + pev->avelocity * 0.1 );
 
-	Vector vecAvel = pev->avelocity * 0.1;
-	Vector vecAngles = pev->angles + vecAvel;
-	UTIL_MakeVectors( vecAngles );
+		Vector vecDir = ( m_vecCollision - pev->origin ).Normalize();
+		Vector vecPush;
+		if ( DotProduct( vecDir, gpGlobals->v_forward ) > 0 && pev->avelocity.y >= 0 )
+			vecPush = m_vecCollision - pev->origin;
 
-	Vector vecPush;
-	Vector vecDir = ( m_vecCollision - pev->origin ).Normalize();
-	if ( DotProduct( vecDir, gpGlobals->v_forward ) > 0 && pev->avelocity.y >= 0 )
-		vecPush = m_vecCollision - pev->origin;
+		if ( pev->avelocity.y < 0 )
+			vecPush = pev->origin - m_vecCollision;
+		else
+			vecPush = pev->origin - m_vecCollision;
 
-	if ( pev->avelocity.y >= 0 )
-		vecPush = pev->origin - m_vecCollision;
-	else
-		vecPush = pev->origin - m_vecCollision;
+		if ( pev->avelocity.y < 0 )
+			vecPush = m_vecCollision - pev->origin;
 
-	if ( pev->avelocity.y < 0 )
-		vecPush = m_vecCollision - pev->origin;
+		Vector vecTurn;
+		vecTurn = UTIL_VecToAngles( vecPush.Normalize() );
+		Vector vecForward, vecRight;
+		UTIL_MakeVectorsPrivate( vecTurn, vecForward, vecRight, NULL );
 
-	Vector vecTurn = UTIL_VecToAngles( vecPush.Normalize() );
-	Vector vecForward, vecRight;
-	UTIL_MakeVectorsPrivate( vecTurn, vecForward, vecRight, NULL );
+		SetAvelocity( pev->avelocity / 4 );
 
-	SetAvelocity( pev->avelocity / 4 );
+		return -vecRight * vecPush.Length() / 4;
+	}
 
-	return -vecRight * vecPush.Length() / 4;
+	return g_vecZero;
 }
 
 //=========================================================
