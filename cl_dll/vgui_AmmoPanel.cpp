@@ -78,14 +78,14 @@ CAmmoPanel::CAmmoPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall)
 	m_iShown = true;
 }
 
-// The HUD calls it each frame with the current weapon's ammo
-void CAmmoPanel::UpdateAmmo( int iAmmoType, int iMaxClip )
+// The HUD calls it each frame with the current weapon's ammo type and maximum
+void CAmmoPanel::UpdateAmmo( int iAmmoType, int iMaxAmmo )
 {
 	int iCount = gWR.CountAmmo( iAmmoType );
 	m_iAmmoCount = iCount;
 
 	// hide the old type's bullets
-	if ( m_iAmmoType > 0 && m_iAmmoType <= MAX_AMMOPANEL_TYPES && iAmmoType != m_iAmmoType )
+	if ( m_iAmmoType > 0 && m_iAmmoType < MAX_AMMOPANEL_TYPES + 1 && iAmmoType != m_iAmmoType )
 	{
 		for ( int i = 0; i < 3; i++ )
 			m_pAmmo[m_iAmmoType - 1][i]->setVisible( false );
@@ -93,30 +93,31 @@ void CAmmoPanel::UpdateAmmo( int iAmmoType, int iMaxClip )
 
 	m_iAmmoType = iAmmoType;
 
-	if ( iAmmoType < 1 || iAmmoType > MAX_AMMOPANEL_TYPES )
-		return;
-
-	int iPerClip = sAmmoPanelTypes[iAmmoType - 1].iPerClip;
-	int iClips = iMaxClip / iPerClip;
-	if ( iClips < 1 )
-		return;
-
-	int iLeft = iCount % iPerClip;
-	if ( iLeft < 1 )
+	if ( iAmmoType >= 1 && iAmmoType <= MAX_AMMOPANEL_TYPES )
 	{
-		iLeft = iCount ? iPerClip : 0;
-	}
-	else if ( iLeft > iPerClip * iClips )
-	{
-		m_iClips = iClips;
-		iLeft = iCount % ( iPerClip * iClips );
-	}
+		int iPerClip = sAmmoPanelTypes[iAmmoType - 1].iPerClip;
+		int iClips = iMaxAmmo / iPerClip;
 
-	m_iClips = ( iCount - iLeft ) / iPerClip;
+		if ( iClips >= 1 )
+		{
+			int iLeft = iCount % iPerClip;
+			if ( iLeft < 1 )
+			{
+				iLeft = iCount ? iPerClip : 0;
+			}
+			else if ( iLeft > iPerClip * iClips )
+			{
+				m_iClips = iClips;
+				iLeft = iCount % ( iPerClip * iClips );
+			}
 
-	// sic: only ever shows the first three
-	for ( int i = 0; i < 3; i++ )
-		m_pAmmo[iAmmoType - 1][i]->setVisible( true );
+			m_iClips = ( iCount - iLeft ) / iPerClip;
+
+			// sic: only ever shows the first three
+			for ( int i = 0; i < 3; i++ )
+				m_pAmmo[iAmmoType - 1][i]->setVisible( true );
+		}
+	}
 }
 
 bool CAmmoPanel::SlotInput( int iSlot )

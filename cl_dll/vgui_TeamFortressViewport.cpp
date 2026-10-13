@@ -1703,27 +1703,28 @@ void TeamFortressViewport::CreateMetalHud()
 // with the HUD
 void CMetalHudPanel::paint( void )
 {
-	if ( gHUD.m_iHideHUDDisplay & ( HIDEHUD_ALL | HIDEHUD_HEALTH ) )
+	if ( !( gHUD.m_iHideHUDDisplay & ( HIDEHUD_ALL | HIDEHUD_HEALTH ) ) )
+	{
+		if ( CVAR_GET_FLOAT( "hud_smallhud" ) == 0 && ScreenWidth > 640 )
+		{
+			if ( m_iSmall )
+			{
+				m_pSmall->setVisible( false );
+				m_pBig->setVisible( true );
+				m_iSmall = false;
+			}
+		}
+		else if ( !m_iSmall )
+		{
+			m_pSmall->setVisible( true );
+			m_pBig->setVisible( false );
+			m_iSmall = true;
+		}
+	}
+	else
 	{
 		setVisible( false );
 		m_iShown = false;
-		return;
-	}
-
-	if ( CVAR_GET_FLOAT( "hud_smallhud" ) == 0 && ScreenWidth > 640 )
-	{
-		if ( m_iSmall )
-		{
-			m_pSmall->setVisible( false );
-			m_pBig->setVisible( true );
-			m_iSmall = false;
-		}
-	}
-	else if ( !m_iSmall )
-	{
-		m_pSmall->setVisible( true );
-		m_pBig->setVisible( false );
-		m_iSmall = true;
 	}
 }
 

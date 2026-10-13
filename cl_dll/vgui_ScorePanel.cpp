@@ -368,13 +368,7 @@ void ScorePanel::setSize(int wide,int tall)
 //-----------------------------------------------------------------------------
 void ScorePanel::Update()
 {
-	// Set the title
-	if (gViewPort->m_szServerName)
-	{
-		char sz[MAX_SERVERNAME_LENGTH + 16];
-		sprintf(sz, "  SCORES: %s", gViewPort->m_szServerName );
-		m_pTitleLabel->setText(sz);
-	}
+	// Gunman: the title stays as the constructor set it
 
 	_tablePanel->m_iRows = 0;
 	gViewPort->GetAllPlayersInfo();

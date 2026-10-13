@@ -15,7 +15,7 @@
 //
 // vgui_Temperature.h
 //
-// the temperature gauge and its warnings
+// the temperature gauge in hot places, and its warning texts
 //
 
 #ifndef VGUI_TEMPERATURE_H

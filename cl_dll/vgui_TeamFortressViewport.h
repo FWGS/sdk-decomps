@@ -1236,7 +1236,7 @@ public:
 public:
 	CAmmoPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall);
 
-	void UpdateAmmo( int iAmmoType, int iMaxClip );
+	void UpdateAmmo( int iAmmoType, int iMaxAmmo );
 
 	virtual bool SlotInput( int iSlot );
 	virtual void Open( void );
@@ -1320,14 +1320,14 @@ public:
 		m_pSmall->setVisible( false );
 
 		m_iSmall = (int)CVAR_GET_FLOAT( "hud_smallhud" );
-		if ( !m_iSmall )
+		if ( m_iSmall )
 		{
-			m_pBig->setVisible( true );
+			m_pSmall->setVisible( true );
 			m_iShown = true;
 		}
 		else
 		{
-			m_pSmall->setVisible( true );
+			m_pBig->setVisible( true );
 			m_iShown = true;
 		}
 	}

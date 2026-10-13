@@ -76,15 +76,13 @@ CClassMenuPanel::CClassMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide
 	}
 
 	int iY = 0;
-	for ( int i = 0; i < MAX_WEAPONLIST; i++ )
+	for ( int i = 0; i < MAX_WEAPONLIST; i++, iY += iSpacing )
 	{
 		sprintf( sz, "%s%d", sWeaponList[i], 0 );
 
 		m_pWeapons[i] = new CImageLabel( sz, iX, iY, 256, 64 );
 		m_pWeapons[i]->setParent( this );
 		m_pWeapons[i]->setVisible( true );
-
-		iY += iSpacing;
 	}
 }
 
