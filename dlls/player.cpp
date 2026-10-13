@@ -158,6 +158,8 @@ TYPEDESCRIPTION	CBasePlayer::m_playerSaveData[] =
 };	
 
 
+unsigned short g_usCleanup;
+unsigned short g_usSpurtBlood;
 int giPrecacheGrunt = 0;
 int giPrecacheTank = 1;
 int gmsgShake = 0;

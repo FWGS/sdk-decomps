@@ -42,6 +42,65 @@ extern entvars_t *g_pevLastInflictor;
 #define ALIEN_GIB_COUNT			4
 
 
+//=========================================================
+// TEXTURETYPE_Check - what TEXTURETYPE_PlaySound does before
+// it plays anything: find the material under the bullet.
+// The sounds are gone; nothing uses the result.
+//=========================================================
+static void TEXTURETYPE_Check( TraceResult *ptr, Vector vecSrc, Vector vecEnd, int iBulletType )
+{
+	char chTextureType;
+	char szbuffer[64];
+	const char *pTextureName;
+	float rgfl1[3];
+	float rgfl2[3];
+
+	if ( !ptr )
+		return;
+
+	CBaseEntity *pEntity = CBaseEntity::Instance(ptr->pHit);
+
+	chTextureType = 0;
+
+	if (pEntity && pEntity->Classify() != CLASS_NONE && pEntity->Classify() != CLASS_MACHINE)
+		// hit body
+		chTextureType = CHAR_TEX_FLESH;
+	else
+	{
+		// hit world
+
+		// find texture under strike, get material type
+
+		// copy trace vector into array for trace_texture
+
+		vecSrc.CopyToArray(rgfl1);
+		vecEnd.CopyToArray(rgfl2);
+
+		// get texture from entity or world (world is ent(0))
+		if (pEntity)
+			pTextureName = TRACE_TEXTURE( ENT(pEntity->pev), rgfl1, rgfl2 );
+		else
+			pTextureName = TRACE_TEXTURE( ENT(0), rgfl1, rgfl2 );
+			
+		if ( pTextureName )
+		{
+			// strip leading '-0' or '+0~' or '{' or '!'
+			if (*pTextureName == '-' || *pTextureName == '+')
+				pTextureName += 2;
+
+			if (*pTextureName == '{' || *pTextureName == '!' || *pTextureName == '~' || *pTextureName == ' ')
+				pTextureName++;
+			// '}}'
+			strcpy(szbuffer, pTextureName);
+			szbuffer[CBTEXTURENAMEMAX - 1] = 0;
+				
+			// get texture type
+			chTextureType = TEXTURETYPE_Find(szbuffer);	
+		}
+	}
+}
+
+
 // HACKHACK -- The gib velocity equations don't work
 void CGib :: LimitVelocity( void )
 {
@@ -1782,7 +1841,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 			{
 				pEntity->TraceAttack(pevAttacker, iDamage, vecDir, &tr, DMG_BULLET | ((iDamage > 16) ? DMG_ALWAYSGIB : DMG_NEVERGIB) );
 				
-				TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
+				TEXTURETYPE_Check(&tr, vecSrc, vecEnd, iBulletType);
 			} 
 			else switch(iBulletType)
 			{
@@ -1794,14 +1853,14 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 
 			case BULLET_PLAYER_MP5:		
 				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgMP5, vecDir, &tr, DMG_BULLET); 
-				TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
+				TEXTURETYPE_Check(&tr, vecSrc, vecEnd, iBulletType);
 				break;
 
 			case BULLET_PLAYER_357:		
 				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgBuckshot, vecDir, &tr, DMG_BULLET); 
 				if ( !tracer )
 				{
-					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
+					TEXTURETYPE_Check(&tr, vecSrc, vecEnd, iBulletType);
 				}
 				break;
 
@@ -1809,7 +1868,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgM203Grenade, vecDir, &tr, DMG_BULLET); 
 				if ( !tracer )
 				{
-					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
+					TEXTURETYPE_Check(&tr, vecSrc, vecEnd, iBulletType);
 					DecalGunshot( &tr, iBulletType );
 				}
 				break;

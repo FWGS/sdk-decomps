@@ -45,6 +45,11 @@ extern DLL_GLOBAL ULONG		g_ulFrameCount;
 
 extern void CopyToBodyQue(entvars_t* pev);
 extern int giPrecacheGrunt;
+extern int giPrecacheTank;
+extern unsigned short g_usCleanup;
+extern unsigned short g_usSpurtBlood;
+extern int g_iGibHuman;
+extern int g_iGoreBot;
 extern int gmsgSayText;
 
 void LinkUserMessages( void );
@@ -352,7 +357,7 @@ void ClientCommand( edict_t *pEntity )
 	else if ( FStrEq(pcmd, "drop" ) )
 	{
 		// player is dropping an item. 
-		GetClassPtr((CBasePlayer *)pev)->DropPlayerItem((char *)CMD_ARGV(1));
+//		GetClassPtr((CBasePlayer *)pev)->DropPlayerItem((char *)CMD_ARGV(1));
 	}
 	else if ( FStrEq(pcmd, "fov" ) )
 	{
@@ -369,13 +374,19 @@ void ClientCommand( edict_t *pEntity )
 	{
 		GetClassPtr((CBasePlayer *)pev)->SelectItem((char *)CMD_ARGV(1));
 	}
+	else if (((pstr = strstr(pcmd, "custupdate")) != NULL)  && (pstr == pcmd))
+	{
+		CBasePlayer *pPlayer = GetClassPtr((CBasePlayer *)pev);
+		if ( pPlayer->m_pActiveItem )
+			pPlayer->m_pActiveItem->UpdateOwner();
+	}
+	else if (((pstr = strstr(pcmd, "cust_")) != NULL)  && (pstr == pcmd))
+	{
+		GetClassPtr((CBasePlayer *)pev)->CustomizeActiveItem((char *)pstr);
+	}
 	else if (((pstr = strstr(pcmd, "weapon_")) != NULL)  && (pstr == pcmd))
 	{
 		GetClassPtr((CBasePlayer *)pev)->SelectItem(pcmd);
-	}
-	else if (FStrEq(pcmd, "lastinv" ))
-	{
-		GetClassPtr((CBasePlayer *)pev)->SelectLastItem();
 	}
 	else if ( g_pGameRules->ClientCommand( GetClassPtr((CBasePlayer *)pev), pcmd ) )
 	{
@@ -538,6 +549,9 @@ void StartFrame( void )
 }
 
 
+int g_iRicochetSprite;
+int g_iBulletPuffSprite;
+
 void ClientPrecache( void )
 {
 	// setup precaches always needed
@@ -621,6 +635,8 @@ void ClientPrecache( void )
 
 // player gib sounds
 	PRECACHE_SOUND("common/bodysplat.wav");		               
+	PRECACHE_SOUND("common/smallsplat.wav");
+	PRECACHE_SOUND("lg_scorp/lg_scorp_attackb.wav");
 
 // player pain sounds
 	PRECACHE_SOUND("player/pl_pain2.wav");
@@ -628,6 +644,13 @@ void ClientPrecache( void )
 	PRECACHE_SOUND("player/pl_pain5.wav");
 	PRECACHE_SOUND("player/pl_pain6.wav");
 	PRECACHE_SOUND("player/pl_pain7.wav");
+
+	PRECACHE_SOUND("player/drown1.wav");
+	PRECACHE_SOUND("player/drown2.wav");
+	PRECACHE_SOUND("player/drown3.wav");
+	PRECACHE_SOUND("player/undrown1.wav");
+	PRECACHE_SOUND("player/undrown2.wav");
+	PRECACHE_SOUND("player/undrown3.wav");
 
 	PRECACHE_MODEL("models/player.mdl");
 
@@ -651,6 +674,22 @@ void ClientPrecache( void )
 
 	if (giPrecacheGrunt)
 		UTIL_PrecacheOther("monster_human_grunt");
+
+	g_iRicochetSprite = PRECACHE_MODEL("sprites/richo1.spr");
+	g_iBulletPuffSprite = PRECACHE_MODEL("sprites/bulletpuff.spr");
+	PRECACHE_MODEL("models/smallwoodgib.mdl");
+	PRECACHE_MODEL("sprites/wallpuff.spr");
+
+	g_usCleanup = PRECACHE_EVENT( 1, "events/cleanup.sc" );
+	g_usSpurtBlood = PRECACHE_EVENT( 1, "events/spurtblood.sc" );
+
+	g_iGibHuman = PRECACHE_MODEL("sprites/gibhuman.spr");
+	g_iGoreBot = PRECACHE_MODEL("sprites/gorebot.spr");
+
+	UTIL_PrecacheOther("player_armor");
+
+	if (giPrecacheTank)
+		UTIL_PrecacheOther("vehicle_tank");
 }
 
 /*
@@ -1317,7 +1356,6 @@ void RegisterEncoders( void )
 
 int GetWeaponData( struct edict_s *player, struct weapon_data_s *info )
 {
-#if defined( CLIENT_WEAPONS )
 	int i;
 	weapon_data_t *item;
 	entvars_t *pev = &player->v;
@@ -1365,9 +1403,6 @@ int GetWeaponData( struct edict_s *player, struct weapon_data_s *info )
 			}
 		}
 	}
-#else
-	memset( info, 0, 32 * sizeof( weapon_data_t ) );
-#endif
 	return 1;
 }
 
@@ -1409,7 +1444,6 @@ void UpdateClientData ( const struct edict_s *ent, int sendweapons, struct clien
 
 	cd->pushmsec		= ent->v.pushmsec;
 
-#if defined( CLIENT_WEAPONS )
 	if ( sendweapons )
 	{
 		entvars_t *pev = (entvars_t *)&ent->v;
@@ -1434,7 +1468,6 @@ void UpdateClientData ( const struct edict_s *ent, int sendweapons, struct clien
 			}
 		}
 	}
-#endif
 }
 
 /*
