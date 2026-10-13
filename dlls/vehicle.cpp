@@ -2001,6 +2001,9 @@ void CVehicleTankShell::Spawn( void )
 
 void CVehicleTankShell::ShellTouch( CBaseEntity *pOther )
 {
+	TraceResult tr;
+	Vector		vecSpot;// trace starts here!
+
 	// don't hit the tank that fired it
 	if ( !FClassnameIs( ENT( pOther->pev ), "vehicle_tank_turret" ) && !FClassnameIs( ENT( pOther->pev ), "vehicle_tank_barrel" ) )
 	{
@@ -2011,12 +2014,9 @@ void CVehicleTankShell::ShellTouch( CBaseEntity *pOther )
 			return;
 		}
 
-		EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "weapons/rocket1.wav", 0, 0, SND_STOP, PITCH_NORM );
+		STOP_SOUND( edict(), CHAN_VOICE, "weapons/rocket1.wav" );
 
 		pev->enemy = pOther->edict();
-
-		TraceResult tr;
-		Vector		vecSpot;// trace starts here!
 
 		vecSpot = pev->origin - pev->velocity.Normalize() * 32;
 		UTIL_TraceLine( vecSpot, vecSpot + pev->velocity.Normalize() * 64, ignore_monsters, ENT( pev ), &tr );
@@ -2338,7 +2338,7 @@ void CVehicleTankRocket::RocketTouch( CBaseEntity *pOther )
 		}
 		else
 		{
-			EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "weapons/rocket1.wav", 0, 0, SND_STOP, PITCH_NORM );
+			STOP_SOUND( edict(), CHAN_VOICE, "weapons/rocket1.wav" );
 
 			pev->enemy = pOther->edict();
 
