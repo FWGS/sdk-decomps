@@ -420,6 +420,10 @@ SOURCE=.\gausspistol.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\grenade_chem.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\minigun.cpp
 # End Source File
 # Begin Source File

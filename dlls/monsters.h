@@ -153,6 +153,7 @@ public:
 	virtual void Spawn( const char *szGibModel );
 	void EXPORT BounceGibTouch ( CBaseEntity *pOther );
 	void EXPORT StickyGibTouch ( CBaseEntity *pOther );
+	void EXPORT StickyAcidTouch ( CBaseEntity *pOther );
 	void EXPORT WaitTillLand( void );
 	void EXPORT GibSmokeThink( void );
 	void		StartSmoke( int iType );
@@ -162,6 +163,7 @@ public:
 	static	void SpawnHeadGib( entvars_t *pevVictim );
 	static	void SpawnRandomGibs( entvars_t *pevVictim, int cGibs, int human );
 	static  void SpawnStickyGibs( entvars_t *pevVictim, Vector vecOrigin, int cGibs );
+	static  void SpawnStickyAcidGibs( entvars_t *pevVictim, Vector vecOrigin, int cGibs );
 
 	int		m_bloodColor;
 	int		m_cBloodDecals;
