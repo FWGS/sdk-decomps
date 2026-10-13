@@ -43,16 +43,18 @@ CGlobalState					gGlobalState;
 extern DLL_GLOBAL	int			gDisplayTitle;
 
 extern void W_Precache(void);
+extern int g_iGoreBot;
+extern int g_iGibBot;
 
 //
 // This must match the list in util.h
 //
 DLL_DECALLIST gDecals[] = {
-	{ "{shot1",	0 },		// DECAL_GUNSHOT1 
-	{ "{shot2",	0 },		// DECAL_GUNSHOT2
-	{ "{shot3",0 },			// DECAL_GUNSHOT3
-	{ "{shot4",	0 },		// DECAL_GUNSHOT4
-	{ "{shot5",	0 },		// DECAL_GUNSHOT5
+	{ "{shot1", 0 },		// DECAL_GUNSHOT1
+	{ "{shot2", 0 },		// DECAL_GUNSHOT2
+	{ "{shot3", 0 },		// DECAL_GUNSHOT3
+	{ "{shot4", 0 },		// DECAL_GUNSHOT4
+	{ "{shot5", 0 },		// DECAL_GUNSHOT5
 	{ "{lambda01", 0 },		// DECAL_LAMBDA1
 	{ "{lambda02", 0 },		// DECAL_LAMBDA2
 	{ "{lambda03", 0 },		// DECAL_LAMBDA3
@@ -61,12 +63,6 @@ DLL_DECALLIST gDecals[] = {
 	{ "{lambda06", 0 },		// DECAL_LAMBDA6
 	{ "{scorch1", 0 },		// DECAL_SCORCH1
 	{ "{scorch2", 0 },		// DECAL_SCORCH2
-	{ "{blood1", 0 },		// DECAL_BLOOD1
-	{ "{blood2", 0 },		// DECAL_BLOOD2
-	{ "{blood3", 0 },		// DECAL_BLOOD3
-	{ "{blood4", 0 },		// DECAL_BLOOD4
-	{ "{blood5", 0 },		// DECAL_BLOOD5
-	{ "{blood6", 0 },		// DECAL_BLOOD6
 	{ "{yblood1", 0 },		// DECAL_YBLOOD1
 	{ "{yblood2", 0 },		// DECAL_YBLOOD2
 	{ "{yblood3", 0 },		// DECAL_YBLOOD3
@@ -84,12 +80,55 @@ DLL_DECALLIST gDecals[] = {
 	{ "{spit1", 0 },		// DECAL_SPIT1
 	{ "{spit2", 0 },		// DECAL_SPIT2
 	{ "{bproof1", 0 },		// DECAL_BPROOF1
-	{ "{gargstomp", 0 },	// DECAL_GARGSTOMP1,	// Gargantua stomp crack
-	{ "{smscorch1", 0 },	// DECAL_SMALLSCORCH1,	// Small scorch mark
-	{ "{smscorch2", 0 },	// DECAL_SMALLSCORCH2,	// Small scorch mark
-	{ "{smscorch3", 0 },	// DECAL_SMALLSCORCH3,	// Small scorch mark
-	{ "{mommablob", 0 },	// DECAL_MOMMABIRTH		// BM Birth spray
-	{ "{mommablob", 0 },	// DECAL_MOMMASPLAT		// BM Mortar spray?? need decal
+	{ "{smscorch1", 0 },		// DECAL_SMALLSCORCH1
+	{ "{smscorch2", 0 },		// DECAL_SMALLSCORCH2
+	{ "{smscorch3", 0 },		// DECAL_SMALLSCORCH3
+	{ "{oil1", 0 },		// DECAL_OIL1
+	{ "{oil2", 0 },		// DECAL_OIL2
+	{ "{oil3", 0 },		// DECAL_OIL3
+	{ "{oil4", 0 },		// DECAL_OIL4
+	{ "{oil5", 0 },		// DECAL_OIL5
+	{ "{oil6", 0 },		// DECAL_OIL6
+	{ "{xenome1", 0 },		// DECAL_XENOME1
+	{ "{xenome2", 0 },		// DECAL_XENOME2
+	{ "{xenome3", 0 },		// DECAL_XENOME3
+	{ "{xenome4", 0 },		// DECAL_XENOME4
+	{ "{xenome5", 0 },		// DECAL_XENOME5
+	{ "{xenome6", 0 },		// DECAL_XENOME6
+	{ "{tube1", 0 },		// DECAL_TUBE1
+	{ "{tube2", 0 },		// DECAL_TUBE2
+	{ "{tube3", 0 },		// DECAL_TUBE3
+	{ "{tube4", 0 },		// DECAL_TUBE4
+	{ "{tube5", 0 },		// DECAL_TUBE5
+	{ "{tube6", 0 },		// DECAL_TUBE6
+	{ "{beak1", 0 },		// DECAL_BEAK1
+	{ "{beak2", 0 },		// DECAL_BEAK2
+	{ "{beak3", 0 },		// DECAL_BEAK3
+	{ "{beak4", 0 },		// DECAL_BEAK4
+	{ "{beak5", 0 },		// DECAL_BEAK5
+	{ "{beak6", 0 },		// DECAL_BEAK6
+	{ "{tubebig", 0 },		// DECAL_TUBEBIG
+	{ "{xenobig", 0 },		// DECAL_XENOBIG
+	{ "{oilbig", 0 },		// DECAL_OILBIG
+	{ "{beakbig", 0 },		// DECAL_BEAKBIG
+	{ "{human1", 0 },		// DECAL_HUMAN1
+	{ "{human2", 0 },		// DECAL_HUMAN2
+	{ "{human3", 0 },		// DECAL_HUMAN3
+	{ "{human4", 0 },		// DECAL_HUMAN4
+	{ "{human5", 0 },		// DECAL_HUMAN5
+	{ "{human6", 0 },		// DECAL_HUMAN6
+	{ "{cg_grn", 0 },		// DECAL_CG_GREEN
+	{ "{cg_yel", 0 },		// DECAL_CG_YELLOW
+	{ "{cg_orn", 0 },		// DECAL_CG_ORANGE
+	{ "{cg_red", 0 },		// DECAL_CG_RED
+	{ "{balburn", 0 },		// DECAL_BALBURN
+	{ "{egg1", 0 },		// DECAL_EGG1
+	{ "{egg2", 0 },		// DECAL_EGG2
+	{ "{maggot", 0 },		// DECAL_MAGGOT
+	{ "{crater3", 0 },		// DECAL_CRATER3
+	{ "{humnbig", 0 },		// DECAL_HUMANBIG
+	{ "{charge", 0 },		// DECAL_CHARGE
+	{ "{pulse", 0 },		// DECAL_PULSE
 };
 
 /*
@@ -539,21 +578,23 @@ void CWorld :: Precache( void )
 	PRECACHE_SOUND( "common/bodydrop4.wav" );
 	
 	g_Language = (int)CVAR_GET_FLOAT( "sv_language" );
-	if ( g_Language == LANGUAGE_GERMAN )
+	if ( g_Language == LANGUAGE_GERMAN || CVAR_GET_FLOAT( "violence_germany" ) != 0 )
 	{
 		PRECACHE_MODEL( "models/germangibs.mdl" );
+		g_iGoreBot = PRECACHE_MODEL( "sprites/gorebot.spr" );
+		g_iGibBot = PRECACHE_MODEL( "sprites/gibbot.spr" );
 	}
-	else
-	{
-		PRECACHE_MODEL( "models/hgibs.mdl" );
-		PRECACHE_MODEL( "models/agibs.mdl" );
-	}
+
+	PRECACHE_MODEL( "models/hgibs.mdl" );
+	PRECACHE_MODEL( "models/agibs.mdl" );
+	PRECACHE_MODEL( "models/rgibs.mdl" );
 
 	PRECACHE_SOUND ("weapons/ric1.wav");
 	PRECACHE_SOUND ("weapons/ric2.wav");
 	PRECACHE_SOUND ("weapons/ric3.wav");
 	PRECACHE_SOUND ("weapons/ric4.wav");
 	PRECACHE_SOUND ("weapons/ric5.wav");
+	PRECACHE_SOUND ("weapons/forcefield.wav");
 //
 // Setup light animation tables. 'a' is total darkness, 'z' is maxbright.
 //
@@ -603,6 +644,14 @@ void CWorld :: Precache( void )
 
 	// 63 testing
 	LIGHT_STYLE(63, "a");
+
+	// reset the sky until a light_environment sets it
+	CVAR_SET_STRING( "sv_skyvec_x", "0" );
+	CVAR_SET_STRING( "sv_skyvec_y", "0" );
+	CVAR_SET_STRING( "sv_skyvec_z", "0" );
+	CVAR_SET_STRING( "sv_skycolor_r", "0" );
+	CVAR_SET_STRING( "sv_skycolor_g", "0" );
+	CVAR_SET_STRING( "sv_skycolor_b", "0" );
 
 	for ( int i = 0; i < ARRAYSIZE(gDecals); i++ )
 		gDecals[i].index = DECAL_INDEX( gDecals[i].name );

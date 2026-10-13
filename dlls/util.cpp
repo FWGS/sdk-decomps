@@ -425,6 +425,9 @@ int UTIL_EntitiesInBox( CBaseEntity **pList, int listMax, const Vector &mins, co
 	{
 		if ( pEdict->free )	// Not in use
 			continue;
+
+		if ( FClassnameIs( pEdict, "monster_beakbirther" ) )
+			continue;
 		
 		if ( flagMask && !(pEdict->v.flags & flagMask) )	// Does it meet the criteria?
 			continue;
@@ -693,7 +696,7 @@ void UTIL_ScreenShake( const Vector &center, float amplitude, float frequency, f
 	{
 		CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
 
-		if ( !pPlayer || !(pPlayer->pev->flags & FL_ONGROUND) )	// Don't shake if not onground
+		if ( !pPlayer )
 			continue;
 
 		localAmplitude = 0;
@@ -1153,7 +1156,7 @@ void UTIL_BloodStream( const Vector &origin, const Vector &direction, int color,
 	if ( !UTIL_ShouldShowBlood( color ) )
 		return;
 
-	if ( g_Language == LANGUAGE_GERMAN && color == BLOOD_COLOR_RED )
+	if ( (g_Language == LANGUAGE_GERMAN || CVAR_GET_FLOAT( "violence_germany" ) != 0) && color == BLOOD_COLOR_RED )
 		color = 0;
 
 	
@@ -1178,7 +1181,7 @@ void UTIL_BloodDrips( const Vector &origin, const Vector &direction, int color, 
 	if ( color == DONT_BLEED || amount == 0 )
 		return;
 
-	if ( g_Language == LANGUAGE_GERMAN && color == BLOOD_COLOR_RED )
+	if ( (g_Language == LANGUAGE_GERMAN || CVAR_GET_FLOAT( "violence_germany" ) != 0) && color == BLOOD_COLOR_RED )
 		color = 0;
 
 	if ( g_pGameRules->IsMultiplayer() )
@@ -1190,6 +1193,7 @@ void UTIL_BloodDrips( const Vector &origin, const Vector &direction, int color, 
 	if ( amount > 255 )
 		amount = 255;
 
+/*
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, origin );
 		WRITE_BYTE( TE_BLOODSPRITE );
 		WRITE_COORD( origin.x);								// pos
@@ -1200,6 +1204,7 @@ void UTIL_BloodDrips( const Vector &origin, const Vector &direction, int color, 
 		WRITE_BYTE( color );								// color index into host_basepal
 		WRITE_BYTE( min( max( 3, amount / 10 ), 16 ) );		// size
 	MESSAGE_END();
+*/
 }				
 
 Vector UTIL_RandomBloodVector( void )
@@ -1216,12 +1221,40 @@ Vector UTIL_RandomBloodVector( void )
 
 void UTIL_BloodDecalTrace( TraceResult *pTrace, int bloodColor )
 {
+	if ( (g_Language == LANGUAGE_GERMAN || CVAR_GET_FLOAT( "violence_germany" ) != 0) && bloodColor == BLOOD_COLOR_RED )
+	{
+		ALERT( at_console, "Language German\n" );
+		bloodColor = 0;
+	}
+
 	if ( UTIL_ShouldShowBlood( bloodColor ) )
 	{
-		if ( bloodColor == BLOOD_COLOR_RED )
-			UTIL_DecalTrace( pTrace, DECAL_BLOOD1 + RANDOM_LONG(0,5) );
-		else
-			UTIL_DecalTrace( pTrace, DECAL_YBLOOD1 + RANDOM_LONG(0,5) );
+		int iDecal = RANDOM_LONG(0,5);
+
+		switch ( bloodColor )
+		{
+		case BLOOD_COLOR_RED:
+			UTIL_DecalTrace( pTrace, DECAL_HUMAN1 + iDecal );
+			break;
+		case BLOOD_COLOR_YELLOW:
+			UTIL_DecalTrace( pTrace, DECAL_YBLOOD1 + iDecal );
+			break;
+		case 100:
+			UTIL_DecalTrace( pTrace, DECAL_XENOME1 + iDecal );
+			break;
+		case 156:
+			UTIL_DecalTrace( pTrace, DECAL_OIL1 + iDecal );
+			break;
+		case 200:
+			UTIL_DecalTrace( pTrace, DECAL_BEAK1 + iDecal );
+			break;
+		case 50:
+			UTIL_DecalTrace( pTrace, DECAL_TUBE1 + iDecal );
+			break;
+		default:
+			ALERT( at_console, "No decal for this color blood %d\n", bloodColor );
+			break;
+		}
 	}
 }
 
@@ -1250,6 +1283,18 @@ void UTIL_DecalTrace( TraceResult *pTrace, int decalNumber )
 		if ( pEntity && !pEntity->IsBSPModel() )
 			return;
 		entityIndex = ENTINDEX( pTrace->pHit );
+
+		float rgfl1[3] = { 0, 0, 0 };
+		float rgfl2[3] = { 0, 0, 0 };
+		Vector vecSrc = pTrace->vecPlaneNormal * 5 + pTrace->vecEndPos;
+		Vector vecEnd = pTrace->vecPlaneNormal * -5 + pTrace->vecEndPos;
+		vecSrc.CopyToArray( rgfl1 );
+		vecEnd.CopyToArray( rgfl2 );
+
+		// no decals on switched-off textures
+		const char *pTextureName = TRACE_TEXTURE( ENT( pEntity->pev ), rgfl1, rgfl2 );
+		if ( pTextureName && !strcmp( pTextureName, "+0ff" ) )
+			return;
 	}
 	else 
 		entityIndex = 0;
