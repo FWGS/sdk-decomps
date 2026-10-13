@@ -52,6 +52,11 @@ DLL_GLOBAL	short	g_sModelIndexExplosion1;
 DLL_GLOBAL	short	g_sModelIndexExplosion2;
 DLL_GLOBAL	short	g_sModelIndexExplosion3;
 DLL_GLOBAL	short	g_sModelIndexExplosion4;
+DLL_GLOBAL	short	g_sModelIndexSmokerGray;
+DLL_GLOBAL	short	g_sModelIndexCGSplashR;
+DLL_GLOBAL	short	g_sModelIndexCGSplashG;
+DLL_GLOBAL	short	g_sModelIndexCGSplashY;
+DLL_GLOBAL	short	g_sModelIndexCGSplashO;
 
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
 AmmoInfo CBasePlayerItem::AmmoInfoArray[MAX_AMMO_SLOTS];
@@ -312,90 +317,71 @@ void W_Precache(void)
 	memset( CBasePlayerItem::AmmoInfoArray, 0, sizeof(CBasePlayerItem::AmmoInfoArray) );
 	giAmmoIndex = 0;
 
-	// custom items...
-
-	// common world objects
-	UTIL_PrecacheOther( "item_suit" );
-	UTIL_PrecacheOther( "item_battery" );
-	UTIL_PrecacheOther( "item_antidote" );
-	UTIL_PrecacheOther( "item_security" );
-	UTIL_PrecacheOther( "item_longjump" );
+	// fists
+	UTIL_PrecacheOtherWeapon( "weapon_fists" );
+	UTIL_PrecacheOtherWeapon( "cust_1fistsKnife" );
 
 	// shotgun
 	UTIL_PrecacheOtherWeapon( "weapon_shotgun" );
+	UTIL_PrecacheOtherWeapon( "cust_1ShotgunSpread" );
+	UTIL_PrecacheOtherWeapon( "cust_2ShotgunShells" );
 	UTIL_PrecacheOther( "ammo_buckshot" );
 
-	// crowbar
-	UTIL_PrecacheOtherWeapon( "weapon_crowbar" );
+	// chemical gun
+	UTIL_PrecacheOtherWeapon( "weapon_SPchemicalgun" );
+	UTIL_PrecacheOther( "ammo_chemical" );
+	UTIL_PrecacheOtherWeapon( "cust_1SPChemicalGunPressure" );
+	UTIL_PrecacheOtherWeapon( "cust_2ChemAcid" );
+	UTIL_PrecacheOtherWeapon( "cust_3ChemBase" );
+	UTIL_PrecacheOtherWeapon( "cust_4ChemNuet" );
 
-	// glock
-	UTIL_PrecacheOtherWeapon( "weapon_9mmhandgun" );
-	UTIL_PrecacheOther( "ammo_9mmclip" );
+	// beam gun
+	UTIL_PrecacheOtherWeapon( "weapon_beamgun" );
+	UTIL_PrecacheOther( "ammo_beamgunclip" );
+	UTIL_PrecacheOtherWeapon( "cust_1BeamFrequency" );
+	UTIL_PrecacheOtherWeapon( "cust_2BeamCurrent" );
+	UTIL_PrecacheOtherWeapon( "cust_3BeamVoltage" );
 
-	// mp5
-	UTIL_PrecacheOtherWeapon( "weapon_9mmAR" );
-	UTIL_PrecacheOther( "ammo_9mmAR" );
-	UTIL_PrecacheOther( "ammo_ARgrenades" );
+	// minigun
+	UTIL_PrecacheOtherWeapon( "weapon_minigun" );
+	UTIL_PrecacheOther( "ammo_minigunClip" );
+	UTIL_PrecacheOtherWeapon( "cust_1MinigunSpin" );
+	UTIL_PrecacheOtherWeapon( "cust_2MinigunCooled" );
 
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// python
-	UTIL_PrecacheOtherWeapon( "weapon_357" );
-	UTIL_PrecacheOther( "ammo_357" );
-#endif
-	
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// gauss
-	UTIL_PrecacheOtherWeapon( "weapon_gauss" );
+	// dml
+	UTIL_PrecacheOtherWeapon( "weapon_dml" );
+	UTIL_PrecacheOther( "ammo_dmlclip" );
+	UTIL_PrecacheOtherWeapon( "cust_1DMLLaunch" );
+	UTIL_PrecacheOtherWeapon( "cust_2DMLFlightpath" );
+	UTIL_PrecacheOtherWeapon( "cust_3DMLDetonate" );
+	UTIL_PrecacheOtherWeapon( "cust_4DMLPayload" );
+
+	// dml grenade
+	UTIL_PrecacheOtherWeapon( "weapon_dmlGrenade" );
+	UTIL_PrecacheOtherWeapon( "cust_1DMLGrenDetonate" );
+	UTIL_PrecacheOtherWeapon( "cust_2DMLGrenPayload" );
+
+	// gauss pistol
+	UTIL_PrecacheOtherWeapon( "weapon_gausspistol" );
+	UTIL_PrecacheOtherWeapon( "cust_1GaussPistolFireType" );
+	UTIL_PrecacheOtherWeapon( "cust_2GaussPistolSniper" );
 	UTIL_PrecacheOther( "ammo_gaussclip" );
-#endif
 
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// rpg
-	UTIL_PrecacheOtherWeapon( "weapon_rpg" );
-	UTIL_PrecacheOther( "ammo_rpgclip" );
-#endif
+	// ai core
+	UTIL_PrecacheOtherWeapon( "weapon_aicore" );
 
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// crossbow
-	UTIL_PrecacheOtherWeapon( "weapon_crossbow" );
-	UTIL_PrecacheOther( "ammo_crossbow" );
-#endif
+	UTIL_PrecacheOther( "item_armor" );
+	UTIL_PrecacheOther( "weaponbox" );// container for dropped deathmatch weapons
 
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// egon
-	UTIL_PrecacheOtherWeapon( "weapon_egon" );
-#endif
-
-	// tripmine
-	UTIL_PrecacheOtherWeapon( "weapon_tripmine" );
-
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// satchel charge
-	UTIL_PrecacheOtherWeapon( "weapon_satchel" );
-#endif
-
-	// hand grenade
-	UTIL_PrecacheOtherWeapon("weapon_handgrenade");
-
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// squeak grenade
-	UTIL_PrecacheOtherWeapon( "weapon_snark" );
-#endif
-
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// hornetgun
-	UTIL_PrecacheOtherWeapon( "weapon_hornetgun" );
-#endif
-
-
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	if ( g_pGameRules->IsDeathmatch() )
-	{
-		UTIL_PrecacheOther( "weaponbox" );// container for dropped deathmatch weapons
-	}
-#endif
-
-	g_sModelIndexFireball = PRECACHE_MODEL ("sprites/zerogxplode.spr");// fireball
+	g_sModelIndexCGSplashR = PRECACHE_MODEL ("sprites/cg_splash_r.spr");
+	g_sModelIndexCGSplashG = PRECACHE_MODEL ("sprites/cg_splash_g.spr");
+	g_sModelIndexCGSplashY = PRECACHE_MODEL ("sprites/cg_splash_y.spr");
+	g_sModelIndexCGSplashO = PRECACHE_MODEL ("sprites/cg_splash_o.spr");
+	g_sModelIndexSmokerGray = PRECACHE_MODEL ("sprites/smoker_gray.spr");
+	g_sModelIndexExplosion1 = PRECACHE_MODEL ("sprites/explosion1.spr");
+	g_sModelIndexExplosion2 = PRECACHE_MODEL ("sprites/explosion2.spr");
+	g_sModelIndexExplosion3 = PRECACHE_MODEL ("sprites/explosion3.spr");
+	g_sModelIndexExplosion4 = PRECACHE_MODEL ("sprites/explosion4.spr");
 	g_sModelIndexWExplosion = PRECACHE_MODEL ("sprites/WXplo1.spr");// underwater fireball
 	g_sModelIndexSmoke = PRECACHE_MODEL ("sprites/steam1.spr");// smoke
 	g_sModelIndexBubbles = PRECACHE_MODEL ("sprites/bubble.spr");//bubbles
@@ -405,10 +391,15 @@ void W_Precache(void)
 	g_sModelIndexLaser = PRECACHE_MODEL( (char *)g_pModelNameLaser );
 	g_sModelIndexLaserDot = PRECACHE_MODEL("sprites/laserdot.spr");
 
+	g_sModelIndexSmokePuff = PRECACHE_MODEL ("sprites/smokepuff.spr");
+
+	if ( g_Language == LANGUAGE_GERMAN || CVAR_GET_FLOAT( "violence_germany" ) != 0 )
+		g_sModelIndexGibSprite = PRECACHE_MODEL ("sprites/gorebot.spr");
+	else
+		g_sModelIndexGibSprite = PRECACHE_MODEL ("sprites/gibhuman.spr");
 
 	// used by explosions
 	PRECACHE_MODEL ("models/grenade.mdl");
-	PRECACHE_MODEL ("sprites/explode1.spr");
 
 	PRECACHE_SOUND ("weapons/debris1.wav");// explosion aftermaths
 	PRECACHE_SOUND ("weapons/debris2.wav");// explosion aftermaths
@@ -469,7 +460,7 @@ void CBasePlayerItem :: SetObjectCollisionBox( void )
 void CBasePlayerItem :: FallInit( void )
 {
 	pev->movetype = MOVETYPE_TOSS;
-	pev->solid = SOLID_BBOX;
+	pev->solid = SOLID_TRIGGER;
 
 	UTIL_SetOrigin( pev, pev->origin );
 	UTIL_SetSize(pev, Vector( 0, 0, 0), Vector(0, 0, 0) );//pointsize until it lands on the ground.
@@ -526,8 +517,17 @@ void CBasePlayerItem::Materialize( void )
 
 	UTIL_SetOrigin( pev, pev->origin );// link into world.
 	SetTouch (DefaultTouch);
-	SetThink (NULL);
+	SetThink (RemoveGlow);
+	pev->nextthink = gpGlobals->time + 10.0;
+}
 
+//=========================================================
+// RemoveGlow - a respawned item stops glowing
+//=========================================================
+void CBasePlayerItem::RemoveGlow( void )
+{
+	pev->renderfx = kRenderFxNone;
+	SetThink (NULL);
 }
 
 //=========================================================
@@ -581,6 +581,12 @@ CBaseEntity* CBasePlayerItem::Respawn( void )
 		pNewWeapon->SetThink( AttemptToMaterialize );
 
 		DROP_TO_FLOOR ( ENT(pev) );
+
+		pNewWeapon->pev->renderfx = kRenderFxGlowShell;
+		pNewWeapon->pev->renderamt = 30;
+		pNewWeapon->pev->rendercolor.x = 255;
+		pNewWeapon->pev->rendercolor.y = 0;
+		pNewWeapon->pev->rendercolor.z = 0;
 
 		// not a typo! We want to know when the weapon the player just picked up should respawn! This new entity we created is the replacement,
 		// but when it should respawn is based on conditions belonging to the weapon that was taken.
@@ -972,9 +978,6 @@ BOOL CBasePlayerWeapon :: CanDeploy( void )
 
 BOOL CBasePlayerWeapon :: DefaultDeploy( char *szViewModel, char *szWeaponModel, int iAnim, char *szAnimExt, int skiplocal /* = 0 */ )
 {
-	if (!CanDeploy( ))
-		return FALSE;
-
 	m_pPlayer->pev->viewmodel = MAKE_STRING(szViewModel);
 	m_pPlayer->pev->weaponmodel = MAKE_STRING(szWeaponModel);
 	strcpy( m_pPlayer->m_szAnimExtention, szAnimExt );
@@ -1045,6 +1048,24 @@ void CBasePlayerWeapon::Holster( int skiplocal /* = 0 */ )
 	m_pPlayer->pev->weaponmodel = 0;
 }
 
+TYPEDESCRIPTION	CBasePlayerAmmo::m_SaveData[] = 
+{
+	DEFINE_FIELD( CBasePlayerAmmo, m_bNoGiveSound, FIELD_BOOLEAN ),
+};
+
+IMPLEMENT_SAVERESTORE( CBasePlayerAmmo, CBaseEntity );
+
+void CBasePlayerAmmo::KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "nopickupsound"))
+	{
+		m_bNoGiveSound = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CBaseEntity::KeyValue( pkvd );
+}
+
 void CBasePlayerAmmo::Spawn( void )
 {
 	pev->movetype = MOVETYPE_TOSS;
@@ -1052,7 +1073,37 @@ void CBasePlayerAmmo::Spawn( void )
 	UTIL_SetSize(pev, Vector(-16, -16, 0), Vector(16, 16, 16));
 	UTIL_SetOrigin( pev, pev->origin );
 
+	SetThink( GlowThink );
 	SetTouch( DefaultTouch );
+	pev->nextthink = gpGlobals->time;
+}
+
+//=========================================================
+// GlowThink - pulse a glow shell around the ammo
+//=========================================================
+void CBasePlayerAmmo::GlowThink( void )
+{
+	if ( pev->effects & EF_NODRAW )
+	{
+		SetThink( NULL );
+		return;
+	}
+
+	if ( pev->renderfx != kRenderFxGlowShell )
+	{
+		pev->effects |= EF_MUZZLEFLASH;
+		pev->renderfx = kRenderFxGlowShell;
+		pev->renderamt = 30;
+		pev->rendercolor.x = 0;
+		pev->rendercolor.y = 100;
+		pev->rendercolor.z = 50;
+		pev->nextthink = gpGlobals->time + 2.2;
+	}
+	else
+	{
+		pev->renderfx = kRenderFxNone;
+		pev->nextthink = gpGlobals->time + 5.0;
+	}
 }
 
 CBaseEntity* CBasePlayerAmmo::Respawn( void )
@@ -1075,7 +1126,8 @@ void CBasePlayerAmmo::Materialize( void )
 		// changing from invisible state to visible.
 		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "items/suitchargeok1.wav", 1, ATTN_NORM, 0, 150 );
 		pev->effects &= ~EF_NODRAW;
-		pev->effects |= EF_MUZZLEFLASH;
+		SetThink( GlowThink );
+		pev->nextthink = gpGlobals->time;
 	}
 
 	SetTouch( DefaultTouch );
@@ -1090,6 +1142,11 @@ void CBasePlayerAmmo :: DefaultTouch( CBaseEntity *pOther )
 
 	if (AddAmmo( pOther ))
 	{
+		// tell whoever made the ammo that it's gone
+		CBaseEntity *pOwner = CBaseEntity::Instance( pev->owner );
+		if ( pOwner )
+			pOwner->DeathNotice( pev );
+
 		if ( g_pGameRules->AmmoShouldRespawn( this ) == GR_AMMO_RESPAWN_YES )
 		{
 			Respawn();

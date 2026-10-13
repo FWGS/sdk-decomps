@@ -330,6 +330,9 @@ BOOL CBasePlayerWeapon :: IsUseable( void ) { return TRUE; }
 int CBasePlayerWeapon::PrimaryAmmoIndex( void ) { return -1; }
 int CBasePlayerWeapon::SecondaryAmmoIndex( void ) {	return -1; }
 void CBasePlayerAmmo::Spawn( void ) { }
+void CBasePlayerAmmo::KeyValue( KeyValueData *pkvd ) { }
+int CBasePlayerAmmo::Save( class CSave & ) { return 1; }
+int CBasePlayerAmmo::Restore( class CRestore & ) { return 1; }
 CBaseEntity* CBasePlayerAmmo::Respawn( void ) { return this; }
 void CBasePlayerAmmo::Materialize( void ) { }
 void CBasePlayerAmmo :: DefaultTouch( CBaseEntity *pOther ) { }

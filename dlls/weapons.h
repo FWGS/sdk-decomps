@@ -232,6 +232,7 @@ public:
 	void EXPORT DefaultTouch( CBaseEntity *pOther );	// default weapon touch
 	void EXPORT FallThink ( void );// when an item is first spawned, this think is run to determine when the object has hit the ground.
 	void EXPORT Materialize( void );// make a weapon visible and tangible
+	void EXPORT RemoveGlow( void );// take the respawn glow off
 	void EXPORT AttemptToMaterialize( void );  // the weapon desires to become visible and tangible, if the game rules allow for it
 	CBaseEntity* Respawn ( void );// copy a weapon
 	void FallInit( void );
@@ -362,7 +363,13 @@ class CBasePlayerAmmo : public CBaseEntity
 {
 public:
 	virtual void Spawn( void );
+	void KeyValue( KeyValueData *pkvd );
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
+
 	void EXPORT DefaultTouch( CBaseEntity *pOther ); // default weapon touch
+	void EXPORT GlowThink( void );
 	virtual BOOL AddAmmo( CBaseEntity *pOther ) { return TRUE; };
 	virtual BOOL PlayPickupSound( void ) { return !m_bNoGiveSound; }
 
