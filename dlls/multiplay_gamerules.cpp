@@ -30,6 +30,7 @@ extern DLL_GLOBAL BOOL	g_fGameOver;
 extern int gmsgDeathMsg;	// client dll messages
 extern int gmsgScoreInfo;
 extern int gmsgMOTD;
+extern unsigned short g_usCleanup;
 
 #define ITEM_RESPAWN_TIME	30
 #define WEAPON_RESPAWN_TIME	20
@@ -456,10 +457,14 @@ void CHalfLifeMultiplay :: PlayerSpawn( CBasePlayer *pPlayer )
 
 	if ( addDefault )
 	{
-		pPlayer->GiveNamedItem( "weapon_crowbar" );
-		pPlayer->GiveNamedItem( "weapon_9mmhandgun" );
-		pPlayer->GiveAmmo( 68, "9mm", _9MM_MAX_CARRY );// 4 full reloads
+		pPlayer->GiveNamedItem( "weapon_fists" );
+		pPlayer->GiveNamedItem( "cust_2MinigunCooled" );
+		pPlayer->GiveNamedItem( "weapon_gausspistol" );
+		pPlayer->SelectItem( "weapon_gausspistol" );
 	}
+
+	if ( g_usCleanup )
+		PLAYBACK_EVENT_FULL( 0, pPlayer->edict(), g_usCleanup, 0, (float *)&g_vecZero, (float *)&g_vecZero, 0, 0, 0, 0, 0, 0 );
 }
 
 //=========================================================
