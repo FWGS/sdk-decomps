@@ -1184,7 +1184,7 @@ void CHudAmmo::UserCmd_Customize(void)
 		m_fMenuOpen = false;
 	}
 
-	if ( gEngfuncs.GetMaxClients() < 2 )
+	if ( gEngfuncs.GetMaxClients() <= 1 )
 		ServerCmd( "custupdate" );
 
 	gWR.SelectSlot( 9, FALSE, 1 );
