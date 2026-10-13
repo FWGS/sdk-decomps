@@ -102,8 +102,8 @@ void CBaseMonster :: ChangeSchedule ( Schedule_t *pNewSchedule )
 	
 // this is very useful code if you can isolate a test case in a level with a single monster. It will notify
 // you of every schedule selection the monster makes.
-#if 0
-	if ( FClassnameIs( pev, "monster_human_grunt" ) )
+#if 1
+	if ( FClassnameIs( pev, "monster_human_bandit" ) )
 	{
 		Task_t *pTask = GetTask();
 		
@@ -537,6 +537,40 @@ void CBaseMonster :: RunTask ( Task_t *pTask )
 			if (m_fSequenceFinished)
 			{
 				m_pCine->SequenceDone( this );
+			}
+			break;
+		}
+	case TASK_LEAP_START:
+	case TASK_BIG_FLINCH:
+		{
+			if ( m_fSequenceFinished )
+			{
+				TaskComplete();
+			}
+			break;
+		}
+	case TASK_LEAP_FLY:
+		{
+			ChangeYaw( pev->yaw_speed );
+
+			if ( pev->flags & FL_ONGROUND )
+			{
+				TaskComplete();
+			}
+			else if ( m_fSequenceFinished )
+			{
+				m_IdealActivity = ACT_FLY;
+			}
+			break;
+		}
+	case TASK_LEAP_LAND:
+		{
+			MakeIdealYaw( m_vecEnemyLKP );
+			ChangeYaw( pev->yaw_speed );
+
+			if ( m_fSequenceFinished )
+			{
+				TaskComplete();
 			}
 			break;
 		}
@@ -1127,6 +1161,7 @@ case TASK_GET_PATH_TO_BESTSCENT:
 		}
 	case TASK_RUN_PATH:
 		{
+			Forget( bits_MEMORY_INCOVER );
 			// UNDONE: This is in some default AI and some monsters can't run? -- walk instead?
 			if ( LookupActivity( ACT_RUN ) != ACTIVITY_NOT_AVAILABLE )
 			{
@@ -1141,6 +1176,7 @@ case TASK_GET_PATH_TO_BESTSCENT:
 		}
 	case TASK_WALK_PATH:
 		{
+			Forget( bits_MEMORY_INCOVER );
 			if ( pev->movetype == MOVETYPE_FLY )
 			{
 				m_movementActivity = ACT_FLY;
@@ -1202,6 +1238,11 @@ case TASK_GET_PATH_TO_BESTSCENT:
 			m_IdealActivity = GetSmallFlinchActivity();
 			break;
 		}
+	case TASK_BIG_FLINCH:
+		{
+			m_IdealActivity = GetBigFlinchActivity();
+			break;
+		}
 	case TASK_DIE:
 		{
 			RouteClear();	
@@ -1217,12 +1258,6 @@ case TASK_GET_PATH_TO_BESTSCENT:
 			TaskComplete();
 			break;
 		}
-	case TASK_SOUND_DIE:
-		{
-			DeathSound();
-			TaskComplete();
-			break;
-		}
 	case TASK_SOUND_IDLE:
 		{
 			IdleSound();
@@ -1231,11 +1266,13 @@ case TASK_GET_PATH_TO_BESTSCENT:
 		}
 	case TASK_SOUND_PAIN:
 		{
-			PainSound();
+			if ( gpGlobals->time - m_tLastTimeHurt > 3 )
+				PainSound();
 			TaskComplete();
 			break;
 		}
 	case TASK_SOUND_DEATH:
+	case TASK_SOUND_DIE:
 		{
 			DeathSound();
 			TaskComplete();
@@ -1299,6 +1336,17 @@ case TASK_GET_PATH_TO_BESTSCENT:
 			break;
 		}
 
+	case TASK_TURN_TO_PLAYER:
+		{
+			if ( m_hTargetEnt != NULL )
+			{
+				CBaseEntity *pPlayer = UTIL_FindEntityByClassname( NULL, "player" );
+				if ( pPlayer )
+					pev->ideal_yaw = UTIL_VecToYaw( pPlayer->pev->origin - pev->origin );
+			}
+			TaskComplete();
+			break;
+		}
 	case TASK_SUGGEST_STATE:
 		{
 			m_IdealMonsterState = (MONSTERSTATE)(int)pTask->flData;
@@ -1313,6 +1361,23 @@ case TASK_GET_PATH_TO_BESTSCENT:
 
 	case TASK_CLEAR_FAIL_SCHEDULE:
 		m_failSchedule = SCHED_NONE;
+		TaskComplete();
+		break;
+
+	case TASK_LEAP_START:
+		m_IdealActivity = ACT_HOP;
+		break;
+
+	case TASK_LEAP_FLY:
+		m_IdealActivity = ACT_FLY;
+		break;
+
+	case TASK_LEAP_LAND:
+		m_IdealActivity = ACT_LAND;
+		break;
+
+	case TASK_SET_ACTIVITY_IDLE:
+		m_IdealActivity = ACT_IDLE;
 		TaskComplete();
 		break;
 

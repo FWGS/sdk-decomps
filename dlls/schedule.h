@@ -172,6 +172,12 @@ typedef enum
 		TASK_REMEMBER,
 		TASK_FORGET,
 		TASK_WAIT_FOR_MOVEMENT,			// wait until MovementIsComplete()
+		TASK_LEAP_START,				// Gunman: play ACT_HOP to the end
+		TASK_LEAP_FLY,					// ACT_FLY until on the ground
+		TASK_LEAP_LAND,					// ACT_LAND facing the enemy's last known position
+		TASK_BIG_FLINCH,
+		TASK_TURN_TO_PLAYER,
+		TASK_SET_ACTIVITY_IDLE,
 		LAST_COMMON_TASK, // LEAVE THIS AT THE BOTTOM!! (sjb)
 } SHARED_TASKS;
 
