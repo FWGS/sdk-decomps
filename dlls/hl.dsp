@@ -442,6 +442,10 @@ SOURCE=.\bandit.cpp
 
 SOURCE=.\demoman.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\friendlygunman.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
