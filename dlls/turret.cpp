@@ -34,7 +34,7 @@
 extern Vector VecBModelOrigin( entvars_t* pevBModel );
 
 #define TURRET_SHOTS	2
-#define TURRET_RANGE	(100 * 12)
+#define TURRET_RANGE	(200 * 12)
 #define TURRET_SPREAD	Vector( 0, 0, 0 )
 #define TURRET_TURNRATE	30		//angles per 0.1 second
 #define TURRET_MAXWAIT	15		// seconds turret will stay active w/o a target
@@ -98,7 +98,7 @@ public:
 
 	// other functions
 	void SetTurretAnim(TURRET_ANIM anim);
-	int MoveTurret(void);
+	virtual int MoveTurret(void);
 	virtual void Shoot(Vector &vecSrc, Vector &vecDirToEnemy) { };
 
 	float m_flMaxSpin;		// Max time to spin the barrel w/o a target
@@ -128,6 +128,7 @@ public:
 	float	m_flStartYaw;
 	Vector	m_vecCurAngles;
 	Vector	m_vecGoalAngles;
+	Vector	m_vOriginalAngles;
 
 
 	float	m_flPingTime;	// Time until the next ping, used when searching
@@ -162,6 +163,7 @@ TYPEDESCRIPTION	CBaseTurret::m_SaveData[] =
 	DEFINE_FIELD( CBaseTurret, m_flStartYaw, FIELD_FLOAT ),
 	DEFINE_FIELD( CBaseTurret, m_vecCurAngles, FIELD_VECTOR ),
 	DEFINE_FIELD( CBaseTurret, m_vecGoalAngles, FIELD_VECTOR ),
+	DEFINE_FIELD( CBaseTurret, m_vOriginalAngles, FIELD_VECTOR ),
 
 	DEFINE_FIELD( CBaseTurret, m_flPingTime, FIELD_TIME ),
 	DEFINE_FIELD( CBaseTurret, m_flSpinUpTime, FIELD_TIME ),
@@ -275,6 +277,7 @@ void CBaseTurret::Spawn()
 
 void CBaseTurret::Precache( )
 {
+/*
 	PRECACHE_SOUND ("turret/tu_fire1.wav");
 	PRECACHE_SOUND ("turret/tu_ping.wav");
 	PRECACHE_SOUND ("turret/tu_active2.wav");
@@ -287,6 +290,7 @@ void CBaseTurret::Precache( )
 	PRECACHE_SOUND ("turret/tu_spindown.wav");
 	PRECACHE_SOUND ("turret/tu_search.wav");
 	PRECACHE_SOUND ("turret/tu_alert.wav");
+*/
 }
 
 #define TURRET_GLOW_SPRITE "sprites/flare3.spr"
@@ -350,7 +354,6 @@ void CMiniTurret::Precache()
 	PRECACHE_MODEL ("models/miniturret.mdl");	
 	PRECACHE_SOUND("weapons/hks1.wav");
 	PRECACHE_SOUND("weapons/hks2.wav");
-	PRECACHE_SOUND("weapons/hks3.wav");
 }
 
 void CBaseTurret::Initialize(void)
@@ -423,8 +426,7 @@ void CBaseTurret::Ping( void )
 		m_flPingTime = gpGlobals->time + 1;
 	else if (m_flPingTime <= gpGlobals->time)
 	{
-		m_flPingTime = gpGlobals->time + 1;
-		EMIT_SOUND(ENT(pev), CHAN_ITEM, "turret/tu_ping.wav", 1, ATTN_NORM);
+		m_flPingTime = gpGlobals->time + RANDOM_LONG( 2, 5 );
 		EyeOn( );
 	}
 	else if (m_eyeBrightness > 0)
@@ -541,7 +543,7 @@ void CBaseTurret::ActiveThink(void)
 	vecLOS = vecLOS.Normalize();
 
 	// Is the Gun looking at the target
-	if (DotProduct(vecLOS, gpGlobals->v_forward) <= 0.866) // 30 degree slop
+	if (DotProduct(vecLOS, gpGlobals->v_forward) <= 0.5) // 60 degree slop
 		fAttack = FALSE;
 	else
 		fAttack = TRUE;
@@ -550,9 +552,20 @@ void CBaseTurret::ActiveThink(void)
 	if (m_iSpin && ((fAttack) || (m_fBeserk)))
 	{
 		Vector vecSrc, vecAng;
-		GetAttachment( 0, vecSrc, vecAng );
-		SetTurretAnim(TURRET_ANIM_FIRE);
-		Shoot(vecSrc, gpGlobals->v_forward );
+		if ( UTIL_PercentChance( 50 ) )
+			GetAttachment( 0, vecSrc, vecAng );
+		else
+			GetAttachment( 1, vecSrc, vecAng );
+
+		m_vecEnemyLKP = m_hEnemy->BodyTarget( vecSrc ) - Vector( 0, 0, 16 );
+
+		if ( DotProduct( (m_vecEnemyLKP - vecSrc).Normalize(), gpGlobals->v_forward ) > 0.95 )
+		{
+			Shoot( vecSrc, ShootAtEnemy( vecSrc ) );
+			SetTurretAnim( TURRET_ANIM_FIRE );
+		}
+		else
+			SetTurretAnim( TURRET_ANIM_SPIN );
 	} 
 	else
 	{
@@ -618,21 +631,19 @@ void CBaseTurret::ActiveThink(void)
 
 void CTurret::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 {
-	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_MONSTER_12MM, 1 );
-	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/tu_fire1.wav", 1, 0.6);
+	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_PLAYER_CROWBAR, 1 );
 	pev->effects = pev->effects | EF_MUZZLEFLASH;
 }
 
 
 void CMiniTurret::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 {
-	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_MONSTER_9MM, 1 );
+	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_PLAYER_9MM, 1 );
 
 	switch(RANDOM_LONG(0,2))
 	{
 	case 0: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks1.wav", 1, ATTN_NORM); break;
 	case 1: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks2.wav", 1, ATTN_NORM); break;
-	case 2: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks3.wav", 1, ATTN_NORM); break;
 	}
 	pev->effects = pev->effects | EF_MUZZLEFLASH;
 }
@@ -643,35 +654,27 @@ void CBaseTurret::Deploy(void)
 	pev->nextthink = gpGlobals->time + 0.1;
 	StudioFrameAdvance( );
 
-	if (pev->sequence != TURRET_ANIM_DEPLOY)
+	m_iOn = 1;
+	SUB_UseTargets( this, USE_ON, 0 );
+
+	pev->maxs.z = m_iDeployHeight;
+	pev->mins.z = -m_iDeployHeight;
+	UTIL_SetSize(pev, pev->mins, pev->maxs);
+
+	m_vecCurAngles.x = 0;
+
+	if (m_iOrientation == 1)
 	{
-		m_iOn = 1;
-		SetTurretAnim(TURRET_ANIM_DEPLOY);
-		EMIT_SOUND(ENT(pev), CHAN_BODY, "turret/tu_deploy.wav", TURRET_MACHINE_VOLUME, ATTN_NORM);
-		SUB_UseTargets( this, USE_ON, 0 );
+		m_vecCurAngles.y = UTIL_AngleMod( pev->angles.y + 180 );
+	}
+	else
+	{
+		m_vecCurAngles.y = UTIL_AngleMod( pev->angles.y );
 	}
 
-	if (m_fSequenceFinished)
-	{
-		pev->maxs.z = m_iDeployHeight;
-		pev->mins.z = -m_iDeployHeight;
-		UTIL_SetSize(pev, pev->mins, pev->maxs);
-
-		m_vecCurAngles.x = 0;
-
-		if (m_iOrientation == 1)
-		{
-			m_vecCurAngles.y = UTIL_AngleMod( pev->angles.y + 180 );
-		}
-		else
-		{
-			m_vecCurAngles.y = UTIL_AngleMod( pev->angles.y );
-		}
-
-		SetTurretAnim(TURRET_ANIM_SPIN);
-		pev->framerate = 0;
-		SetThink(SearchThink);
-	}
+	SetTurretAnim(TURRET_ANIM_SPIN);
+	pev->framerate = 0;
+	SetThink(SearchThink);
 
 	m_flLastSight = gpGlobals->time + m_flMaxWait;
 }
@@ -697,7 +700,6 @@ void CBaseTurret::Retire(void)
 		else if (pev->sequence != TURRET_ANIM_RETIRE)
 		{
 			SetTurretAnim(TURRET_ANIM_RETIRE);
-			EMIT_SOUND_DYN(ENT(pev), CHAN_BODY, "turret/tu_deploy.wav", TURRET_MACHINE_VOLUME, ATTN_NORM, 0, 120);
 			SUB_UseTargets( this, USE_OFF, 0 );
 		}
 		else if (m_fSequenceFinished) 
@@ -737,7 +739,6 @@ void CTurret::SpinUpCall(void)
 		if (!m_iStartSpin)
 		{
 			pev->nextthink = gpGlobals->time + 1.0; // spinup delay
-			EMIT_SOUND(ENT(pev), CHAN_BODY, "turret/tu_spinup.wav", TURRET_MACHINE_VOLUME, ATTN_NORM);
 			m_iStartSpin = 1;
 			pev->framerate = 0.1;
 		}
@@ -745,7 +746,6 @@ void CTurret::SpinUpCall(void)
 		else if (pev->framerate >= 1.0)
 		{
 			pev->nextthink = gpGlobals->time + 0.1; // retarget delay
-			EMIT_SOUND(ENT(pev), CHAN_STATIC, "turret/tu_active2.wav", TURRET_MACHINE_VOLUME, ATTN_NORM);
 			SetThink(ActiveThink);
 			m_iStartSpin = 0;
 			m_iSpin = 1;
@@ -768,11 +768,6 @@ void CTurret::SpinDownCall(void)
 	if (m_iSpin)
 	{
 		SetTurretAnim( TURRET_ANIM_SPIN );
-		if (pev->framerate == 1.0)
-		{
-			EMIT_SOUND_DYN(ENT(pev), CHAN_STATIC, "turret/tu_active2.wav", 0, 0, SND_STOP, 100);
-			EMIT_SOUND(ENT(pev), CHAN_ITEM, "turret/tu_spindown.wav", TURRET_MACHINE_VOLUME, ATTN_NORM);
-		}
 		pev->framerate -= 0.02;
 		if (pev->framerate <= 0)
 		{
@@ -874,10 +869,6 @@ void CBaseTurret::SearchThink(void)
 			SpinDownCall();
 		}
 		
-		// generic hunt for new victims
-		m_vecGoalAngles.y = (m_vecGoalAngles.y + 0.1 * m_fTurnRate);
-		if (m_vecGoalAngles.y >= 360)
-			m_vecGoalAngles.y -= 360;
 		MoveTurret();
 	}
 }
@@ -912,7 +903,6 @@ void CBaseTurret::AutoSearchThink(void)
 	if (m_hEnemy != NULL)
 	{
 		SetThink(Deploy);
-		EMIT_SOUND(ENT(pev), CHAN_BODY, "turret/tu_alert.wav", TURRET_MACHINE_VOLUME, ATTN_NORM);
 	}
 }
 
@@ -929,15 +919,6 @@ void CBaseTurret ::	TurretDeath( void )
 		pev->deadflag = DEAD_DEAD;
 
 		float flRndSound = RANDOM_FLOAT ( 0 , 1 );
-
-		if ( flRndSound <= 0.33 )
-			EMIT_SOUND(ENT(pev), CHAN_BODY, "turret/tu_die.wav", 1.0, ATTN_NORM);
-		else if ( flRndSound <= 0.66 )
-			EMIT_SOUND(ENT(pev), CHAN_BODY, "turret/tu_die2.wav", 1.0, ATTN_NORM);
-		else 
-			EMIT_SOUND(ENT(pev), CHAN_BODY, "turret/tu_die3.wav", 1.0, ATTN_NORM);
-
-		EMIT_SOUND_DYN(ENT(pev), CHAN_STATIC, "turret/tu_active2.wav", 0, 0, SND_STOP, 100);
 
 		if (m_iOrientation == 0)
 			m_vecGoalAngles.x = -15;
@@ -1153,6 +1134,7 @@ public:
 	void EXPORT SentryTouch( CBaseEntity *pOther );
 	void EXPORT SentryDeath( void );
 
+	unsigned short m_usFireEvent;
 };
 
 LINK_ENTITY_TO_CLASS( monster_sentry, CSentry );
@@ -1161,6 +1143,12 @@ void CSentry::Precache()
 {
 	CBaseTurret::Precache( );
 	PRECACHE_MODEL ("models/sentry.mdl");	
+	PRECACHE_SOUND ("sentry/sentry_fire.wav");
+	PRECACHE_SOUND ("sentry/sentry_idle.wav");
+	PRECACHE_SOUND ("sentry/sentry_deploy.wav");
+	PRECACHE_SOUND ("sentry/sentry_die.wav");
+
+	m_usFireEvent = PRECACHE_EVENT( 1, "events/monstersentry.sc" );
 }
 
 void CSentry::Spawn()
@@ -1177,29 +1165,29 @@ void CSentry::Spawn()
 	m_iRetractHeight = 64;
 	m_iDeployHeight = 64;
 	m_iMinPitch	= -60;
-	UTIL_SetSize(pev, Vector(-16, -16, -m_iRetractHeight), Vector(16, 16, m_iRetractHeight));
+	UTIL_SetSize(pev, Vector(-32, -32, 0), Vector(32, 32, 64));
 
 	SetTouch(SentryTouch);
 	SetThink(Initialize);	
+	m_iBaseTurnRate = 90;
 	pev->nextthink = gpGlobals->time + 0.3; 
 }
 
 void CSentry::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 {
-	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_MONSTER_MP5, 1 );
-	
-	switch(RANDOM_LONG(0,2))
-	{
-	case 0: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks1.wav", 1, ATTN_NORM); break;
-	case 1: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks2.wav", 1, ATTN_NORM); break;
-	case 2: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks3.wav", 1, ATTN_NORM); break;
-	}
+	PLAYBACK_EVENT_FULL( FEV_RELIABLE, edict(), m_usFireEvent, 0.0, (float *)&vecSrc, (float *)&vecDirToEnemy, 0.0, 0.0, 0, 0, 1, 0 );
+	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_PLAYER_MP5, 0 );
+	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "sentry/sentry_fire.wav", 1, ATTN_NONE);
 	pev->effects = pev->effects | EF_MUZZLEFLASH;
 }
 
 int CSentry::TakeDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType)
 {
 	if ( !pev->takedamage )
+		return 0;
+
+	// only the tank's guns hurt it
+	if ( !FClassnameIs( pevInflictor, "vehicle_tank_rocket" ) && !FClassnameIs( pevInflictor, "vehicle_tank_shell" ) )
 		return 0;
 
 	if (!m_iOn)
@@ -1252,14 +1240,7 @@ void CSentry ::	SentryDeath( void )
 
 		float flRndSound = RANDOM_FLOAT ( 0 , 1 );
 
-		if ( flRndSound <= 0.33 )
-			EMIT_SOUND(ENT(pev), CHAN_BODY, "turret/tu_die.wav", 1.0, ATTN_NORM);
-		else if ( flRndSound <= 0.66 )
-			EMIT_SOUND(ENT(pev), CHAN_BODY, "turret/tu_die2.wav", 1.0, ATTN_NORM);
-		else 
-			EMIT_SOUND(ENT(pev), CHAN_BODY, "turret/tu_die3.wav", 1.0, ATTN_NORM);
-
-		EMIT_SOUND_DYN(ENT(pev), CHAN_STATIC, "turret/tu_active2.wav", 0, 0, SND_STOP, 100);
+		EMIT_SOUND(ENT(pev), CHAN_BODY, "sentry/sentry_die.wav", 1.0, ATTN_NORM);
 
 		SetBoneController( 0, 0 );
 		SetBoneController( 1, 0 );
@@ -1303,3 +1284,88 @@ void CSentry ::	SentryDeath( void )
 	}
 }
 
+
+//=========================================================
+// Sentry Mini - small sentry that only covers its front
+//=========================================================
+class CSentryMini : public CSentry
+{
+public:
+	void Spawn( );
+	void Precache(void);
+	void Shoot(Vector &vecSrc, Vector &vecDirToEnemy);
+	int TakeDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType);
+	int MoveTurret(void);
+};
+
+LINK_ENTITY_TO_CLASS( monster_sentry_mini, CSentryMini );
+
+void CSentryMini::Spawn()
+{ 
+	Precache( );
+	CSentry::Spawn();
+	pev->health = 50;
+	SET_MODEL(ENT(pev), "models/small_sentry.mdl");
+	UTIL_SetSize(pev, Vector(-16, -16, 0), Vector(16, 16, 32));
+	m_vOriginalAngles = pev->angles;
+}
+
+void CSentryMini::Precache()
+{
+	CSentry::Precache( );
+	PRECACHE_MODEL ("models/small_sentry.mdl");	
+}
+
+void CSentryMini::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
+{
+	PLAYBACK_EVENT_FULL( FEV_RELIABLE, edict(), m_usFireEvent, 0.0, (float *)&vecSrc, (float *)&vecDirToEnemy, 0.0, 0.0, 0, 0, 0, 0 );
+	FireBullets( 1, vecSrc, vecDirToEnemy, VECTOR_CONE_10DEGREES, TURRET_RANGE, BULLET_PLAYER_MP5, 0, 4 );
+	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "sentry/sentry_fire.wav", 0.4, ATTN_NONE);
+	pev->effects = pev->effects | EF_MUZZLEFLASH;
+}
+
+int CSentryMini::TakeDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType)
+{
+	if ( !pev->takedamage )
+		return 0;
+
+	pev->health -= flDamage;
+	if (pev->health <= 0)
+	{
+		pev->health = 0;
+		pev->takedamage = DAMAGE_NO;
+		pev->dmgtime = gpGlobals->time;
+
+		ClearBits (pev->flags, FL_MONSTER); // why are they set in the first place???
+
+		SetUse(NULL);
+		SetThink(SentryDeath);
+		SUB_UseTargets( this, USE_ON, 0 ); // wake up others
+
+		if ( m_iTriggerCondition == AITRIGGER_DEATH )
+		{
+			FireTargets( STRING( m_iszTriggerTarget ), this, this, USE_TOGGLE, 0 );
+			m_iTriggerCondition = AITRIGGER_NONE;
+		}
+
+		pev->nextthink = gpGlobals->time + 0.1;
+
+		return 0;
+	}
+
+	return 1;
+}
+
+int CSentryMini::MoveTurret(void)
+{
+	// don't turn around further than the sides
+	if ( m_vecGoalAngles.y > m_vOriginalAngles.y + 90 )
+		m_vecGoalAngles.y = m_vOriginalAngles.y + 90;
+
+	if ( m_vecGoalAngles.y < m_vOriginalAngles.y - 90 )
+		m_vecGoalAngles.y = m_vOriginalAngles.y - 90;
+	else if ( m_vecGoalAngles.y > m_vOriginalAngles.y + 270 )
+		m_vecGoalAngles.y = m_vOriginalAngles.y + 270;
+
+	return CBaseTurret::MoveTurret();
+}
