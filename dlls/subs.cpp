@@ -267,6 +267,7 @@ void CBaseDelay :: SUB_UseTargets( CBaseEntity *pActivator, USE_TYPE useType, fl
 		pentKillTarget = FIND_ENTITY_BY_TARGETNAME( NULL, STRING(m_iszKillTarget) );
 		while ( !FNullEnt(pentKillTarget) )
 		{
+			CBaseEntity::Instance(pentKillTarget)->PreRemove();
 			UTIL_Remove( CBaseEntity::Instance(pentKillTarget) );
 
 			ALERT( at_aiconsole, "killing %s\n", STRING( pentKillTarget->v.classname ) );
