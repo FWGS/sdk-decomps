@@ -92,6 +92,16 @@ void CCineMonster :: KeyValue( KeyValueData *pkvd )
 		m_iFinishSchedule = atoi( pkvd->szValue );
 		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "m_bAbsoluteControl"))
+	{
+		m_bAbsoluteControl = atoi( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "corpse_offset"))
+	{
+		m_iCorpseOffset = atoi( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
 	else
 	{
 		CBaseMonster::KeyValue( pkvd );
@@ -115,6 +125,8 @@ TYPEDESCRIPTION	CCineMonster::m_SaveData[] =
 	DEFINE_FIELD( CCineMonster, m_saved_effects, FIELD_INTEGER ),
 	DEFINE_FIELD( CCineMonster, m_iFinishSchedule, FIELD_INTEGER ),
 	DEFINE_FIELD( CCineMonster, m_interruptable, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CCineMonster, m_bAbsoluteControl, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CCineMonster, m_iCorpseOffset, FIELD_INTEGER ),
 };
 
 
@@ -125,6 +137,11 @@ LINK_ENTITY_TO_CLASS( scripted_sequence, CCineMonster );
 
 LINK_ENTITY_TO_CLASS( aiscripted_sequence, CCineAI );
 
+
+void CCineMonster :: ClearCorpseOffset( void )
+{
+	m_iCorpseOffset = 0;
+}
 
 void CCineMonster :: Spawn( void )
 {
@@ -154,12 +171,20 @@ void CCineMonster :: Spawn( void )
 		m_interruptable = TRUE;
 }
 
+
+CCineMonster :: CCineMonster()
+{
+	m_bAbsoluteControl = TRUE;
+}
+
 //=========================================================
 // FCanOverrideState - returns FALSE, scripted sequences 
 // cannot possess entities regardless of state.
 //=========================================================
 BOOL CCineMonster :: FCanOverrideState( void )
 {
+	if ( m_bAbsoluteControl )
+		return 2;
 	if ( pev->spawnflags & SF_SCRIPT_OVERRIDESTATE )
 		return TRUE;
 	return FALSE;
@@ -171,7 +196,7 @@ BOOL CCineMonster :: FCanOverrideState( void )
 //=========================================================
 BOOL CCineAI :: FCanOverrideState( void )
 {
-	return TRUE;
+	return FALSE;
 }
 
 
@@ -501,7 +526,7 @@ BOOL CCineMonster :: StartSequence( CBaseMonster *pTarget, int iszSeq, BOOL comp
 	pTarget->pev->sequence = pTarget->LookupSequence( STRING( iszSeq ) );
 	if (pTarget->pev->sequence == -1)
 	{
-		ALERT( at_error, "%s: unknown scripted sequence \"%s\"\n", STRING( pTarget->pev->targetname ), STRING( iszSeq) );
+		ALERT( at_console, "%s: unknown scripted sequence \"%s\"\n", STRING( pTarget->pev->targetname ), STRING( iszSeq) );
 		pTarget->pev->sequence = 0;
 		// return FALSE;
 	}
@@ -796,6 +821,7 @@ void CCineMonster :: Activate( void )
 BOOL CBaseMonster :: CineCleanup( )
 {
 	CCineMonster *pOldCine = m_pCine;
+	int iCorpseOffset = 0;
 
 	// am I linked to a cinematic?
 	if (m_pCine)
@@ -805,6 +831,7 @@ BOOL CBaseMonster :: CineCleanup( )
 		pev->movetype = m_pCine->m_saved_movetype;
 		pev->solid = m_pCine->m_saved_solid;
 		pev->effects = m_pCine->m_saved_effects;
+		iCorpseOffset = m_pCine->m_iCorpseOffset;
 	}
 	else
 	{
@@ -869,7 +896,10 @@ BOOL CBaseMonster :: CineCleanup( )
 
 			pev->origin.x = new_origin.x;
 			pev->origin.y = new_origin.y;
-			pev->origin.z += 1;
+			if ( iCorpseOffset )
+				pev->origin.z = new_origin.z - iCorpseOffset;
+			else
+				pev->origin.z += 1;
 
 			pev->flags |= FL_ONGROUND;
 			int drop = DROP_TO_FLOOR( ENT(pev) );
@@ -1231,11 +1261,11 @@ void CFurniture :: Spawn( )
 {
 	PRECACHE_MODEL((char *)STRING(pev->model));
 	SET_MODEL(ENT(pev),	STRING(pev->model));
+	UTIL_SetSize(pev, g_vecZero, g_vecZero);
 
 	pev->movetype	= MOVETYPE_NONE;
-	pev->solid		= SOLID_BBOX;
+	pev->solid		= SOLID_NOT;
 	pev->health		= 80000;
-	pev->takedamage = DAMAGE_AIM;
 	pev->effects		= 0;
 	pev->yaw_speed		= 0;
 	pev->sequence		= 0;
@@ -1247,6 +1277,7 @@ void CFurniture :: Spawn( )
 	ResetSequenceInfo( );
 	pev->frame = 0;
 	MonsterInit();
+	pev->takedamage = DAMAGE_YES;
 }
 
 //=========================================================

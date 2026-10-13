@@ -46,6 +46,7 @@ enum SS_INTERRUPT
 class CCineMonster : public CBaseMonster
 {
 public:
+	CCineMonster();
 	void Spawn( void );
 	virtual void KeyValue( KeyValueData *pkvd );
 	virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
@@ -76,6 +77,7 @@ public:
 	BOOL	CanInterrupt( void );
 	void	AllowInterrupt( BOOL fAllow );
 	int		IgnoreConditions( void );
+	void	ClearCorpseOffset( void );
 
 	int	m_iszIdle;		// string index for idle animation
 	int	m_iszPlay;		// string index for scripted animation
@@ -92,7 +94,9 @@ public:
 	int	m_saved_solid;
 	int m_saved_effects;
 //	Vector m_vecOrigOrigin;
+	int m_iCorpseOffset;
 	BOOL m_interruptable;
+	BOOL m_bAbsoluteControl;
 };
 
 class CCineAI : public CCineMonster
