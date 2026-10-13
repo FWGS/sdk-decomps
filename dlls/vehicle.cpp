@@ -223,8 +223,8 @@ void CVehicleTank::Spawn( void )
 
 	if ( g_pGameRules->IsMultiplayer() )
 	{
-		pev->absmin = Vector( pev->origin.x - 400, pev->origin.y - 400, pev->origin.z );
-		pev->absmax = Vector( pev->origin.x + 400, pev->origin.y + 400, pev->origin.z + 400 );
+		pev->absmin = pev->origin - Vector( 400, 400, 0 );
+		pev->absmax = pev->origin + Vector( 400, 400, 400 );
 		pev->health = 1000;
 		pev->takedamage = DAMAGE_AIM;
 		pev->health = m_iTankHealth;
@@ -236,9 +236,9 @@ int CVehicleTank::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, f
 	if ( g_pGameRules->IsMultiplayer() && m_pPlayer )
 	{
 		if ( bitsDamageType & DMG_BULLET )
-			flDamage *= 0.25;
+			flDamage /= 4;
 		if ( bitsDamageType & DMG_BLAST )
-			flDamage *= 0.5;
+			flDamage /= 2;
 
 		pev->health -= flDamage;
 		if ( pev->health < 0 )
@@ -291,46 +291,53 @@ void CVehicleTank::BuildVehicleThink( void )
 		}
 	}
 
-	if ( iLinked != 3 )
+	if ( iLinked == 3 )
+	{
+		pev->nextthink = gpGlobals->time + 0.1;
+
+		// restored with a driver: find him again
+		if ( !m_pPlayer )
+		{
+			m_pPlayer = NULL;
+			SetThink( WithoutPlayerThink );
+			SetUse( UseVehicle );
+		}
+		else
+		{
+			m_pPlayer = (CBasePlayer *)UTIL_FindEntityByClassname( NULL, "player" );
+			if ( m_pPlayer )
+			{
+				m_pPlayer->m_pVehicle = this;
+				SetThink( WithPlayerThink );
+				SetUse( NULL );
+			}
+			else
+			{
+				SetThink( WithoutPlayerThink );
+				SetUse( UseVehicle );
+			}
+		}
+
+		UTIL_SetOrigin( m_pBodyBSP->pev, pev->origin );
+		UTIL_SetOrigin( m_pTurretBSP->pev, pev->origin + Vector( 0, 0, 70 ) );
+		UTIL_SetOrigin( m_pBarrelBSP->pev, pev->origin + Vector( 0, 0, 82 ) );
+
+		m_pBarrelBSP->pev->angles = pev->angles;
+		m_pTurretBSP->pev->angles = m_pBarrelBSP->pev->angles;
+		m_pBodyBSP->pev->angles = m_pTurretBSP->pev->angles;
+
+		m_pBarrelBSP->pev->owner = ENT( pev );
+		m_pTurretBSP->pev->owner = m_pBarrelBSP->pev->owner;
+		m_pBodyBSP->pev->owner = m_pTurretBSP->pev->owner;
+
+		void *pmodel = GET_MODEL_PTR( ENT( pev ) );
+		SetController( pmodel, pev, 3, m_pBarrelBSP->pev->angles.x );
+	}
+	else
 	{
 		pev->nextthink = gpGlobals->time + 0.5;
 		ALERT( at_console, "WARNING: VehicleID %d did NOT Link ALL Parts\n", m_iVehicleID );
-		return;
 	}
-
-	pev->nextthink = gpGlobals->time + 0.1;
-
-	// restored with a driver: find him again
-	if ( m_pPlayer )
-		m_pPlayer = (CBasePlayer *)UTIL_FindEntityByClassname( NULL, "player" );
-	else
-		m_pPlayer = NULL;
-
-	if ( m_pPlayer )
-	{
-		m_pPlayer->m_pVehicle = this;
-		SetThink( WithPlayerThink );
-		SetUse( NULL );
-	}
-	else
-	{
-		SetThink( WithoutPlayerThink );
-		SetUse( UseVehicle );
-	}
-
-	UTIL_SetOrigin( m_pBodyBSP->pev, pev->origin );
-	UTIL_SetOrigin( m_pTurretBSP->pev, Vector( pev->origin.x, pev->origin.y, pev->origin.z + 70 ) );
-	UTIL_SetOrigin( m_pBarrelBSP->pev, Vector( pev->origin.x, pev->origin.y, pev->origin.z + 82 ) );
-
-	m_pBarrelBSP->pev->angles = pev->angles;
-	m_pTurretBSP->pev->angles = m_pBarrelBSP->pev->angles;
-	m_pBodyBSP->pev->angles = m_pTurretBSP->pev->angles;
-
-	m_pBarrelBSP->pev->owner = ENT( pev );
-	m_pTurretBSP->pev->owner = m_pBarrelBSP->pev->owner;
-	m_pBodyBSP->pev->owner = m_pTurretBSP->pev->owner;
-
-	SetController( GET_MODEL_PTR( ENT( pev ) ), pev, 3, m_pBarrelBSP->pev->angles.x );
 }
 
 //=========================================================
@@ -346,12 +353,12 @@ void CVehicleTank::WithoutPlayerThink( void )
 		return;
 	}
 
-	Vector vecForward;
-	UTIL_MakeVectorsPrivate( m_pBodyBSP->pev->angles, NULL, NULL, vecForward );
+	Vector vecUp;
+	UTIL_MakeVectorsPrivate( m_pBodyBSP->pev->angles, NULL, NULL, vecUp );
 
 	UTIL_SetOrigin( m_pBodyBSP->pev, pev->origin );
-	UTIL_SetOrigin( m_pTurretBSP->pev, pev->origin + vecForward * 70 );
-	UTIL_SetOrigin( m_pBarrelBSP->pev, pev->origin + vecForward * 82 );
+	UTIL_SetOrigin( m_pTurretBSP->pev, pev->origin + vecUp * 70 );
+	UTIL_SetOrigin( m_pBarrelBSP->pev, pev->origin + vecUp * 82 );
 }
 
 //=========================================================
@@ -383,7 +390,7 @@ void CVehicleTank::WithPlayerThink( void )
 
 	if ( m_iGasState == TANK_GAS_REFUEL )
 	{
-		EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_STATIC, "tank/startup.wav", m_fTankSoundAdj, 0.8, 0, PITCH_NORM );
+		EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_STATIC, "tank/startup.wav", m_fTankSoundAdj, 0.8 );
 		m_iGasState = TANK_GAS_FULL;
 		m_pPlayer->pev->view_ofs = g_vecZero;
 	}
@@ -408,7 +415,7 @@ void CVehicleTank::WithPlayerThink( void )
 	float flInterval = gpGlobals->time - m_flTimeHolder;
 	m_flTimeHolder = gpGlobals->time;
 
-	Move( flInterval );
+	MoveTank( flInterval );
 	UpdatePlayer( flInterval );
 
 	if ( gpGlobals->time > m_flNextHullCheck )
@@ -425,8 +432,8 @@ void CVehicleTank::WithPlayerThink( void )
 
 	// the parts move with velocities that carry them onto the tank
 	m_pBodyBSP->pev->velocity = pev->origin - m_pBodyBSP->pev->origin + m_pBodyBSP->pev->velocity;
-	m_pTurretBSP->pev->velocity = Vector( pev->origin.x, pev->origin.y, pev->origin.z + 70 ) - m_pTurretBSP->pev->origin + m_pTurretBSP->pev->velocity;
-	m_pBarrelBSP->pev->velocity = Vector( pev->origin.x, pev->origin.y, pev->origin.z + 82 ) - m_pBarrelBSP->pev->origin + m_pBarrelBSP->pev->velocity;
+	m_pTurretBSP->pev->velocity = pev->origin + Vector( 0, 0, 70 ) - m_pTurretBSP->pev->origin + m_pTurretBSP->pev->velocity;
+	m_pBarrelBSP->pev->velocity = pev->origin + Vector( 0, 0, 82 ) - m_pBarrelBSP->pev->origin + m_pBarrelBSP->pev->velocity;
 }
 
 //=========================================================
@@ -459,10 +466,7 @@ int CVehicleTank::TankControls( void )
 	{
 		m_flAccelTime = gpGlobals->time + 0.1;
 
-		float flSpeed = m_flSpeed;
-		if ( flSpeed < 0 )
-			flSpeed *= -1;
-		flSpeed /= 250;
+		float flSpeed = ( m_flSpeed < 0 ? m_flSpeed * -1 : m_flSpeed ) / 250;
 
 		float flVol = flSpeed * 0.3;
 		if ( m_iGasState )
@@ -652,9 +656,9 @@ void CVehicleTank::SetTankAnim( int iAnim )
 }
 
 //=========================================================
-// Move - turns and tilts the tank to the ground, then drives
+// MoveTank - turns and tilts the tank to the ground, then drives
 //=========================================================
-void CVehicleTank::Move( float flInterval )
+void CVehicleTank::MoveTank( float flInterval )
 {
 	static int s_iStuck = 0;
 	BOOL bRestore = FALSE;
@@ -670,7 +674,8 @@ void CVehicleTank::Move( float flInterval )
 	vecGround.x = UTIL_AngleNormalize( vecGround.x );
 	vecGround.y = UTIL_AngleNormalize( vecGround.y );
 
-	Vector vecAvel = BodyAvelocity( UTIL_AngleDiff( pev->angles.y, vecGround.y ), vecGround );
+	Vector vecAvel;
+	vecAvel = BodyAvelocity( UTIL_AngleDiff( pev->angles.y, vecGround.y ), vecGround );
 	pev->avelocity.x = vecAvel.x;
 	pev->avelocity.z = vecAvel.z;
 	m_pBodyBSP->pev->avelocity.x = pev->avelocity.x * -1;
@@ -719,10 +724,11 @@ void CVehicleTank::Move( float flInterval )
 
 	m_pBodyBSP->pev->velocity = pev->velocity;
 
-	Vector vecForward;
-	UTIL_MakeVectorsPrivate( pev->angles, vecForward, NULL, NULL );
-	m_pTurretBSP->pev->velocity = pev->origin + vecForward * 70 - m_pTurretBSP->pev->origin + pev->velocity;
-	m_pBarrelBSP->pev->velocity = pev->origin + vecForward * 82 - m_pBarrelBSP->pev->origin + pev->velocity;
+	// the turret and barrel sit on the body, along its up vector
+	Vector vecUp;
+	UTIL_MakeVectorsPrivate( pev->angles, NULL, NULL, vecUp );
+	m_pTurretBSP->pev->velocity = pev->origin + vecUp * 70 - m_pTurretBSP->pev->origin + pev->velocity;
+	m_pBarrelBSP->pev->velocity = pev->origin + vecUp * 82 - m_pBarrelBSP->pev->origin + pev->velocity;
 
 	if ( bRestore )
 		RestoreLastValid();
@@ -876,15 +882,15 @@ int CVehicleTank::UpdatePlayer( float flInterval )
 
 	UTIL_MakeVectors( m_pBarrelBSP->pev->angles );
 
+	Vector vecEnd, vecStart;
 	Vector vecBack = gpGlobals->v_forward * -250;
 	Vector vecUp = gpGlobals->v_up * 140;
-	Vector vecEnd = pev->origin + vecUp + vecBack;
-	Vector vecStart = pev->origin + gpGlobals->v_up * 140;
+	vecEnd = pev->origin + vecUp + vecBack;
+	vecStart = pev->origin + gpGlobals->v_up * 140;
 
 	UTIL_TraceLine( vecStart, vecEnd, ignore_monsters, NULL, &tr );
 
-	Vector vecDir = ( vecStart - vecEnd ).Normalize() * 50;
-	m_pPlayer->pev->velocity = tr.vecEndPos + vecDir - m_pPlayer->pev->origin;
+	m_pPlayer->pev->velocity = tr.vecEndPos + ( vecStart - vecEnd ).Normalize() * 50 - m_pPlayer->pev->origin;
 	UTIL_SetOrigin( m_pPlayer->pev, tr.vecEndPos + ( vecStart - vecEnd ).Normalize() * 50 );
 
 	return 1;
@@ -943,43 +949,46 @@ void CVehicleTank::UpdateControllers( void )
 {
 	void *pmodel = GET_MODEL_PTR( ENT( pev ) );
 
-	float flTurret = UTIL_AngleNormalize( m_pBarrelBSP->pev->angles.y - pev->angles.y );
+	float flTurret = m_pBarrelBSP->pev->angles.y - pev->angles.y;
+	flTurret = UTIL_AngleNormalize( flTurret );
 	if ( flTurret < 0 )
 		flTurret += 360;
 
-	CBasePlayer *pPlayer = m_pPlayer;
-	if ( pPlayer )
+	// the HUD's turret indicator has 16 positions, centered on the compass points
+	float flPos = flTurret - 11.25;
+	if ( flPos < 0 )
+		flPos += 360;
+	float flHUDPos = 16 - flPos / 22.5;
+
+	if ( m_pPlayer )
 	{
-		if ( (int)flTurret != m_sTurretHUDPos )
+		if ( (int)flHUDPos != m_sTurretHUDPos )
 		{
-			m_sTurretHUDPos = (int)flTurret;
-			MESSAGE_BEGIN( MSG_ONE, gmsgTurretPos, NULL, pPlayer->pev );
-				WRITE_SHORT( (int)flTurret );
+			m_sTurretHUDPos = (int)flHUDPos;
+			MESSAGE_BEGIN( MSG_ONE, gmsgTurretPos, NULL, m_pPlayer->pev );
+				WRITE_SHORT( m_sTurretHUDPos );
 			MESSAGE_END();
 		}
 	}
 
 	// the turret turns on three controllers of 120 degrees each
-	if ( flTurret > 120 )
-	{
-		if ( flTurret > 240 )
-		{
-			SetController( pmodel, pev, 0, 120 );
-			SetController( pmodel, pev, 1, 120 );
-			SetController( pmodel, pev, 2, flTurret - 240 );
-		}
-		else
-		{
-			SetController( pmodel, pev, 0, 120 );
-			SetController( pmodel, pev, 1, flTurret - 120 );
-			SetController( pmodel, pev, 2, 0 );
-		}
-	}
-	else
+	if ( flTurret <= 120 )
 	{
 		SetController( pmodel, pev, 0, flTurret );
 		SetController( pmodel, pev, 1, 0 );
 		SetController( pmodel, pev, 2, 0 );
+	}
+	else if ( flTurret <= 240 )
+	{
+		SetController( pmodel, pev, 0, 120 );
+		SetController( pmodel, pev, 1, flTurret - 120 );
+		SetController( pmodel, pev, 2, 0 );
+	}
+	else
+	{
+		SetController( pmodel, pev, 0, 120 );
+		SetController( pmodel, pev, 1, 120 );
+		SetController( pmodel, pev, 2, flTurret - 240 );
 	}
 
 	SetController( pmodel, pev, 3, UTIL_AngleDiff( m_pBarrelBSP->pev->angles.x, m_pTurretBSP->pev->angles.x ) );
@@ -1263,15 +1272,18 @@ Vector CVehicleTank::Slide( Vector vecVelocity, Vector vecNormal )
 Vector CVehicleTank::GroundAngles( void )
 {
 	TraceResult tr;
-
-	UTIL_TraceLine( pev->origin, Vector( pev->origin.x, pev->origin.y, pev->origin.z - 2048 ), ignore_monsters, ENT( m_pBodyBSP->pev ), &tr );
-
+	Vector vecAngles;
 	Vector vecUp;
-	Vector vecAngles = UTIL_VecToAngles( tr.vecPlaneNormal );
-	UTIL_MakeVectorsPrivate( vecAngles, NULL, NULL, vecUp );
-	vecAngles = UTIL_VecToAngles( vecUp );
 
-	return Vector( vecAngles.x * -1, vecAngles.y, pev->origin.z - tr.vecEndPos.z );
+	UTIL_TraceLine( pev->origin, pev->origin - Vector( 0, 0, 2048 ), ignore_monsters, ENT( m_pBodyBSP->pev ), &tr );
+
+	vecAngles = UTIL_VecToAngles( tr.vecPlaneNormal );
+	UTIL_MakeVectorsPrivate( vecAngles, NULL, NULL, vecUp );
+	vecUp = UTIL_VecToAngles( vecUp );
+	vecUp.x *= -1;
+	vecUp.z = pev->origin.z - tr.vecEndPos.z;	// height above the ground
+
+	return vecUp;
 }
 
 //=========================================================
@@ -1280,16 +1292,18 @@ Vector CVehicleTank::GroundAngles( void )
 //=========================================================
 Vector CVehicleTank::BodyAvelocity( float flYawDiff, Vector vecGround )
 {
+	// how much of the slope's pitch is pitch and how much is roll
 	float flPitch = flYawDiff / 180;
 	if ( flPitch < 0 )
 		flPitch *= -1;
+	flPitch = ( 2 - flPitch * 2 - 1 ) * vecGround.x;
 
-	float flRoll = UTIL_AngleNormalize( flYawDiff - 90 ) / 180;
-	if ( flRoll < 0 )
-		flRoll *= -1;
+	flYawDiff = UTIL_AngleNormalize( flYawDiff - 90 ) / 180;
+	if ( flYawDiff < 0 )
+		flYawDiff *= -1;
 
-	float flPitchDiff = UTIL_AngleDiff( ( 2 - flPitch * 2 - 1 ) * vecGround.x, pev->angles.x );
-	float flRollDiff = UTIL_AngleDiff( ( 2 - flRoll * 2 - 1 ) * vecGround.x * -1, pev->angles.z );
+	float flPitchDiff = UTIL_AngleDiff( flPitch, pev->angles.x );
+	float flRollDiff = UTIL_AngleDiff( ( 2 - flYawDiff * 2 - 1 ) * vecGround.x * -1, pev->angles.z );
 
 	if ( flPitchDiff > 2 || flPitchDiff < -2 )
 		flPitchDiff *= 2;
@@ -1305,16 +1319,18 @@ Vector CVehicleTank::BodyAvelocity( float flYawDiff, Vector vecGround )
 //=========================================================
 Vector CVehicleTank::TurretAvelocity( float flYawDiff, Vector vecGround )
 {
+	// how much of the slope's pitch is pitch and how much is roll
 	float flPitch = flYawDiff / 180;
 	if ( flPitch < 0 )
 		flPitch *= -1;
+	flPitch = ( 2 - flPitch * 2 - 1 ) * vecGround.x;
 
-	float flRoll = UTIL_AngleNormalize( flYawDiff - 90 ) / 180;
-	if ( flRoll < 0 )
-		flRoll *= -1;
+	flYawDiff = UTIL_AngleNormalize( flYawDiff - 90 ) / 180;
+	if ( flYawDiff < 0 )
+		flYawDiff *= -1;
 
-	float flPitchDiff = UTIL_AngleDiff( ( 2 - flPitch * 2 - 1 ) * vecGround.x * -1, m_pTurretBSP->pev->angles.x );
-	float flRollDiff = UTIL_AngleDiff( ( 2 - flRoll * 2 - 1 ) * vecGround.x * -1, m_pTurretBSP->pev->angles.z );
+	float flPitchDiff = UTIL_AngleDiff( flPitch * -1, m_pTurretBSP->pev->angles.x );
+	float flRollDiff = UTIL_AngleDiff( ( 2 - flYawDiff * 2 - 1 ) * vecGround.x * -1, m_pTurretBSP->pev->angles.z );
 
 	if ( flPitchDiff > 2 || flPitchDiff < -2 )
 		flPitchDiff *= 2;
