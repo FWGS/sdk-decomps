@@ -281,6 +281,7 @@ public:
 		void Eat ( float flFullDuration );// make the monster 'full' for a while.
 
 		CBaseEntity *CheckTraceHullAttack( float flDist, int iDamage, int iDmgType );
+		CBaseEntity *CheckEnemyMeleeHit( float flDist, int iDamage, int iDmgType, int iPunch, int iKnockback );
 		BOOL FacingIdeal( void );
 
 		BOOL FCheckAITrigger( void );// checks and, if necessary, fires the monster's trigger target. 
@@ -294,11 +295,13 @@ public:
 		BOOL GetEnemy ( void );
 		void MakeDamageBloodDecal ( int cCount, float flNoise, TraceResult *ptr, const Vector &vecDir );
 		void TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType);
+		void TraceBleed( float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType, Vector vecPos );
 
 	// combat functions
 	float UpdateTarget ( entvars_t *pevTarget );
 	virtual Activity GetDeathActivity ( void );
 	Activity GetSmallFlinchActivity( void );
+	Activity GetBigFlinchActivity( void );
 	virtual int VisionFlags( void );	// bit 0: FVisible ignores the water line
 	virtual void CallForHelp( char *szClassname, float flDist, EHANDLE hEnemy, Vector &vecLocation );
 	virtual void Killed( entvars_t *pevAttacker, int iGib );

@@ -48,6 +48,10 @@ DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for the initia
 DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for splattered blood
 DLL_GLOBAL	short	g_sModelIndexSmokePuff;// smoke trail of burning gibs
 DLL_GLOBAL	short	g_sModelIndexGibSprite;// blood trail of gibs (robot oil in the German version)
+DLL_GLOBAL	short	g_sModelIndexExplosion1;
+DLL_GLOBAL	short	g_sModelIndexExplosion2;
+DLL_GLOBAL	short	g_sModelIndexExplosion3;
+DLL_GLOBAL	short	g_sModelIndexExplosion4;
 
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
 AmmoInfo CBasePlayerItem::AmmoInfoArray[MAX_AMMO_SLOTS];

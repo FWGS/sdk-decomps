@@ -418,7 +418,7 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 		}
 
 		SpawnBlood(ptr->vecEndPos, BloodColor(), flDamage);// a little surface blood.
-		TraceBleed( flDamage, vecDir, ptr, bitsDamageType );
+		TraceBleed( flDamage, vecDir, ptr, bitsDamageType, ptr->vecEndPos );
 		AddMultiDamage( pevAttacker, this, flDamage, bitsDamageType );
 	}
 }

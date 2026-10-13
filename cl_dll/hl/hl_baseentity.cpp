@@ -120,7 +120,7 @@ void CBaseAnimating :: SetBodygroup( int iGroup, int iValue ) { }
 int CBaseAnimating :: GetBodygroup( int iGroup ) { return 0; }
 void CBaseEntity::TraceAttack(entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType) { }
 void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iBulletType, int iTracerFreq, int iDamage, entvars_t *pevAttacker ) { }
-void CBaseEntity :: TraceBleed( float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType ) { }
+void CBaseEntity :: TraceBleed( float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType, Vector vecPos ) { }
 void CBaseMonster :: MakeDamageBloodDecal ( int cCount, float flNoise, TraceResult *ptr, const Vector &vecDir ) { }
 void CBaseMonster::ReportAIState( void ) { }
 void CBaseMonster :: KeyValue( KeyValueData *pkvd ) { }
@@ -132,6 +132,7 @@ BOOL CBaseMonster :: ShouldFadeOnDeath( void ) { return FALSE; }
 void CBaseMonster :: RadiusDamage(entvars_t* pevInflictor, entvars_t*	pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType ) { }
 void CBaseMonster :: RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType ) { }
 void CBaseMonster :: CallForHelp( char *szClassname, float flDist, EHANDLE hEnemy, Vector &vecLocation ) { }
+void CBaseMonster :: TraceBleed( float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType, Vector vecPos ) { }
 void CBaseMonster::FadeMonster( void ) { }
 void CBaseMonster :: GibMonster( void ) { }
 BOOL CBaseMonster :: HasHumanGibs( void ) { return FALSE; }

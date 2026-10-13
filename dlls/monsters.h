@@ -165,6 +165,44 @@ public:
 };
 
 
+// Gunman's per-species data, indexed by CBaseMonster::MonsterType()
+typedef struct
+{
+	const char	*pszModel;
+	int			iParts[4];		// meaning not known yet
+} gibmodel_t;
+
+typedef struct
+{
+	int		iGibModel;		// gGibModels entry GibMonster throws
+	int		bloodColor;
+	int		iBloodDecal;	// not read by the code
+	int		iPrecacheGib;	// gGibModels entry Precache loads
+	int		iGoreType;		// TraceBleed's spray sprite, 1-6
+	int		iGibType;		// GibMonster's spray sprite, 1-6
+	int		afCapability;
+	int		movetype;
+	float	flFieldOfView;
+} monstertype_t;
+
+extern gibmodel_t gGibModels[];
+extern monstertype_t gMonsterTypes[];
+
+// gib and gore spray sprites, precached by the species that use them
+extern int g_iGibHuman;
+extern int g_iGoreHuman;
+extern int g_iGibBot;
+extern int g_iGoreBot;
+extern int g_iGibBirth;
+extern int g_iGoreBeak;
+extern int g_iGibBeak;
+extern int g_iGoreBirth;
+extern int g_iGoreTube;
+extern int g_iGibTube;
+extern int g_iGoreXeno;
+extern int g_iGibXeno;
+
+
 #define CUSTOM_SCHEDULES\
 		virtual Schedule_t *ScheduleFromName( const char *pName );\
 		static Schedule_t *m_scheduleList[];

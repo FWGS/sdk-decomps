@@ -29,6 +29,7 @@
 #include "animation.h"
 #include "weapons.h"
 #include "func_break.h"
+#include "gamerules.h"
 
 extern DLL_GLOBAL Vector		g_vecAttackDir;
 extern DLL_GLOBAL int			g_iSkillLevel;
@@ -527,6 +528,16 @@ Activity CBaseMonster :: GetSmallFlinchActivity ( void )
 	{
 		flinchActivity = ACT_SMALL_FLINCH;
 	}
+
+	return flinchActivity;
+}
+
+Activity CBaseMonster :: GetBigFlinchActivity ( void )
+{
+	Activity	flinchActivity = ACT_BIG_FLINCH;
+
+	if ( LookupActivity ( flinchActivity ) == ACTIVITY_NOT_AVAILABLE )
+		return ACT_SMALL_FLINCH;
 
 	return flinchActivity;
 }
@@ -1087,12 +1098,34 @@ float CBaseMonster :: DamageForce( float damage )
 { 
 	float force = damage * ((32 * 32 * 72.0) / (pev->size.x * pev->size.y * pev->size.z)) * 5;
 	
-	if ( force > 1000.0) 
+	if ( g_pGameRules && g_pGameRules->IsMultiplayer() )
 	{
-		force = 1000.0;
+		if ( force > 1000.0) 
+		{
+			force = 1000.0;
+		}
+	}
+	else if ( force > 400.0 )
+	{
+		force = 400.0;
 	}
 
 	return force;
+}
+
+short RandomExplosionSprite( void )
+{
+	switch ( RANDOM_LONG( 0, 3 ) )
+	{
+	case 0:
+		return g_sModelIndexExplosion1;
+	case 1:
+		return g_sModelIndexExplosion2;
+	case 2:
+		return g_sModelIndexExplosion3;
+	default:
+		return g_sModelIndexExplosion4;
+	}
 }
 
 //
@@ -1218,9 +1251,67 @@ CBaseEntity* CBaseMonster :: CheckTraceHullAttack( float flDist, int iDamage, in
 		if ( iDamage > 0 )
 		{
 			pEntity->TakeDamage( pev, pev, iDamage, iDmgType );
+
+			CBaseMonster *pMonster = pEntity->MyMonsterPointer();
+			if ( pMonster )
+				pMonster->TraceBleed( iDamage, pev->origin - pEntity->pev->origin, &tr, iDmgType, pEntity->pev->origin );
 		}
 
 		return pEntity;
+	}
+
+	return NULL;
+}
+
+
+//=========================================================
+// CheckEnemyMeleeHit - bite or claw the enemy if it is in reach and
+// in view; damage, punch and knock back whatever the trace hits.
+// The damage type is always DMG_SLASH, whatever iDmgType says.
+//=========================================================
+CBaseEntity* CBaseMonster :: CheckEnemyMeleeHit( float flDist, int iDamage, int iDmgType, int iPunch, int iKnockback )
+{
+	TraceResult tr;
+
+	if ( m_hEnemy != NULL && FInViewCone( m_hEnemy ) )
+	{
+		Vector vecDist = pev->origin - m_hEnemy->pev->origin;
+
+		if ( vecDist.Length() - (m_hEnemy->pev->absmax.x - m_hEnemy->pev->absmin.x) / 2 > flDist )
+			return NULL;
+
+		UTIL_TraceLine( pev->origin + Vector( 0, 0, 8 ), m_hEnemy->Center(), dont_ignore_monsters, ENT(pev), &tr );
+	}
+
+	if ( tr.pHit )
+	{
+		CBaseEntity *pEntity = (CBaseEntity *)GET_PRIVATE( tr.pHit );
+
+		if ( pEntity )
+		{
+			if ( iDamage > 0 )
+			{
+				UTIL_MakeAimVectors( pev->angles );
+				pEntity->TakeDamage( pev, pev, iDamage, DMG_SLASH );
+
+				pEntity->pev->punchangle.z = RANDOM_LONG( -iPunch, iPunch );
+				pEntity->pev->punchangle.x = RANDOM_LONG( -iPunch, iPunch );
+
+				pEntity->pev->velocity = pEntity->pev->velocity - gpGlobals->v_forward * iKnockback;
+				pEntity->pev->velocity = pEntity->pev->velocity + gpGlobals->v_up * iKnockback;
+
+				CBaseMonster *pMonster = pEntity->MyMonsterPointer();
+				if ( pMonster )
+				{
+					TraceResult trBleed;
+
+					UTIL_TraceLine( BodyTarget( g_vecZero ), pMonster->BodyTarget( g_vecZero ), dont_ignore_monsters, ENT(pev), &trBleed );
+					pMonster->TraceBleed( iDamage, (pMonster->BodyTarget( g_vecZero ) - BodyTarget( g_vecZero )).Normalize(), &trBleed, DMG_SLASH, trBleed.vecEndPos );
+				}
+			}
+
+			return pEntity;
+		}
 	}
 
 	return NULL;
@@ -1297,7 +1388,10 @@ BOOL CBaseEntity :: FVisible ( CBaseEntity *pEntity )
 	// don't look through water
 	if ((pev->waterlevel != 3 && pEntity->pev->waterlevel == 3) 
 		|| (pev->waterlevel == 3 && pEntity->pev->waterlevel == 0))
+	{
+		ALERT( at_console, "FVisible - water split!!\n" );
 		return FALSE;
+	}
 
 	vecLookerOrigin = pev->origin + pev->view_ofs;//look through the caller's 'eyes'
 	vecTargetOrigin = pEntity->EyePosition();
@@ -1355,7 +1449,7 @@ void CBaseEntity::TraceAttack(entvars_t *pevAttacker, float flDamage, Vector vec
 		if ( blood != DONT_BLEED )
 		{
 			SpawnBlood(vecOrigin, blood, flDamage);// a little surface blood.
-			TraceBleed( flDamage, vecDir, ptr, bitsDamageType );
+			TraceBleed( flDamage, vecDir, ptr, bitsDamageType, vecOrigin );
 		}
 	}
 }
@@ -1394,6 +1488,7 @@ void CBaseMonster :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector
 	if ( pev->takedamage )
 	{
 		m_LastHitGroup = ptr->iHitgroup;
+		m_LastHitDamageType = bitsDamageType;
 
 		switch ( ptr->iHitgroup )
 		{
@@ -1421,7 +1516,7 @@ void CBaseMonster :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector
 		}
 
 		SpawnBlood(ptr->vecEndPos, BloodColor(), flDamage);// a little surface blood.
-		TraceBleed( flDamage, vecDir, ptr, bitsDamageType );
+		TraceBleed( flDamage, vecDir, ptr, bitsDamageType, ptr->vecEndPos );
 		AddMultiDamage( pevAttacker, this, flDamage, bitsDamageType );
 	}
 }
@@ -1556,7 +1651,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 }
 
 
-void CBaseEntity :: TraceBleed( float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType )
+void CBaseEntity :: TraceBleed( float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType, Vector vecPos )
 {
 	if (BloodColor() == DONT_BLEED)
 		return;
@@ -1564,7 +1659,7 @@ void CBaseEntity :: TraceBleed( float flDamage, Vector vecDir, TraceResult *ptr,
 	if (flDamage == 0)
 		return;
 
-	if (! (bitsDamageType & (DMG_CRUSH | DMG_BULLET | DMG_SLASH | DMG_BLAST | DMG_CLUB | DMG_MORTAR)))
+	if ( bitsDamageType & DMG_DROWN )
 		return;
 	
 	// make blood decal on the wall! 
@@ -1621,6 +1716,58 @@ void CBaseEntity :: TraceBleed( float flDamage, Vector vecDir, TraceResult *ptr,
 			UTIL_BloodDecalTrace( &Bloodtr, BloodColor() );
 		}
 	}
+}
+
+void CBaseMonster :: TraceBleed( float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType, Vector vecPos )
+{
+	if ( MonsterType() )
+	{
+		int iSprite;
+
+		switch ( gMonsterTypes[ MonsterType() ].iGoreType )
+		{
+		case 1:
+			iSprite = g_iGoreBot;
+			break;
+		case 2:
+			iSprite = g_iGoreBeak;
+			break;
+		case 3:
+			iSprite = g_iGoreXeno;
+			break;
+		case 4:
+			iSprite = g_iGoreTube;
+			break;
+		case 5:
+			iSprite = g_iGoreHuman;
+			break;
+		case 6:
+			iSprite = g_iGoreBirth;
+			break;
+		default:
+			iSprite = 0;
+			break;
+		}
+
+		if ( CVAR_GET_FLOAT( "violence_ablood" ) != 0 && iSprite > 0 )
+		{
+			MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecPos );
+				WRITE_BYTE( TE_SPRITE_SPRAY );
+				WRITE_COORD( vecPos.x );
+				WRITE_COORD( vecPos.y );
+				WRITE_COORD( vecPos.z );
+				WRITE_COORD( vecDir.x );
+				WRITE_COORD( vecDir.y );
+				WRITE_COORD( vecDir.z );
+				WRITE_SHORT( iSprite );
+				WRITE_BYTE( min( flDamage / 2, 50 ) );
+				WRITE_BYTE( 100 );
+				WRITE_BYTE( 100 );
+			MESSAGE_END();
+		}
+	}
+
+	CBaseEntity::TraceBleed( flDamage, vecDir, ptr, bitsDamageType, vecPos );
 }
 
 //=========================================================

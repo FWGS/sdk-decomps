@@ -388,6 +388,12 @@ extern DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for blo
 extern DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for blood spray (bigger)
 extern DLL_GLOBAL	short	g_sModelIndexSmokePuff;// smoke trail of burning gibs
 extern DLL_GLOBAL	short	g_sModelIndexGibSprite;// blood trail of gibs (robot oil in the German version)
+extern DLL_GLOBAL	short	g_sModelIndexExplosion1;
+extern DLL_GLOBAL	short	g_sModelIndexExplosion2;
+extern DLL_GLOBAL	short	g_sModelIndexExplosion3;
+extern DLL_GLOBAL	short	g_sModelIndexExplosion4;
+
+short RandomExplosionSprite( void );
 
 extern void ClearMultiDamage(void);
 extern void ApplyMultiDamage(entvars_t* pevInflictor, entvars_t* pevAttacker );
