@@ -62,23 +62,30 @@ public:
 #define ITEM_BATTERY		4
 
 #define WEAPON_NONE				0
-#define WEAPON_CROWBAR			1
-#define	WEAPON_GLOCK			2
-#define WEAPON_PYTHON			3
-#define WEAPON_MP5				4
-#define WEAPON_CHAINGUN			5
-#define WEAPON_CROSSBOW			6
-#define WEAPON_SHOTGUN			7
-#define WEAPON_RPG				8
-#define WEAPON_GAUSS			9
-#define WEAPON_EGON				10
-#define WEAPON_HORNETGUN		11
-#define WEAPON_HANDGRENADE		12
-#define WEAPON_TRIPMINE			13
-#define	WEAPON_SATCHEL			14
-#define	WEAPON_SNARK			15
+#define WEAPON_FISTS			1
+#define WEAPON_CUST_BEAM		2	// cust_1BeamFrequency, cust_2BeamCurrent, cust_3BeamVoltage
+#define WEAPON_CUST_DMLGRENADE	6	// cust_1DMLGrenDetonate, cust_2DMLGrenPayload
+#define WEAPON_AICORE			7
+#define WEAPON_CUST_KNIFE		8	// cust_1fistsKnife
+#define WEAPON_CUST_DML			12	// cust_1DMLLaunch, cust_2DMLFlightpath, cust_3DMLDetonate, cust_4DMLPayload
+#define WEAPON_DMLGRENADE		13
+#define WEAPON_BEAMGUN			14
+#define WEAPON_DML				16
+#define WEAPON_SHOTGUN			17
+#define WEAPON_CUST_SNIPER		18	// cust_2GaussPistolSniper
+#define WEAPON_SPCHEMICALGUN	19
+#define WEAPON_CUST_SPREAD		20	// cust_1ShotgunSpread
+#define WEAPON_CUST_COOLERS		23	// cust_2MinigunCooled
+#define WEAPON_CUST_CHEMGUN		25	// cust_1SPChemicalGunPressure, cust_2ChemAcid, cust_3ChemBase, cust_4ChemNuet
+#define WEAPON_MINIGUN			28
+#define WEAPON_CUST_SPIN		29	// cust_1MinigunSpin
+#define WEAPON_GAUSSPISTOL		30
+#define WEAPON_CUST_FIRETYPE	31	// cust_1GaussPistolFireType
+#define WEAPON_CUST_SHELLS		32	// cust_2ShotgunShells
 
-#define WEAPON_ALLWEAPONS		(~(1<<1))	// all but the fists (id 1)
+#define	WEAPON_GLOCK			2	// SDK; the client's prediction code still has the glock
+
+#define WEAPON_ALLWEAPONS		(~(1<<WEAPON_FISTS))
 
 #define WEAPON_SUIT				0
 
@@ -90,6 +97,8 @@ public:
 
 // weapon weight factors (for auto-switching)   (-1 = noswitch)
 #define CROWBAR_WEIGHT		0
+#define FISTS_WEIGHT		-10
+#define CUSTOMIZATION_WEIGHT	-100
 #define GLOCK_WEIGHT		10
 #define PYTHON_WEIGHT		15
 #define MP5_WEIGHT			15
