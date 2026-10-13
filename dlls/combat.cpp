@@ -1646,3 +1646,22 @@ void CBaseMonster :: MakeDamageBloodDecal ( int cCount, float flNoise, TraceResu
 		}
 	}
 }
+
+void CBaseMonster :: CallForHelp( char *szClassname, float flDist, EHANDLE hEnemy, Vector &vecLocation )
+{
+	CBaseEntity *pEntity = NULL;
+
+	while ((pEntity = UTIL_FindEntityByClassname( pEntity, szClassname )) != NULL)
+	{
+		float d = (pev->origin - pEntity->pev->origin).Length();
+		if (d < flDist)
+		{
+			CBaseMonster *pMonster = pEntity->MyMonsterPointer( );
+			if (pMonster)
+			{
+				pMonster->m_afMemory |= bits_MEMORY_PROVOKED;
+				pMonster->PushEnemy( hEnemy, vecLocation );
+			}
+		}
+	}
+}

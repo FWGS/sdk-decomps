@@ -300,7 +300,7 @@ public:
 	virtual Activity GetDeathActivity ( void );
 	Activity GetSmallFlinchActivity( void );
 	virtual int VisionFlags( void );	// bit 0: FVisible ignores the water line
-	virtual void RadiusDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType );
+	virtual void CallForHelp( char *szClassname, float flDist, EHANDLE hEnemy, Vector &vecLocation );
 	virtual void Killed( entvars_t *pevAttacker, int iGib );
 	virtual void GibMonster( void );
 	BOOL		 ShouldGibMonster( int iGib );
@@ -326,6 +326,7 @@ public:
 	virtual int TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType);
 	int			DeadTakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
 
+	void RadiusDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType );
 	void RadiusDamage(Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType );
 	virtual int		IsMoving( void ) { return m_movementGoal != MOVEGOAL_NONE; }
 

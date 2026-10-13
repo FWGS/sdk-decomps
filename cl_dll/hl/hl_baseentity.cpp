@@ -131,6 +131,7 @@ void CBaseMonster :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector
 BOOL CBaseMonster :: ShouldFadeOnDeath( void ) { return FALSE; }
 void CBaseMonster :: RadiusDamage(entvars_t* pevInflictor, entvars_t*	pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType ) { }
 void CBaseMonster :: RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType ) { }
+void CBaseMonster :: CallForHelp( char *szClassname, float flDist, EHANDLE hEnemy, Vector &vecLocation ) { }
 void CBaseMonster::FadeMonster( void ) { }
 void CBaseMonster :: GibMonster( void ) { }
 BOOL CBaseMonster :: HasHumanGibs( void ) { return FALSE; }
