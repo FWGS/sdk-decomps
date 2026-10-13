@@ -699,7 +699,9 @@ Activity CBaseMonster :: GetBigFlinchActivity ( void )
 	Activity	flinchActivity = ACT_BIG_FLINCH;
 
 	if ( LookupActivity ( flinchActivity ) == ACTIVITY_NOT_AVAILABLE )
-		return ACT_SMALL_FLINCH;
+	{
+		flinchActivity = ACT_SMALL_FLINCH;
+	}
 
 	return flinchActivity;
 }
