@@ -770,8 +770,8 @@ void EV_FireGWShotgun( event_args_t *args )
 
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
-	VectorCopy( args->angles, angles );
 	iShells = args->iparam2;
+	VectorCopy( args->angles, angles );
 	VectorCopy( args->velocity, velocity );
 
 	AngleVectors( angles, forward, right, up );
@@ -803,7 +803,7 @@ void EV_FireGWShotgun( event_args_t *args )
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 
-		switch ( iShells )
+		switch ( args->iparam2 )
 		{
 		case 1:
 			gEngfuncs.pEventAPI->EV_WeaponAnimation( 3, 2 );
@@ -836,7 +836,7 @@ void EV_FireGWShotgun( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
-		V_PunchAxis( 0, -( iShells * ( iShells + 1 ) ) );
+		V_PunchAxis( 0, -( ( iShells + 1 ) * iShells ) );
 	}
 }
 
@@ -947,6 +947,7 @@ void EV_MonsterShotgun( event_args_t *args )
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSpread;
+	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
 
 	idx = args->entindex;
@@ -968,7 +969,11 @@ void EV_MonsterShotgun( event_args_t *args )
 		EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHOTSHELL ); 
 	}
 
-	// sic: shoots along the angles, not forward
+	// sic: vecSrc and vecAiming go unused; the bullets start at the origin
+	// and fly along the angles, not forward
+	VectorCopy( origin, vecSrc );
+	VectorCopy( angles, vecAiming );
+
 	EV_HLDM_FireBullets( idx, forward, right, up, 8, origin, angles, vecSpread, 2048, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1] );
 }
 
@@ -984,6 +989,7 @@ void EV_MonsterMechagun( event_args_t *args )
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSpread;
+	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
 
 	idx = args->entindex;
@@ -1005,7 +1011,11 @@ void EV_MonsterMechagun( event_args_t *args )
 		EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL ); 
 	}
 
-	// sic: shoots along the angles, not forward
+	// sic: vecSrc and vecAiming go unused; the bullets start at the origin
+	// and fly along the angles, not forward
+	VectorCopy( origin, vecSrc );
+	VectorCopy( angles, vecAiming );
+
 	EV_HLDM_FireBullets( idx, forward, right, up, 1, origin, angles, vecSpread, 2048, BULLET_PLAYER_MP5, 1, &tracerCount[idx-1] );
 }
 
@@ -1021,6 +1031,7 @@ void EV_ChopperFire( event_args_t *args )
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSpread;
+	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
 
 	idx = args->entindex;
@@ -1042,7 +1053,11 @@ void EV_ChopperFire( event_args_t *args )
 		EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL ); 
 	}
 
-	// sic: shoots along the angles, not forward
+	// sic: vecSrc and vecAiming go unused; the bullets start at the origin
+	// and fly along the angles, not forward
+	VectorCopy( origin, vecSrc );
+	VectorCopy( angles, vecAiming );
+
 	EV_HLDM_FireBullets( idx, forward, right, up, 1, origin, angles, vecSpread, 2048, BULLET_PLAYER_MP5, 2, &tracerCount[idx-1] );
 }
 
@@ -1880,7 +1895,7 @@ void EV_ChemicalSpray( event_args_t *args )
 
 	gEngfuncs.pEventAPI->EV_PopPMStates();
 
-	if ( !tr.startsolid )
+	if ( !tr.allsolid )
 		gEngfuncs.pEfxAPI->R_Sprite_Spray( origin, tr.plane.normal, iSprite, 10, 50, 100 );
 }
 
