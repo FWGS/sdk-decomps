@@ -978,6 +978,178 @@ Schedule_t	slTakeCoverFromEnemy[] =
 	},
 };
 
+//=========================================================
+// leap at the enemy, then face it
+//=========================================================
+Task_t	tlJumpAir[] =
+{
+	{ TASK_STOP_MOVING,				(float)0					},
+	{ TASK_LEAP_START,				(float)0					},
+	{ TASK_LEAP_FLY,				(float)0					},
+	{ TASK_STOP_MOVING,				(float)0					},
+	{ TASK_LEAP_LAND,				(float)0					},
+	{ TASK_FACE_ENEMY,				(float)0					},
+};
+
+Schedule_t	slJumpAir[] =
+{
+	{ 
+		tlJumpAir,
+		ARRAYSIZE ( tlJumpAir ), 
+		bits_COND_LIGHT_DAMAGE	|
+		bits_COND_HEAVY_DAMAGE,
+		0,
+		"Jump-fly-land(Jump_Air)"
+	},
+};
+
+Task_t	tlCrouch[] =
+{
+	{ TASK_STOP_MOVING,				(float)0					},
+	{ TASK_FACE_ENEMY,				(float)0					},
+	{ TASK_PLAY_SEQUENCE,			(float)ACT_CROUCH			},
+};
+
+Schedule_t	slCrouch[] =
+{
+	{ 
+		tlCrouch,
+		ARRAYSIZE ( tlCrouch ), 
+		bits_COND_LIGHT_DAMAGE	|
+		bits_COND_HEAVY_DAMAGE,
+		0,
+		"Crouching"
+	},
+};
+
+Task_t	tlStand[] =
+{
+	{ TASK_STOP_MOVING,				(float)0					},
+	{ TASK_PLAY_SEQUENCE,			(float)ACT_STAND			},
+	{ TASK_FACE_IDEAL,				(float)0					},
+};
+
+Schedule_t	slStand[] =
+{
+	{ 
+		tlStand,
+		ARRAYSIZE ( tlStand ), 
+		bits_COND_LIGHT_DAMAGE	|
+		bits_COND_HEAVY_DAMAGE,
+		0,
+		"Crouching"
+	},
+};
+
+//=========================================================
+// stand idle and ignore everything
+//=========================================================
+Task_t	tlLockedIdleStand[] =
+{
+	{ TASK_STOP_MOVING,				(float)0					},
+	{ TASK_SET_ACTIVITY_IDLE,		(float)0					},
+	{ TASK_WAIT,					(float)5					},
+};
+
+Schedule_t	slLockedIdleStand[] =
+{
+	{ 
+		tlLockedIdleStand,
+		ARRAYSIZE ( tlLockedIdleStand ), 
+		0,
+		0,
+		"Locked - IdleStand"
+	},
+};
+
+Task_t	tlBigFlinch[] =
+{
+	{ TASK_REMEMBER,				(float)bits_MEMORY_FLINCHED	},
+	{ TASK_STOP_MOVING,				(float)0					},
+	{ TASK_BIG_FLINCH,				(float)0					},
+	{ TASK_SOUND_PAIN,				(float)0					},
+};
+
+Schedule_t	slBigFlinch[] =
+{
+	{ 
+		tlBigFlinch,
+		ARRAYSIZE ( tlBigFlinch ), 
+		0,
+		0,
+		"Big Flinch"
+	},
+};
+
+//=========================================================
+// scripts that end facing the player
+//=========================================================
+Task_t tlScriptedWalkFacePlayer[] = 
+{
+	{ TASK_WALK_TO_TARGET,		(float)TARGET_MOVE_SCRIPTED },
+	{ TASK_WAIT_FOR_MOVEMENT,	(float)0		},
+	{ TASK_PLANT_ON_SCRIPT,		(float)0		},
+	{ TASK_TURN_TO_PLAYER,		(float)0		},
+	{ TASK_FACE_IDEAL,			(float)0		},
+	{ TASK_ENABLE_SCRIPT,		(float)0		},
+	{ TASK_WAIT_FOR_SCRIPT,		(float)0		},
+	{ TASK_PLAY_SCRIPT,			(float)0		},
+};
+
+Schedule_t slWalkToScriptFacePlayer[] =
+{
+	{ 
+		tlScriptedWalkFacePlayer,
+		ARRAYSIZE ( tlScriptedWalkFacePlayer ),
+		SCRIPT_BREAK_CONDITIONS,
+		0,
+		"WalkToScript"
+	},
+};
+
+Task_t tlScriptedRunFacePlayer[] = 
+{
+	{ TASK_RUN_TO_TARGET,		(float)TARGET_MOVE_SCRIPTED },
+	{ TASK_WAIT_FOR_MOVEMENT,	(float)0		},
+	{ TASK_PLANT_ON_SCRIPT,		(float)0		},
+	{ TASK_TURN_TO_PLAYER,		(float)0		},
+	{ TASK_FACE_IDEAL,			(float)0		},
+	{ TASK_ENABLE_SCRIPT,		(float)0		},
+	{ TASK_WAIT_FOR_SCRIPT,		(float)0		},
+	{ TASK_PLAY_SCRIPT,			(float)0		},
+};
+
+Schedule_t slRunToScriptFacePlayer[] =
+{
+	{ 
+		tlScriptedRunFacePlayer,
+		ARRAYSIZE ( tlScriptedRunFacePlayer ),
+		SCRIPT_BREAK_CONDITIONS,
+		0,
+		"RunToScript"
+	},
+};
+
+Task_t tlScriptedFacePlayer[] = 
+{
+	{ TASK_STOP_MOVING,			0				},
+	{ TASK_TURN_TO_PLAYER,		(float)0		},
+	{ TASK_FACE_IDEAL,			(float)0		},
+	{ TASK_WAIT_FOR_SCRIPT,		(float)0		},
+	{ TASK_PLAY_SCRIPT,			(float)0		},
+};
+
+Schedule_t slFaceScriptFacePlayer[] =
+{
+	{ 
+		tlScriptedFacePlayer,
+		ARRAYSIZE ( tlScriptedFacePlayer ),
+		SCRIPT_BREAK_CONDITIONS,
+		0,
+		"FaceScript"
+	},
+};
+
 Schedule_t *CBaseMonster::m_scheduleList[] = 
 {
 	slIdleStand,
@@ -1017,7 +1189,15 @@ Schedule_t *CBaseMonster::m_scheduleList[] =
 	slTakeCoverFromOrigin,
 	slTakeCoverFromBestSound,
 	slTakeCoverFromEnemy,
-	slFail
+	slFail,
+	slJumpAir,
+	slCrouch,
+	slStand,
+	slLockedIdleStand,
+	slBigFlinch,
+	slWalkToScriptFacePlayer,
+	slRunToScriptFacePlayer,
+	slFaceScriptFacePlayer
 };
 
 Schedule_t *CBaseMonster::ScheduleFromName( const char *pName )
@@ -1083,6 +1263,12 @@ Schedule_t* CBaseMonster :: GetScheduleOfType ( int Type )
 					return slRunToScript;
 				case 5:
 					return slFaceScript;
+				case 6:
+					return slWalkToScriptFacePlayer;
+				case 7:
+					return slRunToScriptFacePlayer;
+				case 8:
+					return slFaceScriptFacePlayer;
 			}
 			break;
 		}
@@ -1218,6 +1404,18 @@ Schedule_t* CBaseMonster :: GetScheduleOfType ( int Type )
 	case SCHED_FAIL:
 		{
 			return slFail;
+		}
+	case SCHED_JUMP_AIR:
+		{
+			return &slJumpAir[ 0 ];
+		}
+	case SCHED_LOCKED_IDLE_STAND:
+		{
+			return &slLockedIdleStand[ 0 ];
+		}
+	case SCHED_BIG_FLINCH:
+		{
+			return &slSmallFlinch[ 0 ];
 		}
 	default:
 		{

@@ -134,6 +134,19 @@ void CSquadMonster :: Killed( entvars_t *pevAttacker, int iGib )
 	CBaseMonster :: Killed ( pevAttacker, iGib );
 }
 
+//=========================================================
+// PreRemove
+//=========================================================
+void CSquadMonster :: PreRemove( void )
+{
+	VacateSlot();
+
+	if ( InSquad() )
+	{
+		MySquadLeader()->SquadRemove( this );
+	}
+}
+
 // These functions are still awaiting conversion to CSquadMonster 
 
 
@@ -418,15 +431,6 @@ void CSquadMonster :: StartMonster( void )
 
 	if ( ( m_afCapability & bits_CAP_SQUAD ) && !InSquad() )
 	{
-		if ( !FStringNull( pev->netname ) )
-		{
-			// if I have a groupname, I can only recruit if I'm flagged as leader
-			if ( !( pev->spawnflags & SF_SQUADMONSTER_LEADER ) )
-			{
-				return;
-			}
-		}
-
 		// try to form squads now.
 		int iSquadSize = SquadRecruit( 1024, 4 );
 
@@ -452,11 +456,6 @@ void CSquadMonster :: StartMonster( void )
 //=========================================================
 BOOL CSquadMonster :: NoFriendlyFire( void )
 {
-	if ( !InSquad() )
-	{
-		return TRUE;
-	}
-
 	CPlane	backPlane;
 	CPlane  leftPlane;
 	CPlane	rightPlane;
@@ -479,8 +478,8 @@ BOOL CSquadMonster :: NoFriendlyFire( void )
 
 	//UTIL_MakeVectors ( pev->angles );
 	
-	vecLeftSide = pev->origin - ( gpGlobals->v_right * ( pev->size.x * 1.5 ) );
-	vecRightSide = pev->origin + ( gpGlobals->v_right * ( pev->size.x * 1.5 ) );
+	vecLeftSide = pev->origin - ( gpGlobals->v_right * pev->size.x );
+	vecRightSide = pev->origin + ( gpGlobals->v_right * pev->size.x );
 	v_left = gpGlobals->v_right * -1;
 
 	leftPlane.InitializePlane ( gpGlobals->v_right, vecLeftSide );
@@ -493,18 +492,26 @@ BOOL CSquadMonster :: NoFriendlyFire( void )
 	ALERT ( at_console, "BackPlane: %f %f %f : %f\n", backPlane.m_vecNormal.x, backPlane.m_vecNormal.y, backPlane.m_vecNormal.z, backPlane.m_flDist );
 */
 
-	CSquadMonster *pSquadLeader = MySquadLeader();
-	for (int i = 0; i < MAX_SQUAD_MEMBERS; i++)
-	{
-		CSquadMonster *pMember = pSquadLeader->MySquadMember(i);
-		if (pMember && pMember != this)
-		{
+	edict_t *pEdict = INDEXENT( 1 );
+	CBaseEntity *pEntity;
 
-			if ( backPlane.PointInFront  ( pMember->pev->origin ) &&
-				 leftPlane.PointInFront  ( pMember->pev->origin ) && 
-				 rightPlane.PointInFront ( pMember->pev->origin) )
+	for ( int i = 1; i < gpGlobals->maxEntities; i++, pEdict++ )
+	{
+		if ( pEdict->free )
+			continue;
+
+		if ( pEdict == edict() )
+			continue;
+
+		pEntity = (CBaseEntity *)GET_PRIVATE( pEdict );
+		if ( pEntity && IRelationship( pEntity ) < R_NO && pEntity->IsAlive() )
+		{
+			if ( backPlane.PointInFront  ( pEntity->pev->origin ) &&
+				 leftPlane.PointInFront  ( pEntity->pev->origin ) && 
+				 rightPlane.PointInFront ( pEntity->pev->origin) )
 			{
 				// this guy is in the check volume! Don't shoot!
+				ALERT ( at_aiconsole, "%s won't shoot because %s is in front of him\n", STRING( pev->classname ), STRING( pEntity->pev->classname ) );
 				return FALSE;
 			}
 		}

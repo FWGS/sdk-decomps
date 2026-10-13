@@ -603,10 +603,6 @@ void CTalkMonster :: RunTask( Task_t *pTask )
 			IdleHeadTurn( pev->origin );
 			// override so that during walk, a scientist may talk and greet player
 			FIdleHello();
-			if (RANDOM_LONG(0,m_nSpeak * 20) == 0)
-			{
-				FIdleSpeak();
-			}
 		}
 
 		CBaseMonster::RunTask( pTask );
@@ -915,32 +911,46 @@ int CTalkMonster :: FOkToSpeak( void )
 	// if in the grip of a barnacle, don't speak
 	if ( m_MonsterState == MONSTERSTATE_PRONE || m_IdealMonsterState == MONSTERSTATE_PRONE )
 	{
+		ALERT( at_aiconsole, "Talkmonster: %s Not okay to speak, barnacled\n", STRING( pev->targetname ) );
 		return FALSE;
 	}
 
 	// if not alive, certainly don't speak
 	if ( pev->deadflag != DEAD_NO )
 	{
+		ALERT( at_aiconsole, "TalkMonster: %s Not okay to speak, not not dead\n", STRING( pev->targetname ) );
 		return FALSE;
 	}
 
 	// if someone else is talking, don't speak
 	if (gpGlobals->time <= CTalkMonster::g_talkWaitTime)
+	{
+		ALERT( at_aiconsole, "TalkMonster: %s Not okay to speak, not time to speak\n", STRING( pev->targetname ) );
 		return FALSE;
+	}
 
 	if ( pev->spawnflags & SF_MONSTER_GAG )
+	{
+		ALERT( at_aiconsole, "TalkMonster: %s Not okay to speak, I am gagged\n", STRING( pev->targetname ) );
 		return FALSE;
+	}
 
 	if ( m_MonsterState == MONSTERSTATE_PRONE )
 		return FALSE;
 
 	// if player is not in pvs, don't speak
 	if (!IsAlive() || FNullEnt(FIND_CLIENT_IN_PVS(edict())))
+	{
+		ALERT( at_aiconsole, "TalkMonster: %s Not okay to speak, not alive or client not in pvs\n", STRING( pev->targetname ) );
 		return FALSE;
+	}
 
 	// don't talk if you're in combat
 	if (m_hEnemy != NULL && FVisible( m_hEnemy ))
+	{
+		ALERT( at_aiconsole, "Talkmonster: %s I have an enemy who I see\n", STRING( pev->targetname ) );
 		return FALSE;
+	}
 
 	return TRUE;
 }
@@ -1266,7 +1276,7 @@ Schedule_t* CTalkMonster :: GetScheduleOfType ( int Type )
 				return slIdleSpeak;
 			}
 			
-			if ( !IsTalking() && HasConditions ( bits_COND_SEE_CLIENT ) && RANDOM_LONG( 0, 6 ) == 0 )
+			if ( !IsTalking() && HasConditions ( bits_COND_SEE_CLIENT ) )
 			{
 				edict_t *pPlayer = g_engfuncs.pfnPEntityOfEntIndex( 1 );
 
