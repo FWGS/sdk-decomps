@@ -906,17 +906,18 @@ void CVehicleTank::HullCheck( void )
 	CPlane planeRight;
 	CPlane planeTop;
 	CPlane planeBottom;
+	Vector vecRight, vecLeft, vecFront, vecBack, vecTop, vecBottom;
 
 	UTIL_MakeVectors( m_pBodyBSP->pev->angles );
 
-	float flExtra = pev->velocity.Length() * 0.2 + 16;
+	float flExtra = pev->velocity.Length() / 5 + 16;
 
-	Vector vecRight = pev->origin + gpGlobals->v_right * ( VehicleWidth() + flExtra );
-	Vector vecLeft = pev->origin - gpGlobals->v_right * ( VehicleWidth() + flExtra );
-	Vector vecFront = pev->origin + gpGlobals->v_forward * ( VehicleLength() + flExtra );
-	Vector vecBack = pev->origin - gpGlobals->v_forward * ( VehicleLength() + flExtra );
-	Vector vecTop = pev->origin + gpGlobals->v_up * 24;
-	Vector vecBottom = Vector( pev->origin.x, pev->origin.y, pev->origin.z - 36 );
+	vecRight = pev->origin + gpGlobals->v_right * ( VehicleWidth() + flExtra );
+	vecLeft = pev->origin - gpGlobals->v_right * ( VehicleWidth() + flExtra );
+	vecFront = pev->origin + gpGlobals->v_forward * ( VehicleLength() + flExtra );
+	vecBack = pev->origin - gpGlobals->v_forward * ( VehicleLength() + flExtra );
+	vecTop = pev->origin + gpGlobals->v_up * 24;
+	vecBottom = pev->origin - Vector( 0, 0, 36 );
 
 	planeFront.InitializePlane( -gpGlobals->v_forward, vecFront );
 	planeBack.InitializePlane( gpGlobals->v_forward, vecBack );
@@ -930,7 +931,10 @@ void CVehicleTank::HullCheck( void )
 	CBaseEntity *pEntity = NULL;
 	while ( ( pEntity = UTIL_FindEntityInSphere( pEntity, pev->origin, flRadius ) ) != NULL )
 	{
-		if ( pEntity != m_pBodyBSP && pEntity != m_pTurretBSP && pEntity != m_pBarrelBSP && pEntity && pEntity->pev->takedamage && pEntity != this
+		if ( pEntity == m_pBodyBSP || pEntity == m_pTurretBSP || pEntity == m_pBarrelBSP )
+			continue;
+
+		if ( pEntity && pEntity->pev->takedamage && pEntity != this
 			&& planeFront.PointInFront( pEntity->pev->origin ) && planeBack.PointInFront( pEntity->pev->origin )
 			&& planeRight.PointInFront( pEntity->pev->origin ) && planeLeft.PointInFront( pEntity->pev->origin )
 			&& planeTop.PointInFront( pEntity->pev->origin ) && planeBottom.PointInFront( pEntity->pev->origin ) )
@@ -1058,80 +1062,80 @@ int CVehicleTank::SideBlocked( int iStartForward, int iEndForward, int iStartRig
 	TraceResult tr;
 	Vector vecForward, vecRight, vecUp;
 	Vector vecHit;
+	Vector vecStart, vecEnd;
 
 	UTIL_MakeVectorsPrivate( m_pBodyBSP->pev->angles, vecForward, vecRight, vecUp );
 
-	Vector vecStart = pev->origin + vecForward * iStartForward * VehicleLength() + vecRight * iStartRight * VehicleWidth() + vecUp * 32;
-	Vector vecEnd = pev->origin + vecForward * iEndForward * VehicleLength() + vecRight * iEndRight * VehicleWidth() + vecUp * 32;
+	vecStart = pev->origin + iStartForward * vecForward * VehicleLength() + iStartRight * vecRight * VehicleWidth() + vecUp * 32;
+	vecEnd = pev->origin + iEndForward * vecForward * VehicleLength() + iEndRight * vecRight * VehicleWidth() + vecUp * 32;
 
-	int iStartContents = UTIL_PointContents( vecStart );
-	int iEndContents = UTIL_PointContents( vecEnd );
+	BOOL bStartSolid = UTIL_PointContents( vecStart ) == CONTENTS_SOLID;
+	BOOL bEndSolid = UTIL_PointContents( vecEnd ) == CONTENTS_SOLID;
 
-	if ( iStartContents == CONTENTS_SOLID )
+	if ( bStartSolid )
 	{
-		if ( iEndContents == CONTENTS_SOLID )
+		if ( bEndSolid )
 			return 0;
 
 		UTIL_TraceLine( vecEnd, vecStart, ignore_monsters, ENT( m_pBodyBSP->pev ), &tr );
 		vecHit = vecStart;
 	}
-	else if ( iEndContents == CONTENTS_SOLID )
+	else
 	{
+		if ( !bEndSolid )
+		{
+			// both corners clear: is something between them?
+			UTIL_TraceLine( vecStart, vecEnd, ignore_monsters, ENT( m_pBodyBSP->pev ), &tr );
+			if ( tr.flFraction == 1.0 )
+				return 0;
+
+			vecStart = pev->origin + iStartForward * vecForward * VehicleLength() + iStartRight * vecRight * VehicleWidth() + vecUp * 32;
+			vecEnd = pev->origin + iEndForward * vecForward * VehicleLength() + iEndRight * vecRight * VehicleWidth() + vecUp * 32;
+
+			if ( UTIL_PointContents( vecStart ) != CONTENTS_SOLID && UTIL_PointContents( vecEnd ) != CONTENTS_SOLID )
+			{
+				UTIL_TraceLine( vecStart, vecEnd, ignore_monsters, ENT( m_pBodyBSP->pev ), &tr );
+				if ( tr.flFraction == 1.0 )
+				{
+					RestoreLastValid();
+					m_flSpeed = 0;
+					return 1;
+				}
+			}
+			pev->velocity.x = 0;
+			pev->velocity.y = 0;
+			m_flSpeed = 0;
+			return 1;
+		}
 		UTIL_TraceLine( vecStart, vecEnd, ignore_monsters, ENT( m_pBodyBSP->pev ), &tr );
 		vecHit = vecEnd;
 	}
-	else
+
+	if ( tr.flFraction != 1.0 )
 	{
-		UTIL_TraceLine( vecStart, vecEnd, ignore_monsters, ENT( m_pBodyBSP->pev ), &tr );
-		if ( tr.flFraction == 1.0 )
-			return 0;
+		vecStart = pev->origin + iStartForward * vecForward * VehicleLength() + iStartRight * vecRight * VehicleWidth() + vecUp * 32;
+		vecEnd = pev->origin + iEndForward * vecForward * VehicleLength() + iEndRight * vecRight * VehicleWidth() + vecUp * 32;
 
-		vecStart = pev->origin + vecForward * iStartForward * VehicleLength() + vecRight * iStartRight * VehicleWidth() + vecUp * 32;
-		vecEnd = pev->origin + vecForward * iEndForward * VehicleLength() + vecRight * iEndRight * VehicleWidth() + vecUp * 32;
-
-		if ( UTIL_PointContents( vecStart ) != CONTENTS_SOLID && UTIL_PointContents( vecEnd ) != CONTENTS_SOLID )
+		if ( UTIL_PointContents( vecStart ) != CONTENTS_SOLID || UTIL_PointContents( vecEnd ) != CONTENTS_SOLID )
 		{
+			// trace from the center toward the hit instead
+			vecStart = pev->origin;
+			vecEnd = pev->origin + ( vecHit - pev->origin ).Normalize() * 512;
+			vecStart.z = vecEnd.z = pev->origin.z + 32;
 			UTIL_TraceLine( vecStart, vecEnd, ignore_monsters, ENT( m_pBodyBSP->pev ), &tr );
-			if ( tr.flFraction == 1.0 )
-			{
-				RestoreLastValid();
-				m_flSpeed = 0;
-				return 1;
-			}
 		}
-		pev->velocity.x = 0;
-		pev->velocity.y = 0;
-		m_flSpeed = 0;
+
+		m_vecNormalLastFrame = tr.vecPlaneNormal;
 		return 1;
 	}
 
-	if ( tr.flFraction == 1.0 )
-		return 0;
-
-	vecStart = vecStart + vecForward * iStartForward * VehicleLength() + vecRight * iStartRight * VehicleWidth() + vecUp * 32;	// FIXME
-	vecEnd = pev->origin + iEndForward * vecForward * VehicleLength() + iEndRight * vecRight * VehicleWidth() + vecUp * 32;
-
-	if ( UTIL_PointContents( vecStart ) != CONTENTS_SOLID || UTIL_PointContents( vecEnd ) != CONTENTS_SOLID )
-	{
-		vecStart = pev->origin;
-		vecEnd = pev->origin + ( vecHit - pev->origin ).Normalize() * 512;
-		vecStart.z = vecEnd.z = pev->origin.z + 32;
-		UTIL_TraceLine( vecStart, vecEnd, ignore_monsters, ENT( m_pBodyBSP->pev ), &tr );
-	}
-
-	m_vecNormalLastFrame = tr.vecPlaneNormal;
-	return 1;
+	return 0;
 }
 
 int CVehicleTank::SidesBlocked( void )
 {
-	if ( SideBlocked( -1, 1, -1, -1 ) )
-		return 1;
-	if ( SideBlocked( 1, -1, 1, 1 ) )
-		return 1;
-	if ( SideBlocked( 1, 1, -1, 1 ) )
-		return 1;
-	if ( SideBlocked( -1, -1, -1, 1 ) )
+	if ( SideBlocked( -1, 1, -1, -1 ) || SideBlocked( 1, -1, 1, 1 )
+		|| SideBlocked( 1, 1, -1, 1 ) || SideBlocked( -1, -1, -1, 1 ) )
 		return 1;
 	return 0;
 }
@@ -1153,15 +1157,12 @@ int CVehicleTank::CornerBlocked( int iStartForward, int iEndForward, int iStartR
 		return 1;
 	}
 
-	Vector vecAngles = m_pBodyBSP->pev->angles + pev->avelocity * 0.1;
 	Vector vecForward, vecRight, vecUp;
-	UTIL_MakeVectorsPrivate( vecAngles, vecForward, vecRight, vecUp );
+	Vector vecStart, vecEnd;
+	UTIL_MakeVectorsPrivate( m_pBodyBSP->pev->angles + pev->avelocity * 0.1, vecForward, vecRight, vecUp );
 
-	float flSpeed = vecVelocity.Length();
-	Vector vecMove = vecVelocity.Normalize() * flSpeed * flInterval;
-
-	Vector vecStart = pev->origin + vecMove + vecForward * iStartForward * ( VehicleLength() + flDist ) + vecRight * iStartRight * ( VehicleWidth() + flDist ) + vecUp * 32;
-	Vector vecEnd = pev->origin + vecMove + vecForward * iEndForward * ( VehicleLength() + flDist ) + vecRight * iEndRight * ( VehicleWidth() + flDist ) + vecUp * 32;
+	vecStart = pev->origin + vecVelocity.Normalize() * vecVelocity.Length() * flInterval + iStartForward * vecForward * ( VehicleLength() + flDist ) + vecRight * iStartRight * ( VehicleWidth() + flDist ) + vecUp * 32;
+	vecEnd = pev->origin + vecVelocity.Normalize() * vecVelocity.Length() * flInterval + iEndForward * vecForward * ( VehicleLength() + flDist ) + vecRight * iEndRight * ( VehicleWidth() + flDist ) + vecUp * 32;
 
 	if ( UTIL_PointContents( vecStart ) == CONTENTS_SOLID && UTIL_PointContents( vecEnd ) == CONTENTS_SOLID )
 		return CornerBlocked( iStartForward, iEndForward, iStartRight, iEndRight, vecVelocity, flInterval, flDist - 2 );
@@ -1193,10 +1194,15 @@ int CVehicleTank::CornerBlocked( int iStartForward, int iEndForward, int iStartR
 
 BOOL CVehicleTank::CornersBlocked( Vector vecVelocity, float flInterval, float flDist )
 {
-	return CornerBlocked( -1, 1, -1, -1, vecVelocity, flInterval, flDist )
-		|| CornerBlocked( 1, -1, 1, 1, vecVelocity, flInterval, flDist )
-		|| CornerBlocked( 1, 1, -1, 1, vecVelocity, flInterval, flDist )
-		|| CornerBlocked( -1, -1, -1, 1, vecVelocity, flInterval, flDist );
+	if ( CornerBlocked( -1, 1, -1, -1, vecVelocity, flInterval, flDist ) )
+		return TRUE;
+	if ( CornerBlocked( 1, -1, 1, 1, vecVelocity, flInterval, flDist ) )
+		return TRUE;
+	if ( CornerBlocked( 1, 1, -1, 1, vecVelocity, flInterval, flDist ) )
+		return TRUE;
+	if ( CornerBlocked( -1, -1, -1, 1, vecVelocity, flInterval, flDist ) )
+		return TRUE;
+	return FALSE;
 }
 
 //=========================================================
