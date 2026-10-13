@@ -78,9 +78,9 @@ public:
 #define	WEAPON_SATCHEL			14
 #define	WEAPON_SNARK			15
 
-#define WEAPON_ALLWEAPONS		(~(1<<WEAPON_SUIT))
+#define WEAPON_ALLWEAPONS		(~(1<<1))	// all but the fists (id 1)
 
-#define WEAPON_SUIT				31	// ?????
+#define WEAPON_SUIT				0
 
 #define MAX_WEAPONS			48
 

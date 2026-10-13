@@ -389,7 +389,7 @@ void CHalfLifeMultiplay :: ClientDisconnected( edict_t *pClient )
 			FireTargets( "game_playerleave", pPlayer, pPlayer, USE_TOGGLE, 0 );
 			UTIL_LogPrintf( "\"%s<%i>\" disconnected\n",  STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ) );
 
-			pPlayer->RemoveAllItems( TRUE );// destroy all of the players weapons and items
+			pPlayer->RemoveAllItems( FALSE );// destroy all of the players weapons and items
 		}
 	}
 }

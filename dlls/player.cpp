@@ -190,6 +190,13 @@ int gmsgTextMsg = 0;
 int gmsgSetFOV = 0;
 int gmsgShowMenu = 0;
 int gmsgGeigerRange = 0;
+int gmsgTankBody = 0;
+int gmsgTurretPos = 0;
+int gmsgZoom = 0;
+int gmsgDmlCross = 0;
+int gmsgSliderX = 0;
+int gmsgTempX = 0;
+int gmsgTank = 0;
 
 void LinkUserMessages( void )
 {
@@ -230,9 +237,98 @@ void LinkUserMessages( void )
 	gmsgShake = REG_USER_MSG("ScreenShake", sizeof(ScreenShake));
 	gmsgFade = REG_USER_MSG("ScreenFade", sizeof(ScreenFade));
 	gmsgAmmoX = REG_USER_MSG("AmmoX", 2);
+	gmsgSliderX = REG_USER_MSG("SliderX", 2);
+	gmsgTempX = REG_USER_MSG("TempX", 2);
+	gmsgTank = REG_USER_MSG("Tank", 2);
+	gmsgTankBody = REG_USER_MSG("TankBody", 2);
+	gmsgTurretPos = REG_USER_MSG("TurretPos", 2);
+	gmsgZoom = REG_USER_MSG("Zoom", 2);
+	gmsgDmlCross = REG_USER_MSG("DmlCross", 2);
 }
 
 LINK_ENTITY_TO_CLASS( player, CBasePlayer );
+
+
+//=========================================================
+// player_armor - armor model that follows its owner
+//=========================================================
+class CPlayerArmor : public CBaseEntity
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	virtual BOOL IsAlive( void ) { return FALSE; }
+
+	static CPlayerArmor *Create( CBaseEntity *pOwner );
+	void Hide( void );
+	void Show( void );
+
+	int m_iUnknown32;
+};
+
+LINK_ENTITY_TO_CLASS( player_armor, CPlayerArmor );
+
+CPlayerArmor *CPlayerArmor::Create( CBaseEntity *pOwner )
+{
+	CPlayerArmor *pArmor = GetClassPtr( (CPlayerArmor *)NULL );
+	if ( !pArmor )
+		return NULL;
+
+	pArmor->Spawn();
+	UTIL_SetOrigin( pArmor->pev, pOwner->pev->origin );
+	pArmor->pev->owner = pOwner->edict();
+	pArmor->pev->skin = ENTINDEX( pOwner->edict() );
+	pArmor->pev->body = 0;
+	pArmor->pev->aiment = pOwner->edict();
+	pArmor->pev->movetype = MOVETYPE_FOLLOW;
+	pArmor->pev->rendermode = kRenderNormal;
+	pArmor->pev->renderfx = kRenderFxNone;
+	pArmor->pev->renderamt = 255;
+	pArmor->pev->rendercolor.x = 255;
+	pArmor->pev->rendercolor.y = 255;
+	pArmor->pev->rendercolor.z = 255;
+	pArmor->pev->effects = 0;
+	UTIL_SetOrigin( pArmor->pev, pArmor->pev->origin );
+
+	return pArmor;
+}
+
+void CPlayerArmor::Precache( void )
+{
+	PRECACHE_MODEL( "models/player_armor.mdl" );
+}
+
+void CPlayerArmor::Spawn( void )
+{
+	pev->classname = MAKE_STRING( "player_armor" );
+	SET_MODEL( ENT(pev), "models/player_armor.mdl" );
+
+	pev->solid = SOLID_NOT;
+	pev->movetype = MOVETYPE_FLY;
+	pev->takedamage = DAMAGE_NO;
+	pev->effects = 0;
+	pev->health = 60;
+	pev->rendermode = kRenderNormal;
+	pev->renderfx = kRenderFxNone;
+	pev->renderamt = 255;
+	pev->velocity = g_vecZero;
+	pev->effects = 0;
+
+	UTIL_SetSize( pev, Vector( 0, 0, 0 ), Vector( 0, 0, 0 ) );
+
+	SetTouch( NULL );
+	SetThink( NULL );
+}
+
+void CPlayerArmor::Hide( void )
+{
+	pev->effects = EF_NODRAW;
+}
+
+void CPlayerArmor::Show( void )
+{
+	pev->effects = 0;
+}
 
 
 
@@ -421,6 +517,44 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 		TraceBleed( flDamage, vecDir, ptr, bitsDamageType, ptr->vecEndPos );
 		AddMultiDamage( pevAttacker, this, flDamage, bitsDamageType );
 	}
+}
+
+void CBasePlayer :: TraceBleed( float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType, Vector vecPos )
+{
+	int iSprite = g_iGibHuman;
+
+	if ( CVAR_GET_FLOAT( "violence_hblood" ) == 0 && iSprite == g_iGibHuman )
+		iSprite = 0;
+
+	if ( g_Language == LANGUAGE_GERMAN || CVAR_GET_FLOAT( "violence_germany" ) != 0 )
+		iSprite = g_iGoreBot;
+
+	if ( iSprite > 0 && g_pGameRules->IsMultiplayer() )
+	{
+		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecPos );
+			WRITE_BYTE( TE_SPRITE_SPRAY );
+			WRITE_COORD( vecPos.x );
+			WRITE_COORD( vecPos.y );
+			WRITE_COORD( vecPos.z );
+			WRITE_COORD( vecDir.x );
+			WRITE_COORD( vecDir.y );
+			WRITE_COORD( vecDir.z );
+			WRITE_SHORT( iSprite );
+			WRITE_BYTE( min( flDamage / 2, 50 ) );
+			WRITE_BYTE( 100 );
+			WRITE_BYTE( 100 );
+		MESSAGE_END();
+	}
+
+	CBaseEntity::TraceBleed( flDamage, vecDir, ptr, bitsDamageType, vecPos );
+}
+
+Vector CBasePlayer :: BodyTarget( const Vector &posSrc )
+{
+	if ( m_pVehicle != NULL )
+		return m_pVehicle->pev->origin;
+
+	return Center( ) + pev->view_ofs * RANDOM_FLOAT( 0.5, 1.1 );
 }
 
 /*
@@ -613,6 +747,24 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 			bitsDamage &= ~DMG_SHOCK;
 			ffound = TRUE;
 		}
+
+		if (bitsDamage & DMG_DROWN)
+		{
+			switch ( RANDOM_LONG( 0, 2 ) )
+			{
+			case 0:
+				EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/drown1.wav", 0.5, ATTN_NORM );
+				break;
+			case 1:
+				EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/drown2.wav", 0.5, ATTN_NORM );
+				break;
+			case 2:
+				EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/drown3.wav", 0.5, ATTN_NORM );
+				break;
+			}
+			bitsDamage &= ~DMG_DROWN;
+			ffound = TRUE;
+		}
 	}
 
 	pev->punchangle.x = -2;
@@ -683,7 +835,7 @@ void CBasePlayer::PackDeadPlayerItems( void )
 	if ( iWeaponRules == GR_PLR_DROP_GUN_NO && iAmmoRules == GR_PLR_DROP_AMMO_NO )
 	{
 		// nothing to pack. Remove the weapons and return. Don't call create on the box!
-		RemoveAllItems( TRUE );
+		RemoveAllItems( FALSE );
 		return;
 	}
 
@@ -785,10 +937,10 @@ void CBasePlayer::PackDeadPlayerItems( void )
 
 	pWeaponBox->pev->velocity = pev->velocity * 1.2;// weaponbox has player's velocity, then some.
 
-	RemoveAllItems( TRUE );// now strip off everything that wasn't handled by the code above.
+	RemoveAllItems( FALSE );// now strip off everything that wasn't handled by the code above.
 }
 
-void CBasePlayer::RemoveAllItems( BOOL removeSuit )
+void CBasePlayer::RemoveAllItems( BOOL giveFists )
 {
 	if (m_pActiveItem)
 	{
@@ -817,10 +969,7 @@ void CBasePlayer::RemoveAllItems( BOOL removeSuit )
 	pev->viewmodel		= 0;
 	pev->weaponmodel	= 0;
 	
-	if ( removeSuit )
-		pev->weapons = 0;
-	else
-		pev->weapons &= ~WEAPON_ALLWEAPONS;
+	pev->weapons &= ~WEAPON_ALLWEAPONS;
 
 	for ( i = 0; i < MAX_AMMO_SLOTS;i++)
 		m_rgAmmo[i] = 0;
@@ -832,6 +981,9 @@ void CBasePlayer::RemoveAllItems( BOOL removeSuit )
 		WRITE_BYTE(0);
 		WRITE_BYTE(0);
 	MESSAGE_END();
+
+	if ( giveFists )
+		GiveNamedItem( "weapon_fists" );
 }
 
 /*
@@ -864,8 +1016,6 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	}
 
 	SetAnimation( PLAYER_DIE );
-		
-	m_iRespawnFrames = 0;
 
 	pev->modelindex = g_ulModelIndexPlayer;    // don't use eyes
 
@@ -880,6 +1030,8 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 
 	// send "health" update message to zero
 	m_iClientHealth = 0;
+	m_bGasTank = false;
+	m_bClientGasTank = false;
 	MESSAGE_BEGIN( MSG_ONE, gmsgHealth, NULL, pev );
 		WRITE_BYTE( m_iClientHealth );
 	MESSAGE_END();
@@ -1792,7 +1944,7 @@ switch (chTextureType)
 	case CHAR_TEX_METAL: return STEP_METAL;	
 	case CHAR_TEX_DIRT: return STEP_DIRT;	
 	case CHAR_TEX_VENT: return STEP_VENT;	
-	case CHAR_TEX_GRATE: return STEP_GRATE;	
+	case CHAR_TEX_WOOD: return STEP_GRATE;	
 	case CHAR_TEX_TILE: return STEP_TILE;
 	case CHAR_TEX_SLOSH: return STEP_SLOSH;
 	}
@@ -3288,6 +3440,27 @@ void CBasePlayer::SelectLastItem(void)
 }
 
 //==============================================
+// CustomizeActiveItem - "cust_<option><value>"
+//==============================================
+void CBasePlayer::CustomizeActiveItem( char *pszCommand )
+{
+	char *pszOption = strstr( pszCommand, "_" );
+	pszOption++;
+	char cOption = *pszOption++;
+	int iValue = atoi( pszOption );
+
+	if ( cOption > '0' && cOption <= '10' )
+	{
+		if ( m_pActiveItem )
+			m_pActiveItem->Customize( cOption, iValue );
+	}
+	else
+	{
+		ALERT( at_console, "Illegal option number\n" );
+	}
+}
+
+//==============================================
 // HasWeapons - do I have any weapons at all?
 //==============================================
 BOOL CBasePlayer::HasWeapons( void )
@@ -4030,6 +4203,32 @@ void CBasePlayer::SendAmmoUpdate(void)
 				WRITE_BYTE( max( min( m_rgAmmo[i], 254 ), 0 ) );  // clamp the value to one byte
 			MESSAGE_END();
 		}
+	}
+}
+
+void CBasePlayer::SendSliderPositions( void )
+{
+	ALERT( at_console, "updating slider\n" );
+
+	for ( int i = 0; i < MAX_WEAPONS; i++ )
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgSliderX, NULL, pev );
+			WRITE_BYTE( i );
+			WRITE_BYTE( m_iSliderPositions[i] );
+		MESSAGE_END();
+	}
+}
+
+void CBasePlayer::SendWeaponTemps( void )
+{
+	ALERT( at_console, "updating temp\n" );
+
+	for ( int i = 0; i < MAX_WEAPONS; i++ )
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgTempX, NULL, pev );
+			WRITE_BYTE( i );
+			WRITE_BYTE( m_iWeaponTemps[i] );
+		MESSAGE_END();
 	}
 }
 
@@ -4830,7 +5029,7 @@ void CStripWeapons :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 	}
 
 	if ( pPlayer )
-		pPlayer->RemoveAllItems( FALSE );
+		pPlayer->RemoveAllItems( TRUE );
 }
 
 
