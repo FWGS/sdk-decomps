@@ -438,6 +438,10 @@ SOURCE=.\spchemicalgun.cpp
 
 SOURCE=.\bandit.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\demoman.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
