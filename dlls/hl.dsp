@@ -430,6 +430,10 @@ SOURCE=.\minigun.cpp
 
 SOURCE=.\shotgun.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\spchemicalgun.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 

@@ -82,7 +82,10 @@ public:
 #define WEAPON_SPCHEMICALGUN	19
 #define WEAPON_CUST_SPREAD		20	// cust_1ShotgunSpread
 #define WEAPON_CUST_COOLERS		23	// cust_2MinigunCooled
-#define WEAPON_CUST_CHEMGUN		25	// cust_1SPChemicalGunPressure, cust_2ChemAcid, cust_3ChemBase, cust_4ChemNuet
+#define WEAPON_CUST_ACID		24	// cust_2ChemAcid
+#define WEAPON_CUST_NUET		25	// cust_4ChemNuet
+#define WEAPON_CUST_BASE		26	// cust_3ChemBase
+#define WEAPON_CUST_PRESSURE	27	// cust_1SPChemicalGunPressure
 #define WEAPON_MINIGUN			28
 #define WEAPON_CUST_SPIN		29	// cust_1MinigunSpin
 #define WEAPON_GAUSSPISTOL		30
