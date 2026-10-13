@@ -466,6 +466,22 @@ SOURCE=.\shotgun.cpp
 
 SOURCE=.\spchemicalgun.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\camera.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\decore.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\hologram.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\torch.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
