@@ -121,6 +121,14 @@ float CHalfLifeRules::FlPlayerFallDamage( CBasePlayer *pPlayer )
 //=========================================================
 void CHalfLifeRules :: PlayerSpawn( CBasePlayer *pPlayer )
 {
+	CBaseEntity	*pWeaponEntity = NULL;
+
+	pPlayer->pev->weapons |= (1<<WEAPON_SUIT);
+
+	while ( pWeaponEntity = UTIL_FindEntityByClassname( pWeaponEntity, "game_player_equip" ))
+	{
+		pWeaponEntity->Touch( pPlayer );
+	}
 }
 
 //=========================================================
