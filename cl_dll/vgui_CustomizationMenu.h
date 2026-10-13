@@ -21,6 +21,8 @@
 #ifndef VGUI_CUSTOMIZATIONMENU_H
 #define VGUI_CUSTOMIZATIONMENU_H
 
+char *GetConfigText( const char *pszName, char *pszText );
+
 class CCustomizationMenu : public CMenuPanel
 {
 public:

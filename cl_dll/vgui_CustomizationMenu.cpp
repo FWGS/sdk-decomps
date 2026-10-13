@@ -36,6 +36,11 @@
 #include "vgui_ServerBrowser.h"
 #include "vgui_CustomizationMenu.h"
 
+char *GetConfigText( const char *pszName, char *pszText )
+{
+	return NULL;
+}
+
 CCustomizationMenu::CCustomizationMenu( int iTrans, int iRemoveMe, int x, int y, int wide, int tall ) : CMenuPanel( iTrans, iRemoveMe, x, y, wide, tall )
 {
 }

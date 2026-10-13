@@ -26,6 +26,7 @@
 #include "cl_entity.h"
 #include "vgui_TeamFortressViewport.h"
 #include "vgui_ScorePanel.h"
+#include "vgui_CustomizationMenu.h"
 
 hud_player_info_t	 g_PlayerInfoList[MAX_PLAYERS+1];	   // player info from the engine
 extra_player_info_t  g_PlayerExtraInfo[MAX_PLAYERS+1];   // additional player info sent directly to the client dll
@@ -284,33 +285,54 @@ Panel* ScoreTablePanel::getCellRenderer(int column,int row,bool columnSelected,b
 //-----------------------------------------------------------------------------
 ScorePanel::ScorePanel(int x,int y,int wide,int tall) : Panel(x,y,wide,tall)
 {
-	setBorder( new LineBorder( Color(255 * 0.7,170 * 0.7,0,0) ) );
+	setBorder( new LineBorder( Color(100,100,255,0) ) );
 	setBgColor( 0,0,0, 100 );
 
-	m_pTitleLabel = new Label( "  SCORES", 0,0, wide, SBOARD_TITLE_SIZE_Y );
-	m_pTitleLabel->setBgColor( Scheme::sc_primary2 );
-	m_pTitleLabel->setFgColor( Scheme::sc_primary1 );
+	// Gunman: the titles come from text/configtext.txt
+	char szScore[12];	// sic: short for a line of the config text
+	char szTitle[MAX_SERVERNAME_LENGTH + 16];
+
+	// sic: the title is built and never used
+	GetConfigText( "score", szScore );
+	sprintf( szTitle, "   %s", szScore );
+
+	m_pTitleLabel = new Label( "SCORES: ", 0,0, wide, SBOARD_TITLE_SIZE_Y );
+	m_pTitleLabel->setBgColor( 120, 120, 130, 200 );
+	m_pTitleLabel->setFgColor( 210, 255, 255, 50 );
 	m_pTitleLabel->setContentAlignment( vgui::Label::a_west );
 	m_pTitleLabel->setParent(this);
 
 	_headerPanel = new HeaderPanel( SBOARD_TABLE_X, SBOARD_TITLE_SIZE_Y, wide - (SBOARD_TABLE_X * 2), SBOARD_HEADER_SIZE_Y);
 	_headerPanel->setParent(this);
 
+	char sz[256];
+
 	// BUGBUG: This isn't working. gHUD.m_Teamplay hasn't been initialized yet.
 	if ( gHUD.m_Teamplay )
-		_headerPanel->addSectionPanel( new CLabelHeader( CHudTextMessage::BufferedLocaliseTextString( "#TEAMS" ), true) );
+	{
+		GetConfigText( "teams", sz );
+		_headerPanel->addSectionPanel( new CLabelHeader( CHudTextMessage::BufferedLocaliseTextString( sz ), true) );
+	}
 	else
-		_headerPanel->addSectionPanel( new CLabelHeader( CHudTextMessage::BufferedLocaliseTextString( "#PLAYERS" ), true) );
+	{
+		GetConfigText( "players", sz );
+		_headerPanel->addSectionPanel( new CLabelHeader( CHudTextMessage::BufferedLocaliseTextString( sz ), true) );
+	}
 
 	if ( HUD_IsGame( "tfc" ) )
-		_headerPanel->addSectionPanel( new CLabelHeader( CHudTextMessage::BufferedLocaliseTextString( "#CLASS" ), true) );
+		_headerPanel->addSectionPanel( new CLabelHeader( CHudTextMessage::BufferedLocaliseTextString( "CLASS" ), true) );
 	else
 		_headerPanel->addSectionPanel( new CLabelHeader("", true) );
 
-	_headerPanel->addSectionPanel( new CLabelHeader( CHudTextMessage::BufferedLocaliseTextString( "#SCORE" )) );
-	_headerPanel->addSectionPanel( new CLabelHeader( CHudTextMessage::BufferedLocaliseTextString( "#DEATHS")) );
-	_headerPanel->addSectionPanel( new CLabelHeader( CHudTextMessage::BufferedLocaliseTextString( "#LATENCY")) );
+	GetConfigText( "kills", sz );
+	_headerPanel->addSectionPanel( new CLabelHeader( CHudTextMessage::BufferedLocaliseTextString( sz )) );
+	GetConfigText( "deaths", sz );
+	_headerPanel->addSectionPanel( new CLabelHeader( CHudTextMessage::BufferedLocaliseTextString( sz )) );
+	GetConfigText( "ping", sz );
+	_headerPanel->addSectionPanel( new CLabelHeader( CHudTextMessage::BufferedLocaliseTextString( sz )) );
+
 	_headerPanel->setBgColor( 0,0,0, 255 );
+	_headerPanel->setFgColor( 255,255,255, 10 );
 
 	// Need to special case 400x300, because the titles just wont fit otherwise
 	if ( ScreenWidth == 400 )
