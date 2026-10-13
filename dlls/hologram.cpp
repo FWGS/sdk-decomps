@@ -383,23 +383,20 @@ void CHologram::HologramThink( void )
 		pev->nextthink = gpGlobals->time;
 	}
 
-	if ( m_fSequenceFinished )
+	if ( m_fSequenceFinished && m_flNextAnimationSwitch < gpGlobals->time )
 	{
-		if ( m_flNextAnimationSwitch < gpGlobals->time )
-		{
-			PlayIdle( );
-			m_flNextAnimationSwitch = RANDOM_FLOAT( 3, 12 ) + gpGlobals->time;
-			return;
-		}
+		PlayIdle( );
+		m_flNextAnimationSwitch = RANDOM_FLOAT( 3, 12 ) + gpGlobals->time;
+		return;
+	}
 
-		if ( m_fSequenceFinished && !m_fSequenceLoops )
-		{
-			pev->animtime = gpGlobals->time;
-			pev->framerate = 1.0;
-			m_fSequenceFinished = FALSE;
-			m_flLastEventCheck = gpGlobals->time;
-			pev->frame = 0;
-		}
+	if ( m_fSequenceFinished && !m_fSequenceLoops )
+	{
+		pev->animtime = gpGlobals->time;
+		pev->framerate = 1.0;
+		m_fSequenceFinished = FALSE;
+		m_flLastEventCheck = gpGlobals->time;
+		pev->frame = 0;
 	}
 }
 
@@ -517,15 +514,16 @@ void CHologram::UseToggle( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 	{
 		SetThink( SpawnThink );
 		pev->nextthink = gpGlobals->time + 0.1;
-		UTIL_SetOrigin( pev, pev->origin );
-		return;
+	}
+	else
+	{
+		pev->solid = SOLID_NOT;
+		pev->takedamage = DAMAGE_NO;
+		pev->effects = EF_NODRAW;
+		m_iState = 0;
+		EMIT_SOUND_DYN( ENT( pev ), CHAN_STATIC, "ambience/holodisplay.wav", 0.3, ATTN_NORM, 0, PITCH_NORM );
 	}
 
-	pev->solid = SOLID_NOT;
-	pev->takedamage = DAMAGE_NO;
-	pev->effects = EF_NODRAW;
-	m_iState = 0;
-	EMIT_SOUND_DYN( ENT( pev ), CHAN_STATIC, "ambience/holodisplay.wav", 0.3, ATTN_NORM, 0, PITCH_NORM );
 	UTIL_SetOrigin( pev, pev->origin );
 }
 
@@ -567,7 +565,7 @@ void CHologram::PlayIdle( void )
 	}
 
 	ResetSequenceInfo( );
-	if ( m_flFrameRate == 0 )
+	if ( m_flFrameRate == 0.0 )
 	{
 		pev->sequence = 0;
 		ResetSequenceInfo( );
@@ -589,14 +587,14 @@ void CHologram::PlayFlinch( void )
 		SetSequenceByName( "flinch" );
 	else
 	{
-		if ( RANDOM_LONG( 0, 1 ) == 0 )
-			SetSequenceByName( "bigflinch" );
-		else
+		if ( RANDOM_LONG( 0, 1 ) )
 			SetSequenceByName( "smallflinch" );
+		else
+			SetSequenceByName( "bigflinch" );
 	}
 
 	ResetSequenceInfo( );
-	if ( m_flFrameRate == 0 )
+	if ( m_flFrameRate == 0.0 )
 	{
 		pev->sequence = 0;
 		ResetSequenceInfo( );
@@ -608,28 +606,28 @@ void CHologram::PlayDeath( void )
 {
 	if ( m_iCreature == HOLOGRAM_BEAK )
 	{
-		if ( RANDOM_LONG( 0, 1 ) == 0 )
-			SetSequenceByName( "dietwitch" );
-		else
+		if ( RANDOM_LONG( 0, 1 ) )
 			SetSequenceByName( "diesimple" );
+		else
+			SetSequenceByName( "dietwitch" );
 	}
 	else if ( m_iCreature == HOLOGRAM_TUBE )
 	{
-		if ( RANDOM_LONG( 0, 1 ) == 0 )
-			SetSequenceByName( "dieback" );
-		else
+		if ( RANDOM_LONG( 0, 1 ) )
 			SetSequenceByName( "diesimple" );
+		else
+			SetSequenceByName( "dieback" );
 	}
 	else
 	{
-		if ( RANDOM_LONG( 0, 1 ) == 0 )
-			SetSequenceByName( "diefight" );
-		else
+		if ( RANDOM_LONG( 0, 1 ) )
 			SetSequenceByName( "diesimple" );
+		else
+			SetSequenceByName( "diefight" );
 	}
 
 	ResetSequenceInfo( );
-	if ( m_flFrameRate == 0 )
+	if ( m_flFrameRate == 0.0 )
 	{
 		pev->sequence = 0;
 		ResetSequenceInfo( );

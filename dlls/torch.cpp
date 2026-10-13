@@ -128,7 +128,9 @@ void CTorch::Spawn( void )
 
 void CTorch::CreateFlame( void )
 {
-	m_pFlame = CFlame::FlameCreate( pev, Vector( pev->origin.x, pev->origin.y, pev->origin.z + 32 ) );
+	Vector vecFlame = pev->origin;
+	vecFlame.z += 32;
+	m_pFlame = CFlame::FlameCreate( pev, vecFlame );
 }
 
 // sic: unused; its empty constructor is all retail has of it
