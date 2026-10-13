@@ -52,6 +52,8 @@ int MapTextureTypeStepType(char chTextureType);
 // the world node graph
 extern CGraph	WorldGraph;
 
+extern void DrawDebugBeam( Vector vecStart, Vector vecEnd, int r, int g, int b );
+
 #define	PLAYER_WALLJUMP_SPEED 300 // how fast we can spring off walls
 #define PLAYER_LONGJUMP_SPEED 350 // how fast we longjump
 
@@ -157,6 +159,7 @@ TYPEDESCRIPTION	CBasePlayer::m_playerSaveData[] =
 
 
 int giPrecacheGrunt = 0;
+int giPrecacheTank = 1;
 int gmsgShake = 0;
 int gmsgFade = 0;
 int gmsgSelAmmo = 0;
@@ -257,7 +260,7 @@ class CPlayerArmor : public CBaseEntity
 public:
 	void Spawn( void );
 	void Precache( void );
-	virtual BOOL IsAlive( void ) { return FALSE; }
+	virtual BOOL IsAlive( void );
 
 	static CPlayerArmor *Create( CBaseEntity *pOwner );
 	void Hide( void );
@@ -1480,6 +1483,11 @@ void CBasePlayer::PlayerDeathThink(void)
 	pev->nextthink = -1;
 }
 
+BOOL CPlayerArmor::IsAlive( void )
+{
+	return FALSE;
+}
+
 //=========================================================
 // StartDeathCam - find an intermission spot and send the
 // player off into observer mode
@@ -2097,7 +2105,7 @@ void CBasePlayer :: UpdateStepSound( void )
 				m_flTimeStepSound = fWalking ? gpGlobals->time + 0.4 : gpGlobals->time + 0.3;
 				break;
 
-			case CHAR_TEX_GRATE:
+			case CHAR_TEX_WOOD:
 				fvol = fWalking ? 0.2 : 0.5;
 				m_flTimeStepSound = fWalking ? gpGlobals->time + 0.4 : gpGlobals->time + 0.3;
 				break;
@@ -2175,6 +2183,15 @@ void CBasePlayer::PreThink(void)
 		pev->flags |= FL_ONTRAIN;
 	else 
 		pev->flags &= ~FL_ONTRAIN;
+
+	// driving a vehicle: no ducking, no ladders, nothing else to do
+	if ( m_pVehicle != NULL )
+	{
+		pev->flags &= ~FL_DUCKING;
+		m_afPhysicsFlags &= ~PFLAG_DUCKING;
+		m_hEnemy = NULL;
+		return;
+	}
 
 	// Train speed control
 	if ( m_afPhysicsFlags & PFLAG_ONTRAIN )
@@ -2388,6 +2405,25 @@ void CBasePlayer::CheckTimeBasedDamage()
 
 					TakeHealth(idif, DMG_GENERIC);
 					m_idrownrestored += idif;
+
+					float flVol = min( 1.1 - (float)m_idrownrestored / m_idrowndmg, 1.0 );
+					if ( flVol < 0 )
+						flVol = 0;
+					else if ( flVol > 1 )
+						flVol = 1;
+
+					switch ( RANDOM_LONG( 0, 2 ) )
+					{
+					case 0:
+						EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/undrown1.wav", flVol, ATTN_NORM );
+						break;
+					case 1:
+						EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/undrown2.wav", flVol, ATTN_NORM );
+						break;
+					case 2:
+						EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/undrown3.wav", flVol, ATTN_NORM );
+						break;
+					}
 				}
 				bDuration = 4;	// get up to 5*10 = 50 points back
 				break;
@@ -2409,19 +2445,6 @@ void CBasePlayer::CheckTimeBasedDamage()
 
 			if (m_rgbTimeBasedDamage[i])
 			{
-				// use up an antitoxin on poison or nervegas after a few seconds of damage					
-				if (((i == itbd_NerveGas) && (m_rgbTimeBasedDamage[i] < NERVEGAS_DURATION)) ||
-					((i == itbd_Poison)   && (m_rgbTimeBasedDamage[i] < POISON_DURATION)))
-				{
-					if (m_rgItems[ITEM_ANTIDOTE])
-					{
-						m_rgbTimeBasedDamage[i] = 0;
-						m_rgItems[ITEM_ANTIDOTE]--;
-						SetSuitUpdate("!HEV_HEAL4", FALSE, SUIT_REPEAT_OK);
-					}
-				}
-
-
 				// decrement damage duration, detect when done.
 				if (!m_rgbTimeBasedDamage[i] || --m_rgbTimeBasedDamage[i] == 0)
 				{
@@ -3207,6 +3230,9 @@ void CBasePlayer::Spawn( void )
 
 	m_lastx = m_lasty = 0;
 
+	m_pVehicle = NULL;
+	m_bGasTank = false;
+
 	g_pGameRules->PlayerSpawn( this );
 }
 
@@ -3370,6 +3396,9 @@ void CBasePlayer::SelectItem(const char *pstr)
 	if (!pstr)
 		return;
 
+	if ( m_pActiveItem && !m_pActiveItem->CanHolster() )
+		return;
+
 	CBasePlayerItem *pItem = NULL;
 
 	for (int i = 0; i < MAX_ITEM_TYPES; i++)
@@ -3417,6 +3446,11 @@ void CBasePlayer::SelectItem(const char *pstr)
 void CBasePlayer::SelectLastItem(void)
 {
 	if (!m_pLastItem)
+	{
+		return;
+	}
+
+	if ( m_pVehicle != NULL )
 	{
 		return;
 	}
@@ -3576,7 +3610,7 @@ void CBloodSplat::Spray ( void )
 {
 	TraceResult	tr;	
 	
-	if ( g_Language != LANGUAGE_GERMAN )
+	if ( g_Language != LANGUAGE_GERMAN && CVAR_GET_FLOAT( "violence_germany" ) == 0 )
 	{
 		UTIL_MakeVectors(pev->angles);
 		UTIL_TraceLine ( pev->origin, pev->origin + gpGlobals->v_forward * 128, ignore_monsters, pev->owner, & tr);
@@ -3640,18 +3674,14 @@ void CBasePlayer :: FlashlightTurnOn( void )
 		return;
 	}
 
-	if ( (pev->weapons & (1<<WEAPON_SUIT)) )
-	{
-		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, SOUND_FLASHLIGHT_ON, 1.0, ATTN_NORM, 0, PITCH_NORM );
-		SetBits(pev->effects, EF_DIMLIGHT);
-		MESSAGE_BEGIN( MSG_ONE, gmsgFlashlight, NULL, pev );
-		WRITE_BYTE(1);
-		WRITE_BYTE(m_iFlashBattery);
-		MESSAGE_END();
+	EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, SOUND_FLASHLIGHT_ON, 1.0, ATTN_NORM, 0, PITCH_NORM );
+	SetBits(pev->effects, EF_DIMLIGHT);
+	MESSAGE_BEGIN( MSG_ONE, gmsgFlashlight, NULL, pev );
+	WRITE_BYTE(1);
+	WRITE_BYTE(m_iFlashBattery);
+	MESSAGE_END();
 
-		m_flFlashLightTime = FLASH_DRAIN_TIME + gpGlobals->time;
-
-	}
+	m_flFlashLightTime = FLASH_DRAIN_TIME + gpGlobals->time;
 }
 
 
@@ -3681,6 +3711,7 @@ void CBasePlayer :: ForceClientDllUpdate( void )
 {
 	m_iClientHealth  = -1;
 	m_iClientBattery = -1;
+	m_bClientGasTank = false;
 	m_iTrain |= TRAIN_NEW;  // Force new train message.
 	m_fWeapon = FALSE;          // Force weapon send
 	m_fKnownItem = FALSE;    // Force weaponinit messages.
@@ -3780,7 +3811,7 @@ void CBasePlayer::ImpulseCommands( )
 void CBasePlayer::CheatImpulseCommands( int iImpulse )
 {
 #if !defined( HLDEMO_BUILD )
-	if ( g_flWeaponCheat == 0.0 )
+	if ( g_flWeaponCheat == 0 )
 	{
 		return;
 	}
@@ -3790,6 +3821,21 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 
 	switch ( iImpulse )
 	{
+	case 2:
+		{
+			if (!giPrecacheTank)
+			{
+				giPrecacheTank = 1;
+				ALERT(at_console, "You must now restart to use Tank.\n");
+			}
+			else
+			{
+				UTIL_MakeVectors( Vector( 0, pev->v_angle.y, 0 ) );
+				Create("vehicle_tank", pev->origin + gpGlobals->v_forward * 128, pev->angles);
+			}
+			break;
+		}
+
 	case 76:
 		{
 			if (!giPrecacheGrunt)
@@ -3805,36 +3851,35 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 			break;
 		}
 
+	case 100:
+		gEvilImpulse101 = TRUE;
+		GiveNamedItem( "ammo_buckshot" );
+		GiveNamedItem( "ammo_gaussclip" );
+		GiveNamedItem( "ammo_chemical" );
+		GiveNamedItem( "ammo_beamgunclip" );
+		GiveNamedItem( "ammo_minigunClip" );
+		GiveNamedItem( "ammo_dmlclip" );
+		gEvilImpulse101 = FALSE;
+		break;
 
 	case 101:
-		gEvilImpulse101 = TRUE;
-		GiveNamedItem( "item_suit" );
-		GiveNamedItem( "item_battery" );
-		GiveNamedItem( "weapon_crowbar" );
-		GiveNamedItem( "weapon_9mmhandgun" );
-		GiveNamedItem( "ammo_9mmclip" );
-		GiveNamedItem( "weapon_shotgun" );
-		GiveNamedItem( "ammo_buckshot" );
-		GiveNamedItem( "weapon_9mmAR" );
-		GiveNamedItem( "ammo_9mmAR" );
-		GiveNamedItem( "ammo_ARgrenades" );
-		GiveNamedItem( "weapon_handgrenade" );
-		GiveNamedItem( "weapon_tripmine" );
-#ifndef OEM_BUILD
-		GiveNamedItem( "weapon_357" );
-		GiveNamedItem( "ammo_357" );
-		GiveNamedItem( "weapon_crossbow" );
-		GiveNamedItem( "ammo_crossbow" );
-		GiveNamedItem( "weapon_egon" );
-		GiveNamedItem( "weapon_gauss" );
-		GiveNamedItem( "ammo_gaussclip" );
-		GiveNamedItem( "weapon_rpg" );
-		GiveNamedItem( "ammo_rpgclip" );
-		GiveNamedItem( "weapon_satchel" );
-		GiveNamedItem( "weapon_snark" );
-		GiveNamedItem( "weapon_hornetgun" );
-#endif
-		gEvilImpulse101 = FALSE;
+		if ( !g_pGameRules->IsMultiplayer() )
+		{
+			gEvilImpulse101 = TRUE;
+			GiveNamedItem( "weapon_fists" );
+			GiveNamedItem( "cust_1fistsKnife" );
+			GiveNamedItem( "weapon_shotgun" );
+			GiveNamedItem( "weapon_gausspistol" );
+			GiveNamedItem( "cust_2GaussPistolSniper" );
+			GiveNamedItem( "weapon_SPchemicalgun" );
+			GiveNamedItem( "weapon_beamgun" );
+			GiveNamedItem( "weapon_minigun" );
+			GiveNamedItem( "cust_2MinigunCooled" );
+			GiveNamedItem( "weapon_dml" );
+			GiveNamedItem( "weapon_dmlGrenade" );
+			GiveNamedItem( "weapon_aicore" );
+			gEvilImpulse101 = FALSE;
+		}
 		break;
 
 	case 102:
@@ -3911,6 +3956,46 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 				ALERT( at_console, "Texture: %s\n", pTextureName );
 		}
 		break;
+
+	case 108:
+		// Use the entity in front of me.
+		pEntity = FindEntityForward( this );
+		if ( pEntity )
+		{
+			ALERT ( at_console, "Classname: %s", STRING( pEntity->pev->classname ) );
+			pEntity->Use( NULL, NULL, USE_TOGGLE, 1 );
+			if ( pEntity->pev->globalname )
+				ALERT ( at_console, "Globalname: %s\n", STRING( pEntity->pev->globalname ) );
+		}
+		break;
+
+	case 109:
+		// How far away is the thing I'm looking at?
+		{
+			TraceResult tr;
+
+			Vector start = pev->origin + pev->view_ofs;
+			Vector end = start + gpGlobals->v_forward * 4096;
+			UTIL_TraceLine( start, end, dont_ignore_monsters, edict(), &tr );
+
+			int iDist = (start - tr.vecEndPos).Length();
+			ALERT( at_console, "Distance: %d feet, %d inches", iDist / 12, iDist % 12 );
+
+			pEntity = FindEntityForward( this );
+			if ( pEntity )
+				ALERT( at_console, " Name: %s\n", STRING( pEntity->pev->classname ) );
+			else
+				ALERT( at_console, "\n" );
+
+			DrawDebugBeam( tr.vecEndPos, tr.vecEndPos + Vector( 64, 0, 0 ), 255, 255, 255 );
+			DrawDebugBeam( tr.vecEndPos, tr.vecEndPos + Vector( -64, 0, 0 ), 255, 255, 255 );
+			DrawDebugBeam( tr.vecEndPos, tr.vecEndPos + Vector( 0, 64, 0 ), 255, 255, 255 );
+			DrawDebugBeam( tr.vecEndPos, tr.vecEndPos + Vector( 0, -64, 0 ), 255, 255, 255 );
+			DrawDebugBeam( tr.vecEndPos, tr.vecEndPos + Vector( 0, 0, 64 ), 255, 255, 255 );
+			DrawDebugBeam( tr.vecEndPos, tr.vecEndPos + Vector( 0, 0, -64 ), 255, 255, 255 );
+		}
+		break;
+
 	case	195:// show shortest paths for entire level to nearest node
 		{
 			Create("node_viewer_fly", pev->origin, pev->angles);
@@ -4001,7 +4086,7 @@ int CBasePlayer::AddPlayerItem( CBasePlayerItem *pItem )
 		// should we switch to this item?
 		if ( g_pGameRules->FShouldSwitchWeapon( this, pItem ) )
 		{
-			SwitchWeapon( pItem );
+//			SwitchWeapon( pItem );
 		}
 
 		return TRUE;
@@ -4085,7 +4170,7 @@ int CBasePlayer :: GiveAmmo( int iCount, char *szName, int iMax )
 	m_rgAmmo[ i ] += iAdd;
 
 
-	if ( gmsgAmmoPickup )  // make sure the ammo messages have been linked first
+	if ( gmsgAmmoPickup && !gEvilImpulse101 )  // make sure the ammo messages have been linked first
 	{
 		// Send the message that ammo has been picked up
 		MESSAGE_BEGIN( MSG_ONE, gmsgAmmoPickup, NULL, pev );
@@ -4133,6 +4218,17 @@ Called every frame by the player PostThink
 void CBasePlayer::ItemPostFrame()
 {
 	static int fInSelect = FALSE;
+
+	for ( int i = 0; i < MAX_ITEM_TYPES; i++ )
+	{
+		CBasePlayerItem *pItem = m_rgpPlayerItems[i];
+
+		while ( pItem )
+		{
+			pItem->InventoryFrame();
+			pItem = pItem->m_pNext;
+		}
+	}
 
 	// check if the player is using a tank
 	if ( m_pTank != NULL )
@@ -4296,7 +4392,7 @@ void CBasePlayer :: UpdateClientData( void )
 		gDisplayTitle = 0;
 	}
 
-	if (pev->health != m_iClientHealth)
+	if ((int)pev->health != m_iClientHealth)
 	{
 		int iHealth = max( pev->health, 0 );  // make sure that no negative health values are sent
 
@@ -4308,8 +4404,15 @@ void CBasePlayer :: UpdateClientData( void )
 		m_iClientHealth = pev->health;
 	}
 
+	if ( !m_bClientGasTank && m_bGasTank )
+	{
+		m_bClientGasTank = true;
+		MESSAGE_BEGIN( MSG_ONE, gmsgTank, NULL, pev );
+			WRITE_SHORT( 3 );
+		MESSAGE_END();
+	}
 
-	if (pev->armorvalue != m_iClientBattery)
+	if ((int)pev->armorvalue != m_iClientBattery)
 	{
 		m_iClientBattery = pev->armorvalue;
 
@@ -4359,6 +4462,7 @@ void CBasePlayer :: UpdateClientData( void )
 	{
 		if (FlashlightIsOn())
 		{
+/*
 			if (m_iFlashBattery)
 			{
 				m_flFlashLightTime = FLASH_DRAIN_TIME + gpGlobals->time;
@@ -4367,6 +4471,7 @@ void CBasePlayer :: UpdateClientData( void )
 				if (!m_iFlashBattery)
 					FlashlightTurnOff();
 			}
+*/
 		}
 		else
 		{
@@ -4432,6 +4537,12 @@ void CBasePlayer :: UpdateClientData( void )
 			else
 				pszName = II.pszName;
 
+			const char *pszCustomizes;
+			if (!II.pszCustomizes)
+				pszCustomizes = "Empty";
+			else
+				pszCustomizes = II.pszCustomizes;
+
 			MESSAGE_BEGIN( MSG_ONE, gmsgWeaponList, NULL, pev );  
 				WRITE_STRING(pszName);			// string	weapon name
 				WRITE_BYTE(GetAmmoIndex(II.pszAmmo1));	// byte		Ammo Type
@@ -4442,6 +4553,10 @@ void CBasePlayer :: UpdateClientData( void )
 				WRITE_BYTE(II.iPosition);				// byte		bucket pos
 				WRITE_BYTE(II.iId);						// byte		id (bit index into pev->weapons)
 				WRITE_BYTE(II.iFlags);					// byte		Flags
+				WRITE_STRING(pszCustomizes);			// string	weapon this customizes
+				WRITE_BYTE(II.iIsCustomization);
+				WRITE_BYTE(II.iCustomSettings);
+				WRITE_BYTE(II.iCustomDefault);
 			MESSAGE_END();
 		}
 	}
@@ -4537,7 +4652,7 @@ void CBasePlayer :: EnableControl(BOOL fControl)
 //=========================================================
 Vector CBasePlayer :: GetAutoaimVector( float flDelta )
 {
-	if (g_iSkillLevel == SKILL_HARD)
+	if (g_iSkillLevel == SKILL_HARD || !g_pGameRules->AllowAutoTargetCrosshair())
 	{
 		UTIL_MakeVectors( pev->v_angle + pev->punchangle );
 		return gpGlobals->v_forward;
@@ -5005,6 +5120,40 @@ void CDeadHEV :: Spawn( void )
 }
 
 
+//=========================================================
+// player_togglehud - hides or shows the weapon and health HUD
+//=========================================================
+class CToggleHud : public CPointEntity
+{
+public:
+	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+};
+
+LINK_ENTITY_TO_CLASS( player_togglehud, CToggleHud );
+
+void CToggleHud :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	CBasePlayer *pPlayer = NULL;
+
+	if ( pActivator && pActivator->IsPlayer() )
+	{
+		pPlayer = (CBasePlayer *)pActivator;
+	}
+	else if ( !g_pGameRules->IsDeathmatch() )
+	{
+		pPlayer = (CBasePlayer *)CBaseEntity::Instance( g_engfuncs.pfnPEntityOfEntIndex( 1 ) );
+	}
+
+	if ( pPlayer )
+	{
+		if ( pPlayer->m_iHideHUD & HIDEHUD_HEALTH )
+			pPlayer->m_iHideHUD &= ~(HIDEHUD_WEAPONS | HIDEHUD_HEALTH);
+		else
+			pPlayer->m_iHideHUD |= HIDEHUD_WEAPONS | HIDEHUD_HEALTH;
+	}
+}
+
+
 class CStripWeapons : public CPointEntity
 {
 public:
@@ -5030,6 +5179,86 @@ void CStripWeapons :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 
 	if ( pPlayer )
 		pPlayer->RemoveAllItems( TRUE );
+}
+
+
+//=========================================================
+// player_giveitems - gives the items picked by spawnflags
+//=========================================================
+#define SF_GIVEITEMS_FISTS			0x0001
+#define SF_GIVEITEMS_GAUSSPISTOL	0x0002
+#define SF_GIVEITEMS_SNIPER			0x0004
+#define SF_GIVEITEMS_SHOTGUN		0x0008
+#define SF_GIVEITEMS_MINIGUN		0x0010
+#define SF_GIVEITEMS_COOLERS		0x0020
+#define SF_GIVEITEMS_BEAMGUN		0x0040
+#define SF_GIVEITEMS_DML			0x0080
+#define SF_GIVEITEMS_CHEMICALGUN	0x0100
+#define SF_GIVEITEMS_AICORE			0x0200
+#define SF_GIVEITEMS_ARMOR			0x0400
+#define SF_GIVEITEMS_HEALTHKIT1		0x0800
+#define SF_GIVEITEMS_HEALTHKIT2		0x1000
+#define SF_GIVEITEMS_HEALTHKIT3		0x2000
+#define SF_GIVEITEMS_HEALTHKIT4		0x4000
+
+class CGiveItems : public CPointEntity
+{
+public:
+	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+};
+
+LINK_ENTITY_TO_CLASS( player_giveitems, CGiveItems );
+
+void CGiveItems :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	CBasePlayer *pPlayer = NULL;
+
+	if ( pActivator && pActivator->IsPlayer() )
+	{
+		pPlayer = (CBasePlayer *)pActivator;
+	}
+	else if ( !g_pGameRules->IsDeathmatch() )
+	{
+		pPlayer = (CBasePlayer *)CBaseEntity::Instance( g_engfuncs.pfnPEntityOfEntIndex( 1 ) );
+	}
+
+	if ( pPlayer )
+	{
+		gEvilImpulse101 = TRUE;
+
+		if ( pev->spawnflags & SF_GIVEITEMS_FISTS )
+			pPlayer->GiveNamedItem( "weapon_fists" );
+		if ( pev->spawnflags & SF_GIVEITEMS_GAUSSPISTOL )
+			pPlayer->GiveNamedItem( "weapon_gausspistol" );
+		if ( pev->spawnflags & SF_GIVEITEMS_SNIPER )
+			pPlayer->GiveNamedItem( "cust_2GaussPistolSniper" );
+		if ( pev->spawnflags & SF_GIVEITEMS_SHOTGUN )
+			pPlayer->GiveNamedItem( "weapon_shotgun" );
+		if ( pev->spawnflags & SF_GIVEITEMS_MINIGUN )
+			pPlayer->GiveNamedItem( "weapon_minigun" );
+		if ( pev->spawnflags & SF_GIVEITEMS_COOLERS )
+			pPlayer->GiveNamedItem( "cust_2MinigunCooled" );
+		if ( pev->spawnflags & SF_GIVEITEMS_BEAMGUN )
+			pPlayer->GiveNamedItem( "weapon_beamgun" );
+		if ( pev->spawnflags & SF_GIVEITEMS_DML )
+			pPlayer->GiveNamedItem( "weapon_dml" );
+		if ( pev->spawnflags & SF_GIVEITEMS_CHEMICALGUN )
+			pPlayer->GiveNamedItem( "weapon_SPchemicalgun" );
+		if ( pev->spawnflags & SF_GIVEITEMS_AICORE )
+			pPlayer->GiveNamedItem( "weapon_aicore" );
+		if ( pev->spawnflags & SF_GIVEITEMS_ARMOR )
+			pPlayer->GiveNamedItem( "item_armor" );
+		if ( pev->spawnflags & SF_GIVEITEMS_HEALTHKIT1 )
+			pPlayer->GiveNamedItem( "item_healthkit" );
+		if ( pev->spawnflags & SF_GIVEITEMS_HEALTHKIT2 )
+			pPlayer->GiveNamedItem( "item_healthkit" );
+		if ( pev->spawnflags & SF_GIVEITEMS_HEALTHKIT3 )
+			pPlayer->GiveNamedItem( "item_healthkit" );
+		if ( pev->spawnflags & SF_GIVEITEMS_HEALTHKIT4 )
+			pPlayer->GiveNamedItem( "item_healthkit" );
+
+		gEvilImpulse101 = FALSE;
+	}
 }
 
 
