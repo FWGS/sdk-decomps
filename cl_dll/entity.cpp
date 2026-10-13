@@ -374,6 +374,9 @@ void TempEnts( void )
 }
 */
 
+// Gunman: on, for the user entities HUD_GetUserEntity hands out
+#define BEAM_TEST
+
 #if defined( BEAM_TEST )
 // Note can't index beam[ 0 ] in Beam callback, so don't use that index
 // Room for 1 beam ( 0 can't be used )
@@ -416,32 +419,7 @@ void BeamEndModel( void )
 
 void Beams( void )
 {
-	static float lasttime;
-	float curtime;
-	struct model_s *mod;
-	int index;
-
-	BeamEndModel();
-	
-	curtime = gEngfuncs.GetClientTime();
-	float end[ 3 ];
-
-	if ( ( curtime - lasttime ) < 10.0 )
-		return;
-
-	mod = gEngfuncs.CL_LoadModel( "sprites/laserbeam.spr", &index );
-	if ( !mod )
-		return;
-
-	lasttime = curtime;
-
-	end [ 0 ] = v_origin.x + 100;
-	end [ 1 ] = v_origin.y + 100;
-	end [ 2 ] = v_origin.z;
-
-	BEAM *p1;
-	p1 = gEngfuncs.pEfxAPI->R_BeamEntPoint( -1, end, index,
-		10.0, 2.0, 0.3, 1.0, 5.0, 0.0, 1.0, 1.0, 1.0, 1.0 );
+	// Gunman draws no test beam
 }
 #endif
 
