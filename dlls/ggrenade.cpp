@@ -72,14 +72,14 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 		WRITE_COORD( pev->origin.z );
 		if (iContents != CONTENTS_WATER)
 		{
-			WRITE_SHORT( g_sModelIndexFireball );
+			WRITE_SHORT( RandomExplosionSprite() );
 		}
 		else
 		{
 			WRITE_SHORT( g_sModelIndexWExplosion );
 		}
-		WRITE_BYTE( (pev->dmg - 50) * .60  ); // scale * 10
-		WRITE_BYTE( 15  ); // framerate
+		WRITE_BYTE( (pev->dmg - 50) * .50  ); // scale * 10
+		WRITE_BYTE( 20  ); // framerate
 		WRITE_BYTE( TE_EXPLFLAG_NONE );
 	MESSAGE_END();
 
@@ -134,13 +134,17 @@ void CGrenade::Smoke( void )
 	}
 	else
 	{
+		int iScale = (pev->dmg - 50) * 0.80;
+		if ( iScale < 20 )
+			iScale = 20;
+
 		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 			WRITE_BYTE( TE_SMOKE );
 			WRITE_COORD( pev->origin.x );
 			WRITE_COORD( pev->origin.y );
 			WRITE_COORD( pev->origin.z );
 			WRITE_SHORT( g_sModelIndexSmoke );
-			WRITE_BYTE( (pev->dmg - 50) * 0.80 ); // scale * 10
+			WRITE_BYTE( iScale ); // scale * 10
 			WRITE_BYTE( 12  ); // framerate
 		MESSAGE_END();
 	}
@@ -305,6 +309,9 @@ void CGrenade::SlideTouch( CBaseEntity *pOther )
 
 void CGrenade :: BounceSound( void )
 {
+	if ( pev->velocity.Length() <= 24 )
+		return;
+
 	switch ( RANDOM_LONG( 0, 2 ) )
 	{
 	case 0:	EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/grenade_hit1.wav", 0.25, ATTN_NORM);	break;
@@ -376,8 +383,6 @@ CGrenade *CGrenade::ShootContact( entvars_t *pevOwner, Vector vecStart, Vector v
 	
 	// Explode on contact
 	pGrenade->SetTouch( ExplodeTouch );
-
-	pGrenade->pev->dmg = gSkillData.plrDmgM203Grenade;
 
 	return pGrenade;
 }
