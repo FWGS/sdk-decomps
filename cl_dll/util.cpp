@@ -121,7 +121,8 @@ HSPRITE LoadSprite(const char *pszName)
 	int i;
 	char sz[256]; 
 
-	if (ScreenWidth < 640)
+	// Gunman: 640 sprites only above 640 wide
+	if (ScreenWidth <= 640)
 		i = 320;
 	else
 		i = 640;

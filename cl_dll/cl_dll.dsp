@@ -113,6 +113,10 @@ SOURCE="$(InputPath)"
 # PROP Default_Filter "*.cpp"
 # Begin Source File
 
+SOURCE=.\dmlcross.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\ev_hldm.cpp
 
 !IF  "$(CFG)" == "cl_dll - Win32 Release"
@@ -306,6 +310,10 @@ SOURCE=.\hl\hl_weapons.cpp
 !ENDIF 
 
 # End Source File
+# Begin Source File
+
+SOURCE=.\zoom.cpp
+# End Source File
 # End Group
 # Begin Source File
 
@@ -434,6 +442,10 @@ SOURCE=.\status_icons.cpp
 # Begin Source File
 
 SOURCE=.\statusbar.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\tank.cpp
 # End Source File
 # Begin Source File
 

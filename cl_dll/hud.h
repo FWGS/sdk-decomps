@@ -114,7 +114,9 @@ public:
 private:
 	float m_fFade;
 	RGBA  m_rgba;
-	WEAPON *m_pWeapon;
+public:
+	WEAPON *m_pWeapon;	// Gunman's crosshair HUDs read it
+private:
 	int	m_HUD_bucket0;
 	int m_HUD_selection;
 
@@ -521,6 +523,77 @@ private:
 //
 //-----------------------------------------------------
 //
+// the tank's damage display: body quarters that flash when hit, and the turret
+class CHudTank: public CHudBase
+{
+public:
+	int Init( void );
+	int VidInit( void );
+	int Draw( float flTime );
+	void Reset( void );
+	void SetTank( int iState );
+	void UserCmd_Honk( void );
+	int MsgFunc_TankBody( const char *pszName, int iSize, void *pbuf );
+	int MsgFunc_TurretPos( const char *pszName, int iSize, void *pbuf );
+
+	bool	m_fInTank;
+	int		m_iBodyHit;		// which quarter flashes, 1 top or 2 bottom
+	int		m_iTurretPos;	// turret sprite frame
+	float	m_flHitTime;	// when the flash ends
+};
+
+//
+//-----------------------------------------------------
+//
+// the gauss pistol's sniper scope: the FOV slides between zoom steps
+class CHudZoom: public CHudBase
+{
+public:
+	int Init( void );
+	int VidInit( void );
+	int Draw( float flTime );
+	void Reset( void );
+	void ZoomIn( void );
+	void ZoomOut( void );
+	int MsgFunc_Zoom( const char *pszName, int iSize, void *pbuf );
+
+	bool	m_fZoomed;
+	float	m_flZoomTime;
+	float	m_flNextFOVTime;
+	int		m_iFOV;
+	bool	m_fChanging;
+	int		m_iFrame;
+	float	m_flNextFrameTime;
+	float	m_flCrosshairTime;
+	float	m_flOffTime;
+	int		m_iTargetFOV;
+	bool	m_fZoomingOut;
+};
+
+//
+//-----------------------------------------------------
+//
+// the DML's target lock
+class CHudDmlCross: public CHudBase
+{
+public:
+	int Init( void );
+	int VidInit( void );
+	int Draw( float flTime );
+	void Reset( void );
+	int MsgFunc_DmlCross( const char *pszName, int iSize, void *pbuf );
+
+	float	m_flRed;
+	float	m_flGreen;
+	float	m_flBlue;
+	int		m_iMode;
+	float	m_flLastTime;
+	float	m_flFrame;
+};
+
+//
+//-----------------------------------------------------
+//
 
 typedef struct cvar_s cvar_t;
 
@@ -533,7 +606,9 @@ private:
 	client_sprite_t				*m_pSpriteList;
 	int							m_iSpriteCount;
 	int							m_iSpriteCountAllRes;
-	float						m_flMouseSensitivity;
+public:
+	float						m_flMouseSensitivity;	// Gunman's scope sets it
+private:
 	int							m_iConcussionEffect; 
 
 public:
@@ -594,6 +669,9 @@ public:
 	CHudAmmoSecondary	m_AmmoSecondary;
 	CHudTextMessage m_TextMessage;
 	CHudStatusIcons m_StatusIcons;
+	CHudTank	m_Tank;
+	CHudZoom	m_Zoom;
+	CHudDmlCross	m_DmlCross;
 
 	void Init( void );
 	void VidInit( void );

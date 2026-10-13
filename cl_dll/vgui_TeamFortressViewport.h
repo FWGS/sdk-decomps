@@ -251,6 +251,38 @@ public:
 };
 
 //==============================================================================
+// Gunman's own panels, as far as the HUD needs them. Provisional: the bases,
+// the other members and the rest of the code come with Gunman's VGUI files.
+
+// the weapon customization menu
+class CCustomizationMenu : public Panel
+{
+public:
+	void HideAll( void );
+
+	Panel	*m_pTitles[6];
+	Panel	*m_pSlots[4][5];
+	Panel	*m_pArrows[2][4];
+	Panel	*m_pLabels[4];
+	Panel	*m_pItems[4][5];
+};
+
+// the tank's view panel: its two halves slide in while driving
+class CTankPanel : public Panel
+{
+public:
+	void ShowTop( void );
+	void ShowBottom( void );
+	void Hide( void );
+
+	Panel	*m_pTop;
+	Panel	*m_pBottom;
+	int		m_fShown;
+	int		m_iX;
+	int		m_iY;
+};
+
+//==============================================================================
 class TeamFortressViewport : public Panel
 {
 private:
@@ -395,6 +427,12 @@ public:
 	CClassMenuPanel	*m_pClassMenu;
 	ScorePanel		*m_pScoreBoard;
 	char			m_szServerName[ MAX_SERVERNAME_LENGTH ];
+
+	// Gunman (provisional, see above)
+	Panel			*m_pGunmanPanel1;	// not identified yet
+	Panel			*m_pGunmanPanel2;	// not identified yet
+	CCustomizationMenu	*m_pCustomMenu;
+	CTankPanel		*m_pTankPanel;
 };
 
 //============================================================
