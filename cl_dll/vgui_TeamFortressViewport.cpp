@@ -2132,3 +2132,63 @@ int TeamFortressViewport::MsgFunc_AllowSpec( const char *pszName, int iSize, voi
 
 	return 1;
 }
+
+//================================================================
+// Gunman's panels. Provisional home of the methods the HUD calls, until
+// Gunman's VGUI files are reconstructed (retail 0x1003dac0, 0x10040850).
+
+void CCustomizationMenu::HideAll( void )
+{
+	int i, j;
+
+	for ( i = 0; i < 4; i++ )
+		for ( j = 0; j < 5; j++ )
+			if ( m_pSlots[i][j] )
+				m_pSlots[i][j]->setVisible( false );
+
+	for ( i = 0; i < 4; i++ )
+		for ( j = 0; j < 5; j++ )
+			if ( m_pItems[i][j] )
+				m_pItems[i][j]->setVisible( false );
+
+	for ( i = 0; i < 2; i++ )
+		for ( j = 0; j < 4; j++ )
+			if ( m_pArrows[i][j] )
+				m_pArrows[i][j]->setVisible( false );
+
+	for ( i = 0; i < 6; i++ )
+		if ( m_pTitles[i] )
+			m_pTitles[i]->setVisible( false );
+
+	for ( i = 0; i < 4; i++ )
+		if ( m_pLabels[i] )
+			m_pLabels[i]->setVisible( false );
+
+	setVisible( false );
+}
+
+void CTankPanel::ShowTop( void )
+{
+	setVisible( true );
+	m_fShown = 1;
+	setPos( 120, m_iY );
+	m_pTop->setVisible( true );
+}
+
+void CTankPanel::ShowBottom( void )
+{
+	setVisible( true );
+	m_fShown = 1;
+	setPos( 120, m_iY );
+	m_pBottom->setVisible( true );
+}
+
+void CTankPanel::Hide( void )
+{
+	m_pTop->setVisible( false );
+	m_pBottom->setVisible( false );
+	m_fShown = 0;
+	setPos( 40, m_iY );
+	setVisible( false );
+}
+
