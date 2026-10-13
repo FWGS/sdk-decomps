@@ -466,10 +466,7 @@ int CVehicleTank::TankControls( void )
 	{
 		m_flAccelTime = gpGlobals->time + 0.1;
 
-		float flSpeed = m_flSpeed;
-		if ( flSpeed < 0 )
-			flSpeed *= -1;
-		flSpeed /= 250;
+		float flSpeed = ( m_flSpeed < 0 ? m_flSpeed * -1 : m_flSpeed ) / 250;
 
 		float flVol = flSpeed * 0.3;
 		if ( m_iGasState )
