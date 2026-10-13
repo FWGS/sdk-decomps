@@ -26,7 +26,7 @@ typedef struct
 	int		nuet;
 	int		viscosity;
 	int		volatility;
-	float	life;			// how long the blob lasts, and how much it bounces
+	float	stability;		// how long the blob lasts, and how much it bounces
 	int		burn_rate;
 	int		explosion;		// 1 acid, 2 base, 3 explosive, 4 both, 5 neutral
 	int		chemical_type;

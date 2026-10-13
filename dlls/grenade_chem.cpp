@@ -51,7 +51,7 @@ TYPEDESCRIPTION	CChemGrenade::m_SaveData[] =
 	DEFINE_FIELD( CChemGrenade, ChemicalMixture.explosion, FIELD_INTEGER ),
 	DEFINE_FIELD( CChemGrenade, ChemicalMixture.chemical_type, FIELD_INTEGER ),
 	DEFINE_FIELD( CChemGrenade, ChemicalMixture.color, FIELD_INTEGER ),
-	DEFINE_FIELD( CChemGrenade, ChemicalMixture.color, FIELD_INTEGER ),
+	DEFINE_FIELD( CChemGrenade, ChemicalMixture.stability, FIELD_FLOAT ),
 };
 
 IMPLEMENT_SAVERESTORE( CChemGrenade, CGrenade );
@@ -312,7 +312,7 @@ void CChemGrenade::ChemicalSmokeThink( void )
 //=========================================================
 CChemGrenade *CChemGrenade::ShootSticky( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, chemicalmixture_t mixture )
 {
-	float time = mixture.life / 10;
+	float time = mixture.stability / 10;
 
 	CChemGrenade *pGrenade = GetClassPtr( (CChemGrenade *)NULL );
 	pGrenade->Spawn();
@@ -419,7 +419,7 @@ void CChemGrenade::BouncyChemicalTouch( CBaseEntity *pOther )
 		if ( pOther->edict() == pev->owner )
 			return;
 
-		ChemicalMixture.life -= pev->velocity.Length() / 15;
+		ChemicalMixture.stability -= pev->velocity.Length() / 15;
 
 		// only do damage if we're moving fairly fast
 		if (m_flNextAttack < gpGlobals->time && pev->velocity.Length() > 100)
@@ -440,7 +440,7 @@ void CChemGrenade::BouncyChemicalTouch( CBaseEntity *pOther )
 		vecTestVelocity = pev->velocity;
 		vecTestVelocity.z *= 0.45;
 
-		if ( ChemicalMixture.life >= 0 && ( m_fRegisteredSound || vecTestVelocity.Length() > 100 ) )
+		if ( ChemicalMixture.stability >= 0 && ( m_fRegisteredSound || vecTestVelocity.Length() > 100 ) )
 		{
 			if (pev->flags & FL_ONGROUND)
 			{
@@ -548,7 +548,7 @@ CChemGrenade *CChemGrenade::ShootBouncy( entvars_t *pevOwner, Vector vecStart, V
 	pGrenade->Spawn();
 	pGrenade->ChemicalMixture = mixture;
 
-	int time = pGrenade->ChemicalMixture.life / 10;
+	int time = pGrenade->ChemicalMixture.stability / 10;
 
 	pGrenade->pev->gravity = 0.5;
 	UTIL_SetOrigin( pGrenade->pev, vecStart );
