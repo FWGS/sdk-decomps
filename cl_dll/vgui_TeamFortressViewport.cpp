@@ -52,6 +52,11 @@
 #include "vgui_TeamFortressViewport.h"
 #include "vgui_ServerBrowser.h"
 #include "vgui_ScorePanel.h"
+#include "vgui_CustomizationMenu.h"
+#include "vgui_HudDeathNotice.h"
+#include "vgui_HudID.h"
+#include "vgui_HudWeaponStatus.h"
+#include "vgui_Temperature.h"
 
 extern int g_iVisibleMouse;
 class CCommandMenu;
@@ -155,7 +160,7 @@ char* GetVGUITGAName(const char *pszName)
 	static char gd[256]; 
 	const char *gamedir;
 
-	if (ScreenWidth < 640)
+	if (ScreenWidth <= 640)
 		i = 320;
 	else
 		i = 640;
@@ -199,30 +204,7 @@ void CCommandMenu::AddButton( CommandButton *pButton )
 //-----------------------------------------------------------------------------
 bool CCommandMenu::KeyInput( int keyNum )
 {
-	// loop through all our buttons looking for one bound to keyNum
-	for ( int i = 0; i < m_iButtons; i++ )
-	{
-		if ( !m_aButtons[i]->IsNotValid() )
-		{
-			if ( m_aButtons[i]->getBoundKey() == keyNum )
-			{
-				// hit the button
-				if ( m_aButtons[i]->GetSubMenu() )
-				{
-					// open the sub menu
-					gViewPort->SetCurrentCommandMenu( m_aButtons[i]->GetSubMenu() );
-					return false;
-				}
-				else
-				{
-					// run the bound command
-					m_aButtons[i]->fireActionSignal();
-					return true;
-				}
-			}
-		}
-	}
-
+	// Gunman: no key bindings in the command menu
 	return false;
 }
 
@@ -469,6 +451,10 @@ TeamFortressViewport::TeamFortressViewport(int x,int y,int wide,int tall) : Pane
 	m_pSpectatorMenu = NULL;
 	m_pCurrentMenu = NULL;
 	m_pCurrentCommandMenu = NULL;
+	m_pAmmoPanel = NULL;
+	m_pCustomizationMenu = NULL;
+	m_pWeaponStatus = NULL;
+	m_pDeathNotice = NULL;
 
 	CVAR_CREATE( "hud_classautokill", "1", FCVAR_ARCHIVE );		// controls whether or not to suicide immediately on TF class switch
 	CVAR_CREATE( "hud_takesshots", "0", FCVAR_ARCHIVE );		// controls whether or not to automatically take screenshots at the end of a round
@@ -532,6 +518,15 @@ TeamFortressViewport::TeamFortressViewport(int x,int y,int wide,int tall) : Pane
 	CreateCommandMenu();
 	CreateServerBrowser();
 	CreateSpectatorMenu();
+
+	// Gunman's HUD panels
+	CreateAmmoPanel();
+	CreateMetalHud();
+	CreateCustomizationMenu();
+	CreateWeaponStatusPanel();
+	CreateTemperaturePanel();
+	CreateIDPanel();
+	CreateDeathNoticePanel();
 }
 
 //-----------------------------------------------------------------------------
@@ -552,6 +547,18 @@ void TeamFortressViewport::Initialize( void )
 	{
 		m_pScoreBoard->Initialize();
 		HideScoreBoard();
+	}
+	if (m_pAmmoPanel)
+	{
+		m_pAmmoPanel->Initialize();
+	}
+	if (m_pCustomizationMenu)
+	{
+		m_pCustomizationMenu->Initialize();
+	}
+	if (m_pWeaponStatus)
+	{
+		m_pWeaponStatus->Initialize();
 	}
 	if (m_pSpectatorMenu)
 	{
@@ -1497,6 +1504,18 @@ void TeamFortressViewport::ShowVGUIMenu( int iMenu )
 		pNewMenu = ShowClassMenu();
 		break;
 
+	case MENU_AMMOPANEL:
+		pNewMenu = ShowAmmoPanel();
+		break;
+
+	case MENU_CUSTOMIZE:
+		pNewMenu = ShowCustomizationMenu();
+		break;
+
+	case MENU_WEAPONSTATUS:
+		pNewMenu = ShowWeaponStatusPanel();
+		break;
+
 	default:
 		break;
 	}
@@ -1587,22 +1606,139 @@ void TeamFortressViewport::CreateTeamMenu()
 // CLASS MENU
 //======================================================================================
 // Bring up the Class selection Menu
+// Gunman: it holds the weapon list, so it opens in demos too
 CMenuPanel* TeamFortressViewport::ShowClassMenu()
 {
-	// Don't open menus in demo playback
-	if ( gEngfuncs.pDemoAPI->IsPlayingback() )
-		return NULL;
-
 	m_pClassMenu->Reset();
 	return m_pClassMenu;
 }
 
+CMenuPanel* TeamFortressViewport::ShowCustomizationMenu()
+{
+	m_pCustomizationMenu->Reset();
+	return m_pCustomizationMenu;
+}
+
+CMenuPanel* TeamFortressViewport::ShowWeaponStatusPanel()
+{
+	m_pWeaponStatus->Reset();
+	return m_pWeaponStatus;
+}
+
+CMenuPanel* TeamFortressViewport::ShowAmmoPanel()
+{
+	m_pAmmoPanel->Reset();
+	return m_pAmmoPanel;
+}
+
+// Gunman: the weapon list, down the right edge of the screen
 void TeamFortressViewport::CreateClassMenu()
 {
+	int x, wide, tall;
+
+	if ( ScreenWidth <= 640 )
+	{
+		x = ScreenWidth - 113;
+		wide = 113;
+		tall = 290;
+	}
+	else
+	{
+		x = ScreenWidth - 221;
+		wide = 221;
+		tall = 550;
+	}
+
 	// Create the panel
-	m_pClassMenu = new CClassMenuPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pClassMenu = new CClassMenuPanel(144, false, x, 0, wide, tall);
 	m_pClassMenu->setParent(this);
 	m_pClassMenu->setVisible( false );
+}
+
+//======================================================================================
+// GUNMAN'S HUD PANELS
+//======================================================================================
+void TeamFortressViewport::CreateAmmoPanel()
+{
+	m_pAmmoPanel = new CAmmoPanel(0, false, ScreenWidth - 110, ScreenHeight - 50, 64, 64);
+	m_pAmmoPanel->setParent(this);
+	m_pAmmoPanel->setVisible( true );
+}
+
+void TeamFortressViewport::CreateCustomizationMenu()
+{
+	m_pCustomizationMenu = new CCustomizationMenu(0, false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pCustomizationMenu->setParent(this);
+	m_pCustomizationMenu->setVisible( true );
+}
+
+void TeamFortressViewport::CreateWeaponStatusPanel()
+{
+	int tall = 300;
+	if ( ScreenWidth < 640 )
+		tall = 150;
+	if ( ScreenWidth == 640 )
+		tall = tall * 0.8;
+
+	m_pWeaponStatus = new CWeaponStatusPanel(200, false, 1, 1, 40, tall);
+	m_pWeaponStatus->setParent(this);
+	m_pWeaponStatus->setVisible( false );
+}
+
+void TeamFortressViewport::CreateDeathNoticePanel()
+{
+	m_pDeathNotice = new CDeathNoticePanel(0, false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pDeathNotice->setParent(this);
+	m_pDeathNotice->setVisible( true );
+}
+
+void TeamFortressViewport::CreateMetalHud()
+{
+	m_pMetalHud = new CMetalHudPanel(false, 0, ScreenHeight - 113, 256, 105);
+	m_pMetalHud->setParent(this);
+	m_pMetalHud->setVisible( true );
+}
+
+// Switch between the big and the small frame as hud_smallhud says, and hide
+// with the HUD
+void CMetalHudPanel::paint( void )
+{
+	if ( gHUD.m_iHideHUDDisplay & ( HIDEHUD_ALL | HIDEHUD_HEALTH ) )
+	{
+		setVisible( false );
+		m_iShown = false;
+		return;
+	}
+
+	if ( CVAR_GET_FLOAT( "hud_smallhud" ) == 0 && ScreenWidth > 640 )
+	{
+		if ( m_iSmall )
+		{
+			m_pSmall->setVisible( false );
+			m_pBig->setVisible( true );
+			m_iSmall = false;
+		}
+	}
+	else if ( !m_iSmall )
+	{
+		m_pSmall->setVisible( true );
+		m_pBig->setVisible( false );
+		m_iSmall = true;
+	}
+}
+
+void TeamFortressViewport::CreateTemperaturePanel()
+{
+	m_pTemperature = new CTemperaturePanel(ScreenWidth / 2 - 64, ScreenHeight - 65, 256, 256);
+	m_pTemperature->setParent(this);
+	m_pTemperature->setVisible( false );
+}
+
+void TeamFortressViewport::CreateIDPanel()
+{
+	m_pIDPanel = new CIDPanel(150, false, 260, ScreenHeight - 75, ScreenWidth / 2, 24);
+	m_pIDPanel->setParent(this);
+	m_pIDPanel->setVisible( true );
 }
 
 //======================================================================================
@@ -1669,31 +1805,15 @@ void TeamFortressViewport::UpdateOnPlayerInfo()
 		m_pClassMenu->Update();
 	if (m_pScoreBoard)
 		m_pScoreBoard->Update();
+	if (m_pAmmoPanel)
+		m_pAmmoPanel->Update();
+	if (m_pCustomizationMenu)
+		m_pCustomizationMenu->Update();
 }
 
 void TeamFortressViewport::UpdateCursorState()
 {
-	// Need cursor if any VGUI window is up
-	if ( m_pCurrentMenu || m_pTeamMenu->isVisible() || m_pServerBrowser->isVisible() )
-	{
-		g_iVisibleMouse = true;
-		App::getInstance()->setCursorOveride( App::getInstance()->getScheme()->getCursor(Scheme::SchemeCursor::scu_arrow) );
-		return;
-	}
-	else if ( m_pCurrentCommandMenu )
-	{
-		// commandmenu doesn't have cursor if hud_capturemouse is turned off
-		if ( gHUD.m_pCvarStealMouse->value != 0.0f )
-		{
-			g_iVisibleMouse = true;
-			App::getInstance()->setCursorOveride( App::getInstance()->getScheme()->getCursor(Scheme::SchemeCursor::scu_arrow) );
-			return;
-		}
-	}
-
-	IN_ResetMouse();
-	g_iVisibleMouse = false;
-	App::getInstance()->setCursorOveride( App::getInstance()->getScheme()->getCursor(Scheme::SchemeCursor::scu_none) );
+	// Gunman: the menus leave the cursor alone
 }
 
 void TeamFortressViewport::UpdateHighlights()
@@ -1716,18 +1836,6 @@ void TeamFortressViewport::GetAllPlayersInfo( void )
 void TeamFortressViewport::paintBackground()
 {
 	// See if the command menu is visible and needs recalculating due to some external change
-	if ( g_iTeamNumber != m_iCurrentTeamNumber )
-	{
-		UpdateCommandMenu();
-
-		if ( m_pClassMenu )
-		{
-			m_pClassMenu->Update();
-		}
-
-		m_iCurrentTeamNumber = g_iTeamNumber;
-	}
-
 	if ( g_iPlayerClass != m_iCurrentPlayerClass )
 	{
 		UpdateCommandMenu();
@@ -1806,86 +1914,7 @@ bool TeamFortressViewport::SlotInput( int iSlot )
 // Direct Key Input
 int	TeamFortressViewport::KeyInput( int down, int keynum, const char *pszCurrentBinding )
 {
-	// Enter gets out of Spectator Mode by bringing up the Team Menu
-	if (m_iUser1 && gEngfuncs.Con_IsVisible() == false )
-	{
-		if ( down && (keynum == K_ENTER || keynum == K_KP_ENTER) )
-			ShowVGUIMenu( MENU_TEAM );
-	}
-
-	// Open Text Window?
-	if (m_pCurrentMenu && gEngfuncs.Con_IsVisible() == false)
-	{
-		int iMenuID = m_pCurrentMenu->GetMenuID();
-
-		// Get number keys as Input for Team/Class menus
-		if (iMenuID == MENU_TEAM || iMenuID == MENU_CLASS)
-		{
-			// Escape gets you out of Team/Class menus if the Cancel button is visible
-			if ( keynum == K_ESCAPE )
-			{
-				if ( (iMenuID == MENU_TEAM && g_iTeamNumber) || (iMenuID == MENU_CLASS && g_iPlayerClass) )
-				{
-					HideTopMenu();
-					return 0;
-				}
-			}
-
-			for (int i = '0'; i <= '9'; i++)
-			{
-				if ( down && (keynum == i) )
-				{
-					SlotInput( i - '0' );
-					return 0;
-				}
-			}
-		}
-
-		// Grab enter keys to close TextWindows
-		if ( down && (keynum == K_ENTER || keynum == K_KP_ENTER || keynum == K_SPACE || keynum == K_ESCAPE) )
-		{
-			if ( iMenuID == MENU_MAPBRIEFING || iMenuID == MENU_INTRO || iMenuID == MENU_CLASSHELP )
-			{
-				HideTopMenu();
-				return 0;
-			}
-		}
-
-		// Grab jump key on Team Menu as autoassign
-		if ( pszCurrentBinding && down && !strcmp(pszCurrentBinding, "+jump") )
-		{
-			if (iMenuID == MENU_TEAM)
-			{
-				m_pTeamMenu->SlotInput(5);
-				return 0;
-			}
-		}
-
-	}
-
-	// if we're in a command menu, try hit one of it's buttons
-	if ( down && m_pCurrentCommandMenu )
-	{
-		// Escape hides the command menu
-		if ( keynum == K_ESCAPE )
-		{
-			HideCommandMenu();
-			return 0;
-		}
-
-		// only trap the number keys
-		if ( keynum >= '0' && keynum <= '9' )
-		{
-			if ( m_pCurrentCommandMenu->KeyInput(keynum) )
-			{
-				// a final command has been issued, so close the command menu
-				HideCommandMenu();
-			}
-
-			return 0;
-		}
-	}
-
+	// Gunman: the menus take no keys
 	return 1;
 }
 
@@ -2132,63 +2161,3 @@ int TeamFortressViewport::MsgFunc_AllowSpec( const char *pszName, int iSize, voi
 
 	return 1;
 }
-
-//================================================================
-// Gunman's panels. Provisional home of the methods the HUD calls, until
-// Gunman's VGUI files are reconstructed (retail 0x1003dac0, 0x10040850).
-
-void CCustomizationMenu::HideAll( void )
-{
-	int i, j;
-
-	for ( i = 0; i < 4; i++ )
-		for ( j = 0; j < 5; j++ )
-			if ( m_pSlots[i][j] )
-				m_pSlots[i][j]->setVisible( false );
-
-	for ( i = 0; i < 4; i++ )
-		for ( j = 0; j < 5; j++ )
-			if ( m_pItems[i][j] )
-				m_pItems[i][j]->setVisible( false );
-
-	for ( i = 0; i < 2; i++ )
-		for ( j = 0; j < 4; j++ )
-			if ( m_pArrows[i][j] )
-				m_pArrows[i][j]->setVisible( false );
-
-	for ( i = 0; i < 6; i++ )
-		if ( m_pTitles[i] )
-			m_pTitles[i]->setVisible( false );
-
-	for ( i = 0; i < 4; i++ )
-		if ( m_pLabels[i] )
-			m_pLabels[i]->setVisible( false );
-
-	setVisible( false );
-}
-
-void CTankPanel::ShowTop( void )
-{
-	setVisible( true );
-	m_fShown = 1;
-	setPos( 120, m_iY );
-	m_pTop->setVisible( true );
-}
-
-void CTankPanel::ShowBottom( void )
-{
-	setVisible( true );
-	m_fShown = 1;
-	setPos( 120, m_iY );
-	m_pBottom->setVisible( true );
-}
-
-void CTankPanel::Hide( void )
-{
-	m_pTop->setVisible( false );
-	m_pBottom->setVisible( false );
-	m_fShown = 0;
-	setPos( 40, m_iY );
-	setVisible( false );
-}
-

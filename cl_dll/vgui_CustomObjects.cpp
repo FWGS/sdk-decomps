@@ -294,6 +294,14 @@ CImageLabel::CImageLabel( const char* pImageName,int x,int y,int wide,int tall )
 	setImage( m_pTGA );
 }
 
+// Gunman: from an image already loaded, so several labels can share it
+CImageLabel::CImageLabel( BitmapTGA *pTGA,int x,int y,int wide,int tall ) : Label( "", x,y,wide,tall )
+{
+	setContentFitted(true);
+	m_pTGA = pTGA;
+	setImage( m_pTGA );
+}
+
 //===========================================================
 // Image size
 int CImageLabel::getImageWide( void )

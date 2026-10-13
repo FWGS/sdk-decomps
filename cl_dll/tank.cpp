@@ -23,6 +23,8 @@
 #include "cl_util.h"
 #include "parsemsg.h"
 #include "vgui_TeamFortressViewport.h"
+#include "vgui_CustomizationMenu.h"
+#include "vgui_HudWeaponStatus.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -80,7 +82,7 @@ void CHudTank::UserCmd_Honk(void)
 		PlaySound( "ambience/horn1.wav", 1 );
 }
 
-// 1 the player got in, 2 and 3 show the tank panel's two halves, 0 got out
+// 1 the player got in, 2 shows the empty gas can, 3 the full one, 0 got out
 void CHudTank::SetTank( int iState )
 {
 	if ( iState == 1 )
@@ -90,10 +92,10 @@ void CHudTank::SetTank( int iState )
 
 		if ( gViewPort )
 		{
-			if ( gViewPort->m_pTankPanel )
-				gViewPort->m_pTankPanel->Hide();
-			if ( gViewPort && gViewPort->m_pCustomMenu )
-				gViewPort->m_pCustomMenu->HideAll();
+			if ( gViewPort->m_pWeaponStatus )
+				gViewPort->m_pWeaponStatus->HideGasCans();
+			if ( gViewPort && gViewPort->m_pCustomizationMenu )
+				gViewPort->m_pCustomizationMenu->HideAll();
 		}
 	}
 	else if ( iState == 2 )
@@ -101,21 +103,21 @@ void CHudTank::SetTank( int iState )
 		m_fInTank = true;
 		m_iFlags |= HUD_ACTIVE;
 
-		if ( gViewPort && gViewPort->m_pTankPanel )
-			gViewPort->m_pTankPanel->ShowBottom();
+		if ( gViewPort && gViewPort->m_pWeaponStatus )
+			gViewPort->m_pWeaponStatus->ShowEmptyGasCan();
 	}
 	else if ( iState == 3 )
 	{
-		if ( gViewPort && gViewPort->m_pTankPanel )
-			gViewPort->m_pTankPanel->ShowTop();
+		if ( gViewPort && gViewPort->m_pWeaponStatus )
+			gViewPort->m_pWeaponStatus->ShowGasCan();
 	}
 	else if ( iState == 0 )
 	{
 		m_fInTank = false;
 		m_iFlags &= ~HUD_ACTIVE;
 
-		if ( gViewPort && gViewPort->m_pTankPanel )
-			gViewPort->m_pTankPanel->Hide();
+		if ( gViewPort && gViewPort->m_pWeaponStatus )
+			gViewPort->m_pWeaponStatus->HideGasCans();
 	}
 }
 
@@ -125,8 +127,8 @@ void CHudTank::Reset(void)
 	m_fInTank = false;
 	m_flHitTime = 0;
 
-	if ( gViewPort && gViewPort->m_pTankPanel )
-		gViewPort->m_pTankPanel->Hide();
+	if ( gViewPort && gViewPort->m_pWeaponStatus )
+		gViewPort->m_pWeaponStatus->HideGasCans();
 }
 
 int CHudTank::MsgFunc_TankBody(const char *pszName,  int iSize, void *pbuf )

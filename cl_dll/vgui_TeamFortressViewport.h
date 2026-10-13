@@ -43,6 +43,13 @@ class DragNDropPanel;
 class CTransparentPanel;
 class CClassMenuPanel;
 class CTeamMenuPanel;
+class CAmmoPanel;
+class CMetalHudPanel;
+class CCustomizationMenu;
+class CWeaponStatusPanel;
+class CTemperaturePanel;
+class CDeathNoticePanel;
+class CIDPanel;
 
 char* GetVGUITGAName(const char *pszName);
 BitmapTGA *LoadTGA( const char* pImageName );
@@ -75,6 +82,11 @@ extern int iTeamColors[5][3];
 
 // Map Briefing Window
 #define MAPBRIEF_INDENT			30
+
+// Gunman's menus, after tf_defs.h's
+#define MENU_AMMOPANEL			9
+#define MENU_CUSTOMIZE			10
+#define MENU_WEAPONSTATUS		11
 
 // Team Menu
 #define TMENU_INDENT_X			(30 * ((float)ScreenHeight / 640))
@@ -113,6 +125,7 @@ public:
 public:
 	CImageLabel( const char* pImageName,int x,int y );
 	CImageLabel( const char* pImageName,int x,int y,int wide,int tall );
+	CImageLabel( BitmapTGA *pTGA,int x,int y,int wide,int tall );
 
 	virtual int getImageTall();
 	virtual int getImageWide();
@@ -120,6 +133,12 @@ public:
 	virtual void paintBackground()
 	{
 		// Do nothing, so the background's left transparent.
+	}
+
+	// Gunman: draw just the image
+	virtual void paint()
+	{
+		m_pTGA->doPaint( this );
 	}
 };
 
@@ -251,38 +270,6 @@ public:
 };
 
 //==============================================================================
-// Gunman's own panels, as far as the HUD needs them. Provisional: the bases,
-// the other members and the rest of the code come with Gunman's VGUI files.
-
-// the weapon customization menu
-class CCustomizationMenu : public Panel
-{
-public:
-	void HideAll( void );
-
-	Panel	*m_pTitles[6];
-	Panel	*m_pSlots[4][5];
-	Panel	*m_pArrows[2][4];
-	Panel	*m_pLabels[4];
-	Panel	*m_pItems[4][5];
-};
-
-// the tank's view panel: its two halves slide in while driving
-class CTankPanel : public Panel
-{
-public:
-	void ShowTop( void );
-	void ShowBottom( void );
-	void Hide( void );
-
-	Panel	*m_pTop;
-	Panel	*m_pBottom;
-	int		m_fShown;
-	int		m_iX;
-	int		m_iY;
-};
-
-//==============================================================================
 class TeamFortressViewport : public Panel
 {
 private:
@@ -307,6 +294,18 @@ private:
 	void		 CreateClassMenu( void );
 	CMenuPanel*	 ShowClassMenu( void );
 	void		 CreateSpectatorMenu( void );
+
+	// Gunman's panels
+	CMenuPanel*	 ShowCustomizationMenu( void );
+	CMenuPanel*	 ShowWeaponStatusPanel( void );
+	CMenuPanel*	 ShowAmmoPanel( void );
+	void		 CreateAmmoPanel( void );
+	void		 CreateCustomizationMenu( void );
+	void		 CreateWeaponStatusPanel( void );
+	void		 CreateDeathNoticePanel( void );
+	void		 CreateMetalHud( void );
+	void		 CreateTemperaturePanel( void );
+	void		 CreateIDPanel( void );
 	
 	// Scheme handler
 	CSchemeManager m_SchemeManager;
@@ -424,15 +423,18 @@ public:
 	// VGUI Menus
 	CMenuPanel		*m_pCurrentMenu;
 	CTeamMenuPanel	*m_pTeamMenu;
-	CClassMenuPanel	*m_pClassMenu;
+	CClassMenuPanel	*m_pClassMenu;		// Gunman: the weapons the player holds
+	CAmmoPanel		*m_pAmmoPanel;
 	ScorePanel		*m_pScoreBoard;
 	char			m_szServerName[ MAX_SERVERNAME_LENGTH ];
 
-	// Gunman (provisional, see above)
-	Panel			*m_pGunmanPanel1;	// not identified yet
-	Panel			*m_pGunmanPanel2;	// not identified yet
-	CCustomizationMenu	*m_pCustomMenu;
-	CTankPanel		*m_pTankPanel;
+	// Gunman's HUD panels
+	CMetalHudPanel		*m_pMetalHud;
+	CCustomizationMenu	*m_pCustomizationMenu;
+	CWeaponStatusPanel	*m_pWeaponStatus;
+	CTemperaturePanel	*m_pTemperature;
+	CDeathNoticePanel	*m_pDeathNotice;
+	CIDPanel			*m_pIDPanel;
 };
 
 //============================================================
@@ -1152,6 +1154,11 @@ public:
 //================================================================
 // Menu Panels that take key input
 //============================================================
+// Gunman: the class menu shows the weapons the player holds instead, along
+// the right edge of the screen. The SDK's members up to m_iCurrentInfo are
+// left over and unused, as are m_iUnused, m_iWeapon and m_iPos.
+#define MAX_WEAPONLIST			9
+
 class CClassMenuPanel : public CMenuPanel
 {
 private:
@@ -1160,13 +1167,17 @@ private:
 	ClassButton			*m_pButtons[PC_LASTCLASS];
 	CommandButton		*m_pCancelButton;
 	ScrollPanel			*m_pScrollPanel;
-
-	CImageLabel			*m_pClassImages[MAX_TEAMS][PC_LASTCLASS];
+	int					m_iUnused;
 
 	int					m_iCurrentInfo;
 
 	enum { STRLENMAX_PLAYERSONTEAM = 128 };
 	char m_sPlayersOnTeamString[STRLENMAX_PLAYERSONTEAM];
+
+public:
+	int					m_iWeapon;
+	int					m_iPos;
+	CImageLabel			*m_pWeapons[MAX_WEAPONLIST];	// one per weapon slot
 
 public:
 	CClassMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall);
@@ -1176,6 +1187,72 @@ public:
 	virtual void Update( void );
 	virtual void SetActiveInfo( int iInput );
 	virtual void Initialize( void );
+
+	// hide with the HUD
+	virtual void paint( void )
+	{
+		if ( gHUD.m_iHideHUDDisplay & ( HIDEHUD_ALL | HIDEHUD_HEALTH ) )
+		{
+			setVisible( false );
+
+			// provisional: CHudAmmo's flag for the weapon list being up, at
+			// 0x2c, until CHudAmmo is reconstructed
+			*(bool *)( (char *)&gHUD.m_Ammo + 0x2c ) = false;
+		}
+	}
+
+	virtual void Reset( void )
+	{
+		CMenuPanel::Reset();
+		m_iCurrentInfo = 0;
+	}
+};
+
+// Gunman: the ammo of the current weapon as rows of bullet images, made from
+// the class menu (its members up to m_iCurrentInfo are as unused)
+#define MAX_AMMOPANEL_TYPES		6
+#define MAX_AMMOPANEL_ICONS		20
+
+class CAmmoPanel : public CMenuPanel
+{
+private:
+	CTransparentPanel	*m_pClassInfoPanel[PC_LASTCLASS];
+	Label				*m_pPlayers[PC_LASTCLASS];
+	ClassButton			*m_pButtons[PC_LASTCLASS];
+	CommandButton		*m_pCancelButton;
+	ScrollPanel			*m_pScrollPanel;
+	int					m_iUnused;
+
+	int					m_iCurrentInfo;
+
+	int					m_iAmmoType;	// 1 to MAX_AMMOPANEL_TYPES, as in the table
+	int					m_iAmmoCount;
+	int					m_iClips;
+	CImageLabel			*m_pAmmo[MAX_AMMOPANEL_TYPES][MAX_AMMOPANEL_ICONS];
+
+public:
+	int					m_iShown;		// cleared while the HUD is hidden
+
+public:
+	CAmmoPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall);
+
+	void UpdateAmmo( int iAmmoType, int iMaxClip );
+
+	virtual bool SlotInput( int iSlot );
+	virtual void Open( void );
+	virtual void Update( void );
+	virtual void SetActiveInfo( int iInput );
+	virtual void Initialize( void );
+
+	// hide with the HUD
+	virtual void paint( void )
+	{
+		if ( gHUD.m_iHideHUDDisplay & ( HIDEHUD_ALL | HIDEHUD_HEALTH ) )
+		{
+			setVisible( false );
+			m_iShown = false;
+		}
+	}
 
 	virtual void Reset( void )
 	{
@@ -1215,6 +1292,47 @@ public:
 		CMenuPanel::Reset();
 		m_iCurrentInfo = 0;
 	}
+};
+
+//=========================================================
+// Gunman: the metal frame behind the health and armor, in two sizes
+// (hud_smallhud picks the small one; screens up to 640 wide always get it)
+class CMetalHudPanel : public CMenuPanel
+{
+public:
+	int			m_iUnused1;
+	int			m_iUnused2;
+	int			m_iSmall;		// showing the small frame
+	int			m_iShown;		// cleared while the HUD is hidden
+	CImageLabel	*m_pBig;
+	CImageLabel	*m_pSmall;
+
+public:
+	CMetalHudPanel( int iRemoveMe, int x, int y, int wide, int tall ) : CMenuPanel( iRemoveMe, x, y, wide, tall )
+	{
+		BitmapTGA *pTGA = LoadTGA( "metalhud" );
+		m_pBig = new CImageLabel( pTGA, 0, -15, 256, 128 );
+		m_pBig->setParent( this );
+		m_pBig->setVisible( false );
+
+		m_pSmall = new CImageLabel( "metalhud_small", 1, -15, 256, 128 );
+		m_pSmall->setParent( this );
+		m_pSmall->setVisible( false );
+
+		m_iSmall = (int)CVAR_GET_FLOAT( "hud_smallhud" );
+		if ( !m_iSmall )
+		{
+			m_pBig->setVisible( true );
+			m_iShown = true;
+		}
+		else
+		{
+			m_pSmall->setVisible( true );
+			m_iShown = true;
+		}
+	}
+
+	virtual void paint( void );
 };
 
 //=========================================================

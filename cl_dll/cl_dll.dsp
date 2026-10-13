@@ -465,6 +465,10 @@ SOURCE=.\util.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\vgui_AmmoPanel.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\vgui_ClassMenu.cpp
 # End Source File
 # Begin Source File
@@ -477,7 +481,23 @@ SOURCE=.\vgui_ControlConfigPanel.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\vgui_CustomizationMenu.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\vgui_CustomObjects.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\vgui_HudDeathNotice.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\vgui_HudID.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\vgui_HudWeaponStatus.cpp
 # End Source File
 # Begin Source File
 
@@ -506,6 +526,10 @@ SOURCE=.\vgui_TeamFortressViewport.cpp
 # Begin Source File
 
 SOURCE=.\vgui_teammenu.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\vgui_Temperature.cpp
 # End Source File
 # Begin Source File
 
@@ -617,6 +641,22 @@ SOURCE=.\vgui_ControlConfigPanel.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\vgui_CustomizationMenu.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\vgui_HudDeathNotice.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\vgui_HudID.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\vgui_HudWeaponStatus.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\vgui_int.h
 # End Source File
 # Begin Source File
@@ -634,6 +674,10 @@ SOURCE=.\vgui_ServerBrowser.h
 # Begin Source File
 
 SOURCE=.\vgui_TeamFortressViewport.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\vgui_Temperature.h
 # End Source File
 # Begin Source File
 
