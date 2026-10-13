@@ -223,8 +223,8 @@ void CVehicleTank::Spawn( void )
 
 	if ( g_pGameRules->IsMultiplayer() )
 	{
-		pev->absmin = Vector( pev->origin.x - 400, pev->origin.y - 400, pev->origin.z );
-		pev->absmax = Vector( pev->origin.x + 400, pev->origin.y + 400, pev->origin.z + 400 );
+		pev->absmin = pev->origin - Vector( 400, 400, 0 );
+		pev->absmax = pev->origin + Vector( 400, 400, 400 );
 		pev->health = 1000;
 		pev->takedamage = DAMAGE_AIM;
 		pev->health = m_iTankHealth;
@@ -236,9 +236,9 @@ int CVehicleTank::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, f
 	if ( g_pGameRules->IsMultiplayer() && m_pPlayer )
 	{
 		if ( bitsDamageType & DMG_BULLET )
-			flDamage *= 0.25;
+			flDamage /= 4;
 		if ( bitsDamageType & DMG_BLAST )
-			flDamage *= 0.5;
+			flDamage /= 2;
 
 		pev->health -= flDamage;
 		if ( pev->health < 0 )
@@ -291,46 +291,53 @@ void CVehicleTank::BuildVehicleThink( void )
 		}
 	}
 
-	if ( iLinked != 3 )
+	if ( iLinked == 3 )
+	{
+		pev->nextthink = gpGlobals->time + 0.1;
+
+		// restored with a driver: find him again
+		if ( !m_pPlayer )
+		{
+			m_pPlayer = NULL;
+			SetThink( WithoutPlayerThink );
+			SetUse( UseVehicle );
+		}
+		else
+		{
+			m_pPlayer = (CBasePlayer *)UTIL_FindEntityByClassname( NULL, "player" );
+			if ( m_pPlayer )
+			{
+				m_pPlayer->m_pVehicle = this;
+				SetThink( WithPlayerThink );
+				SetUse( NULL );
+			}
+			else
+			{
+				SetThink( WithoutPlayerThink );
+				SetUse( UseVehicle );
+			}
+		}
+
+		UTIL_SetOrigin( m_pBodyBSP->pev, pev->origin );
+		UTIL_SetOrigin( m_pTurretBSP->pev, pev->origin + Vector( 0, 0, 70 ) );
+		UTIL_SetOrigin( m_pBarrelBSP->pev, pev->origin + Vector( 0, 0, 82 ) );
+
+		m_pBarrelBSP->pev->angles = pev->angles;
+		m_pTurretBSP->pev->angles = m_pBarrelBSP->pev->angles;
+		m_pBodyBSP->pev->angles = m_pTurretBSP->pev->angles;
+
+		m_pBarrelBSP->pev->owner = ENT( pev );
+		m_pTurretBSP->pev->owner = m_pBarrelBSP->pev->owner;
+		m_pBodyBSP->pev->owner = m_pTurretBSP->pev->owner;
+
+		void *pmodel = GET_MODEL_PTR( ENT( pev ) );
+		SetController( pmodel, pev, 3, m_pBarrelBSP->pev->angles.x );
+	}
+	else
 	{
 		pev->nextthink = gpGlobals->time + 0.5;
 		ALERT( at_console, "WARNING: VehicleID %d did NOT Link ALL Parts\n", m_iVehicleID );
-		return;
 	}
-
-	pev->nextthink = gpGlobals->time + 0.1;
-
-	// restored with a driver: find him again
-	if ( m_pPlayer )
-		m_pPlayer = (CBasePlayer *)UTIL_FindEntityByClassname( NULL, "player" );
-	else
-		m_pPlayer = NULL;
-
-	if ( m_pPlayer )
-	{
-		m_pPlayer->m_pVehicle = this;
-		SetThink( WithPlayerThink );
-		SetUse( NULL );
-	}
-	else
-	{
-		SetThink( WithoutPlayerThink );
-		SetUse( UseVehicle );
-	}
-
-	UTIL_SetOrigin( m_pBodyBSP->pev, pev->origin );
-	UTIL_SetOrigin( m_pTurretBSP->pev, Vector( pev->origin.x, pev->origin.y, pev->origin.z + 70 ) );
-	UTIL_SetOrigin( m_pBarrelBSP->pev, Vector( pev->origin.x, pev->origin.y, pev->origin.z + 82 ) );
-
-	m_pBarrelBSP->pev->angles = pev->angles;
-	m_pTurretBSP->pev->angles = m_pBarrelBSP->pev->angles;
-	m_pBodyBSP->pev->angles = m_pTurretBSP->pev->angles;
-
-	m_pBarrelBSP->pev->owner = ENT( pev );
-	m_pTurretBSP->pev->owner = m_pBarrelBSP->pev->owner;
-	m_pBodyBSP->pev->owner = m_pTurretBSP->pev->owner;
-
-	SetController( GET_MODEL_PTR( ENT( pev ) ), pev, 3, m_pBarrelBSP->pev->angles.x );
 }
 
 //=========================================================
