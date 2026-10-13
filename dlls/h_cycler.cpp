@@ -72,6 +72,82 @@ public:
 LINK_ENTITY_TO_CLASS( cycler, CGenericCycler );
 
 
+//
+// Gunman cycler: a generic cycler that picks its submodels
+//
+class CGunmanCycler : public CGenericCycler
+{
+public:
+	CGunmanCycler() { m_iSubmodel1 = 1; m_iSubmodel2 = 1; m_iSubmodel3 = 1; }
+	void KeyValue( KeyValueData *pkvd );
+	void Spawn( void );
+	int BloodColor( void );
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	int m_iSubmodel1;
+	int m_iSubmodel2;
+	int m_iSubmodel3;
+};
+LINK_ENTITY_TO_CLASS( gunman_cycler, CGunmanCycler );
+
+void CGunmanCycler::KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "cyc_submodel1"))
+	{
+		m_iSubmodel1 = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	if (FStrEq(pkvd->szKeyName, "cyc_submodel2"))
+	{
+		m_iSubmodel2 = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	if (FStrEq(pkvd->szKeyName, "cyc_submodel3"))
+	{
+		m_iSubmodel3 = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CBaseEntity::KeyValue( pkvd );
+}
+
+void CGunmanCycler::Spawn( void )
+{
+	GenericCyclerSpawn( (char *)STRING(pev->model), Vector(-16, -16, 0), Vector(16, 16, 72) );
+
+	if ( m_iSubmodel1 < 1 )
+		m_iSubmodel1 = 1;
+	if ( m_iSubmodel2 < 1 )
+		m_iSubmodel2 = 1;
+	if ( m_iSubmodel2 < 1 )	// sic, submodel 3 is never checked
+		m_iSubmodel2 = 1;
+
+	SetBodygroup( 1, m_iSubmodel1 - 1 );
+	SetBodygroup( 2, m_iSubmodel2 - 1 );
+	SetBodygroup( 3, m_iSubmodel3 - 1 );
+
+	pev->solid = SOLID_NOT;
+	pev->takedamage = DAMAGE_NO;
+}
+
+int CGunmanCycler::BloodColor( void )
+{
+	return DONT_BLEED;
+}
+
+TYPEDESCRIPTION	CGunmanCycler::m_SaveData[] = 
+{
+	DEFINE_FIELD( CGunmanCycler, m_iSubmodel1, FIELD_INTEGER ),
+	DEFINE_FIELD( CGunmanCycler, m_iSubmodel2, FIELD_INTEGER ),
+	DEFINE_FIELD( CGunmanCycler, m_iSubmodel3, FIELD_INTEGER ),
+};
+
+IMPLEMENT_SAVERESTORE( CGunmanCycler, CGenericCycler );
+
+
 
 // Probe droid imported for tech demo compatibility
 //
