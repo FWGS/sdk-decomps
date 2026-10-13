@@ -9,6 +9,7 @@
 #include "entity_state.h"
 #include "cl_entity.h"
 #include "triangleapi.h"
+#include "effectlist.h"
 
 #define DLLEXPORT __declspec( dllexport )
 
@@ -17,6 +18,8 @@ extern "C"
 	void DLLEXPORT HUD_DrawNormalTriangles( void );
 	void DLLEXPORT HUD_DrawTransparentTriangles( void );
 };
+
+CEffectList g_Effects;
 
 //#define TEST_IT
 #if defined( TEST_IT )
