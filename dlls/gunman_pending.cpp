@@ -10,6 +10,8 @@
 #include	"weapons.h"
 #include	"player.h"
 #include	"vehicle.h"
+#include	"effects.h"
+#include	"dmlrocket.h"
 
 // Gib models, by the iGibModel and iPrecacheGib fields of gMonsterTypes.
 gibmodel_t gGibModels[] =
@@ -107,4 +109,16 @@ void DrawDebugBeam( Vector vecStart, Vector vecEnd, int r, int g, int b )
 // code is reconstructed.
 void CVehicleTank::EjectPlayer( void )
 {
+}
+
+// The DML's rockets (retail 0x100899e0, 0x10089ae0). Stubs until the rocket
+// is reconstructed.
+CDmlRocket *CDmlRocket::CreateSpiralRocket( const Vector &vecOrigin, const Vector &vecAngles, edict_t *pentOwner, int iFlightpath, int iPayload, int iDetonate )
+{
+	return NULL;
+}
+
+CDmlRocket *CDmlRocket::CreateDmlRocket( const Vector &vecOrigin, const Vector &vecAngles, edict_t *pentOwner, int iFlightpath, int iPayload, int iDetonate )
+{
+	return NULL;
 }

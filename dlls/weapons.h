@@ -69,7 +69,10 @@ public:
 #define WEAPON_CUST_DMLGRENADE	6	// cust_1DMLGrenDetonate, cust_2DMLGrenPayload
 #define WEAPON_AICORE			7
 #define WEAPON_CUST_KNIFE		8	// cust_1fistsKnife
-#define WEAPON_CUST_DML			12	// cust_1DMLLaunch, cust_2DMLFlightpath, cust_3DMLDetonate, cust_4DMLPayload
+#define WEAPON_CUST_LAUNCH		9	// cust_1DMLLaunch
+#define WEAPON_CUST_FLIGHTPATH	10	// cust_2DMLFlightpath
+#define WEAPON_CUST_DETONATE	11	// cust_3DMLDetonate
+#define WEAPON_CUST_PAYLOAD		12	// cust_4DMLPayload
 #define WEAPON_DMLGRENADE		13
 #define WEAPON_BEAMGUN			14
 #define WEAPON_DML				16
@@ -375,6 +378,20 @@ class CBaseCustomization : public CBasePlayerWeapon
 {
 public:
 	void Precache( void ) { PRECACHE_MODEL( "models/w_crowbar.mdl" ); }
+};
+
+class CLaserSpot : public CBaseEntity
+{
+	void Spawn( void );
+	void Precache( void );
+
+	int	ObjectCaps( void ) { return FCAP_DONT_SAVE; }
+
+public:
+	void Suspend( float flSuspendTime );
+	void EXPORT Revive( void );
+	
+	static CLaserSpot *CreateSpot( void );
 };
 
 
