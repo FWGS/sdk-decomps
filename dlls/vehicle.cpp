@@ -1385,7 +1385,7 @@ void CVehicleTank::UseVehicle( CBaseEntity *pActivator, CBaseEntity *pCaller, US
 	m_pPlayer->pev->solid = SOLID_NOT;
 	m_pPlayer->pev->takedamage = DAMAGE_NO;
 	m_pPlayer->pev->velocity = g_vecZero;
-	m_pPlayer->pev->flags |= FL_NOTARGET;
+	m_pPlayer->pev->flags |= FL_IMMUNE_LAVA;	// sic: FL_IMMUNE_LAVA, not FL_NOTARGET
 	m_pPlayer->pev->effects |= EF_NODRAW;
 	CLIENT_COMMAND( ENT( m_pPlayer->pev ), "cl_bob 0\n" );
 	m_pPlayer->m_iHideHUD |= HIDEHUD_WEAPONS | HIDEHUD_HEALTH;
@@ -1400,7 +1400,7 @@ void CVehicleTank::UseVehicle( CBaseEntity *pActivator, CBaseEntity *pCaller, US
 	if ( m_pPlayer->m_bGasTank == true && m_iGasState == TANK_GAS_EMPTY )
 	{
 		// he brought a gas can: refuel
-		EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_STATIC, "tank/glug.wav", m_fTankSoundAdj, 0.8, 0, PITCH_NORM );
+		EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_STATIC, "tank/glug.wav", m_fTankSoundAdj, 0.8 );
 		m_pPlayer->m_bGasTank = false;
 		m_pPlayer->m_bClientGasTank = false;
 		m_iGasState = TANK_GAS_REFUEL;
@@ -1408,7 +1408,7 @@ void CVehicleTank::UseVehicle( CBaseEntity *pActivator, CBaseEntity *pCaller, US
 	}
 	else if ( m_iGasState == TANK_GAS_FULL )
 	{
-		EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_STATIC, "tank/startup.wav", m_fTankSoundAdj * 0.4, ATTN_NORM, 0, PITCH_NORM );
+		EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_STATIC, "tank/startup.wav", m_fTankSoundAdj * 0.4, 1.0, 0, PITCH_NORM );
 	}
 
 	EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_VOICE, "tank/engineidle.wav", 0, 0.8, 0, PITCH_NORM );
@@ -1451,7 +1451,7 @@ void CVehicleTank::EjectPlayer( void )
 	m_pPlayer->pev->takedamage = DAMAGE_AIM;
 	m_pPlayer->pev->view_ofs = Vector( 0, 0, 28 );
 	m_pPlayer->pev->fixangle = TRUE;
-	m_pPlayer->pev->punchangle.y = 0;
+	m_pPlayer->pev->v_angle.z = 0;
 	m_pPlayer->pev->angles.z = 0;
 	m_pPlayer->pev->v_angle.x = 0;
 	m_pPlayer->pev->angles.x = 0;
@@ -1459,7 +1459,7 @@ void CVehicleTank::EjectPlayer( void )
 	m_pPlayer->pev->velocity = g_vecZero;
 	m_pPlayer->m_pVehicle = NULL;
 	m_pPlayer->m_bClientGasTank = false;
-	m_pPlayer->pev->flags &= ~FL_NOTARGET;
+	m_pPlayer->pev->flags &= ~FL_IMMUNE_LAVA;
 	CLIENT_COMMAND( ENT( m_pPlayer->pev ), "cl_bob 0.01\n" );
 	m_pPlayer->pev->effects &= ~EF_NODRAW;
 
@@ -1473,14 +1473,15 @@ void CVehicleTank::EjectPlayer( void )
 	}
 	m_pPlayer->m_iHideHUD &= ~( HIDEHUD_WEAPONS | HIDEHUD_HEALTH );
 
-	UTIL_SetOrigin( m_pPlayer->pev, Vector( pev->origin.x, pev->origin.y, pev->origin.z + 180 ) );
+	Vector vecExit = pev->origin + Vector( 0, 0, 180 );
+	UTIL_SetOrigin( m_pPlayer->pev, vecExit );
 
 	if ( m_iGasState == TANK_GAS_FULL )
-		EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_STATIC, "tank/powerdown.wav", m_fTankSoundAdj, 0.8, 0, PITCH_NORM );
+		EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_STATIC, "tank/powerdown.wav", m_fTankSoundAdj, 0.8 );
 
-	EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_VOICE, "common/null.wav", 0, 0.8, 0, PITCH_NORM );
-	EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_BODY, "common/null.wav", 0, 0.8, 0, PITCH_NORM );
-	EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_ITEM, "common/null.wav", 0, 0.8, 0, PITCH_NORM );
+	EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_VOICE, "common/null.wav", 0, 0.8 );
+	EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_BODY, "common/null.wav", 0, 0.8 );
+	EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_ITEM, "common/null.wav", 0, 0.8 );
 
 	SetUse( UseVehicle );
 	SetThink( WithoutPlayerThink );
@@ -1505,8 +1506,8 @@ void CVehicleTank::Debris( Vector vecPos )
 	float rgfl1[3];
 	float rgfl2[3];
 
-	Vector vecSrc = m_vecCollision;
-	Vector vecEnd = pev->origin;
+	Vector vecSrc = pev->origin;
+	Vector vecEnd = m_vecCollision;
 
 	UTIL_TraceLine( vecPos, pev->origin, ignore_monsters, ENT( pev ), &tr );
 
@@ -1535,6 +1536,7 @@ void CVehicleTank::Debris( Vector vecPos )
 				pTextureName++;
 
 			strcpy( szbuffer, pTextureName );
+			szbuffer[CBTEXTURENAMEMAX - 1] = 0;
 			chTextureType = TEXTURETYPE_Find( szbuffer );
 		}
 	}
@@ -1587,7 +1589,7 @@ void CVehicleTank::FireShell( void )
 	pShell->pev->velocity = vecForward * 1800;
 	pShell->pev->gravity = 0.5;
 
-	EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_WEAPON, "weapons/explode4.wav", m_fTankSoundAdj, 0.8, 0, PITCH_NORM );
+	EMIT_SOUND( ENT( m_pPlayer->pev ), CHAN_WEAPON, "weapons/explode4.wav", m_fTankSoundAdj, 0.8 );
 
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecSrc );
 		WRITE_BYTE( TE_SMOKE );
@@ -1701,17 +1703,15 @@ void CVehicleTankBSP::TankBSPUse( CBaseEntity *pActivator, CBaseEntity *pCaller,
 		return;
 
 	CVehicleTank *pTank = (CVehicleTank *)UTIL_FindEntityByClassname( NULL, "vehicle_tank" );
-	if ( !pTank )
-		return;
-
-	while ( pTank->m_iVehicleID != m_iVehicleID )
+	while ( pTank )
 	{
-		pTank = (CVehicleTank *)UTIL_FindEntityByClassname( pTank, "vehicle_tank" );
-		if ( !pTank )
+		if ( pTank->m_iVehicleID == m_iVehicleID )
+		{
+			pTank->UseVehicle( pActivator, pCaller, useType, value );
 			return;
+		}
+		pTank = (CVehicleTank *)UTIL_FindEntityByClassname( pTank, "vehicle_tank" );
 	}
-
-	pTank->UseVehicle( pActivator, pCaller, useType, value );
 }
 
 void CVehicleTankBSP::WaitThink( void )
@@ -2131,6 +2131,7 @@ void CVehicleTankShell::Debris( TraceResult *pTrace, Vector vecSrc, Vector vecEn
 				pTextureName++;
 
 			strcpy( szbuffer, pTextureName );
+			szbuffer[CBTEXTURENAMEMAX - 1] = 0;
 			chTextureType = TEXTURETYPE_Find( szbuffer );
 		}
 	}
