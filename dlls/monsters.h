@@ -50,6 +50,12 @@
 //										64
 #define	SF_MONSTER_WAIT_FOR_SCRIPT		128 //spawnflag that makes monsters wait to check for attacking until the script is done or they've been attacked
 #define SF_MONSTER_PREDISASTER			256	//this is a predisaster scientist or barney. Influences how they speak.
+#define SF_MONSTER_ARMED				256	// Gunman's meaning of the same bit
+
+// Gunman: pev->flags bit set by the "spawndeadpose" key: the monster starts
+// as a corpse in that activity. It is the bit the engine uses for
+// FL_SKIPLOCALHOST.
+#define FL_SPAWNDEADPOSE				256
 #define SF_MONSTER_FADECORPSE			512 // Fade out corpse after death
 #define SF_MONSTER_FALL_TO_GROUND		0x80000000
 

@@ -126,7 +126,7 @@ void CBaseMonster::ReportAIState( void ) { }
 void CBaseMonster :: KeyValue( KeyValueData *pkvd ) { }
 BOOL CBaseMonster :: FCheckAITrigger ( void ) { return FALSE; }
 void CBaseMonster::CorpseFallThink( void ) { }
-void CBaseMonster :: MonsterInitDead( void ) { }
+void CBaseMonster :: MonsterInitDead( BOOL fKeepAnimation ) { }
 void CBaseMonster :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType) { }
 BOOL CBaseMonster :: ShouldFadeOnDeath( void ) { return FALSE; }
 void CBaseMonster :: RadiusDamage(entvars_t* pevInflictor, entvars_t*	pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType ) { }
@@ -149,6 +149,8 @@ void CBaseMonster :: GibSound ( void ) { }
 CSound* CBaseMonster :: PBestSound ( void ) { return NULL; }
 CSound* CBaseMonster :: PBestScent ( void ) { return NULL; } 
 int CBaseMonster :: VisionFlags ( void ) { return 0; }
+BOOL CBaseMonster :: FVisible ( CBaseEntity *pEntity ) { return FALSE; }
+BOOL CBaseMonster :: FVisible ( const Vector &vecOrigin ) { return FALSE; }
 int CBaseMonster :: IgnoreConditions ( void ) { return 0; }
 BOOL CBaseMonster :: FCanCheckAttacks ( void ) { return FALSE; }
 BOOL CBaseMonster :: FTriangulate ( const Vector &vecStart , const Vector &vecEnd, float flDist, CBaseEntity *pTargetEnt, Vector *pApex ) { return FALSE; }

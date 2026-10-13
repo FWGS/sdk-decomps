@@ -173,6 +173,34 @@ int LookupSequence( void *pmodel, const char *label )
 }
 
 
+char *GetSequenceName( void *pmodel, int sequence )
+{
+	studiohdr_t *pstudiohdr;
+	
+	pstudiohdr = (studiohdr_t *)pmodel;
+
+	mstudioseqdesc_t	*pseqdesc;
+
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
+
+	return pseqdesc[sequence].label;
+}
+
+
+int GetSequenceActivity( void *pmodel, int sequence )
+{
+	studiohdr_t *pstudiohdr;
+	
+	pstudiohdr = (studiohdr_t *)pmodel;
+
+	mstudioseqdesc_t	*pseqdesc;
+
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
+
+	return pseqdesc[sequence].activity;
+}
+
+
 int IsSoundEvent( int eventNumber )
 {
 	if ( eventNumber == SCRIPT_EVENT_SOUND || eventNumber == SCRIPT_EVENT_SOUND_VOICE )

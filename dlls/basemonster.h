@@ -118,6 +118,8 @@ public:
 	
 	static	TYPEDESCRIPTION m_SaveData[];
 
+	void Precache( void );
+
 	void KeyValue( KeyValueData *pkvd );
 
 // monster use function
@@ -150,7 +152,7 @@ public:
 		void EXPORT	CallMonsterThink( void ) { this->MonsterThink(); }
 		virtual int IRelationship ( CBaseEntity *pTarget );
 		virtual void MonsterInit ( void );
-		virtual void MonsterInitDead( void );	// Call after animation/pose is set up
+		virtual void MonsterInitDead( BOOL fKeepAnimation );	// Call after animation/pose is set up
 		virtual void BecomeDead( void );
 		void EXPORT CorpseFallThink( void );
 
@@ -303,6 +305,8 @@ public:
 	Activity GetSmallFlinchActivity( void );
 	Activity GetBigFlinchActivity( void );
 	virtual int VisionFlags( void );	// bit 0: FVisible ignores the water line
+	BOOL FVisible ( CBaseEntity *pEntity );
+	BOOL FVisible ( const Vector &vecOrigin );
 	virtual void CallForHelp( char *szClassname, float flDist, EHANDLE hEnemy, Vector &vecLocation );
 	virtual void Killed( entvars_t *pevAttacker, int iGib );
 	virtual void GibMonster( void );

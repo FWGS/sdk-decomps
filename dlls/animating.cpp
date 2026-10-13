@@ -104,6 +104,24 @@ int CBaseAnimating :: LookupSequence ( const char *label )
 	return ::LookupSequence( pmodel, label );
 }
 
+//=========================================================
+//=========================================================
+char *CBaseAnimating :: GetSequenceName ( int iSequence )
+{
+	void *pmodel = GET_MODEL_PTR( ENT(pev) );
+
+	return ::GetSequenceName( pmodel, iSequence );
+}
+
+//=========================================================
+//=========================================================
+int CBaseAnimating :: GetSequenceActivity ( int iSequence )
+{
+	void *pmodel = GET_MODEL_PTR( ENT(pev) );
+
+	return ::GetSequenceActivity( pmodel, iSequence );
+}
+
 
 //=========================================================
 //=========================================================

@@ -4802,7 +4802,7 @@ void CDeadHEV :: Spawn( void )
 	// Corpses have less health
 	pev->health			= 8;
 
-	MonsterInitDead();
+	MonsterInitDead( FALSE );
 }
 
 
