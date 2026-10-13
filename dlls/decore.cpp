@@ -1627,4 +1627,494 @@ void CSpaceDebris::DebrisTouch( CBaseEntity *pOther )
 
 // ==== decore part C: CDummyBot (fork C) ====
 
+// past the header region, so the .pch replay is unchanged
+#include "customentity.h"
+#include "sphereexplosion.h"
+
+//=========================================================
+// the training bot: a battery-powered drone that floats along its
+// path_corners with three beams and a glow between its arms, slows
+// down after a while, and falls smoking or blows up when killed
+//=========================================================
+
+#define SF_TRAININGBOT_NORING	0x0400	// no ring event while it floats
+
+class CDummyBot : public CBaseMonster
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int BloodColor( void ) { return 156; }	// the robots' oil
+	int Classify( void ) { return CLASS_ROBOT; }
+	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
+	void Killed( entvars_t *pevAttacker, int iGib );
+
+	void EXPORT FloatThink( void );
+	void EXPORT BotSparkThink( void );
+	void EXPORT SmokeFallThink( void );
+	void EXPORT BotExplodeTouch( CBaseEntity *pOther );
+
+	void BotExplode( void );
+	void CreateBeams( void );
+	void UpdateBeams( void );
+	void ClearBeams( void );
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	CBaseEntity *m_pGoalEnt;	// the path_corner it floats to
+	Vector m_vGoalPos;
+	CBeam *AttackBeam1;
+	CBeam *AttackBeam2;
+	CBeam *AttackBeam3;
+	CSprite *m_pSprite;			// the glow between the arms
+	int m_iExplosion;
+	float m_fSpeed;
+	float m_flSlowDown;			// when it halves its speed
+	float m_flNextRingTime;
+	unsigned short m_usBeamRing;
+	int m_iSmoke;
+	int m_iBeam;
+};
+LINK_ENTITY_TO_CLASS( monster_trainingbot, CDummyBot );
+
+TYPEDESCRIPTION	CDummyBot::m_SaveData[] =
+{
+	DEFINE_FIELD( CDummyBot, m_pGoalEnt, FIELD_CLASSPTR ),
+	DEFINE_FIELD( CDummyBot, AttackBeam1, FIELD_CLASSPTR ),
+	DEFINE_FIELD( CDummyBot, AttackBeam2, FIELD_CLASSPTR ),
+	DEFINE_FIELD( CDummyBot, AttackBeam3, FIELD_CLASSPTR ),
+	DEFINE_FIELD( CDummyBot, m_pSprite, FIELD_CLASSPTR ),
+	DEFINE_FIELD( CDummyBot, m_vGoalPos, FIELD_VECTOR ),
+	DEFINE_FIELD( CDummyBot, m_iExplosion, FIELD_INTEGER ),
+	DEFINE_FIELD( CDummyBot, m_fSpeed, FIELD_FLOAT ),
+	DEFINE_FIELD( CDummyBot, m_flSlowDown, FIELD_TIME ),
+	DEFINE_FIELD( CDummyBot, m_flNextRingTime, FIELD_TIME ),
+};
+
+IMPLEMENT_SAVERESTORE( CDummyBot, CBaseMonster );
+
+void CDummyBot::Spawn( void )
+{
+	pev->classname = MAKE_STRING( "monster_trainingbot" );
+	Precache( );
+
+	SET_MODEL( ENT( pev ), "models/batterybot.mdl" );
+	pev->solid = SOLID_BBOX;
+	pev->movetype = MOVETYPE_FLY;
+	pev->takedamage = DAMAGE_AIM;
+	pev->effects = 0;
+	pev->health = 60;
+	pev->velocity = g_vecZero;
+	UTIL_SetSize( pev, Vector( -32, -32, -32 ), Vector( 32, 32, 32 ) );
+	UTIL_SetOrigin( pev, pev->origin );
+	SetTouch( NULL );
+
+	if ( FStringNull( pev->target ) )
+		pev->target = ALLOC_STRING( "bot1" );
+
+	edict_t *pentTarget = FIND_ENTITY_BY_TARGETNAME( NULL, STRING( pev->target ) );
+	if ( !FNullEnt( pentTarget ) )
+	{
+		m_pGoalEnt = CBaseEntity::Instance( pentTarget );
+		if ( m_pGoalEnt )
+			m_vGoalPos = m_pGoalEnt->pev->origin;
+	}
+
+	m_fSpeed = RANDOM_FLOAT( 75, 175 ) * 2;
+	m_flSlowDown = gpGlobals->time + 4.0;
+	pev->velocity = ( m_vGoalPos - pev->origin ).Normalize( ) * m_fSpeed;
+
+	CreateBeams( );
+	MonsterInit( );
+
+	SetThink( FloatThink );
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	SetSequenceByName( "idle" );
+	ResetSequenceInfo( );
+	pev->frame = 0;
+	pev->avelocity.y = RANDOM_FLOAT( -20, 20 );
+
+	EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "drone/drone_idle.wav", 0.65, 0.5, 0, PITCH_NORM );
+	m_flNextRingTime = 0;
+}
+
+void CDummyBot::Precache( void )
+{
+	PRECACHE_MODEL( "models/batterybot.mdl" );
+	m_iBeam = PRECACHE_MODEL( "sprites/xbeam1.spr" );
+	PRECACHE_MODEL( "sprites/hugeball.spr" );
+	m_iExplosion = PRECACHE_MODEL( "sprites/explosion4.spr" );
+	PRECACHE_MODEL( "models/battgib.mdl" );
+
+	PRECACHE_SOUND( "drone/drone_idle.wav" );
+	PRECACHE_SOUND( "drone/drone_flinch1.wav" );
+	PRECACHE_SOUND( "drone/drone_flinch2.wav" );
+
+	UTIL_PrecacheOther( "sphere_explosion" );
+
+	m_usBeamRing = PRECACHE_EVENT( 1, "events/batbotbeam.sc" );
+	m_iSmoke = PRECACHE_MODEL( "sprites/dmlsmoke.spr" );
+}
+
+void CDummyBot::FloatThink( void )
+{
+	if ( m_flSlowDown && m_flSlowDown < gpGlobals->time )
+	{
+		m_flSlowDown = 0;
+		m_fSpeed /= 2;
+	}
+
+	StudioFrameAdvance( );
+	UpdateBeams( );
+
+	if ( !m_pGoalEnt )
+		m_pGoalEnt = UTIL_FindEntityByTargetname( NULL, STRING( pev->target ) );
+
+	if ( m_pGoalEnt )
+	{
+		m_vGoalPos = m_pGoalEnt->pev->origin;
+		UTIL_MakeAimVectors( m_pGoalEnt->pev->angles );
+		Vector vecDir = m_vGoalPos - pev->origin;
+		pev->velocity = vecDir.Normalize( ) * m_fSpeed;
+	}
+
+	float flDist = ( pev->origin - m_vGoalPos ).Length( );
+	if ( m_pGoalEnt && flDist < 40 )
+	{
+		// on to the next corner
+		m_pGoalEnt = UTIL_FindEntityByTargetname( NULL, STRING( m_pGoalEnt->pev->target ) );
+		if ( m_pGoalEnt )
+		{
+			m_vGoalPos = m_pGoalEnt->pev->origin;
+			UTIL_MakeAimVectors( m_pGoalEnt->pev->angles );
+			Vector vecDir = m_vGoalPos - pev->origin;
+			pev->velocity = vecDir.Normalize( ) * m_fSpeed;
+		}
+	}
+
+	if ( m_flNextRingTime < gpGlobals->time && !( pev->spawnflags & SF_TRAININGBOT_NORING ) )
+	{
+		PLAYBACK_EVENT_FULL( 0, ENT( pev ), m_usBeamRing, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, 0, 0 );
+		m_flNextRingTime = gpGlobals->time + 0.1;
+	}
+
+	pev->nextthink = gpGlobals->time + 0.1;
+}
+
+int CDummyBot::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
+{
+	return CBaseMonster::TakeDamage( pevInflictor, pevAttacker, flDamage, bitsDamageType | DMG_BULLET );
+}
+
+void CDummyBot::Killed( entvars_t *pevAttacker, int iGib )
+{
+	// tell the training room
+	pev->target = ALLOC_STRING( "bradybunch" );
+	m_pGoalEnt = UTIL_FindEntityByTargetname( NULL, STRING( pev->target ) );
+	if ( m_pGoalEnt )
+		m_pGoalEnt->Use( this, this, USE_ON, 0 );
+
+	ClearBeams( );
+	EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "drone/drone_idle.wav", 0, 0, SND_STOP, PITCH_NORM );
+
+	switch ( RANDOM_LONG( 0, 1 ) )
+	{
+	case 0:	EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "drone/drone_flinch1.wav", 0.65, 0.5, 0, PITCH_NORM ); break;
+	case 1:	EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "drone/drone_flinch2.wav", 0.65, 0.5, 0, PITCH_NORM ); break;
+	}
+
+	if ( pev->health <= -30 && RANDOM_LONG( 0, 6 ) )
+	{
+		BotExplode( );
+		CBaseMonster::Killed( pevAttacker, GIB_ALWAYS );
+		return;
+	}
+
+	// fall down smoking, and blow up on landing
+	pev->health = 1;
+	pev->takedamage = DAMAGE_NO;
+	pev->movetype = MOVETYPE_BOUNCE;
+	pev->avelocity.x = RANDOM_FLOAT( -150, 150 );
+	pev->avelocity.y = RANDOM_FLOAT( -150, 150 );
+	pev->avelocity.z = RANDOM_FLOAT( -150, 150 );
+	SetThink( SmokeFallThink );
+	pev->nextthink = gpGlobals->time + 0.1;
+}
+
+void CDummyBot::BotSparkThink( void )
+{
+	SetTouch( BotExplodeTouch );
+
+	if ( m_pSprite )
+		m_pSprite->pev->scale += 0.1;
+
+	UTIL_MakeVectors( pev->angles );
+
+	Vector vecRight = gpGlobals->v_right * RANDOM_FLOAT( -27, -12 );
+	Vector vecUp = gpGlobals->v_up * RANDOM_FLOAT( 12, 27 );
+	Vector vecForward = gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 );
+	Vector vecEnd = pev->origin + vecForward + vecUp + vecRight;
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_BEAMPOINTS );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		WRITE_COORD( vecEnd.x );
+		WRITE_COORD( vecEnd.y );
+		WRITE_COORD( vecEnd.z );
+		WRITE_SHORT( m_iBeam );
+		WRITE_BYTE( 0 );	// frame start
+		WRITE_BYTE( 0 );	// framerate
+		WRITE_BYTE( 1 );	// life
+		WRITE_BYTE( 12 );	// width
+		WRITE_BYTE( 50 );	// noise
+		WRITE_BYTE( 80 );	// r
+		WRITE_BYTE( 255 );	// g
+		WRITE_BYTE( 120 );	// b
+		WRITE_BYTE( 100 );	// brightness
+		WRITE_BYTE( 5 );	// speed
+	MESSAGE_END();
+
+	vecRight = gpGlobals->v_right * RANDOM_FLOAT( 12, 27 );
+	vecUp = gpGlobals->v_up * RANDOM_FLOAT( 12, 27 );
+	vecForward = gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 );
+	vecEnd = pev->origin + vecForward + vecUp + vecRight;
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_BEAMPOINTS );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		WRITE_COORD( vecEnd.x );
+		WRITE_COORD( vecEnd.y );
+		WRITE_COORD( vecEnd.z );
+		WRITE_SHORT( m_iBeam );
+		WRITE_BYTE( 0 );	// frame start
+		WRITE_BYTE( 0 );	// framerate
+		WRITE_BYTE( 1 );	// life
+		WRITE_BYTE( 12 );	// width
+		WRITE_BYTE( 50 );	// noise
+		WRITE_BYTE( 80 );	// r
+		WRITE_BYTE( 255 );	// g
+		WRITE_BYTE( 120 );	// b
+		WRITE_BYTE( 100 );	// brightness
+		WRITE_BYTE( 5 );	// speed
+	MESSAGE_END();
+
+	vecRight = gpGlobals->v_right * RANDOM_FLOAT( 12, 27 );
+	vecUp = gpGlobals->v_up * RANDOM_FLOAT( -27, -12 );
+	vecForward = gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 );
+	vecEnd = pev->origin + vecForward + vecUp + vecRight;
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_BEAMPOINTS );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		WRITE_COORD( vecEnd.x );
+		WRITE_COORD( vecEnd.y );
+		WRITE_COORD( vecEnd.z );
+		WRITE_SHORT( m_iBeam );
+		WRITE_BYTE( 0 );	// frame start
+		WRITE_BYTE( 0 );	// framerate
+		WRITE_BYTE( 1 );	// life
+		WRITE_BYTE( 12 );	// width
+		WRITE_BYTE( 50 );	// noise
+		WRITE_BYTE( 80 );	// r
+		WRITE_BYTE( 255 );	// g
+		WRITE_BYTE( 120 );	// b
+		WRITE_BYTE( 100 );	// brightness
+		WRITE_BYTE( 5 );	// speed
+	MESSAGE_END();
+
+	vecRight = gpGlobals->v_right * RANDOM_FLOAT( -27, -12 );
+	vecUp = gpGlobals->v_up * RANDOM_FLOAT( -27, -12 );
+	vecForward = gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 );
+	vecEnd = pev->origin + vecForward + vecUp + vecRight;
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_BEAMPOINTS );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		WRITE_COORD( vecEnd.x );
+		WRITE_COORD( vecEnd.y );
+		WRITE_COORD( vecEnd.z );
+		WRITE_SHORT( m_iBeam );
+		WRITE_BYTE( 0 );	// frame start
+		WRITE_BYTE( 0 );	// framerate
+		WRITE_BYTE( 1 );	// life
+		WRITE_BYTE( 12 );	// width
+		WRITE_BYTE( 50 );	// noise
+		WRITE_BYTE( 80 );	// r
+		WRITE_BYTE( 255 );	// g
+		WRITE_BYTE( 120 );	// b
+		WRITE_BYTE( 100 );	// brightness
+		WRITE_BYTE( 5 );	// speed
+	MESSAGE_END();
+
+	pev->nextthink = gpGlobals->time + 0.1;
+}
+
+void CDummyBot::SmokeFallThink( void )
+{
+	SetTouch( BotExplodeTouch );
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_SPRITE_SPRAY );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		WRITE_COORD( 0 );	// direction
+		WRITE_COORD( 0 );
+		WRITE_COORD( 1 );
+		WRITE_SHORT( m_iSmoke );
+		WRITE_BYTE( 1 );	// count
+		WRITE_BYTE( 100 );	// speed
+		WRITE_BYTE( 20 );	// noise
+	MESSAGE_END();
+
+	pev->nextthink = gpGlobals->time + 0.1;
+}
+
+void CDummyBot::BotExplodeTouch( CBaseEntity *pOther )
+{
+	BotExplode( );
+
+	CBaseEntity *pOwner = CBaseEntity::Instance( pev->owner );
+	if ( pOwner )
+		pOwner->DeathNotice( pev );
+
+	UTIL_Remove( this );
+}
+
+void CDummyBot::BotExplode( void )
+{
+	Vector vecSrc = pev->origin;
+
+	CSphereExplosion *pBig = CSphereExplosion::Create( vecSrc, this, 100, 2, 255, 7, 1, TRUE, FALSE, 0, 0, 0 );
+	CSphereExplosion *pSmall = CSphereExplosion::Create( vecSrc, this, 25, 0.5, 220, 3, 1, FALSE, FALSE, 0, 0, 0 );
+	if ( pBig )
+		pBig->UseToggle( this, this, USE_ON, 0 );
+	if ( pSmall )
+		pSmall->UseToggle( this, this, USE_ON, 0 );
+
+	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_EXPLOSION );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		WRITE_SHORT( m_iExplosion );
+		WRITE_BYTE( 12 );	// scale * 10
+		WRITE_BYTE( 15 );	// framerate
+		WRITE_BYTE( TE_EXPLFLAG_NONE );
+	MESSAGE_END();
+
+	SpawnGib( "models/battgib.mdl", 1.0, 0, 0 );
+	SpawnGib( "models/battgib.mdl", 1.0, 1, 0 );
+	SpawnGib( "models/battgib.mdl", 1.0, 2, 0 );
+	SpawnGib( "models/battgib.mdl", 1.0, 3, 0 );
+}
+
+void CDummyBot::CreateBeams( void )
+{
+	ClearBeams( );
+
+	AttackBeam1 = CBeam::BeamCreate( "sprites/xbeam1.spr", 40 );
+	AttackBeam2 = CBeam::BeamCreate( "sprites/xbeam1.spr", 40 );
+	AttackBeam3 = CBeam::BeamCreate( "sprites/xbeam1.spr", 40 );
+
+	AttackBeam1->EntsInit( entindex( ), entindex( ) );
+	AttackBeam1->SetFlags( BEAM_FSINE );
+	AttackBeam1->SetFlags( BEAM_FSHADEOUT );	// sic: replaces BEAM_FSINE
+	AttackBeam1->SetScrollRate( 5 );
+	AttackBeam1->SetNoise( 50 );
+	AttackBeam1->SetBrightness( 255 );
+	AttackBeam1->SetWidth( 25 );
+	AttackBeam1->SetColor( 80, 120, 255 );
+	AttackBeam1->SetEndAttachment( 1 );
+	AttackBeam1->SetStartAttachment( 2 );
+	AttackBeam1->pev->spawnflags |= SF_BEAM_TEMPORARY;
+
+	AttackBeam2->EntsInit( entindex( ), entindex( ) );
+	AttackBeam2->SetFlags( BEAM_FSINE );
+	AttackBeam2->SetFlags( BEAM_FSHADEOUT );	// sic
+	AttackBeam2->SetScrollRate( 5 );
+	AttackBeam2->SetNoise( 50 );
+	AttackBeam2->SetBrightness( 255 );
+	AttackBeam2->SetWidth( 25 );
+	AttackBeam2->SetColor( 80, 120, 255 );
+	AttackBeam2->SetEndAttachment( 1 );
+	AttackBeam2->SetStartAttachment( 3 );
+	AttackBeam2->pev->spawnflags |= SF_BEAM_TEMPORARY;
+
+	AttackBeam3->EntsInit( entindex( ), entindex( ) );
+	AttackBeam3->SetFlags( BEAM_FSINE );
+	AttackBeam3->SetFlags( BEAM_FSHADEOUT );	// sic
+	AttackBeam3->SetScrollRate( 5 );
+	AttackBeam3->SetNoise( 50 );
+	AttackBeam3->SetBrightness( 255 );
+	AttackBeam3->SetWidth( 25 );
+	AttackBeam3->SetColor( 80, 120, 255 );
+	AttackBeam3->SetEndAttachment( 1 );
+	AttackBeam3->SetStartAttachment( 4 );
+	AttackBeam3->pev->spawnflags |= SF_BEAM_TEMPORARY;
+
+	m_pSprite = CSprite::SpriteCreate( "sprites/hugeball.spr", pev->origin, TRUE );
+	m_pSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxNoDissipation );
+	m_pSprite->SetAttachment( edict( ), 1 );
+	m_pSprite->SetScale( 0.2 );
+	m_pSprite->pev->framerate = 10;
+	m_pSprite->pev->frame = 0;
+	m_pSprite->TurnOn( );
+	UTIL_SetOrigin( m_pSprite->pev, m_pSprite->pev->origin );
+	m_pSprite->pev->spawnflags |= SF_SPRITE_TEMPORARY;
+}
+
+void CDummyBot::UpdateBeams( void )
+{
+	if ( AttackBeam1 )
+	{
+		AttackBeam1->RelinkBeam( );
+		if ( AttackBeam2 )
+			AttackBeam2->RelinkBeam( );
+		if ( AttackBeam3 )
+			AttackBeam3->RelinkBeam( );
+	}
+	else
+	{
+		// the beams went away (a restore): make them again
+		CreateBeams( );
+	}
+}
+
+void CDummyBot::ClearBeams( void )
+{
+	if ( AttackBeam1 )
+	{
+		UTIL_Remove( AttackBeam1 );
+		AttackBeam1 = NULL;
+	}
+	if ( AttackBeam2 )
+	{
+		UTIL_Remove( AttackBeam2 );
+		AttackBeam2 = NULL;
+	}
+	if ( AttackBeam3 )
+	{
+		UTIL_Remove( AttackBeam3 );
+		AttackBeam3 = NULL;
+	}
+	if ( m_pSprite )
+	{
+		UTIL_Remove( m_pSprite );
+		m_pSprite = NULL;
+	}
+}
+
+
 // ==== end of part C ====
