@@ -747,7 +747,8 @@ void CVehicleTank::Drive( float flInterval )
 	if ( m_flSpeed < 0 || m_flSpeed > 0 )
 	{
 		flDot = m_flSpeed;
-		vecVelocity = Vector( vecForward.x, vecForward.y, 0 ) * m_flSpeed;
+		Vector vecDir = Vector( vecForward.x, vecForward.y, 0 );
+		vecVelocity = vecDir * m_flSpeed;
 	}
 	else if ( m_flSpeed != 0 || pev->velocity.Length2D() >= 5 )
 	{
@@ -761,93 +762,96 @@ void CVehicleTank::Drive( float flInterval )
 	m_vecCollision = g_vecZero;
 	m_bCanBounce = TRUE;
 
-	if ( !CornersBlocked( vecVelocity, flInterval, 18 ) )
+	if ( CornersBlocked( vecVelocity, flInterval, 18 ) )
 	{
-		m_bCollisionLastFrame = FALSE;
-	}
-	else if ( m_bCollisionLastFrame )
-	{
-		Vector vecDir = vecVelocity.Normalize();
-		flDot = DotProduct( vecDir, m_vecNormalLastFrame );
-
-		if ( pev->avelocity.y != 0 && pev->velocity.Length() < 10 )
+		if ( m_bCollisionLastFrame )
 		{
-			Vector vecPush = PushAway();
-			if ( !( vecPush == g_vecZero ) )
-			{
-				Vector vecAway = ( pev->origin - m_vecCollision ).Normalize();
-				vecVelocity = vecAway * 128 + vecPush;
-				goto turned;
-			}
-		}
+			flDot = DotProduct( vecVelocity.Normalize(), m_vecNormalLastFrame );
 
-		if ( m_bCanBounce && flDot >= -0.8 && flDot <= 0.8 && pev->avelocity.y == 0 )
-		{
-			vecDir = vecVelocity.Normalize();
-			if ( DotProduct( vecDir, m_vecNormalLastFrame ) < 0 )
+			if ( pev->avelocity.y != 0 && pev->velocity.Length() < 10 )
 			{
-				Vector vecSlide = Slide( vecVelocity, m_vecNormalLastFrame );
-				if ( vecSlide.Length() > 50 && ( m_flSpeed > 50 || m_flSpeed < -50 ) )
+				Vector vecPush;
+				vecPush = PushAway();
+				if ( vecPush != g_vecZero )
 				{
-					if ( m_flSpeed < 0 )
-						vecSlide = vecSlide * -1;
-					vecVelocity = vecSlide;
-
-					if ( !( m_vecCollision == g_vecZero ) && m_flNextDebris < gpGlobals->time )
-					{
-						Debris( pev->origin + ( m_vecCollision - pev->origin ).Normalize() * 0.7 * ( m_vecCollision - pev->origin ).Length() );
-						m_flNextDebris = gpGlobals->time + 0.2;
-					}
+					// turning in place against a wall: push off it
+					vecVelocity = ( pev->origin - m_vecCollision ).Normalize() * 128;
+					vecVelocity = vecVelocity + vecPush;
 					goto turned;
 				}
 			}
-		}
 
-		if ( m_flNextBounceMove < gpGlobals->time )
-		{
-			// rammed something: bounce back
-			Vector vecFwd;
-			UTIL_MakeVectorsPrivate( pev->angles, vecFwd, NULL, NULL );
-
-			Vector vecToCollision = m_vecCollision - pev->origin;
-			vecDir = vecToCollision.Normalize();
-
-			int iAnim;
-			if ( DotProduct( vecDir, vecFwd ) > 0 )
+			if ( m_bCanBounce && flDot >= -0.8 && flDot <= 0.8 && pev->avelocity.y == 0 )
 			{
-				if ( pev->avelocity.y > 15 )
-					iAnim = TANK_BUMPFRONTLEFT;
-				else
-					iAnim = TANK_BUMPFRONT;
-			}
-			else
-			{
-				if ( pev->avelocity.y > 15 )
-					iAnim = TANK_BUMPBACKRIGHT;
-				else
-					iAnim = TANK_BUMPBACKLEFT;
-			}
-			SetTankAnim( iAnim );
+				if ( DotProduct( vecVelocity.Normalize(), m_vecNormalLastFrame ) < 0 )
+				{
+					// glancing blow: slide along the wall
+					Vector vecSlide;
+					vecSlide = Slide( vecVelocity, m_vecNormalLastFrame );
+					if ( vecSlide.Length() > 50 && ( m_flSpeed > 50 || m_flSpeed < -50 ) )
+					{
+						if ( m_flSpeed < 0 )
+							vecSlide = vecSlide * -1;
+						vecVelocity = vecSlide;
 
-			vecDir = ( pev->origin - m_vecCollision ).Normalize();
-			vecVelocity = vecDir * 128;
-			vecVelocity.z = 0;
-			SetAvelocity( -pev->avelocity );
-			m_flSpeed = 0;
-			m_fYawAccel = 0;
-			m_flNextBounceMove = gpGlobals->time + 2;
-		}
+						if ( m_vecCollision != g_vecZero && m_flNextDebris < gpGlobals->time )
+						{
+							Debris( pev->origin + ( m_vecCollision - pev->origin ).Normalize() * 0.7 * ( m_vecCollision - pev->origin ).Length() );
+							m_flNextDebris = gpGlobals->time + 0.2;
+						}
+						goto turned;
+					}
+				}
+			}
+
+			if ( m_flNextBounceMove < gpGlobals->time )
+			{
+				// rammed something: bounce back
+				Vector vecFwd;
+				UTIL_MakeVectorsPrivate( pev->angles, vecFwd, NULL, NULL );
+
+				Vector vecToCollision = m_vecCollision - pev->origin;
+
+				int iAnim;
+				if ( DotProduct( vecToCollision.Normalize(), vecFwd ) > 0 )
+				{
+					if ( pev->avelocity.y > 15 )
+						iAnim = TANK_BUMPFRONTLEFT;
+					else
+						iAnim = TANK_BUMPFRONT;
+				}
+				else
+				{
+					if ( pev->avelocity.y > 15 )
+						iAnim = TANK_BUMPBACKRIGHT;
+					else
+						iAnim = TANK_BUMPBACKLEFT;
+				}
+				SetTankAnim( iAnim );
+
+				vecVelocity = ( pev->origin - m_vecCollision ).Normalize() * 128;
+				vecVelocity.z = 0;
+				SetAvelocity( -pev->avelocity );
+				m_flSpeed = 0;
+				m_fYawAccel = 0;
+				m_flNextBounceMove = gpGlobals->time + 2;
+			}
 turned:
-		if ( pev->avelocity.y != 0 && vecVelocity.Length() < 10 )
-		{
-			Vector vecPush = PushAway();
-			if ( !( vecPush == g_vecZero ) )
+			if ( pev->avelocity.y != 0 && vecVelocity.Length() < 10 )
 			{
-				vecDir = ( pev->origin - m_vecCollision ).Normalize();
-				vecVelocity = vecPush + vecDir * 128;
+				Vector vecPush;
+				vecPush = PushAway();
+				if ( vecPush != g_vecZero )
+				{
+					Vector vecAway = ( pev->origin - m_vecCollision ).Normalize();
+					vecVelocity = vecAway * 128;
+					vecVelocity = vecPush + vecVelocity;
+				}
 			}
 		}
 	}
+	else
+		m_bCollisionLastFrame = FALSE;
 
 	pev->velocity = vecVelocity;
 }
