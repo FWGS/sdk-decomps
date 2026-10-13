@@ -416,6 +416,10 @@ SOURCE=.\fists.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\gausspistol.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\minigun.cpp
 # End Source File
 # Begin Source File
