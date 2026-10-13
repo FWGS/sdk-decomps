@@ -949,43 +949,46 @@ void CVehicleTank::UpdateControllers( void )
 {
 	void *pmodel = GET_MODEL_PTR( ENT( pev ) );
 
-	float flTurret = UTIL_AngleNormalize( m_pBarrelBSP->pev->angles.y - pev->angles.y );
+	float flTurret = m_pBarrelBSP->pev->angles.y - pev->angles.y;
+	flTurret = UTIL_AngleNormalize( flTurret );
 	if ( flTurret < 0 )
 		flTurret += 360;
 
-	CBasePlayer *pPlayer = m_pPlayer;
-	if ( pPlayer )
+	// the HUD's turret indicator has 16 positions, centered on the compass points
+	float flPos = flTurret - 11.25;
+	if ( flPos < 0 )
+		flPos += 360;
+	float flHUDPos = 16 - flPos / 22.5;
+
+	if ( m_pPlayer )
 	{
-		if ( (int)flTurret != m_sTurretHUDPos )
+		if ( (int)flHUDPos != m_sTurretHUDPos )
 		{
-			m_sTurretHUDPos = (int)flTurret;
-			MESSAGE_BEGIN( MSG_ONE, gmsgTurretPos, NULL, pPlayer->pev );
-				WRITE_SHORT( (int)flTurret );
+			m_sTurretHUDPos = (int)flHUDPos;
+			MESSAGE_BEGIN( MSG_ONE, gmsgTurretPos, NULL, m_pPlayer->pev );
+				WRITE_SHORT( m_sTurretHUDPos );
 			MESSAGE_END();
 		}
 	}
 
 	// the turret turns on three controllers of 120 degrees each
-	if ( flTurret > 120 )
-	{
-		if ( flTurret > 240 )
-		{
-			SetController( pmodel, pev, 0, 120 );
-			SetController( pmodel, pev, 1, 120 );
-			SetController( pmodel, pev, 2, flTurret - 240 );
-		}
-		else
-		{
-			SetController( pmodel, pev, 0, 120 );
-			SetController( pmodel, pev, 1, flTurret - 120 );
-			SetController( pmodel, pev, 2, 0 );
-		}
-	}
-	else
+	if ( flTurret <= 120 )
 	{
 		SetController( pmodel, pev, 0, flTurret );
 		SetController( pmodel, pev, 1, 0 );
 		SetController( pmodel, pev, 2, 0 );
+	}
+	else if ( flTurret <= 240 )
+	{
+		SetController( pmodel, pev, 0, 120 );
+		SetController( pmodel, pev, 1, flTurret - 120 );
+		SetController( pmodel, pev, 2, 0 );
+	}
+	else
+	{
+		SetController( pmodel, pev, 0, 120 );
+		SetController( pmodel, pev, 1, 120 );
+		SetController( pmodel, pev, 2, flTurret - 240 );
 	}
 
 	SetController( pmodel, pev, 3, UTIL_AngleDiff( m_pBarrelBSP->pev->angles.x, m_pTurretBSP->pev->angles.x ) );
