@@ -1856,7 +1856,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 				TEXTURETYPE_Check(&tr, vecSrc, vecEnd, iBulletType);
 				break;
 
-			case BULLET_PLAYER_357:		
+			case BULLET_PLAYER_BUCKSHOT:	
 				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgBuckshot, vecDir, &tr, DMG_BULLET); 
 				if ( !tracer )
 				{
@@ -1864,7 +1864,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 				}
 				break;
 
-			case BULLET_PLAYER_CROWBAR:		
+			case BULLET_MONSTER_12MM:
 				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgM203Grenade, vecDir, &tr, DMG_BULLET); 
 				if ( !tracer )
 				{

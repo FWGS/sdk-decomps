@@ -786,7 +786,7 @@ void CFuncTankGun::Fire( const Vector &barrelEnd, const Vector &forward, entvars
 					break;
 
 				case TANK_BULLET_12MM:
-					FireBullets( 1, barrelEnd, forward, gTankSpread[m_spread], 4096, BULLET_PLAYER_CROWBAR, 0, m_iBulletDamage, pevAttacker );
+					FireBullets( 1, barrelEnd, forward, gTankSpread[m_spread], 4096, BULLET_MONSTER_12MM, 0, m_iBulletDamage, pevAttacker );
 					break;
 
 				default:
