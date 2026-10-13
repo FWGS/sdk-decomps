@@ -1050,26 +1050,27 @@ int CVehicleTank::SideBlocked( int iStartForward, int iEndForward, int iStartRig
 	TraceResult tr;
 	Vector vecForward, vecRight, vecUp;
 	Vector vecHit;
+	Vector vecStart, vecEnd;
 
 	UTIL_MakeVectorsPrivate( m_pBodyBSP->pev->angles, vecForward, vecRight, vecUp );
 
-	Vector vecStart = pev->origin + iStartForward * vecForward * VehicleLength() + iStartRight * vecRight * VehicleWidth() + vecUp * 32;
-	Vector vecEnd = pev->origin + iEndForward * vecForward * VehicleLength() + iEndRight * vecRight * VehicleWidth() + vecUp * 32;
+	vecStart = pev->origin + iStartForward * vecForward * VehicleLength() + iStartRight * vecRight * VehicleWidth() + vecUp * 32;
+	vecEnd = pev->origin + iEndForward * vecForward * VehicleLength() + iEndRight * vecRight * VehicleWidth() + vecUp * 32;
 
-	int iStartContents = UTIL_PointContents( vecStart );
-	int iEndContents = UTIL_PointContents( vecEnd );
+	BOOL bStartSolid = UTIL_PointContents( vecStart ) == CONTENTS_SOLID;
+	BOOL bEndSolid = UTIL_PointContents( vecEnd ) == CONTENTS_SOLID;
 
-	if ( iStartContents == CONTENTS_SOLID && iEndContents == CONTENTS_SOLID )
-		return 0;
-
-	if ( iStartContents == CONTENTS_SOLID )
+	if ( bStartSolid )
 	{
+		if ( bEndSolid )
+			return 0;
+
 		UTIL_TraceLine( vecEnd, vecStart, ignore_monsters, ENT( m_pBodyBSP->pev ), &tr );
 		vecHit = vecStart;
 	}
 	else
 	{
-		if ( iEndContents != CONTENTS_SOLID )
+		if ( !bEndSolid )
 		{
 			// both corners clear: is something between them?
 			UTIL_TraceLine( vecStart, vecEnd, ignore_monsters, ENT( m_pBodyBSP->pev ), &tr );
