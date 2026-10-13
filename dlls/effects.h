@@ -82,6 +82,7 @@ public:
 		SetThink(AnimateUntilDead); 
 		pev->framerate = framerate;
 		pev->dmgtime = gpGlobals->time + (m_maxFrame / framerate); 
+		m_lastTime = gpGlobals->time;
 		pev->nextthink = gpGlobals->time; 
 	}
 
