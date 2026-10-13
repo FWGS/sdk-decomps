@@ -964,8 +964,8 @@ void EV_MonsterShotgun( event_args_t *args )
 	{
 		EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 32, -12, 6 );
 
-		vec3_t vecOrigin = ShellOrigin + forward * -8 + up * -3 + right * 5;
-		EV_EjectBrass ( vecOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHOTSHELL ); 
+		ShellOrigin = ShellOrigin + forward * -8 + up * -3 + right * 5;
+		EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHOTSHELL ); 
 	}
 
 	// sic: shoots along the angles, not forward
@@ -1001,8 +1001,8 @@ void EV_MonsterMechagun( event_args_t *args )
 	{
 		EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 32, -12, 6 );
 
-		vec3_t vecOrigin = ShellOrigin + forward * -8 + up * -3 + right * 5;
-		EV_EjectBrass ( vecOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL ); 
+		ShellOrigin = ShellOrigin + forward * -8 + up * -3 + right * 5;
+		EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL ); 
 	}
 
 	// sic: shoots along the angles, not forward
@@ -1038,8 +1038,8 @@ void EV_ChopperFire( event_args_t *args )
 	{
 		EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 32, -12, 6 );
 
-		vec3_t vecOrigin = ShellOrigin + forward * -8 + up * -3 + right * 5;
-		EV_EjectBrass ( vecOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL ); 
+		ShellOrigin = ShellOrigin + forward * -8 + up * -3 + right * 5;
+		EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL ); 
 	}
 
 	// sic: shoots along the angles, not forward
@@ -1048,10 +1048,124 @@ void EV_ChopperFire( event_args_t *args )
 
 void EV_FireGWMinigun( event_args_t *args )
 {
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t velocity;
+
+	vec3_t ShellVelocity;
+	vec3_t ShellOrigin;
+	int shell;
+	vec3_t vecSrc, vecAiming;
+	vec3_t vecSpread;
+	vec3_t up, right, forward;
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+	VectorCopy( args->velocity, velocity );
+
+	AngleVectors( angles, forward, right, up );
+
+	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/shell.mdl");// brass shell
+
+	// iparam1 is the spread setting
+	switch ( args->iparam1 )
+	{
+	case 1:
+		vecSpread = VECTOR_CONE_10DEGREES;
+		break;
+	case 2:
+		vecSpread = VECTOR_CONE_3DEGREES;
+		break;
+	case 4:
+		vecSpread = VECTOR_CONE_6DEGREES;
+		break;
+	default:
+		vecSpread = VECTOR_CONE_20DEGREES;
+		break;
+	}
+	
+	if ( EV_IsLocal( idx ) )
+	{
+		// Add muzzle flash to current weapon model
+		EV_MuzzleFlash();
+
+		if ( args->iparam2 )
+		{
+			if ( args->fparam1 < args->fparam2 )
+				gEngfuncs.pEventAPI->EV_WeaponAnimation( 4, args->bparam1 );
+		}
+		else
+		{
+			gEngfuncs.pEventAPI->EV_WeaponAnimation( 2, args->bparam1 );
+		}
+	}
+
+	EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -12, 4 );
+
+	EV_EjectBrass ( ShellOrigin + up * 8 + forward * 2 + right * 8, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL ); 
+
+	switch( gEngfuncs.pfnRandomLong( 0, 2 ) )
+	{
+	case 0:
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/hks1.wav", 0.65, ATTN_NORM, 0, 94 + gEngfuncs.pfnRandomLong( 0, 0xf ) );
+		break;
+	case 1:
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/hks2.wav", 0.65, ATTN_NORM, 0, 94 + gEngfuncs.pfnRandomLong( 0, 0xf ) );
+		break;
+	case 2:
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/hks3.wav", 0.65, ATTN_NORM, 0, 94 + gEngfuncs.pfnRandomLong( 0, 0xf ) );
+		break;
+	}
+
+	EV_GetGunPosition( args, vecSrc, origin );
+	VectorCopy( forward, vecAiming );
+
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_MP5, 1, &tracerCount[idx-1] );
+
+	if ( EV_IsLocal( idx ) )
+	{
+		V_PunchAxis( 0, gEngfuncs.pfnRandomFloat( -2, 2 ) );
+	}
 }
 
 void EV_MinigunHeat( event_args_t *args )
 {
+	int bOverheating = args->bparam1;
+	int bCooled = args->bparam2;
+
+	if ( EV_IsLocal( args->entindex ) )
+	{
+		cl_entity_t *view = gEngfuncs.GetViewModel();
+
+		if ( view )
+		{
+			// the barrels glow while it is too hot to fire
+			if ( bOverheating )
+			{
+				view->curstate.renderfx = kRenderFxGlowShell;
+				view->curstate.renderamt = 60;
+
+				if ( !bCooled )
+				{
+					view->curstate.rendercolor.r = 255;
+					view->curstate.rendercolor.g = 100;
+					view->curstate.rendercolor.b = 0;
+				}
+				else
+				{
+					view->curstate.rendercolor.r = 100;
+					view->curstate.rendercolor.g = 100;
+					view->curstate.rendercolor.b = 255;
+				}
+			}
+			else
+			{
+				view->curstate.renderfx = kRenderFxNone;
+			}
+		}
+	}
 }
 
 void EV_FireMP5( event_args_t *args )
@@ -1091,10 +1205,10 @@ void EV_FireMP5( event_args_t *args )
 	switch( gEngfuncs.pfnRandomLong( 0, 1 ) )
 	{
 	case 0:
-		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/hks1.wav", 1, ATTN_NORM, 0, 94 + gEngfuncs.pfnRandomLong( 0, 0xf ) );
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/hks1.wav", 0.5, ATTN_NORM, 0, 94 + gEngfuncs.pfnRandomLong( 0, 0xf ) );
 		break;
 	case 1:
-		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/hks2.wav", 1, ATTN_NORM, 0, 94 + gEngfuncs.pfnRandomLong( 0, 0xf ) );
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/hks2.wav", 0.5, ATTN_NORM, 0, 94 + gEngfuncs.pfnRandomLong( 0, 0xf ) );
 		break;
 	}
 
@@ -1191,333 +1305,748 @@ void EV_SpinGauss( event_args_t *args )
 }
 
 // FIXME, pass m_fPrimaryFire in as parameter!!!
+// the gauss pistol fired a beam this frame, and who fired it
+int g_iGaussBeamFired;
+int g_iGaussBeamOwner;
+
 void EV_FireGauss( event_args_t *args )
 {
 	int idx;
 	vec3_t origin;
 	vec3_t angles;
-	vec3_t velocity;
-	float flDamage = args->fparam1;
-	int primaryfire = args->bparam1;
+	int fNoTrace = args->bparam2;
 
-	int m_fPrimaryFire = args->bparam1;
-	int m_iWeaponVolume = GAUSS_PRIMARY_FIRE_VOLUME;
 	vec3_t vecSrc;
 	vec3_t vecDest;
-	edict_t		*pentIgnore;
-	pmtrace_t tr, beam_tr;
-	float flMaxFrac = 1.0;
-	int	nTotal = 0;
-	int fHasPunched = 0;
-	int fFirstBeam = 1;
-	int	nMaxHits = 10;
+	vec3_t vecBeam, vecNormal;
+	pmtrace_t tr;
 	physent_t *pEntity;
 	int m_iBeam, m_iGlow, m_iBalls;
+	int iStartEnt;
 	vec3_t up, right, forward;
+	char *decalName = "{pulse2";
 
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->angles, angles );
-	VectorCopy( args->velocity, velocity );
 
-	// Make sure we don't have a gauss spin event in the queue for this guy
-	gEngfuncs.pEventAPI->EV_KillEvents( idx, "events/gaussspin.sc" );
-
-//	Con_Printf( "Firing gauss with %f\n", flDamage );
 	EV_GetGunPosition( args, vecSrc, origin );
 
-	m_iBeam = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/smoke.spr" );
-	m_iBalls = m_iGlow = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/hotglow.spr" );
-	
-	AngleVectors( angles, forward, right, up );
+	m_iBeam = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/gaussbeam2.spr" );
+	m_iGlow = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/gausspark.spr" );
+	m_iBalls = gEngfuncs.pEventAPI->EV_FindModelIndex( "models/w_gauss.mdl" );
 
+	AngleVectors( angles, forward, right, up );
 	VectorMA( vecSrc, 8192, forward, vecDest );
 
 	if ( EV_IsLocal( idx ) )
 	{
-		V_PunchAxis( 0, -2.0 );
-		gEngfuncs.pEventAPI->EV_WeaponAnimation( GAUSS_FIRE2, 2 );
+		V_PunchAxis( 0, -1.0 );
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( 2, 2 );
 	}
 
-	gEngfuncs.pEventAPI->EV_StopSound( idx, CHAN_WEAPON, "ambience/pulsemachine.wav" );
+	if ( args->iparam1 == 1 )
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/gauss_fire4.wav", 1.0, ATTN_NORM, 0, 85 + gEngfuncs.pfnRandomLong( 0, 0x1f ) );
+	else
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/gauss_fire4.wav", 1.0, ATTN_NORM, 0, 85 + gEngfuncs.pfnRandomLong( 0, 0x1f ) );
 
-	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/gauss2.wav", 0.5 + flDamage * (1.0 / 400.0), ATTN_NORM, 0, 85 + gEngfuncs.pfnRandomLong( 0, 0x1f ) );
-
-	while (flDamage > 10 && nMaxHits > 0)
-	{
-		nMaxHits--;
-
-		gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
-		
-		// Store off the old count
-		gEngfuncs.pEventAPI->EV_PushPMStates();
+	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
 	
-		// Now add in all of the players.
-		gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );	
+	// Store off the old count
+	gEngfuncs.pEventAPI->EV_PushPMStates();
 
-		gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+	// Now add in all of the players.
+	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );	
+
+	gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+
+	if ( !fNoTrace )
 		gEngfuncs.pEventAPI->EV_PlayerTrace( vecSrc, vecDest, PM_STUDIO_BOX, -1, &tr );
 
-		gEngfuncs.pEventAPI->EV_PopPMStates();
+	pEntity = gEngfuncs.pEventAPI->EV_GetPhysent( tr.ent );
 
-		if ( tr.allsolid )
-			break;
+	gEngfuncs.pEventAPI->EV_PopPMStates();
 
-		pEntity = gEngfuncs.pEventAPI->EV_GetPhysent( tr.ent );
-		if ( pEntity == NULL )
-			break;
+	if ( EV_IsLocal( idx ) )
+	{
+		V_PunchAxis( 0, -2.2 );
+	}
 
-		if (fFirstBeam)
-		{
-			if ( EV_IsLocal( idx ) )
-			{
-				// Add muzzle flash to current weapon model
-				EV_MuzzleFlash();
-			}
-			fFirstBeam = 0;
-
-			gEngfuncs.pEfxAPI->R_BeamEntPoint( 
-				idx | 0x1000,
-				tr.endpos,
-				m_iBeam,
-				0.1,
-				m_fPrimaryFire ? 1.0 : 2.5,
-				0.0,
-				m_fPrimaryFire ? 128.0 : flDamage,
-				0,
-				0,
-				0,
-				m_fPrimaryFire ? 255 : 255,
-				m_fPrimaryFire ? 128 : 255,
-				m_fPrimaryFire ? 0 : 255
-			);
-		}
+	if ( !fNoTrace )
+	{
+		VectorCopy( tr.endpos, vecBeam );
+		VectorCopy( tr.plane.normal, vecNormal );
+		iStartEnt = idx | 0x1000;
+	}
+	else
+	{
+		if ( args->iparam2 )
+			iStartEnt = idx | 0x1000;
 		else
-		{
-			gEngfuncs.pEfxAPI->R_BeamPoints( vecSrc,
-				tr.endpos,
-				m_iBeam,
-				0.1,
-				m_fPrimaryFire ? 1.0 : 2.5,
-				0.0,
-				m_fPrimaryFire ? 128.0 : flDamage,
-				0,
-				0,
-				0,
-				m_fPrimaryFire ? 255 : 255,
-				m_fPrimaryFire ? 128 : 255,
-				m_fPrimaryFire ? 0 : 255
-			);
-		}
+			iStartEnt = idx | 0x2000;
+		VectorCopy( angles, vecBeam );
+		VectorCopy( origin, vecNormal );
+	}
 
+	g_iGaussBeamFired = 1;
+	g_iGaussBeamOwner = idx;
+	gEngfuncs.pEfxAPI->R_BeamEntPoint( iStartEnt, vecBeam, m_iBeam, 0.1, 0.8, 0, 128, 0, 0, 0, 255, 255, 255 );
+
+	if ( pEntity )
+	{
 		if ( pEntity->solid == SOLID_BSP )
 		{
-			float n;
+			vec3_t vecEnd = tr.endpos + tr.plane.normal;
 
-			pentIgnore = NULL;
+			if ( gEngfuncs.GetMaxClients() < 2 )
+				gEngfuncs.pEfxAPI->R_Sprite_Trail( TE_SPRITETRAIL, tr.endpos, vecEnd, m_iGlow, 2, 0, gEngfuncs.pfnRandomFloat( 0, 20 ) / 100, 100, 255, 200 );
 
-			n = -DotProduct( tr.plane.normal, forward );
-
-			if (n < 0.5) // 60 degrees
-			{
-				// ALERT( at_console, "reflect %f\n", n );
-				// reflect
-				vec3_t r;
-			
-				VectorMA( forward, 2.0 * n, tr.plane.normal, r );
-
-				flMaxFrac = flMaxFrac - tr.fraction;
-				
-				VectorCopy( r, forward );
-
-				VectorMA( tr.endpos, 8.0, forward, vecSrc );
-				VectorMA( vecSrc, 8192.0, forward, vecDest );
-
-				gEngfuncs.pEfxAPI->R_TempSprite( tr.endpos, vec3_origin, 0.2, m_iGlow, kRenderGlow, kRenderFxNoDissipation, flDamage * n / 255.0, flDamage * n * 0.5 * 0.1, FTENT_FADEOUT );
-				
-				{
-					vec3_t fwd;
-					VectorAdd( tr.endpos, tr.plane.normal, fwd );
-					gEngfuncs.pEfxAPI->R_Sprite_Trail( TE_SPRITETRAIL, tr.endpos, fwd, m_iBalls, (int)(n * flDamage * 0.3), 0.1, gEngfuncs.pfnRandomFloat( 10, 20 ) / 100.0, 100,
-						255, 200 );
-				}
-	
-				// lose energy
-				if ( n == 0 )
-				{
-					n = 0.1;
-				}
-				
-				flDamage = flDamage * (1 - n);
-
-			}
-			else
-			{
-				// tunnel
-				EV_HLDM_DecalGunshot( &tr, BULLET_MONSTER_12MM );
-
-				gEngfuncs.pEfxAPI->R_TempSprite( tr.endpos, vec3_origin, 1.0, m_iGlow, kRenderGlow, kRenderFxNoDissipation, flDamage / 255.0, 6.0, FTENT_FADEOUT );
-
-				// limit it to one hole punch
-				if (fHasPunched)
-				{
-					break;
-				}
-				fHasPunched = 1;
-				
-				// try punching through wall if secondary attack (primary is incapable of breaking through)
-				if ( !m_fPrimaryFire )
-				{
-					vec3_t start;
-
-					VectorMA( tr.endpos, 8.0, forward, start );
-
-					// Store off the old count
-					gEngfuncs.pEventAPI->EV_PushPMStates();
-						
-					// Now add in all of the players.
-					gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );
-
-					gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
-					gEngfuncs.pEventAPI->EV_PlayerTrace( start, vecDest, PM_STUDIO_BOX, -1, &beam_tr );
-
-					if ( !beam_tr.allsolid )
-					{
-						vec3_t delta;
-						float n;
-
-						// trace backwards to find exit point
-
-						gEngfuncs.pEventAPI->EV_PlayerTrace( beam_tr.endpos, tr.endpos, PM_STUDIO_BOX, -1, &beam_tr );
-
-						VectorSubtract( beam_tr.endpos, tr.endpos, delta );
-						
-						n = Length( delta );
-
-						if (n < flDamage)
-						{
-							if (n == 0)
-								n = 1;
-							flDamage -= n;
-
-							// absorption balls
-							{
-								vec3_t fwd;
-								VectorSubtract( tr.endpos, forward, fwd );
-								gEngfuncs.pEfxAPI->R_Sprite_Trail( TE_SPRITETRAIL, tr.endpos, fwd, m_iBalls, 3, 0.1, gEngfuncs.pfnRandomFloat( 10, 20 ) / 100.0, 100,
-									255, 100 );
-							}
-
-	//////////////////////////////////// WHAT TO DO HERE
-							// CSoundEnt::InsertSound ( bits_SOUND_COMBAT, pev->origin, NORMAL_EXPLOSION_VOLUME, 3.0 );
-
-							EV_HLDM_DecalGunshot( &beam_tr, BULLET_MONSTER_12MM );
-							
-							gEngfuncs.pEfxAPI->R_TempSprite( beam_tr.endpos, vec3_origin, 0.1, m_iGlow, kRenderGlow, kRenderFxNoDissipation, flDamage / 255.0, 6.0, FTENT_FADEOUT );
-			
-							// balls
-							{
-								vec3_t fwd;
-								VectorSubtract( beam_tr.endpos, forward, fwd );
-								gEngfuncs.pEfxAPI->R_Sprite_Trail( TE_SPRITETRAIL, beam_tr.endpos, fwd, m_iBalls, (int)(flDamage * 0.3), 0.1, gEngfuncs.pfnRandomFloat( 10, 20 ) / 100.0, 200,
-									255, 40 );
-							}
-							
-							VectorAdd( beam_tr.endpos, forward, vecSrc );
-						}
-					}
-					else
-					{
-						flDamage = 0;
-					}
-
-					gEngfuncs.pEventAPI->EV_PopPMStates();
-				}
-				else
-				{
-					if ( m_fPrimaryFire )
-					{
-						// slug doesn't punch through ever with primary 
-						// fire, so leave a little glowy bit and make some balls
-						gEngfuncs.pEfxAPI->R_TempSprite( tr.endpos, vec3_origin, 0.2, m_iGlow, kRenderGlow, kRenderFxNoDissipation, 200.0 / 255.0, 0.3, FTENT_FADEOUT );
-			
-						{
-							vec3_t fwd;
-							VectorAdd( tr.endpos, tr.plane.normal, fwd );
-							gEngfuncs.pEfxAPI->R_Sprite_Trail( TE_SPRITETRAIL, tr.endpos, fwd, m_iBalls, 8, 0.6, gEngfuncs.pfnRandomFloat( 10, 20 ) / 100.0, 100,
-								255, 200 );
-						}
-					}
-
-					flDamage = 0;
-				}
-			}
+			g_Effects.Add( CEffect( 8, vecBeam + vecNormal * 5, vecNormal, 0.5, EFFECT_FLAME2, 255, 20, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/gaussimpact.spr" ) ) ) );
 		}
-		else
+		else if ( pEntity->takedamage && EV_IsPlayer( pEntity->info ) )
 		{
-			VectorAdd( tr.endpos, forward, vecSrc );
+			EV_HLDM_PlayerBlood( 9, forward, vecBeam );
+		}
+	}
+
+	g_Effects.Add( CEffect( 30, vecBeam, vecNormal, 3, EFFECT_SHOCK, 255, 32, gEngfuncs.GetClientTime(), NULL ) );
+
+	pEntity = gEngfuncs.pEventAPI->EV_GetPhysent( tr.ent );
+
+	// Only decal brush models such as the world etc.
+	if ( pEntity && decalName && decalName[0] && pEntity->rendermode == kRenderNormal && ( pEntity->solid == SOLID_BSP || pEntity->movetype == MOVETYPE_PUSHSTEP ) )
+	{
+		if ( CVAR_GET_FLOAT( "r_decals" ) )
+		{
+			gEngfuncs.pEfxAPI->R_DecalShoot( 
+				gEngfuncs.pEfxAPI->Draw_DecalIndex( gEngfuncs.pEfxAPI->Draw_DecalIndexFromName( decalName ) ), 
+				gEngfuncs.pEventAPI->EV_IndexFromTrace( &tr ), 0, tr.endpos, 0 );
 		}
 	}
 }
 
 void EV_Cleanup( event_args_t *args )
 {
+	if ( EV_IsLocal( args->entindex ) )
+	{
+		cl_entity_t *view = gEngfuncs.GetViewModel();
+
+		if ( view )
+			view->curstate.renderfx = kRenderFxNone;
+	}
 }
 
 void EV_BatbotBeam( event_args_t *args )
 {
+	int idx;
+	vec3_t origin;
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+
+	g_Effects.Add( CEffect( 4, origin, Vector( 0, 0, -1 ), 0.1, EFFECT_BEAM, 240, 6, idx, 0, 0, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/hugeball.spr" ) ) ) );
 }
 
 void EV_RustbitImpact( event_args_t *args )
 {
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t up, right, forward;
+	vec3_t vecDest;
+	pmtrace_t tr;
+	physent_t *pe;
+	char *decalName = "{pulse";
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+
+	AngleVectors( angles, forward, right, up );
+	VectorMA( origin, 2048, forward, vecDest );
+
+	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
+	gEngfuncs.pEventAPI->EV_PushPMStates();
+	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );	
+	gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+
+	origin = origin + forward * -10;
+	vecDest = origin + forward * 2048;
+	gEngfuncs.pEventAPI->EV_PlayerTrace( origin, vecDest, PM_STUDIO_BOX, -1, &tr );
+
+	gEngfuncs.pEventAPI->EV_PopPMStates();
+
+	pe = gEngfuncs.pEventAPI->EV_GetPhysent( tr.ent );
+
+	// Only decal brush models such as the world etc.
+	if ( decalName && decalName[0] && pe && pe->rendermode == kRenderNormal && ( pe->solid == SOLID_BSP || pe->movetype == MOVETYPE_PUSHSTEP ) )
+	{
+		if ( CVAR_GET_FLOAT( "r_decals" ) )
+		{
+			gEngfuncs.pEfxAPI->R_DecalShoot( 
+				gEngfuncs.pEfxAPI->Draw_DecalIndex( gEngfuncs.pEfxAPI->Draw_DecalIndexFromName( decalName ) ), 
+				gEngfuncs.pEventAPI->EV_IndexFromTrace( &tr ), 0, tr.endpos, 0 );
+		}
+	}
 }
 
 void EV_BallLightning( event_args_t *args )
 {
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t up, right, forward;
+	vec3_t vecDest, vecSpot;
+	pmtrace_t tr;
+	physent_t *pe;
+	dlight_t *dl;
+	char *decalName;
+	int iSize;
+	int fBurn = args->bparam2;
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+
+	AngleVectors( angles, forward, right, up );
+
+	if ( !fBurn )
+		forward[2] = forward[2] * -1;
+
+	VectorMA( origin, 2048, forward, vecDest );
+
+	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
+	gEngfuncs.pEventAPI->EV_PushPMStates();
+	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );	
+	gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+
+	origin = origin + forward * -10;
+	vecDest = origin + forward * 2048;
+	gEngfuncs.pEventAPI->EV_PlayerTrace( origin, vecDest, PM_STUDIO_BOX, -1, &tr );
+
+	gEngfuncs.pEventAPI->EV_PopPMStates();
+
+	vecSpot = tr.endpos + tr.plane.normal * 16;
+	vecSpot[2] = vecSpot[2] - 8;
+
+	if ( fBurn )
+	{
+		dl = gEngfuncs.pEfxAPI->CL_AllocDlight( 0 );
+		VectorCopy( vecSpot, dl->origin );
+		dl->radius = 130;
+		dl->color.r = 180;
+		dl->color.g = 0;
+		dl->color.b = 255;
+		dl->decay = 80;
+		dl->die = gEngfuncs.GetClientTime() + 1.0;
+	}
+
+	if ( fBurn )
+		decalName = "{balburn";
+	else
+		decalName = "{pulse";
+
+	pe = gEngfuncs.pEventAPI->EV_GetPhysent( tr.ent );
+
+	// Only decal brush models such as the world etc.
+	if ( decalName && decalName[0] && pe && pe->rendermode == kRenderNormal && ( pe->solid == SOLID_BSP || pe->movetype == MOVETYPE_PUSHSTEP ) )
+	{
+		if ( CVAR_GET_FLOAT( "r_decals" ) )
+		{
+			gEngfuncs.pEfxAPI->R_DecalShoot( 
+				gEngfuncs.pEfxAPI->Draw_DecalIndex( gEngfuncs.pEfxAPI->Draw_DecalIndexFromName( decalName ) ), 
+				gEngfuncs.pEventAPI->EV_IndexFromTrace( &tr ), 0, tr.endpos, 0 );
+		}
+	}
+
+	if ( fBurn )
+		iSize = 130;
+	else
+		iSize = 65;
+
+	g_Effects.Add( CEffect( iSize, vecSpot, tr.plane.normal, 0, EFFECT_SPRITE, 0, 3, 10, 11, 11, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/ballpop.spr" ) ) ) );
 }
 
 void EV_KataImpact( event_args_t *args )
 {
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t velocity;
+	vec3_t up, right, forward;
+	vec3_t vecDest, vecSpot;
+	pmtrace_t tr;
+	physent_t *pe;
+	dlight_t *dl;
+	char *decalName = "{scorch1";
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+	VectorCopy( args->velocity, velocity );
+
+	VectorAngles( velocity, angles );
+	AngleVectors( angles, forward, right, up );
+	forward[2] = forward[2] * -1;
+
+	VectorMA( origin, 2048, forward, vecDest );
+
+	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
+	gEngfuncs.pEventAPI->EV_PushPMStates();
+	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );	
+	gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+
+	origin = origin + forward * -10;
+	vecDest = origin + forward * 2048;
+	gEngfuncs.pEventAPI->EV_PlayerTrace( origin, vecDest, PM_STUDIO_BOX, -1, &tr );
+
+	gEngfuncs.pEventAPI->EV_PopPMStates();
+
+	vecSpot = tr.endpos + tr.plane.normal * 16;
+	vecSpot[2] = vecSpot[2] - 8;
+
+	dl = gEngfuncs.pEfxAPI->CL_AllocDlight( 0 );
+	VectorCopy( vecSpot, dl->origin );
+	dl->radius = 130;
+	dl->color.r = 0;
+	dl->color.g = 255;
+	dl->color.b = 255;
+	dl->decay = 80;
+	dl->die = gEngfuncs.GetClientTime() + 1.0;
+
+	pe = gEngfuncs.pEventAPI->EV_GetPhysent( tr.ent );
+
+	// Only decal brush models such as the world etc.
+	if ( decalName && decalName[0] && pe && pe->rendermode == kRenderNormal && ( pe->solid == SOLID_BSP || pe->movetype == MOVETYPE_PUSHSTEP ) )
+	{
+		if ( CVAR_GET_FLOAT( "r_decals" ) )
+		{
+			gEngfuncs.pEfxAPI->R_DecalShoot( 
+				gEngfuncs.pEfxAPI->Draw_DecalIndex( gEngfuncs.pEfxAPI->Draw_DecalIndexFromName( decalName ) ), 
+				gEngfuncs.pEventAPI->EV_IndexFromTrace( &tr ), 0, tr.endpos, 0 );
+		}
+	}
+
+	g_Effects.Add( CEffect( 130, vecSpot, tr.plane.normal, 0, EFFECT_SPRITE, 0, 3, 12, 18, 18, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/kataimpact.spr" ) ) ) );
 }
 
 void EV_SniperShot( event_args_t *args )
 {
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t vecSrc, vecDest, vecEnd;
+	vec3_t vecStart, vecDir;
+	vec3_t up, right, forward;
+	pmtrace_t tr;
+	dlight_t *dl;
+	int m_iBeam;
+	int fRings = args->bparam1;
+	int iSize;
+	float flLength;
+	char *decalName = "{pulse2";
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+
+	EV_GetGunPosition( args, vecSrc, origin );
+
+	m_iBeam = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/gaussbeam2.spr" );
+
+	AngleVectors( angles, forward, right, up );
+	VectorMA( vecSrc, 8192, forward, vecDest );
+
+	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
+	gEngfuncs.pEventAPI->EV_PushPMStates();
+	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );	
+	gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+
+	gEngfuncs.pEventAPI->EV_PlayerTrace( vecSrc, vecDest, PM_STUDIO_BOX, -1, &tr );
+
+	gEngfuncs.pEventAPI->EV_PopPMStates();
+
+	gEngfuncs.pEventAPI->EV_GetPhysent( tr.ent );
+
+	if ( EV_IsLocal( idx ) )
+	{
+		V_PunchAxis( 0, -2.2 );
+	}
+
+	VectorCopy( tr.endpos, vecEnd );
+
+	// the rings start at the barrel
+	vecStart = vecSrc + right * 1 + forward * 11 + up * -1;
+	vecDir = vecStart - vecEnd;
+	flLength = vecDir.Length();
+
+	iSize = 60;
+	if ( fRings )
+	{
+		iSize = 100;
+		for ( int i = 80; i < flLength; i += 80 )
+		{
+			g_Effects.Add( CEffect( 13, vecStart + forward * i, forward, 0.1, EFFECT_RING, 240, 5, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/gaussring.spr" ) ) ) );
+		}
+	}
+
+	g_Effects.Add( CEffect( iSize, vecEnd, tr.plane.normal, 0, EFFECT_SPRITE, 0, 3, 13, 9, 9, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/gausspoof.spr" ) ) ) );
+
+	dl = gEngfuncs.pEfxAPI->CL_AllocDlight( 0 );
+	VectorCopy( vecEnd, dl->origin );
+	dl->radius = iSize + 40;
+	dl->color.r = 0;
+	dl->color.g = 255;
+	dl->color.b = 0;
+	dl->decay = 80;
+	dl->die = gEngfuncs.GetClientTime() + 0.7;
+
+	physent_t *pe = gEngfuncs.pEventAPI->EV_GetPhysent( tr.ent );
+
+	// Only decal brush models such as the world etc.
+	if ( pe && decalName && decalName[0] && pe->rendermode == kRenderNormal && ( pe->solid == SOLID_BSP || pe->movetype == MOVETYPE_PUSHSTEP ) )
+	{
+		if ( CVAR_GET_FLOAT( "r_decals" ) )
+		{
+			gEngfuncs.pEfxAPI->R_DecalShoot( 
+				gEngfuncs.pEfxAPI->Draw_DecalIndex( gEngfuncs.pEfxAPI->Draw_DecalIndexFromName( decalName ) ), 
+				gEngfuncs.pEventAPI->EV_IndexFromTrace( &tr ), 0, tr.endpos, 0 );
+		}
+	}
 }
 
 void EV_ChargedImpact( event_args_t *args )
 {
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t up, right, forward;
+	vec3_t vecDest, vecSpot;
+	pmtrace_t tr;
+	physent_t *pe;
+	dlight_t *dl;
+	char *decalName = "{charge";
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+
+	AngleVectors( angles, forward, right, up );
+	VectorMA( origin, 2048, forward, vecDest );
+
+	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
+	gEngfuncs.pEventAPI->EV_PushPMStates();
+	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );	
+	gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+
+	origin = origin + forward * -10;
+	vecDest = origin + forward * 2048;
+	gEngfuncs.pEventAPI->EV_PlayerTrace( origin, vecDest, PM_STUDIO_BOX, -1, &tr );
+
+	pe = gEngfuncs.pEventAPI->EV_GetPhysent( tr.ent );
+
+	gEngfuncs.pEventAPI->EV_PopPMStates();
+
+	vecSpot = tr.endpos + tr.plane.normal * 16;
+	vecSpot[2] = vecSpot[2] - 8;
+
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/gauss_spritebig.wav", 1.0, ATTN_NORM, 0, 85 + gEngfuncs.pfnRandomLong( 0, 0x1f ) );
+
+	if ( pe && pe->solid == SOLID_BSP )
+		gEngfuncs.pEfxAPI->R_Explosion( vecSpot, gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/gausspuff.spr" ), 1, 10, TE_EXPLFLAG_NODLIGHTS | TE_EXPLFLAG_NOSOUND | TE_EXPLFLAG_NOPARTICLES );
+
+	dl = gEngfuncs.pEfxAPI->CL_AllocDlight( 0 );
+	VectorCopy( vecSpot, dl->origin );
+	dl->radius = 130;
+	dl->color.r = 0;
+	dl->color.g = 150;
+	dl->color.b = 255;
+	dl->decay = 80;
+	dl->die = gEngfuncs.GetClientTime() + 0.5;
+
+	g_Effects.Add( CEffect( 150, vecSpot, tr.plane.normal, 4, EFFECT_SHOCK, 255, 8, gEngfuncs.GetClientTime(), NULL ) );
+
+	if ( pe && pe->takedamage && EV_IsPlayer( pe->info ) )
+		EV_HLDM_PlayerBlood( 50, forward, origin );
+
+	// Only decal brush models such as the world etc.
+	if ( decalName && decalName[0] && pe && pe->rendermode == kRenderNormal && ( pe->solid == SOLID_BSP || pe->movetype == MOVETYPE_PUSHSTEP ) )
+	{
+		if ( CVAR_GET_FLOAT( "r_decals" ) )
+		{
+			gEngfuncs.pEfxAPI->R_DecalShoot( 
+				gEngfuncs.pEfxAPI->Draw_DecalIndex( gEngfuncs.pEfxAPI->Draw_DecalIndexFromName( decalName ) ), 
+				gEngfuncs.pEventAPI->EV_IndexFromTrace( &tr ), 0, tr.endpos, 0 );
+		}
+	}
 }
 
 void EV_SpurtBlood( event_args_t *args )
 {
+	vec3_t origin;
+	vec3_t angles;
+	float flDamage = args->fparam1;
+
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+
+	EV_HLDM_PlayerBlood( flDamage, angles, origin );
 }
 
 void EV_RapidImpact( event_args_t *args )
 {
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t up, right, forward;
+	vec3_t vecDest, vecSpot;
+	pmtrace_t tr;
+	physent_t *pe;
+	char *decalName = "{shot5";
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+
+	AngleVectors( angles, forward, right, up );
+	VectorMA( origin, 2048, forward, vecDest );
+
+	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
+	gEngfuncs.pEventAPI->EV_PushPMStates();
+	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );	
+	gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+
+	origin = origin + forward * -10;
+	vecDest = origin + forward * 2048;
+	gEngfuncs.pEventAPI->EV_PlayerTrace( origin, vecDest, PM_STUDIO_BOX, -1, &tr );
+
+	pe = gEngfuncs.pEventAPI->EV_GetPhysent( tr.ent );
+
+	gEngfuncs.pEventAPI->EV_PopPMStates();
+
+	vecSpot = tr.endpos + tr.plane.normal * 5;
+	vecSpot[2] = vecSpot[2] - 12;
+
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/gauss_spritesmall.wav", 1.0, ATTN_NORM, 0, 85 + gEngfuncs.pfnRandomLong( 0, 0x1f ) );
+
+	if ( pe && pe->solid == SOLID_BSP )
+		gEngfuncs.pEfxAPI->R_Explosion( tr.endpos, gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/gausspuff.spr" ), 0.25, 15, TE_EXPLFLAG_NODLIGHTS | TE_EXPLFLAG_NOSOUND | TE_EXPLFLAG_NOPARTICLES );
+
+	g_Effects.Add( CEffect( 30, vecSpot, tr.plane.normal, 4, EFFECT_SHOCK, 255, 32, gEngfuncs.GetClientTime(), NULL ) );
+
+	if ( pe && pe->takedamage && EV_IsPlayer( pe->info ) )
+		EV_HLDM_PlayerBlood( 12, forward, origin );
+
+	// Only decal brush models such as the world etc.
+	if ( decalName && decalName[0] && pe && pe->rendermode == kRenderNormal && ( pe->solid == SOLID_BSP || pe->movetype == MOVETYPE_PUSHSTEP ) )
+	{
+		if ( CVAR_GET_FLOAT( "r_decals" ) )
+		{
+			gEngfuncs.pEfxAPI->R_DecalShoot( 
+				gEngfuncs.pEfxAPI->Draw_DecalIndex( gEngfuncs.pEfxAPI->Draw_DecalIndexFromName( decalName ) ), 
+				gEngfuncs.pEventAPI->EV_IndexFromTrace( &tr ), 0, tr.endpos, 0 );
+		}
+	}
 }
 
 void EV_ChemicalSpray( event_args_t *args )
 {
+	int idx;
+	vec3_t origin;
+	vec3_t velocity;
+	pmtrace_t tr;
+	int iSprite;
+
+	// iparam1 is the mixture's colour
+	if ( args->iparam1 == 0 )
+		iSprite = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/greensplash.spr" );
+	else if ( args->iparam1 == 3 )
+		iSprite = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/redsplash.spr" );
+	else if ( args->iparam1 == 2 )
+		iSprite = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/orangesplash.spr" );
+	else
+		iSprite = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/yellowsplash.spr" );
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->velocity, velocity );
+
+	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
+	gEngfuncs.pEventAPI->EV_PushPMStates();
+	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );	
+	gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+
+	gEngfuncs.pEventAPI->EV_PlayerTrace( origin, velocity * 10, PM_STUDIO_BOX, -1, &tr );
+
+	gEngfuncs.pEventAPI->EV_PopPMStates();
+
+	if ( !tr.startsolid )
+		gEngfuncs.pEfxAPI->R_Sprite_Spray( origin, tr.plane.normal, iSprite, 10, 50, 100 );
 }
 
 void EV_ClusterExplosion( event_args_t *args )
 {
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t velocity;
+	vec3_t up, right, forward;
+	pmtrace_t tr;
+	int iExplode;
+
+	iExplode = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/kaboom.spr" );
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+	VectorCopy( args->velocity, velocity );
+
+	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
+	gEngfuncs.pEventAPI->EV_PushPMStates();
+	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );	
+	gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+
+	gEngfuncs.pEventAPI->EV_PlayerTrace( origin, velocity * 10, PM_STUDIO_BOX, -1, &tr );
+
+	gEngfuncs.pEventAPI->EV_PopPMStates();
+
+	gEngfuncs.pEfxAPI->R_Explosion( origin, iExplode, 3, 15, TE_EXPLFLAG_NOSOUND | TE_EXPLFLAG_NOPARTICLES );
+
+	// bparam1 is the manta's carpet bombing
+	if ( !args->bparam1 )
+	{
+		switch ( gEngfuncs.pfnRandomLong( 0, 2 ) )
+		{
+		case 0:
+			gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/kaboom1.wav", 1.0, ATTN_NORM, 0, 85 + gEngfuncs.pfnRandomLong( 0, 0x1f ) );
+			break;
+		case 1:
+			gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/kaboom2.wav", 1.0, ATTN_NORM, 0, 85 + gEngfuncs.pfnRandomLong( 0, 0x1f ) );
+			break;
+		case 2:
+			gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/kaboom3.wav", 1.0, ATTN_NORM, 0, 85 + gEngfuncs.pfnRandomLong( 0, 0x1f ) );
+			break;
+		}
+	}
+	else
+	{
+		switch ( gEngfuncs.pfnRandomLong( 0, 2 ) )
+		{
+		case 0:
+			gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "manta/carpetbomb1.wav", 1.0, ATTN_NORM, 0, PITCH_NORM );
+			break;
+		case 1:
+			gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "manta/carpetbomb2.wav", 1.0, ATTN_NORM, 0, PITCH_NORM );
+			break;
+		case 2:
+			gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "manta/carpetbomb3.wav", 1.0, ATTN_NORM, 0, PITCH_NORM );
+			break;
+		}
+	}
+
+	AngleVectors( angles, forward, right, up );
+
+	g_Effects.Add( CEffect( 90, origin, Vector( 0, 0, 0 ), 3, EFFECT_SPHERE, 240, 10, gEngfuncs.GetClientTime(), NULL ) );
 }
 
 void EV_SphereExplode( event_args_t *args )
 {
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t up, right, forward;
+	vec3_t vecVelocity;
+	float flRadius = args->fparam1;
+	float flSpeed = args->fparam2;
+	float flBrightness = args->iparam1;
+	float flFade = args->iparam2;
+	int fTracers = args->bparam1;
+	int fImplode = args->bparam2;
+	int i, iLength;
+
+	VectorCopy( args->origin, origin );
+
+	g_Effects.Add( CEffect( flRadius, origin, Vector( 0, 0, 0 ), flSpeed, EFFECT_SPHERE, flBrightness, flFade, gEngfuncs.GetClientTime(), NULL ) );
+
+	AngleVectors( angles, forward, right, up );
+
+	if ( fTracers )
+	{
+		for ( i = 0; i < 30; i++ )
+		{
+			vecVelocity = forward * gEngfuncs.pfnRandomFloat( -600, 600 ) + right * gEngfuncs.pfnRandomFloat( -600, 600 ) + up * gEngfuncs.pfnRandomFloat( -600, 600 );
+
+			iLength = abs( (int)vecVelocity.Length() );
+			if ( iLength >= 100 )
+				gEngfuncs.pEfxAPI->R_UserTracerParticle( origin, vecVelocity, flRadius * 2.5 / iLength, 5, 3, 0, NULL );
+		}
+	}
+
+	if ( fImplode )
+		gEngfuncs.pEfxAPI->R_Implosion( origin, flRadius * 1.4, 70, 1 );
 }
 
 void EV_Lightning( event_args_t *args )
 {
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t vecSrc, vecDest, vecEnd;
+	vec3_t up, right, forward;
+	pmtrace_t tr;
+	int iBeam;
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+
+	EV_GetGunPosition( args, vecSrc, origin );
+
+	iBeam = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/zbeam5.spr" );
+
+	AngleVectors( angles, forward, right, up );
+	VectorMA( vecSrc, 8192, forward, vecDest );
+
+	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
+	gEngfuncs.pEventAPI->EV_PushPMStates();
+	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );	
+	gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+
+	gEngfuncs.pEventAPI->EV_PlayerTrace( vecSrc, vecDest, PM_STUDIO_BOX, -1, &tr );
+
+	gEngfuncs.pEventAPI->EV_PopPMStates();
+
+	gEngfuncs.pEventAPI->EV_GetPhysent( tr.ent );
+
+	VectorCopy( tr.endpos, vecEnd );
+	gEngfuncs.pEfxAPI->R_BeamEntPoint( idx | 0x1000, vecEnd, iBeam, 0.1, 2.5, 0.25, 200, 0, 0, 10, 1, 1, 1 );
 }
 
 void EV_RocketSmoke( event_args_t *args )
 {
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t up, right, forward;
+
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+
+	AngleVectors( angles, forward, right, up );
+
+	g_Effects.Add( CEffect( 16, origin, forward, 2.4, EFFECT_RING, 255, 15, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/firebeam.spr" ) ) ) );
 }
 
 void EV_Cylinder( event_args_t *args )
 {
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t up, right, forward;
+
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+
+	AngleVectors( angles, forward, right, up );
+
+	g_Effects.Add( CEffect( 10, origin, forward, 0.2, EFFECT_RING, 220, 4, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/smoke.spr" ) ) ) );
 }
 
 void EV_VolumeExplosion( event_args_t *args )
