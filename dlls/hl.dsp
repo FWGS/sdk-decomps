@@ -392,6 +392,10 @@ SOURCE=.\gunman_pending.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\aicore.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\fists.cpp
 # End Source File
 # Begin Source File
