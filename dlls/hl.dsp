@@ -394,6 +394,10 @@ SOURCE=.\gunman_pending.cpp
 
 SOURCE=.\fists.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\shotgun.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 

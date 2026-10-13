@@ -371,6 +371,7 @@ public:
 class CBasePlayerAmmo : public CBaseEntity
 {
 public:
+	CBasePlayerAmmo() { m_bNoGiveSound = FALSE; }
 	virtual void Spawn( void );
 	void KeyValue( KeyValueData *pkvd );
 	virtual int		Save( CSave &save );
