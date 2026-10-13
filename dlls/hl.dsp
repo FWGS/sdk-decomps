@@ -408,6 +408,10 @@ SOURCE=.\dmlgrenade.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\dmlrocket.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\fists.cpp
 # End Source File
 # Begin Source File

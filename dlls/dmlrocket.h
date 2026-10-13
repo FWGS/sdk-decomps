@@ -68,8 +68,31 @@ public:
 	static CDmlRocket *CreateSpiralRocket( const Vector &vecOrigin, const Vector &vecAngles, edict_t *pentOwner, int iFlightpath, int iPayload, int iDetonate );
 	static CDmlRocket *CreateDmlRocket( const Vector &vecOrigin, const Vector &vecAngles, edict_t *pentOwner, int iFlightpath, int iPayload, int iDetonate );
 
+	void EXPORT TrackTarget( void );
+	void EXPORT TrackTouch( CBaseEntity *pOther );
+	void EXPORT ShootClusterGrenades( CBaseEntity *pOther );
+	void EXPORT BounceSoundTouch( CBaseEntity *pOther );
+	void EXPORT RocketTouch( CBaseEntity *pOther );
+	void EXPORT RocketThink( void );
+	void EXPORT FollowThink( void );
+	void EXPORT BigThink( void );
+	void EXPORT LittleThink( void );
+	void EXPORT ExplodeThink( void );
+	void Explode( TraceResult *pTrace, int bitsDamageType );
+	void EXPORT Smoke( void );
+	void EXPORT TumbleThink( void );
+	void CreateFlame( void );
+	void EXPORT RemoveThink( void );
+
+	// tripmine payload
+	void BecomeTripmine( void );
+	void EXPORT PowerupThink( void );
+	void KillBeam( void );
+	void MakeBeam( void );
+	void EXPORT BeamBreakThink( void );
 	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
 	void Killed( entvars_t *pevAttacker, int iGib );
+	void EXPORT DelayDeathThink( void );
 
 	float			m_flStopAttack;
 	int				m_iHornetType;
@@ -79,16 +102,17 @@ public:
 	int				m_iPayload;
 	int				m_iDetonate;
 	float			m_flStopHoming;
-	int				m_iUnknown28c;
-	int				m_iUnknown290;
-	int				m_iIsBrother;
+	short			m_sExplosion;
+	short			m_sSmoke;
+	int				m_iTrail;
+	int				m_iIsBrother;		// spiral: 1 the little rocket, 2 the big one
 	float			m_iSpiralScalar_In;
 	float			m_iSpiralScalar_Up;
 	float			m_flIgniteTime;
 	CDmlRocket		*m_BrotherRocket;
 	CSprite			*m_pSprite;
 	float			m_flNextBounceSound;
-	int				m_iUnknown2b0;
+	float			m_flHomingFuel;		// homing in multiplayer stops when it runs out
 
 	// tripmine payload
 	float			m_flPowerUp;
@@ -101,8 +125,8 @@ public:
 	Vector			m_angleOwner;
 	bool			m_bSpawnedTrip;
 	edict_t			*m_pRealOwner;
-	int				m_iUnknown300;
-	int				m_iUnknown304;
+	int				m_iWhiteTrail;
+	unsigned short	m_usRocketSmoke;
 };
 
 #endif // DMLROCKET_H
