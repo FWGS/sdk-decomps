@@ -1639,8 +1639,7 @@ void CVehicleTank::FireMachineGuns( void )
 	vecAngles = UTIL_VecToAngles( vecForward );
 	vecAngles.x *= -1;
 
-	Vector vecOffset = vecSrc - pev->origin;
-	PLAYBACK_EVENT_FULL( FEV_RELIABLE, ENT( pev ), m_usTankMGuns, 0.0, (float *)&vecOffset, (float *)&vecAngles, m_fTankSoundAdj, 0.0, 0, 0, 0, 0 );
+	PLAYBACK_EVENT_FULL( FEV_RELIABLE, ENT( pev ), m_usTankMGuns, 0.0, vecSrc - pev->origin, vecAngles, m_fTankSoundAdj, 0.0, 0, 0, 0, 0 );
 
 	FireBullets( 1, vecSrc, vecForward, VECTOR_CONE_4DEGREES, 8192, BULLET_PLAYER_MP5, 0, 50, m_pBodyBSP->pev );
 }
