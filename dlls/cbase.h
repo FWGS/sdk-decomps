@@ -87,17 +87,24 @@ typedef void (CBaseEntity::*USEPTR)( CBaseEntity *pActivator, CBaseEntity *pCall
 #define	CLASS_NONE				0
 #define CLASS_MACHINE			1
 #define CLASS_PLAYER			2
-#define	CLASS_HUMAN_PASSIVE		3
-#define CLASS_HUMAN_MILITARY	4
-#define CLASS_ALIEN_MILITARY	5
-#define CLASS_ALIEN_PASSIVE		6
-#define CLASS_ALIEN_MONSTER		7
-#define CLASS_ALIEN_PREY		8
-#define CLASS_ALIEN_PREDATOR	9
-#define CLASS_INSECT			10
-#define CLASS_PLAYER_ALLY		11
-#define CLASS_PLAYER_BIOWEAPON	12 // hornets and snarks.launched by players
-#define CLASS_ALIEN_BIOWEAPON	13 // hornets and snarks.launched by the alien menace
+#define CLASS_PLAYER_ALLY		3	// friendly gunmen and robots, the player's tank
+#define	CLASS_HUMAN_PASSIVE		4	// scientists
+#define CLASS_HUMAN_MILITARY	5	// bandits, demomen, hostile scientists, func_tank
+#define CLASS_HUMAN_6			6	// no one in retail
+#define CLASS_ROBOT				7	// rustbot, training bot
+#define CLASS_ROBOT_GUNNER		8	// gunner, rustbit, rust flier
+#define CLASS_ROBOT_9			9	// no one in retail
+#define CLASS_10				10	// no one in retail
+#define CLASS_ALIEN_BEAK		11	// beaks and their holograms
+#define CLASS_ALIEN_TUBE		12	// tubes, the tube queen, alien gibs
+#define CLASS_ALIEN_CRITTER		13	// critters, maggots, embryos, the xenome
+#define CLASS_ALIEN_14			14	// no one in retail
+#define CLASS_ALIEN_PREDATOR	15	// raptors, scorpions
+#define CLASS_ALIEN_16			16	// no one in retail
+#define CLASS_ALIEN_PREY		17	// cricket, hatchetfish
+#define CLASS_PLAYER_BIOWEAPON	18	// the player's rockets and lightning
+#define CLASS_ALIEN_BIOWEAPON	19	// monsters' rockets and mortars
+#define CLASS_ENDBOSS			20	// the end boss and its weapons
 #define	CLASS_BARNACLE			99 // special because no one pays attention to it, and it eats a wide cross-section of creatures.
 
 class CBaseEntity;

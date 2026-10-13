@@ -261,8 +261,13 @@ BOOL CBaseMonster :: HasHumanGibs( void )
 		 myClass == CLASS_PLAYER_ALLY	||
 		 myClass == CLASS_HUMAN_PASSIVE  ||
 		 myClass == CLASS_PLAYER )
+	{
+		// in the German version the enemy humans are robots
+		if ( (g_Language == LANGUAGE_GERMAN || CVAR_GET_FLOAT( "violence_germany" ) != 0) && myClass == CLASS_HUMAN_MILITARY )
+			return FALSE;
 
-		 return TRUE;
+		return TRUE;
+	}
 
 	return FALSE;
 }
@@ -272,12 +277,9 @@ BOOL CBaseMonster :: HasAlienGibs( void )
 {
 	int myClass = Classify();
 
-	if ( myClass == CLASS_ALIEN_MILITARY ||
-		 myClass == CLASS_ALIEN_MONSTER	||
-		 myClass == CLASS_ALIEN_PASSIVE  ||
-		 myClass == CLASS_INSECT  ||
-		 myClass == CLASS_ALIEN_PREDATOR  ||
-		 myClass == CLASS_ALIEN_PREY )
+	if ( myClass == CLASS_ALIEN_BEAK ||
+		 myClass == CLASS_ALIEN_TUBE	||
+		 myClass == CLASS_ALIEN_CRITTER )
 
 		 return TRUE;
 
@@ -289,13 +291,14 @@ BOOL CBaseMonster :: HasRobotGibs( void )
 {
 	int myClass = Classify();
 
-	if ( myClass == 8 || myClass == 9 || myClass == 7 )
+	if ( myClass == CLASS_ROBOT_GUNNER || myClass == CLASS_ROBOT_9 || myClass == CLASS_ROBOT )
 		return TRUE;
 
-	if ( g_Language != LANGUAGE_GERMAN && CVAR_GET_FLOAT( "violence_germany" ) == 0 )
-		return FALSE;
+	// in the German version the enemy humans are robots
+	if ( (g_Language == LANGUAGE_GERMAN || CVAR_GET_FLOAT( "violence_germany" ) != 0) && myClass == CLASS_HUMAN_MILITARY )
+		return TRUE;
 
-	return myClass == 5;
+	return FALSE;
 }
 
 
@@ -719,6 +722,55 @@ void CGib :: WaitTillLand ( void )
 	}
 }
 
+void CGib :: GibSmokeThink ( void )
+{
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	if ( m_lifeTime < gpGlobals->time )
+	{
+		SetThink ( SUB_StartFadeOut );
+		return;
+	}
+
+	if ( m_iSmokeSprite == g_sModelIndexGibSprite && FBitSet( pev->flags, FL_ONGROUND ) )
+		return;
+
+	// thins out as the gib's life runs down
+	if ( UTIL_PercentChance( 100 - (m_lifeTime - gpGlobals->time) * 4 ) )
+		return;
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_SPRITE_SPRAY );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		WRITE_COORD( 0 );
+		WRITE_COORD( 0 );
+		WRITE_COORD( 1 );
+		WRITE_SHORT( m_iSmokeSprite );
+		WRITE_BYTE( 1 );
+		WRITE_BYTE( 100 );
+		WRITE_BYTE( 20 );
+	MESSAGE_END();
+}
+
+void CGib :: StartSmoke ( int iType )
+{
+	switch ( iType )
+	{
+	case 1:
+		m_iSmokeSprite = g_sModelIndexSmokePuff;
+		break;
+	case 2:
+		m_iSmokeSprite = g_sModelIndexGibSprite;
+		break;
+	}
+
+	SetThink ( GibSmokeThink );
+	pev->nextthink = gpGlobals->time + 0.1;
+	m_lifeTime = pev->nextthink + 25;
+}
+
 //
 // Gib bounces on the ground or wall, sponges some blood down, too!
 //
@@ -740,7 +792,7 @@ void CGib :: BounceGibTouch ( CBaseEntity *pOther )
 	}
 	else
 	{
-		if ( g_Language != LANGUAGE_GERMAN && m_cBloodDecals > 0 && m_bloodColor != DONT_BLEED )
+		if ( m_cBloodDecals > 0 && m_bloodColor != DONT_BLEED )
 		{
 			vecSpot = pev->origin + Vector ( 0 , 0 , 8 );//move up a bit, and trace down.
 			UTIL_TraceLine ( vecSpot, vecSpot + Vector ( 0, 0, -24 ),  ignore_monsters, ENT(pev), & tr);
@@ -803,19 +855,20 @@ void CGib :: Spawn( const char *szGibModel )
 	pev->renderamt = 255;
 	pev->rendermode = kRenderNormal;
 	pev->renderfx = kRenderFxNone;
-	pev->solid = SOLID_SLIDEBOX;/// hopefully this will fix the VELOCITY TOO LOW crap
+	pev->solid = SOLID_TRIGGER;
 	pev->classname = MAKE_STRING("gib");
 
 	SET_MODEL(ENT(pev), szGibModel);
 	UTIL_SetSize(pev, Vector( 0, 0, 0), Vector(0, 0, 0));
+	UTIL_SetOrigin( pev, pev->origin );
 
-	pev->nextthink = gpGlobals->time + 4;
+	pev->nextthink = gpGlobals->time + 0.1;
 	m_lifeTime = 25;
 	SetThink ( WaitTillLand );
 	SetTouch ( BounceGibTouch );
 
 	m_material = matNone;
-	m_cBloodDecals = 5;// how many blood decals this gib can place (1 per bounce until none remain). 
+	m_cBloodDecals = 2;// how many blood decals this gib can place (1 per bounce until none remain). 
 }
 
 // take health
@@ -1408,8 +1461,8 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 		} while (z > 1);
 
 		Vector vecDir = vecDirShooting +
-						x * vecSpread.x * vecRight +
-						y * vecSpread.y * vecUp;
+						vecRight * (x * vecSpread.x) +
+						vecUp * (y * vecSpread.y);
 		Vector vecEnd;
 
 		vecEnd = vecSrc + vecDir * flDistance;
@@ -1431,14 +1484,8 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 			
 			if ( iTracerFreq != 1 )		// guns that always trace also always decal
 				tracer = 1;
-			switch( iBulletType )
+			if ( !(pevAttacker->flags & FL_CLIENT) )
 			{
-			case BULLET_PLAYER_MP5:
-				break;
-			case BULLET_MONSTER_MP5:
-			case BULLET_MONSTER_9MM:
-			case BULLET_MONSTER_12MM:
-			default:
 				MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, vecTracerSrc );
 					WRITE_BYTE( TE_TRACER );
 					WRITE_COORD( vecTracerSrc.x );
@@ -1448,7 +1495,6 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 					WRITE_COORD( tr.vecEndPos.y );
 					WRITE_COORD( tr.vecEndPos.z );
 				MESSAGE_END();
-				break;
 			}
 		}
 		// do damage, paint decals
@@ -1461,46 +1507,30 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 				pEntity->TraceAttack(pevAttacker, iDamage, vecDir, &tr, DMG_BULLET | ((iDamage > 16) ? DMG_ALWAYSGIB : DMG_NEVERGIB) );
 				
 				TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-				DecalGunshot( &tr, iBulletType );
 			} 
 			else switch(iBulletType)
 			{
 			default:
 			case BULLET_PLAYER_9MM:		
 				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg9MM, vecDir, &tr, DMG_BULLET); 
+				DecalGunshot( &tr, iBulletType );
 				break;
 
 			case BULLET_PLAYER_MP5:		
 				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgMP5, vecDir, &tr, DMG_BULLET); 
+				TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
 				break;
 
-			case BULLET_PLAYER_BUCKSHOT:	
-				 // make distance based!
-				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgBuckshot, vecDir, &tr, DMG_BULLET); 
-				break;
-			
 			case BULLET_PLAYER_357:		
-				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg357, vecDir, &tr, DMG_BULLET); 
+				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgBuckshot, vecDir, &tr, DMG_BULLET); 
+				if ( !tracer )
+				{
+					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
+				}
 				break;
 
-			case BULLET_MONSTER_9MM:
-				pEntity->TraceAttack(pevAttacker, gSkillData.monDmg9MM, vecDir, &tr, DMG_BULLET);
-				
-				TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-				DecalGunshot( &tr, iBulletType );
-
-				break;
-
-			case BULLET_MONSTER_MP5:
-				pEntity->TraceAttack(pevAttacker, gSkillData.monDmgMP5, vecDir, &tr, DMG_BULLET);
-				
-				TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-				DecalGunshot( &tr, iBulletType );
-
-				break;
-
-			case BULLET_MONSTER_12MM:		
-				pEntity->TraceAttack(pevAttacker, gSkillData.monDmg12MM, vecDir, &tr, DMG_BULLET); 
+			case BULLET_PLAYER_CROWBAR:		
+				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgM203Grenade, vecDir, &tr, DMG_BULLET); 
 				if ( !tracer )
 				{
 					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
@@ -1510,7 +1540,6 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 			
 			case BULLET_NONE: // FIX 
 				pEntity->TraceAttack(pevAttacker, 50, vecDir, &tr, DMG_CLUB);
-				TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
 				// only decal glass
 				if ( !FNullEnt(tr.pHit) && VARS(tr.pHit)->rendermode != 0)
 				{

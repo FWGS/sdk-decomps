@@ -30,6 +30,7 @@
 #include "player.h"
 #include "weapons.h"
 #include "gamerules.h"
+#include "skill.h"
 
 /*
 =====================
@@ -1642,6 +1643,33 @@ void UTIL_StripToken( const char *pKey, char *pDest )
 		i++;
 	}
 	pDest[i] = 0;
+}
+
+BOOL UTIL_PercentChance( int iPercent )
+{
+	return RANDOM_LONG( 0, 99 ) < iPercent;
+}
+
+// adds up to sk_percent_random_h percent to a monster's health
+float UTIL_RandomizeHealth( float flHealth )
+{
+	float flScale = gSkillData.monHealthPercentRandom * 0.01;
+
+	return RANDOM_FLOAT( 0, flHealth ) * flScale + flHealth;
+}
+
+float UTIL_VecToPitch( const Vector &vec )
+{
+	float pitch;
+
+	if ( vec.z == 0 && vec.x == 0 )
+		return 0;
+
+	pitch = (int)(atan2( vec.z, sqrt( vec.x * vec.x + vec.y * vec.y ) ) * (180 / M_PI));
+	if ( pitch < 0 )
+		pitch += 360;
+
+	return pitch;
 }
 
 

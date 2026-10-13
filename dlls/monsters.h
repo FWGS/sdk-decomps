@@ -141,13 +141,15 @@ enum
 //
 // A gib is a chunk of a body, or a piece of wood/metal/rocks/etc.
 //
-class CGib : public CBaseEntity
+class CGib : public CBaseMonster
 {
 public:
-	void Spawn( const char *szGibModel );
+	virtual void Spawn( const char *szGibModel );
 	void EXPORT BounceGibTouch ( CBaseEntity *pOther );
 	void EXPORT StickyGibTouch ( CBaseEntity *pOther );
 	void EXPORT WaitTillLand( void );
+	void EXPORT GibSmokeThink( void );
+	void		StartSmoke( int iType );
 	void		LimitVelocity( void );
 
 	virtual int	ObjectCaps( void ) { return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | FCAP_DONT_SAVE; }
@@ -159,6 +161,7 @@ public:
 	int		m_cBloodDecals;
 	int		m_material;
 	float	m_lifeTime;
+	int		m_iSmokeSprite;
 };
 
 

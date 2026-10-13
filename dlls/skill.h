@@ -22,102 +22,129 @@ struct skilldata_t
 	int iSkillLevel; // game skill level
 
 // Monster Health & Damage
-	float	agruntHealth;
-	float agruntDmgPunch;
+	float monHealthPercentRandom;	// sk_percent_random_h
+	float humanDmgKick;
+	float humanGrenadeSpeed;
 
-	float apacheHealth;
-	
-	float barneyHealth;
+	float banditHealth;
+	float banditLimpHealth;
+	float banditDmgMelee;
+	float banditDmgBolt;
+	float banditDmgFast;
+	float banditDmgMech;
 
-	float bigmommaHealthFactor;		// Multiply each node's health by this
-	float bigmommaDmgSlash;			// melee attack damage
-	float bigmommaDmgBlast;			// mortar attack damage
-	float bigmommaRadiusBlast;		// mortar attack radius
+	float demomanHealth;
+	float demomanLimpHealth;
+	float demomanDmgRocket;
+	float demomanDmgShotgun;
 
-	float bullsquidHealth;
-	float bullsquidDmgBite;
-	float bullsquidDmgWhip;
-	float bullsquidDmgSpit;
+	float gatorDmgBite;
+	float gatorHealth;
 
-	float gargantuaHealth;
-	float gargantuaDmgSlash;
-	float gargantuaDmgFire;
-	float gargantuaDmgStomp;
+	float ouranoDmg;
+	float ouranoHealth;
 
-	float hassassinHealth;
+	float raptorHealth;
+	float raptorDmgBite;
+	float raptorDmgJump;
 
-	float headcrabHealth;
-	float headcrabDmgBite;
+	float smlscorpHealth;
+	float smlscorpDmgClaw;
+	float smlscorpDmgSting;
 
-	float hgruntHealth;
-	float hgruntDmgKick;
-	float hgruntShotgunPellets;
-	float hgruntGrenadeSpeed;
+	float lrgscorpHealth;
+	float lrgscorpDmgSting;
+	float lrgscorpDmgClaw;
 
-	float houndeyeHealth;
-	float houndeyeDmgBlast;
+	float rustbitHealth;
+	float rustbitDmgShot;
+	float rustbitDmgClaw;
 
-	float slaveHealth;
-	float slaveDmgClaw;
-	float slaveDmgClawrake;
-	float slaveDmgZap;
+	float rustbotHealth;
+	float rustbotDmgMelee;
+	float rustbotDmgLong;
+	float rustbotUnused;		// never set or read
 
-	float ichthyosaurHealth;
-	float ichthyosaurDmgShake;
-
-	float leechHealth;
-	float leechDmgBite;
-
-	float controllerHealth;
-	float controllerDmgZap;
-	float controllerSpeedBall;
-	float controllerDmgBall;
-
-	float nihilanthHealth;
-	float nihilanthZap;
+	float rustgunnerHealth;
+	float rustgunnerDmgRocket;
+	float rustgunnerDmgMiniRocket;
 
 	float scientistHealth;
 
-	float snarkHealth;
-	float snarkDmgBite;
-	float snarkDmgPop;
+	float beakHealth;			// RefreshSkillData reads sk_tube_h into it
+	float beakDmgBite;
+	float beakDmgScrape;
 
-	float zombieHealth;
-	float zombieDmgOneSlash;
-	float zombieDmgBothSlash;
+	float tubeHealth;
 
-	float turretHealth;
-	float miniturretHealth;
+	float critterHealth;
+	float critterDmgSpit;
+	float critterDmgMelee1;
+
+	float maggotDmg;
+	float maggotHealth;
+
+	float hatchetfishDmg;
+	float hatchetfishHealth;
+
+	float chopperHealth;
+
+	float xenomeHealth;
+	float xenomeDmgMelee;
+	float xenomeDmgDart;
+
+	float turretHealth;			// never set
+	float miniturretHealth;		// never set
 	float sentryHealth;
 
+// Player weapon ammo
+	float dmlMaxAmmo;
+	float dmlDefaultAmmo;
+	float dmlClipAmmo;
+
+	float chemMaxAmmo;
+	float chemClipAmmo;
+	float chemDefaultAmmo;
+
+	float shotgunMaxAmmo;
+	float shotgunClipAmmo;
+	float shotgunDefaultAmmo;
+
+	float minigunMaxAmmo;
+	float minigunClipAmmo;
+	float minigunDefaultAmmo;
+
+	float gaussMaxAmmo;
+	float gaussClipAmmo;
+	float gaussDefaultAmmo;
+
+	float beamgunMaxAmmo;
+	float beamgunClipAmmo;
+	float beamgunDefaultAmmo;
+
+	float plrDmgDmlGrenade;
 
 // Player Weapons
-	float plrDmgCrowbar;
-	float plrDmg9MM;
-	float plrDmg357;
-	float plrDmgMP5;
+	float plrDmg9MM;			// sk_9mmAR_bullet
+	float plrDmg357;			// never set
+	float plrDmgMP5;			// sk_9mmAR_bullet
 	float plrDmgM203Grenade;
 	float plrDmgBuckshot;
-	float plrDmgCrossbowClient;
-	float plrDmgCrossbowMonster;
-	float plrDmgRPG;
-	float plrDmgGauss;
-	float plrDmgEgonNarrow;
-	float plrDmgEgonWide;
-	float plrDmgHornet;
+	float plrDmgGaussShot;
+	float plrDmgGaussFast;
+	float plrDmgGaussSlow;
 	float plrDmgHandGrenade;
-	float plrDmgSatchel;
-	float plrDmgTripmine;
-	
-// weapons shared by monsters
-	float monDmg9MM;
-	float monDmgMP5;
-	float monDmg12MM;
-	float monDmgHornet;
+	float plrDmgChemgun;
+	float plrDmgOneHandPunch;
+	float plrDmgTwoHandPunch;
+	float plrDmgKnife;
+	float plrDmgMine;
+	float plrDmgDmlRocket;
 
 // health/suit charge
 	float suitchargerCapacity;
 	float batteryCapacity;
+	float armorsuitCapacity;
 	float healthchargerCapacity;
 	float healthkitCapacity;
 	float scientistHeal;

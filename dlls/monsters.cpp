@@ -2209,22 +2209,29 @@ int CBaseMonster::TaskIsRunning( void )
 //=========================================================
 int CBaseMonster::IRelationship ( CBaseEntity *pTarget )
 {
-	static int iEnemy[14][14] =
-	{			 //   NONE	 MACH	 PLYR	 HPASS	 HMIL	 AMIL	 APASS	 AMONST	APREY	 APRED	 INSECT	PLRALY	PBWPN	ABWPN
-	/*NONE*/		{ R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO,	R_NO,	R_NO	},
-	/*MACHINE*/		{ R_NO	,R_NO	,R_DL	,R_DL	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_DL,	R_DL,	R_DL	},
-	/*PLAYER*/		{ R_NO	,R_DL	,R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO,	R_DL,	R_DL	},
-	/*HUMANPASSIVE*/{ R_NO	,R_NO	,R_AL	,R_AL	,R_HT	,R_FR	,R_NO	,R_HT	,R_DL	,R_FR	,R_NO	,R_AL,	R_NO,	R_NO	},
-	/*HUMANMILITAR*/{ R_NO	,R_NO	,R_HT	,R_DL	,R_NO	,R_HT	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_HT,	R_NO,	R_NO	},
-	/*ALIENMILITAR*/{ R_NO	,R_DL	,R_HT	,R_DL	,R_HT	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_DL,	R_NO,	R_NO	},
-	/*ALIENPASSIVE*/{ R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO,	R_NO,	R_NO	},
-	/*ALIENMONSTER*/{ R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_DL,	R_NO,	R_NO	},
-	/*ALIENPREY   */{ R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_NO	,R_FR	,R_NO	,R_DL,	R_NO,	R_NO	},
-	/*ALIENPREDATO*/{ R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_HT	,R_DL	,R_NO	,R_DL,	R_NO,	R_NO	},
-	/*INSECT*/		{ R_FR	,R_FR	,R_FR	,R_FR	,R_FR	,R_NO	,R_FR	,R_FR	,R_FR	,R_FR	,R_NO	,R_FR,	R_NO,	R_NO	},
-	/*PLAYERALLY*/	{ R_NO	,R_DL	,R_AL	,R_AL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO,	R_NO,	R_NO	},
-	/*PBIOWEAPON*/	{ R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_DL,	R_NO,	R_DL	},
-	/*ABIOWEAPON*/	{ R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_AL	,R_NO	,R_DL	,R_DL	,R_NO	,R_NO	,R_DL,	R_DL,	R_NO	}
+	static int iEnemy[21][21] =
+	{			 //   NONE	 MACH	 PLYR	 ALLY	 HPASS	 HMIL	 HUM6	 ROBOT	 RGUN	 ROB9	 C10	 BEAK	 TUBE	 CRIT	 A14	 APRED	 A16	 APREY	 PBWPN	 ABWPN	 BOSS
+	/*NONE*/        { R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	},
+	/*MACHINE*/     { R_NO	,R_NO	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_NO	,R_DL	,R_DL	,R_NO	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	},
+	/*PLAYER*/      { R_NO	,R_NO	,R_AL	,R_AL	,R_FR	,R_NM	,R_NO	,R_DL	,R_NM	,R_HT	,R_NO	,R_HT	,R_DL	,R_NO	,R_DL	,R_NM	,R_NO	,R_NO	,R_NO	,R_NO	,R_DL	},
+	/*PLAYERALLY*/  { R_NO	,R_NO	,R_AL	,R_AL	,R_FR	,R_NM	,R_NO	,R_DL	,R_NM	,R_HT	,R_DL	,R_HT	,R_DL	,R_DL	,R_DL	,R_NM	,R_DL	,R_NO	,R_NO	,R_NO	,R_HT	},
+	/*HUMANPASSIVE*/{ R_NO	,R_NO	,R_FR	,R_FR	,R_FR	,R_FR	,R_NO	,R_DL	,R_DL	,R_FR	,R_NO	,R_HT	,R_HT	,R_NO	,R_DL	,R_HT	,R_NO	,R_NO	,R_NO	,R_NO	,R_FR	},
+	/*HUMANMILITAR*/{ R_NO	,R_NO	,R_HT	,R_HT	,R_AL	,R_AL	,R_AL	,R_FR	,R_DL	,R_NO	,R_NO	,R_NM	,R_HT	,R_NO	,R_DL	,R_HT	,R_NO	,R_DL	,R_NO	,R_NO	,R_FR	},
+	/*HUMAN6*/      { R_NO	,R_NO	,R_HT	,R_HT	,R_NO	,R_AL	,R_AL	,R_FR	,R_DL	,R_NO	,R_NO	,R_DL	,R_NM	,R_NO	,R_DL	,R_HT	,R_NO	,R_DL	,R_NO	,R_NO	,R_FR	},
+	/*ROBOT*/       { R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_NM	,R_NO	,R_AL	,R_AL	,R_AL	,R_NO	,R_NM	,R_DL	,R_NO	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_NO	,R_HT	},
+	/*ROBOTGUNNER*/ { R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_NM	,R_NO	,R_AL	,R_AL	,R_AL	,R_NO	,R_NM	,R_DL	,R_NO	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_NO	,R_HT	},
+	/*ROBOT9*/      { R_NO	,R_NO	,R_DL	,R_NM	,R_DL	,R_NM	,R_NO	,R_AL	,R_AL	,R_AL	,R_NO	,R_DL	,R_NM	,R_NO	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_NO	,R_HT	},
+	/*CLASS10*/     { R_NO	,R_NO	,R_NM	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_HT	},
+	/*ALIENBEAK*/   { R_NO	,R_NO	,R_HT	,R_NM	,R_NM	,R_HT	,R_NO	,R_HT	,R_NM	,R_DL	,R_NO	,R_AL	,R_AL	,R_AL	,R_AL	,R_AL	,R_NO	,R_NO	,R_NO	,R_NO	,R_AL	},
+	/*ALIENTUBE*/   { R_NO	,R_NO	,R_HT	,R_NM	,R_NM	,R_HT	,R_DL	,R_DL	,R_HT	,R_NM	,R_NO	,R_AL	,R_AL	,R_AL	,R_AL	,R_AL	,R_NO	,R_NO	,R_NO	,R_NO	,R_AL	},
+	/*ALIENCRITTER*/{ R_NO	,R_NO	,R_HT	,R_NM	,R_NM	,R_HT	,R_DL	,R_DL	,R_HT	,R_NM	,R_NO	,R_AL	,R_AL	,R_AL	,R_AL	,R_AL	,R_NO	,R_NO	,R_NO	,R_NO	,R_AL	},
+	/*ALIEN14*/     { R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_NM	,R_NO	,R_DL	,R_DL	,R_DL	,R_NO	,R_AL	,R_AL	,R_AL	,R_AL	,R_DL	,R_NO	,R_NO	,R_NO	,R_NO	,R_DL	},
+	/*ALIENPREDATO*/{ R_NO	,R_NO	,R_DL	,R_NM	,R_NM	,R_DL	,R_NO	,R_DL	,R_DL	,R_DL	,R_NO	,R_AL	,R_AL	,R_AL	,R_DL	,R_AL	,R_DL	,R_NO	,R_NO	,R_NO	,R_DL	},
+	/*ALIEN16*/     { R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_DL	,R_DL	,R_DL	,R_NO	,R_AL	,R_AL	,R_AL	,R_AL	,R_DL	,R_AL	,R_DL	,R_NO	,R_NO	,R_DL	},
+	/*ALIENPREY*/   { R_NO	,R_NO	,R_FR	,R_FR	,R_DL	,R_DL	,R_FR	,R_FR	,R_FR	,R_FR	,R_NO	,R_FR	,R_FR	,R_FR	,R_FR	,R_FR	,R_FR	,R_FR	,R_FR	,R_FR	,R_FR	},
+	/*PLRBIOWEAPON*/{ R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NM	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_NM	,R_NO	,R_DL	,R_DL	,R_NO	,R_DL	},
+	/*ALIENBIOWEAP*/{ R_NO	,R_NO	,R_DL	,R_NM	,R_DL	,R_DL	,R_NO	,R_DL	,R_DL	,R_NM	,R_NO	,R_AL	,R_AL	,R_AL	,R_DL	,R_NM	,R_NO	,R_NO	,R_DL	,R_NO	,R_NO	},
+	/*ENDBOSS*/     { R_NO	,R_NO	,R_DL	,R_NM	,R_FR	,R_FR	,R_FR	,R_DL	,R_DL	,R_NM	,R_NO	,R_FR	,R_FR	,R_FR	,R_DL	,R_NM	,R_NO	,R_NO	,R_DL	,R_NO	,R_AL	},
 	};
 
 	return iEnemy[ Classify() ][ pTarget->Classify() ];
@@ -3246,7 +3253,11 @@ void CBaseMonster :: AttackHitSound ( CBaseMonster *pVictim )
 	switch ( RANDOM_LONG( 0, 2 ) )
 	{
 	case 0:
+		EMIT_SOUND_DYN( ENT(pVictim->pev), CHAN_VOICE, "lg_scorp/lg_scorp_attackb.wav", 0.25, ATTN_IDLE, 0, 60 );
+		break;
 	case 1:
+		EMIT_SOUND_DYN( ENT(pVictim->pev), CHAN_VOICE, "lg_scorp/lg_scorp_attackb.wav", 0.25, ATTN_IDLE, 0, 60 );
+		break;
 	case 2:
 		EMIT_SOUND_DYN( ENT(pVictim->pev), CHAN_VOICE, "lg_scorp/lg_scorp_attackb.wav", 0.25, ATTN_IDLE, 0, 60 );
 		break;

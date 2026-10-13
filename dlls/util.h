@@ -334,6 +334,9 @@ extern void			UTIL_LogPrintf( char *fmt, ... );
 extern float UTIL_DotPoints ( const Vector &vecSrc, const Vector &vecCheck, const Vector &vecDir );
 
 extern void UTIL_StripToken( const char *pKey, char *pDest );// for redundant keynames
+extern BOOL UTIL_PercentChance( int iPercent );
+extern float UTIL_RandomizeHealth( float flHealth );
+extern float UTIL_VecToPitch( const Vector &vec );
 
 // Misc functions
 extern void SetMovedir(entvars_t* pev);
