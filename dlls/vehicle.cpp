@@ -1292,16 +1292,18 @@ Vector CVehicleTank::GroundAngles( void )
 //=========================================================
 Vector CVehicleTank::BodyAvelocity( float flYawDiff, Vector vecGround )
 {
+	// how much of the slope's pitch is pitch and how much is roll
 	float flPitch = flYawDiff / 180;
 	if ( flPitch < 0 )
 		flPitch *= -1;
+	flPitch = ( 2 - flPitch * 2 - 1 ) * vecGround.x;
 
-	float flRoll = UTIL_AngleNormalize( flYawDiff - 90 ) / 180;
-	if ( flRoll < 0 )
-		flRoll *= -1;
+	flYawDiff = UTIL_AngleNormalize( flYawDiff - 90 ) / 180;
+	if ( flYawDiff < 0 )
+		flYawDiff *= -1;
 
-	float flPitchDiff = UTIL_AngleDiff( ( 2 - flPitch * 2 - 1 ) * vecGround.x, pev->angles.x );
-	float flRollDiff = UTIL_AngleDiff( ( 2 - flRoll * 2 - 1 ) * vecGround.x * -1, pev->angles.z );
+	float flPitchDiff = UTIL_AngleDiff( flPitch, pev->angles.x );
+	float flRollDiff = UTIL_AngleDiff( ( 2 - flYawDiff * 2 - 1 ) * vecGround.x * -1, pev->angles.z );
 
 	if ( flPitchDiff > 2 || flPitchDiff < -2 )
 		flPitchDiff *= 2;
@@ -1317,16 +1319,18 @@ Vector CVehicleTank::BodyAvelocity( float flYawDiff, Vector vecGround )
 //=========================================================
 Vector CVehicleTank::TurretAvelocity( float flYawDiff, Vector vecGround )
 {
+	// how much of the slope's pitch is pitch and how much is roll
 	float flPitch = flYawDiff / 180;
 	if ( flPitch < 0 )
 		flPitch *= -1;
+	flPitch = ( 2 - flPitch * 2 - 1 ) * vecGround.x;
 
-	float flRoll = UTIL_AngleNormalize( flYawDiff - 90 ) / 180;
-	if ( flRoll < 0 )
-		flRoll *= -1;
+	flYawDiff = UTIL_AngleNormalize( flYawDiff - 90 ) / 180;
+	if ( flYawDiff < 0 )
+		flYawDiff *= -1;
 
-	float flPitchDiff = UTIL_AngleDiff( ( 2 - flPitch * 2 - 1 ) * vecGround.x * -1, m_pTurretBSP->pev->angles.x );
-	float flRollDiff = UTIL_AngleDiff( ( 2 - flRoll * 2 - 1 ) * vecGround.x * -1, m_pTurretBSP->pev->angles.z );
+	float flPitchDiff = UTIL_AngleDiff( flPitch * -1, m_pTurretBSP->pev->angles.x );
+	float flRollDiff = UTIL_AngleDiff( ( 2 - flYawDiff * 2 - 1 ) * vecGround.x * -1, m_pTurretBSP->pev->angles.z );
 
 	if ( flPitchDiff > 2 || flPitchDiff < -2 )
 		flPitchDiff *= 2;
