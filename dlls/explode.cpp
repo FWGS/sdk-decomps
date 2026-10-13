@@ -191,7 +191,7 @@ void CEnvExplosion::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 			WRITE_COORD( pev->origin.x );
 			WRITE_COORD( pev->origin.y );
 			WRITE_COORD( pev->origin.z );
-			WRITE_SHORT( g_sModelIndexFireball );
+			WRITE_SHORT( RandomExplosionSprite() );
 			WRITE_BYTE( (BYTE)m_spriteScale ); // scale * 10
 			WRITE_BYTE( 15  ); // framerate
 			WRITE_BYTE( TE_EXPLFLAG_NONE );
@@ -204,7 +204,7 @@ void CEnvExplosion::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 			WRITE_COORD( pev->origin.x );
 			WRITE_COORD( pev->origin.y );
 			WRITE_COORD( pev->origin.z );
-			WRITE_SHORT( g_sModelIndexFireball );
+			WRITE_SHORT( RandomExplosionSprite() );
 			WRITE_BYTE( 0 ); // no sprite
 			WRITE_BYTE( 15  ); // framerate
 			WRITE_BYTE( TE_EXPLFLAG_NONE );
