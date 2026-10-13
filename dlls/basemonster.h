@@ -308,6 +308,7 @@ public:
 	virtual void GibMonster( void );
 	BOOL		 ShouldGibMonster( int iGib );
 	void		 CallGibMonster( void );
+	CBaseMonster *SpawnGib( const char *szGibModel, float flVelScale, int iBody, int iSmoke );
 	virtual BOOL	HasHumanGibs( void );
 	virtual BOOL	HasAlienGibs( void );
 	virtual BOOL	HasRobotGibs( void );

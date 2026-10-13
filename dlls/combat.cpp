@@ -38,7 +38,7 @@ extern Vector VecBModelOrigin( entvars_t* pevBModel );
 extern entvars_t *g_pevLastInflictor;
 
 #define GERMAN_GIB_COUNT		4
-#define	HUMAN_GIB_COUNT			6
+#define	ROBOT_GIB_COUNT			4
 #define ALIEN_GIB_COUNT			4
 
 
@@ -58,7 +58,7 @@ void CGib :: SpawnStickyGibs( entvars_t *pevVictim, Vector vecOrigin, int cGibs 
 {
 	int i;
 
-	if ( g_Language == LANGUAGE_GERMAN )
+	if ( g_Language == LANGUAGE_GERMAN || CVAR_GET_FLOAT( "violence_germany" ) != 0 )
 	{
 		// no sticky gibs in germany right now!
 		return; 
@@ -127,16 +127,15 @@ void CGib :: SpawnHeadGib( entvars_t *pevVictim )
 {
 	CGib *pGib = GetClassPtr( (CGib *)NULL );
 
-	if ( g_Language == LANGUAGE_GERMAN )
+	if ( g_Language == LANGUAGE_GERMAN || CVAR_GET_FLOAT( "violence_germany" ) != 0 )
 	{
 		pGib->Spawn( "models/germangibs.mdl" );// throw one head
-		pGib->pev->body = 0;
 	}
 	else
 	{
 		pGib->Spawn( "models/hgibs.mdl" );// throw one head
-		pGib->pev->body = 0;
 	}
+	pGib->pev->body = 1;
 
 	if ( pevVictim )
 	{
@@ -189,24 +188,27 @@ void CGib :: SpawnRandomGibs( entvars_t *pevVictim, int cGibs, int human )
 	{
 		CGib *pGib = GetClassPtr( (CGib *)NULL );
 
-		if ( g_Language == LANGUAGE_GERMAN )
+		if ( g_Language == LANGUAGE_GERMAN || CVAR_GET_FLOAT( "violence_germany" ) != 0 )
 		{
 			pGib->Spawn( "models/germangibs.mdl" );
 			pGib->pev->body = RANDOM_LONG(0,GERMAN_GIB_COUNT-1);
 		}
 		else
 		{
-			if ( human )
+			switch ( human )
 			{
-				// human pieces
-				pGib->Spawn( "models/hgibs.mdl" );
-				pGib->pev->body = RANDOM_LONG(1,HUMAN_GIB_COUNT-1);// start at one to avoid throwing random amounts of skulls (0th gib)
-			}
-			else
-			{
+			case 1:
+				// robot pieces
+				pGib->Spawn( "models/rgibs.mdl" );
+				pGib->pev->body = RANDOM_LONG(1,ROBOT_GIB_COUNT-1);
+				break;
+			case 2:
+				return;
+			default:
 				// aliens
 				pGib->Spawn( "models/agibs.mdl" );
 				pGib->pev->body = RANDOM_LONG(0,ALIEN_GIB_COUNT-1);
+				break;
 			}
 		}
 
@@ -322,26 +324,127 @@ void CBaseMonster :: GibMonster( void )
 {
 	TraceResult	tr;
 	BOOL		gibbed = FALSE;
+	int			i, n;
 
-	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "common/bodysplat.wav", 1, ATTN_NORM);		
+	GibSound();
 
-	// only humans throw skulls !!!UNDONE - eventually monsters will have their own sets of gibs
-	if ( HasHumanGibs() )
+	if ( MonsterType() )
 	{
-		if ( CVAR_GET_FLOAT("violence_hgibs") != 0 )	// Only the player will ever get here
+		int iType = MonsterType();
+		int iSprite;
+
+		switch ( gMonsterTypes[ iType ].iGibType )
 		{
-			CGib::SpawnHeadGib( pev );
-			CGib::SpawnRandomGibs( pev, 4, 1 );	// throw some human gibs.
+		case 1:
+			iSprite = g_iGibBot;
+			break;
+		case 2:
+			iSprite = g_iGibBeak;
+			break;
+		case 3:
+			iSprite = g_iGibXeno;
+			break;
+		case 4:
+			iSprite = g_iGibTube;
+			break;
+		case 5:
+			iSprite = g_iGibHuman;
+			break;
+		case 6:
+			iSprite = g_iGibBirth;
+			break;
+		default:
+			iSprite = 0;
+			break;
 		}
-		gibbed = TRUE;
+
+		// these compare the sprite index, not its type
+		if ( CVAR_GET_FLOAT( "violence_hgibs" ) == 0 && iSprite == 5 )
+			iSprite = 0;
+
+		if ( (g_Language == LANGUAGE_GERMAN || CVAR_GET_FLOAT( "violence_germany" ) != 0) && iSprite == 5 )
+			iSprite = 0;
+
+		if ( CVAR_GET_FLOAT( "violence_agibs" ) != 0 && iSprite > 0 )
+		{
+			MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+				WRITE_BYTE( TE_SPRITE_SPRAY );
+				WRITE_COORD( pev->origin.x );
+				WRITE_COORD( pev->origin.y );
+				WRITE_COORD( pev->origin.z );
+				WRITE_COORD( 0 );
+				WRITE_COORD( 0 );
+				WRITE_COORD( 1 );
+				WRITE_SHORT( iSprite );
+				WRITE_BYTE( 25 );
+				WRITE_BYTE( 100 );
+				WRITE_BYTE( 100 );
+			MESSAGE_END();
+		}
+
+		const char *pszGibModel = gGibModels[ gMonsterTypes[ iType ].iGibModel ].pszModel;
+
+		if ( pszGibModel == "models/hgibs.mdl" )
+		{
+			SpawnGib( pszGibModel, 1.6, 0, 0 );// throw one head
+			for ( i = RANDOM_LONG( 0, 1 ) + 2; i < 12; i += 2 )
+				SpawnGib( "models/hgibs.mdl", RANDOM_FLOAT( 0, 1 ) + 1, i, 0 );
+		}
+		else if ( pszGibModel == "models/germangibs.mdl" )
+		{
+			SpawnGib( pszGibModel, 1.6, 0, 0 );
+			for ( i = RANDOM_LONG( 0, 1 ) + 2; i < 12; i += 2 )
+				SpawnGib( "models/germangibs.mdl", RANDOM_FLOAT( 0, 1 ) + 1, i, 0 );
+
+			SpawnGib( "models/germangibs.mdl", 1.6, 0, 0 );
+			for ( i = RANDOM_LONG( 0, 1 ) + 2; i < 12; i += 2 )
+				SpawnGib( "models/germangibs.mdl", RANDOM_FLOAT( 0, 1 ) + 1, i, 0 );
+
+			gibbed = TRUE;
+		}
+		else
+		{
+			for ( i = 0; i < 3; i++ )
+			{
+				for ( n = gGibModels[ gMonsterTypes[ iType ].iGibModel ].iParts[ i ]; n > 0; n-- )
+					SpawnGib( pszGibModel, 1, i, 0 );
+			}
+		}
+
+		pszGibModel = gGibModels[ gMonsterTypes[ iType ].iPrecacheGib ].pszModel;
+		for ( i = 0; i < 3; i++ )
+		{
+			for ( n = gGibModels[ gMonsterTypes[ iType ].iPrecacheGib ].iParts[ i ]; n > 0; n-- )
+				SpawnGib( pszGibModel, 1, i, 0 );
+		}
+
+		int iDecal = gMonsterTypes[ iType ].iBloodDecal;
+		if ( iDecal > 0 )
+		{
+			UTIL_TraceLine( pev->origin + Vector( 0, 0, 16 ), pev->origin - Vector( 0, 0, 1024 ), ignore_monsters, ENT(pev), &tr );
+			UTIL_DecalTrace( &tr, iDecal );
+		}
 	}
-	else if ( HasAlienGibs() )
+	else
 	{
-		if ( CVAR_GET_FLOAT("violence_agibs") != 0 )	// Should never get here, but someone might call it directly
+		// only humans throw skulls !!!UNDONE - eventually monsters will have their own sets of gibs
+		if ( HasHumanGibs() )
+		{
+			SpawnGib( "models/hgibs.mdl", 1.6, 0, 0 );// throw one head
+			for ( i = RANDOM_LONG( 0, 1 ) + 2; i < 12; i += 2 )
+				SpawnGib( "models/hgibs.mdl", RANDOM_FLOAT( 0, 1 ) + 1, i, 0 );
+			gibbed = TRUE;
+		}
+		else if ( HasAlienGibs() )
 		{
 			CGib::SpawnRandomGibs( pev, 4, 0 );	// Throw alien gibs
+			gibbed = TRUE;
 		}
-		gibbed = TRUE;
+		else if ( HasRobotGibs() )
+		{
+			CGib::SpawnRandomGibs( pev, 4, 1 );	// Throw robot gibs
+			gibbed = TRUE;
+		}
 	}
 
 	if ( !IsPlayer() )
@@ -577,6 +680,9 @@ void CBaseMonster::CallGibMonster( void )
 	{
 		if ( CVAR_GET_FLOAT("violence_hgibs") == 0 )
 			fade = TRUE;
+
+		if ( g_Language == LANGUAGE_GERMAN || CVAR_GET_FLOAT("violence_germany") != 0 )
+			fade = TRUE;
 	}
 	else if ( HasAlienGibs() )
 	{
@@ -589,6 +695,7 @@ void CBaseMonster::CallGibMonster( void )
 
 	if ( fade )
 	{
+		ALERT( at_console, "FadeMonster" );
 		FadeMonster();
 	}
 	else
@@ -664,6 +771,79 @@ void CBaseMonster :: Killed( entvars_t *pevAttacker, int iGib )
 	
 	m_IdealMonsterState = MONSTERSTATE_DEAD;
 }
+
+//=========================================================
+// SpawnGib - throw one gib of the given model from this
+// monster. Like SpawnHeadGib, the gib may fly at the player's
+// face; iSmoke starts a smoke or gore trail (CGib::StartSmoke).
+//=========================================================
+CBaseMonster *CBaseMonster :: SpawnGib( const char *szGibModel, float flVelScale, int iBody, int iSmoke )
+{
+	CGib *pGib = GetClassPtr( (CGib *)NULL );
+
+	if ( g_Language == LANGUAGE_GERMAN || CVAR_GET_FLOAT( "violence_germany" ) != 0 )
+	{
+		// no human gibs in the German version
+		if ( !strcmp( "models/hgibs.mdl", szGibModel ) )
+			return NULL;
+	}
+
+	pGib->Spawn( szGibModel );
+	pGib->pev->body = iBody;
+	pGib->pev->skin = pev->skin;
+
+	if ( pev && pGib )
+	{
+		Vector vecOrigin = pev->origin + pev->view_ofs;
+		vecOrigin = vecOrigin + Vector( RANDOM_FLOAT( -4, 4 ), RANDOM_FLOAT( -4, 4 ), RANDOM_FLOAT( -4, 4 ) );
+		UTIL_SetOrigin( pGib->pev, vecOrigin );
+
+		edict_t *pentPlayer = FIND_CLIENT_IN_PVS( pGib->edict() );
+
+		if ( UTIL_PercentChance( 5 ) && pentPlayer )
+		{
+			// 5% chance the gib will be thrown at player's face.
+			entvars_t *pevPlayer = VARS( pentPlayer );
+
+			pGib->pev->velocity = ( ( pevPlayer->origin + pevPlayer->view_ofs ) - pGib->pev->origin ).Normalize() * 300;
+			pGib->pev->velocity.z += 100;
+		}
+		else
+		{
+			pGib->pev->velocity = Vector( RANDOM_FLOAT( -100, 100 ), RANDOM_FLOAT( -100, 100 ), RANDOM_FLOAT( 200, 300 ) );
+		}
+
+		pGib->pev->avelocity.x = RANDOM_FLOAT( 100, 200 );
+		pGib->pev->avelocity.y = RANDOM_FLOAT( 100, 300 );
+		pGib->pev->gravity = 1.0;
+
+		// copy owner's blood color
+		pGib->m_bloodColor = (CBaseEntity::Instance( pev ))->BloodColor();
+
+		if ( pev->health > -50 )
+		{
+			pGib->pev->velocity = pGib->pev->velocity * 1;
+		}
+		else if ( pev->health > -200 )
+		{
+			pGib->pev->velocity = pGib->pev->velocity * 2;
+		}
+		else
+		{
+			pGib->pev->velocity = pGib->pev->velocity * 4;
+		}
+
+		pGib->pev->velocity = pGib->pev->velocity * flVelScale;
+
+		pGib->LimitVelocity();
+
+		if ( iSmoke )
+			pGib->StartSmoke( iSmoke );
+	}
+
+	return pGib->MyMonsterPointer();
+}
+
 
 //
 // fade out - slowly fades a entity out, then removes it.
@@ -929,7 +1109,9 @@ int CBaseMonster :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker,
 	if ( pev->deadflag == DEAD_NO )
 	{
 		// no pain sound during death animation.
-		PainSound();// "Ouch!"
+		if ( gpGlobals->time - m_tLastTimeHurt > 3 )
+			PainSound();// "Ouch!"
+		m_tLastTimeHurt = gpGlobals->time;
 	}
 
 	//!!!LATER - make armor consideration here!
@@ -1025,16 +1207,15 @@ int CBaseMonster :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker,
 			}
 
 			MakeIdealYaw( m_vecEnemyLKP );
+			Forget( bits_MEMORY_INCOVER );
 
 			// add pain to the conditions 
-			// !!!HACKHACK - fudged for now. Do we want to have a virtual function to determine what is light and 
-			// heavy damage per monster class?
-			if ( flDamage > 0 )
+			if ( flDamage > LightDamageThreshold() )
 			{
 				SetConditions(bits_COND_LIGHT_DAMAGE);
 			}
 
-			if ( flDamage >= 20 )
+			if ( flDamage >= HeavyDamageThreshold() )
 			{
 				SetConditions(bits_COND_HEAVY_DAMAGE);
 			}
