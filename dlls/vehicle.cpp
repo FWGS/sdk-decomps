@@ -1272,15 +1272,18 @@ Vector CVehicleTank::Slide( Vector vecVelocity, Vector vecNormal )
 Vector CVehicleTank::GroundAngles( void )
 {
 	TraceResult tr;
-
-	UTIL_TraceLine( pev->origin, Vector( pev->origin.x, pev->origin.y, pev->origin.z - 2048 ), ignore_monsters, ENT( m_pBodyBSP->pev ), &tr );
-
+	Vector vecAngles;
 	Vector vecUp;
-	Vector vecAngles = UTIL_VecToAngles( tr.vecPlaneNormal );
-	UTIL_MakeVectorsPrivate( vecAngles, NULL, NULL, vecUp );
-	vecAngles = UTIL_VecToAngles( vecUp );
 
-	return Vector( vecAngles.x * -1, vecAngles.y, pev->origin.z - tr.vecEndPos.z );
+	UTIL_TraceLine( pev->origin, pev->origin - Vector( 0, 0, 2048 ), ignore_monsters, ENT( m_pBodyBSP->pev ), &tr );
+
+	vecAngles = UTIL_VecToAngles( tr.vecPlaneNormal );
+	UTIL_MakeVectorsPrivate( vecAngles, NULL, NULL, vecUp );
+	vecUp = UTIL_VecToAngles( vecUp );
+	vecUp.x *= -1;
+	vecUp.z = pev->origin.z - tr.vecEndPos.z;	// height above the ground
+
+	return vecUp;
 }
 
 //=========================================================
