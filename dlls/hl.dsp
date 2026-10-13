@@ -446,6 +446,10 @@ SOURCE=.\demoman.cpp
 
 SOURCE=.\friendlygunman.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\friendlyunarmed.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
