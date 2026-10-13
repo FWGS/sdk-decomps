@@ -1851,21 +1851,19 @@ void CDummyBot::BotSparkThink( void )
 	if ( m_pSprite )
 		m_pSprite->pev->scale += 0.1;
 
+	// a spark to each corner around it
 	UTIL_MakeVectors( pev->angles );
 
-	Vector vecRight = gpGlobals->v_right * RANDOM_FLOAT( -27, -12 );
-	Vector vecUp = gpGlobals->v_up * RANDOM_FLOAT( 12, 27 );
-	Vector vecForward = gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 );
-	Vector vecEnd = pev->origin + vecForward + vecUp + vecRight;
+	Vector vecSpark1 = pev->origin + gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 ) + gpGlobals->v_up * RANDOM_FLOAT( 12, 27 ) + gpGlobals->v_right * RANDOM_FLOAT( -27, -12 );
 
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_BEAMPOINTS );
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
 		WRITE_COORD( pev->origin.z );
-		WRITE_COORD( vecEnd.x );
-		WRITE_COORD( vecEnd.y );
-		WRITE_COORD( vecEnd.z );
+		WRITE_COORD( vecSpark1.x );
+		WRITE_COORD( vecSpark1.y );
+		WRITE_COORD( vecSpark1.z );
 		WRITE_SHORT( m_iBeam );
 		WRITE_BYTE( 0 );	// frame start
 		WRITE_BYTE( 0 );	// framerate
@@ -1879,19 +1877,16 @@ void CDummyBot::BotSparkThink( void )
 		WRITE_BYTE( 5 );	// speed
 	MESSAGE_END();
 
-	vecRight = gpGlobals->v_right * RANDOM_FLOAT( 12, 27 );
-	vecUp = gpGlobals->v_up * RANDOM_FLOAT( 12, 27 );
-	vecForward = gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 );
-	vecEnd = pev->origin + vecForward + vecUp + vecRight;
+	Vector vecSpark2 = pev->origin + gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 ) + gpGlobals->v_up * RANDOM_FLOAT( 12, 27 ) + gpGlobals->v_right * RANDOM_FLOAT( 12, 27 );
 
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_BEAMPOINTS );
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
 		WRITE_COORD( pev->origin.z );
-		WRITE_COORD( vecEnd.x );
-		WRITE_COORD( vecEnd.y );
-		WRITE_COORD( vecEnd.z );
+		WRITE_COORD( vecSpark2.x );
+		WRITE_COORD( vecSpark2.y );
+		WRITE_COORD( vecSpark2.z );
 		WRITE_SHORT( m_iBeam );
 		WRITE_BYTE( 0 );	// frame start
 		WRITE_BYTE( 0 );	// framerate
@@ -1905,19 +1900,16 @@ void CDummyBot::BotSparkThink( void )
 		WRITE_BYTE( 5 );	// speed
 	MESSAGE_END();
 
-	vecRight = gpGlobals->v_right * RANDOM_FLOAT( 12, 27 );
-	vecUp = gpGlobals->v_up * RANDOM_FLOAT( -27, -12 );
-	vecForward = gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 );
-	vecEnd = pev->origin + vecForward + vecUp + vecRight;
+	Vector vecSpark3 = pev->origin + gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 ) + gpGlobals->v_up * RANDOM_FLOAT( -27, -12 ) + gpGlobals->v_right * RANDOM_FLOAT( 12, 27 );
 
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_BEAMPOINTS );
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
 		WRITE_COORD( pev->origin.z );
-		WRITE_COORD( vecEnd.x );
-		WRITE_COORD( vecEnd.y );
-		WRITE_COORD( vecEnd.z );
+		WRITE_COORD( vecSpark3.x );
+		WRITE_COORD( vecSpark3.y );
+		WRITE_COORD( vecSpark3.z );
 		WRITE_SHORT( m_iBeam );
 		WRITE_BYTE( 0 );	// frame start
 		WRITE_BYTE( 0 );	// framerate
@@ -1931,19 +1923,16 @@ void CDummyBot::BotSparkThink( void )
 		WRITE_BYTE( 5 );	// speed
 	MESSAGE_END();
 
-	vecRight = gpGlobals->v_right * RANDOM_FLOAT( -27, -12 );
-	vecUp = gpGlobals->v_up * RANDOM_FLOAT( -27, -12 );
-	vecForward = gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 );
-	vecEnd = pev->origin + vecForward + vecUp + vecRight;
+	Vector vecSpark4 = pev->origin + gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 ) + gpGlobals->v_up * RANDOM_FLOAT( -27, -12 ) + gpGlobals->v_right * RANDOM_FLOAT( -27, -12 );
 
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_BEAMPOINTS );
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
 		WRITE_COORD( pev->origin.z );
-		WRITE_COORD( vecEnd.x );
-		WRITE_COORD( vecEnd.y );
-		WRITE_COORD( vecEnd.z );
+		WRITE_COORD( vecSpark4.x );
+		WRITE_COORD( vecSpark4.y );
+		WRITE_COORD( vecSpark4.z );
 		WRITE_SHORT( m_iBeam );
 		WRITE_BYTE( 0 );	// frame start
 		WRITE_BYTE( 0 );	// framerate
