@@ -314,7 +314,8 @@ bool EV_HLDM_TextureEffect( int idx, pmtrace_t *ptr, float *vecSrc, float *vecEn
 				// a puff of dust off the floor
 				if ( ptr->plane.normal.z > 0.5 )
 				{
-					vecOrigin = Vector( ptr->endpos.x, ptr->endpos.y, ptr->endpos.z + 10 );
+					vecOrigin = ptr->endpos;
+					vecOrigin.z += 10;
 
 					pTent = gEngfuncs.pEfxAPI->R_TempSprite( vecOrigin, Vector( 0, 0, 0 ), 0.75, gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/bulletpuff.spr" ), kRenderTransAlpha, kRenderFxNoDissipation, 255, 10, FTENT_SPRANIMATE );
 					if ( pTent )
@@ -331,6 +332,7 @@ bool EV_HLDM_TextureEffect( int idx, pmtrace_t *ptr, float *vecSrc, float *vecEn
 				g_Effects.Add( CEffect( 20, ptr->endpos, ptr->plane.normal, 1, EFFECT_SPRITE, 0, 10, 20, 10, 0, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/ripple.spr" ) ) ) );
 			}
 
+			gEngfuncs.pfnRandomLong( 0, 0x7fff );
 			gEngfuncs.pEventAPI->EV_PlaySound( -1, ptr->endpos, CHAN_AUTO, "weapons/forcefield.wav", 1.0, ATTN_NORM, 0, PITCH_NORM );
 			return true;
 		}
@@ -1979,7 +1981,6 @@ void EV_SphereExplode( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t up, right, forward;
-	vec3_t vecVelocity;
 	float flRadius = args->fparam1;
 	float flSpeed = args->fparam2;
 	float flBrightness = args->iparam1;
@@ -1998,7 +1999,7 @@ void EV_SphereExplode( event_args_t *args )
 	{
 		for ( i = 0; i < 30; i++ )
 		{
-			vecVelocity = forward * gEngfuncs.pfnRandomFloat( -600, 600 ) + right * gEngfuncs.pfnRandomFloat( -600, 600 ) + up * gEngfuncs.pfnRandomFloat( -600, 600 );
+			vec3_t vecVelocity = forward * gEngfuncs.pfnRandomFloat( -600, 600 ) + right * gEngfuncs.pfnRandomFloat( -600, 600 ) + up * gEngfuncs.pfnRandomFloat( -600, 600 );
 
 			iLength = abs( (int)vecVelocity.Length() );
 			if ( iLength >= 100 )
