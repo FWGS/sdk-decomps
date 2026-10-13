@@ -25,6 +25,7 @@ private:
 		int					m_afConditions;
 
 public:
+		float				m_tLastTimeHurt;
 		typedef enum
 		{
 			SCRIPT_PLAYING = 0,		// Playing the sequence
@@ -50,6 +51,7 @@ public:
 		Activity			m_IdealActivity;// monster should switch to this activity
 		
 		int					m_LastHitGroup; // the last body region that took damage
+		int					m_LastHitDamageType; // damage type of the last TraceAttack
 		
 		MONSTERSTATE		m_MonsterState;// monster's current state
 		MONSTERSTATE		m_IdealMonsterState;// monster should change to this state
@@ -108,6 +110,9 @@ public:
 	SCRIPTSTATE			m_scriptState;		// internal cinematic state
 	CCineMonster		*m_pCine;
 
+	int					m_iUnknown616;	// cleared in MonsterInit, never read
+	int					m_iUnknown620;	// cleared in RunAI, never read
+
 	virtual int		Save( CSave &save ); 
 	virtual int		Restore( CRestore &restore );
 	
@@ -124,6 +129,8 @@ public:
 	virtual int	 BloodColor( void ) { return m_bloodColor; }
 
 	virtual CBaseMonster *MyMonsterPointer( void ) { return this; }
+	virtual int MonsterType( void ) { return 0; }	// index into the species table: gibs, blood, movetype
+	virtual void PrecacheSounds( void ) {}
 	virtual void Look ( int iDistance );// basic sight function for monsters
 	virtual void RunAI ( void );// core ai function!	
 	void Listen ( void );
@@ -203,7 +210,7 @@ public:
 		void SetState ( MONSTERSTATE State );
 		virtual void ReportAIState( void );
 
-		void CheckAttacks ( CBaseEntity *pTarget, float flDist );
+		virtual void CheckAttacks ( CBaseEntity *pTarget, float flDist );
 		virtual int CheckEnemy ( CBaseEntity *pEnemy );
 		void PushEnemy( CBaseEntity *pEnemy, Vector &vecLastKnownPos );
 		BOOL PopEnemy( void );
@@ -292,12 +299,15 @@ public:
 	float UpdateTarget ( entvars_t *pevTarget );
 	virtual Activity GetDeathActivity ( void );
 	Activity GetSmallFlinchActivity( void );
+	virtual int VisionFlags( void );	// bit 0: FVisible ignores the water line
+	virtual void RadiusDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType );
 	virtual void Killed( entvars_t *pevAttacker, int iGib );
 	virtual void GibMonster( void );
 	BOOL		 ShouldGibMonster( int iGib );
 	void		 CallGibMonster( void );
 	virtual BOOL	HasHumanGibs( void );
 	virtual BOOL	HasAlienGibs( void );
+	virtual BOOL	HasRobotGibs( void );
 	virtual void	FadeMonster( void );	// Called instead of GibMonster() when gibs are disabled
 
 	Vector ShootAtEnemy( const Vector &shootOrigin );
@@ -305,11 +315,17 @@ public:
 
 	virtual	Vector  GetGunPosition( void );
 
+	virtual int HeavyDamageThreshold( void ) { return 20; }	// bits_COND_HEAVY_DAMAGE at or above this
+	virtual int LightDamageThreshold( void ) { return 0; }	// bits_COND_LIGHT_DAMAGE above this
+	virtual const char *SentenceGroup( int index ) { return NULL; }
+	virtual void RangeAttackSound( void ) {}
+	virtual void MeleeAttackSound( void ) {}
+	virtual void GibSound( void );
+
 	virtual int TakeHealth( float flHealth, int bitsDamageType );
 	virtual int TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType);
 	int			DeadTakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
 
-	void RadiusDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType );
 	void RadiusDamage(Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType );
 	virtual int		IsMoving( void ) { return m_movementGoal != MOVEGOAL_NONE; }
 
@@ -320,6 +336,7 @@ public:
 	virtual void AlertSound ( void ) { return; };
 	virtual void IdleSound ( void ) { return; };
 	virtual void PainSound ( void ) { return; };
+	virtual void AttackHitSound( CBaseMonster *pVictim );
 	
 	virtual void StopFollowing( BOOL clearSchedule ) {}
 

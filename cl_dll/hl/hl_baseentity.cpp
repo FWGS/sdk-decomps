@@ -135,6 +135,7 @@ void CBaseMonster::FadeMonster( void ) { }
 void CBaseMonster :: GibMonster( void ) { }
 BOOL CBaseMonster :: HasHumanGibs( void ) { return FALSE; }
 BOOL CBaseMonster :: HasAlienGibs( void ) { return FALSE; }
+BOOL CBaseMonster :: HasRobotGibs( void ) { return FALSE; }
 Activity CBaseMonster :: GetDeathActivity ( void ) { return ACT_DIE_HEADSHOT; }
 void CBaseMonster::BecomeDead( void ) {}
 void CBaseMonster :: Killed( entvars_t *pevAttacker, int iGib ) {}
@@ -142,14 +143,17 @@ int CBaseMonster :: TakeHealth (float flHealth, int bitsDamageType) { return 0; 
 int CBaseMonster :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType ) { return 0; }
 BOOL CBaseMonster :: FValidateHintType ( short sHint ) { return FALSE; }
 int CBaseMonster :: ISoundMask ( void ) { return 0; }
+void CBaseMonster :: GibSound ( void ) { }
 CSound* CBaseMonster :: PBestSound ( void ) { return NULL; }
 CSound* CBaseMonster :: PBestScent ( void ) { return NULL; } 
+int CBaseMonster :: VisionFlags ( void ) { return 0; }
 int CBaseMonster :: IgnoreConditions ( void ) { return 0; }
 BOOL CBaseMonster :: FCanCheckAttacks ( void ) { return FALSE; }
 BOOL CBaseMonster :: FTriangulate ( const Vector &vecStart , const Vector &vecEnd, float flDist, CBaseEntity *pTargetEnt, Vector *pApex ) { return FALSE; }
 BOOL CBaseMonster :: FindCover ( Vector vecThreat, Vector vecViewOffset, float flMinDist, float flMaxDist ) { return FALSE; }
 BOOL CBaseMonster :: BuildNearestRoute ( Vector vecThreat, Vector vecViewOffset, float flMinDist, float flMaxDist ) { return FALSE; }
 BOOL CBaseMonster :: FCanActiveIdle ( void ) { return FALSE; }
+void CBaseMonster :: AttackHitSound ( CBaseMonster *pVictim ) { }
 void CBaseMonster :: Eat ( float flFullDuration ) { }
 BOOL CBaseMonster :: FShouldEat ( void ) { return TRUE; }
 void CBaseMonster :: BarnacleVictimBitten ( entvars_t *pevBarnacle ) { }

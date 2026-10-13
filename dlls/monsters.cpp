@@ -108,6 +108,7 @@ TYPEDESCRIPTION	CBaseMonster::m_SaveData[] =
 
 	DEFINE_FIELD( CBaseMonster, m_scriptState, FIELD_INTEGER ),
 	DEFINE_FIELD( CBaseMonster, m_pCine, FIELD_CLASSPTR ),
+	DEFINE_FIELD( CBaseMonster, m_tLastTimeHurt, FIELD_TIME ),
 };
 
 //IMPLEMENT_SAVERESTORE( CBaseMonster, CBaseToggle );
@@ -409,6 +410,11 @@ int CBaseMonster :: ISoundMask ( void )
 			bits_SOUND_PLAYER;
 }
 
+void CBaseMonster :: GibSound ( void )
+{
+	EMIT_SOUND( ENT(pev), CHAN_WEAPON, "common/bodysplat.wav", 1, ATTN_NORM );
+}
+
 //=========================================================
 // PBestSound - returns a pointer to the sound the monster 
 // should react to. Right now responds only to nearest sound.
@@ -510,6 +516,11 @@ CSound* CBaseMonster :: PBestScent ( void )
 	ALERT( at_error, "NULL Return from PBestScent\n" );
 #endif
 	return NULL;
+}
+
+int CBaseMonster :: VisionFlags ( void )
+{
+	return 14;
 }
 
 
@@ -3228,6 +3239,18 @@ BOOL CBaseMonster :: FCanActiveIdle ( void )
 	}
 	*/
 	return FALSE;
+}
+
+void CBaseMonster :: AttackHitSound ( CBaseMonster *pVictim )
+{
+	switch ( RANDOM_LONG( 0, 2 ) )
+	{
+	case 0:
+	case 1:
+	case 2:
+		EMIT_SOUND_DYN( ENT(pVictim->pev), CHAN_VOICE, "lg_scorp/lg_scorp_attackb.wav", 0.25, ATTN_IDLE, 0, 60 );
+		break;
+	}
 }
 
 

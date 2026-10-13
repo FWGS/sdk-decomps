@@ -24,6 +24,9 @@ public:
 	void	EXPORT ItemTouch( CBaseEntity *pOther );
 	void	EXPORT Materialize( void );
 	virtual BOOL MyTouch( CBasePlayer *pPlayer ) { return FALSE; };
+	virtual BOOL PlayPickupSound( void ) { return !m_bNoGiveSound; }
+
+	BOOL m_bNoGiveSound;	// "nopickupsound" keyvalue
 };
 
 #endif // ITEMS_H

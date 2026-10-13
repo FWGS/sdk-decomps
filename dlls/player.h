@@ -71,6 +71,10 @@ typedef enum
 class CBasePlayer : public CBaseMonster
 {
 public:
+	EHANDLE				m_pVehicle;		// the vehicle the player is driving
+	bool				m_bGasTank;		// picked up the gas can
+	bool				m_bClientGasTank;	// the HUD was told about the gas can
+
 	int					random_seed;    // See that is shared between client & server for shared weapons code
 
 	int					m_iPlayerSound;// the index of the sound list slot reserved for this player
@@ -137,7 +141,6 @@ public:
 	float				m_fDeadTime;			// the time at which the player died  (used in PlayerDeathThink())
 
 	BOOL			m_fNoPlayerSound;	// a debugging feature. Player makes no sound if this is true. 
-	BOOL			m_fLongJump; // does this player have the longjump module?
 
 	float       m_tSneaking;
 	int			m_iUpdateTime;		// stores the number of frame ticks before sending HUD update messages
@@ -152,6 +155,7 @@ public:
 	CBasePlayerItem *m_pActiveItem;
 	CBasePlayerItem *m_pClientActiveItem;  // client version of the active item
 	CBasePlayerItem *m_pLastItem;
+	int				m_iUnknown1208;	// never accessed
 	// shared ammo slots
 	int	m_rgAmmo[MAX_AMMO_SLOTS];
 	int	m_rgAmmoLast[MAX_AMMO_SLOTS];
@@ -220,6 +224,10 @@ public:
 	void SetAnimation( PLAYER_ANIM playerAnim );
 	void SetWeaponAnimType( const char *szExtention );
 	char m_szAnimExtention[32];
+
+	int m_iSliderPositions[MAX_WEAPONS];	// customization settings, by weapon id
+	int m_iWeaponTemps[MAX_WEAPONS];		// weapon temperatures, by weapon id
+	int m_iUnknown1940;	// never accessed
 
 	// custom player functions
 	virtual void ImpulseCommands( void );

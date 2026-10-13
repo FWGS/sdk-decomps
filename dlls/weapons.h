@@ -82,7 +82,7 @@ public:
 
 #define WEAPON_SUIT				31	// ?????
 
-#define MAX_WEAPONS			32
+#define MAX_WEAPONS			48
 
 
 #define MAX_NORMAL_BATTERY	100
@@ -206,6 +206,10 @@ typedef struct
 	int		iId;
 	int		iFlags;
 	int		iWeight;// this value used to determine this weapon's importance in autoselection.
+	const char	*pszCustomizes;	// customization items: the weapon they customize
+	int		iIsCustomization;
+	int		iCustomSettings;	// 0-5 on customization items (meaning inferred)
+	int		iCustomDefault;		// 0-3 on customization items (meaning inferred)
 } ItemInfo;
 
 typedef struct
@@ -244,6 +248,9 @@ public:
 	virtual void Holster( int skiplocal = 0 );
 	virtual void UpdateItemInfo( void ) { return; };
 
+	virtual void InventoryFrame( void ) {}	// each frame, for every item the player carries
+	virtual void Customize( char cOption, int iValue ) {}	// a "cust_" command setting
+
 	virtual void ItemPreFrame( void )	{ return; }		// called each frame by the player PreThink
 	virtual void ItemPostFrame( void ) { return; }		// called each frame by the player PostThink
 
@@ -260,6 +267,8 @@ public:
 
 	static ItemInfo ItemInfoArray[ MAX_WEAPONS ];
 	static AmmoInfo AmmoInfoArray[ MAX_AMMO_SLOTS ];
+
+	int		m_iUnknown60[10];	// never accessed by the server
 
 	CBasePlayer	*m_pPlayer;
 	CBasePlayerItem *m_pNext;
@@ -358,6 +367,9 @@ public:
 	virtual void Spawn( void );
 	void EXPORT DefaultTouch( CBaseEntity *pOther ); // default weapon touch
 	virtual BOOL AddAmmo( CBaseEntity *pOther ) { return TRUE; };
+	virtual BOOL PlayPickupSound( void ) { return !m_bNoGiveSound; }
+
+	BOOL m_bNoGiveSound;	// "nopickupsound" keyvalue
 
 	CBaseEntity* Respawn( void );
 	void EXPORT Materialize( void );

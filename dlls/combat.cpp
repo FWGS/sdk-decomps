@@ -285,6 +285,20 @@ BOOL CBaseMonster :: HasAlienGibs( void )
 }
 
 
+BOOL CBaseMonster :: HasRobotGibs( void )
+{
+	int myClass = Classify();
+
+	if ( myClass == 8 || myClass == 9 || myClass == 7 )
+		return TRUE;
+
+	if ( g_Language != LANGUAGE_GERMAN && CVAR_GET_FLOAT( "violence_germany" ) == 0 )
+		return FALSE;
+
+	return myClass == 5;
+}
+
+
 void CBaseMonster::FadeMonster( void )
 {
 	StopAnimation();

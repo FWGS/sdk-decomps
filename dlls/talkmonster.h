@@ -59,6 +59,8 @@ typedef enum
 	TLK_SMELL,
 	TLK_WOUND,
 	TLK_MORTAL,
+	TLK_KILL,
+	TLK_ATTACK,
 
 	TLK_CGROUPS,					// MUST be last entry
 } TALKGROUPNAMES;
