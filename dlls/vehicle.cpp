@@ -353,12 +353,12 @@ void CVehicleTank::WithoutPlayerThink( void )
 		return;
 	}
 
-	Vector vecForward;
-	UTIL_MakeVectorsPrivate( m_pBodyBSP->pev->angles, NULL, NULL, vecForward );
+	Vector vecUp;
+	UTIL_MakeVectorsPrivate( m_pBodyBSP->pev->angles, NULL, NULL, vecUp );
 
 	UTIL_SetOrigin( m_pBodyBSP->pev, pev->origin );
-	UTIL_SetOrigin( m_pTurretBSP->pev, pev->origin + vecForward * 70 );
-	UTIL_SetOrigin( m_pBarrelBSP->pev, pev->origin + vecForward * 82 );
+	UTIL_SetOrigin( m_pTurretBSP->pev, pev->origin + vecUp * 70 );
+	UTIL_SetOrigin( m_pBarrelBSP->pev, pev->origin + vecUp * 82 );
 }
 
 //=========================================================
@@ -674,7 +674,8 @@ void CVehicleTank::MoveTank( float flInterval )
 	vecGround.x = UTIL_AngleNormalize( vecGround.x );
 	vecGround.y = UTIL_AngleNormalize( vecGround.y );
 
-	Vector vecAvel = BodyAvelocity( UTIL_AngleDiff( pev->angles.y, vecGround.y ), vecGround );
+	Vector vecAvel;
+	vecAvel = BodyAvelocity( UTIL_AngleDiff( pev->angles.y, vecGround.y ), vecGround );
 	pev->avelocity.x = vecAvel.x;
 	pev->avelocity.z = vecAvel.z;
 	m_pBodyBSP->pev->avelocity.x = pev->avelocity.x * -1;
@@ -723,10 +724,11 @@ void CVehicleTank::MoveTank( float flInterval )
 
 	m_pBodyBSP->pev->velocity = pev->velocity;
 
-	Vector vecForward;
-	UTIL_MakeVectorsPrivate( pev->angles, vecForward, NULL, NULL );
-	m_pTurretBSP->pev->velocity = pev->origin + vecForward * 70 - m_pTurretBSP->pev->origin + pev->velocity;
-	m_pBarrelBSP->pev->velocity = pev->origin + vecForward * 82 - m_pBarrelBSP->pev->origin + pev->velocity;
+	// the turret and barrel sit on the body, along its up vector
+	Vector vecUp;
+	UTIL_MakeVectorsPrivate( pev->angles, NULL, NULL, vecUp );
+	m_pTurretBSP->pev->velocity = pev->origin + vecUp * 70 - m_pTurretBSP->pev->origin + pev->velocity;
+	m_pBarrelBSP->pev->velocity = pev->origin + vecUp * 82 - m_pBarrelBSP->pev->origin + pev->velocity;
 
 	if ( bRestore )
 		RestoreLastValid();
