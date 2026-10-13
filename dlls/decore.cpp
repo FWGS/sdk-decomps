@@ -28,6 +28,8 @@
 #include "soundent.h"
 #include "decals.h"
 #include "weapons.h"
+#include "customentity.h"
+#include "sphereexplosion.h"
 
 //=========================================================
 // CDecore - the base of the decorations: a monster that
@@ -52,8 +54,6 @@ public:
 	int m_fAnimEnd;		// +0x284: CBigFootCrush waits for it, nothing sets it
 	int m_iUnused2;		// +0x288
 };
-
-// ==== decore part A: CDecore .. CBigFootCrush (fork A) ====
 
 void CDecore::DecoreInit( void )
 {
@@ -91,7 +91,6 @@ void CDecore::KeyValue( KeyValueData *pkvd )
 	else
 		pev->frame = 0;	// sic: every other key is dropped
 }
-
 
 //=========================================================
 // decore_baboon - a dying baboon twitching on the ground
@@ -155,7 +154,6 @@ int CDecoreBaboon::PlayerTouch( CBaseEntity *pOther )
 
 IMPLEMENT_SAVERESTORE( CDecoreBaboon, CDecore );
 
-
 //=========================================================
 // decore_pipes - pipes that start on a random frame
 //=========================================================
@@ -207,7 +205,6 @@ int CDecorePipes::PlayerTouch( CBaseEntity *pOther )
 }
 
 IMPLEMENT_SAVERESTORE( CDecorePipes, CDecore );
-
 
 //=========================================================
 // decore_mushroom - a mushroom that puffs spores when a
@@ -296,7 +293,6 @@ int CDecoreMushroom::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker
 	return 0;
 }
 
-
 //=========================================================
 // decore_mushroom2 - the other mushroom
 //=========================================================
@@ -382,7 +378,6 @@ int CDecoreMushroom2::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacke
 	return 0;
 }
 
-
 //=========================================================
 // decore_cactus - pricks players who walk into it, at most
 // once a second, and breaks into pieces
@@ -448,7 +443,6 @@ void CDecoreCactus::GibMonster( void )
 	}
 }
 
-
 //=========================================================
 // decore_prickle - a small prickly plant
 //=========================================================
@@ -490,7 +484,6 @@ void CDecorePrickle::Precache( void )
 {
 	PRECACHE_MODEL( "models/prickle.mdl" );
 }
-
 
 //=========================================================
 // decore_gutspile, decore_bodygib, decore_hatgib - human
@@ -573,7 +566,6 @@ void CDecoreGutspile::Precache( void )
 	PRECACHE_MODEL( "models/gutspile.mdl" );
 }
 
-
 class CDecoreBodygib : public CDecoreHumanGibsParts
 {
 public:
@@ -592,7 +584,6 @@ void CDecoreBodygib::Precache( void )
 	PRECACHE_MODEL( "models/bodygib.mdl" );
 }
 
-
 class CDecoreHatgib : public CDecoreHumanGibsParts
 {
 public:
@@ -610,7 +601,6 @@ void CDecoreHatgib::Precache( void )
 {
 	PRECACHE_MODEL( "models/hatgib.mdl" );
 }
-
 
 //=========================================================
 // decore_icebeak - the beak frozen in a block of ice
@@ -638,7 +628,6 @@ void CDecoreIcebeak::Spawn( void )
 	pev->effects = 0;
 	pev->takedamage = DAMAGE_NO;
 }
-
 
 //=========================================================
 // decore_ice - a block of ice, with a beak inside when
@@ -754,7 +743,6 @@ void CIce::Precache( void )
 
 IMPLEMENT_SAVERESTORE( CIce, CBaseMonster );
 
-
 //=========================================================
 // decore_swampplants - swamp plants
 //=========================================================
@@ -790,7 +778,6 @@ int CDecoreSwampPlants::PlayerTouch( CBaseEntity *pOther )
 {
 	return 0;
 }
-
 
 //=========================================================
 // decore_goldskull - the golden monkey skull; it opens
@@ -854,7 +841,6 @@ int CDecoreMonkeySkull::PlayerTouch( CBaseEntity *pOther )
 }
 
 IMPLEMENT_SAVERESTORE( CDecoreMonkeySkull, CDecore );
-
 
 //=========================================================
 // decore_foot - the renesaur's foot, hidden until used;
@@ -934,10 +920,6 @@ int CBigFootCrush::PlayerTouch( CBaseEntity *pOther )
 }
 
 IMPLEMENT_SAVERESTORE( CBigFootCrush, CDecore );
-
-// ==== end of part A ====
-
-// ==== decore part B: CXenomeEmbryo .. CSpaceDebris (fork B) ====
 
 //=========================================================
 // xenome embryo: a small creature that idles, chitters now
@@ -1030,7 +1012,6 @@ void CXenomeEmbryo::Precache( void )
 	PRECACHE_SOUND( "xenome/xmbryo_idle2.wav" );
 	PRECACHE_SOUND( "xenome/xmbryo_idle3.wav" );
 }
-
 
 //=========================================================
 // sitting tube mortar: a tube that sits on the floor and,
@@ -1161,7 +1142,6 @@ TYPEDESCRIPTION	CSittingTubeMortar::m_SaveData[] =
 
 IMPLEMENT_SAVERESTORE( CSittingTubeMortar, CDecore );
 
-
 //=========================================================
 // the sack around a tube embryo
 //=========================================================
@@ -1204,7 +1184,6 @@ Schedule_t *CDecoreSack::GetSchedule( void )
 {
 	return GetScheduleOfType( SCHED_LOCKED_IDLE_STAND );
 }
-
 
 //=========================================================
 // tube embryo: an embryo floating in its sack, which
@@ -1312,7 +1291,6 @@ TYPEDESCRIPTION	CTubeEmbryo::m_SaveData[] =
 
 IMPLEMENT_SAVERESTORE( CTubeEmbryo, CBaseMonster );
 
-
 // CDecore's own defaults sit here in retail, between the tube embryo and
 // the lab stuff.
 int CDecore::PlayerTouch( CBaseEntity *pOther )
@@ -1324,7 +1302,6 @@ int CDecore::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float 
 {
 	return CBaseMonster::TakeDamage( pevInflictor, pevAttacker, flDamage, bitsDamageType );
 }
-
 
 //=========================================================
 // lab stuff: clutter on the lab tables that breaks into
@@ -1412,7 +1389,6 @@ int CDecoreLabstuff::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker
 	return 0;
 }
 
-
 //=========================================================
 // asteroid: a rock that spins in place in the sky; the
 // bigger it is, the faster it may spin
@@ -1475,7 +1451,6 @@ void CAsteroid::Spawn( void )
 	pev->nextthink = gpGlobals->time + 0.1;
 	SetTouch( NULL );
 }
-
 
 //=========================================================
 // space debris: hidden until used, then flies at its target
@@ -1622,14 +1597,6 @@ void CSpaceDebris::DebrisTouch( CBaseEntity *pOther )
 	if ( FStrEq( STRING( pev->classname ), STRING( pOther->pev->classname ) ) )
 		pev->solid = SOLID_NOT;
 }
-
-// ==== end of part B ====
-
-// ==== decore part C: CDummyBot (fork C) ====
-
-// past the header region, so the .pch replay is unchanged
-#include "customentity.h"
-#include "sphereexplosion.h"
 
 //=========================================================
 // the training bot: a battery-powered drone that floats along its
@@ -1985,8 +1952,8 @@ void CDummyBot::BotExplode( void )
 {
 	Vector vecSrc = pev->origin;
 
-	CSphereExplosion *pBig = CSphereExplosion::Create( vecSrc, this, 100, 2, 255, 7, 1, TRUE, FALSE, 0, 0, 0 );
-	CSphereExplosion *pSmall = CSphereExplosion::Create( vecSrc, this, 25, 0.5, 220, 3, 1, FALSE, FALSE, 0, 0, 0 );
+	CSphereExplosion *pBig = CSphereExplosion::CreateSphereExplosion( vecSrc, this, 100, 2, 255, 7, 1, TRUE, FALSE, 0, 0, 0 );
+	CSphereExplosion *pSmall = CSphereExplosion::CreateSphereExplosion( vecSrc, this, 25, 0.5, 220, 3, 1, FALSE, FALSE, 0, 0, 0 );
 	if ( pBig )
 		pBig->UseToggle( this, this, USE_ON, 0 );
 	if ( pSmall )
@@ -2104,6 +2071,3 @@ void CDummyBot::ClearBeams( void )
 		m_pSprite = NULL;
 	}
 }
-
-
-// ==== end of part C ====
