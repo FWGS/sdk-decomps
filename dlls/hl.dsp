@@ -434,6 +434,10 @@ SOURCE=.\shotgun.cpp
 
 SOURCE=.\spchemicalgun.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\bandit.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
