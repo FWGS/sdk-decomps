@@ -170,7 +170,7 @@ void CAiWallPlug::AiWallPlugThink( void )
 //=========================================================
 enum aicore_e {
 	AICORE_IDLE = 0,
-	AICORE_USE,
+	AICORE_PLUGIN,
 	AICORE_DRAW,
 };
 
@@ -341,7 +341,7 @@ void CAicore::PrimaryAttack( void )
 
 	if ( m_flNextAttackAnim < gpGlobals->time )
 	{
-		SendWeaponAnim( AICORE_USE );
+		SendWeaponAnim( AICORE_PLUGIN );
 		m_flNextAttackAnim = gpGlobals->time + 1.0;
 		m_flRetireWeapon = gpGlobals->time + 0.6;
 	}
