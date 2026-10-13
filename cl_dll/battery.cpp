@@ -25,6 +25,10 @@
 #include <string.h>
 #include <stdio.h>
 
+int g_HUD_number_10;	// provisional: ammo.cpp defines and sets it (CHudAmmo::VidInit)
+
+static int m_HUD_armor_graph;
+
 DECLARE_MESSAGE(m_Battery, Battery)
 
 int CHudBattery::Init(void)
@@ -45,6 +49,7 @@ int CHudBattery::VidInit(void)
 {
 	int HUD_suit_empty = gHUD.GetSpriteIndex( "suit_empty" );
 	int HUD_suit_full = gHUD.GetSpriteIndex( "suit_full" );
+	m_HUD_armor_graph = gHUD.GetSpriteIndex( "armor_graph" );
 
 	m_hSprite1 = m_hSprite2 = 0;  // delaying get sprite handles until we know the sprites are loaded
 	m_prc1 = &gHUD.GetSpriteRect( HUD_suit_empty );
@@ -74,65 +79,45 @@ int CHudBattery:: MsgFunc_Battery(const char *pszName,  int iSize, void *pbuf )
 
 int CHudBattery::Draw(float flTime)
 {
-	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_HEALTH )
-		return 1;
-
-	int r, g, b, x, y, a;
-	wrect_t rc;
-
-	rc = *m_prc2;
-	rc.top  += m_iHeight * ((float)(100-(min(100,m_iBat))) * 0.01);	// battery can go from 0 to 100 so * 0.01 goes from 0 to 1
-
-	UnpackRGB(r,g,b, RGB_YELLOWISH);
-
-	if (!(gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT)) ))
-		return 1;
-
-	// Has health changed? Flash the health #
-	if (m_fFade)
+	// Gunman: the armor number sits low on the left, with a bar above it
+	if ( !( gHUD.m_iHideHUDDisplay & HIDEHUD_HEALTH ) )
 	{
-		if (m_fFade > FADE_TIME)
-			m_fFade = FADE_TIME;
+		int x = 164;
+		int y = ScreenHeight - 63;
 
-		m_fFade -= (gHUD.m_flTimeDelta * 20);
-		if (m_fFade <= 0)
+		if ( CVAR_GET_FLOAT( "hud_smallhud" ) != 0 || ScreenWidth <= 640 )
+			x = 35;
+
+		if ( m_iBat > 99 )
 		{
-			a = 128;
-			m_fFade = 0;
+			// a hundred has its own sprite
+			SPR_Set( gHUD.GetSprite( g_HUD_number_10 ), 0, 255, 0 );
+			SPR_DrawAdditive( 0, x - 3, y, &gHUD.GetSpriteRect( g_HUD_number_10 ) );
+		}
+		else
+		{
+			gHUD.DrawHudNumber( x, y, DHN_DRAWZERO | DHN_2DIGITS, m_iBat, 0, 255, 0 );
 		}
 
-		// Fade the health number back to dim
+		if ( CVAR_GET_FLOAT( "hud_smallhud" ) == 0 && ScreenWidth > 640 )
+		{
+			wrect_t rc = gHUD.GetSpriteRect( m_HUD_armor_graph );
 
-		a = MIN_ALPHA +  (m_fFade/FADE_TIME) * 128;
+			if ( m_iBat > 96 )
+			{
+				rc.right = 96;
+			}
+			else
+			{
+				rc.right = 1;
+				if ( m_iBat )
+					rc.right = m_iBat;
+			}
 
+			SPR_Set( gHUD.GetSprite( m_HUD_armor_graph ), 255, 255, 255 );
+			SPR_DrawAdditive( 0, 27, ScreenHeight - 112, &rc );
+		}
 	}
-	else
-		a = MIN_ALPHA;
-
-	ScaleColors(r, g, b, a );
-	
-	int iOffset = (m_prc1->bottom - m_prc1->top)/6;
-
-	y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
-	x = ScreenWidth/5;
-
-	// make sure we have the right sprite handles
-	if ( !m_hSprite1 )
-		m_hSprite1 = gHUD.GetSprite( gHUD.GetSpriteIndex( "suit_empty" ) );
-	if ( !m_hSprite2 )
-		m_hSprite2 = gHUD.GetSprite( gHUD.GetSpriteIndex( "suit_full" ) );
-
-	SPR_Set(m_hSprite1, r, g, b );
-	SPR_DrawAdditive( 0,  x, y - iOffset, m_prc1);
-
-	if (rc.bottom > rc.top)
-	{
-		SPR_Set(m_hSprite2, r, g, b );
-		SPR_DrawAdditive( 0, x, y - iOffset + (rc.top - m_prc2->top), &rc);
-	}
-
-	x += (m_prc1->right - m_prc1->left);
-	x = gHUD.DrawHudNumber(x, y, DHN_3DIGITS | DHN_DRAWZERO, m_iBat, r, g, b);
 
 	return 1;
 }

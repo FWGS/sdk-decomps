@@ -213,12 +213,12 @@ void CHudSayText :: SayTextPrint( const char *pszBuf, int iBufSize, int clientIn
 	}
 
 	m_iFlags |= HUD_ACTIVE;
-	PlaySound( "misc/talk.wav", 1 );
 
+	// Gunman: no talk sound, and the text sits higher
 	if ( ScreenHeight >= 480 )
-		Y_START = ScreenHeight - 60;
+		Y_START = ScreenHeight - 100;
 	else
-		Y_START = ScreenHeight - 45;
+		Y_START = ScreenHeight - 60;
 	Y_START -= (line_height * (MAX_LINES+1));
 
 }

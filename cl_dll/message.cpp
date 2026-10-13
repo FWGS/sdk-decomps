@@ -363,7 +363,8 @@ int CHudMessage::Draw( float fTime )
 		}
 	}
 
-	for ( i = 0; i < maxHUDMessages; i++ )
+	// Gunman draws only the first message
+	for ( i = 0; i < 1; i++ )
 	{
 		if ( m_pMessages[i] )
 		{
@@ -415,17 +416,9 @@ int CHudMessage::Draw( float fTime )
 
 void CHudMessage::MessageAdd( const char *pName, float time )
 {
-	int i;
-
-	for ( i = 0; i < maxHUDMessages; i++ )
-	{
-		if ( !m_pMessages[i] )
-		{
-			m_pMessages[i] = TextMessageGet( pName );
-			m_startTime[i] = time;
-			return;
-		}
-	}
+	// Gunman shows one message at a time: a new one replaces the old
+	m_pMessages[0] = TextMessageGet( pName );
+	m_startTime[0] = time;
 }
 
 
