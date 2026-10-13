@@ -36,28 +36,27 @@ extern DLL_GLOBAL Vector		g_vecAttackDir;
 // be spawned, and still remain fairly flexible
 const char *CBreakable::pSpawnObjects[] =
 {
-	NULL,				// 0
-	"item_battery",		// 1
-	"item_healthkit",	// 2
-	"weapon_9mmhandgun",// 3
-	"ammo_9mmclip",		// 4
-	"weapon_9mmAR",		// 5
-	"ammo_9mmAR",		// 6
-	"ammo_ARgrenades",	// 7
-	"weapon_shotgun",	// 8
-	"ammo_buckshot",	// 9
-	"weapon_crossbow",	// 10
-	"ammo_crossbow",	// 11
-	"weapon_357",		// 12
-	"ammo_357",			// 13
-	"weapon_rpg",		// 14
-	"ammo_rpgclip",		// 15
-	"ammo_gaussclip",	// 16
-	"weapon_handgrenade",// 17
-	"weapon_tripmine",	// 18
-	"weapon_satchel",	// 19
-	"weapon_snark",		// 20
-	"weapon_hornetgun",	// 21
+	NULL,					// 0
+	"item_battery",			// 1
+	"item_healthkit",		// 2
+	"weapon_fists",			// 3
+	"weapon_shotgun",		// 4
+	"weapon_SPchemicalgun",	// 5
+	"weapon_beamgun",		// 6
+	"weapon_minigun",		// 7
+	"weapon_dml",			// 8
+	"weapon_gausspistol",	// 9
+	"ammo_buckshot",		// 10
+	"ammo_chemical",		// 11
+	"ammo_beamgunclip",		// 12
+	"ammo_minigunClip",		// 13
+	"ammo_dmlclip",			// 14
+	"ammo_gaussclip",		// 15
+	"weapon_gausspistol",	// 16
+	"entity_clustergod",	// 17
+	"cust_2MinigunCooled",	// 18
+	"cust_2GaussPistolSniper",// 19
+	"item_armor",			// 20
 };
 
 void CBreakable::KeyValue( KeyValueData* pkvd )
@@ -766,10 +765,10 @@ BOOL CBreakable :: IsBreakable( void )
 int	CBreakable :: DamageDecal( int bitsDamageType )
 {
 	if ( m_Material == matGlass  )
-		return DECAL_GLASSBREAK1 + RANDOM_LONG(0,2);
+		return -1;
 
-	if ( m_Material == matUnbreakableGlass )
-		return DECAL_BPROOF1;
+	if ( pev->rendermode != 7 )	// sic, no such render mode
+		return -1;
 
 	return CBaseEntity::DamageDecal( bitsDamageType );
 }

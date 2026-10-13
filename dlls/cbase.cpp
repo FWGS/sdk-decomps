@@ -225,10 +225,16 @@ void DispatchThink( edict_t *pent )
 	CBaseEntity *pEntity = (CBaseEntity *)GET_PRIVATE(pent);
 	if (pEntity)
 	{
+		float flStart = g_engfuncs.pfnTime();
+
 		if ( FBitSet( pEntity->pev->flags, FL_DORMANT ) )
 			ALERT( at_error, "Dormant entity %s is thinking!!\n", STRING(pEntity->pev->classname) );
 				
 		pEntity->Think();
+
+		float flTime = (g_engfuncs.pfnTime() - flStart) * 1000;
+		if ( flTime > 100 )
+			ALERT( at_console, "%s thought for %d ms\n", STRING(pEntity->pev->classname), (int)flTime );
 	}
 }
 
@@ -735,7 +741,7 @@ int	CBaseEntity :: DamageDecal( int bitsDamageType )
 		return -1;
 
 	if ( pev->rendermode != kRenderNormal )
-		return DECAL_BPROOF1;
+		return -1;
 
 	return DECAL_GUNSHOT1 + RANDOM_LONG(0,4);
 }
