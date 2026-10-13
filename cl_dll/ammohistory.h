@@ -72,7 +72,7 @@ public:
 		}
 	}
 
-	WEAPON* GetWeaponSlot( int slot, int pos ) { return rgSlots[slot][pos]; }
+	WEAPON* GetWeaponSlot( int slot, int pos );
 
 	void LoadWeaponSprites( WEAPON* wp );
 	void LoadAllWeaponSprites( void );

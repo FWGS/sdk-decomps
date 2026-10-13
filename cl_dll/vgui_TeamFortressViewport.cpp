@@ -2192,3 +2192,34 @@ void CTankPanel::Hide( void )
 	setVisible( false );
 }
 
+// Placeholders for the methods the ammo HUD calls, until Gunman's VGUI files
+// bring them (retail addresses next to the declarations). They draw the
+// customization menu's pages, the pickup history and the ammo panel.
+
+void CCustomizationMenu::ShowShotgun( int iShells, int iSpread, int iItem )
+{
+}
+
+void CCustomizationMenu::ShowDml( int iLaunch, int iFlightpath, int iDetonate, int iPayload, int iItem )
+{
+}
+
+void CCustomizationMenu::ShowBeamgun( int iFrequency, int iCurrent, int iVoltage, int iItem )
+{
+}
+
+void CCustomizationMenu::ShowGrenade( int iDetonate, int iPayload, int iItem )
+{
+}
+
+void CCustomizationMenu::ShowChemgun( int iItem )
+{
+}
+
+void CTankPanel::AddToHistory( int iIndex, int fWeapon )
+{
+}
+
+void CAmmoPanel::SetAmmo( int iAmmoType, int iMax )
+{
+}
