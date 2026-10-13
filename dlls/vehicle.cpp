@@ -1634,15 +1634,15 @@ void CVehicleTank::FireMachineGuns( void )
 	UTIL_MakeVectorsPrivate( vecAngles, vecForward, NULL, vecUp );
 
 	vecSrc = vecSrc + vecForward * 32;
-	Vector vecDir = ( vecForward * 2048 - vecUp * 16 ).Normalize();
+	vecForward = ( vecForward * 2048 - vecUp * 16 ).Normalize();
 
-	vecAngles = UTIL_VecToAngles( vecDir );
+	vecAngles = UTIL_VecToAngles( vecForward );
 	vecAngles.x *= -1;
 
 	Vector vecOffset = vecSrc - pev->origin;
-	PLAYBACK_EVENT_FULL( FEV_GLOBAL, ENT( pev ), m_usTankMGuns, 0.0, (float *)&vecOffset, (float *)&vecAngles, m_fTankSoundAdj, 0.0, 0, 0, 0, 0 );
+	PLAYBACK_EVENT_FULL( FEV_RELIABLE, ENT( pev ), m_usTankMGuns, 0.0, (float *)&vecOffset, (float *)&vecAngles, m_fTankSoundAdj, 0.0, 0, 0, 0, 0 );
 
-	FireBullets( 1, vecSrc, vecDir, VECTOR_CONE_4DEGREES, 8192, BULLET_PLAYER_MP5, 0, 50, m_pBodyBSP->pev );
+	FireBullets( 1, vecSrc, vecForward, VECTOR_CONE_4DEGREES, 8192, BULLET_PLAYER_MP5, 0, 50, m_pBodyBSP->pev );
 }
 
 //=========================================================
@@ -2001,68 +2001,71 @@ void CVehicleTankShell::Spawn( void )
 
 void CVehicleTankShell::ShellTouch( CBaseEntity *pOther )
 {
-	TraceResult tr;
-
 	// don't hit the tank that fired it
-	if ( FClassnameIs( pOther->pev, "vehicle_tank_turret" ) || FClassnameIs( pOther->pev, "vehicle_tank_barrel" ) )
-		return;
-
-	if ( UTIL_PointContents( pev->origin ) == CONTENTS_SKY )
+	if ( !FClassnameIs( ENT( pOther->pev ), "vehicle_tank_turret" ) && !FClassnameIs( ENT( pOther->pev ), "vehicle_tank_barrel" ) )
 	{
-		SetThink( SUB_Remove );
-		pev->nextthink = gpGlobals->time;
-		return;
+		if ( UTIL_PointContents( pev->origin ) == CONTENTS_SKY )
+		{
+			SetThink( SUB_Remove );
+			pev->nextthink = gpGlobals->time;
+			return;
+		}
+
+		EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "weapons/rocket1.wav", 0, 0, SND_STOP, PITCH_NORM );
+
+		pev->enemy = pOther->edict();
+
+		TraceResult tr;
+		Vector		vecSpot;// trace starts here!
+
+		vecSpot = pev->origin - pev->velocity.Normalize() * 32;
+		UTIL_TraceLine( vecSpot, vecSpot + pev->velocity.Normalize() * 64, ignore_monsters, ENT( pev ), &tr );
+
+		Debris( &tr, vecSpot, vecSpot + pev->velocity.Normalize() * 64 );
+
+		pev->model = iStringNull;
+		pev->solid = SOLID_NOT;
+		pev->takedamage = DAMAGE_NO;
+
+		// Pull out of the wall a bit
+		if ( tr.flFraction != 1.0 )
+			pev->origin = tr.vecEndPos + ( tr.vecPlaneNormal * 12 );
+
+		int iContents = UTIL_PointContents( pev->origin );
+
+		MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+			WRITE_BYTE( TE_EXPLOSION );
+			WRITE_COORD( pev->origin.x );
+			WRITE_COORD( pev->origin.y );
+			WRITE_COORD( pev->origin.z );
+			WRITE_SHORT( s_sShellExplosion );
+			WRITE_BYTE( 75 );	// scale * 10
+			WRITE_BYTE( 20 );	// framerate
+			WRITE_BYTE( TE_EXPLFLAG_NOPARTICLES );
+		MESSAGE_END();
+
+		Vector vecDebris = tr.vecPlaneNormal * 50;	// sic: unused
+
+		UTIL_DecalTrace( &tr, DECAL_SCORCH1 );
+
+		CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, BIG_EXPLOSION_VOLUME, 3.0 );
+
+		entvars_t *pevOwner;
+		if ( pev->owner )
+			pevOwner = VARS( pev->owner );
+		else
+			pevOwner = NULL;
+
+		pev->owner = NULL; // can't traceline attack owner if this is set
+
+		RadiusDamage( pev, pevOwner, pev->dmg, CLASS_NONE, DMG_BLAST );
+
+		pev->effects |= EF_NODRAW;
+		SetThink( ShellSmokeThink );
+		pev->nextthink = gpGlobals->time + 0.3;
+		pev->movetype = MOVETYPE_NONE;
+		pev->velocity = g_vecZero;
 	}
-
-	EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "weapons/rocket1.wav", 0, 0, SND_STOP, PITCH_NORM );
-
-	pev->enemy = pOther->edict();
-
-	Vector vecSpot = pev->origin - pev->velocity.Normalize() * 32;
-	UTIL_TraceLine( vecSpot, vecSpot + pev->velocity.Normalize() * 64, ignore_monsters, ENT( pev ), &tr );
-
-	Debris( &tr, vecSpot, vecSpot + pev->velocity.Normalize() * 64 );
-
-	pev->model = iStringNull;
-	pev->solid = SOLID_NOT;
-	pev->takedamage = DAMAGE_NO;
-
-	// Pull out of the wall a bit
-	if ( tr.flFraction != 1.0 )
-		pev->origin = tr.vecEndPos + ( tr.vecPlaneNormal * 12 );
-
-	int iContents = UTIL_PointContents( pev->origin );
-
-	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
-		WRITE_BYTE( TE_EXPLOSION );
-		WRITE_COORD( pev->origin.x );
-		WRITE_COORD( pev->origin.y );
-		WRITE_COORD( pev->origin.z );
-		WRITE_SHORT( s_sShellExplosion );
-		WRITE_BYTE( 75 );	// scale * 10
-		WRITE_BYTE( 20 );	// framerate
-		WRITE_BYTE( TE_EXPLFLAG_NOSOUND );
-	MESSAGE_END();
-
-	UTIL_DecalTrace( &tr, DECAL_SCORCH1 );
-
-	CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, NORMAL_EXPLOSION_VOLUME, 3.0 );
-
-	entvars_t *pevOwner;
-	if ( pev->owner )
-		pevOwner = VARS( pev->owner );
-	else
-		pevOwner = NULL;
-
-	pev->owner = NULL; // can't traceline attack owner if this is set
-
-	RadiusDamage( pev, pevOwner, pev->dmg, CLASS_NONE, DMG_BLAST );
-
-	pev->effects |= EF_NODRAW;
-	SetThink( ShellSmokeThink );
-	pev->nextthink = gpGlobals->time + 0.3;
-	pev->movetype = MOVETYPE_NONE;
-	pev->velocity = g_vecZero;
 }
 
 void CVehicleTankShell::OrientThink( void )
@@ -2319,111 +2322,113 @@ void CVehicleTankRocket::TankIgniteThink( void )
 void CVehicleTankRocket::RocketTouch( CBaseEntity *pOther )
 {
 	TraceResult tr;
+	Vector		vecSpot;// trace starts here!
 
 	// don't hit the tank that fired it
-	if ( FClassnameIs( pOther->pev, "vehicle_tank_turret" ) || FClassnameIs( pOther->pev, "vehicle_tank_barrel" ) )
-		return;
-
-	if ( UTIL_PointContents( pev->origin ) == CONTENTS_SKY )
+	if ( !FClassnameIs( ENT( pOther->pev ), "vehicle_tank_turret" ) && !FClassnameIs( ENT( pOther->pev ), "vehicle_tank_barrel" ) )
 	{
-		if ( m_pFlame )
+		if ( UTIL_PointContents( pev->origin ) == CONTENTS_SKY )
 		{
-			UTIL_Remove( m_pFlame );
-			m_pFlame = NULL;
-		}
-		SetThink( SUB_Remove );
-	}
-	else
-	{
-		EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "weapons/rocket1.wav", 0, 0, SND_STOP, PITCH_NORM );
-
-		pev->enemy = pOther->edict();
-
-		Vector vecSpot = pev->origin - pev->velocity.Normalize() * 32;
-		UTIL_TraceLine( vecSpot, vecSpot + pev->velocity.Normalize() * 64, ignore_monsters, ENT( pev ), &tr );
-
-		pev->model = iStringNull;
-		pev->solid = SOLID_NOT;
-		pev->takedamage = DAMAGE_NO;
-
-		pev->origin = vecSpot;
-		UTIL_SetOrigin( pev, pev->origin );
-
-		int iContents = UTIL_PointContents( pev->origin );
-		Vector vecNormal = tr.vecPlaneNormal * 50;
-
-		MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
-			WRITE_BYTE( TE_EXPLOSION );
-			WRITE_COORD( pev->origin.x );
-			WRITE_COORD( pev->origin.y );
-			WRITE_COORD( pev->origin.z );
-			WRITE_SHORT( s_sRocketExplosion );
-			WRITE_BYTE( 60 );	// scale * 10
-			WRITE_BYTE( 15 );	// framerate
-			WRITE_BYTE( TE_EXPLFLAG_NOSOUND );
-		MESSAGE_END();
-
-		UTIL_MakeVectors( pev->angles );
-		UTIL_DecalTrace( &tr, DECAL_SCORCH1 );
-
-		CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, NORMAL_EXPLOSION_VOLUME, 3.0 );
-
-		entvars_t *pevOwner;
-		if ( pev->owner )
-			pevOwner = VARS( pev->owner );
-		else
-			pevOwner = NULL;
-
-		pev->owner = NULL; // can't traceline attack owner if this is set
-
-		if ( pev->dmg )
-			::RadiusDamage( pev->origin, pev, pevOwner, pev->dmg, pev->dmg * 2.5, CLASS_NONE, DMG_BURN );
-
-		pev->effects |= EF_NODRAW;
-		pev->movetype = MOVETYPE_NONE;
-		pev->velocity = g_vecZero;
-		UTIL_SetOrigin( pev, pev->origin );
-
-		if ( m_pFlame )
-		{
-			UTIL_Remove( m_pFlame );
-			m_pFlame = NULL;
-		}
-
-		CSprite *pSprite = CSprite::SpriteCreate( "sprites/part2.spr", pev->origin, TRUE );
-		pSprite->SetScale( 7.0 );
-		pSprite->AnimateAndDie( 10 );
-		pSprite->SetTransparency( kRenderTransAlpha, 255, 255, 255, 255, kRenderFxNoDissipation );
-		pSprite->pev->frame = 0;
-		UTIL_SetOrigin( pSprite->pev, pev->origin );
-		pSprite->pev->origin.z += 16;
-
-		// a ring of flames
-		UTIL_MakeVectors( pev->angles );
-		for ( int i = 0; i < 30; i++ )
-		{
-			Vector vecFlame = gpGlobals->v_forward * RANDOM_FLOAT( -600, 600 ) + gpGlobals->v_right * RANDOM_FLOAT( -600, 600 ) + gpGlobals->v_up * RANDOM_FLOAT( -600, 600 );
-			if ( abs( (int)vecFlame.Length() ) > 99 )
+			if ( m_pFlame )
 			{
-				MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
-					WRITE_BYTE( TE_FIREFIELD );
-					WRITE_COORD( pev->origin.x );
-					WRITE_COORD( pev->origin.y );
-					WRITE_COORD( pev->origin.z );
-					WRITE_COORD( vecFlame.x );
-					WRITE_COORD( vecFlame.y );
-					WRITE_COORD( vecFlame.z );
-					WRITE_BYTE( 10 );
-					WRITE_BYTE( 5 );
-					WRITE_BYTE( 10 );
-				MESSAGE_END();
+				UTIL_Remove( m_pFlame );
+				m_pFlame = NULL;
 			}
+			SetThink( SUB_Remove );
+		}
+		else
+		{
+			EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "weapons/rocket1.wav", 0, 0, SND_STOP, PITCH_NORM );
+
+			pev->enemy = pOther->edict();
+
+			vecSpot = pev->origin - pev->velocity.Normalize() * 32;
+			UTIL_TraceLine( vecSpot, vecSpot + pev->velocity.Normalize() * 64, ignore_monsters, ENT( pev ), &tr );
+
+			pev->model = iStringNull;
+			pev->solid = SOLID_NOT;
+			pev->takedamage = DAMAGE_NO;
+
+			// Pull out of the wall a bit
+			pev->origin = pev->origin + tr.vecPlaneNormal * 20;
+			UTIL_SetOrigin( pev, pev->origin );
+
+			int iContents = UTIL_PointContents( pev->origin );
+			Vector vecDebris = tr.vecPlaneNormal * 50;	// sic: unused
+
+			MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+				WRITE_BYTE( TE_EXPLOSION );
+				WRITE_COORD( pev->origin.x );
+				WRITE_COORD( pev->origin.y );
+				WRITE_COORD( pev->origin.z );
+				WRITE_SHORT( s_sRocketExplosion );
+				WRITE_BYTE( 60 );	// scale * 10
+				WRITE_BYTE( 15 );	// framerate
+				WRITE_BYTE( TE_EXPLFLAG_NOPARTICLES );
+			MESSAGE_END();
+
+			UTIL_MakeVectors( pev->angles );
+			UTIL_DecalTrace( &tr, DECAL_SCORCH1 );
+
+			CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, BIG_EXPLOSION_VOLUME, 3.0 );
+
+			entvars_t *pevOwner;
+			if ( pev->owner )
+				pevOwner = VARS( pev->owner );
+			else
+				pevOwner = NULL;
+
+			pev->owner = NULL; // can't traceline attack owner if this is set
+
+			if ( pev->dmg )
+				::RadiusDamage( pev->origin, pev, pevOwner, pev->dmg, pev->dmg * 2.5, CLASS_NONE, DMG_BLAST );
+
+			pev->effects |= EF_NODRAW;
+			pev->movetype = MOVETYPE_NONE;
+			pev->velocity = g_vecZero;
+			UTIL_SetOrigin( pev, pev->origin );
+
+			if ( m_pFlame )
+			{
+				UTIL_Remove( m_pFlame );
+				m_pFlame = NULL;
+			}
+
+			CSprite *pSprite = CSprite::SpriteCreate( "sprites/part2.spr", pev->origin, TRUE );
+			pSprite->SetScale( 7.0 );
+			pSprite->AnimateAndDie( 10 );
+			pSprite->SetTransparency( kRenderTransAlpha, 255, 255, 255, 255, kRenderFxNoDissipation );
+			pSprite->pev->frame = 0;
+			UTIL_SetOrigin( pSprite->pev, pev->origin );
+			pSprite->pev->origin.z += 16;
+
+			// a burst of tracers
+			UTIL_MakeVectors( pev->angles );
+			for ( int i = 0; i < 30; i++ )
+			{
+				Vector vecTracer = gpGlobals->v_forward * RANDOM_FLOAT( -600, 600 ) + gpGlobals->v_right * RANDOM_FLOAT( -600, 600 ) + gpGlobals->v_up * RANDOM_FLOAT( -600, 600 );
+				if ( abs( (int)vecTracer.Length() ) >= 100 )
+				{
+					MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+						WRITE_BYTE( TE_USERTRACER );
+						WRITE_COORD( pev->origin.x );
+						WRITE_COORD( pev->origin.y );
+						WRITE_COORD( pev->origin.z );
+						WRITE_COORD( vecTracer.x );
+						WRITE_COORD( vecTracer.y );
+						WRITE_COORD( vecTracer.z );
+						WRITE_BYTE( 10 );	// life * 10
+						WRITE_BYTE( 5 );	// color
+						WRITE_BYTE( 10 );	// length * 10
+					MESSAGE_END();
+				}
+			}
+
+			SetThink( RocketSmokeThink );
 		}
 
-		SetThink( RocketSmokeThink );
+		pev->nextthink = gpGlobals->time;
 	}
-
-	pev->nextthink = gpGlobals->time;
 }
 
 void CVehicleTankRocket::RocketSmokeThink( void )
@@ -2473,7 +2478,8 @@ void CVehicleTankRocket::RocketThink( void )
 	if ( m_hEnemy != NULL )
 	{
 		float flSpeed = pev->velocity.Length();
-		Vector vecTarget = ( m_hEnemy->BodyTarget( pev->origin ) - pev->origin ).Normalize() * 128;
+		Vector vecTarget = m_hEnemy->BodyTarget( pev->origin ) - pev->origin;
+		vecTarget = vecTarget.Normalize() * 128;
 		Vector vecCurrent = pev->velocity.Normalize() * 128;
 		Vector vecTurn = vecTarget - vecCurrent;
 		if ( vecTurn.Length() > 20 )
