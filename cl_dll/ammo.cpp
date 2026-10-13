@@ -1256,10 +1256,10 @@ void CHudAmmo::UserCmd_NextWeapon(void)
 		return;
 	}
 
-	if ( CVAR_GET_FLOAT( "hud_reverseweapons" ) )
-		PrevWeapon();
-	else
+	if ( CVAR_GET_FLOAT( "hud_reverseweapons" ) == 0 )
 		NextWeapon();
+	else
+		PrevWeapon();
 }
 
 void CHudAmmo::NextWeapon(void)
@@ -1279,7 +1279,7 @@ void CHudAmmo::NextWeapon(void)
 
 		for ( int loop = 0; loop <= 1; loop++ )
 		{
-			for ( ; slot < 10; slot++ )
+			for ( ; slot <= 9; slot++ )
 			{
 				WEAPON *p = gWR.GetWeaponSlot( slot, 0 );
 
@@ -1975,17 +1975,15 @@ void CHudAmmo::DrawCustomization(void)
 
 	if ( iSettings )
 	{
-		int iSetting = gpActiveSel->iCustomSetting;
-		int i, x;
-
-		for ( i = 0, x = 38; i < gpActiveSel->iCustomSettings; i++, x += 32 )
+		int xSlider = ( iSettings * 32 / iSettings ) * gpActiveSel->iCustomSetting + 6;
+		for ( int i = 0; i < gpActiveSel->iCustomSettings; i++ )
 		{
 			SPR_Set( gHUD.GetSprite( g_HUD_chem_bar ), 0, 160, 0 );
-			SPR_DrawAdditive( 0, x, 180, &gHUD.GetSpriteRect( g_HUD_chem_bar ) );
+			SPR_DrawAdditive( 0, i * 32 + 38, 180, &gHUD.GetSpriteRect( g_HUD_chem_bar ) );
 		}
 
 		SPR_Set( gHUD.GetSprite( g_HUD_chem_slider ), 0, 255, 255 );
-		SPR_DrawAdditive( 0, ( iSettings * 32 / iSettings ) * iSetting + 6, 180, &gHUD.GetSpriteRect( g_HUD_chem_slider ) );
+		SPR_DrawAdditive( 0, xSlider, 180, &gHUD.GetSpriteRect( g_HUD_chem_slider ) );
 	}
 }
 
@@ -2040,7 +2038,7 @@ void CHudAmmo::DrawChemCustom(void)
 			SPR_DrawAdditive( 0, x, y, &gHUD.GetSpriteRect( g_HUD_vial_fl ) );
 		}
 
-		if ( gpActiveSel->iCustomSetting < 3 )
+		if ( gpActiveSel->iCustomSetting <= 2 )
 		{
 			UnpackRGB( r, g, b, RGB_YELLOWISH );
 			SPR_Set( gHUD.GetSprite( g_HUD_vial_ec ), r, g, b );
@@ -2058,7 +2056,7 @@ void CHudAmmo::DrawChemCustom(void)
 			SPR_DrawAdditive( 0, x + gHUD.GetSpriteRect( g_HUD_vial_ec ).right - gHUD.GetSpriteRect( g_HUD_vial_ec ).left, y, &gHUD.GetSpriteRect( g_HUD_vial_fc ) );
 		}
 
-		if ( gpActiveSel->iCustomSetting < 4 )
+		if ( gpActiveSel->iCustomSetting <= 3 )
 		{
 			UnpackRGB( r, g, b, RGB_YELLOWISH );
 			SPR_Set( gHUD.GetSprite( g_HUD_vial_ec ), r, g, b );
@@ -2096,7 +2094,11 @@ void CHudAmmo::DrawChemCustom(void)
 
 		if ( ScreenWidth >= 640 )
 			y += 10;
-		y += ( ScreenWidth < 640 ? 10 : 20 ) + 14;
+
+		int iGap = 20;
+		if ( ScreenWidth < 640 )
+			iGap = 10;
+		y += iGap + 14;
 	}
 
 	// the pressure
@@ -2116,8 +2118,9 @@ void CHudAmmo::DrawChemCustom(void)
 		xbar += 32;
 	}
 
+	xbar = ( 160 / gpActiveSel->iCustomSettings ) * ( gpActiveSel->iCustomSetting - 1 ) + x;
 	SPR_Set( gHUD.GetSprite( g_HUD_chem_slider ), 255, 160, 0 );
-	SPR_DrawAdditive( 0, ( 160 / gpActiveSel->iCustomSettings ) * ( gpActiveSel->iCustomSetting - 1 ) + x, y, &gHUD.GetSpriteRect( g_HUD_chem_slider ) );
+	SPR_DrawAdditive( 0, xbar, y, &gHUD.GetSpriteRect( g_HUD_chem_slider ) );
 
 	gpActiveSel = pSave;
 
@@ -2243,11 +2246,12 @@ void CHudAmmo::DrawGrenadeCustom(void)
 //
 void CHudAmmo::DrawGaussCustom(void)
 {
-	gpActiveSel = gWR.GetWeapon( 31 );	// WEAPON_CUST_FIRETYPE
-
 	int x = -( gHUD.GetSpriteRect( g_HUD_pulse ).right - gHUD.GetSpriteRect( g_HUD_pulse ).left ) * 3 / 2 + ScreenWidth / 2;
 
+	gpActiveSel = gWR.GetWeapon( 31 );	// WEAPON_CUST_FIRETYPE
+
 	WEAPON *pScope = gWR.GetWeaponSlot( 9, 19 );
+	int iOffset;
 
 	if ( gWR.HasAmmo( pScope ) )
 		x -= ( gHUD.GetSpriteRect( g_HUD_sniper ).right - gHUD.GetSpriteRect( g_HUD_sniper ).left ) / 2;
@@ -2263,56 +2267,63 @@ void CHudAmmo::DrawGaussCustom(void)
 		SPR_DrawAdditive( 0, x, 35, &gHUD.GetSpriteRect( g_HUD_pulse ) );
 	}
 
+	iOffset = ScreenWidth >= 640 ? 64 : 32;
+
 	if ( gpActiveSel->iCustomSetting == 2 )
 	{
 		SPR_Set( gHUD.GetSprite( g_HUD_chargeAct ), 255, 255, 255 );
-		SPR_DrawAdditive( 0, x + ( ScreenWidth < 640 ? 32 : 64 ), 35, &gHUD.GetSpriteRect( g_HUD_chargeAct ) );
+		SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_chargeAct ) );
 	}
 	else
 	{
 		SPR_Set( gHUD.GetSprite( g_HUD_charge ), 255, 255, 255 );
-		SPR_DrawAdditive( 0, x + ( ScreenWidth < 640 ? 32 : 64 ), 35, &gHUD.GetSpriteRect( g_HUD_charge ) );
+		SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_charge ) );
 	}
+
+	iOffset = ScreenWidth >= 640 ? 124 : 62;
 
 	if ( gpActiveSel->iCustomSetting == 3 )
 	{
 		if ( gWR.HasAmmo( pScope ) )
 		{
 			SPR_Set( gHUD.GetSprite( g_HUD_rapidSnipeAct ), 255, 255, 255 );
-			SPR_DrawAdditive( 0, x + ( ScreenWidth < 640 ? 62 : 124 ), 35, &gHUD.GetSpriteRect( g_HUD_rapidSnipeAct ) );
+			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_rapidSnipeAct ) );
 		}
 		else
 		{
 			SPR_Set( gHUD.GetSprite( g_HUD_rapidAct ), 255, 255, 255 );
-			SPR_DrawAdditive( 0, x + ( ScreenWidth < 640 ? 62 : 124 ), 35, &gHUD.GetSpriteRect( g_HUD_rapidAct ) );
+			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_rapidAct ) );
 		}
 	}
 	else
 	{
-		if ( !gWR.HasAmmo( pScope ) )
+		if ( gWR.HasAmmo( pScope ) )
 		{
-			SPR_Set( gHUD.GetSprite( g_HUD_rapid ), 255, 255, 255 );
-			SPR_DrawAdditive( 0, x + ( ScreenWidth < 640 ? 62 : 124 ), 35, &gHUD.GetSpriteRect( g_HUD_rapid ) );
+			SPR_Set( gHUD.GetSprite( g_HUD_rapidSnipe ), 255, 255, 255 );
+			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_rapidSnipe ) );
 		}
 		else
 		{
-			SPR_Set( gHUD.GetSprite( g_HUD_rapidSnipe ), 255, 255, 255 );
-			SPR_DrawAdditive( 0, x + ( ScreenWidth < 640 ? 62 : 124 ), 35, &gHUD.GetSpriteRect( g_HUD_rapidSnipe ) );
+			SPR_Set( gHUD.GetSprite( g_HUD_rapid ), 255, 255, 255 );
+			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_rapid ) );
 		}
 	}
 
+	iOffset = ScreenWidth >= 640 ? 175 : 87;
+
 	if ( gpActiveSel->iCustomSetting == 4 )
 	{
-		// lost the scope: back to rapid fire
-		if ( !gWR.HasAmmo( pScope ) )
+		if ( gWR.HasAmmo( pScope ) )
 		{
+			SPR_Set( gHUD.GetSprite( g_HUD_sniperAct ), 255, 255, 255 );
+			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_sniperAct ) );
+		}
+		else
+		{
+			// lost the scope: back to rapid fire
 			gpActiveSel->iCustomSetting = 3;
 			SendCustomization();
-			return;
 		}
-
-		SPR_Set( gHUD.GetSprite( g_HUD_sniperAct ), 255, 255, 255 );
-		SPR_DrawAdditive( 0, x + ( ScreenWidth < 640 ? 87 : 175 ), 35, &gHUD.GetSpriteRect( g_HUD_sniperAct ) );
 	}
 	else
 	{
@@ -2320,7 +2331,7 @@ void CHudAmmo::DrawGaussCustom(void)
 			return;
 
 		SPR_Set( gHUD.GetSprite( g_HUD_sniper ), 255, 255, 255 );
-		SPR_DrawAdditive( 0, x + ( ScreenWidth < 640 ? 87 : 175 ), 35, &gHUD.GetSpriteRect( g_HUD_sniper ) );
+		SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_sniper ) );
 	}
 }
 
