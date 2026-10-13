@@ -1144,15 +1144,12 @@ int CVehicleTank::CornerBlocked( int iStartForward, int iEndForward, int iStartR
 		return 1;
 	}
 
-	Vector vecAngles = m_pBodyBSP->pev->angles + pev->avelocity * 0.1;
 	Vector vecForward, vecRight, vecUp;
-	UTIL_MakeVectorsPrivate( vecAngles, vecForward, vecRight, vecUp );
+	Vector vecStart, vecEnd;
+	UTIL_MakeVectorsPrivate( m_pBodyBSP->pev->angles + pev->avelocity * 0.1, vecForward, vecRight, vecUp );
 
-	float flSpeed = vecVelocity.Length();
-	Vector vecMove = vecVelocity.Normalize() * flSpeed * flInterval;
-
-	Vector vecStart = pev->origin + vecMove + vecForward * iStartForward * ( VehicleLength() + flDist ) + vecRight * iStartRight * ( VehicleWidth() + flDist ) + vecUp * 32;
-	Vector vecEnd = pev->origin + vecMove + vecForward * iEndForward * ( VehicleLength() + flDist ) + vecRight * iEndRight * ( VehicleWidth() + flDist ) + vecUp * 32;
+	vecStart = pev->origin + vecVelocity.Normalize() * vecVelocity.Length() * flInterval + iStartForward * vecForward * ( VehicleLength() + flDist ) + vecRight * iStartRight * ( VehicleWidth() + flDist ) + vecUp * 32;
+	vecEnd = pev->origin + vecVelocity.Normalize() * vecVelocity.Length() * flInterval + iEndForward * vecForward * ( VehicleLength() + flDist ) + vecRight * iEndRight * ( VehicleWidth() + flDist ) + vecUp * 32;
 
 	if ( UTIL_PointContents( vecStart ) == CONTENTS_SOLID && UTIL_PointContents( vecEnd ) == CONTENTS_SOLID )
 		return CornerBlocked( iStartForward, iEndForward, iStartRight, iEndRight, vecVelocity, flInterval, flDist - 2 );
