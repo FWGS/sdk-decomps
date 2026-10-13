@@ -74,7 +74,13 @@ BOOL CHealthKit::MyTouch( CBasePlayer *pPlayer )
 			WRITE_STRING( STRING(pev->classname) );
 		MESSAGE_END();
 
-		EMIT_SOUND(ENT(pPlayer->pev), CHAN_ITEM, "items/smallmedkit1.wav", 1, ATTN_NORM);
+		// tell whoever made the kit that it's gone
+		CBaseEntity *pOwner = CBaseEntity::Instance( pev->owner );
+		if ( pOwner )
+			pOwner->DeathNotice( pev );
+
+		if ( PlayPickupSound() )
+			EMIT_SOUND(ENT(pPlayer->pev), CHAN_ITEM, "items/smallmedkit1.wav", 1, ATTN_NORM);
 
 		if ( g_pGameRules->ItemShouldRespawn( this ) )
 		{
@@ -171,6 +177,9 @@ void CWallHealth::Precache()
 	PRECACHE_SOUND("items/medshot4.wav");
 	PRECACHE_SOUND("items/medshotno1.wav");
 	PRECACHE_SOUND("items/medcharge4.wav");
+	PRECACHE_SOUND("items/mayancharger_deny.wav");
+	PRECACHE_SOUND("items/mayancharger_loop.wav");
+	PRECACHE_SOUND("items/mayancharger_start.wav");
 }
 
 
@@ -196,7 +205,10 @@ void CWallHealth::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE u
 		if (m_flSoundTime <= gpGlobals->time)
 		{
 			m_flSoundTime = gpGlobals->time + 0.62;
-			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/medshotno1.wav", 1.0, ATTN_NORM );
+			if ( strstr( STRING( gpGlobals->mapname ), "mayan" ) )
+				EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/mayancharger_deny.wav", 1.0, ATTN_NORM );
+			else
+				EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/medshotno1.wav", 1.0, ATTN_NORM );
 		}
 		return;
 	}
@@ -213,13 +225,19 @@ void CWallHealth::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE u
 	if (!m_iOn)
 	{
 		m_iOn++;
-		EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/medshot4.wav", 1.0, ATTN_NORM );
+		if ( strstr( STRING( gpGlobals->mapname ), "mayan" ) )
+			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/mayancharger_start.wav", 1.0, ATTN_NORM );
+		else
+			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/medshot4.wav", 1.0, ATTN_NORM );
 		m_flSoundTime = 0.56 + gpGlobals->time;
 	}
 	if ((m_iOn == 1) && (m_flSoundTime <= gpGlobals->time))
 	{
 		m_iOn++;
-		EMIT_SOUND(ENT(pev), CHAN_STATIC, "items/medcharge4.wav", 1.0, ATTN_NORM );
+		if ( strstr( STRING( gpGlobals->mapname ), "mayan" ) )
+			EMIT_SOUND(ENT(pev), CHAN_STATIC, "items/mayancharger_loop.wav", 1.0, ATTN_NORM );
+		else
+			EMIT_SOUND(ENT(pev), CHAN_STATIC, "items/medcharge4.wav", 1.0, ATTN_NORM );
 	}
 
 
@@ -235,6 +253,9 @@ void CWallHealth::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE u
 
 void CWallHealth::Recharge(void)
 {
+	if ( strstr( STRING( gpGlobals->mapname ), "mayan" ) )
+		EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/mayancharger_start.wav", 1.0, ATTN_NORM );
+	else
 		EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/medshot4.wav", 1.0, ATTN_NORM );
 	m_iJuice = gSkillData.healthchargerCapacity;
 	pev->frame = 0;			
@@ -245,7 +266,12 @@ void CWallHealth::Off(void)
 {
 	// Stop looping sound.
 	if (m_iOn > 1)
-		STOP_SOUND( ENT(pev), CHAN_STATIC, "items/medcharge4.wav" );
+	{
+		if ( strstr( STRING( gpGlobals->mapname ), "mayan" ) )
+			STOP_SOUND( ENT(pev), CHAN_STATIC, "items/mayancharger_loop.wav" );
+		else
+			STOP_SOUND( ENT(pev), CHAN_STATIC, "items/medcharge4.wav" );
+	}
 
 	m_iOn = 0;
 

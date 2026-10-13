@@ -30,6 +30,7 @@
 #include "gamerules.h"
 
 extern int gmsgItemPickup;
+extern int gmsgTank;
 
 class CWorldItem : public CBaseEntity
 {
@@ -61,15 +62,6 @@ void CWorldItem::Spawn( void )
 	case 44: // ITEM_BATTERY:
 		pEntity = CBaseEntity::Create( "item_battery", pev->origin, pev->angles );
 		break;
-	case 42: // ITEM_ANTIDOTE:
-		pEntity = CBaseEntity::Create( "item_antidote", pev->origin, pev->angles );
-		break;
-	case 43: // ITEM_SECURITY:
-		pEntity = CBaseEntity::Create( "item_security", pev->origin, pev->angles );
-		break;
-	case 45: // ITEM_SUIT:
-		pEntity = CBaseEntity::Create( "item_suit", pev->origin, pev->angles );
-		break;
 	}
 
 	if (!pEntity)
@@ -87,6 +79,34 @@ void CWorldItem::Spawn( void )
 }
 
 
+TYPEDESCRIPTION	CItem::m_SaveData[] = 
+{
+	DEFINE_FIELD( CItem, m_bNoGiveSound, FIELD_BOOLEAN ),
+};
+
+IMPLEMENT_SAVERESTORE( CItem, CBaseEntity );
+
+CItem::CItem()
+{
+	m_bNoGiveSound = FALSE;
+}
+
+BOOL CItem::MyTouch( CBasePlayer *pPlayer )
+{
+	return FALSE;
+}
+
+void CItem::KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "nopickupsound"))
+	{
+		m_bNoGiveSound = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CBaseEntity::KeyValue( pkvd );
+}
+
 void CItem::Spawn( void )
 {
 	pev->movetype = MOVETYPE_TOSS;
@@ -100,6 +120,37 @@ void CItem::Spawn( void )
 		ALERT(at_error, "Item %s fell out of level at %f,%f,%f", STRING( pev->classname ), pev->origin.x, pev->origin.y, pev->origin.z);
 		UTIL_Remove( this );
 		return;
+	}
+
+	SetThink( GlowThink );
+	pev->nextthink = gpGlobals->time;
+}
+
+//=========================================================
+// GlowThink - pulse a glow shell around the item
+//=========================================================
+void CItem::GlowThink( void )
+{
+	if ( pev->effects & EF_NODRAW )
+	{
+		SetThink( NULL );
+		return;
+	}
+
+	if ( pev->renderfx != kRenderFxGlowShell )
+	{
+		pev->effects |= EF_MUZZLEFLASH;
+		pev->renderfx = kRenderFxGlowShell;
+		pev->renderamt = 30;
+		pev->rendercolor.x = 0;
+		pev->rendercolor.y = 100;
+		pev->rendercolor.z = 50;
+		pev->nextthink = gpGlobals->time + 2.2;
+	}
+	else
+	{
+		pev->renderfx = kRenderFxNone;
+		pev->nextthink = gpGlobals->time + 5.0;
 	}
 }
 
@@ -164,43 +215,12 @@ void CItem::Materialize( void )
 		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "items/suitchargeok1.wav", 1, ATTN_NORM, 0, 150 );
 		pev->effects &= ~EF_NODRAW;
 		pev->effects |= EF_MUZZLEFLASH;
+		SetThink( GlowThink );
+		pev->nextthink = gpGlobals->time;
 	}
 
 	SetTouch( ItemTouch );
 }
-
-#define SF_SUIT_SHORTLOGON		0x0001
-
-class CItemSuit : public CItem
-{
-	void Spawn( void )
-	{ 
-		Precache( );
-		SET_MODEL(ENT(pev), "models/w_suit.mdl");
-		CItem::Spawn( );
-	}
-	void Precache( void )
-	{
-		PRECACHE_MODEL ("models/w_suit.mdl");
-	}
-	BOOL MyTouch( CBasePlayer *pPlayer )
-	{
-		if ( pPlayer->pev->weapons & (1<<WEAPON_SUIT) )
-			return FALSE;
-
-		if ( pev->spawnflags & SF_SUIT_SHORTLOGON )
-			EMIT_SOUND_SUIT(pPlayer->edict(), "!HEV_A0");		// short version of suit logon,
-		else
-			EMIT_SOUND_SUIT(pPlayer->edict(), "!HEV_AAx");	// long version of suit logon
-
-		pPlayer->pev->weapons |= (1<<WEAPON_SUIT);
-		return TRUE;
-	}
-};
-
-LINK_ENTITY_TO_CLASS(item_suit, CItemSuit);
-
-
 
 class CItemBattery : public CItem
 {
@@ -226,7 +246,8 @@ class CItemBattery : public CItem
 			pPlayer->pev->armorvalue += gSkillData.batteryCapacity;
 			pPlayer->pev->armorvalue = min(pPlayer->pev->armorvalue, MAX_NORMAL_BATTERY);
 
-			EMIT_SOUND( pPlayer->edict(), CHAN_ITEM, "items/gunpickup2.wav", 1, ATTN_NORM );
+			if ( PlayPickupSound() )
+				EMIT_SOUND( pPlayer->edict(), CHAN_ITEM, "items/gunpickup2.wav", 1, ATTN_NORM );
 
 			MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
 				WRITE_STRING( STRING(pev->classname) );
@@ -253,48 +274,96 @@ class CItemBattery : public CItem
 LINK_ENTITY_TO_CLASS(item_battery, CItemBattery);
 
 
-class CItemAntidote : public CItem
+//=========================================================
+// item_armor - armor that doesn't need the suit
+//=========================================================
+class CItemArmor : public CItem
 {
 	void Spawn( void )
 	{ 
 		Precache( );
-		SET_MODEL(ENT(pev), "models/w_antidote.mdl");
+		SET_MODEL(ENT(pev), "models/w_armor.mdl");
 		CItem::Spawn( );
 	}
 	void Precache( void )
 	{
-		PRECACHE_MODEL ("models/w_antidote.mdl");
+		PRECACHE_MODEL ("models/w_armor.mdl");
+		PRECACHE_SOUND( "items/gunpickup2.wav" );
 	}
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{
-		pPlayer->SetSuitUpdate("!HEV_DET4", FALSE, SUIT_NEXT_IN_1MIN);
+		if (pPlayer->pev->armorvalue < MAX_NORMAL_BATTERY)
+		{
+			int pct;
+			char szcharge[64];
+
+			pPlayer->pev->armorvalue += gSkillData.armorsuitCapacity;
+			pPlayer->pev->armorvalue = min(pPlayer->pev->armorvalue, MAX_NORMAL_BATTERY);
+
+			if ( PlayPickupSound() )
+				EMIT_SOUND( pPlayer->edict(), CHAN_ITEM, "items/gunpickup2.wav", 1, ATTN_NORM );
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
+				WRITE_STRING( STRING(pev->classname) );
+			MESSAGE_END();
+
+			pct = (int)( (float)(pPlayer->pev->armorvalue * 100.0) * (1.0/MAX_NORMAL_BATTERY) + 0.5);
+			pct = (pct / 5);
+			if (pct > 0)
+				pct--;
 		
-		pPlayer->m_rgItems[ITEM_ANTIDOTE] += 1;
-		return TRUE;
+			sprintf( szcharge,"!HEV_%1dP", pct );
+			
+			if ( PlayPickupSound() )
+				pPlayer->SetSuitUpdate(szcharge, FALSE, SUIT_NEXT_IN_30SEC);
+			return TRUE;		
+		}
+		return FALSE;
 	}
 };
 
-LINK_ENTITY_TO_CLASS(item_antidote, CItemAntidote);
+LINK_ENTITY_TO_CLASS(item_armor, CItemArmor);
 
 
-class CItemSecurity : public CItem
+//=========================================================
+// item_gastank, item_gascan - the tank's gas can
+//=========================================================
+class CItemGasCan : public CItem
 {
 	void Spawn( void )
 	{ 
 		Precache( );
-		SET_MODEL(ENT(pev), "models/w_security.mdl");
+		SET_MODEL(ENT(pev), "models/gastank.mdl");
 		CItem::Spawn( );
 	}
 	void Precache( void )
 	{
-		PRECACHE_MODEL ("models/w_security.mdl");
+		PRECACHE_MODEL ("models/gastank.mdl");
+		PRECACHE_SOUND( "tank/gaspickup.wav" );
 	}
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{
-		pPlayer->m_rgItems[ITEM_SECURITY] += 1;
+		if ( pPlayer->m_bGasTank )
+			return FALSE;
+
+		pPlayer->m_bGasTank = true;
+		pPlayer->m_bClientGasTank = true;
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgTank, NULL, pPlayer->pev );
+			WRITE_SHORT( 3 );
+		MESSAGE_END();
+
+		if ( PlayPickupSound() )
+			EMIT_SOUND( pPlayer->edict(), CHAN_ITEM, "tank/gaspickup.wav", 1, ATTN_NORM );
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
+			WRITE_STRING( STRING(pev->classname) );
+		MESSAGE_END();
+
 		return TRUE;
 	}
 };
 
-LINK_ENTITY_TO_CLASS(item_security, CItemSecurity);
+LINK_ENTITY_TO_CLASS(item_gastank, CItemGasCan);
+LINK_ENTITY_TO_CLASS(item_gascan, CItemGasCan);
 

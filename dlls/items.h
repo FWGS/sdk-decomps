@@ -19,12 +19,19 @@
 class CItem : public CBaseEntity
 {
 public:
+	CItem();
+	void	KeyValue( KeyValueData *pkvd );
 	void	Spawn( void );
 	CBaseEntity*	Respawn( void );
 	void	EXPORT ItemTouch( CBaseEntity *pOther );
 	void	EXPORT Materialize( void );
-	virtual BOOL MyTouch( CBasePlayer *pPlayer ) { return FALSE; };
+	void	EXPORT GlowThink( void );
+	virtual BOOL MyTouch( CBasePlayer *pPlayer );
 	virtual BOOL PlayPickupSound( void ) { return !m_bNoGiveSound; }
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
 
 	BOOL m_bNoGiveSound;	// "nopickupsound" keyvalue
 };
