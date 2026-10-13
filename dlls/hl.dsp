@@ -404,6 +404,10 @@ SOURCE=.\speakers.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\boulder.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\gunman_pending.cpp
 # End Source File
 # Begin Source File
