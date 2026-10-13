@@ -42,6 +42,7 @@
 #define FL_IMMUNE_WATER			(1<<17)
 #define	FL_IMMUNE_SLIME			(1<<18)
 #define FL_IMMUNE_LAVA			(1<<19)
+#define FL_INVEHICLE			FL_IMMUNE_LAVA	// Gunman: drives a vehicle
 
 //#define FL_ARCHIVE_OVERRIDE		(1<<20)	// NOT USED
 #define FL_ALWAYSTHINK			(1<<21)	// Brush model flag -- call think every frame regardless of nextthink - ltime (for constantly changing velocity/path)

@@ -2014,7 +2014,8 @@ void PM_Duck( void )
 					 ( pmove->onground == -1 ) )
 				{
 					pmove->usehull = 1;
-					pmove->view_ofs[2] = VEC_DUCK_VIEW;
+					if ( !( pmove->flags & FL_INVEHICLE ) )
+						pmove->view_ofs[2] = VEC_DUCK_VIEW;
 					pmove->flags |= FL_DUCKING;
 					pmove->bInDuck = false;
 
@@ -2038,7 +2039,10 @@ void PM_Duck( void )
 
 					// Calc parametric time
 					duckFraction = PM_SplineFraction( time, (1.0/TIME_TO_DUCK) );
-					pmove->view_ofs[2] = ((VEC_DUCK_VIEW - fMore ) * duckFraction) + (VEC_VIEW * (1-duckFraction));
+					if ( !( pmove->flags & FL_INVEHICLE ) )
+						pmove->view_ofs[2] = ((VEC_DUCK_VIEW - fMore ) * duckFraction) + (VEC_VIEW * (1-duckFraction));
+					else
+						pmove->view_ofs[2] = ((VEC_VIEW - fMore ) * duckFraction) + (VEC_VIEW * (1-duckFraction));
 				}
 			}
 		}
@@ -3017,7 +3021,19 @@ void PM_PlayerMove ( qboolean server )
 		break;
 
 	case MOVETYPE_NOCLIP:
-		PM_NoClip();
+		if ( !( pmove->flags & FL_INVEHICLE ) )
+		{
+			PM_NoClip();
+		}
+		else
+		{
+			// the vehicle moves us
+			int i;
+			float frametime = pmove->frametime;
+
+			for ( i = 0; i < 3; i++ )
+				pmove->origin[i] += frametime * pmove->velocity[i];
+		}
 		break;
 
 	case MOVETYPE_TOSS:
