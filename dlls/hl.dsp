@@ -560,6 +560,10 @@ SOURCE=.\hostilescientist.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\tube.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\camera.cpp
 # End Source File
 # Begin Source File
