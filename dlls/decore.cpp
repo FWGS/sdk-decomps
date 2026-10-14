@@ -1678,7 +1678,7 @@ void CDummyBot::Spawn( void )
 	UTIL_SetOrigin( pev, pev->origin );
 	SetTouch( NULL );
 
-	if ( !pev->target )
+	if ( FStringNull( pev->target ) )
 		pev->target = ALLOC_STRING( "bot1" );
 
 	edict_t *pentTarget = FIND_ENTITY_BY_TARGETNAME( NULL, STRING( pev->target ) );
@@ -1691,7 +1691,8 @@ void CDummyBot::Spawn( void )
 
 	m_fSpeed = RANDOM_FLOAT( 75, 175 ) * 2;
 	m_flSlowDown = gpGlobals->time + 4.0;
-	pev->velocity = ( m_vGoalPos - pev->origin ).Normalize( ) * m_fSpeed;
+	Vector vecDir = m_vGoalPos - pev->origin;
+	pev->velocity = vecDir.Normalize( ) * m_fSpeed;
 
 	CreateBeams( );
 	MonsterInit( );
