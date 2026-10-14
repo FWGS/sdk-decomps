@@ -34,8 +34,8 @@ LINK_ENTITY_TO_CLASS( weapon_fists, CFists );
 #ifndef CLIENT_DLL
 TYPEDESCRIPTION	CFists::m_SaveData[] =
 {
-	DEFINE_FIELD( CFists, m_iWeapon, FIELD_INTEGER ),
 	DEFINE_FIELD( CFists, m_flDrawAnimTime, FIELD_TIME ),
+	DEFINE_FIELD( CFists, m_iWeapon, FIELD_INTEGER ),
 };
 IMPLEMENT_SAVERESTORE( CFists, CBasePlayerWeapon );
 #endif
