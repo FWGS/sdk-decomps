@@ -70,15 +70,14 @@ CDeathNoticePanel::CDeathNoticePanel( int iTrans, int iRemoveMe, int x, int y, i
 
 	SchemeHandle_t hTextScheme = pSchemes->getSchemeHandle( "Death Notice Text" );
 
-	int iY;
-	for ( i = 0, iY = 0; i < m_iMaxLines; i++ )
+	for ( i = 0; i < m_iMaxLines; i++ )
 	{
-		m_Notices[i].pIcon = new CImageLabel( m_pIcons[0], 0, iY, 64, 32 );
+		m_Notices[i].pIcon = new CImageLabel( m_pIcons[0], 0, i * 36, 64, 32 );
 		m_Notices[i].pIcon->setParent( this );
 		m_Notices[i].pIcon->setVisible( false );
 		m_Notices[i].flHideTime = 0;
 
-		m_Notices[i].pKiller = new TextPanel( "longest_player_name", 0, iY, 128, 64 );
+		m_Notices[i].pKiller = new TextPanel( "longest_player_name", 0, i * 36, 128, 64 );
 		m_Notices[i].pKiller->setParent( this );
 		m_Notices[i].pKiller->setFont( pSchemes->getFont( hTextScheme ) );
 		pSchemes->getFgColor( hTextScheme, r, g, b, a );
@@ -89,7 +88,7 @@ CDeathNoticePanel::CDeathNoticePanel( int iTrans, int iRemoveMe, int x, int y, i
 		m_Notices[i].pKiller->setSize( iKillerWide, iKillerTall );
 		m_Notices[i].pKiller->setVisible( false );
 
-		m_Notices[i].pVictim = new TextPanel( "longest_player_name", iKillerWide + 128, iY, 128, 64 );
+		m_Notices[i].pVictim = new TextPanel( "longest_player_name", iKillerWide + 128, i * 36, 128, 64 );
 		m_Notices[i].pVictim->setParent( this );
 		m_Notices[i].pVictim->setFont( pSchemes->getFont( hTextScheme ) );
 		pSchemes->getFgColor( hTextScheme, r, g, b, a );
@@ -100,7 +99,6 @@ CDeathNoticePanel::CDeathNoticePanel( int iTrans, int iRemoveMe, int x, int y, i
 		m_Notices[i].pVictim->setSize( iVictimWide, iVictimTall );
 		m_Notices[i].pVictim->setVisible( false );
 
-		iY += 36;
 		m_Notices[i].iLine = 0;
 	}
 
@@ -148,6 +146,30 @@ static int DeathNoticeIcon( const char *pszKilledWith )
 	return DEATH_ICON_SKULL;
 }
 
+// Put a notice on its line, or hide it once it has gone off the top
+inline void PlaceNotice( deathnotice_t *pNotice )
+{
+	if ( pNotice->iLine < 0 )
+	{
+		pNotice->iLine = 0;
+		pNotice->pIcon->setVisible( false );
+		pNotice->pKiller->setVisible( false );
+		pNotice->pVictim->setVisible( false );
+	}
+	else
+	{
+		int x, y;
+		int iY = pNotice->iLine * 36;
+
+		pNotice->pKiller->getPos( x, y );
+		pNotice->pKiller->setPos( x, iY );
+		pNotice->pIcon->getPos( x, y );
+		pNotice->pIcon->setPos( x, iY );
+		pNotice->pVictim->getPos( x, y );
+		pNotice->pVictim->setPos( x, iY );
+	}
+}
+
 // A death: killer, icon and victim on the next line; when the lines are
 // full, all move up one first
 void CDeathNoticePanel::AddNotice( char *pszKilledWith, char *pszKiller, char *pszVictim )
@@ -166,25 +188,8 @@ void CDeathNoticePanel::AddNotice( char *pszKilledWith, char *pszKiller, char *p
 	{
 		for ( int i = 0; i < m_iMaxLines; i++ )
 		{
-			if ( --m_Notices[i].iLine < 0 )
-			{
-				m_Notices[i].iLine = 0;
-				m_Notices[i].pIcon->setVisible( false );
-				m_Notices[i].pKiller->setVisible( false );
-				m_Notices[i].pVictim->setVisible( false );
-			}
-			else
-			{
-				int x, y;
-				int iY = m_Notices[i].iLine * 36;
-
-				m_Notices[i].pKiller->getPos( x, y );
-				m_Notices[i].pKiller->setPos( x, iY );
-				m_Notices[i].pIcon->getPos( x, y );
-				m_Notices[i].pIcon->setPos( x, iY );
-				m_Notices[i].pVictim->getPos( x, y );
-				m_Notices[i].pVictim->setPos( x, iY );
-			}
+			m_Notices[i].iLine--;
+			PlaceNotice( &m_Notices[i] );
 		}
 
 		m_iLine = m_iMaxLines - 1;
@@ -218,26 +223,7 @@ void CDeathNoticePanel::AddNotice( char *pszKilledWith, char *pszKiller, char *p
 
 	m_Notices[m_iNext].iLine = m_iLine;
 
-	deathnotice_t *pNotice = &m_Notices[m_iNext];
-	if ( pNotice->iLine < 0 )
-	{
-		pNotice->iLine = 0;
-		pNotice->pIcon->setVisible( false );
-		pNotice->pKiller->setVisible( false );
-		pNotice->pVictim->setVisible( false );
-	}
-	else
-	{
-		int x, y;
-		int iY = pNotice->iLine * 36;
-
-		pNotice->pKiller->getPos( x, y );
-		pNotice->pKiller->setPos( x, iY );
-		pNotice->pIcon->getPos( x, y );
-		pNotice->pIcon->setPos( x, iY );
-		pNotice->pVictim->getPos( x, y );
-		pNotice->pVictim->setPos( x, iY );
-	}
+	PlaceNotice( &m_Notices[m_iNext] );
 
 	m_iLine++;
 	m_iNumShown++;
@@ -270,25 +256,7 @@ void CDeathNoticePanel::paintBackground( void )
 		for ( int j = 0; j < m_iMaxLines; j++ )
 		{
 			m_Notices[j].iLine--;
-			if ( m_Notices[j].iLine < 0 )
-			{
-				m_Notices[j].iLine = 0;
-				m_Notices[j].pIcon->setVisible( false );
-				m_Notices[j].pKiller->setVisible( false );
-				m_Notices[j].pVictim->setVisible( false );
-			}
-			else
-			{
-				int x, y;
-				int iY = m_Notices[j].iLine * 36;
-
-				m_Notices[j].pKiller->getPos( x, y );
-				m_Notices[j].pKiller->setPos( x, iY );
-				m_Notices[j].pIcon->getPos( x, y );
-				m_Notices[j].pIcon->setPos( x, iY );
-				m_Notices[j].pVictim->getPos( x, y );
-				m_Notices[j].pVictim->setPos( x, iY );
-			}
+			PlaceNotice( &m_Notices[j] );
 		}
 
 		if ( --m_iLine < 0 )
