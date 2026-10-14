@@ -25,7 +25,7 @@
 #include <string.h>
 #include <stdio.h>
 
-int g_HUD_number_10;	// provisional: ammo.cpp defines and sets it (CHudAmmo::VidInit)
+extern int g_HUD_number_10;
 
 static int m_HUD_armor_graph;
 
