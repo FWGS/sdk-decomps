@@ -165,11 +165,11 @@ void CAnimeRocket::AccelerateThink( void )
 		float flSpeed = pev->velocity.Length();
 
 		// turn toward the target, at most 20 units a think
-		Vector vecDir;
-		vecDir = vecTarget - pev->origin;
+		Vector vecDir = vecTarget - pev->origin;
 		vecDir = vecDir.Normalize() * 128;
 		Vector vecCurrent = pev->velocity.Normalize() * 128;
-		Vector vecTurn = vecDir - vecCurrent;
+		Vector vecTurn;
+		vecTurn = vecDir - vecCurrent;
 		if ( vecTurn.Length() > 20 )
 			vecTurn = vecTurn.Normalize() * 20;
 
@@ -404,21 +404,20 @@ void CBackpackAnimeRocket::AccelerateThink( void )
 		float flSpeed = pev->velocity.Length();
 
 		// turn toward the target, at most 25 units a think
-		Vector vecDir;
-		vecDir = m_vecEnemyLKP - pev->origin;
+		Vector vecDir = m_vecEnemyLKP - pev->origin;
 		vecDir = vecDir.Normalize() * 128;
-		Vector vecCur;
-		vecCur = pev->velocity.Normalize() * 128;
-		Vector vecDelta;
-		vecDelta = vecDir - vecCur;
-		if ( vecDelta.Length() > 25 )
-			vecDelta = vecDelta.Normalize() * 25;
+		Vector vecCurrent = pev->velocity.Normalize() * 128;
+		Vector vecTurn;
+		vecTurn = vecDir - vecCurrent;
+		if ( vecTurn.Length() > 25 )
+			vecTurn = vecTurn.Normalize() * 25;
 
-		pev->velocity = vecDelta + vecCur;
+		pev->velocity = vecTurn + vecCurrent;
 		pev->angles = UTIL_VecToAngles( pev->velocity );
 
-		flSpeed += 50;
-		if ( flSpeed >= 1200 )
+		if ( flSpeed + 50 < 1200 )
+			flSpeed += 50;
+		else
 			flSpeed = 1200;
 		pev->velocity = pev->velocity.Normalize() * flSpeed;
 	}
