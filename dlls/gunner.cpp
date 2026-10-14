@@ -103,9 +103,7 @@ void CAnimeRocket::Spawn( void )
 	Vector vecUpOfs = vecUp * ( RANDOM_FLOAT( 0, 40 ) - 20 );
 	Vector vecRightOfs = vecRight * ( RANDOM_FLOAT( 0, 30 ) - 15 );
 	Vector vecAhead = vecForward * 64;
-	Vector vecTarget = pev->origin + vecAhead + vecRightOfs + vecUpOfs;
-
-	pev->velocity = ( vecTarget - pev->origin ).Normalize() * 500;
+	pev->velocity = ( pev->origin + vecAhead + vecRightOfs + vecUpOfs - pev->origin ).Normalize() * 500;
 	pev->angles = UTIL_VecToAngles( pev->velocity );
 	pev->dmg = gSkillData.rustgunnerDmgRocket;
 
@@ -939,8 +937,11 @@ void CGunner::GibMonster( void )
 
 	for ( int i = 0; i < 4; i++ )
 	{
-		CAnimeRocket *pRocket = ShootRocket( pev->origin + Vector( RANDOM_FLOAT( -32, 32 ), RANDOM_FLOAT( -32, 32 ), RANDOM_FLOAT( 10, 60 ) ) );
-		pRocket->pev->angles = UTIL_VecToAngles( Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( 0, 1 ) ).Normalize() );
+		Vector vecSrc = pev->origin + Vector( RANDOM_FLOAT( -32, 32 ), RANDOM_FLOAT( -32, 32 ), RANDOM_FLOAT( 10, 60 ) );
+		CAnimeRocket *pRocket = ShootRocket( vecSrc );
+		Vector vecDir = Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( 0, 1 ) );
+		vecDir.Normalize();		// sic: the result is thrown away
+		pRocket->pev->angles = UTIL_VecToAngles( vecDir );
 		UTIL_MakeAimVectors( pRocket->pev->angles );
 		pRocket->pev->velocity = gpGlobals->v_forward * 300;
 		pRocket->pev->movetype = MOVETYPE_TOSS;
