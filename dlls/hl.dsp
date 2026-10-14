@@ -532,6 +532,14 @@ SOURCE=.\hostilescientist.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\rustflier.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\rust.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\camera.cpp
 # End Source File
 # Begin Source File
