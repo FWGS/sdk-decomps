@@ -82,6 +82,14 @@ public:
 	void BigMeteorExplode( void );
 	void LittleMeteorExplode( void );
 
+	// IsInWorld without the speed test
+	BOOL InWorld( void )
+	{
+		return pev->origin.x >= -4096 && pev->origin.x <= 4096 &&
+			pev->origin.y >= -4096 && pev->origin.y <= 4096 &&
+			pev->origin.z >= -4096 && pev->origin.z <= 4096;
+	}
+
 	int		m_iType;
 	BOOL	m_bDebris;
 };
@@ -403,15 +411,14 @@ void CMeteor::MeteorTouch( CBaseEntity *pOther )
 // sic: nothing uses this think
 void CMeteor::MeteorChipsThink( void )
 {
-	if ( pev->origin.x >= -4096 && pev->origin.x <= 4096 &&
-		pev->origin.y >= -4096 && pev->origin.y <= 4096 &&
-		pev->origin.z >= -4096 && pev->origin.z <= 4096 )
+	if ( InWorld() )
 	{
 		pev->nextthink = gpGlobals->time + RANDOM_FLOAT( 0.05, 0.1 );
 
-		Vector vecVelocity, vecOrigin;
+		Vector vecVelocity = pev->velocity;
+		Vector vecOrigin;
 
-		vecVelocity = pev->velocity * 0.3;
+		vecVelocity = vecVelocity * 0.3;
 		vecVelocity.x += RANDOM_FLOAT( -0.08, 0.08 );
 		vecVelocity.y += RANDOM_FLOAT( -0.08, 0.08 );
 		vecVelocity.z += RANDOM_FLOAT( -100, 200 );
@@ -429,14 +436,13 @@ void CMeteor::MeteorChipsThink( void )
 
 void CMeteor::StreakerThink( void )
 {
-	if ( pev->origin.x >= -4096 && pev->origin.x <= 4096 &&
-		pev->origin.y >= -4096 && pev->origin.y <= 4096 &&
-		pev->origin.z >= -4096 && pev->origin.z <= 4096 )
+	if ( InWorld() )
 	{
 		// burn out somewhere between a quarter of the way and the ground
 		TraceResult tr;
-		Vector vecStart = pev->origin;
+		Vector vecStart;
 
+		vecStart = pev->origin;
 		UTIL_TraceLine( vecStart, vecStart + pev->velocity.Normalize() * 4096, ignore_monsters, ENT( pev ), &tr );
 
 		float flTime = ( tr.vecEndPos - vecStart ).Length() / pev->velocity.Length();
@@ -460,9 +466,7 @@ void CMeteor::KillMeteorThink( void )
 
 void CMeteor::LittleSmokingMeteorThink( void )
 {
-	if ( pev->origin.x >= -4096 && pev->origin.x <= 4096 &&
-		pev->origin.y >= -4096 && pev->origin.y <= 4096 &&
-		pev->origin.z >= -4096 && pev->origin.z <= 4096 )
+	if ( InWorld() )
 	{
 		pev->renderfx = kRenderFxGlowShell;
 		pev->renderamt = 100;
@@ -510,9 +514,7 @@ void CMeteor::LittleSmokingMeteorThink( void )
 
 void CMeteor::BigSmokingMeteorThink( void )
 {
-	if ( pev->origin.x >= -4096 && pev->origin.x <= 4096 &&
-		pev->origin.y >= -4096 && pev->origin.y <= 4096 &&
-		pev->origin.z >= -4096 && pev->origin.z <= 4096 )
+	if ( InWorld() )
 	{
 		pev->renderfx = kRenderFxGlowShell;
 		pev->renderamt = 100;
