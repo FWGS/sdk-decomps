@@ -807,7 +807,7 @@ void EV_FireGWShotgun( event_args_t *args )
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 
-		switch ( args->iparam2 )
+		switch ( iShells )
 		{
 		case 1:
 			gEngfuncs.pEventAPI->EV_WeaponAnimation( 3, 2 );
@@ -836,7 +836,7 @@ void EV_FireGWShotgun( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	EV_HLDM_FireBullets( idx, forward, right, up, iShells * 4, vecSrc, vecAiming, vecSpread, 2048, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1] );
+	EV_HLDM_FireBullets( idx, forward, right, up, args->iparam2 * 4, vecSrc, vecAiming, vecSpread, 2048, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1] );
 
 	if ( EV_IsLocal( idx ) )
 	{
