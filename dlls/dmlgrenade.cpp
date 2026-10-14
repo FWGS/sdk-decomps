@@ -379,6 +379,7 @@ void CDmlHandGrenade::ShootClusters( void )
 {
 	Vector vecForward;
 	TraceResult tr;
+	Vector vecEnd;
 	int i;
 
 	if ( m_iDetonate == 2 )
@@ -389,7 +390,7 @@ void CDmlHandGrenade::ShootClusters( void )
 		UTIL_MakeVectors( pev->angles );
 		vecForward = gpGlobals->v_forward;
 
-		Vector vecEnd = pev->origin + vecForward * 2048;
+		vecEnd = pev->origin + vecForward * 2048;	// sic: unused
 		UTIL_TraceLine( pev->origin, pev->origin + vecForward * 128, dont_ignore_monsters, pev->owner, &tr );
 
 		if ( tr.flFraction < 1.0 )
@@ -397,8 +398,7 @@ void CDmlHandGrenade::ShootClusters( void )
 			CBaseEntity *pHit = CBaseEntity::Instance( tr.pHit );
 			if ( pHit && !( pHit->pev->flags & FL_CONVEYOR ) )
 			{
-				Vector angles;
-				angles = UTIL_VecToAngles( tr.vecPlaneNormal );
+				Vector angles = UTIL_VecToAngles( tr.vecPlaneNormal );
 				UTIL_MakeVectors( angles );
 				vecForward = gpGlobals->v_forward;
 			}
@@ -417,7 +417,7 @@ void CDmlHandGrenade::ShootClusters( void )
 		UTIL_MakeVectors( pev->angles );
 		vecForward = gpGlobals->v_forward;
 
-		Vector vecEnd = pev->origin + vecForward * 2048;
+		vecEnd = pev->origin + vecForward * 2048;	// sic: unused
 		UTIL_TraceLine( pev->origin, pev->origin + vecForward * 128, dont_ignore_monsters, pev->owner, &tr );
 
 		if ( tr.vecPlaneNormal.z > 0 )
