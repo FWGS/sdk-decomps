@@ -35,6 +35,7 @@ int g_iGibBot;
 int g_iGoreBot;
 
 
+// the mortar's think and touch come first in retail's object
 void CGunnerMortar :: MortarThink( void )
 {
 	Fragment( );
