@@ -1306,12 +1306,10 @@ void CEndBoss::RunAI( void )
 {
 	CBaseMonster::RunAI( );
 
-	Vector vecSrc, vecAngles;
-
 	if ( HasConditions( bits_COND_SEE_ENEMY ) )
 	{
-		vecSrc = ShootAtEnemy( GetGunPosition( ENDBOSS_GUN_MGUN_HIGH ) );
-		vecAngles = UTIL_VecToAngles( vecSrc );
+		Vector vecShootDir = ShootAtEnemy( GetGunPosition( ENDBOSS_GUN_MGUN_HIGH ) );
+		Vector vecAngles = UTIL_VecToAngles( vecShootDir );
 		SetBlending( 0, vecAngles.x );
 	}
 	else
@@ -1321,6 +1319,7 @@ void CEndBoss::RunAI( void )
 
 	if ( !m_bHasKatagun )
 	{
+		Vector vecSrc, vecAngles;
 		GetAttachment( 3, vecSrc, vecAngles );
 
 		if ( UTIL_PercentChance( 1 ) )
