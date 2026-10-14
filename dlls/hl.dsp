@@ -532,6 +532,18 @@ SOURCE=.\hostilescientist.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\beak.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\critter.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\maggot.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\camera.cpp
 # End Source File
 # Begin Source File
