@@ -420,6 +420,14 @@ SOURCE=.\volcanospew.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\bird.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\chopper.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\gunman_pending.cpp
 # End Source File
 # Begin Source File
