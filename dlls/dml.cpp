@@ -714,7 +714,10 @@ void CDml::OffsetRocket( CBaseEntity *pRocket, int iSide )
 	Vector vecRight;
 
 	UTIL_MakeVectorsPrivate( pRocket->pev->angles, NULL, vecRight, NULL );
-	pRocket->pev->origin = pRocket->pev->origin + vecRight * ( iSide * 5 );
+	vecRight.x *= iSide * 5;
+	vecRight.y *= iSide * 5;
+	vecRight.z *= iSide * 5;
+	pRocket->pev->origin = pRocket->pev->origin + vecRight;
 }
 
 
