@@ -694,7 +694,7 @@ void CDmlRocket :: FollowThink( void  )
 		if (pev->effects & EF_LIGHT)
 		{
 			pev->effects = 0;
-			STOP_SOUND( ENT(pev), CHAN_VOICE, "weapons/rocket1.wav" );
+			EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "weapons/rocket1.wav", 0, 0, SND_STOP, PITCH_NORM );
 		}
 		pev->velocity = pev->velocity * 0.3 + vecTarget * flSpeed * 0.798;
 	}
