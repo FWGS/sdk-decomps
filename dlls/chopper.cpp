@@ -957,8 +957,10 @@ void CMantaShip :: MantaThink( void )
 			m_posDesired = m_pGoalEnt->pev->origin;
 			UTIL_MakeAimVectors( m_pGoalEnt->pev->angles );
 			m_vecGoal = gpGlobals->v_forward;
-			pev->velocity = (m_pGoalEnt->pev->origin - pev->origin).Normalize() * 300;
-			pev->angles.y = UTIL_VecToAngles( pev->origin - m_pGoalEnt->pev->origin ).y + 180;
+			Vector vecDir = m_pGoalEnt->pev->origin - pev->origin;
+			pev->velocity = vecDir.Normalize() * 300;
+			Vector vecAngles = UTIL_VecToAngles( pev->origin - m_pGoalEnt->pev->origin );
+			pev->angles.y = vecAngles.y + 180;
 		}
 	}
 
@@ -979,7 +981,9 @@ void CMantaShip :: MantaThink( void )
 				UTIL_MakeAimVectors( m_pGoalEnt->pev->angles );
 				m_vecGoal = gpGlobals->v_forward;
 				flLength = (pev->origin - m_posDesired).Length();
-				pev->velocity = (m_pGoalEnt->pev->origin - pev->origin).Normalize() * 300;
+				Vector vecDir;
+				vecDir = m_pGoalEnt->pev->origin - pev->origin;
+				pev->velocity = vecDir.Normalize() * 300;
 			}
 		}
 	}
