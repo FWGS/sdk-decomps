@@ -166,7 +166,7 @@ A twisting strip along dir, flLength long and flWidth wide
 void DrawStrip( float *origin, float *dir, float flWidth, float flLength, int iSegments, float flBrightness )
 {
 	vec3_t angles, forward, right, up;
-	vec3_t vecPoint1, vecPoint2;
+	vec3_t vecPoint[2];
 	float flStep;
 	float v;
 
@@ -188,18 +188,18 @@ void DrawStrip( float *origin, float *dir, float flWidth, float flLength, int iS
 		angles[2] = fmod( v * 360 + angles[2], 360 );
 		AngleVectors( angles, forward, right, up );
 
-		vecPoint1[0] = forward[0] * flLength + origin[0] - up[0] * flWidth;
-		vecPoint1[1] = forward[1] * flLength + origin[1] - up[1] * flWidth;
-		vecPoint1[2] = -forward[2] * flLength + origin[2] + up[2] * flWidth;
+		vecPoint[0][0] = forward[0] * flLength + origin[0] + ( -( up[0] * flWidth ) );
+		vecPoint[0][1] = forward[1] * flLength + ( -( up[1] * flWidth ) ) + origin[1];
+		vecPoint[0][2] = ( -( forward[2] * flLength ) ) + origin[2] + up[2] * flWidth;
 
-		vecPoint2[0] = origin[0] - up[0] * flWidth;
-		vecPoint2[1] = origin[1] - up[1] * flWidth;
-		vecPoint2[2] = origin[2] + up[2] * flWidth;
+		vecPoint[1][0] = ( -( up[0] * flWidth ) ) + origin[0];
+		vecPoint[1][1] = ( -( up[1] * flWidth ) ) + origin[1];
+		vecPoint[1][2] = up[2] * flWidth + origin[2];
 
 		gEngfuncs.pTriAPI->TexCoord2f( 0, v );
-		gEngfuncs.pTriAPI->Vertex3fv( vecPoint1 );
+		gEngfuncs.pTriAPI->Vertex3fv( vecPoint[0] );
 		gEngfuncs.pTriAPI->TexCoord2f( 1, v );
-		gEngfuncs.pTriAPI->Vertex3fv( vecPoint2 );
+		gEngfuncs.pTriAPI->Vertex3fv( vecPoint[1] );
 	}
 
 	gEngfuncs.pTriAPI->End();
