@@ -436,6 +436,10 @@ SOURCE=.\butterfly.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\aigirl.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\gunman_pending.cpp
 # End Source File
 # Begin Source File
