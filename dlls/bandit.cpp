@@ -2070,7 +2070,8 @@ Schedule_t *CBaseBandit :: GetSchedule( void )
 				// roll out from behind cover, toward the side a gun is on
 				if ( HasConditions( bits_COND_ENEMY_OCCLUDED ) && m_hEnemy != NULL && GetGunsFiring() && UTIL_PercentChance( 50 ) )
 				{
-					Vector vecDir = ( pev->origin - m_hEnemy->pev->origin ).Normalize();
+					Vector vecDir;
+					vecDir = ( pev->origin - m_hEnemy->pev->origin ).Normalize();
 
 					if ( DotProduct( vecDir, gpGlobals->v_forward ) <= -0.9 )
 					{
