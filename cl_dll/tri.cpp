@@ -286,13 +286,13 @@ void DrawShocks( void )
 		if ( g_Effects[i].m_iType != EFFECT_SHOCK )
 			continue;
 
-		float flBrightness = g_Effects[i].m_flBrightness - ( flTime - g_Effects[i].m_flStartTime ) * g_Effects[i].m_flFadeSpeed * 30;
-		float flScale = ( flTime - g_Effects[i].m_flStartTime ) * g_Effects[i].m_flScaleSpeed * 30 + g_Effects[i].m_flScale;
+		float flBrightness = g_Effects[i].m_flBrightness - g_Effects[i].m_flFadeSpeed * ( flTime - g_Effects[i].m_flStartTime ) * 30;
+		float flScale = g_Effects[i].m_flScale + g_Effects[i].m_flScaleSpeed * ( flTime - g_Effects[i].m_flStartTime ) * 30;
 
 		if ( flBrightness < 1 )
 			flBrightness = 1;
 
-		if ( flScale > g_Effects[i].m_flMaxScale )
+		if ( g_Effects[i].m_flMaxScale < flScale )
 		{
 			g_Effects.Remove( g_Effects[i].m_iId );
 			continue;
