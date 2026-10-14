@@ -210,12 +210,13 @@ void CRustbitShot :: Shoot( entvars_t *pevOwner, Vector vecStart, Vector vecDir,
 		z = x*x+y*y;
 	} while (z > 1);
 
-	Vector vecVelocity = (vecDir + x * vecSpread.x * vecRight + y * vecSpread.y * vecUp) * iSpeed;
+	vecDir = vecDir + x * vecSpread.x * vecRight + y * vecSpread.y * vecUp;
+	vecDir = vecDir * iSpeed;
 
 	CRustbitShot *pShot = GetClassPtr( (CRustbitShot *)NULL );
 	UTIL_SetOrigin( pShot->pev, vecStart );
 	pShot->Spawn( );
-	pShot->pev->velocity = vecVelocity;
+	pShot->pev->velocity = vecDir;
 	pShot->pev->owner = ENT( pevOwner );
 	pShot->SetThink( NULL );
 }
@@ -237,7 +238,7 @@ void CRustbitShot :: ShotTouch( CBaseEntity *pOther )
 		UTIL_TraceLine( pev->origin, pev->origin + pev->velocity * 8, ignore_monsters, ENT(pev), &tr );
 		UTIL_DecalTrace( &tr, DECAL_PULSE );
 
-		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "rustbit/RustBit_Projectile2.wav", 0.3, ATTN_NORM, 0, PITCH_NORM );
+		EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "rustbit/RustBit_Projectile2.wav", 0.3, ATTN_NORM, 0, PITCH_NORM );
 		UTIL_Remove( this );
 		return;
 	}
@@ -245,9 +246,9 @@ void CRustbitShot :: ShotTouch( CBaseEntity *pOther )
 	pOther->TakeDamage( pev, pev, gSkillData.rustbitDmgShot, DMG_GENERIC );
 
 	if ( pOther->IsPlayer( ) )
-		EMIT_SOUND_DYN( pOther->edict(), CHAN_WEAPON, "rustbit/RustBit_Projectile1.wav", 1.0, ATTN_NORM, 0, 130 );
+		EMIT_SOUND_DYN( pOther->edict(), CHAN_VOICE, "rustbit/RustBit_Projectile1.wav", 1.0, ATTN_NORM, 0, 130 );
 	else
-		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "rustbit/RustBit_Projectile2.wav", 0.3, ATTN_NORM, 0, PITCH_NORM );
+		EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "rustbit/RustBit_Projectile2.wav", 0.3, ATTN_NORM, 0, PITCH_NORM );
 
 	SetTouch( NULL );
 	SetThink( SUB_Remove );
@@ -371,13 +372,15 @@ void CGunnerRocket :: AccelerateThink( void )
 	CBaseEntity *pEntity = NULL;
 	while ((pEntity = UTIL_FindEntityInSphere( pEntity, pev->origin, 1024 )) != NULL)
 	{
-		if ( pEntity->pev->takedamage && pEntity->IsPlayer( ) && pEntity->edict() != pev->owner && pEntity != this )
+		if ( pEntity->pev->takedamage && pEntity->IsPlayer( ) && pEntity->edict() != pev->owner && this != pEntity )
 		{
-			Vector vecDir;
+			Vector vecDir, vecVelocity;
 			vecDir = pEntity->pev->origin - pev->origin;
-			Vector vecVelocity = pev->velocity;
+			vecVelocity = pev->velocity;
 			vecDir.Normalize( );	// sic: the result is thrown away
-			pev->velocity = vecVelocity + vecDir * 0.7;
+			vecDir.x = vecDir.x * 0.7;	// sic: not z
+			vecDir.y = vecDir.y * 0.7;
+			pev->velocity = vecVelocity + vecDir;
 		}
 	}
 
