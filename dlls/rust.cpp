@@ -30,8 +30,9 @@
 #include "dmlrocket.h"
 #include "rust.h"
 
-extern int g_iGibBot;
-extern int g_iGoreBot;
+// the robots' gib and gore spray sprites
+int g_iGibBot;
+int g_iGoreBot;
 
 
 void CGunnerMortar :: MortarThink( void )
