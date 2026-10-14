@@ -13,7 +13,8 @@
 *
 ****/
 //=========================================================
-// monster_tube: the tube queen pulls tubes out of her belly
+// CTube, monster_tube: tube.cpp has the code; the tube queen
+// (tubequeen.cpp) builds the tubes she pulls out of her belly
 //=========================================================
 #ifndef TUBE_H
 #define TUBE_H
