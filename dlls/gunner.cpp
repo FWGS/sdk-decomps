@@ -213,19 +213,18 @@ void CAnimeRocket::AccelerateThink( void )
 		Vector vecDir;
 		vecDir = vecTarget - pev->origin;
 		vecDir = vecDir.Normalize() * 128;
-		Vector vecCur;
-		vecCur = pev->velocity.Normalize() * 128;
-		Vector vecDelta;
-		vecDelta = vecDir - vecCur;
-		if ( vecDelta.Length() > 20 )
-			vecDelta = vecDelta.Normalize() * 20;
+		Vector vecCurrent = pev->velocity.Normalize() * 128;
+		Vector vecTurn = vecDir - vecCurrent;
+		if ( vecTurn.Length() > 20 )
+			vecTurn = vecTurn.Normalize() * 20;
 
-		pev->velocity = vecDelta + vecCur;
+		pev->velocity = vecTurn + vecCurrent;
 		pev->velocity = pev->velocity.Normalize() * flSpeed;
 		pev->angles = UTIL_VecToAngles( pev->velocity );
 
-		flSpeed += 50;
-		if ( flSpeed >= 1000 )
+		if ( flSpeed + 50 < 1000 )
+			flSpeed += 50;
+		else
 			flSpeed = 1000;
 		pev->velocity = pev->velocity.Normalize() * flSpeed;
 	}
@@ -815,7 +814,10 @@ void CGunner::HandleAnimEvent( MonsterEvent_t *pEvent )
 	{
 	case GUNNER_AE_ROCKET_RIGHT:
 	case GUNNER_AE_ROCKET_RIGHT2:
-		ShootRocket( GetArmPosition( GUNNER_ARM_RIGHT ) );
+		{
+			Vector vecSrc = GetArmPosition( GUNNER_ARM_RIGHT );
+			ShootRocket( vecSrc );
+		}
 		break;
 
 	case GUNNER_AE_SWIPE:
@@ -844,7 +846,10 @@ void CGunner::HandleAnimEvent( MonsterEvent_t *pEvent )
 
 	case GUNNER_AE_ROCKET_LEFT:
 	case GUNNER_AE_ROCKET_LEFT2:
-		ShootRocket( GetArmPosition( GUNNER_ARM_LEFT ) );
+		{
+			Vector vecSrc = GetArmPosition( GUNNER_ARM_LEFT );
+			ShootRocket( vecSrc );
+		}
 		break;
 
 	case GUNNER_AE_STEP:
@@ -968,9 +973,15 @@ void CGunner::Killed( entvars_t *pevAttacker, int iGib )
 void CGunner::GibMonster( void )
 {
 	if ( UTIL_PercentChance( 40 ) )
-		ShootRocket( GetArmPosition( GUNNER_ARM_RIGHT ) );
+	{
+		Vector vecSrc = GetArmPosition( GUNNER_ARM_RIGHT );
+		ShootRocket( vecSrc );
+	}
 	if ( UTIL_PercentChance( 40 ) )
-		ShootRocket( GetArmPosition( GUNNER_ARM_LEFT ) );
+	{
+		Vector vecSrc = GetArmPosition( GUNNER_ARM_LEFT );
+		ShootRocket( vecSrc );
+	}
 
 	for ( int i = 0; i < 4; i++ )
 	{
