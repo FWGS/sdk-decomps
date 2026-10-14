@@ -404,9 +404,9 @@ void CBackpackAnimeRocket::AccelerateThink( void )
 		// turn toward the target, at most 25 units a think
 		Vector vecDir = m_vecEnemyLKP - pev->origin;
 		vecDir = vecDir.Normalize() * 128;
-		Vector vecCurrent = pev->velocity.Normalize() * 128;
-		Vector vecTurn;
-		vecTurn = vecDir - vecCurrent;
+		Vector vecCurrent;
+		vecCurrent = pev->velocity.Normalize() * 128;
+		Vector vecTurn = vecDir - vecCurrent;
 		if ( vecTurn.Length() > 25 )
 			vecTurn = vecTurn.Normalize() * 25;
 
