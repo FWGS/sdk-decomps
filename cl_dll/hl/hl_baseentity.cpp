@@ -45,7 +45,7 @@ ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
 // Gunman's weapons use these
 skilldata_t gSkillData;
 CGameRules *g_pGameRules;
-int g_iSkillLevel;
+int g_iSkillLevel = 1;
 int gEvilImpulse101;
 int gmsgSliderX;
 int gmsgTempX;
