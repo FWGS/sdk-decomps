@@ -102,17 +102,7 @@ public:
 class CEffectNode
 {
 public:
-	CEffectNode *Previous( int iId )
-	{
-		CEffectNode *pNode = this;
-		while ( pNode->m_pNext )
-		{
-			if ( pNode->m_pNext->m_Effect.m_iId == iId )
-				return pNode;
-			pNode = pNode->m_pNext;
-		}
-		return NULL;
-	}
+	CEffectNode *Previous( int iId );	// in tri.cpp
 
 	CEffect		m_Effect;
 	CEffectNode	*m_pNext;
@@ -170,26 +160,7 @@ public:
 		return m_pHead->m_Effect.m_iId;
 	}
 
-	void Remove( int iId )
-	{
-		if ( m_pHead->m_Effect.m_iId == iId )
-		{
-			CEffectNode *pNode = m_pHead;
-			m_iCount--;
-			m_pHead = pNode->m_pNext;
-			delete pNode;
-			return;
-		}
-
-		CEffectNode *pPrev = m_pHead->Previous( iId );
-		if ( pPrev )
-		{
-			CEffectNode *pNode = pPrev->m_pNext;
-			pPrev->m_pNext = pNode->m_pNext;
-			m_iCount--;
-			delete pNode;
-		}
-	}
+	bool Remove( int iId );				// in tri.cpp
 
 	CEffect &operator[]( int i )
 	{

@@ -1194,10 +1194,7 @@ public:
 		if ( gHUD.m_iHideHUDDisplay & ( HIDEHUD_ALL | HIDEHUD_HEALTH ) )
 		{
 			setVisible( false );
-
-			// provisional: CHudAmmo's flag for the weapon list being up, at
-			// 0x2c, until CHudAmmo is reconstructed
-			*(bool *)( (char *)&gHUD.m_Ammo + 0x2c ) = false;
+			gHUD.m_Ammo.m_fMenuOpen = false;
 		}
 	}
 

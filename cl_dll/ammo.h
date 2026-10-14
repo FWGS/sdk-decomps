@@ -38,6 +38,12 @@ struct WEAPON
 
 	int		iCount;		// # of itesm in plist
 
+	// Gunman: customization items, the weapons' settings that slot 10 shows
+	int		iIsCustomization;
+	char	szCustomizes[MAX_WEAPON_NAME];	// the weapon this item customizes
+	int		iCustomSettings;	// how many settings it has
+	int		iCustomSetting;		// the current one, from 1
+
 	HSPRITE hActive;
 	wrect_t rcActive;
 	HSPRITE hInactive;

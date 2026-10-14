@@ -388,6 +388,54 @@ SOURCE=.\world.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\funcwind.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\lava.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\leaf.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\speakers.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\boulder.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\sphereexplosion.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\spritegod.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\volcanospew.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\bird.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\chopper.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\cricket.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\butterfly.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\gunman_pending.cpp
 # End Source File
 # Begin Source File
@@ -433,6 +481,26 @@ SOURCE=.\shotgun.cpp
 # Begin Source File
 
 SOURCE=.\spchemicalgun.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\vehicle.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\camera.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\decore.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\hologram.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\torch.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
