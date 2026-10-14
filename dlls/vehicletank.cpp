@@ -2348,7 +2348,6 @@ void CVehicleTankRocket::TankIgniteThink( void )
 void CVehicleTankRocket::RocketTouch( CBaseEntity *pOther )
 {
 	TraceResult tr;
-	Vector		vecSpot;// trace starts here!
 
 	// don't hit the tank that fired it
 	if ( !FClassnameIs( ENT( pOther->pev ), "vehicle_tank_turret" ) && !FClassnameIs( ENT( pOther->pev ), "vehicle_tank_barrel" ) )
@@ -2368,7 +2367,7 @@ void CVehicleTankRocket::RocketTouch( CBaseEntity *pOther )
 
 			pev->enemy = pOther->edict();
 
-			vecSpot = pev->origin - pev->velocity.Normalize() * 32;
+			Vector vecSpot = pev->origin - pev->velocity.Normalize() * 32;
 			UTIL_TraceLine( vecSpot, vecSpot + pev->velocity.Normalize() * 64, ignore_monsters, ENT( pev ), &tr );
 
 			pev->model = iStringNull;
