@@ -1103,7 +1103,11 @@ void CGaussPistol::FireSniper( void )
 		UTIL_DecalTrace( &tr, DECAL_SMALLSCORCH1 );
 
 		if ( g_pGameRules->IsMultiplayer() )
-			::RadiusDamage( tr.vecEndPos, pev, m_pPlayer->pev, flDamage * 0.8, (flDamage * 0.7) * 2, CLASS_NONE, DMG_ENERGYBEAM | DMG_NEVERGIB );
+		{
+			entvars_t *pevOwner = m_pPlayer->pev;
+			entvars_t *pevInflictor = pev;
+			::RadiusDamage( tr.vecEndPos, pevInflictor, pevOwner, flDamage * 0.8, (flDamage * 0.7) * 2, CLASS_NONE, DMG_ENERGYBEAM | DMG_NEVERGIB );
+		}
 	}
 
 	m_pPlayer->pev->effects |= EF_MUZZLEFLASH;
@@ -1126,7 +1130,7 @@ static void GaussShot( Vector vecOrigSrc, Vector vecDir, float flDamage, CBasePl
 	Vector vecSrc = vecOrigSrc;
 	Vector vecDest = vecSrc + vecDir * 8192;
 	edict_t		*pentIgnore;
-	TraceResult tr;
+	TraceResult tr, beam_tr;	// sic: beam_tr is never used
 
 	pentIgnore = ENT( pPlayer->pev );
 

@@ -168,25 +168,21 @@ void CShotgun::Customize( char cOption, int iValue )
 		{
 		case 1:
 			m_vecSpread = VECTOR_CONE_6DEGREES;
-			m_iSlidePos = iValue;
 			break;
 		case 2:
 			m_vecSpread = VECTOR_CONE_10DEGREES;
-			m_iSlidePos = iValue;
 			break;
 		case 3:
 			m_vecSpread = VECTOR_CONE_15DEGREES;
-			m_iSlidePos = iValue;
 			break;
 		case 4:
 			m_vecSpread = VECTOR_CONE_20DEGREES;
-			m_iSlidePos = iValue;
 			break;
 		default:
 			m_vecSpread = VECTOR_CONE_3DEGREES;
-			m_iSlidePos = iValue;
 			break;
 		}
+		m_iSlidePos = iValue;
 	}
 	else if ( cOption == '2' )
 	{

@@ -368,7 +368,7 @@ void CDmlRocket :: TrackTarget ( void )
 		vecFlightDir = pev->velocity.Normalize();
 
 	// measure how far the turn is, the wider the turn, the slow we'll go this time.
-	flDelta = DotProduct ( vecFlightDir, vecDirToEnemy );
+	flDelta = vecFlightDir.x * vecDirToEnemy.x + vecFlightDir.y * vecDirToEnemy.y + vecFlightDir.z * vecDirToEnemy.z;
 
 	if ( flDelta <= 0 )
 	{// no flying backwards, but we don't want to invert this, cause we'd go fast when we have to turn REAL far.
@@ -463,8 +463,7 @@ void CDmlRocket::ShootClusterGrenades( CBaseEntity *pOther )
 		CBaseEntity *pHit = CBaseEntity::Instance( tr.pHit );
 		if ( pHit && !( pHit->pev->flags & FL_CONVEYOR ) )
 		{
-			Vector angles;
-			angles = UTIL_VecToAngles( tr.vecPlaneNormal );
+			Vector angles( UTIL_VecToAngles( tr.vecPlaneNormal ) );
 			UTIL_MakeVectors( angles );
 			m_vecDir = gpGlobals->v_forward;
 		}
@@ -695,7 +694,7 @@ void CDmlRocket :: FollowThink( void  )
 		if (pev->effects & EF_LIGHT)
 		{
 			pev->effects = 0;
-			STOP_SOUND( ENT(pev), CHAN_VOICE, "weapons/rocket1.wav" );
+			EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "weapons/rocket1.wav", 0, 0, SND_STOP, PITCH_NORM );
 		}
 		pev->velocity = pev->velocity * 0.3 + vecTarget * flSpeed * 0.798;
 	}
@@ -761,7 +760,7 @@ void CDmlRocket::BigThink( void )
 
 	while ( ( pEntity = UTIL_FindEntityInSphere( pEntity, pev->origin, 50 ) ) != NULL )
 	{
-		if ( pEntity->pev->takedamage && pEntity->edict() != pev->owner && pEntity != this && ( pEntity->pev->velocity.y >= 1 || pev->velocity.y <= -1 ) && FClassnameIs( pev, STRING( pEntity->pev->classname ) ) )
+		if ( pEntity->pev->takedamage && pEntity->edict() != pev->owner && this != pEntity && ( pEntity->pev->velocity.y >= 1 || pev->velocity.y <= -1 ) && FClassnameIs( pev, STRING( pEntity->pev->classname ) ) )
 		{
 			float x = pEntity->pev->origin.x - pev->origin.x;
 			float y = pEntity->pev->origin.y - pev->origin.y;
@@ -783,7 +782,7 @@ void CDmlRocket::BigThink( void )
 				if ( !pBrother )
 					return;
 
-				if ( pEntity->edict() != pev->owner && pEntity != pBrother && ( pEntity->pev->velocity.y >= 1 || pev->velocity.y <= -1 ) && FClassnameIs( pev, STRING( pEntity->pev->classname ) ) )
+				if ( pEntity->edict() != pev->owner && pBrother != pEntity && ( pEntity->pev->velocity.y >= 1 || pev->velocity.y <= -1 ) && FClassnameIs( pev, STRING( pEntity->pev->classname ) ) )
 				{
 					float x = pEntity->pev->origin.x - pBrother->pev->origin.x;
 					float y = pEntity->pev->origin.y - pBrother->pev->origin.y;
@@ -1074,7 +1073,7 @@ void CDmlRocket::RemoveThink( void )
 //=========================================================
 void CDmlRocket::BecomeTripmine( void )
 {
-	TraceResult tr;
+	TraceResult tr, tr2;	// sic: tr2 is never used
 
 	pev->movetype = MOVETYPE_FLY;
 	pev->solid = SOLID_NOT;
@@ -1107,8 +1106,7 @@ void CDmlRocket::BecomeTripmine( void )
 		CBaseEntity *pHit = CBaseEntity::Instance( tr.pHit );
 		if ( pHit && !( pHit->pev->flags & FL_CONVEYOR ) )
 		{
-			Vector angles;
-			angles = UTIL_VecToAngles( tr.vecPlaneNormal );
+			Vector angles( UTIL_VecToAngles( tr.vecPlaneNormal ) );
 			UTIL_MakeVectors( angles );
 			m_vecDir = gpGlobals->v_forward;
 			m_vecEnd = pev->origin + m_vecDir * 2048;

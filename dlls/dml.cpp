@@ -639,8 +639,10 @@ void CDml::FireSpiral( void )
 
 	EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/dml_fire.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 93 + RANDOM_LONG(0,0xF));
 
-	if ( m_iClip || !m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] )
+	if ( m_iClip )
 		SendWeaponAnim( DML_FIRE );
+	else if ( !m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] )
+		SendWeaponAnim( DML_FIRE );	// sic: the same animation
 
 	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
@@ -714,7 +716,10 @@ void CDml::OffsetRocket( CBaseEntity *pRocket, int iSide )
 	Vector vecRight;
 
 	UTIL_MakeVectorsPrivate( pRocket->pev->angles, NULL, vecRight, NULL );
-	pRocket->pev->origin = pRocket->pev->origin + vecRight * ( iSide * 5 );
+	vecRight.x *= iSide * 5;
+	vecRight.y *= iSide * 5;
+	vecRight.z *= iSide * 5;
+	pRocket->pev->origin = pRocket->pev->origin + vecRight;
 }
 
 
@@ -786,7 +791,7 @@ void CDml::Reload( void )
 			fReloaded = DefaultReload( 2, DML_RELOADLEFT, 1.4 );
 		if ( !fReloaded )
 			return;
-			EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/dml_reload.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 93 + RANDOM_LONG(0,0xF));
+		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/dml_reload.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 93 + RANDOM_LONG(0,0xF));
 	}
 	else
 	{
@@ -797,14 +802,13 @@ void CDml::Reload( void )
 		{
 			m_iSide = -1;
 			m_iFirstSide = -1;
-				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/dml_reload.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 93 + RANDOM_LONG(0,0xF));
 		}
 		else
 		{
 			m_iSide = 1;
 			m_iFirstSide = 1;
-				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/dml_reload.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 93 + RANDOM_LONG(0,0xF));
 		}
+		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/dml_reload.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 93 + RANDOM_LONG(0,0xF));
 	}
 }
 
@@ -1098,7 +1102,8 @@ Vector CDml::AutoaimDeflection( Vector &vecSrc, float flDist, float flDelta )
 
 		center = pEntity->BodyTarget( vecSrc );
 
-		dir = (center - vecSrc).Normalize( );
+		dir = center - vecSrc;
+		dir = dir.Normalize( );
 
 		// make sure it's in front of the player
 		if (DotProduct (dir, gpGlobals->v_forward ) < 0)

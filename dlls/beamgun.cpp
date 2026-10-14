@@ -743,7 +743,8 @@ void CBeamGun::ShotgunLightning( Vector vecSrc, Vector vecDir, TraceResult tr )
 						x * flSpread * gpGlobals->v_right +
 						y * flSpread * gpGlobals->v_up;
 		Vector vecStart = vecSrc + gpGlobals->v_right * 4;
-		Vector vecEnd = vecSpreadDir * Configuration.range + vecSrc;
+		float flRange = Configuration.range;
+		Vector vecEnd = vecSpreadDir * flRange + vecSrc;
 		TraceResult tr2;
 
 		UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, ENT( m_pPlayer->pev ), &tr2 );
@@ -838,7 +839,6 @@ void CBeamGun::InventoryFrame( void )
 
 void CBeamGun::WeaponIdle( void )
 {
-	Vector vecEnd;
 	TraceResult tr;
 
 	ResetEmptySound( );
@@ -869,6 +869,7 @@ void CBeamGun::WeaponIdle( void )
 		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 		Vector vecAiming = gpGlobals->v_forward;
 		Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+		Vector vecEnd;
 		vecEnd	 = vecSrc + vecAiming * Configuration.range;
 
 		UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, ENT( m_pPlayer->pev ), &tr );
@@ -1969,7 +1970,7 @@ void CLightningBug :: TrackTargetBug ( void )
 	// wide turns wear it out
 	m_flEnergy += flDelta - 1;
 
-	pev->velocity = ( vecFlightDir + vecDirToEnemy).Normalize() * ( flDelta * m_flFlySpeed );
+	pev->velocity = ( flDelta * m_flFlySpeed ) * ( vecFlightDir + vecDirToEnemy).Normalize();
 
 	pev->angles = UTIL_VecToAngles (pev->velocity);
 }
