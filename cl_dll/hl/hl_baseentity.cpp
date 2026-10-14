@@ -362,7 +362,7 @@ BOOL CBasePlayer::HasNamedPlayerItem( const char *pszItemName ) { return FALSE; 
 void CBaseMonster :: Precache( void ) { }
 void CGrenade::BounceTouch( CBaseEntity *pOther ) { }
 CBaseEntity * EHANDLE :: operator = (CBaseEntity *pEntity) { return NULL; }
-EHANDLE :: operator int ( ) { return 0; }
+EHANDLE :: operator int ( ) { }	// sic: no return value (retail's is a bare ret)
 EHANDLE :: operator CBaseEntity *() { return NULL; }
 CBaseEntity * EHANDLE :: operator -> () { return NULL; }
 void CSoundEnt :: InsertSound ( int iType, const Vector &vecOrigin, int iVolume, float flDuration ) { }
