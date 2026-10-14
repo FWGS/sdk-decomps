@@ -433,8 +433,7 @@ void CDmlHandGrenade::ShootClusters( void )
 			CBaseEntity *pHit = CBaseEntity::Instance( tr.pHit );
 			if ( pHit && !( pHit->pev->flags & FL_CONVEYOR ) )
 			{
-				Vector angles;
-				angles = UTIL_VecToAngles( tr.vecPlaneNormal );
+				Vector angles( UTIL_VecToAngles( tr.vecPlaneNormal ) );
 				UTIL_MakeVectors( angles );
 				vecForward = gpGlobals->v_forward;
 			}
@@ -1311,8 +1310,7 @@ void CTripmineGrenade::ShootClusters( void )
 		CBaseEntity *pHit = CBaseEntity::Instance( tr.pHit );
 		if ( pHit && !( pHit->pev->flags & FL_CONVEYOR ) )
 		{
-			Vector angles;
-			angles = UTIL_VecToAngles( tr.vecPlaneNormal );
+			Vector angles( UTIL_VecToAngles( tr.vecPlaneNormal ) );
 			UTIL_MakeVectors( angles );
 			vecForward = gpGlobals->v_forward;
 		}

@@ -463,8 +463,7 @@ void CDmlRocket::ShootClusterGrenades( CBaseEntity *pOther )
 		CBaseEntity *pHit = CBaseEntity::Instance( tr.pHit );
 		if ( pHit && !( pHit->pev->flags & FL_CONVEYOR ) )
 		{
-			Vector angles;
-			angles = UTIL_VecToAngles( tr.vecPlaneNormal );
+			Vector angles( UTIL_VecToAngles( tr.vecPlaneNormal ) );
 			UTIL_MakeVectors( angles );
 			m_vecDir = gpGlobals->v_forward;
 		}
@@ -1107,8 +1106,7 @@ void CDmlRocket::BecomeTripmine( void )
 		CBaseEntity *pHit = CBaseEntity::Instance( tr.pHit );
 		if ( pHit && !( pHit->pev->flags & FL_CONVEYOR ) )
 		{
-			Vector angles;
-			angles = UTIL_VecToAngles( tr.vecPlaneNormal );
+			Vector angles( UTIL_VecToAngles( tr.vecPlaneNormal ) );
 			UTIL_MakeVectors( angles );
 			m_vecDir = gpGlobals->v_forward;
 			m_vecEnd = pev->origin + m_vecDir * 2048;
