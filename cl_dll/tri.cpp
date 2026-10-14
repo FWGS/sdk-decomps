@@ -582,13 +582,13 @@ void DrawSprites( void )
 		if ( !effect.m_pSprite )
 			continue;
 
-		vec3_t vecOrigin, vecNormal, vecAngles, angles, forward, right, up;
+		vec3_t vecOrigin, vecAngles, angles, forward, right, up;
 		vec3_t vecPoint2, vecPoint3, vecPoint4;
 
 		gEngfuncs.pTriAPI->SpriteTexture( effect.m_pSprite, (int)flFrame );
 
 		vecOrigin = g_Effects[i].m_vecOrigin;
-		vecNormal = g_Effects[i].m_vecAngles;
+		vec3_t vecNormal = g_Effects[i].m_vecAngles;
 		VectorAngles( vecNormal, vecAngles );
 		angles = vecAngles;
 		AngleVectors( angles, forward, right, up );
@@ -606,7 +606,7 @@ void DrawSprites( void )
 		vecPoint3.z = ( right.z + up.z ) * flScale + vecOrigin.z;
 
 		vecPoint4.x = vecOrigin.x - up.x * flScale;
-		vecPoint4[1] = vecOrigin.y - up.y * flScale;
+		vecPoint4.y = vecOrigin.y - up.y * flScale;
 		vecPoint4[2] = vecOrigin.z + up.z * flScale;
 
 		gEngfuncs.pTriAPI->RenderMode( kRenderTransAdd );
