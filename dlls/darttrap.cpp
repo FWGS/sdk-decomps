@@ -118,7 +118,7 @@ void CDart::ShotTouch( CBaseEntity *pOther )
 	else
 	{
 		pOther->TakeDamage( pev, pev, 8, DMG_BULLET );
-		if ( pOther->IsAlive( ) )
+		if ( pOther->IsPlayer( ) )
 			EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "debris/flesh1.wav", 1, 0.8, 0, 110 );
 	}
 }
@@ -219,7 +219,7 @@ void CDartTrap::DartShootThink( void )
 		m_iNumDartsAvalible--;
 	}
 
-	Vector vecSpread = VECTOR_CONE_1DEGREES * m_iSpread;
+	Vector vecSpread = m_iSpread * VECTOR_CONE_1DEGREES;
 
 	// as CBaseEntity::FireBullets spreads its shots
 	float x, y, z;
@@ -352,31 +352,35 @@ void CTargetRocket::IgniteThink( void )
 
 void CTargetRocket::AccelerateThink( void )
 {
-	if ( pev->origin.x < -4096 || pev->origin.x > 4096
-		|| pev->origin.y < -4096 || pev->origin.y > 4096
-		|| pev->origin.z < -4096 || pev->origin.z > 4096 )
+	if ( pev->origin.x >= -4096 && pev->origin.x <= 4096
+		&& pev->origin.y >= -4096 && pev->origin.y <= 4096
+		&& pev->origin.z >= -4096 && pev->origin.z <= 4096 )
+	{
+		// steer towards the target
+		if ( m_pTargetEntity )
+		{
+			Vector vecVelocity, vecDir;
+			vecVelocity = pev->velocity;
+			vecDir = m_pTargetEntity->pev->origin - pev->origin;
+			vecDir.Normalize( );	// sic: the result is dropped
+			vecDir.x *= 0.7;
+			vecDir.y *= 0.7;
+			pev->velocity = vecVelocity + vecDir;
+		}
+
+		// and speed up
+		if ( pev->velocity.Length( ) < 1800 )
+			pev->velocity = pev->velocity + m_vecForward * 200;
+
+		pev->angles = UTIL_VecToAngles( pev->velocity );
+		pev->nextthink = gpGlobals->time + 0.1;
+	}
+	else
 	{
 		if ( m_pFlare )
 			UTIL_Remove( m_pFlare );
 		UTIL_Remove( this );
-		return;
 	}
-
-	// steer towards the target
-	if ( m_pTargetEntity )
-	{
-		Vector vecVelocity = pev->velocity;
-		Vector vecDir = m_pTargetEntity->pev->origin - pev->origin;
-		vecDir.Normalize( );	// sic: the result is dropped
-		pev->velocity = vecVelocity + vecDir * 0.7;
-	}
-
-	// and speed up
-	if ( pev->velocity.Length( ) < 1800 )
-		pev->velocity = pev->velocity + m_vecForward * 200;
-
-	pev->angles = UTIL_VecToAngles( pev->velocity );
-	pev->nextthink = gpGlobals->time + 0.1;
 }
 
 //=========================================================

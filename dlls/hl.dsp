@@ -476,6 +476,10 @@ SOURCE=.\darttrap.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\monstertank.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\camera.cpp
 # End Source File
 # Begin Source File

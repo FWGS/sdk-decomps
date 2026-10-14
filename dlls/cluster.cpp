@@ -73,13 +73,14 @@ void CClusterGod::Precache( void )
 void CClusterGod::ShootClusterGrenades( void )
 {
 	TraceResult tr;
+	Vector vecDir;
 
 	pev->angles.x = RANDOM_FLOAT( -90, -70 );
 	pev->angles.y = RANDOM_FLOAT( -90, 90 );
 	pev->angles.z = 0;
 
 	UTIL_MakeVectors( pev->angles );
-	Vector vecDir = gpGlobals->v_forward;
+	vecDir = gpGlobals->v_forward;
 	Vector vecEnd = pev->origin + vecDir * 2048;	// sic: unused
 
 	UTIL_TraceLine( pev->origin, pev->origin + vecDir * 128, dont_ignore_monsters, pev->owner, &tr );
@@ -187,13 +188,14 @@ void CClusterExplosion::Precache( void )
 void CClusterExplosion::ClusterExplode( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	TraceResult tr;
+	Vector vecDir;
 
 	pev->angles.x = RANDOM_FLOAT( -90, -70 );
 	pev->angles.y = RANDOM_FLOAT( -90, 90 );
 	pev->angles.z = 0;
 
 	UTIL_MakeVectors( pev->angles );
-	Vector vecDir = gpGlobals->v_forward;
+	vecDir = gpGlobals->v_forward;
 	Vector vecEnd = pev->origin + vecDir * 2048;	// sic: unused
 
 	UTIL_TraceLine( pev->origin, pev->origin + vecDir * 128, dont_ignore_monsters, pev->owner, &tr );

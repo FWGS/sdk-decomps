@@ -108,3 +108,16 @@ void DrawDebugBeam( Vector vecStart, Vector vecEnd, int r, int g, int b )
 void CVehicleTank::EjectPlayer( void )
 {
 }
+
+// The tank's shell (retail 0x100a0170); monster_tank's unused FireShell
+// calls it. Stub until the vehicle code is reconstructed.
+class CVehicleTankShell : public CGrenade
+{
+public:
+	static CVehicleTankShell *Create( Vector vecOrigin, Vector vecAngles, CBaseEntity *pOwner );
+};
+
+CVehicleTankShell *CVehicleTankShell::Create( Vector vecOrigin, Vector vecAngles, CBaseEntity *pOwner )
+{
+	return NULL;
+}
