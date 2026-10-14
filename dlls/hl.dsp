@@ -590,6 +590,10 @@ SOURCE=.\hologram.cpp
 
 SOURCE=.\torch.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\scientist.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
