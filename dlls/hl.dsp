@@ -488,6 +488,30 @@ SOURCE=.\vehicle.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\bandit.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\demoman.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\friendlygunman.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\friendlyunarmed.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\banditgrunt.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\hostilescientist.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\camera.cpp
 # End Source File
 # Begin Source File
