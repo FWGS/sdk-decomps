@@ -2277,24 +2277,24 @@ Schedule_t* CBaseBandit :: GetScheduleOfType ( int Type )
 		break;
 	case SCHED_BANDIT_RANGE_MACHINEGUN:
 		{
-			if ( m_bStanding )
-				return &slBanditMachinegunStand[ 0 ];
-			else
+			if ( !m_bStanding )
 				return &slBanditMachinegunCrouch[ 0 ];
+			else
+				return &slBanditMachinegunStand[ 0 ];
 		}
 	case SCHED_BANDIT_RANGE_ROCKET:
 		{
-			if ( m_bStanding )
-				return &slBanditRocketStand[ 0 ];
-			else
+			if ( !m_bStanding )
 				return &slBanditRocketCrouch[ 0 ];
+			else
+				return &slBanditRocketStand[ 0 ];
 		}
 	case SCHED_BANDIT_RANGE_SHOTGUN:
 		{
-			if ( m_bStanding )
-				return &slBanditShotgunStand[ 0 ];
-			else
+			if ( !m_bStanding )
 				return &slBanditShotgunCrouch[ 0 ];
+			else
+				return &slBanditShotgunStand[ 0 ];
 		}
 	case SCHED_RANGE_ATTACK2:
 		{
