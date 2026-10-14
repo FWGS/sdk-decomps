@@ -626,7 +626,8 @@ void CBaseBandit :: FireGauss ( Vector vecOrigSrc, Vector vecDir, float flDamage
 
 	pShooter->pev->effects |= EF_MUZZLEFLASH;
 
-	Vector vecMuzzle = vecSrc + gpGlobals->v_up * -8 + gpGlobals->v_right * 3;	// sic: not used
+	Vector vecMuzzle;	// sic: not used
+	vecMuzzle = vecSrc + gpGlobals->v_up * -8 + gpGlobals->v_right * 3;
 
 	if ( pEntity->pev->takedamage )
 	{
@@ -641,7 +642,7 @@ void CBaseBandit :: FireGauss ( Vector vecOrigSrc, Vector vecDir, float flDamage
 	UTIL_VecToAngles( vecDir.Normalize() );	// sic: thrown away
 
 	// the event gets the trace's plane normal and end point
-	PLAYBACK_EVENT_FULL( FEV_RELIABLE, edict(), g_usGaussFire, 0.0, (float *)&tr.vecPlaneNormal, (float *)&tr.vecEndPos, 0.0, 0.0, 1, iGun, 0, 1 );
+	PLAYBACK_EVENT_FULL( FEV_RELIABLE, edict(), g_usGaussFire, 0.0, tr.vecPlaneNormal, tr.vecEndPos, 0.0, 0.0, 1, iGun, 0, 1 );
 }
 
 //=========================================================
@@ -2069,7 +2070,8 @@ Schedule_t *CBaseBandit :: GetSchedule( void )
 				// roll out from behind cover, toward the side a gun is on
 				if ( HasConditions( bits_COND_ENEMY_OCCLUDED ) && m_hEnemy != NULL && GetGunsFiring() && UTIL_PercentChance( 50 ) )
 				{
-					Vector vecDir = ( pev->origin - m_hEnemy->pev->origin ).Normalize();
+					Vector vecDir;
+					vecDir = ( pev->origin - m_hEnemy->pev->origin ).Normalize();
 
 					if ( DotProduct( vecDir, gpGlobals->v_forward ) <= -0.9 )
 					{

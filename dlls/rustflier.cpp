@@ -441,8 +441,9 @@ void CRustFlier :: StartCrash( void )
 	m_pGoalEnt = UTIL_FindEntityByTargetname( NULL, STRING( m_iszDeathPath ) );
 	if ( m_pGoalEnt )
 	{
-		Vector vecDir = m_pGoalEnt->pev->origin - pev->origin;
-		float flDist = (m_pGoalEnt->pev->origin - pev->origin).Length();
+		const Vector &vecGoal = m_pGoalEnt->pev->origin;
+		Vector vecDir = vecGoal - pev->origin;
+		float flDist = (vecGoal - pev->origin).Length();
 
 		pev->velocity = vecDir.Normalize() * flDist / m_flTimeTillCrash;
 

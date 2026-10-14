@@ -238,7 +238,9 @@ void CEndBossKataball::AccelerateThink( void )
 
 		vecVelocity = pev->velocity.Normalize( ) * 128;
 		vecSteer = vecDir.Normalize( ) * flTurn;
-		pev->velocity = ( vecSteer + vecVelocity ).Normalize( ) * flSpeed;
+		Vector vecNew;
+		vecNew = vecSteer + vecVelocity;
+		pev->velocity = vecNew.Normalize( ) * flSpeed;
 		pev->angles = UTIL_VecToAngles( pev->velocity );
 	}
 	else
@@ -319,13 +321,20 @@ void CEndBossRocket::Spawn( void )
 	UTIL_MakeVectorsPrivate( pev->owner->v.angles, vecForward, vecRight, vecUp );
 
 	// sic: the target is never used
-	Vector vecTarget = ( m_hEnemy != NULL ) ? m_hEnemy->BodyTarget( pev->origin ) : pev->origin + vecForward * 1024;
+	Vector vecTarget;
+	if ( m_hEnemy != NULL )
+		vecTarget = m_hEnemy->BodyTarget( pev->origin );
+	else
+		vecTarget = pev->origin + vecForward * 1024;
 
 	// leave toward a random spot 64 units ahead of the boss
-	Vector vecUpOffset = vecUp * ( RANDOM_FLOAT( 0, 64 ) - 32 );
-	Vector vecRightOffset = vecRight * ( RANDOM_FLOAT( 0, 64 ) - 32 );
-	Vector vecSpot = pev->origin + vecForward * 64 + vecRightOffset + vecUpOffset;
-	pev->velocity = ( vecSpot - pev->origin ).Normalize( ) * 500;
+	Vector vecUpOffset;
+	vecUpOffset = ( RANDOM_FLOAT( 0, 64 ) - 32 ) * vecUp;
+	Vector vecRightOffset;
+	vecRightOffset = ( RANDOM_FLOAT( 0, 64 ) - 32 ) * vecRight;
+	Vector vecSpot = pev->origin + 64 * vecForward + vecRightOffset + vecUpOffset;
+	Vector vecDir = vecSpot - pev->origin;
+	pev->velocity = vecDir.Normalize( ) * 500;
 	pev->angles = UTIL_VecToAngles( pev->velocity );
 
 	pev->dmg = 50;

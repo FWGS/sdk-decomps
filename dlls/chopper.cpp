@@ -461,17 +461,23 @@ void CChopper :: HuntThink( void )
 	Flight( );
 
 	UTIL_MakeAimVectors( pev->angles );
-	(gpGlobals->v_up * 800 + pev->velocity).Normalize( );	// sic: the estimate is thrown away
+	Vector vecEst = (gpGlobals->v_up * 800 + pev->velocity).Normalize( );	// sic: not used
 
 	if ( m_iBullets == 0 )
 	{
 		ResetStrafe( );
 	}
-	else if ( CanStrafe( ) && (m_flLastSeen + 1 > gpGlobals->time) && (m_flPrevSeen + 2 < gpGlobals->time) && FireGun( ) )
+	else if ( CanStrafe( ) )
 	{
-		// slow down if we're fireing
-		if (m_flGoalSpeed > 150)
-			m_flGoalSpeed = 150;
+		if ((m_flLastSeen + 1 > gpGlobals->time) && (m_flPrevSeen + 2 < gpGlobals->time))
+		{
+			if (FireGun( ))
+			{
+				// slow down if we're fireing
+				if (m_flGoalSpeed > 150)
+					m_flGoalSpeed = 150;
+			}
+		}
 	}
 }
 
@@ -793,8 +799,10 @@ void CMantaShip :: Spawn( void )
 	{
 		m_vecDest = m_pGoalEnt->pev->origin;
 		UTIL_MakeAimVectors( m_pGoalEnt->pev->angles );
-		pev->velocity = (m_vecDest - pev->origin).Normalize() * 400;
-		pev->angles.y = UTIL_VecToAngles( pev->origin - m_pGoalEnt->pev->origin ).y + 180;
+		Vector vecDir = m_vecDest - pev->origin;
+		pev->velocity = vecDir.Normalize() * 400;
+		Vector vecAngles = UTIL_VecToAngles( pev->origin - m_pGoalEnt->pev->origin );
+		pev->angles.y = vecAngles.y + 180;
 	}
 
 	EMIT_SOUND_DYN( ENT(pev), CHAN_STATIC, "manta/manta_idle2.wav", 1.0, 0.3, SND_CHANGE_PITCH | SND_CHANGE_VOL, 100 );
@@ -949,8 +957,10 @@ void CMantaShip :: MantaThink( void )
 			m_posDesired = m_pGoalEnt->pev->origin;
 			UTIL_MakeAimVectors( m_pGoalEnt->pev->angles );
 			m_vecGoal = gpGlobals->v_forward;
-			pev->velocity = (m_pGoalEnt->pev->origin - pev->origin).Normalize() * 300;
-			pev->angles.y = UTIL_VecToAngles( pev->origin - m_pGoalEnt->pev->origin ).y + 180;
+			Vector vecDir = m_pGoalEnt->pev->origin - pev->origin;
+			pev->velocity = vecDir.Normalize() * 300;
+			Vector vecAngles = UTIL_VecToAngles( pev->origin - m_pGoalEnt->pev->origin );
+			pev->angles.y = vecAngles.y + 180;
 		}
 	}
 
@@ -971,7 +981,9 @@ void CMantaShip :: MantaThink( void )
 				UTIL_MakeAimVectors( m_pGoalEnt->pev->angles );
 				m_vecGoal = gpGlobals->v_forward;
 				flLength = (pev->origin - m_posDesired).Length();
-				pev->velocity = (m_pGoalEnt->pev->origin - pev->origin).Normalize() * 300;
+				Vector vecDir;
+				vecDir = m_pGoalEnt->pev->origin - pev->origin;
+				pev->velocity = vecDir.Normalize() * 300;
 			}
 		}
 	}
