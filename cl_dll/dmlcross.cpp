@@ -127,14 +127,14 @@ int CHudDmlCross::Draw(float flTime)
 	// mode 2 cycles frames 0 to 5, the others hold frame 6
 	flMin = 0;
 	flNow = gEngfuncs.GetClientTime();
-	if ( m_iMode == 2 )
-	{
-		flMax = 5;
-	}
-	else
+	if ( m_iMode != 2 )
 	{
 		flMax = 11;
 		flMin = 6;
+	}
+	else
+	{
+		flMax = 5;
 	}
 
 	m_flFrame = ( flNow - m_flLastTime ) * 10 + m_flFrame;

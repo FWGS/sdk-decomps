@@ -17,6 +17,10 @@
 //
 // implementation of CHudAmmo class
 //
+// Gunman: slots 1-9 open a VGUI weapon menu; slot 10 lists the current
+// weapon's customization items, whose settings the weapon keys step through
+// and that are drawn here (chemgun vials, beamgun dials, gauss modes ...).
+//
 
 #include "hud.h"
 #include "cl_util.h"
@@ -30,7 +34,15 @@
 
 WEAPON *gpActiveSel;	// NULL means off, 1 means just the menu bar, otherwise
 						// this points to the active weapon menu item
-WEAPON *gpLastSel;		// Last weapon menu selection 
+WEAPON *gpLastSel;		// the weapon lastinv goes back to
+WEAPON *gpMenuWeapon;	// the weapon held when the menu opened
+
+int giActiveSlot;		// the slot the menu shows
+float g_flSelTime;		// cleared when the selection moves; never read
+int g_fWeaponSelected = 1;	// set when a weapon is picked; the heat gauge reads it
+
+int g_iHeatWeapon;		// TempX: the weapon whose heat the gauge shows
+int g_iHeat;			// and its heat
 
 client_sprite_t *GetSpriteList(client_sprite_t *pList, const char *psz, int iRes, int iCount);
 
@@ -68,12 +80,11 @@ int WeaponsResource :: HasAmmo( WEAPON *p )
 		|| CountAmmo(p->iAmmo2Type) || ( p->iFlags & WEAPON_FLAGS_SELECTONEMPTY );
 }
 
-
 void WeaponsResource :: LoadWeaponSprites( WEAPON *pWeapon )
 {
 	int i, iRes;
 
-	if (ScreenWidth < 640)
+	if (ScreenWidth <= 640)
 		iRes = 320;
 	else
 		iRes = 640;
@@ -195,13 +206,19 @@ void WeaponsResource :: LoadWeaponSprites( WEAPON *pWeapon )
 }
 
 // Returns the first weapon for a given slot.
+// Gunman: a customization item counts when it belongs to the current weapon.
 WEAPON *WeaponsResource :: GetFirstPos( int iSlot )
 {
 	WEAPON *pret = NULL;
 
 	for (int i = 0; i < MAX_WEAPON_POSITIONS; i++)
 	{
-		if ( rgSlots[iSlot][i] && HasAmmo( rgSlots[iSlot][i] ) )
+		if ( rgSlots[iSlot][i] && rgSlots[iSlot][i]->iIsCustomization == 1 )
+		{
+			if ( gHUD.m_Ammo.m_pWeapon && !strcmp( rgSlots[iSlot][i]->szCustomizes, gHUD.m_Ammo.m_pWeapon->szName ) )
+				return rgSlots[iSlot][i];
+		}
+		else if ( rgSlots[iSlot][i] && HasAmmo( rgSlots[iSlot][i] ) )
 		{
 			pret = rgSlots[iSlot][i];
 			break;
@@ -211,6 +228,21 @@ WEAPON *WeaponsResource :: GetFirstPos( int iSlot )
 	return pret;
 }
 
+// Gunman: hides the customization items of the other weapons
+WEAPON* WeaponsResource :: GetWeaponSlot( int slot, int pos )
+{
+	WEAPON *p = rgSlots[slot][pos];
+
+	if ( p && p->iIsCustomization == 1 )
+	{
+		if ( gHUD.m_Ammo.m_pWeapon && !strcmp( p->szCustomizes, gHUD.m_Ammo.m_pWeapon->szName ) )
+			return p;
+
+		return NULL;
+	}
+
+	return p;
+}
 
 WEAPON* WeaponsResource :: GetNextActivePos( int iSlot, int iSlotPos )
 {
@@ -219,16 +251,42 @@ WEAPON* WeaponsResource :: GetNextActivePos( int iSlot, int iSlotPos )
 
 	WEAPON *p = gWR.rgSlots[ iSlot ][ iSlotPos+1 ];
 	
-	if ( !p || !gWR.HasAmmo(p) )
-		return GetNextActivePos( iSlot, iSlotPos + 1 );
+	if ( p && p->iIsCustomization == 1 )
+	{
+		if ( gHUD.m_Ammo.m_pWeapon && !strcmp( p->szCustomizes, gHUD.m_Ammo.m_pWeapon->szName ) )
+			return p;
+	}
+	else if ( p && gWR.HasAmmo(p) )
+		return p;
 
-	return p;
+	return GetNextActivePos( iSlot, iSlotPos + 1 );
 }
 
 
 int giBucketHeight, giBucketWidth, giABHeight, giABWidth; // Ammo Bar width and height
 
 HSPRITE ghsprBuckets;					// Sprite for top row of weapons menu
+
+// Gunman's HUD sprites (hud.txt)
+int g_HUD_g_arrow, g_HUD_g_bar, g_HUD_g_slider;
+int g_HUD_vial_ec, g_HUD_vial_el, g_HUD_vial_er;	// chemgun vials: empty
+int g_HUD_vial_fc, g_HUD_vial_fl, g_HUD_vial_fr;	// and full
+int g_HUD_chem_slider, g_HUD_chem_bar;
+int g_HUD_beamdials, g_HUD_pointer;
+int g_HUD_fired, g_HUD_locked, g_HUD_guided, g_HUD_homing, g_HUD_spiral;
+int g_HUD_impact, g_HUD_proximity, g_HUD_timed, g_HUD_explosive, g_HUD_cluster;
+int g_HUD_launch, g_HUD_flightpath, g_HUD_detonate, g_HUD_payload, g_HUD_while, g_HUD_on;
+int g_HUD_pulseAct, g_HUD_pulse, g_HUD_chargeAct, g_HUD_charge;	// gauss pistol modes
+int g_HUD_rapidAct, g_HUD_rapid, g_HUD_rapidSnipe, g_HUD_rapidSnipeAct;
+int g_HUD_sniper, g_HUD_sniperAct;
+int g_HUD_tripped, g_HUD_degrees, g_HUD_mechaArrow, g_HUD_shells;
+int g_HUD_glow_beamgun, g_HUD_glow_chemgun, g_HUD_glow_dml, g_HUD_glow_grenade;	// weapon menu
+int g_HUD_glow_pistol, g_HUD_glow_knife, g_HUD_glow_minigun, g_HUD_glow_shotgun;
+int g_HUD_glow_bracketleft, g_HUD_glow_bracketright;
+int g_HUD_number_10;
+int g_HUD_glow_beamgun_no, g_HUD_glow_chemgun_no, g_HUD_glow_dml_no, g_HUD_glow_grenade_no;
+int g_HUD_glow_pistol_no, g_HUD_glow_minigun_no, g_HUD_glow_shotgun_no;
+int g_HUD_selectLeft, g_HUD_selectRight;
 
 DECLARE_MESSAGE(m_Ammo, CurWeapon );	// Current weapon and clip
 DECLARE_MESSAGE(m_Ammo, WeaponList);	// new weapon type
@@ -237,6 +295,8 @@ DECLARE_MESSAGE(m_Ammo, AmmoPickup);	// flashes an ammo pickup record
 DECLARE_MESSAGE(m_Ammo, WeapPickup);    // flashes a weapon pickup record
 DECLARE_MESSAGE(m_Ammo, HideWeapon);	// hides the weapon, ammo, and crosshair displays temporarily
 DECLARE_MESSAGE(m_Ammo, ItemPickup);
+DECLARE_MESSAGE(m_Ammo, SliderX);		// sets a customization item's setting
+DECLARE_MESSAGE(m_Ammo, TempX);			// a weapon's heat
 
 DECLARE_COMMAND(m_Ammo, Slot1);
 DECLARE_COMMAND(m_Ammo, Slot2);
@@ -251,6 +311,9 @@ DECLARE_COMMAND(m_Ammo, Slot10);
 DECLARE_COMMAND(m_Ammo, Close);
 DECLARE_COMMAND(m_Ammo, NextWeapon);
 DECLARE_COMMAND(m_Ammo, PrevWeapon);
+DECLARE_COMMAND(m_Ammo, LastInv);
+
+DECLARE_MESSAGE(m_Ammo, Tank);			// gets in and out of the tank
 
 // width of ammo fonts
 #define AMMO_SMALL_WIDTH 10
@@ -269,6 +332,9 @@ int CHudAmmo::Init(void)
 	HOOK_MESSAGE(ItemPickup);
 	HOOK_MESSAGE(HideWeapon);
 	HOOK_MESSAGE(AmmoX);
+	HOOK_MESSAGE(SliderX);
+	HOOK_MESSAGE(TempX);
+	HOOK_MESSAGE(Tank);
 
 	HOOK_COMMAND("slot1", Slot1);
 	HOOK_COMMAND("slot2", Slot2);
@@ -283,16 +349,31 @@ int CHudAmmo::Init(void)
 	HOOK_COMMAND("cancelselect", Close);
 	HOOK_COMMAND("invnext", NextWeapon);
 	HOOK_COMMAND("invprev", PrevWeapon);
+	HOOK_COMMAND("lastinv", LastInv);
 
 	Reset();
 
 	CVAR_CREATE( "hud_drawhistory_time", HISTORY_DRAW_TIME, 0 );
 	CVAR_CREATE( "hud_fastswitch", "0", FCVAR_ARCHIVE );		// controls whether or not weapons can be selected in one keypress
+	CVAR_CREATE( "hud_smallhud", "0", FCVAR_ARCHIVE );
+	CVAR_CREATE( "hud_reverseweapons", "0", FCVAR_ARCHIVE );	// swaps invnext and invprev
+	CVAR_CREATE( "hud_autoswitch", "1", FCVAR_ARCHIVE );		// selecting a weapon in the menu switches to it
+	CVAR_CREATE( "hud_customwrap", "0", FCVAR_ARCHIVE );		// customization settings wrap around
+	CVAR_CREATE( "violence_germany", "0", FCVAR_ARCHIVE );
 
 	m_iFlags |= HUD_ACTIVE; //!!!
 
+	m_fCustomizing = 0;
+	m_fCustomPrev = 0;
+	m_fCustomNext = 0;
+	m_flNextFrame = 0;
+	m_iFrame = 0;
+	m_fGrenadesPicked = 0;
+
 	gWR.Init();
 	gHR.Init();
+
+	gpActiveSel = NULL;
 
 	return 1;
 };
@@ -302,11 +383,20 @@ void CHudAmmo::Reset(void)
 	m_fFade = 0;
 	m_iFlags |= HUD_ACTIVE; //!!!
 
+	m_fCustomizing = 0;
+	m_fCustomPrev = 0;
+	m_fCustomNext = 0;
+
 	gpActiveSel = NULL;
 	gHUD.m_iHideHUDDisplay = 0;
+	m_fMenuOpen = false;
 
 	gWR.Reset();
 	gHR.Reset();
+
+	gHUD.m_Tank.Reset();
+	gHUD.m_Zoom.Reset();
+	gHUD.m_DmlCross.Reset();
 
 	//	VidInit();
 
@@ -317,6 +407,70 @@ int CHudAmmo::VidInit(void)
 	// Load sprites for buckets (top row of weapon menu)
 	m_HUD_bucket0 = gHUD.GetSpriteIndex( "bucket1" );
 	m_HUD_selection = gHUD.GetSpriteIndex( "selection" );
+
+	g_HUD_g_arrow = gHUD.GetSpriteIndex( "g_arrow" );
+	g_HUD_g_bar = gHUD.GetSpriteIndex( "g_bar" );
+	g_HUD_g_slider = gHUD.GetSpriteIndex( "g_slider" );
+	g_HUD_vial_ec = gHUD.GetSpriteIndex( "vial_ec" );
+	g_HUD_vial_el = gHUD.GetSpriteIndex( "vial_el" );
+	g_HUD_vial_er = gHUD.GetSpriteIndex( "vial_er" );
+	g_HUD_vial_fc = gHUD.GetSpriteIndex( "vial_fc" );
+	g_HUD_vial_fl = gHUD.GetSpriteIndex( "vial_fl" );
+	g_HUD_vial_fr = gHUD.GetSpriteIndex( "vial_fr" );
+	g_HUD_chem_slider = gHUD.GetSpriteIndex( "chem_slider" );
+	g_HUD_chem_bar = gHUD.GetSpriteIndex( "chem_bar" );
+	g_HUD_beamdials = gHUD.GetSpriteIndex( "beamdials" );
+	g_HUD_pointer = gHUD.GetSpriteIndex( "pointer" );
+	g_HUD_fired = gHUD.GetSpriteIndex( "fired" );
+	g_HUD_locked = gHUD.GetSpriteIndex( "locked" );
+	g_HUD_guided = gHUD.GetSpriteIndex( "guided" );
+	g_HUD_homing = gHUD.GetSpriteIndex( "homing" );
+	g_HUD_spiral = gHUD.GetSpriteIndex( "spiral" );
+	g_HUD_impact = gHUD.GetSpriteIndex( "impact" );
+	g_HUD_proximity = gHUD.GetSpriteIndex( "proximity" );
+	g_HUD_timed = gHUD.GetSpriteIndex( "timed" );
+	g_HUD_explosive = gHUD.GetSpriteIndex( "explosive" );
+	g_HUD_cluster = gHUD.GetSpriteIndex( "cluster" );
+	g_HUD_launch = gHUD.GetSpriteIndex( "launch" );
+	g_HUD_flightpath = gHUD.GetSpriteIndex( "flightpath" );
+	g_HUD_detonate = gHUD.GetSpriteIndex( "detonate" );
+	g_HUD_payload = gHUD.GetSpriteIndex( "payload" );
+	g_HUD_while = gHUD.GetSpriteIndex( "while" );
+	g_HUD_on = gHUD.GetSpriteIndex( "on" );
+	g_HUD_pulseAct = gHUD.GetSpriteIndex( "pulseAct" );
+	g_HUD_pulse = gHUD.GetSpriteIndex( "pulse" );
+	g_HUD_chargeAct = gHUD.GetSpriteIndex( "chargeAct" );
+	g_HUD_charge = gHUD.GetSpriteIndex( "charge" );
+	g_HUD_rapidAct = gHUD.GetSpriteIndex( "rapidAct" );
+	g_HUD_rapid = gHUD.GetSpriteIndex( "rapid" );
+	g_HUD_rapidSnipe = gHUD.GetSpriteIndex( "rapidSnipe" );
+	g_HUD_rapidSnipeAct = gHUD.GetSpriteIndex( "rapidSnipeAct" );
+	g_HUD_sniper = gHUD.GetSpriteIndex( "sniper" );
+	g_HUD_sniperAct = gHUD.GetSpriteIndex( "sniperAct" );
+	g_HUD_tripped = gHUD.GetSpriteIndex( "tripped" );
+	g_HUD_degrees = gHUD.GetSpriteIndex( "degrees" );
+	g_HUD_mechaArrow = gHUD.GetSpriteIndex( "mechaArrow" );
+	g_HUD_shells = gHUD.GetSpriteIndex( "shells" );
+	g_HUD_glow_beamgun = gHUD.GetSpriteIndex( "glow_beamgun" );
+	g_HUD_glow_chemgun = gHUD.GetSpriteIndex( "glow_chemgun" );
+	g_HUD_glow_dml = gHUD.GetSpriteIndex( "glow_dml" );
+	g_HUD_glow_grenade = gHUD.GetSpriteIndex( "glow_grenade" );
+	g_HUD_glow_pistol = gHUD.GetSpriteIndex( "glow_pistol" );
+	g_HUD_glow_knife = gHUD.GetSpriteIndex( "glow_knife" );
+	g_HUD_glow_minigun = gHUD.GetSpriteIndex( "glow_minigun" );
+	g_HUD_glow_shotgun = gHUD.GetSpriteIndex( "glow_shotgun" );
+	g_HUD_glow_bracketleft = gHUD.GetSpriteIndex( "glow_bracketleft" );
+	g_HUD_glow_bracketright = gHUD.GetSpriteIndex( "glow_bracketright" );
+	g_HUD_number_10 = gHUD.GetSpriteIndex( "number_10" );
+	g_HUD_glow_beamgun_no = gHUD.GetSpriteIndex( "glow_beamgun_no" );
+	g_HUD_glow_chemgun_no = gHUD.GetSpriteIndex( "glow_chemgun_no" );
+	g_HUD_glow_dml_no = gHUD.GetSpriteIndex( "glow_dml_no" );
+	g_HUD_glow_grenade_no = gHUD.GetSpriteIndex( "glow_grenade_no" );
+	g_HUD_glow_pistol_no = gHUD.GetSpriteIndex( "glow_pistol_no" );
+	g_HUD_glow_minigun_no = gHUD.GetSpriteIndex( "glow_minigun_no" );
+	g_HUD_glow_shotgun_no = gHUD.GetSpriteIndex( "glow_shotgun_no" );
+	g_HUD_selectLeft = gHUD.GetSpriteIndex( "selectLeft" );
+	g_HUD_selectRight = gHUD.GetSpriteIndex( "selectRight" );
 
 	ghsprBuckets = gHUD.GetSprite(m_HUD_bucket0);
 	giBucketWidth = gHUD.GetSpriteRect(m_HUD_bucket0).right - gHUD.GetSpriteRect(m_HUD_bucket0).left;
@@ -350,6 +504,15 @@ void CHudAmmo::Think(void)
 	if ( gHUD.m_fPlayerDead )
 		return;
 
+	// no menu in the tank
+	if ( m_fCustomizing && gHUD.m_Tank.m_fInTank )
+	{
+		gpActiveSel = NULL;
+		gHUD.m_iKeyBits &= ~IN_ATTACK;
+		m_fCustomizing = 0;
+		return;
+	}
+
 	if ( gHUD.m_iWeaponBits != gWR.iOldWeaponBits )
 	{
 		gWR.iOldWeaponBits = gHUD.m_iWeaponBits;
@@ -371,22 +534,108 @@ void CHudAmmo::Think(void)
 	if (!gpActiveSel)
 		return;
 
+	// a customization item with settings opens them
+	if ( gpActiveSel != (WEAPON *)1 && gpActiveSel->iIsCustomization == 1 )
+		m_fCustomizing = gpActiveSel->iCustomSettings != 0;
+	else
+		m_fCustomizing = 0;
+
 	// has the player selected one?
 	if (gHUD.m_iKeyBits & IN_ATTACK)
 	{
+		g_flSelTime = 0;
+		g_fWeaponSelected = 1;
+
 		if (gpActiveSel != (WEAPON *)1)
 		{
-			ServerCmd(gpActiveSel->szName);
-			g_weaponselect = gpActiveSel->iId;
+			if ( gpActiveSel->iIsCustomization == 1 )
+			{
+				if ( gpActiveSel->iCustomSettings )
+				{
+					// opens and closes its settings
+					if ( m_fCustomizing )
+						m_fCustomizing = 0;
+					else
+					{
+						m_fCustomizing = 1;
+						gHUD.m_iKeyBits &= ~IN_ATTACK;
+					}
+				}
+				else
+				{
+					// an on/off item
+					gpActiveSel->iCustomSetting = !gpActiveSel->iCustomSetting;
+				}
+			}
+			else
+			{
+				gpLastSel = gpMenuWeapon;
+				gpMenuWeapon = NULL;
+				ServerCmd(gpActiveSel->szName);
+				g_weaponselect = gpActiveSel->iId;
+
+				if ( gViewPort )
+					gViewPort->HideVGUIMenu();
+				m_fMenuOpen = false;
+
+				PlaySound("common/wpn_select.wav", 1);
+			}
+
+			if ( gpActiveSel != (WEAPON *)1 && gpActiveSel->iIsCustomization )
+			{
+				SendCustomization();
+				PlaySound("common/wpn_hudoff.wav", 1);
+				gViewPort->m_pCustomMenu->HideAll();
+			}
 		}
 
-		gpLastSel = gpActiveSel;
 		gpActiveSel = NULL;
 		gHUD.m_iKeyBits &= ~IN_ATTACK;
-
-		PlaySound("common/wpn_select.wav", 1);
 	}
 
+	if ( !m_fCustomizing || gpActiveSel == (WEAPON *)1 )
+		return;
+
+	// sic: gpActiveSel is NULL here if the attack key just closed the menu
+	if ( m_fCustomPrev )
+	{
+		gpActiveSel->iCustomSetting--;
+		m_fCustomPrev = 0;
+
+		if ( gpActiveSel->iCustomSetting < 1 )
+		{
+			if ( CVAR_GET_FLOAT( "hud_customwrap" ) && strcmp( gpActiveSel->szCustomizes, "weapon_SPchemicalgun" ) )
+				gpActiveSel->iCustomSetting = gpActiveSel->iCustomSettings;
+			else
+				gpActiveSel->iCustomSetting = 1;
+		}
+	}
+
+	if ( m_fCustomNext )
+	{
+		gpActiveSel->iCustomSetting++;
+		m_fCustomNext = 0;
+
+		if ( gpActiveSel->iCustomSetting > gpActiveSel->iCustomSettings )
+		{
+			if ( CVAR_GET_FLOAT( "hud_customwrap" ) && strcmp( gpActiveSel->szCustomizes, "weapon_SPchemicalgun" ) )
+				gpActiveSel->iCustomSetting = 1;
+			else
+				gpActiveSel->iCustomSetting = gpActiveSel->iCustomSettings;
+		}
+
+		// the gauss pistol's sniper mode needs the scope
+		if ( m_pWeapon && gpActiveSel->iCustomSetting == 4 && !strcmp( gHUD.m_Ammo.m_pWeapon->szName, "weapon_gausspistol" ) )
+		{
+			if ( !gWR.HasAmmo( gWR.GetWeaponSlot( 9, 19 ) ) )
+			{
+				if ( CVAR_GET_FLOAT( "hud_customwrap" ) )
+					gpActiveSel->iCustomSetting = 1;
+				else
+					gpActiveSel->iCustomSetting = 3;
+			}
+		}
+	}
 }
 
 //
@@ -417,6 +666,19 @@ HSPRITE* WeaponsResource :: GetAmmoPicFromWeapon( int iAmmoId, wrect_t& rect )
 
 void WeaponsResource :: SelectSlot( int iSlot, int fAdvance, int iDirection )
 {
+	if ( gHUD.m_Tank.m_fInTank )
+		return;
+
+	// the AI core has no menu
+	if ( gHUD.m_Ammo.m_pWeapon && !strcmp( gHUD.m_Ammo.m_pWeapon->szName, "weapon_aicore" ) )
+	{
+		gHUD.m_Ammo.m_fCustomizing = 0;
+		gpActiveSel = NULL;
+	}
+
+	if ( giActiveSlot != iSlot )
+		g_flSelTime = 0;
+
 	if ( gHUD.m_Menu.m_fMenuDisplayed && (fAdvance == FALSE) && (iDirection == 1) )	
 	{ // menu is overriding slot use commands
 		gHUD.m_Menu.SelectMenuItem( iSlot + 1 );  // slots are one off the key numbers
@@ -429,51 +691,52 @@ void WeaponsResource :: SelectSlot( int iSlot, int fAdvance, int iDirection )
 	if ( gHUD.m_fPlayerDead || gHUD.m_iHideHUDDisplay & ( HIDEHUD_WEAPONS | HIDEHUD_ALL ) )
 		return;
 
-	if (!(gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT)) ))
-		return;
+	WEAPON *p;
 
-	if ( ! ( gHUD.m_iWeaponBits & ~(1<<(WEAPON_SUIT)) ))
-		return;
-
-	WEAPON *p = NULL;
-	bool fastSwitch = CVAR_GET_FLOAT( "hud_fastswitch" ) != 0;
-
-	if ( (gpActiveSel == NULL) || (gpActiveSel == (WEAPON *)1) || (iSlot != gpActiveSel->iSlot) )
+	if ( gpActiveSel && gpActiveSel != (WEAPON *)1 && iSlot == gpActiveSel->iSlot )
 	{
-		PlaySound( "common/wpn_hudon.wav", 1 );
-		p = GetFirstPos( iSlot );
-
-		if ( p && fastSwitch ) // check for fast weapon switch mode
-		{
-			// if fast weapon switch is on, then weapons can be selected in a single keypress
-			// but only if there is only one item in the bucket
-			WEAPON *p2 = GetNextActivePos( p->iSlot, p->iSlotPos );
-			if ( !p2 )
-			{	// only one active item in bucket, so change directly to weapon
-				ServerCmd( p->szName );
-				g_weaponselect = p->iId;
-				return;
-			}
-		}
-	}
-	else
-	{
-		PlaySound("common/wpn_moveselect.wav", 1);
-		if ( gpActiveSel )
-			p = GetNextActivePos( gpActiveSel->iSlot, gpActiveSel->iSlotPos );
+		p = GetNextActivePos( gpActiveSel->iSlot, gpActiveSel->iSlotPos );
 		if ( !p )
 			p = GetFirstPos( iSlot );
 	}
-
-	
-	if ( !p )  // no selection found
+	else
 	{
-		// just display the weapon list, unless fastswitch is on just ignore it
-		if ( !fastSwitch )
-			gpActiveSel = (WEAPON *)1;
-		else
-			gpActiveSel = NULL;
+		p = GetFirstPos( iSlot );
+
+		if ( !p || iSlot != 9 )
+			PlaySound( p ? "common/wpn_moveselect.wav" : "common/wpn_denyselect.wav", 1 );
+
+		if ( p && strcmp( p->szCustomizes, "weapon_gausspistol" ) )
+		{
+			WEAPON *p2 = GetNextActivePos( p->iSlot, p->iSlotPos );
+
+			if ( !gpActiveSel && iSlot == 9 )
+			{
+				if ( p2 )
+					PlaySound( "common/wpn_hudon.wav", 1 );
+				else
+					PlaySound( "common/wpn_moveselect.wav", 1 );
+			}
+
+			if ( !p2 || !strcmp( p2->szName, "cust_2MinigunCooled" ) )
+			{	// only one active item in bucket, so change directly to weapon
+				if ( CVAR_GET_FLOAT( "hud_autoswitch" ) || iSlot == 9 )
+				{
+					ServerCmd( p->szName );
+					g_weaponselect = p->iId;
+				}
+
+				if ( !p->iIsCustomization )
+					gpActiveSel = p;
+				return;
+			}
+		}
+		else if ( !gpActiveSel && iSlot == 9 )
+			PlaySound( "common/wpn_hudon.wav", 1 );
 	}
+
+	if ( !p )  // no selection found
+		gpActiveSel = NULL;
 	else 
 		gpActiveSel = p;
 }
@@ -497,6 +760,62 @@ int CHudAmmo::MsgFunc_AmmoX(const char *pszName, int iSize, void *pbuf)
 	return 1;
 }
 
+//
+// SliderX -- sets a customization item's setting
+//
+int CHudAmmo::MsgFunc_SliderX( const char *pszName, int iSize, void *pbuf )
+{
+	if ( pbuf && pszName && iSize )
+	{
+		BEGIN_READ( pbuf, iSize );
+
+		int iId = READ_BYTE();
+		int iSetting = READ_BYTE();
+
+		if ( iId && iSetting )
+		{
+			WEAPON *p = gWR.GetWeapon( iId );
+
+			if ( p )
+				p->iCustomSetting = iSetting;
+		}
+	}
+
+	return 1;
+}
+
+int CHudAmmo::MsgFunc_Tank( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+
+	int iState = READ_SHORT();
+	gHUD.m_Tank.SetTank( iState );
+
+	return 1;
+}
+
+//
+// TempX -- the current weapon's heat
+//
+int CHudAmmo::MsgFunc_TempX( const char *pszName, int iSize, void *pbuf )
+{
+	if ( pbuf && pszName && iSize )
+	{
+		BEGIN_READ( pbuf, iSize );
+
+		int iId = READ_BYTE();
+		int iHeat = READ_BYTE();
+
+		if ( iId && iHeat && m_pWeapon && iHeat > 0 && m_pWeapon->iId == iId )
+		{
+			g_iHeatWeapon = iId;
+			g_iHeat = iHeat;
+		}
+	}
+
+	return 1;
+}
+
 int CHudAmmo::MsgFunc_AmmoPickup( const char *pszName, int iSize, void *pbuf )
 {
 	BEGIN_READ( pbuf, iSize );
@@ -504,7 +823,37 @@ int CHudAmmo::MsgFunc_AmmoPickup( const char *pszName, int iSize, void *pbuf )
 	int iCount = READ_BYTE();
 
 	// Add ammo to the history
-	gHR.AddToHistory( HISTSLOT_AMMO, iIndex, abs(iCount) );
+	if ( gViewPort && gViewPort->m_pTankPanel )
+		gViewPort->m_pTankPanel->AddToHistory( iIndex, 0 );
+
+	// the first grenades picked up get selected
+	WEAPON *p = gWR.GetWeapon( 13 );	// WEAPON_DMLGRENADE
+	if ( !m_fGrenadesPicked && p && p->iAmmoType == iIndex && !gWR.HasAmmo( p ) )
+	{
+		m_fGrenadesPicked = 1;
+
+		if ( m_fMenuOpen && gViewPort && gViewPort->m_pWeaponMenu && gViewPort->m_pWeaponMenu->m_pSlots[p->iSlot] )
+			gViewPort->m_pWeaponMenu->m_pSlots[p->iSlot]->setVisible( true );
+
+		if ( ( CVAR_GET_FLOAT( "hud_autoswitch" ) || !m_pWeapon || !gWR.HasAmmo( m_pWeapon ) ) && !m_fCustomizing )
+		{
+			ServerCmd( p->szName );
+			g_weaponselect = p->iId;
+		}
+	}
+
+	// light up the slot of the weapon that uses it
+	for ( int i = 0; i < 8; i++ )
+	{
+		WEAPON *pw = gWR.GetWeaponSlot( i, 0 );
+
+		if ( pw && pw->iAmmoType == iIndex )
+		{
+			if ( gViewPort->m_pWeaponMenu->m_pSlots[i] )
+				gViewPort->m_pWeaponMenu->m_pSlots[i]->setVisible( true );
+			break;
+		}
+	}
 
 	return 1;
 }
@@ -514,8 +863,53 @@ int CHudAmmo::MsgFunc_WeapPickup( const char *pszName, int iSize, void *pbuf )
 	BEGIN_READ( pbuf, iSize );
 	int iIndex = READ_BYTE();
 
-	// Add the weapon to the history
-	gHR.AddToHistory( HISTSLOT_WEAP, iIndex );
+	WEAPON *p = gWR.GetWeapon( iIndex );
+
+	if ( !p )
+		return 1;
+
+	if ( m_fMenuOpen && gViewPort && gViewPort->m_pWeaponMenu && !p->iIsCustomization )
+	{
+		if ( !gViewPort->m_pWeaponMenu->m_pSlots[p->iSlot] )
+			return 1;
+
+		gViewPort->m_pWeaponMenu->m_pSlots[p->iSlot]->setVisible( true );
+	}
+
+	if ( !p->iIsCustomization )
+	{
+		if ( ( CVAR_GET_FLOAT( "hud_autoswitch" ) || !m_pWeapon || !gWR.HasAmmo( m_pWeapon ) ) && !m_fCustomizing )
+		{
+			ServerCmd( p->szName );
+			g_weaponselect = p->iId;
+			gpLastSel = m_pWeapon;
+		}
+
+		// Add the weapon to the history
+		if ( gViewPort && gViewPort->m_pTankPanel && p->iId != 13 && p->iId != 1 )	// not the grenades or the fists
+			gViewPort->m_pTankPanel->AddToHistory( iIndex, 1 );
+
+		return 1;
+	}
+
+	if ( gViewPort && gViewPort->m_pTankPanel )
+		gViewPort->m_pTankPanel->AddToHistory( iIndex, 1 );
+
+	// the minigun's coolers and the gauss pistol's scope set their weapons up
+	if ( !strcmp( p->szName, "cust_2MinigunCooled" ) )
+	{
+		ClientCmd( p->szCustomizes );
+		ClientCmd( "cust_20" );
+		return 1;
+	}
+
+	if ( !strcmp( p->szName, "cust_2GaussPistolSniper" ) && CVAR_GET_FLOAT( "hud_autoswitch" ) )
+	{
+		ClientCmd( p->szCustomizes );
+		ClientCmd( "cust_14" );
+		gWR.GetWeapon( 31 )->iCustomSetting = 4;	// cust_1GaussPistolFireType: sniper
+		gpLastSel = m_pWeapon;
+	}
 
 	return 1;
 }
@@ -525,8 +919,15 @@ int CHudAmmo::MsgFunc_ItemPickup( const char *pszName, int iSize, void *pbuf )
 	BEGIN_READ( pbuf, iSize );
 	const char *szName = READ_STRING();
 
-	// Add the weapon to the history
-	gHR.AddToHistory( HISTSLOT_ITEM, szName );
+	// Add the item to the history
+	if ( gViewPort && gViewPort->m_pTankPanel )
+	{
+		if ( !strcmp( szName, "item_healthkit" ) )
+			gViewPort->m_pTankPanel->AddToHistory( 7, 0 );
+
+		if ( !strcmp( szName, "item_armor" ) )
+			gViewPort->m_pTankPanel->AddToHistory( 8, 0 );
+	}
 
 	return 1;
 }
@@ -578,6 +979,10 @@ int CHudAmmo::MsgFunc_CurWeapon(const char *pszName, int iSize, void *pbuf )
 	if ( iId < 1 )
 	{
 		SetCrosshair(0, nullrc, 0, 0, 0);
+		m_pWeapon = NULL;
+
+		if ( gViewPort && gViewPort->m_pCustomMenu )
+			gViewPort->m_pCustomMenu->HideAll();
 		return 0;
 	}
 
@@ -657,6 +1062,11 @@ int CHudAmmo::MsgFunc_WeaponList(const char *pszName, int iSize, void *pbuf )
 	Weapon.iFlags = READ_BYTE();
 	Weapon.iClip = 0;
 
+	strcpy( Weapon.szCustomizes, READ_STRING() );
+	Weapon.iIsCustomization = READ_CHAR();
+	Weapon.iCustomSettings = READ_CHAR();
+	Weapon.iCustomSetting = READ_CHAR();
+
 	gWR.AddWeapon( &Weapon );
 
 	return 1;
@@ -672,6 +1082,38 @@ void CHudAmmo::SlotInput( int iSlot )
 	// Let the Viewport use it first, for menus
 	if ( gViewPort && gViewPort->SlotInput( iSlot ) )
 		return;
+
+	if ( m_fCustomizing )
+		return;
+
+	if ( CVAR_GET_FLOAT( "hud_fastswitch" ) && !m_fCustomizing && !gHUD.m_Tank.m_fInTank )
+	{
+		// fast switch: the slot key picks the slot's weapon at once
+		WEAPON *p = gWR.GetWeaponSlot( iSlot, 0 );
+
+		if ( p && !p->iIsCustomization && gWR.HasAmmo( p ) )
+		{
+			gpLastSel = m_pWeapon;
+			ServerCmd( p->szName );
+			g_weaponselect = p->iId;
+			PlaySound( "common/wpn_moveselect.wav", 1 );
+			return;
+		}
+
+		PlaySound( "common/wpn_denyselect.wav", 1 );
+		return;
+	}
+
+	if ( !gpMenuWeapon )
+		gpMenuWeapon = m_pWeapon;
+
+	// any slot key goes back to the customization items
+	if ( gpActiveSel && gpActiveSel != (WEAPON *)1 && gpActiveSel->iIsCustomization && !m_fCustomizing )
+	{
+		PlaySound( "common/wpn_hudon.wav", 1 );
+		gWR.SelectSlot( 9, FALSE, 1 );
+		return;
+	}
 
 	gWR.SelectSlot(iSlot, FALSE, 1);
 }
@@ -726,13 +1168,57 @@ void CHudAmmo::UserCmd_Slot10(void)
 	SlotInput( 9 );
 }
 
+// +custom: opens the current weapon's customization items
+void CHudAmmo::UserCmd_Customize(void)
+{
+	if ( !m_pWeapon )
+		return;
+
+	if ( gpActiveSel && gpActiveSel != (WEAPON *)1 && gpActiveSel->iIsCustomization && strcmp( gpActiveSel->szCustomizes, "weapon_minigun" ) )
+		SendCustomization();
+
+	if ( m_fMenuOpen )
+	{
+		if ( gViewPort )
+			gViewPort->HideVGUIMenu();
+		m_fMenuOpen = false;
+	}
+
+	if ( gEngfuncs.GetMaxClients() <= 1 )
+		ServerCmd( "custupdate" );
+
+	gWR.SelectSlot( 9, FALSE, 1 );
+}
+
+// switches back to the previous weapon
+void CHudAmmo::UserCmd_LastInv(void)
+{
+	if ( gHUD.m_Tank.m_fInTank || m_fCustomizing || !gpLastSel )
+		return;
+
+	if ( gWR.HasAmmo( gpLastSel ) )
+	{
+		WEAPON *p = m_pWeapon;
+
+		ServerCmd( gpLastSel->szName );
+		g_weaponselect = gpLastSel->iId;
+		gpLastSel = p;
+		return;
+	}
+
+	PlaySound( "common/wpn_denyselect.wav", 1 );
+}
+
 void CHudAmmo::UserCmd_Close(void)
 {
+	m_fCustomizing = 0;
+
 	if (gpActiveSel)
 	{
-		gpLastSel = gpActiveSel;
 		gpActiveSel = NULL;
-		PlaySound("common/wpn_hudoff.wav", 1);
+
+		if ( gViewPort && gViewPort->m_pCustomMenu )
+			gViewPort->m_pCustomMenu->HideAll();
 	}
 	else
 		ClientCmd("escape");
@@ -740,10 +1226,79 @@ void CHudAmmo::UserCmd_Close(void)
 
 
 // Selects the next item in the weapon menu
+// Gunman: zooms in the scope, steps through customization settings
 void CHudAmmo::UserCmd_NextWeapon(void)
 {
+	if ( gHUD.m_Tank.m_fInTank )
+		return;
+
+	if ( gHUD.m_Zoom.m_fZoomed )
+	{
+		gHUD.m_Zoom.ZoomIn();
+		return;
+	}
+
 	if ( gHUD.m_fPlayerDead || (gHUD.m_iHideHUDDisplay & (HIDEHUD_WEAPONS | HIDEHUD_ALL)) )
 		return;
+
+	if ( m_pWeapon && !strcmp( m_pWeapon->szName, "weapon_aicore" ) )
+		m_fCustomizing = 0;
+
+	if ( m_fCustomizing )
+	{
+		m_fCustomNext = 1;
+		return;
+	}
+
+	if ( gpActiveSel && gpActiveSel != (WEAPON *)1 && gpActiveSel->iIsCustomization )
+	{
+		gWR.SelectSlot( 9, FALSE, 1 );
+		return;
+	}
+
+	if ( CVAR_GET_FLOAT( "hud_reverseweapons" ) == 0 )
+		NextWeapon();
+	else
+		PrevWeapon();
+}
+
+void CHudAmmo::NextWeapon(void)
+{
+	if ( CVAR_GET_FLOAT( "hud_fastswitch" ) )
+	{
+		// fast switch: straight to the next slot's weapon
+		gpLastSel = m_pWeapon;
+
+		int slot = 1;
+		if ( m_pWeapon )
+		{
+			slot = m_pWeapon->iSlot + 1;
+			if ( slot > 9 )
+				slot = 1;
+		}
+
+		for ( int loop = 0; loop <= 1; loop++ )
+		{
+			for ( ; slot <= 9; slot++ )
+			{
+				WEAPON *p = gWR.GetWeaponSlot( slot, 0 );
+
+				if ( p && !p->iIsCustomization && gWR.HasAmmo( p ) )
+				{
+					ServerCmd( p->szName );
+					g_weaponselect = p->iId;
+					return;
+				}
+			}
+
+			slot = 0;
+		}
+
+		return;
+	}
+
+	if ( !gpMenuWeapon )
+		gpMenuWeapon = m_pWeapon;
 
 	if ( !gpActiveSel || gpActiveSel == (WEAPON*)1 )
 		gpActiveSel = m_pWeapon;
@@ -764,9 +1319,16 @@ void CHudAmmo::UserCmd_NextWeapon(void)
 			{
 				WEAPON *wsp = gWR.GetWeaponSlot( slot, pos );
 
-				if ( wsp && gWR.HasAmmo(wsp) )
+				if ( wsp && gWR.HasAmmo(wsp) && wsp->iIsCustomization != 1 )
 				{
+					PlaySound( "common/wpn_moveselect.wav", 1 );
 					gpActiveSel = wsp;
+
+					if ( CVAR_GET_FLOAT( "hud_autoswitch" ) )
+					{
+						ServerCmd( gpActiveSel->szName );
+						g_weaponselect = gpActiveSel->iId;
+					}
 					return;
 				}
 			}
@@ -780,11 +1342,43 @@ void CHudAmmo::UserCmd_NextWeapon(void)
 	gpActiveSel = NULL;
 }
 
-// Selects the previous item in the menu
-void CHudAmmo::UserCmd_PrevWeapon(void)
+void CHudAmmo::PrevWeapon(void)
 {
-	if ( gHUD.m_fPlayerDead || (gHUD.m_iHideHUDDisplay & (HIDEHUD_WEAPONS | HIDEHUD_ALL)) )
+	if ( CVAR_GET_FLOAT( "hud_fastswitch" ) )
+	{
+		// fast switch: straight to the previous slot's weapon
+		gpLastSel = m_pWeapon;
+
+		int slot = 1;
+		if ( m_pWeapon )
+		{
+			slot = m_pWeapon->iSlot - 1;
+			if ( slot < 0 )
+				slot = 9;
+		}
+
+		for ( int loop = 0; loop <= 1; loop++ )
+		{
+			for ( ; slot >= 0; slot-- )
+			{
+				WEAPON *p = gWR.GetWeaponSlot( slot, 0 );
+
+				if ( p && !p->iIsCustomization && gWR.HasAmmo( p ) )
+				{
+					ServerCmd( p->szName );
+					g_weaponselect = p->iId;
+					return;
+				}
+			}
+
+			slot = 9;
+		}
+
 		return;
+	}
+
+	if ( !gpMenuWeapon )
+		gpMenuWeapon = m_pWeapon;
 
 	if ( !gpActiveSel || gpActiveSel == (WEAPON*)1 )
 		gpActiveSel = m_pWeapon;
@@ -805,9 +1399,16 @@ void CHudAmmo::UserCmd_PrevWeapon(void)
 			{
 				WEAPON *wsp = gWR.GetWeaponSlot( slot, pos );
 
-				if ( wsp && gWR.HasAmmo(wsp) )
+				if ( wsp && gWR.HasAmmo(wsp) && wsp->iIsCustomization != 1 )
 				{
+					PlaySound( "common/wpn_moveselect.wav", 1 );
 					gpActiveSel = wsp;
+
+					if ( CVAR_GET_FLOAT( "hud_autoswitch" ) )
+					{
+						ServerCmd( gpActiveSel->szName );
+						g_weaponselect = gpActiveSel->iId;
+					}
 					return;
 				}
 			}
@@ -821,6 +1422,43 @@ void CHudAmmo::UserCmd_PrevWeapon(void)
 	gpActiveSel = NULL;
 }
 
+// Selects the previous item in the menu
+// Gunman: zooms out the scope, steps through customization settings
+void CHudAmmo::UserCmd_PrevWeapon(void)
+{
+	if ( gHUD.m_Tank.m_fInTank )
+		return;
+
+	if ( gHUD.m_Zoom.m_fZoomed )
+	{
+		gHUD.m_Zoom.ZoomOut();
+		return;
+	}
+
+	if ( gHUD.m_fPlayerDead || (gHUD.m_iHideHUDDisplay & (HIDEHUD_WEAPONS | HIDEHUD_ALL)) )
+		return;
+
+	if ( m_pWeapon && !strcmp( m_pWeapon->szName, "weapon_aicore" ) )
+		m_fCustomizing = 0;
+
+	if ( m_fCustomizing )
+	{
+		m_fCustomPrev = 1;
+		return;
+	}
+
+	if ( gpActiveSel && gpActiveSel != (WEAPON *)1 && gpActiveSel->iIsCustomization )
+	{
+		gWR.SelectSlot( 9, FALSE, 1 );
+		return;
+	}
+
+	if ( CVAR_GET_FLOAT( "hud_reverseweapons" ) )
+		NextWeapon();
+	else
+		PrevWeapon();
+}
+
 
 
 //-------------------------------------------------------------------------
@@ -832,11 +1470,12 @@ int CHudAmmo::Draw(float flTime)
 	int a, x, y, r, g, b;
 	int AmmoWidth;
 
-	if (!(gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT)) ))
-		return 1;
-
 	if ( (gHUD.m_iHideHUDDisplay & ( HIDEHUD_WEAPONS | HIDEHUD_ALL )) )
 		return 1;
+
+	// Draw the customization settings
+	if ( m_fCustomizing )
+		DrawCustomization();
 
 	// Draw Weapon Menu
 	DrawWList(flTime);
@@ -851,6 +1490,9 @@ int CHudAmmo::Draw(float flTime)
 		return 0;
 
 	WEAPON *pw = m_pWeapon; // shorthand
+
+	if ( gViewPort->m_pAmmoPanel->m_fActive )
+		gViewPort->m_pAmmoPanel->SetAmmo( m_pWeapon->iAmmoType, m_pWeapon->iMax1 );
 
 	// SPR_Draw Ammo
 	if ((pw->iAmmoType < 0) && (pw->iAmmo2Type < 0))
@@ -882,43 +1524,30 @@ int CHudAmmo::Draw(float flTime)
 		{
 			// room for the number and the '|' and the current ammo
 			
-			x = ScreenWidth - (8 * AmmoWidth) - iIconWidth;
+			x = ScreenWidth - (6 * AmmoWidth) - iIconWidth;
 			x = gHUD.DrawHudNumber(x, y, iFlags | DHN_3DIGITS, pw->iClip, r, g, b);
-
-			wrect_t rc;
-			rc.top = 0;
-			rc.left = 0;
-			rc.right = AmmoWidth;
-			rc.bottom = 100;
 
 			int iBarWidth =  AmmoWidth/10;
 
-			x += AmmoWidth/2;
+			x += AmmoWidth/4;
 
-			UnpackRGB(r,g,b, RGB_YELLOWISH);
+			UnpackRGB(r,g,b, RGB_CYANISH);
 
 			// draw the | bar
 			FillRGBA(x, y, iBarWidth, gHUD.m_iFontHeight, r, g, b, a);
 
-			x += iBarWidth + AmmoWidth/2;;
+			x += iBarWidth + AmmoWidth/4 - 20;
 
 			// GL Seems to need this
 			ScaleColors(r, g, b, a );
-			x = gHUD.DrawHudNumber(x, y, iFlags | DHN_3DIGITS, gWR.CountAmmo(pw->iAmmoType), r, g, b);		
-
-
+			gHUD.DrawHudNumber(x, y, iFlags | DHN_3DIGITS, gWR.CountAmmo(pw->iAmmoType), r, g, b);		
 		}
 		else
 		{
 			// SPR_Draw a bullets only line
 			x = ScreenWidth - 4 * AmmoWidth - iIconWidth;
-			x = gHUD.DrawHudNumber(x, y, iFlags | DHN_3DIGITS, gWR.CountAmmo(pw->iAmmoType), r, g, b);
+			gHUD.DrawHudNumber(x, y, iFlags | DHN_3DIGITS, gWR.CountAmmo(pw->iAmmoType), r, g, b);
 		}
-
-		// Draw the ammo Icon
-		int iOffset = (m_pWeapon->rcAmmo.bottom - m_pWeapon->rcAmmo.top)/8;
-		SPR_Set(m_pWeapon->hAmmo, r, g, b);
-		SPR_DrawAdditive(0, x, y - iOffset, &m_pWeapon->rcAmmo);
 	}
 
 	// Does weapon have seconday ammo?
@@ -968,7 +1597,7 @@ int DrawBar(int x, int y, int width, int height, float f)
 		width -= w;
 	}
 
-	UnpackRGB(r, g, b, RGB_YELLOWISH);
+	UnpackRGB(r, g, b, RGB_CYANISH);
 
 	FillRGBA(x, y, width, height, r, g, b, 128);
 
@@ -1010,84 +1639,162 @@ void DrawAmmoBar(WEAPON *p, int x, int y, int width, int height)
 
 //
 // Draw Weapon Menu
+// Gunman: slots 1-9 are a VGUI menu, with the selected slot's glow and its
+// brackets drawn here; slot 10 lists the current weapon's customization items.
 //
 int CHudAmmo::DrawWList(float flTime)
 {
-	int r,g,b,x,y,a,i;
+	int r,g,b,x,y,i;
 
 	if ( !gpActiveSel )
+	{
+		gViewPort->m_pWeaponMenu->setVisible( false );
+		m_fMenuOpen = false;
 		return 0;
-
-	int iActiveSlot;
+	}
 
 	if ( gpActiveSel == (WEAPON *)1 )
-		iActiveSlot = -1;	// current slot has no weapons
+		giActiveSlot = -1;	// current slot has no weapons
 	else 
-		iActiveSlot = gpActiveSel->iSlot;
+		giActiveSlot = gpActiveSel->iSlot;
 
-	x = 10; //!!!
-	y = 10; //!!!
-	
+	int fCustom = FALSE;
+	if ( giActiveSlot == 9 )
+		fCustom = TRUE;
+
 
 	// Ensure that there are available choices in the active slot
-	if ( iActiveSlot > 0 )
+	if ( giActiveSlot > 0 )
 	{
-		if ( !gWR.GetFirstPos( iActiveSlot ) )
+		if ( !gWR.GetFirstPos( giActiveSlot ) )
 		{
 			gpActiveSel = (WEAPON *)1;
-			iActiveSlot = -1;
+			giActiveSlot = -1;
 		}
 	}
-		
+
+	if ( !fCustom )
+	{
+		if ( !gpActiveSel || gpActiveSel == (WEAPON *)1 )
+			return 1;
+
+		if ( !m_fMenuOpen )
+		{
+			gViewPort->ShowVGUIMenu( MENU_CLASS );
+			gViewPort->m_pWeaponMenu->Update();
+			gViewPort->m_pWeaponMenu->setVisible( true );
+			m_fMenuOpen = true;
+		}
+
+		gViewPort->m_pWeaponMenu->setVisible( true );
+		m_fMenuOpen = true;
+
+		int iSlot = gpActiveSel->iSlot;
+		int iRight, iStep;
+
+		if ( ScreenWidth <= 640 )
+		{
+			iRight = 128;
+			iStep = 30;
+		}
+		else
+		{
+			iRight = 256;
+			iStep = 60;
+		}
+
+		// the selected slot glows, between brackets
+		SPR_Set( gHUD.GetSprite( g_HUD_glow_knife + iSlot ), 0, 255, 0 );
+		y = iStep * iSlot;
+		SPR_DrawAdditive( 0, ScreenWidth - iRight, y, &gHUD.GetSpriteRect( g_HUD_glow_knife + gpActiveSel->iSlot ) );
+
+		if ( ScreenWidth <= 640 )
+		{
+			SPR_Set( gHUD.GetSprite( g_HUD_glow_bracketleft ), 0, 255, 0 );
+			SPR_DrawAdditive( m_iFrame, ScreenWidth - iRight + 13, y, &gHUD.GetSpriteRect( g_HUD_glow_bracketleft ) );
+			SPR_Set( gHUD.GetSprite( g_HUD_glow_bracketright ), 0, 255, 0 );
+			SPR_DrawAdditive( m_iFrame, ScreenWidth - 25, y, &gHUD.GetSpriteRect( g_HUD_glow_bracketright ) );
+		}
+		else
+		{
+			SPR_Set( gHUD.GetSprite( g_HUD_glow_bracketleft ), 0, 255, 0 );
+			SPR_DrawAdditive( m_iFrame, ScreenWidth - iRight + 30, y, &gHUD.GetSpriteRect( g_HUD_glow_bracketleft ) );
+			SPR_Set( gHUD.GetSprite( g_HUD_glow_bracketright ), 0, 255, 0 );
+			SPR_DrawAdditive( m_iFrame, ScreenWidth - 60, y, &gHUD.GetSpriteRect( g_HUD_glow_bracketright ) );
+		}
+
+		if ( gEngfuncs.GetClientTime() > m_flNextFrame )
+		{
+			m_iFrame++;
+			if ( m_iFrame > 4 )
+				m_iFrame = 0;
+
+			m_flNextFrame = gEngfuncs.GetClientTime() + 0.1;
+		}
+
+		// the slots without ammo get crossed out
+		for ( i = 0, y = 0; i < 9; i++, y += iStep )
+		{
+			WEAPON *p = gWR.GetWeaponSlot( i, 0 );
+
+			if ( p && !gWR.HasAmmo( p ) )
+			{
+				SPR_Set( gHUD.GetSprite( g_HUD_glow_pistol_no + i - 1 ), 255, 255, 255 );
+				SPR_DrawAdditive( 0, ScreenWidth - iRight, y, &gHUD.GetSpriteRect( g_HUD_glow_pistol_no + i - 1 ) );
+			}
+		}
+
+		return 1;
+	}
+
 	// Draw top line
 	for ( i = 0; i < MAX_WEAPON_SLOTS; i++ )
 	{
-		int iWidth;
+		int a;
 
-		UnpackRGB(r,g,b, RGB_YELLOWISH);
+		UnpackRGB(r,g,b, RGB_CYANISH);
 	
-		if ( iActiveSlot == i )
+		if ( giActiveSlot == i )
 			a = 255;
 		else
 			a = 192;
 
 		ScaleColors(r, g, b, 255);
 		SPR_Set(gHUD.GetSprite(m_HUD_bucket0 + i), r, g, b );
-
-		// make active slot wide enough to accomodate gun pictures
-		if ( i == iActiveSlot )
-		{
-			WEAPON *p = gWR.GetFirstPos(iActiveSlot);
-			if ( p )
-				iWidth = p->rcActive.right - p->rcActive.left;
-			else
-				iWidth = giBucketWidth;
-		}
-		else
-			iWidth = giBucketWidth;
-
-		SPR_DrawAdditive(0, x, y, &gHUD.GetSpriteRect(m_HUD_bucket0 + i));
-		
-		x += iWidth + 5;
 	}
 
+	x = 230; //!!!
+	y = 55;
 
-	a = 128; //!!!
-	x = 10;
+	// the weapons without customization items have nothing to list
+	if ( m_pWeapon && gHUD.m_Ammo.m_pWeapon )
+	{
+		if ( !strcmp( gHUD.m_Ammo.m_pWeapon->szName, "weapon_beamgun" ) )
+			return 1;
+		if ( !strcmp( gHUD.m_Ammo.m_pWeapon->szName, "weapon_dml" ) )
+			return 1;
+		if ( !strcmp( gHUD.m_Ammo.m_pWeapon->szName, "weapon_gausspistol" ) )
+			return 1;
+		if ( !strcmp( gHUD.m_Ammo.m_pWeapon->szName, "weapon_dmlGrenade" ) )
+			return 1;
+		if ( !strcmp( gHUD.m_Ammo.m_pWeapon->szName, "weapon_shotgun" ) )
+			return 1;
+		if ( !strcmp( gHUD.m_Ammo.m_pWeapon->szName, "weapon_fists" ) )
+			return 1;
+		if ( !strcmp( gHUD.m_Ammo.m_pWeapon->szName, "weapon_minigun" ) )
+			return 1;
+		if ( !strcmp( gHUD.m_Ammo.m_pWeapon->szName, "weapon_SPchemicalgun" ) )
+			return 1;
+	}
 
 	// Draw all of the buckets
 	for (i = 0; i < MAX_WEAPON_SLOTS; i++)
 	{
-		y = giBucketHeight + 10;
-
 		// If this is the active slot, draw the bigger pictures,
 		// otherwise just draw boxes
-		if ( i == iActiveSlot )
+		if ( i == giActiveSlot )
 		{
 			WEAPON *p = gWR.GetFirstPos( i );
-			int iWidth = giBucketWidth;
-			if ( p )
-				iWidth = p->rcActive.right - p->rcActive.left;
 
 			for ( int iPos = 0; iPos < MAX_WEAPON_POSITIONS; iPos++ )
 			{
@@ -1096,17 +1803,47 @@ int CHudAmmo::DrawWList(float flTime)
 				if ( !p || !p->iId )
 					continue;
 
-				UnpackRGB( r,g,b, RGB_YELLOWISH );
+				UnpackRGB( r,g,b, RGB_CYANISH );
 			
 				// if active, then we must have ammo.
 
 				if ( gpActiveSel == p )
 				{
-					SPR_Set(p->hActive, r, g, b );
-					SPR_DrawAdditive(0, x, y, &p->rcActive);
+					if ( i == 9 )
+					{
+						if ( m_pWeapon && ( !strcmp( gpActiveSel->szName, "cust_1MinigunSpin" )
+							|| !strcmp( gHUD.m_Ammo.m_pWeapon->szName, "weapon_fists" )
+							|| !strcmp( gpActiveSel->szName, "cust_2MinigunCooled" ) ) )
+						{
+							// on/off items show their state
+							if ( gpActiveSel->iCustomSetting == 1 )
+							{
+								SPR_Set( p->hActive, 0, 255, 255 );
+								SPR_DrawAdditive( 0, x, y, &p->rcActive );
+							}
+							else
+							{
+								SPR_Set( p->hInactive, 0, 255, 255 );
+								SPR_DrawAdditive( 0, x, y, &p->rcInactive );
+							}
 
-					SPR_Set(gHUD.GetSprite(m_HUD_selection), r, g, b );
-					SPR_DrawAdditive(0, x, y, &gHUD.GetSpriteRect(m_HUD_selection));
+							int xArrow = x - 35;
+							int yArrow = y + 15;
+							if ( ScreenWidth <= 640 )
+								yArrow = y;
+
+							SPR_Set( gHUD.GetSprite( g_HUD_mechaArrow ), 255, 255, 255 );
+							SPR_DrawAdditive( 0, xArrow, yArrow, &gHUD.GetSpriteRect( g_HUD_mechaArrow ) );
+						}
+						else
+						{
+							SPR_Set( p->hActive, 0, 255, 255 );
+							SPR_DrawAdditive( 0, x, y, &p->rcActive );
+
+							SPR_Set( gHUD.GetSprite( g_HUD_mechaArrow ), 255, 255, 255 );
+							SPR_DrawAdditive( 0, x - 35, y - 8, &gHUD.GetSpriteRect( g_HUD_mechaArrow ) );
+						}
+					}
 				}
 				else
 				{
@@ -1120,55 +1857,504 @@ int CHudAmmo::DrawWList(float flTime)
 						ScaleColors(r, g, b, 128);
 					}
 
-					SPR_Set( p->hInactive, r, g, b );
-					SPR_DrawAdditive( 0, x, y, &p->rcInactive );
+					if ( i == 9 )
+					{
+						SPR_Set( p->hInactive, r, g, b );
+						SPR_DrawAdditive( 0, x, y, &p->rcInactive );
+					}
 				}
 
 				// Draw Ammo Bar
 
 				DrawAmmoBar(p, x + giABWidth/2, y, giABWidth, giABHeight);
 				
-				y += p->rcActive.bottom - p->rcActive.top + 5;
+				if ( ScreenWidth > 640 )
+					y += 10;
+				y += p->rcActive.bottom - p->rcActive.top + 9;
 			}
-
-			x += iWidth + 5;
-
-		}
-		else
-		{
-			// Draw Row of weapons.
-
-			UnpackRGB(r,g,b, RGB_YELLOWISH);
-
-			for ( int iPos = 0; iPos < MAX_WEAPON_POSITIONS; iPos++ )
-			{
-				WEAPON *p = gWR.GetWeaponSlot( i, iPos );
-				
-				if ( !p || !p->iId )
-					continue;
-
-				if ( gWR.HasAmmo(p) )
-				{
-					UnpackRGB(r,g,b, RGB_YELLOWISH);
-					a = 128;
-				}
-				else
-				{
-					UnpackRGB(r,g,b, RGB_REDISH);
-					a = 96;
-				}
-
-				FillRGBA( x, y, giBucketWidth, giBucketHeight, r, g, b, a );
-
-				y += giBucketHeight + 5;
-			}
-
-			x += giBucketWidth + 5;
 		}
 	}	
 
 	return 1;
 
+}
+
+//
+// Gunman: sends the selected customization item's setting to the server,
+// as "cust_N<setting>"
+//
+void CHudAmmo::SendCustomization(void)
+{
+	if ( gpActiveSel->iIsCustomization )
+	{
+		char szCmd[] = "                             ";
+		char *p;
+
+		sprintf( szCmd, gpActiveSel->szName );
+
+		for ( int i = 0; i < 30; i++ )
+		{
+			if ( szCmd[i] == '_' )
+			{
+				p = &szCmd[i + 2];
+				break;
+			}
+		}
+
+		sprintf( p, "%d", gpActiveSel->iCustomSetting );
+		ConsolePrint( szCmd );
+		ServerCmd( szCmd );
+	}
+}
+
+//
+// Gunman: draws the selected customization item's settings
+//
+void CHudAmmo::DrawCustomization(void)
+{
+	if ( !gpActiveSel || gpActiveSel == (WEAPON *)1 || !m_pWeapon )
+		return;
+
+	// the weapon changed: back to the list
+	if ( strcmp( gpActiveSel->szCustomizes, m_pWeapon->szName ) )
+	{
+		if ( gViewPort && gViewPort->m_pCustomMenu )
+			gViewPort->m_pCustomMenu->HideAll();
+
+		gWR.SelectSlot( 9, FALSE, 1 );
+	}
+
+	if ( !gpActiveSel || gpActiveSel == (WEAPON *)1 )
+		return;
+
+	if ( gpActiveSel->iCustomSetting < 1 )
+		gpActiveSel->iCustomSetting = 1;
+	if ( gpActiveSel->iCustomSetting > gpActiveSel->iCustomSettings )
+		gpActiveSel->iCustomSetting = gpActiveSel->iCustomSettings;
+
+	if ( !strcmp( gpActiveSel->szCustomizes, "weapon_shotgun" ) )
+	{
+		DrawShotgunCustom();
+		return;
+	}
+
+	if ( !strcmp( gpActiveSel->szCustomizes, "weapon_dml" ) )
+	{
+		DrawDmlCustom();
+		return;
+	}
+
+	gViewPort->m_pCustomMenu->setVisible( false );
+
+	if ( !strcmp( gpActiveSel->szCustomizes, "weapon_SPchemicalgun" ) )
+	{
+		DrawChemCustom();
+		return;
+	}
+
+	if ( !strcmp( gpActiveSel->szCustomizes, "weapon_beamgun" ) )
+	{
+		DrawBeamCustom();
+		return;
+	}
+
+	if ( !strcmp( gpActiveSel->szCustomizes, "weapon_gausspistol" ) )
+	{
+		DrawGaussCustom();
+		return;
+	}
+
+	if ( !strcmp( gpActiveSel->szCustomizes, "weapon_dmlGrenade" ) )
+	{
+		DrawGrenadeCustom();
+		return;
+	}
+
+	// the others get a slider
+	int iSettings = gpActiveSel->iCustomSettings;
+
+	if ( iSettings )
+	{
+		int xSlider = ( iSettings * 32 / iSettings ) * gpActiveSel->iCustomSetting + 6;
+		for ( int i = 0; i < gpActiveSel->iCustomSettings; i++ )
+		{
+			SPR_Set( gHUD.GetSprite( g_HUD_chem_bar ), 0, 160, 0 );
+			SPR_DrawAdditive( 0, i * 32 + 38, 180, &gHUD.GetSpriteRect( g_HUD_chem_bar ) );
+		}
+
+		SPR_Set( gHUD.GetSprite( g_HUD_chem_slider ), 0, 255, 255 );
+		SPR_DrawAdditive( 0, xSlider, 180, &gHUD.GetSpriteRect( g_HUD_chem_slider ) );
+	}
+}
+
+//
+// the chemgun: a vial per chemical (acid, nuet, base), filled to its setting,
+// and the pressure slider
+//
+void CHudAmmo::DrawChemCustom(void)
+{
+	int r, g, b;
+	int x = 50;
+	int y = 54;
+
+	if ( ScreenWidth > 640 )
+		x = 214;
+	if ( ScreenWidth == 640 )
+		x += 130;
+	x += 195;
+	if ( ScreenWidth > 800 )
+		x += 150;
+	if ( ScreenWidth > 1200 )
+		x += 100;
+
+	int iItem = -1;
+	WEAPON *pSave = gpActiveSel;
+
+	for ( int i = 24; i <= 26; i++ )	// WEAPON_CUST_ACID, _NUET, _BASE
+	{
+		gpActiveSel = gWR.GetWeapon( i );
+
+		if ( pSave == gpActiveSel )
+			iItem = 24 - i;	// sic: 0, -1, -2
+
+		if ( !gpActiveSel )
+			return;
+
+		if ( gpActiveSel->iCustomSetting == 1 )
+		{
+			UnpackRGB( r, g, b, RGB_YELLOWISH );
+			SPR_Set( gHUD.GetSprite( g_HUD_vial_el ), r, g, b );
+			SPR_DrawAdditive( 0, x, y, &gHUD.GetSpriteRect( g_HUD_vial_el ) );
+		}
+		else
+		{
+			if ( i == 26 )
+				UnpackRGB( r, g, b, RGB_REDISH );
+			else if ( i == 24 )
+				UnpackRGB( r, g, b, RGB_GREENISH );
+			else if ( i == 25 )
+				UnpackRGB( r, g, b, RGB_BLUEISH );
+			SPR_Set( gHUD.GetSprite( g_HUD_vial_fl ), r, g, b );
+			SPR_DrawAdditive( 0, x, y, &gHUD.GetSpriteRect( g_HUD_vial_fl ) );
+		}
+
+		if ( gpActiveSel->iCustomSetting <= 2 )
+		{
+			UnpackRGB( r, g, b, RGB_YELLOWISH );
+			SPR_Set( gHUD.GetSprite( g_HUD_vial_ec ), r, g, b );
+			SPR_DrawAdditive( 0, x + gHUD.GetSpriteRect( g_HUD_vial_ec ).right - gHUD.GetSpriteRect( g_HUD_vial_ec ).left, y, &gHUD.GetSpriteRect( g_HUD_vial_ec ) );
+		}
+		else
+		{
+			if ( i == 26 )
+				UnpackRGB( r, g, b, RGB_REDISH );
+			else if ( i == 24 )
+				UnpackRGB( r, g, b, RGB_GREENISH );
+			else if ( i == 25 )
+				UnpackRGB( r, g, b, RGB_BLUEISH );
+			SPR_Set( gHUD.GetSprite( g_HUD_vial_fc ), r, g, b );
+			SPR_DrawAdditive( 0, x + gHUD.GetSpriteRect( g_HUD_vial_ec ).right - gHUD.GetSpriteRect( g_HUD_vial_ec ).left, y, &gHUD.GetSpriteRect( g_HUD_vial_fc ) );
+		}
+
+		if ( gpActiveSel->iCustomSetting <= 3 )
+		{
+			UnpackRGB( r, g, b, RGB_YELLOWISH );
+			SPR_Set( gHUD.GetSprite( g_HUD_vial_ec ), r, g, b );
+			SPR_DrawAdditive( 0, x + ( gHUD.GetSpriteRect( g_HUD_vial_ec ).right - gHUD.GetSpriteRect( g_HUD_vial_ec ).left ) * 2, y, &gHUD.GetSpriteRect( g_HUD_vial_ec ) );
+		}
+		else
+		{
+			if ( i == 26 )
+				UnpackRGB( r, g, b, RGB_REDISH );
+			else if ( i == 24 )
+				UnpackRGB( r, g, b, RGB_GREENISH );
+			else if ( i == 25 )
+				UnpackRGB( r, g, b, RGB_BLUEISH );
+			SPR_Set( gHUD.GetSprite( g_HUD_vial_fc ), r, g, b );
+			SPR_DrawAdditive( 0, x + ( gHUD.GetSpriteRect( g_HUD_vial_ec ).right - gHUD.GetSpriteRect( g_HUD_vial_ec ).left ) * 2, y, &gHUD.GetSpriteRect( g_HUD_vial_fc ) );
+		}
+
+		if ( gpActiveSel->iCustomSetting == 5 )
+		{
+			if ( i == 26 )
+				UnpackRGB( r, g, b, RGB_REDISH );
+			else if ( i == 24 )
+				UnpackRGB( r, g, b, RGB_GREENISH );
+			else if ( i == 25 )
+				UnpackRGB( r, g, b, RGB_BLUEISH );
+			SPR_Set( gHUD.GetSprite( g_HUD_vial_fr ), r, g, b );
+			SPR_DrawAdditive( 0, x + ( gHUD.GetSpriteRect( g_HUD_vial_ec ).right - gHUD.GetSpriteRect( g_HUD_vial_ec ).left ) * 3, y, &gHUD.GetSpriteRect( g_HUD_vial_fr ) );
+		}
+		else
+		{
+			UnpackRGB( r, g, b, RGB_YELLOWISH );
+			SPR_Set( gHUD.GetSprite( g_HUD_vial_er ), r, g, b );
+			SPR_DrawAdditive( 0, x + ( gHUD.GetSpriteRect( g_HUD_vial_ec ).right - gHUD.GetSpriteRect( g_HUD_vial_ec ).left ) * 3, y, &gHUD.GetSpriteRect( g_HUD_vial_er ) );
+		}
+
+		if ( ScreenWidth >= 640 )
+			y += 10;
+
+		int iGap = 20;
+		if ( ScreenWidth < 640 )
+			iGap = 10;
+		y += iGap + 14;
+	}
+
+	// the pressure
+	gpActiveSel = gWR.GetWeapon( 27 );	// WEAPON_CUST_PRESSURE
+	if ( !gpActiveSel )
+		return;
+
+	if ( iItem == -1 )
+		iItem = 3;
+	gViewPort->m_pCustomMenu->ShowChemgun( iItem );
+
+	int xbar = x;
+	for ( int j = 0; j < 5; j++ )
+	{
+		SPR_Set( gHUD.GetSprite( g_HUD_chem_bar ), 255, 160, 0 );
+		SPR_DrawAdditive( 0, xbar, y, &gHUD.GetSpriteRect( g_HUD_chem_bar ) );
+		xbar += 32;
+	}
+
+	xbar = ( 160 / gpActiveSel->iCustomSettings ) * ( gpActiveSel->iCustomSetting - 1 ) + x;
+	SPR_Set( gHUD.GetSprite( g_HUD_chem_slider ), 255, 160, 0 );
+	SPR_DrawAdditive( 0, xbar, y, &gHUD.GetSpriteRect( g_HUD_chem_slider ) );
+
+	gpActiveSel = pSave;
+
+	if ( gpActiveSel )
+	{
+		switch ( gpActiveSel->iId )
+		{
+		case 24:	iItem = 0;	break;
+		case 25:	iItem = 1;	break;
+		case 26:	iItem = 2;	break;
+		default:	iItem = 3;	break;
+		}
+
+		gViewPort->m_pCustomMenu->ShowChemgun( iItem );
+	}
+}
+
+//
+// the beamgun: frequency, current and voltage
+//
+void CHudAmmo::DrawBeamCustom(void)
+{
+	WEAPON *pSave = gpActiveSel;
+	int iFrequency, iCurrent, iVoltage, iItem;
+	int x = -( gHUD.GetSpriteRect( g_HUD_beamdials ).right - gHUD.GetSpriteRect( g_HUD_beamdials ).left ) * 3 / 2 + ScreenWidth / 2;
+
+	for ( int i = 2; i <= 4; i++ )	// WEAPON_CUST_FREQUENCY, _CURRENT, _VOLTAGE
+	{
+		gpActiveSel = gWR.GetWeapon( i );
+
+		if ( gpActiveSel )
+		{
+			if ( gpActiveSel == pSave )
+				iItem = i - 2;
+
+			switch ( i )
+			{
+			case 2:	iFrequency = gpActiveSel->iCustomSetting;	break;
+			case 3:	iCurrent = gpActiveSel->iCustomSetting;		break;
+			case 4:	iVoltage = gpActiveSel->iCustomSetting;		break;
+			}
+
+			x += gHUD.GetSpriteRect( g_HUD_beamdials ).right - gHUD.GetSpriteRect( g_HUD_beamdials ).left + 25;
+		}
+	}
+
+	if ( gViewPort && gViewPort->m_pCustomMenu )
+		gViewPort->m_pCustomMenu->ShowBeamgun( iFrequency, iCurrent, iVoltage, iItem );
+
+	gpActiveSel = pSave;
+}
+
+//
+// the DML: launch, flight path, detonation and payload
+//
+void CHudAmmo::DrawDmlCustom(void)
+{
+	WEAPON *pSave = gpActiveSel;
+	int iLaunch, iFlightpath, iDetonate, iPayload, iItem;
+	int y = 47;
+
+	for ( int i = 9; i <= 12; i++ )	// WEAPON_CUST_LAUNCH ... _PAYLOAD
+	{
+		gpActiveSel = gWR.GetWeapon( i );
+
+		if ( gpActiveSel )
+		{
+			switch ( i )
+			{
+			case 9:		iLaunch = gpActiveSel->iCustomSetting;		break;
+			case 10:	iFlightpath = gpActiveSel->iCustomSetting;	break;
+			case 11:	iDetonate = gpActiveSel->iCustomSetting;	break;
+			case 12:	iPayload = gpActiveSel->iCustomSetting;		break;
+			}
+
+			if ( pSave == gpActiveSel )
+				iItem = i;
+
+			y += gpActiveSel->rcActive.top - gpActiveSel->rcActive.bottom + 65;
+		}
+	}
+
+	gViewPort->m_pCustomMenu->ShowDml( iLaunch, iFlightpath, iDetonate, iPayload, iItem );
+
+	gpActiveSel = pSave;
+}
+
+//
+// the DML grenades: detonation and payload
+//
+void CHudAmmo::DrawGrenadeCustom(void)
+{
+	WEAPON *pSave = gpActiveSel;
+	int iDetonate, iPayload, iItem;
+	int y = 55;
+
+	for ( int i = 5; i <= 6; i++ )	// WEAPON_CUST_GRENDETONATE, _GRENPAYLOAD
+	{
+		gpActiveSel = gWR.GetWeapon( i );
+
+		if ( gpActiveSel )
+		{
+			switch ( i )
+			{
+			case 5:	iDetonate = gpActiveSel->iCustomSetting;	break;
+			case 6:	iPayload = gpActiveSel->iCustomSetting;		break;
+			}
+
+			if ( pSave == gpActiveSel )
+				iItem = i;
+
+			y += gpActiveSel->rcActive.top - gpActiveSel->rcActive.bottom + 65;
+		}
+	}
+
+	gViewPort->m_pCustomMenu->ShowGrenade( iDetonate, iPayload, iItem );
+
+	gpActiveSel = pSave;
+}
+
+//
+// the gauss pistol: pulse, charge, rapid and, with the scope, sniper
+//
+void CHudAmmo::DrawGaussCustom(void)
+{
+	int x = -( gHUD.GetSpriteRect( g_HUD_pulse ).right - gHUD.GetSpriteRect( g_HUD_pulse ).left ) * 3 / 2 + ScreenWidth / 2;
+
+	gpActiveSel = gWR.GetWeapon( 31 );	// WEAPON_CUST_FIRETYPE
+
+	WEAPON *pScope = gWR.GetWeaponSlot( 9, 19 );
+	int iOffset;
+
+	if ( gWR.HasAmmo( pScope ) )
+		x -= ( gHUD.GetSpriteRect( g_HUD_sniper ).right - gHUD.GetSpriteRect( g_HUD_sniper ).left ) / 2;
+
+	if ( gpActiveSel->iCustomSetting == 1 )
+	{
+		SPR_Set( gHUD.GetSprite( g_HUD_pulseAct ), 255, 255, 255 );
+		SPR_DrawAdditive( 0, x, 35, &gHUD.GetSpriteRect( g_HUD_pulseAct ) );
+	}
+	else
+	{
+		SPR_Set( gHUD.GetSprite( g_HUD_pulse ), 255, 255, 255 );
+		SPR_DrawAdditive( 0, x, 35, &gHUD.GetSpriteRect( g_HUD_pulse ) );
+	}
+
+	iOffset = ScreenWidth >= 640 ? 64 : 32;
+
+	if ( gpActiveSel->iCustomSetting == 2 )
+	{
+		SPR_Set( gHUD.GetSprite( g_HUD_chargeAct ), 255, 255, 255 );
+		SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_chargeAct ) );
+	}
+	else
+	{
+		SPR_Set( gHUD.GetSprite( g_HUD_charge ), 255, 255, 255 );
+		SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_charge ) );
+	}
+
+	iOffset = ScreenWidth >= 640 ? 124 : 62;
+
+	if ( gpActiveSel->iCustomSetting == 3 )
+	{
+		if ( gWR.HasAmmo( pScope ) )
+		{
+			SPR_Set( gHUD.GetSprite( g_HUD_rapidSnipeAct ), 255, 255, 255 );
+			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_rapidSnipeAct ) );
+		}
+		else
+		{
+			SPR_Set( gHUD.GetSprite( g_HUD_rapidAct ), 255, 255, 255 );
+			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_rapidAct ) );
+		}
+	}
+	else
+	{
+		if ( gWR.HasAmmo( pScope ) )
+		{
+			SPR_Set( gHUD.GetSprite( g_HUD_rapidSnipe ), 255, 255, 255 );
+			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_rapidSnipe ) );
+		}
+		else
+		{
+			SPR_Set( gHUD.GetSprite( g_HUD_rapid ), 255, 255, 255 );
+			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_rapid ) );
+		}
+	}
+
+	iOffset = ScreenWidth >= 640 ? 175 : 87;
+
+	if ( gpActiveSel->iCustomSetting == 4 )
+	{
+		if ( gWR.HasAmmo( pScope ) )
+		{
+			SPR_Set( gHUD.GetSprite( g_HUD_sniperAct ), 255, 255, 255 );
+			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_sniperAct ) );
+		}
+		else
+		{
+			// lost the scope: back to rapid fire
+			gpActiveSel->iCustomSetting = 3;
+			SendCustomization();
+		}
+	}
+	else
+	{
+		if ( !gWR.HasAmmo( pScope ) )
+			return;
+
+		SPR_Set( gHUD.GetSprite( g_HUD_sniper ), 255, 255, 255 );
+		SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_sniper ) );
+	}
+}
+
+//
+// the shotgun: spread and shells
+//
+void CHudAmmo::DrawShotgunCustom(void)
+{
+	int iSpread;
+
+	switch ( gWR.GetWeapon( 20 )->iCustomSetting )	// WEAPON_CUST_SPREAD
+	{
+	case 1:		iSpread = 1;	break;
+	case 2:		iSpread = 2;	break;
+	case 3:		iSpread = 3;	break;
+	case 4:		iSpread = 4;	break;
+	default:	iSpread = 3;	break;
+	}
+
+	if ( gpActiveSel == gWR.GetWeapon( 32 ) )	// WEAPON_CUST_SHELLS
+		gViewPort->m_pCustomMenu->ShowShotgun( gWR.GetWeapon( 32 )->iCustomSetting, iSpread, 4 );
+	else
+		gViewPort->m_pCustomMenu->ShowShotgun( gWR.GetWeapon( 32 )->iCustomSetting, iSpread, 5 );
 }
 
 

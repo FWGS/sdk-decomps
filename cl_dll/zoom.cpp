@@ -140,13 +140,13 @@ void CHudZoom::ZoomIn(void)
 	m_fChanging = true;
 	m_fZoomingOut = false;
 	m_flZoomTime = gEngfuncs.GetClientTime();
-	m_flNextFOVTime = m_flNextFrameTime = gEngfuncs.GetClientTime();
+	m_flNextFrameTime = m_flNextFOVTime = gEngfuncs.GetClientTime();
 }
 
 // one step out, by the previous-weapon key
 void CHudZoom::ZoomOut(void)
 {
-	if ( m_iFOV < 66 )
+	if ( m_iFOV <= 65 )
 	{
 		if ( m_iFOV == 0 )
 			m_iFOV = 90;
@@ -158,7 +158,7 @@ void CHudZoom::ZoomOut(void)
 		m_fChanging = true;
 		m_flZoomTime = gEngfuncs.GetClientTime();
 		m_fZoomingOut = true;
-		m_flNextFOVTime = m_flNextFrameTime = gEngfuncs.GetClientTime();
+		m_flNextFrameTime = m_flNextFOVTime = gEngfuncs.GetClientTime();
 	}
 }
 

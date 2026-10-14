@@ -68,6 +68,8 @@ int CHudHealth::Init(void)
 
 
 	gHUD.AddHudElem(this);
+	m_iPulse = 0;
+	m_flPulseTime = 0;
 	return 1;
 }
 
@@ -83,6 +85,9 @@ void CHudHealth::Reset( void )
 	{
 		m_dmg[i].fExpire = 0;
 	}
+
+	m_iPulse = 0;
+	m_flPulseTime = 0;
 }
 
 int CHudHealth::VidInit(void)

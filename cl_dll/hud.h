@@ -24,6 +24,8 @@
 #define RGB_YELLOWISH 0x00FFA000 //255,160,0
 #define RGB_REDISH 0x00FF1010 //255,160,0
 #define RGB_GREENISH 0x0000A000 //0,160,0
+#define RGB_CYANISH 0x0000FFFF //0,255,255 (Gunman)
+#define RGB_BLUEISH 0x000000FF //0,0,255 (Gunman)
 
 #include "wrect.h"
 #include "cl_dll.h"
@@ -95,6 +97,9 @@ public:
 	int MsgFunc_WeapPickup( const char *pszName, int iSize, void *pbuf );
 	int MsgFunc_ItemPickup( const char *pszName, int iSize, void *pbuf );
 	int MsgFunc_HideWeapon( const char *pszName, int iSize, void *pbuf );
+	int MsgFunc_SliderX( const char *pszName, int iSize, void *pbuf );
+	int MsgFunc_TempX( const char *pszName, int iSize, void *pbuf );
+	int MsgFunc_Tank( const char *pszName, int iSize, void *pbuf );
 
 	void SlotInput( int iSlot );
 	void _cdecl UserCmd_Slot1( void );
@@ -107,19 +112,39 @@ public:
 	void _cdecl UserCmd_Slot8( void );
 	void _cdecl UserCmd_Slot9( void );
 	void _cdecl UserCmd_Slot10( void );
+	void _cdecl UserCmd_Customize( void );
+	void _cdecl UserCmd_LastInv( void );
 	void _cdecl UserCmd_Close( void );
 	void _cdecl UserCmd_NextWeapon( void );
 	void _cdecl UserCmd_PrevWeapon( void );
 
+	// Gunman
+	void NextWeapon( void );
+	void PrevWeapon( void );
+	void SendCustomization( void );
+	void DrawCustomization( void );
+	void DrawChemCustom( void );
+	void DrawBeamCustom( void );
+	void DrawDmlCustom( void );
+	void DrawGrenadeCustom( void );
+	void DrawGaussCustom( void );
+	void DrawShotgunCustom( void );
+
+	int		m_fCustomizing;	// a customization item's settings are open
+	int		m_fCustomPrev;	// the weapon keys step through them
+	int		m_fCustomNext;
+	float	m_flNextFrame;	// the weapon menu's brackets animate
+	int		m_iFrame;
+	WEAPON	*m_pWeapon;		// Gunman's crosshair HUDs read it
+	bool	m_fMenuOpen;	// the VGUI weapon menu is up
+
 private:
 	float m_fFade;
 	RGBA  m_rgba;
-public:
-	WEAPON *m_pWeapon;	// Gunman's crosshair HUDs read it
-private:
 	int	m_HUD_bucket0;
 	int m_HUD_selection;
 
+	int	m_fGrenadesPicked;	// the first grenade pickup selects them
 };
 
 //

@@ -120,6 +120,8 @@ private:
 	
 	DAMAGE_IMAGE m_dmg[NUM_DMG_TYPES];
 	int	m_bitsDamage;
+	int	m_iPulse;			// Gunman: the heartbeat trace scrolls
+	float	m_flPulseTime;
 	int DrawPain(float fTime);
 	int DrawDamage(float fTime);
 	void CalcDamageDirection(vec3_t vecFrom);

@@ -259,6 +259,11 @@ class CCustomizationMenu : public Panel
 {
 public:
 	void HideAll( void );
+	void ShowShotgun( int iShells, int iSpread, int iItem );			// retail 0x1003d780
+	void ShowDml( int iLaunch, int iFlightpath, int iDetonate, int iPayload, int iItem );	// 0x1003db90
+	void ShowBeamgun( int iFrequency, int iCurrent, int iVoltage, int iItem );	// 0x1003dda0
+	void ShowGrenade( int iDetonate, int iPayload, int iItem );		// 0x1003dfa0
+	void ShowChemgun( int iItem );									// 0x1003e1a0
 
 	Panel	*m_pTitles[6];
 	Panel	*m_pSlots[4][5];
@@ -274,6 +279,8 @@ public:
 	void ShowTop( void );
 	void ShowBottom( void );
 	void Hide( void );
+	// retail's error message calls it CWeaponStatusPanel::AddToHistory
+	void AddToHistory( int iIndex, int fWeapon );	// retail 0x10040920
 
 	Panel	*m_pTop;
 	Panel	*m_pBottom;
@@ -281,6 +288,18 @@ public:
 	int		m_iX;
 	int		m_iY;
 };
+
+// the ammo panel; retail keeps it where the SDK keeps the scoreboard
+class CAmmoPanel : public Panel
+{
+public:
+	void SetAmmo( int iAmmoType, int iMax );	// retail 0x10039e90
+
+	int		m_iUnknown[ ( 0x360 - sizeof( Panel ) ) / 4 ];
+	int		m_fActive;
+};
+
+class CWeaponMenu;	// below, after CMenuPanel
 
 //==============================================================================
 class TeamFortressViewport : public Panel
@@ -424,8 +443,14 @@ public:
 	// VGUI Menus
 	CMenuPanel		*m_pCurrentMenu;
 	CTeamMenuPanel	*m_pTeamMenu;
-	CClassMenuPanel	*m_pClassMenu;
-	ScorePanel		*m_pScoreBoard;
+	union {	// Gunman (provisional): its weapon menu is the class menu (MENU_CLASS)
+		CClassMenuPanel	*m_pClassMenu;
+		CWeaponMenu		*m_pWeaponMenu;
+	};
+	union {	// Gunman (provisional): its ammo panel sits where the SDK has the scoreboard
+		ScorePanel		*m_pScoreBoard;
+		CAmmoPanel		*m_pAmmoPanel;
+	};
 	char			m_szServerName[ MAX_SERVERNAME_LENGTH ];
 
 	// Gunman (provisional, see above)
@@ -1115,6 +1140,18 @@ public:
 	// Numeric input
 	virtual bool SlotInput( int iSlot ) { return false; };
 	virtual void SetActiveInfo( int iInput ) {};
+};
+
+//================================================================
+// Gunman's weapon menu, as far as the ammo HUD needs it. Provisional: the
+// rest comes with Gunman's VGUI files.
+class CWeaponMenu : public CMenuPanel
+{
+public:
+	virtual void Update( void );	// the slot after CMenuPanel's, like CClassMenuPanel::Update
+
+	int		m_iUnknown[ ( 0x1fc - sizeof( CMenuPanel ) ) / 4 ];
+	Panel	*m_pSlots[MAX_WEAPON_SLOTS];	// lit once the slot holds a weapon
 };
 
 //================================================================

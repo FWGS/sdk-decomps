@@ -406,12 +406,11 @@ void IN_SpeedUp(void) {KeyUp(&in_speed);}
 void IN_StrafeDown(void) {KeyDown(&in_strafe);}
 void IN_StrafeUp(void) {KeyUp(&in_strafe);}
 
-// needs capture by hud/vgui also
-extern void __CmdFunc_InputPlayerSpecial(void);
+// Gunman: the second attack key is +custom, which opens the customization items
 void IN_Attack2Down(void) 
 {
 	KeyDown(&in_attack2);
-	__CmdFunc_InputPlayerSpecial();
+	gHUD.m_Ammo.UserCmd_Customize();
 }
 
 void IN_Attack2Up(void) {KeyUp(&in_attack2);}
@@ -882,8 +881,8 @@ void InitInput (void)
 	gEngfuncs.pfnAddCommand ("-speed", IN_SpeedUp);
 	gEngfuncs.pfnAddCommand ("+attack", IN_AttackDown);
 	gEngfuncs.pfnAddCommand ("-attack", IN_AttackUp);
-	gEngfuncs.pfnAddCommand ("+attack2", IN_Attack2Down);
-	gEngfuncs.pfnAddCommand ("-attack2", IN_Attack2Up);
+	gEngfuncs.pfnAddCommand ("+custom", IN_Attack2Down);
+	gEngfuncs.pfnAddCommand ("-custom", IN_Attack2Up);
 	gEngfuncs.pfnAddCommand ("+use", IN_UseDown);
 	gEngfuncs.pfnAddCommand ("-use", IN_UseUp);
 	gEngfuncs.pfnAddCommand ("+jump", IN_JumpDown);
