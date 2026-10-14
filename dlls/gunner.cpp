@@ -28,59 +28,14 @@
 #include	"monsters.h"
 #include	"schedule.h"
 #include	"animation.h"
-#include	"squadmonster.h"
 #include	"weapons.h"
 #include	"effects.h"
 #include	"soundent.h"
 #include	"decals.h"
 #include	"sphereexplosion.h"
+#include	"rust.h"
 
 extern DLL_GLOBAL int g_iSkillLevel;
-
-//=========================================================
-// provisional: the rust robots' base and the gunner's mortar
-// belong to the rust flier job (rust.h, rust.cpp), running
-// alongside this one. Replace this block with
-// #include "rust.h" when merging.
-//=========================================================
-class CBaseRust : public CSquadMonster
-{
-public:
-	void Precache( void );
-	void GibMonster( void );
-	void CallForHelp( char *szClassname, float flDist, EHANDLE hEnemy, Vector &vecLocation );
-
-	void SpeakSentence( void );
-	void RustInit( void );
-	void JustSpoke( void );
-	BOOL FOkToSpeak( void );
-
-	int		Save( CSave &save );
-	int		Restore( CRestore &restore );
-	static	TYPEDESCRIPTION m_SaveData[];
-
-	int		m_iVoicePitch;
-	int		m_iSentence;			// the SentenceGroup to say next
-	int		m_iSentenceVolume;		// not saved
-	int		m_iModelIndexBotDeath;	// sprites/botdeath.spr
-	float	m_flSpawnTime;			// not saved
-};
-
-class CGunnerMortar : public CBaseEntity
-{
-public:
-	void Spawn( void );
-	void Precache( void );
-
-	static CGunnerMortar *MortarCreate( void );
-
-	void Fragment( void );
-	void EXPORT MortarThink( void );
-	void EXPORT FragmentTouch( CBaseEntity *pOther );
-
-	int		m_iTrail;
-};
-
 
 //=========================================================
 // anime_rocket: the rocket from the gunner's arms. It flies
