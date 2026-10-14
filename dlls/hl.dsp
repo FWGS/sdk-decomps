@@ -564,6 +564,50 @@ SOURCE=.\hostilescientist.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\rustflier.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\rust.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\rustbit.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\rustbot.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\beak.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\critter.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\maggot.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\tube.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\tubequeen.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\tuberocket.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\xenome.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\camera.cpp
 # End Source File
 # Begin Source File
@@ -581,6 +625,10 @@ SOURCE=.\torch.cpp
 # Begin Source File
 
 SOURCE=.\endboss.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\scientist.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"

@@ -66,13 +66,3 @@ monstertype_t gMonsterTypes[] =
 // gib and gore spray sprites, precached by the species that use them
 int g_iGibHuman;
 int g_iGoreHuman;
-int g_iGibBot;
-int g_iGoreBot;
-int g_iGibBirth;
-int g_iGoreBeak;
-int g_iGibBeak;
-int g_iGoreBirth;
-int g_iGoreTube;
-int g_iGibTube;
-int g_iGoreXeno;
-int g_iGibXeno;
