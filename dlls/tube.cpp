@@ -409,7 +409,8 @@ void CTube::GibMonster( void )
 //=========================================================
 CBaseMonster *CTube::ShootRocket( void )
 {
-	Vector vecDir = ( m_vecEnemyLKP - pev->origin ).Normalize( );
+	Vector vecOrigin = pev->origin;	// sic: never used
+	Vector vecDir = Vector( m_vecEnemyLKP - pev->origin ).Normalize( );
 	Vector vecAngles;
 
 	vecAngles = UTIL_VecToAngles( vecDir );
@@ -422,7 +423,6 @@ CBaseMonster *CTube::ShootRocket( void )
 	{
 		UTIL_MakeVectors( vecAngles );
 		pRocket->pev->velocity = gpGlobals->v_forward * 500;
-		Vector vecForward = gpGlobals->v_forward;	// sic: never used
 	}
 
 	CBaseMonster *pMonster = pRocket->MyMonsterPointer( );
