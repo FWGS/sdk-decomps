@@ -23,6 +23,7 @@
 #include <stdio.h>
 
 #include "vgui_TeamFortressViewport.h"
+#include "vgui_HudDeathNotice.h"
 
 DECLARE_MESSAGE( m_DeathNotice, DeathMsg );
 
@@ -90,65 +91,8 @@ int CHudDeathNotice :: VidInit( void )
 
 int CHudDeathNotice :: Draw( float flTime )
 {
-	int x, y, r, g, b;
-
-	for ( int i = 0; i < MAX_DEATHNOTICES; i++ )
-	{
-		if ( rgDeathNoticeList[i].iId == 0 )
-			break;  // we've gone through them all
-
-		if ( rgDeathNoticeList[i].flDisplayTime < flTime )
-		{ // display time has expired
-			// remove the current item from the list
-			memmove( &rgDeathNoticeList[i], &rgDeathNoticeList[i+1], sizeof(DeathNoticeItem) * (MAX_DEATHNOTICES - i) );
-			i--;  // continue on the next item;  stop the counter getting incremented
-			continue;
-		}
-
-		rgDeathNoticeList[i].flDisplayTime = min( rgDeathNoticeList[i].flDisplayTime, gHUD.m_flTime + DEATHNOTICE_DISPLAY_TIME );
-
-		// Only draw if the viewport will let me
-		if ( gViewPort && gViewPort->AllowedToPrintText() )
-		{
-			// Draw the death notice
-			y = DEATHNOTICE_TOP + (20 * i);  //!!!
-
-			int id = (rgDeathNoticeList[i].iId == -1) ? m_HUD_d_skull : rgDeathNoticeList[i].iId;
-			x = ScreenWidth - ConsoleStringLen(rgDeathNoticeList[i].szVictim) - (gHUD.GetSpriteRect(id).right - gHUD.GetSpriteRect(id).left);
-
-			if ( !rgDeathNoticeList[i].iSuicide )
-			{
-				x -= (5 + ConsoleStringLen( rgDeathNoticeList[i].szKiller ) );
-
-				// Draw killers name
-				if ( rgDeathNoticeList[i].KillerColor )
-					gEngfuncs.pfnDrawSetTextColor( rgDeathNoticeList[i].KillerColor[0], rgDeathNoticeList[i].KillerColor[1], rgDeathNoticeList[i].KillerColor[2] );
-				x = 5 + DrawConsoleString( x, y, rgDeathNoticeList[i].szKiller );
-			}
-
-			r = 255;  g = 80;	b = 0;
-			if ( rgDeathNoticeList[i].iTeamKill )
-			{
-				r = 10;	g = 240; b = 10;  // display it in sickly green
-			}
-
-			// Draw death weapon
-			SPR_Set( gHUD.GetSprite(id), r, g, b );
-			SPR_DrawAdditive( 0, x, y, &gHUD.GetSpriteRect(id) );
-
-			x += (gHUD.GetSpriteRect(id).right - gHUD.GetSpriteRect(id).left);
-
-			// Draw victims name (if it was a player that was killed)
-			if (rgDeathNoticeList[i].iNonPlayerKill == FALSE)
-			{
-				if ( rgDeathNoticeList[i].VictimColor )
-					gEngfuncs.pfnDrawSetTextColor( rgDeathNoticeList[i].VictimColor[0], rgDeathNoticeList[i].VictimColor[1], rgDeathNoticeList[i].VictimColor[2] );
-				x = DrawConsoleString( x, y, rgDeathNoticeList[i].szVictim );
-			}
-		}
-	}
-
-	return 1;
+	// Gunman: the death notices are a VGUI panel, see vgui_HudDeathNotice.cpp
+	return 0;
 }
 
 // This message handler may be better off elsewhere
@@ -212,6 +156,10 @@ int CHudDeathNotice :: MsgFunc_DeathMsg( const char *pszName, int iSize, void *p
 		strncpy( rgDeathNoticeList[i].szVictim, victim_name, MAX_PLAYER_NAME_LENGTH );
 		rgDeathNoticeList[i].szVictim[MAX_PLAYER_NAME_LENGTH-1] = 0;
 	}
+
+	// Gunman: show it on the death notice panel in multiplayer
+	if ( gViewPort && gViewPort->m_pDeathNotice && gEngfuncs.GetMaxClients() > 1 )
+		gViewPort->m_pDeathNotice->AddNotice( killedwith, killer_name, victim_name );
 
 	// Is it a non-player object kill?
 	if ( ((char)victim) == -1 )
