@@ -793,8 +793,10 @@ void CMantaShip :: Spawn( void )
 	{
 		m_vecDest = m_pGoalEnt->pev->origin;
 		UTIL_MakeAimVectors( m_pGoalEnt->pev->angles );
-		pev->velocity = (m_vecDest - pev->origin).Normalize() * 400;
-		pev->angles.y = UTIL_VecToAngles( pev->origin - m_pGoalEnt->pev->origin ).y + 180;
+		Vector vecDir = m_vecDest - pev->origin;
+		pev->velocity = vecDir.Normalize() * 400;
+		Vector vecAngles = UTIL_VecToAngles( pev->origin - m_pGoalEnt->pev->origin );
+		pev->angles.y = vecAngles.y + 180;
 	}
 
 	EMIT_SOUND_DYN( ENT(pev), CHAN_STATIC, "manta/manta_idle2.wav", 1.0, 0.3, SND_CHANGE_PITCH | SND_CHANGE_VOL, 100 );
