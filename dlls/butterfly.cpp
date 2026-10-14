@@ -255,8 +255,12 @@ void CDragonfly::FlockLeaderThink( void )
 	if ( FPathBlocked() )
 		fBlocked = TRUE;
 
-	// is the way ahead clear, and done turning from what was in it?
-	if ( ( !m_fTurning || m_vecLastPosition.x * gpGlobals->v_forward.x + m_vecLastPosition.y * gpGlobals->v_forward.y + m_vecLastPosition.z * gpGlobals->v_forward.z >= 0 ) && !fBlocked )
+	// still turning away from what was in the way?
+	if ( m_fTurning && DotProduct( gpGlobals->v_forward, m_vecLastPosition ) < 0 )
+		fBlocked = TRUE;
+
+	// is the way ahead clear?
+	if ( !fBlocked )
 	{
 		// if the boid is turning, stop the trend.
 		if ( m_fTurning )
