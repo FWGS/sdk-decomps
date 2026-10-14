@@ -121,6 +121,8 @@ void CMonsterTankRocket::Spawn( void )
 
 	pev->classname = MAKE_STRING( "monster_tank_rocket" );
 
+	// sic: 8 isn't one of util.h's SND_ flags (vehicle_tank_rocket plays
+	// this with EMIT_SOUND_DYN on CHAN_WEAPON)
 	UTIL_EmitAmbientSound( ENT( pev ), pev->origin, "tank/firering.wav", 1, 0.8, 8, PITCH_NORM );
 
 	UTIL_MakeVectors( pev->angles );
@@ -413,6 +415,8 @@ void CMonsterTank::Precache( void )
 	PRECACHE_SOUND( "tank/engineidle.wav" );
 }
 
+// sic: empty, though PrescheduleThink calls it every 2.36 seconds and
+// Precache loads tank/engineidle.wav
 void CMonsterTank::IdleSound( void )
 {
 }

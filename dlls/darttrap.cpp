@@ -359,13 +359,15 @@ void CTargetRocket::AccelerateThink( void )
 		// steer towards the target
 		if ( m_pTargetEntity )
 		{
-			Vector vecVelocity, vecDir;
-			vecVelocity = pev->velocity;
+			// sic: Normalize's result is dropped, so the rocket gains 0.7
+			// of the whole distance to the target sideways and all of it
+			// upwards, every tenth of a second
+			Vector vecDir;
 			vecDir = m_pTargetEntity->pev->origin - pev->origin;
-			vecDir.Normalize( );	// sic: the result is dropped
+			vecDir.Normalize( );
 			vecDir.x *= 0.7;
 			vecDir.y *= 0.7;
-			pev->velocity = vecVelocity + vecDir;
+			pev->velocity = pev->velocity + vecDir;
 		}
 
 		// and speed up
