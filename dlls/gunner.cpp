@@ -100,11 +100,12 @@ void CAnimeRocket::Spawn( void )
 	Vector vecForward, vecRight, vecUp;
 	UTIL_MakeVectorsPrivate( pev->owner->v.angles, vecForward, vecRight, vecUp );
 
-	Vector vecUpOfs = vecUp * ( RANDOM_FLOAT( 0, 40 ) - 20 );
-	Vector vecRightOfs = vecRight * ( RANDOM_FLOAT( 0, 30 ) - 15 );
-	Vector vecAhead = vecForward * 64;
-	Vector vecTarget;
-	vecTarget = pev->origin + vecAhead + vecRightOfs + vecUpOfs;
+	Vector vecUpOfs;
+	vecUpOfs = ( RANDOM_FLOAT( 0, 40 ) - 20 ) * vecUp;
+	Vector vecRightOfs;
+	vecRightOfs = ( RANDOM_FLOAT( 0, 30 ) - 15 ) * vecRight;
+	Vector vecAhead = 64 * vecForward;
+	Vector vecTarget = pev->origin + vecAhead + vecRightOfs + vecUpOfs;
 	pev->velocity = ( vecTarget - pev->origin ).Normalize() * 500;
 	pev->angles = UTIL_VecToAngles( pev->velocity );
 	pev->dmg = gSkillData.rustgunnerDmgRocket;
@@ -342,11 +343,11 @@ void CBackpackAnimeRocket::Spawn( void )
 	Vector vecForward, vecRight, vecUp;
 	UTIL_MakeVectorsPrivate( pev->owner->v.angles, vecForward, vecRight, vecUp );
 
-	Vector vecUpOfs = vecUp * ( RANDOM_FLOAT( 0, 40 ) - 20 );
-	Vector vecRightOfs = vecRight * ( RANDOM_FLOAT( 0, 30 ) - 15 );
-	Vector vecAhead = vecForward * 64;
-	Vector vecTarget;
-	vecTarget = pev->origin + vecAhead + vecRightOfs + vecUpOfs;
+	Vector vecUpOfs;
+	vecUpOfs = ( RANDOM_FLOAT( 0, 40 ) - 20 ) * vecUp;
+	Vector vecRightOfs = ( RANDOM_FLOAT( 0, 30 ) - 15 ) * vecRight;
+	Vector vecAhead = 64 * vecForward;
+	Vector vecTarget = pev->origin + vecAhead + vecRightOfs + vecUpOfs;
 	pev->velocity = ( vecTarget - pev->origin ).Normalize() * 500;
 	pev->angles = UTIL_VecToAngles( pev->velocity );
 	pev->dmg = gSkillData.rustgunnerDmgMiniRocket;
