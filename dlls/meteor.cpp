@@ -262,17 +262,28 @@ void CMeteorGod::Think( void )
 	if ( !m_bActive )
 		return;
 
-	Vector vecSpot = pev->origin + Vector( RANDOM_LONG( -m_fDropSizeX, m_fDropSizeX ), RANDOM_LONG( -m_fDropSizeY, m_fDropSizeY ), 0 );
+	Vector vecSpot;
+	vecSpot = pev->origin + Vector( RANDOM_LONG( -m_fDropSizeX, m_fDropSizeX ), RANDOM_LONG( -m_fDropSizeY, m_fDropSizeY ), 0 );
 
+	// pick a type by the weights
 	int iRand = RANDOM_LONG( 0, m_iStreakers + m_iSmalls + m_iLarges );
+	int iLimit = m_iStreakers;
 	int iType;
 
-	if ( iRand <= m_iStreakers )
+	if ( iRand <= iLimit )
 		iType = METEOR_STREAKER;
-	else if ( iRand <= m_iStreakers + m_iSmalls )
-		iType = METEOR_SMALL;
-	else if ( iRand <= m_iStreakers + m_iSmalls + m_iLarges )
-		iType = METEOR_LARGE;
+	else
+	{
+		iLimit += m_iSmalls;
+		if ( iRand <= iLimit )
+			iType = METEOR_SMALL;
+		else
+		{
+			iLimit += m_iLarges;
+			if ( iRand <= iLimit )
+				iType = METEOR_LARGE;
+		}
+	}
 
 	CMeteor::MeteorCreate( vecSpot, iType, m_vecDir, m_bDebris );
 }
