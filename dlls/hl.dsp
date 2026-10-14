@@ -428,6 +428,14 @@ SOURCE=.\chopper.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\cricket.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\butterfly.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\gunman_pending.cpp
 # End Source File
 # Begin Source File
