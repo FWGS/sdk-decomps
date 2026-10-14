@@ -548,6 +548,10 @@ SOURCE=.\hostilescientist.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\gunner.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\camera.cpp
 # End Source File
 # Begin Source File
