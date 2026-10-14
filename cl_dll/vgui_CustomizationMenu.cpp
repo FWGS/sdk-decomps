@@ -755,8 +755,9 @@ void CCustomizationMenu::ShowBeamgun( int iFrequency, int iCurrent, int iVoltage
 		}
 		else
 		{
-			hScheme = hSelected;
-			if ( iRow != i )
+			if ( iRow == i )
+				hScheme = hSelected;
+			else
 				hScheme = hTitle;
 
 			// the current shows on the power and the accuracy rows

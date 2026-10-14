@@ -705,8 +705,13 @@ void WeaponsResource :: SelectSlot( int iSlot, int fAdvance, int iDirection )
 	{
 		p = GetFirstPos( iSlot );
 
-		if ( !p || iSlot != 9 )
-			PlaySound( p ? "common/wpn_moveselect.wav" : "common/wpn_denyselect.wav", 1 );
+		char *pszSound = NULL;
+		if ( !p )
+			pszSound = "common/wpn_denyselect.wav";
+		else if ( iSlot != 9 )
+			pszSound = "common/wpn_moveselect.wav";
+		if ( pszSound )
+			PlaySound( pszSound, 1 );
 
 		if ( p && strcmp( p->szCustomizes, "weapon_gausspistol" ) )
 		{

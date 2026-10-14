@@ -113,15 +113,17 @@ void CIDPanel::GetIDString( char *pszBuf, int iLen, int iPlayer, int iLocalPlaye
 	team_info_t *pPlayerTeam = &g_TeamInfo[iPlayer];
 	team_info_t *pLocalTeam = &g_TeamInfo[iLocalPlayer];
 
-	if ( pPlayerTeam && pLocalTeam && pPlayerTeam->teamnumber == pLocalTeam->teamnumber && gHUD.m_Teamplay )
-	{
-		sprintf( pszBuf, "Friend: " );
-		gViewPort->m_pIDPanel->m_pText->setFgColor( 0, 255, 0, 1 );
-	}
-	else
+	bool bFriend = pPlayerTeam && pLocalTeam && pPlayerTeam->teamnumber == pLocalTeam->teamnumber && gHUD.m_Teamplay;
+
+	if ( !bFriend )
 	{
 		sprintf( pszBuf, "Enemy:  " );
 		gViewPort->m_pIDPanel->m_pText->setFgColor( 255, 0, 0, 1 );
+	}
+	else
+	{
+		sprintf( pszBuf, "Friend: " );
+		gViewPort->m_pIDPanel->m_pText->setFgColor( 0, 255, 0, 1 );
 	}
 
 	hud_player_info_t *pInfo = &g_PlayerInfoList[iPlayer];
