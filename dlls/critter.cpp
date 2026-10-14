@@ -732,10 +732,12 @@ void CCritter::RunAI( void )
 		vecAim = vecAim.Normalize( );
 		vecAim = vecAim * -1;
 
-		if ( DotProduct( vecDir, vecAim ) > 0.95 )
+		Vector vecApex;
+
+		float flDot = DotProduct( vecAim, vecDir );
+		if ( flDot > 0.95 )
 		{
 			float flDist;
-			Vector vecApex;
 
 			m_flLastSwerveTime = gpGlobals->time + 0.5;
 
