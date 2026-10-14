@@ -18,7 +18,7 @@
 // toward itself from a height above it when it is used.
 // The meteors are streakers (a lava ball that burns out in
 // the air), small and large smoking asteroids that blow up
-// with rock debris where they land.
+// with lava ball or rock debris where they land.
 //=========================================================
 
 #include "extdll.h"
