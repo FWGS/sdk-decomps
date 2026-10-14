@@ -27,6 +27,9 @@
 #include "parsemsg.h"
 #include <string.h>
 
+#include "vgui_TeamFortressViewport.h"
+#include "vgui_Temperature.h"
+
 
 DECLARE_MESSAGE(m_Health, Health )
 DECLARE_MESSAGE(m_Health, Damage )
@@ -35,6 +38,21 @@ DECLARE_MESSAGE(m_Health, Damage )
 #define DAMAGE_NAME "sprites/%d_dmg.spr"
 
 int giDmgHeight, giDmgWidth;
+
+// Gunman's sprites from hud.txt; only the heartbeat is drawn
+int g_HUD_logo;
+int g_HUD_temperature;
+int g_HUD_malfunction;
+int g_HUD_warning;
+int g_HUD_danger;
+int g_HUD_health_pulse;
+
+extern int g_HUD_number_10;
+extern int g_iHeatWeapon;
+extern int g_iHeat;
+extern int g_fWeaponSelected;
+
+static void DrawHeatGauge( float flTime );
 
 int giDmgFlags[NUM_DMG_TYPES] = 
 {
@@ -96,6 +114,12 @@ int CHudHealth::VidInit(void)
 
 	m_HUD_dmg_bio = gHUD.GetSpriteIndex( "dmg_bio" ) + 1;
 	m_HUD_cross = gHUD.GetSpriteIndex( "cross" );
+	g_HUD_logo = gHUD.GetSpriteIndex( "logo" );
+	g_HUD_temperature = gHUD.GetSpriteIndex( "temperature" );
+	g_HUD_malfunction = gHUD.GetSpriteIndex( "malfunction" );
+	g_HUD_warning = gHUD.GetSpriteIndex( "warning" );
+	g_HUD_danger = gHUD.GetSpriteIndex( "danger" );
+	g_HUD_health_pulse = gHUD.GetSpriteIndex( "health_pulse" );
 
 	giDmgHeight = gHUD.GetSpriteRect(m_HUD_dmg_bio).right - gHUD.GetSpriteRect(m_HUD_dmg_bio).left;
 	giDmgWidth = gHUD.GetSpriteRect(m_HUD_dmg_bio).bottom - gHUD.GetSpriteRect(m_HUD_dmg_bio).top;
@@ -146,7 +170,8 @@ int CHudHealth:: MsgFunc_Damage(const char *pszName,  int iSize, void *pbuf )
 
 // Returns back a color from the
 // Green <-> Yellow <-> Red ramp
-void CHudHealth::GetPainColor( int &r, int &g, int &b )
+// Gunman: cyan, red when low; inline (retail has no copy of its own)
+inline void CHudHealth::GetPainColor( int &r, int &g, int &b )
 {
 	int iHealth = m_iHealth;
 
@@ -161,7 +186,7 @@ void CHudHealth::GetPainColor( int &r, int &g, int &b )
 #else
 	if (m_iHealth > 25)
 	{
-		UnpackRGB(r,g,b, RGB_YELLOWISH);
+		UnpackRGB(r,g,b, RGB_CYANISH);
 	}
 	else
 	{
@@ -175,68 +200,114 @@ void CHudHealth::GetPainColor( int &r, int &g, int &b )
 int CHudHealth::Draw(float flTime)
 {
 	int r, g, b;
-	int a = 0, x, y;
-	int HealthWidth;
-
-//	if (m_iHealth <= 0)
-//		return 1;
+	int x;
+	int iFrame;
 
 	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_HEALTH )
-		return 1;
-
-	if ( !m_hSprite )
-		m_hSprite = LoadSprite(PAIN_NAME);
-	
-	// Has health changed? Flash the health #
-	if (m_fFade)
 	{
-		m_fFade -= (gHUD.m_flTimeDelta * 20);
-		if (m_fFade <= 0)
+		// the temperature gauge goes with the rest of the HUD
+		if ( gViewPort && gViewPort->m_pTemperature )
 		{
-			a = MIN_ALPHA;
-			m_fFade = 0;
+			gViewPort->m_pTemperature->ShowTexts( false, false, false );
+			gViewPort->m_pTemperature->setVisible( false );
 		}
+		return 1;
+	}
 
-		// Fade the health number back to dim
+	// bring back the metal frame and the ammo panel when the HUD comes back
+	if ( !gViewPort->m_pMetalHud->m_iShown )
+	{
+		gViewPort->m_pMetalHud->setVisible( true );
+		gViewPort->m_pMetalHud->m_iShown = true;
+		gViewPort->m_pAmmoPanel->setVisible( true );
+		gViewPort->m_pAmmoPanel->m_iShown = true;
+	}
 
-		a = MIN_ALPHA +  (m_fFade/FADE_TIME) * 128;
+	DrawHeatGauge( flTime );
+	DrawPain( flTime );
 
+	// the health number sits low on the left, next to the armor
+	x = 164;
+
+	if ( CVAR_GET_FLOAT( "hud_smallhud" ) != 0 || ScreenWidth <= 640 )
+		x = 35;
+
+	GetPainColor( r, g, b );
+	if ( 0 )	// sic: the SDK's fading is switched off (this keeps r, g and b on the stack)
+		ScaleColors( r, g, b, MIN_ALPHA );
+
+	if ( m_iHealth > 99 )
+	{
+		// a hundred has its own sprite
+		SPR_Set( gHUD.GetSprite( g_HUD_number_10 ), r, g, b );
+		SPR_DrawAdditive( 0, x - 3, ScreenHeight - 99, &gHUD.GetSpriteRect( g_HUD_number_10 ) );
 	}
 	else
-		a = MIN_ALPHA;
-
-	// If health is getting low, make it bright red
-	if (m_iHealth <= 15)
-		a = 255;
-		
-	GetPainColor( r, g, b );
-	ScaleColors(r, g, b, a );
-
-	// Only draw health if we have the suit.
-	if (gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT)))
 	{
-		HealthWidth = gHUD.GetSpriteRect(gHUD.m_HUD_number_0).right - gHUD.GetSpriteRect(gHUD.m_HUD_number_0).left;
-		int CrossWidth = gHUD.GetSpriteRect(m_HUD_cross).right - gHUD.GetSpriteRect(m_HUD_cross).left;
-
-		y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
-		x = CrossWidth /2;
-
-		SPR_Set(gHUD.GetSprite(m_HUD_cross), r, g, b);
-		SPR_DrawAdditive(0, x, y, &gHUD.GetSpriteRect(m_HUD_cross));
-
-		x = CrossWidth + HealthWidth / 2;
-
-		x = gHUD.DrawHudNumber(x, y, DHN_3DIGITS | DHN_DRAWZERO, m_iHealth, r, g, b);
-
-		x += HealthWidth/2;
-
-		int iHeight = gHUD.m_iFontHeight;
-		int iWidth = HealthWidth/10;
-		FillRGBA(x, y, iWidth, iHeight, 255, 160, 0, a);
+		gHUD.DrawHudNumber( x, ScreenHeight - 99, DHN_DRAWZERO | DHN_2DIGITS, m_iHealth, r, g, b );
 	}
 
-	DrawDamage(flTime);
-	return DrawPain(flTime);
+	// the big HUD has a heartbeat trace, its frame picked by the health
+	if ( CVAR_GET_FLOAT( "hud_smallhud" ) == 0 && ScreenWidth > 640 )
+	{
+		if ( m_iHealth <= 0 )
+			iFrame = 4;
+		else if ( m_iHealth <= 25 )
+			iFrame = 3;
+		else if ( m_iHealth <= 50 )
+			iFrame = 2;
+		else if ( m_iHealth <= 80 )
+			iFrame = 1;
+		else
+			iFrame = 0;
+
+		// the trace scrolls right by m_iPulse: its end is drawn first, at
+		// the left, and the rest after it
+		wrect_t rcEnd = gHUD.GetSpriteRect( g_HUD_health_pulse );
+		wrect_t rcStart = rcEnd;
+
+		rcStart.right -= m_iPulse;
+		if ( rcStart.right == 0 )
+			rcStart.right = 1;
+
+		rcEnd.left = rcEnd.right - m_iPulse;
+		if ( rcEnd.left == rcEnd.right )
+			rcEnd.left = rcEnd.right - 1;
+
+		SPR_Set( gHUD.GetSprite( g_HUD_health_pulse ), 255, 255, 255 );
+		SPR_DrawAdditive( iFrame, 36, ScreenHeight - 74, &rcEnd );
+
+		SPR_Set( gHUD.GetSprite( g_HUD_health_pulse ), 255, 255, 255 );
+		SPR_DrawAdditive( iFrame, m_iPulse + 36, ScreenHeight - 74, &rcStart );
+
+		// fifty pixels a second
+		float flClientTime = gEngfuncs.GetClientTime();
+
+		if ( m_flPulseTime == 0 || flClientTime < m_flPulseTime )
+		{
+			m_flPulseTime = flClientTime;
+			return 1;
+		}
+
+		int iSteps = (flClientTime - m_flPulseTime) * 50.0;
+		for ( int i = 0; i < iSteps; i++ )
+		{
+			m_iPulse++;
+			m_flPulseTime = flClientTime;
+			if ( m_iPulse > 79 )
+				m_iPulse = 0;
+		}
+	}
+
+	if ( !m_hSprite )
+	{
+		if ( ScreenWidth >= 640 )
+			m_hSprite = SPR_Load( "sprites/640_pain.spr" );
+		else
+			m_hSprite = SPR_Load( "sprites/320_pain.spr" );
+	}
+
+	return 0;
 }
 
 void CHudHealth::CalcDamageDirection(vec3_t vecFrom)
@@ -298,6 +369,7 @@ void CHudHealth::CalcDamageDirection(vec3_t vecFrom)
 	}
 }
 
+// Gunman: the pain arrows are red, nearer the middle of the screen
 int CHudHealth::DrawPain(float flTime)
 {
 	if (!(m_fAttackFront || m_fAttackRear || m_fAttackLeft || m_fAttackRight))
@@ -310,17 +382,21 @@ int CHudHealth::DrawPain(float flTime)
 	a = 255;	// max brightness until then
 
 	float fFade = gHUD.m_flTimeDelta * 2;
+
+	// sic: set once, so each arrow drawn darkens the colour of the next
+	r = 255;
+	g = 0;
+	b = 0;
 	
 	// SPR_Draw top
 	if (m_fAttackFront > 0.4)
 	{
-		GetPainColor(r,g,b);
 		shade = a * max( m_fAttackFront, 0.5 );
 		ScaleColors(r, g, b, shade);
 		SPR_Set(m_hSprite, r, g, b );
 
 		x = ScreenWidth/2 - SPR_Width(m_hSprite, 0)/2;
-		y = ScreenHeight/2 - SPR_Height(m_hSprite,0) * 3;
+		y = ScreenHeight/2 - SPR_Height(m_hSprite,0) * 3 + 200;
 		SPR_DrawAdditive(0, x, y, NULL);
 		m_fAttackFront = max( 0, m_fAttackFront - fFade );
 	} else
@@ -328,12 +404,11 @@ int CHudHealth::DrawPain(float flTime)
 
 	if (m_fAttackRight > 0.4)
 	{
-		GetPainColor(r,g,b);
 		shade = a * max( m_fAttackRight, 0.5 );
 		ScaleColors(r, g, b, shade);
 		SPR_Set(m_hSprite, r, g, b );
 
-		x = ScreenWidth/2 + SPR_Width(m_hSprite, 1) * 2;
+		x = ScreenWidth/2 + SPR_Width(m_hSprite, 1) * 2 - 200;
 		y = ScreenHeight/2 - SPR_Height(m_hSprite,1)/2;
 		SPR_DrawAdditive(1, x, y, NULL);
 		m_fAttackRight = max( 0, m_fAttackRight - fFade );
@@ -342,13 +417,12 @@ int CHudHealth::DrawPain(float flTime)
 
 	if (m_fAttackRear > 0.4)
 	{
-		GetPainColor(r,g,b);
 		shade = a * max( m_fAttackRear, 0.5 );
 		ScaleColors(r, g, b, shade);
 		SPR_Set(m_hSprite, r, g, b );
 
 		x = ScreenWidth/2 - SPR_Width(m_hSprite, 2)/2;
-		y = ScreenHeight/2 + SPR_Height(m_hSprite,2) * 2;
+		y = ScreenHeight/2 + SPR_Height(m_hSprite,2) * 2 - 200;
 		SPR_DrawAdditive(2, x, y, NULL);
 		m_fAttackRear = max( 0, m_fAttackRear - fFade );
 	} else
@@ -356,12 +430,11 @@ int CHudHealth::DrawPain(float flTime)
 
 	if (m_fAttackLeft > 0.4)
 	{
-		GetPainColor(r,g,b);
 		shade = a * max( m_fAttackLeft, 0.5 );
 		ScaleColors(r, g, b, shade);
 		SPR_Set(m_hSprite, r, g, b );
 
-		x = ScreenWidth/2 - SPR_Width(m_hSprite, 3) * 3;
+		x = ScreenWidth/2 - SPR_Width(m_hSprite, 3) * 3 + 200;
 		y = ScreenHeight/2 - SPR_Height(m_hSprite,3)/2;
 		SPR_DrawAdditive(3, x, y, NULL);
 
@@ -372,6 +445,7 @@ int CHudHealth::DrawPain(float flTime)
 	return 1;
 }
 
+// Gunman: no longer called (retail has no code for it)
 int CHudHealth::DrawDamage(float flTime)
 {
 	int r, g, b, a;
@@ -477,4 +551,102 @@ void CHudHealth::UpdateTiles(float flTime, long bitsDamage)
 
 	// damage bits are only turned on here;  they are turned off when the draw time has expired (in DrawDamage())
 	m_bitsDamage |= bitsDamage;
+}
+
+// Gunman: the temperature gauge of the weapon that heats up (TempX): its
+// panel, a bar that grows from green over yellow to red with the heat, and
+// a warning, a danger or a malfunction text
+static void DrawHeatGauge( float flTime )
+{
+	int r, g, b;
+	int x, y;
+
+	if ( !gHUD.m_Ammo.m_pWeapon )
+		return;
+
+	if ( g_iHeatWeapon == gHUD.m_Ammo.m_pWeapon->iId )
+	{
+		if ( gViewPort && gViewPort->m_pTemperature )
+			gViewPort->m_pTemperature->setVisible( true );
+
+		x = ScreenWidth / 2 - 54;
+		y = ScreenHeight - 33;
+
+		if ( g_iHeat <= 50 )
+		{
+			g = 255;
+			b = 0;
+			r = 0;
+			if ( gViewPort && gViewPort->m_pTemperature )
+				gViewPort->m_pTemperature->ShowTexts( false, false, false );
+		}
+
+		if ( g_iHeat > 50 && g_iHeat <= 75 )
+		{
+			g = 255;
+			r = 255;
+			b = 0;
+			if ( gViewPort && gViewPort->m_pTemperature )
+				gViewPort->m_pTemperature->ShowTexts( true, false, false );
+		}
+
+		if ( g_iHeat > 75 )
+		{
+			r = 255;
+			g = 0;
+			b = 0;
+			if ( g_iHeat >= 99 )
+			{
+				if ( gViewPort && gViewPort->m_pTemperature )
+					gViewPort->m_pTemperature->ShowTexts( false, false, true );
+			}
+			else
+			{
+				if ( gViewPort && gViewPort->m_pTemperature )
+					gViewPort->m_pTemperature->ShowTexts( false, true, false );
+			}
+		}
+
+		// one column per step, ramping up the red over the first 58 and
+		// then down the green; the colours set above are never used
+		int iWidth = g_iHeat * 1.16;
+		for ( int i = 0; i < iWidth; i++ )
+		{
+			b = 0;
+			r = i * 255 / 58;
+			g = 255;
+			if ( r >= 255 )
+			{
+				r = 255;
+				g = (58 - i) * 255 / 58 + 240;
+			}
+
+			if ( g_iHeat >= 99 )
+			{
+				r = 255;
+				b = 0;
+				g = 0;
+			}
+
+			FillRGBA( x + i, y, 1, 18, r, g, b, 255 );
+		}
+	}
+	else
+	{
+		if ( gViewPort && gViewPort->m_pTemperature )
+		{
+			gViewPort->m_pTemperature->ShowTexts( false, false, false );
+			gViewPort->m_pTemperature->setVisible( false );
+		}
+	}
+
+	// sic: computes a colour twenty times and never uses it
+	if ( g_fWeaponSelected )
+	{
+		for ( int i = 0; i < 20; i++ )
+		{
+			UnpackRGB( r, g, b, RGB_YELLOWISH );
+			ScaleColors( r, g, b, 255 );
+		}
+	}
 }
