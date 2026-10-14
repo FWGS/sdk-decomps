@@ -2114,17 +2114,14 @@ void CGunmanTriggerKill :: Spawn( void )
 
 void CGunmanTriggerKill :: KillUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	entvars_t *pevKiller;
 	CBaseEntity *pEntity = UTIL_FindEntityByString( NULL, "targetname", STRING( pev->target ) );
 
 	if ( pEntity && pEntity->pev->takedamage )
 	{
 		if ( pActivator )
-			pevKiller = pActivator->pev;
+			pEntity->TakeDamage( pActivator->pev, pActivator->pev, pEntity->pev->health + 1, m_iDamageType | DMG_CRUSH );
 		else
-			pevKiller = pev;
-
-		pEntity->TakeDamage( pevKiller, pevKiller, pEntity->pev->health + 1, m_iDamageType | DMG_CRUSH );
+			pEntity->TakeDamage( pev, pev, pEntity->pev->health + 1, m_iDamageType | DMG_CRUSH );
 	}
 }
 
