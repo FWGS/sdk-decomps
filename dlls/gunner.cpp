@@ -1272,13 +1272,13 @@ BOOL CGunner::CheckRangeAttack1( float flDot, float flDist )
 void CGunner::SetActivity( Activity NewActivity )
 {
 	int iSequence;
-	int iDist;
+	Vector vecDist;
 
 	switch ( NewActivity )
 	{
 	case ACT_RUN:
-		iDist = ( m_vecEnemyLKP - pev->origin ).Length();
-		if ( iDist > 700 && UTIL_PercentChance( 25 ) )
+		vecDist = m_vecEnemyLKP - pev->origin;
+		if ( (int)vecDist.Length() > 700 && UTIL_PercentChance( 25 ) )
 			iSequence = LookupActivity( ACT_WALK );
 		else
 			iSequence = LookupActivity( ACT_RUN );
