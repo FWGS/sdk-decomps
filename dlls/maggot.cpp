@@ -304,7 +304,8 @@ void CMaggot::RunAI( void )
 
 	if ( m_fLaunched )
 	{
-		Vector vecDir = pev->velocity.Normalize( );
+		Vector vecDir;
+		vecDir = pev->velocity.Normalize( );
 
 		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 			WRITE_BYTE( TE_SPRITE_SPRAY );
@@ -327,12 +328,15 @@ void CMaggot::RunAI( void )
 	if ( m_hEnemy == NULL )
 		return;
 
-	Vector vecDir = m_vecEnemyLKP - pev->origin;
+	Vector vecDir;
+	vecDir = m_vecEnemyLKP - pev->origin;
 	UTIL_MakeAimVectors( m_hEnemy->pev->angles );
 	Vector vecForward = gpGlobals->v_forward;
 	vecDir = vecDir.Normalize( );
 	vecForward = vecForward.Normalize( );
-	float flDot = DotProduct( vecDir, vecForward * -1 );
+	vecForward = vecForward * -1;
+	float flDot = DotProduct( vecForward, vecDir );
+	Vector vecApex;
 
 	if ( flDot > 0.97 && m_bCanDodge == TRUE )
 	{
@@ -369,7 +373,6 @@ void CMaggot::RunAI( void )
 		m_hEnemy->pev == m_hEnemy->pev &&	// sic: always true
 		( pev->origin - m_hEnemy->pev->origin ).Length2D( ) > 128 )
 	{
-		Vector vecApex;
 		if ( FTriangulate( pev->origin, m_Route[ m_iRouteIndex ].vecLocation, ( pev->origin - m_Route[ m_iRouteIndex ].vecLocation ).Length2D( ) * 0.5, m_hEnemy, &vecApex ) )
 		{
 			InsertWaypoint( vecApex, bits_MF_TO_DETOUR | bits_MF_DONT_SIMPLIFY );
@@ -601,4 +604,14 @@ Schedule_t *CMaggot::GetScheduleOfType( int Type )
 	}
 
 	return CSquadMonster::GetScheduleOfType( Type );
+}
+
+int CMaggot::Classify( void )
+{
+	return CLASS_ALIEN_CRITTER;
+}
+
+int CMaggot::MonsterType( void )
+{
+	return 21;
 }

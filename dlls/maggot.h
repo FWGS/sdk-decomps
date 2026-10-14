@@ -27,8 +27,8 @@ public:
 	void Spawn( void );
 	void Precache( void );
 	void PrecacheSounds( void );
-	int  Classify( void ) { return CLASS_ALIEN_CRITTER; }
-	int  MonsterType( void ) { return 21; }
+	int  Classify( void );
+	int  MonsterType( void );
 	void SetYawSpeed( void );
 	Vector Center( void );
 	int  TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
