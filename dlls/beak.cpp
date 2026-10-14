@@ -684,7 +684,8 @@ void CBeak::StartTask( Task_t *pTask )
 			{
 				Vector vecDir;
 				vecDir = m_hEnemy->BodyTarget( pev->origin ) - pev->origin;
-				float flLead = vecDir.Length();
+				Vector vecDist = vecDir;
+				float flLead = vecDist.Length();
 				Vector vecEnemyVelocity;
 				vecEnemyVelocity = m_hEnemy->pev->velocity;
 
