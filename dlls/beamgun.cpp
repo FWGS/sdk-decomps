@@ -1587,7 +1587,7 @@ void CBallLightning::Spawn( void )
 
 	if ( Classify() == CLASS_PLAYER )
 	{
-		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "weapons/ball_fly.wav", 1.0, ATTN_NORM, 0, 80 + RANDOM_LONG(0,0x3f) );
+		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "weapons/ball-fly.wav", 1.0, ATTN_NORM, 0, 80 + RANDOM_LONG(0,0x3f) );
 	}
 	else
 	{
@@ -1606,14 +1606,14 @@ void CBallLightning::Precache( void )
 	PRECACHE_MODEL( "sprites/ballight.spr" );
 	m_iSmoke = PRECACHE_MODEL( "sprites/smoke.spr" );
 
-	PRECACHE_SOUND( "weapons/ball_fly.wav" );
+	PRECACHE_SOUND( "weapons/ball-fly.wav" );
 	PRECACHE_SOUND( "flier/flyball_fly1.wav" );
 	PRECACHE_SOUND( "flier/flyball_fly2.wav" );
 	PRECACHE_SOUND( "flier/flyball_fly3.wav" );
 	PRECACHE_SOUND( "flier/flyball_hit1.wav" );
 	PRECACHE_SOUND( "flier/flyball_hit2.wav" );
 	PRECACHE_SOUND( "flier/flyball_hit3.wav" );
-	PRECACHE_SOUND( "weapons/ball_die.wav" );
+	PRECACHE_SOUND( "weapons/ball-die.wav" );
 
 	m_usBallLightning = PRECACHE_EVENT( 1, "events/balllightning.sc" );
 
@@ -1641,7 +1641,7 @@ void CBallLightning::LightningTouch( CBaseEntity *pOther )
 	}
 	else
 	{
-		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "weapons/ball-die.wav", 1.0, ATTN_NORM, 0, 80 + RANDOM_LONG(0,0x3f) );	// not the precached ball_die.wav (sic)
+		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "weapons/ball-die.wav", 1.0, ATTN_NORM, 0, 80 + RANDOM_LONG(0,0x3f) );
 	}
 
 	PLAYBACK_EVENT_FULL( 0, edict(), m_usBallLightning, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, 0, 1 );
