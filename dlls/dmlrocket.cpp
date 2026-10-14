@@ -1073,7 +1073,7 @@ void CDmlRocket::RemoveThink( void )
 //=========================================================
 void CDmlRocket::BecomeTripmine( void )
 {
-	TraceResult tr;
+	TraceResult tr, tr2;	// sic: tr2 is never used
 
 	pev->movetype = MOVETYPE_FLY;
 	pev->solid = SOLID_NOT;
