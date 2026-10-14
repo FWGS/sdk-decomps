@@ -421,7 +421,8 @@ CBaseMonster *CTube::ShootRocket( void )
 	else
 	{
 		UTIL_MakeVectors( vecAngles );
-		pRocket->pev->velocity = Vector( gpGlobals->v_forward * 500 );
+		pRocket->pev->velocity = gpGlobals->v_forward * 500;
+		Vector vecForward = gpGlobals->v_forward;	// sic: never used
 	}
 
 	CBaseMonster *pMonster = pRocket->MyMonsterPointer( );
