@@ -195,7 +195,7 @@ TYPEDESCRIPTION	CDecoreExplode::m_SaveData[] =
 	DEFINE_FIELD( CDecoreExplode, m_iszIdleAnim, FIELD_STRING ),
 	DEFINE_FIELD( CDecoreExplode, m_iszActionAnim, FIELD_STRING ),
 };
-IMPLEMENT_SAVERESTORE( CDecoreExplode, CBaseMonster );
+IMPLEMENT_SAVERESTORE( CDecoreExplode, CBaseEntity );	// sic: skips CBaseMonster's fields
 
 
 void CDecoreExplode::Spawn( void )
