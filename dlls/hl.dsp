@@ -544,6 +544,10 @@ SOURCE=.\rustbit.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\rustbot.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\camera.cpp
 # End Source File
 # Begin Source File
