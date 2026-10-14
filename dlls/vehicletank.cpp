@@ -468,7 +468,10 @@ int CVehicleTank::TankControls( void )
 
 		float flSpeed = ( m_flSpeed < 0 ? m_flSpeed * -1 : m_flSpeed ) / 250;
 
-		EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_VOICE, "tank/engineidle.wav", ( m_iGasState ? flSpeed * 0.3 + 0.3 : flSpeed * 0.3 ) * m_fTankSoundAdj, 0.8, SND_CHANGE_VOL, PITCH_NORM );
+		if ( m_iGasState )
+			EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_VOICE, "tank/engineidle.wav", ( ( flSpeed * 0.3 ) + 0.3 ) * m_fTankSoundAdj, 0.8, SND_CHANGE_VOL, PITCH_NORM );
+		else
+			EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_VOICE, "tank/engineidle.wav", ( flSpeed * 0.3 ) * m_fTankSoundAdj, 0.8, SND_CHANGE_VOL, PITCH_NORM );
 
 		float flTurn = m_fYawAccel / 100;
 		if ( flTurn < 0 )
@@ -811,7 +814,8 @@ void CVehicleTank::Drive( float flInterval )
 				Vector vecFwd;
 				UTIL_MakeVectorsPrivate( pev->angles, vecFwd, NULL, NULL );
 
-				Vector vecToCollision = m_vecCollision - pev->origin;
+				Vector vecToCollision;
+				vecToCollision = m_vecCollision - pev->origin;
 
 				int iAnim;
 				if ( DotProduct( vecToCollision.Normalize(), vecFwd ) > 0 )
@@ -840,8 +844,7 @@ void CVehicleTank::Drive( float flInterval )
 turned:
 			if ( pev->avelocity.y != 0 && vecVelocity.Length() < 10 )
 			{
-				Vector vecPush;
-				vecPush = PushAway();
+				Vector vecPush = PushAway();
 				if ( vecPush != g_vecZero )
 				{
 					Vector vecAway = ( pev->origin - m_vecCollision ).Normalize();
@@ -1215,7 +1218,8 @@ Vector CVehicleTank::PushAway( void )
 	{
 		UTIL_MakeVectors( pev->angles + pev->avelocity * 0.1 );
 
-		Vector vecDir = ( m_vecCollision - pev->origin ).Normalize();
+		Vector vecDir;
+		vecDir = ( m_vecCollision - pev->origin ).Normalize();
 		Vector vecPush;
 		if ( DotProduct( vecDir, gpGlobals->v_forward ) > 0 && pev->avelocity.y >= 0 )
 			vecPush = m_vecCollision - pev->origin;
@@ -1228,8 +1232,7 @@ Vector CVehicleTank::PushAway( void )
 		if ( pev->avelocity.y < 0 )
 			vecPush = m_vecCollision - pev->origin;
 
-		Vector vecTurn;
-		vecTurn = UTIL_VecToAngles( vecPush.Normalize() );
+		Vector vecTurn = UTIL_VecToAngles( vecPush.Normalize() );
 		Vector vecForward, vecRight;
 		UTIL_MakeVectorsPrivate( vecTurn, vecForward, vecRight, NULL );
 
@@ -1246,14 +1249,12 @@ Vector CVehicleTank::PushAway( void )
 //=========================================================
 Vector CVehicleTank::Slide( Vector vecVelocity, Vector vecNormal )
 {
-	Vector vecN = vecNormal.Normalize();
-	float flDot = DotProduct( vecVelocity.Normalize(), vecN );
+	float flDot = DotProduct( vecVelocity.Normalize(), vecNormal.Normalize() );
 	float flSpeed = vecVelocity.Length();
 
 	vecVelocity = vecVelocity.Normalize() * flSpeed * ( 1 - flDot );
 
-	Vector vecSide;
-	vecSide = CrossProduct( Vector( 0, 0, 1 ), vecNormal );
+	Vector vecSide = CrossProduct( Vector( 0, 0, 1 ), vecNormal );
 	vecSide = vecSide.Normalize();
 	float flNormal = DotProduct( vecVelocity, vecNormal );
 	Vector vecProj = flNormal * vecNormal;
@@ -2025,7 +2026,6 @@ void CVehicleTankShell::Spawn( void )
 void CVehicleTankShell::ShellTouch( CBaseEntity *pOther )
 {
 	TraceResult tr;
-	Vector		vecSpot;// trace starts here!
 
 	// don't hit the tank that fired it
 	if ( !FClassnameIs( ENT( pOther->pev ), "vehicle_tank_turret" ) && !FClassnameIs( ENT( pOther->pev ), "vehicle_tank_barrel" ) )
@@ -2037,11 +2037,11 @@ void CVehicleTankShell::ShellTouch( CBaseEntity *pOther )
 			return;
 		}
 
-		STOP_SOUND( edict(), CHAN_VOICE, "weapons/rocket1.wav" );
+		STOP_SOUND( ENT( pev ), CHAN_VOICE, "weapons/rocket1.wav" );
 
 		pev->enemy = pOther->edict();
 
-		vecSpot = pev->origin - pev->velocity.Normalize() * 32;
+		Vector vecSpot = pev->origin - pev->velocity.Normalize() * 32;
 		UTIL_TraceLine( vecSpot, vecSpot + pev->velocity.Normalize() * 64, ignore_monsters, ENT( pev ), &tr );
 
 		Debris( &tr, vecSpot, vecSpot + pev->velocity.Normalize() * 64 );
@@ -2345,7 +2345,6 @@ void CVehicleTankRocket::TankIgniteThink( void )
 void CVehicleTankRocket::RocketTouch( CBaseEntity *pOther )
 {
 	TraceResult tr;
-	Vector		vecSpot;// trace starts here!
 
 	// don't hit the tank that fired it
 	if ( !FClassnameIs( ENT( pOther->pev ), "vehicle_tank_turret" ) && !FClassnameIs( ENT( pOther->pev ), "vehicle_tank_barrel" ) )
@@ -2365,7 +2364,7 @@ void CVehicleTankRocket::RocketTouch( CBaseEntity *pOther )
 
 			pev->enemy = pOther->edict();
 
-			vecSpot = pev->origin - pev->velocity.Normalize() * 32;
+			Vector vecSpot = pev->origin - pev->velocity.Normalize() * 32;
 			UTIL_TraceLine( vecSpot, vecSpot + pev->velocity.Normalize() * 64, ignore_monsters, ENT( pev ), &tr );
 
 			pev->model = iStringNull;

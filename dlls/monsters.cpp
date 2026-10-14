@@ -3441,7 +3441,7 @@ Vector CBaseMonster :: ShootAtEnemy( const Vector &shootOrigin )
 		// a player in a vehicle: aim somewhere around him
 		if ( pEnemy->IsPlayer() && ((CBasePlayer *)pEnemy)->m_pVehicle != NULL )
 		{
-			Vector vecSpread;
+			Vector vecSpread = g_vecZero;
 
 			vecSpread.x = RANDOM_LONG( -32, 32 );
 			vecSpread.y = RANDOM_LONG( -32, 32 );
