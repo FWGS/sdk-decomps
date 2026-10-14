@@ -72,5 +72,3 @@ int g_iGibBirth;
 int g_iGoreBeak;
 int g_iGibBeak;
 int g_iGoreBirth;
-int g_iGoreXeno;
-int g_iGibXeno;
