@@ -1102,7 +1102,8 @@ Vector CDml::AutoaimDeflection( Vector &vecSrc, float flDist, float flDelta )
 
 		center = pEntity->BodyTarget( vecSrc );
 
-		dir = (center - vecSrc).Normalize( );
+		dir = center - vecSrc;
+		dir = dir.Normalize( );
 
 		// make sure it's in front of the player
 		if (DotProduct (dir, gpGlobals->v_forward ) < 0)
