@@ -1678,7 +1678,7 @@ void CDummyBot::Spawn( void )
 	UTIL_SetOrigin( pev, pev->origin );
 	SetTouch( NULL );
 
-	if ( FStringNull( pev->target ) )
+	if ( !pev->target )
 		pev->target = ALLOC_STRING( "bot1" );
 
 	edict_t *pentTarget = FIND_ENTITY_BY_TARGETNAME( NULL, STRING( pev->target ) );
@@ -1704,7 +1704,7 @@ void CDummyBot::Spawn( void )
 	pev->frame = 0;
 	pev->avelocity.y = RANDOM_FLOAT( -20, 20 );
 
-	EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "drone/drone_idle.wav", 0.65, 0.5, 0, PITCH_NORM );
+	EMIT_SOUND( ENT( pev ), CHAN_VOICE, "drone/drone_idle.wav", 0.65, 0.5 );
 	m_flNextRingTime = 0;
 }
 
