@@ -727,11 +727,12 @@ void CCritter::RunAI( void )
 		UTIL_MakeAimVectors( m_hEnemy->pev->angles );
 
 		Vector vecAim = gpGlobals->v_forward;
-		Vector vecDir = vecToLKP.Normalize( );
+		Vector vecDir;
+		vecDir = vecToLKP.Normalize( );
 		vecAim = vecAim.Normalize( );
 		vecAim = vecAim * -1;
 
-		if ( vecDir.x * vecAim.x + vecDir.y * vecAim.y + vecDir.z * vecAim.z > 0.95 )
+		if ( DotProduct( vecDir, vecAim ) > 0.95 )
 		{
 			float flDist;
 			Vector vecApex;
