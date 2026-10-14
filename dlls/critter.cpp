@@ -563,7 +563,9 @@ void CCritter::HandleAnimEvent( MonsterEvent_t *pEvent )
 				return;
 			}
 
-			Vector vecDir = ( m_vecEnemyLKP - m_hEnemy->pev->view_ofs ).Normalize( );
+			Vector vecToEnemy;
+			vecToEnemy = m_vecEnemyLKP - m_hEnemy->pev->view_ofs;
+			Vector vecDir = vecToEnemy.Normalize( );
 			Vector vecSrc;
 			vecSrc = pev->origin + Vector( 0, 0, 32 );
 
@@ -605,7 +607,7 @@ void CCritter::HandleAnimEvent( MonsterEvent_t *pEvent )
 				// sic: this undoes the straight spit above, which leaves the maggot still
 				pMonster->pev->velocity = vecToss;
 
-				vecToss = pMaggot->pev->velocity.Normalize( );
+				Vector vecSpitDir = pMaggot->pev->velocity.Normalize( );
 
 				// spew the spittle temporary ents.
 				MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecSrc );
@@ -613,9 +615,9 @@ void CCritter::HandleAnimEvent( MonsterEvent_t *pEvent )
 					WRITE_COORD( vecSrc.x );	// pos
 					WRITE_COORD( vecSrc.y );	
 					WRITE_COORD( vecSrc.z );	
-					WRITE_COORD( vecToss.x );	// dir
-					WRITE_COORD( vecToss.y );	
-					WRITE_COORD( vecToss.z );	
+					WRITE_COORD( vecSpitDir.x );	// dir
+					WRITE_COORD( vecSpitDir.y );	
+					WRITE_COORD( vecSpitDir.z );	
 					WRITE_SHORT( iCritterSpitSprite );	// model
 					WRITE_BYTE ( 8 );			// count
 					WRITE_BYTE ( 120 );			// speed
@@ -732,10 +734,12 @@ void CCritter::RunAI( void )
 		vecAim = vecAim.Normalize( );
 		vecAim = vecAim * -1;
 
-		if ( DotProduct( vecDir, vecAim ) > 0.95 )
+		Vector vecApex;
+
+		float flDot = DotProduct( vecAim, vecDir );
+		if ( flDot > 0.95 )
 		{
 			float flDist;
-			Vector vecApex;
 
 			m_flLastSwerveTime = gpGlobals->time + 0.5;
 

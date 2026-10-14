@@ -1691,7 +1691,8 @@ void CDummyBot::Spawn( void )
 
 	m_fSpeed = RANDOM_FLOAT( 75, 175 ) * 2;
 	m_flSlowDown = gpGlobals->time + 4.0;
-	pev->velocity = ( m_vGoalPos - pev->origin ).Normalize( ) * m_fSpeed;
+	Vector vecDir = m_vGoalPos - pev->origin;
+	pev->velocity = vecDir.Normalize( ) * m_fSpeed;
 
 	CreateBeams( );
 	MonsterInit( );
@@ -1704,7 +1705,7 @@ void CDummyBot::Spawn( void )
 	pev->frame = 0;
 	pev->avelocity.y = RANDOM_FLOAT( -20, 20 );
 
-	EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "drone/drone_idle.wav", 0.65, 0.5, 0, PITCH_NORM );
+	EMIT_SOUND( ENT( pev ), CHAN_VOICE, "drone/drone_idle.wav", 0.65, 0.5 );
 	m_flNextRingTime = 0;
 }
 
@@ -1821,16 +1822,16 @@ void CDummyBot::BotSparkThink( void )
 	// a spark to each corner around it
 	UTIL_MakeVectors( pev->angles );
 
-	Vector vecSpark1 = pev->origin + gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 ) + gpGlobals->v_up * RANDOM_FLOAT( 12, 27 ) + gpGlobals->v_right * RANDOM_FLOAT( -27, -12 );
+	Vector vecSpark = pev->origin + gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 ) + gpGlobals->v_up * RANDOM_FLOAT( 12, 27 ) + gpGlobals->v_right * RANDOM_FLOAT( -27, -12 );
 
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_BEAMPOINTS );
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
 		WRITE_COORD( pev->origin.z );
-		WRITE_COORD( vecSpark1.x );
-		WRITE_COORD( vecSpark1.y );
-		WRITE_COORD( vecSpark1.z );
+		WRITE_COORD( vecSpark.x );
+		WRITE_COORD( vecSpark.y );
+		WRITE_COORD( vecSpark.z );
 		WRITE_SHORT( m_iBeam );
 		WRITE_BYTE( 0 );	// frame start
 		WRITE_BYTE( 0 );	// framerate
@@ -1844,16 +1845,16 @@ void CDummyBot::BotSparkThink( void )
 		WRITE_BYTE( 5 );	// speed
 	MESSAGE_END();
 
-	Vector vecSpark2 = pev->origin + gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 ) + gpGlobals->v_up * RANDOM_FLOAT( 12, 27 ) + gpGlobals->v_right * RANDOM_FLOAT( 12, 27 );
+	vecSpark = pev->origin + gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 ) + gpGlobals->v_up * RANDOM_FLOAT( 12, 27 ) + gpGlobals->v_right * RANDOM_FLOAT( 12, 27 );
 
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_BEAMPOINTS );
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
 		WRITE_COORD( pev->origin.z );
-		WRITE_COORD( vecSpark2.x );
-		WRITE_COORD( vecSpark2.y );
-		WRITE_COORD( vecSpark2.z );
+		WRITE_COORD( vecSpark.x );
+		WRITE_COORD( vecSpark.y );
+		WRITE_COORD( vecSpark.z );
 		WRITE_SHORT( m_iBeam );
 		WRITE_BYTE( 0 );	// frame start
 		WRITE_BYTE( 0 );	// framerate
@@ -1867,16 +1868,16 @@ void CDummyBot::BotSparkThink( void )
 		WRITE_BYTE( 5 );	// speed
 	MESSAGE_END();
 
-	Vector vecSpark3 = pev->origin + gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 ) + gpGlobals->v_up * RANDOM_FLOAT( -27, -12 ) + gpGlobals->v_right * RANDOM_FLOAT( 12, 27 );
+	vecSpark = pev->origin + gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 ) + gpGlobals->v_up * RANDOM_FLOAT( -27, -12 ) + gpGlobals->v_right * RANDOM_FLOAT( 12, 27 );
 
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_BEAMPOINTS );
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
 		WRITE_COORD( pev->origin.z );
-		WRITE_COORD( vecSpark3.x );
-		WRITE_COORD( vecSpark3.y );
-		WRITE_COORD( vecSpark3.z );
+		WRITE_COORD( vecSpark.x );
+		WRITE_COORD( vecSpark.y );
+		WRITE_COORD( vecSpark.z );
 		WRITE_SHORT( m_iBeam );
 		WRITE_BYTE( 0 );	// frame start
 		WRITE_BYTE( 0 );	// framerate
@@ -1890,16 +1891,16 @@ void CDummyBot::BotSparkThink( void )
 		WRITE_BYTE( 5 );	// speed
 	MESSAGE_END();
 
-	Vector vecSpark4 = pev->origin + gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 ) + gpGlobals->v_up * RANDOM_FLOAT( -27, -12 ) + gpGlobals->v_right * RANDOM_FLOAT( -27, -12 );
+	vecSpark = pev->origin + gpGlobals->v_forward * RANDOM_FLOAT( -30, 30 ) + gpGlobals->v_up * RANDOM_FLOAT( -27, -12 ) + gpGlobals->v_right * RANDOM_FLOAT( -27, -12 );
 
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_BEAMPOINTS );
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
 		WRITE_COORD( pev->origin.z );
-		WRITE_COORD( vecSpark4.x );
-		WRITE_COORD( vecSpark4.y );
-		WRITE_COORD( vecSpark4.z );
+		WRITE_COORD( vecSpark.x );
+		WRITE_COORD( vecSpark.y );
+		WRITE_COORD( vecSpark.z );
 		WRITE_SHORT( m_iBeam );
 		WRITE_BYTE( 0 );	// frame start
 		WRITE_BYTE( 0 );	// framerate

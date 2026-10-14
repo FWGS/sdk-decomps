@@ -310,7 +310,7 @@ void CDragonfly::FlockLeaderThink( void )
 	// maybe it did, though.
 	if ( FBitSet( pev->flags, FL_ONGROUND ) )
 	{
-		UTIL_SetOrigin( pev, pev->origin + Vector( 0, 0, 1 ) );
+		UTIL_SetOrigin( pev, Vector( 0, 0, 1 ) + pev->origin );
 		pev->velocity.z = 0;
 	}
 
