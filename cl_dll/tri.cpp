@@ -470,9 +470,8 @@ void DrawBeams( void )
 		if ( !pEntity )
 		{
 			g_Effects.Remove( effect.m_iId );
+			continue;
 		}
-		else
-		{
 
 		vecOrigin = effect.m_vecAngles * ( ( flTime - effect.m_flStartTime ) * effect.m_flMaxScale * 30 ) + pEntity->curstate.origin;
 
@@ -487,7 +486,6 @@ void DrawBeams( void )
 		{
 			gEngfuncs.pTriAPI->SpriteTexture( effect.m_pSprite, 0 );
 			DrawStrip( vecOrigin, effect.m_vecAngles, flWidth, 4.5, 32, flBrightness );
-		}
 		}
 	}
 }
