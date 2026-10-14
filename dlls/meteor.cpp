@@ -149,10 +149,12 @@ IMPLEMENT_SAVERESTORE( CMeteorGod, CBaseEntity );
 
 CMeteorGod::CMeteorGod( void )
 {
-	m_vecDir = Vector( -90, 0, 0 );
+	Vector vecDown( -90, 0, 0 );	// pitch -90: straight down
+
 	m_bActive = FALSE;
-	m_fDropSizeX = 0;
+	m_vecDir = vecDown;
 	m_fDropSizeY = 0;
+	m_fDropSizeX = 0;
 	m_fMinDropFreq = 1;
 	m_fMaxDropFreq = 5;
 	m_iStreakers = 1;
