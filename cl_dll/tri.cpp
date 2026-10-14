@@ -235,10 +235,13 @@ void DrawFlameFan( float *origin, float *dir, float flScale, int iSegments, floa
 		angles[2] = fmod( v * 360.0 + angles[2], 360 );
 		AngleVectors( angles, forward, right, up );
 
-		iWidth = ( iType == EFFECT_FLAME ) + 1;
+		if ( iType == EFFECT_FLAME )
+			iWidth = 2;
+		else
+			iWidth = 1;
 
-		vecPoint[0] = -( iWidth * up[0] * flScale ) + origin[0];
-		vecPoint[1] = -( iWidth * up[1] * flScale ) + origin[1];
+		vecPoint[0] = ( -( iWidth * up[0] * flScale ) ) + origin[0];
+		vecPoint[1] = ( -( iWidth * up[1] * flScale ) ) + origin[1];
 		vecPoint[2] = iWidth * up[2] * flScale + origin[2];
 
 		vecTip[0] = origin[0] - forward[0] * flScale;
@@ -370,8 +373,8 @@ void DrawFlameStrip( float *origin, float *dir, float flScale, int iSegments, fl
 		angles[2] = fmod( v * 360.0 + angles[2], 360 );
 		AngleVectors( angles, forward, right, up );
 
-		vecPoint[0] = -( up[0] * flScale ) + origin[0];
-		vecPoint[1] = -( up[1] * flScale ) + origin[1];
+		vecPoint[0] = ( -( up[0] * flScale ) ) + origin[0];
+		vecPoint[1] = ( -( up[1] * flScale ) ) + origin[1];
 		vecPoint[2] = up[2] * flScale + origin[2];
 
 		vecTip[0] = origin[0] - forward[0] * flScale * -6;
