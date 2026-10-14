@@ -839,7 +839,6 @@ void CBeamGun::InventoryFrame( void )
 
 void CBeamGun::WeaponIdle( void )
 {
-	Vector vecEnd;
 	TraceResult tr;
 
 	ResetEmptySound( );
@@ -870,6 +869,7 @@ void CBeamGun::WeaponIdle( void )
 		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 		Vector vecAiming = gpGlobals->v_forward;
 		Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+		Vector vecEnd;
 		vecEnd	 = vecSrc + vecAiming * Configuration.range;
 
 		UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, ENT( m_pPlayer->pev ), &tr );
