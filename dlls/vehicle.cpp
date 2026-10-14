@@ -468,8 +468,6 @@ int CVehicleTank::TankControls( void )
 
 		float flSpeed = ( m_flSpeed < 0 ? m_flSpeed * -1 : m_flSpeed ) / 250;
 
-		// near miss: retail adds the 0.3 after the multiply; VC6 here
-		// turns x * 0.3 + 0.3 into ( x + 1 ) * 0.3
 		EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_VOICE, "tank/engineidle.wav", ( m_iGasState ? flSpeed * 0.3 + 0.3 : flSpeed * 0.3 ) * m_fTankSoundAdj, 0.8, SND_CHANGE_VOL, PITCH_NORM );
 
 		float flTurn = m_fYawAccel / 100;
