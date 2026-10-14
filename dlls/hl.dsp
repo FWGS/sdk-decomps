@@ -468,6 +468,10 @@ SOURCE=.\spchemicalgun.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\vehicle.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\camera.cpp
 # End Source File
 # Begin Source File

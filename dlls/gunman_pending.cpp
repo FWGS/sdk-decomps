@@ -9,7 +9,6 @@
 #include	"monsters.h"
 #include	"weapons.h"
 #include	"player.h"
-#include	"vehicle.h"
 
 // Gib models, by the iGibModel and iPrecacheGib fields of gMonsterTypes.
 gibmodel_t gGibModels[] =
@@ -77,34 +76,3 @@ int g_iGoreTube;
 int g_iGibTube;
 int g_iGoreXeno;
 int g_iGibXeno;
-
-// White beam between two points (the vehicle code; impulse 109 uses it).
-void DrawDebugBeam( Vector vecStart, Vector vecEnd, int r, int g, int b )
-{
-	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
-		WRITE_BYTE( TE_BEAMPOINTS );
-		WRITE_COORD( vecStart.x );
-		WRITE_COORD( vecStart.y );
-		WRITE_COORD( vecStart.z );
-		WRITE_COORD( vecEnd.x );
-		WRITE_COORD( vecEnd.y );
-		WRITE_COORD( vecEnd.z );
-		WRITE_SHORT( g_sModelIndexLaser );
-		WRITE_BYTE( 0 );	// frame start
-		WRITE_BYTE( 10 );	// framerate
-		WRITE_BYTE( 1 );	// life
-		WRITE_BYTE( 4 );	// width
-		WRITE_BYTE( 0 );	// noise
-		WRITE_BYTE( r );
-		WRITE_BYTE( g );
-		WRITE_BYTE( b );
-		WRITE_BYTE( 255 );	// brightness
-		WRITE_BYTE( 10 );	// speed
-	MESSAGE_END();
-}
-
-// The tank lets its driver out (retail 0x1009e950). Stub until the vehicle
-// code is reconstructed.
-void CVehicleTank::EjectPlayer( void )
-{
-}
