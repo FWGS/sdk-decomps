@@ -454,6 +454,10 @@ SOURCE=.\friendlyunarmed.cpp
 
 SOURCE=.\banditgrunt.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\hostilescientist.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
