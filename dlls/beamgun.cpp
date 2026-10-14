@@ -1970,7 +1970,7 @@ void CLightningBug :: TrackTargetBug ( void )
 	// wide turns wear it out
 	m_flEnergy += flDelta - 1;
 
-	pev->velocity = ( vecFlightDir + vecDirToEnemy).Normalize() * ( flDelta * m_flFlySpeed );
+	pev->velocity = ( flDelta * m_flFlySpeed ) * ( vecFlightDir + vecDirToEnemy).Normalize();
 
 	pev->angles = UTIL_VecToAngles (pev->velocity);
 }
