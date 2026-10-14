@@ -321,15 +321,15 @@ void CDemomanRocket::AccelerateThink( void )
 	if ( pev->origin.x >= -4096 && pev->origin.x <= 4096 && pev->origin.y >= -4096 && pev->origin.y <= 4096 && pev->origin.z >= -4096 && pev->origin.z <= 4096 )
 	{
 		CBaseEntity *pOther = NULL;
-		Vector vecTarget = g_vecZero;
+		Vector vecTarget;
+		vecTarget = g_vecZero;
 
 		// steer toward the players near the rocket
 		while ( ( pOther = UTIL_FindEntityInSphere( pOther, pev->origin, 1024 ) ) != NULL )
 		{
 			if ( pOther->pev->takedamage != DAMAGE_NO && pOther->IsPlayer() && ENT( pOther->pev ) != pev->owner && pOther != this )
 			{
-				Vector vecDir = ( pOther->pev->origin - pev->origin ).Normalize();
-				vecTarget = vecTarget + vecDir;
+				vecTarget = vecTarget + ( pOther->pev->origin - pev->origin ).Normalize();
 				vecTarget.x *= 0.7;
 				vecTarget.y *= 0.7;
 				vecTarget.Normalize();	// sic: the result is thrown away
