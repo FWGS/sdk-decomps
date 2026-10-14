@@ -555,42 +555,11 @@ void CCritter::HandleAnimEvent( MonsterEvent_t *pEvent )
 {
 	switch( pEvent->event )
 	{
-		case CRITTER_AE_BITE:
-		{
-			CBaseEntity *pHurt = CheckTraceHullAttack( 70, 15, DMG_SLASH );
-			
-			if ( pHurt )
-			{
-				Vector vecForward;
-
-				UTIL_MakeVectorsPrivate( pev->angles, vecForward, NULL, NULL );
-
-				pHurt->pev->punchangle.z = RANDOM_FLOAT( -10, 10 );
-				pHurt->pev->punchangle.x = RANDOM_FLOAT( -10, 10 );
-				pHurt->pev->velocity = pHurt->pev->velocity + vecForward * 100;
-				pHurt->pev->velocity = pHurt->pev->velocity + Vector( 0, 0, 100 );
-
-				CBaseMonster *pMonster = pHurt->MyMonsterPointer( );
-
-				if ( pMonster )
-				{
-					TraceResult tr;
-
-					UTIL_TraceLine( BodyTarget( g_vecZero ), pMonster->BodyTarget( g_vecZero ), dont_ignore_monsters, ENT( pev ), &tr );
-					pMonster->TraceBleed( 15, ( pMonster->BodyTarget( g_vecZero ) - BodyTarget( g_vecZero ) ).Normalize( ), &tr, DMG_SLASH, tr.vecEndPos );
-
-					if ( pMonster->IsPlayer( ) )
-						AttackHitSound( pMonster );
-				}
-			}
-		}
-		break;
-
 		case CRITTER_AE_SPIT:
 		{
 			if ( m_hEnemy == NULL )
 			{
-				ALERT( at_console, "Critter spit without an enemy\n" );
+				ALERT( at_aiconsole, "Critter spit without an enemy\n" );
 				return;
 			}
 
@@ -630,7 +599,7 @@ void CCritter::HandleAnimEvent( MonsterEvent_t *pEvent )
 					float flGravity = CVAR_GET_FLOAT( "sv_gravity" );
 
 					pMaggot->pev->velocity = gpGlobals->v_forward * 800;
-					pMaggot->pev->velocity.z += flGravity * 0.625 * 0.2;
+					pMaggot->pev->velocity.z += ( 0.625 * flGravity ) * 0.2;
 				}
 
 				// sic: this undoes the straight spit above, which leaves the maggot still
@@ -652,6 +621,37 @@ void CCritter::HandleAnimEvent( MonsterEvent_t *pEvent )
 					WRITE_BYTE ( 120 );			// speed
 					WRITE_BYTE ( 15 );			// noise ( client will divide by 100 )
 				MESSAGE_END();
+			}
+		}
+		break;
+
+		case CRITTER_AE_BITE:
+		{
+			CBaseEntity *pHurt = CheckTraceHullAttack( 70, 15, DMG_SLASH );
+			
+			if ( pHurt )
+			{
+				Vector vecForward;
+
+				UTIL_MakeVectorsPrivate( pev->angles, vecForward, NULL, NULL );
+
+				pHurt->pev->punchangle.z = RANDOM_FLOAT( -10, 10 );
+				pHurt->pev->punchangle.x = RANDOM_FLOAT( -10, 10 );
+				pHurt->pev->velocity = pHurt->pev->velocity + vecForward * 100;
+				pHurt->pev->velocity = pHurt->pev->velocity + Vector( 0, 0, 100 );
+
+				CBaseMonster *pMonster = pHurt->MyMonsterPointer( );
+
+				if ( pMonster )
+				{
+					TraceResult tr;
+
+					UTIL_TraceLine( BodyTarget( g_vecZero ), pMonster->BodyTarget( g_vecZero ), dont_ignore_monsters, ENT( pev ), &tr );
+					pMonster->TraceBleed( 15, ( pMonster->BodyTarget( g_vecZero ) - BodyTarget( g_vecZero ) ).Normalize( ), &tr, DMG_SLASH, tr.vecEndPos );
+
+					if ( pMonster->IsPlayer( ) )
+						AttackHitSound( pMonster );
+				}
 			}
 		}
 		break;
@@ -707,7 +707,10 @@ void CCritter::RunAI( void )
 	// first, do base class stuff
 	CBaseMonster::RunAI( );
 
-	if ( m_hEnemy != NULL && m_Activity == ACT_RUN )
+	if ( m_hEnemy == NULL )
+		return;
+
+	if ( m_Activity == ACT_RUN )
 	{
 		// chasing enemy. Sprint for last bit
 		if ( ( pev->origin - m_hEnemy->pev->origin ).Length2D( ) < CRITTER_SPRINT_DIST )
@@ -719,7 +722,7 @@ void CCritter::RunAI( void )
 	if ( m_hEnemy != NULL && m_flLastSwerveTime < gpGlobals->time )
 	{
 		// swerve when the enemy aims at the critter
-		Vector vecToLKP = m_vecEnemyLKP - pev->origin;
+		Vector vecToLKP( m_vecEnemyLKP - pev->origin );
 
 		UTIL_MakeAimVectors( m_hEnemy->pev->angles );
 
@@ -728,7 +731,7 @@ void CCritter::RunAI( void )
 		vecAim = vecAim.Normalize( );
 		vecAim = vecAim * -1;
 
-		if ( DotProduct( vecDir, vecAim ) > 0.95 )
+		if ( vecDir.x * vecAim.x + vecDir.y * vecAim.y + vecDir.z * vecAim.z > 0.95 )
 		{
 			float flDist;
 			Vector vecApex;
