@@ -363,7 +363,7 @@ void CBaseMonster :: Precache( void ) { }
 void CGrenade::BounceTouch( CBaseEntity *pOther ) { }
 CBaseEntity * EHANDLE :: operator = (CBaseEntity *pEntity) { return NULL; }
 EHANDLE :: operator int ( ) { }	// sic: no return value (retail's is a bare ret)
-EHANDLE :: operator CBaseEntity *() { return NULL; }
+EHANDLE :: operator CBaseEntity *() { }	// sic: no return value either (retail calls a bare ret)
 CBaseEntity * EHANDLE :: operator -> () { return NULL; }
 void CSoundEnt :: InsertSound ( int iType, const Vector &vecOrigin, int iVolume, float flDuration ) { }
 CSprite *CSprite::SpriteCreate( const char *pSpriteName, const Vector &origin, BOOL animate ) { return NULL; }
