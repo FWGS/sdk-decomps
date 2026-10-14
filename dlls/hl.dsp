@@ -536,6 +536,10 @@ SOURCE=.\monstertank.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\meteor.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\bandit.cpp
 # End Source File
 # Begin Source File
