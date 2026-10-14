@@ -496,6 +496,18 @@ SOURCE=.\vehicle.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\cluster.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\darttrap.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\monstertank.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\bandit.cpp
 # End Source File
 # Begin Source File
