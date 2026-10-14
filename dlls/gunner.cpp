@@ -1070,7 +1070,7 @@ CAnimeRocket *CGunner::ShootRocket( Vector vecSrc )
 	RangeAttackSound( );
 	UTIL_MakeAimVectors( pev->angles );
 
-	switch ( RANDOM_LONG( 0, 4 ) % 5 )
+	switch ( RANDOM_LONG( 0, 4 ) % 5 )	// one time in five, from the spot itself
 	{
 	case 0:
 		vecSrc = vecSrc + gpGlobals->v_right * 10;
@@ -1124,7 +1124,7 @@ CBackpackAnimeRocket *CGunner::ShootBackpackRocket( Vector vecSrc )
 
 	Vector vecVelocity;
 
-	switch ( m_iVollyCount % 5 )
+	switch ( m_iVollyCount % 5 )	// sic: the count runs 4 to 1, so case 0 never happens
 	{
 	case 0:
 		vecSrc = vecSrc + gpGlobals->v_right * 15;
@@ -1333,6 +1333,7 @@ void CGunner::ToggleTakedamage( CBaseEntity *pActivator, CBaseEntity *pCaller, U
 		pev->takedamage = DAMAGE_AIM;
 }
 
+// sic: sets no movetype, blood colour, field of view or monster state
 void CGunner::Spawn( void )
 {
 	Precache( );
@@ -1691,7 +1692,7 @@ CBackpackAnimeRocket *CFriendlyGunner::ShootBackpackRocket( Vector vecSrc )
 
 	Vector vecVelocity;
 
-	switch ( m_iVollyCount % 5 )
+	switch ( m_iVollyCount % 5 )	// sic: the count runs 4 to 1, so case 0 never happens
 	{
 	case 0:
 		vecSrc = vecSrc + gpGlobals->v_right * 15;
