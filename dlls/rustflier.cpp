@@ -286,7 +286,7 @@ void CRustFlier :: HuntThink( void )
 		m_pFlyball = CSprite::SpriteCreate( "sprites/flyball.spr", pev->origin, TRUE );
 		m_pFlyball->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxNone );
 		m_pFlyball->SetAttachment( edict(), 2 );
-		m_pFlyball->SetScale( 2.0 );
+		m_pFlyball->pev->scale = 2.0;
 		m_pFlyball->pev->framerate = 9.0;
 		m_pFlyball->pev->spawnflags = 0;
 		m_pFlyball->TurnOn( );
@@ -416,7 +416,8 @@ Vector g_vecFlierUnused2;
 // the flier flies its death path to the crash
 void CRustFlier :: StartCrash( void )
 {
-	CSphereExplosion *pSphere = CSphereExplosion::CreateSphereExplosion( pev->origin, this, 200, 8, 255, 5, 1, FALSE, FALSE, 2.5, 1.0, 0.5 );
+	Vector vecSrc = pev->origin;
+	CSphereExplosion *pSphere = CSphereExplosion::CreateSphereExplosion( vecSrc, this, 200, 8, 255, 5, 1, FALSE, FALSE, 2.5, 1.0, 0.5 );
 	if ( pSphere )
 		pSphere->UseToggle( this, this, USE_ON, 0 );
 
@@ -444,9 +445,13 @@ void CRustFlier :: StartCrash( void )
 		pev->angles.y = (int)pev->angles.y % 360;
 		pev->angles.z = (int)pev->angles.z % 360;
 
-		pev->avelocity.x = UTIL_AngleDistance( m_vecDeathAngle.x, pev->angles.x ) / m_flTimeTillCrash;
-		pev->avelocity.y = UTIL_AngleDistance( m_vecDeathAngle.y, pev->angles.y ) / m_flTimeTillCrash;
-		pev->avelocity.z = UTIL_AngleDistance( m_vecDeathAngle.z, pev->angles.z ) / m_flTimeTillCrash;
+		float flPitch = UTIL_AngleDistance( m_vecDeathAngle.x, pev->angles.x ) / m_flTimeTillCrash;
+		float flYaw = UTIL_AngleDistance( m_vecDeathAngle.y, pev->angles.y ) / m_flTimeTillCrash;
+		float flRoll = UTIL_AngleDistance( m_vecDeathAngle.z, pev->angles.z ) / m_flTimeTillCrash;
+
+		pev->avelocity.x = flPitch;
+		pev->avelocity.y = flYaw;
+		pev->avelocity.z = flRoll;
 
 		m_posDesired = m_pGoalEnt->pev->origin;
 	}
@@ -459,13 +464,13 @@ void CRustFlier :: CrashingThink( void )
 	StudioFrameAdvance( );
 	pev->nextthink = gpGlobals->time + 0.1;
 
-	Vector vecForward, vecRight, vecSpot;
+	Vector vecForward, vecRight;
 	g_engfuncs.pfnAngleVectors( pev->angles, vecForward, vecRight, NULL );
 
 	int cPuffs = RANDOM_LONG( 2, 4 );
 	for ( int i = 0; i < cPuffs; i++ )
 	{
-		vecSpot = pev->origin - vecForward * RANDOM_LONG( 0, 200 ) - vecRight * RANDOM_LONG( 0, 128 );
+		Vector vecSpot = pev->origin - vecForward * RANDOM_LONG( 0, 200 ) - vecRight * RANDOM_LONG( 0, 128 );
 
 		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecSpot );
 			WRITE_BYTE( TE_SMOKE );
@@ -667,8 +672,7 @@ BOOL CRustFlier :: FireGun( void )
 	if ( m_hEnemy != NULL && !m_hEnemy->IsAlive() )
 		return FALSE;
 
-	Vector vecTarget;
-	vecTarget = m_posTarget - posGun;
+	Vector vecTarget = m_posTarget - posGun;
 	vecTarget = vecTarget.Normalize( );
 
 	UTIL_MakeAimVectors( pev->angles );
@@ -766,10 +770,8 @@ int CRustFlier :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, f
 	if ( flDamage > m_fTargetDamage && pev->health > 0 )
 	{
 		StartCrash( );
-		return 0;
 	}
-
-	if ( m_iShieldOn )
+	else if ( m_iShieldOn )
 	{
 		// the shield glows
 		m_iShellTime = 0;
