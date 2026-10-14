@@ -15,8 +15,8 @@
 //
 // vgui_HudWeaponStatus.h
 //
-// CWeaponStatusPanel: the history of weapons and items picked up, and the
-// tank's gas can (STUB: being reconstructed)
+// CWeaponStatusPanel: the history of weapons, ammo and items picked up, a
+// column of icons along the left edge, and the tank's gas can
 //
 
 #ifndef VGUI_HUDWEAPONSTATUS_H
@@ -24,12 +24,13 @@
 
 #define MAX_HISTORY_ICONS		19
 #define MAX_HISTORY_ITEMS		10
+#define HISTORY_TIME			5.0		// seconds an icon stays up
 
 typedef struct
 {
 	CImageLabel	*pLabel;
 	float		flHideTime;
-	int			iWeapon;
+	int			iWeapon;		// a weapon, not ammo or an item
 } historyitem_t;
 
 class CWeaponStatusPanel : public CMenuPanel
@@ -39,11 +40,11 @@ public:
 	historyitem_t	m_Items[MAX_HISTORY_ITEMS];
 	int				m_iNumShown;
 	int				m_iNextItem;
-	float			m_flHideTime;
+	float			m_flHideTime;	// hide the panel then, once empty
 	CImageLabel		*m_pGasCan;
 	CImageLabel		*m_pEmptyGasCan;
 	int				m_iGasCanShown;
-	int				m_iMaxItems;
+	int				m_iMaxItems;	// by screen size
 	int				m_iTall;
 	int				m_iWeaponsShown;
 
