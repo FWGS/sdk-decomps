@@ -30,6 +30,8 @@
 #include "event_args.h"
 #include "in_defs.h"
 #include "effectlist.h"
+#include "vgui_TeamFortressViewport.h"
+#include "vgui_CustomizationMenu.h"
 
 #include <string.h>
 
@@ -1445,13 +1447,19 @@ void EV_FireGauss( event_args_t *args )
 
 void EV_Cleanup( event_args_t *args )
 {
-	if ( EV_IsLocal( args->entindex ) )
+	int idx;
+
+	idx = args->entindex;
+	if ( EV_IsLocal( idx ) )
 	{
 		cl_entity_t *view = gEngfuncs.GetViewModel();
 
 		if ( view )
 			view->curstate.renderfx = kRenderFxNone;
 	}
+
+	if ( gViewPort && gViewPort->m_pCustomizationMenu )
+		gViewPort->m_pCustomizationMenu->HideAll();
 }
 
 void EV_BatbotBeam( event_args_t *args )
