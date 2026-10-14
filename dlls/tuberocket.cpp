@@ -240,9 +240,11 @@ void CTubeRocket::TrackTarget( void )
 
 	if ( m_TurnFuel > 0 && m_hEnemy != NULL )
 	{
-		Vector	vecDirToEnemy = ( m_vecEnemyLKP - pev->origin ).Normalize( );
+		Vector	vecDirToEnemy;
 		Vector	vecFlightDir;
 		float	flDelta;
+
+		vecDirToEnemy = ( m_vecEnemyLKP - pev->origin ).Normalize( );
 
 		if ( pev->velocity.Length( ) < 0.1 )
 			vecFlightDir = vecDirToEnemy;
@@ -276,8 +278,9 @@ void CTubeRocket::TrackTarget( void )
 
 		flDelta *= 1.1;
 		pev->velocity = vecFlightDir + vecDirToEnemy * flDelta;
+		Vector vecVelocity = pev->velocity;	// sic: never used
 		pev->velocity = pev->velocity.Normalize( );
-		pev->velocity = pev->velocity * ( flDelta / 2 * m_fFlySpeed );
+		pev->velocity = pev->velocity * ( ( flDelta / 2 ) * m_fFlySpeed );
 	}
 
 	float flSpeed = pev->velocity.Length( );
