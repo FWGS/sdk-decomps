@@ -814,7 +814,8 @@ void CVehicleTank::Drive( float flInterval )
 				Vector vecFwd;
 				UTIL_MakeVectorsPrivate( pev->angles, vecFwd, NULL, NULL );
 
-				Vector vecToCollision = m_vecCollision - pev->origin;
+				Vector vecToCollision;
+				vecToCollision = m_vecCollision - pev->origin;
 
 				int iAnim;
 				if ( DotProduct( vecToCollision.Normalize(), vecFwd ) > 0 )
@@ -843,8 +844,7 @@ void CVehicleTank::Drive( float flInterval )
 turned:
 			if ( pev->avelocity.y != 0 && vecVelocity.Length() < 10 )
 			{
-				Vector vecPush;
-				vecPush = PushAway();
+				Vector vecPush = PushAway();
 				if ( vecPush != g_vecZero )
 				{
 					Vector vecAway = ( pev->origin - m_vecCollision ).Normalize();
