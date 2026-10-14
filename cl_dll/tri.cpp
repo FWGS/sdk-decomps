@@ -475,7 +475,10 @@ void DrawBeams( void )
 
 		vecOrigin = effect.m_vecAngles * ( ( flTime - effect.m_flStartTime ) * effect.m_flMaxScale * 30 ) + pEntity->origin;
 
-		if ( flBrightness < 1 || flBrightness < 5 )
+		if ( flBrightness < 1 )
+			flBrightness = 1;
+
+		if ( flBrightness < 5 )
 		{
 			g_Effects.Remove( effect.m_iId );
 		}
@@ -507,7 +510,10 @@ void DrawRings( void )
 			float flBrightness = effect.m_flBrightness - ( flTime - effect.m_flStartTime ) * effect.m_flFadeSpeed * 30;
 			float flScale = ( flTime - effect.m_flStartTime ) * effect.m_flScaleSpeed * 30 + effect.m_flScale + 7;
 
-			if ( flBrightness < 1 || flBrightness < 5 )
+			if ( flBrightness < 1 )
+				flBrightness = 1;
+
+			if ( flBrightness < 5 )
 			{
 				g_Effects.Remove( effect.m_iId );
 			}
