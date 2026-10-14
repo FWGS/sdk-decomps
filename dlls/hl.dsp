@@ -436,6 +436,34 @@ SOURCE=.\butterfly.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\gator.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\hatchetfish.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\microraptor.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\ourano.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\raptor.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\renesaur.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\scorpion.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\aigirl.cpp
 # End Source File
 # Begin Source File
@@ -508,6 +536,10 @@ SOURCE=.\monstertank.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\meteor.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\bandit.cpp
 # End Source File
 # Begin Source File
@@ -545,6 +577,18 @@ SOURCE=.\rustbit.cpp
 # Begin Source File
 
 SOURCE=.\rustbot.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\beak.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\critter.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\maggot.cpp
 # End Source File
 # Begin Source File
 
