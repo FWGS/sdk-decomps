@@ -448,6 +448,10 @@ SOURCE=.\microraptor.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\ourano.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\gunman_pending.cpp
 # End Source File
 # Begin Source File
