@@ -1126,7 +1126,7 @@ static void GaussShot( Vector vecOrigSrc, Vector vecDir, float flDamage, CBasePl
 	Vector vecSrc = vecOrigSrc;
 	Vector vecDest = vecSrc + vecDir * 8192;
 	edict_t		*pentIgnore;
-	TraceResult tr;
+	TraceResult tr, beam_tr;	// sic: beam_tr is never used
 
 	pentIgnore = ENT( pPlayer->pev );
 
