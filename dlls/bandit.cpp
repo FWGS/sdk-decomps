@@ -591,9 +591,9 @@ void CBaseBandit :: ShootGauss ( Vector vecShootOrigin, int iGun )
 		y = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
 	} while ( x*x+y*y > 1 );
 
-	Vector vecDir = vecShootDir + x * VECTOR_CONE_8DEGREES.x * gpGlobals->v_right + y * VECTOR_CONE_8DEGREES.y * gpGlobals->v_up;
+	vecShootDir = vecShootDir + x * VECTOR_CONE_8DEGREES.x * gpGlobals->v_right + y * VECTOR_CONE_8DEGREES.y * gpGlobals->v_up;
 
-	FireGauss( vecShootOrigin, vecDir, gSkillData.banditDmgBolt, this, iGun );
+	FireGauss( vecShootOrigin, vecShootDir, gSkillData.banditDmgBolt, this, iGun );
 
 	EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/gauss_fire1.wav", 1, ATTN_NORM );
 	pev->effects |= EF_MUZZLEFLASH;
@@ -626,7 +626,7 @@ void CBaseBandit :: FireGauss ( Vector vecOrigSrc, Vector vecDir, float flDamage
 
 	pShooter->pev->effects |= EF_MUZZLEFLASH;
 
-	Vector vecMuzzle = vecSrc + gpGlobals->v_up * -8 + gpGlobals->v_right * 3;
+	Vector vecMuzzle = vecSrc + gpGlobals->v_up * -8 + gpGlobals->v_right * 3;	// sic: not used
 
 	if ( pEntity->pev->takedamage )
 	{
@@ -638,9 +638,10 @@ void CBaseBandit :: FireGauss ( Vector vecOrigSrc, Vector vecDir, float flDamage
 			EMIT_SOUND_DYN( pEntity->edict(), CHAN_VOICE, "weapons/gauss_fire3.wav", 0.25, ATTN_NORM, 0, 120 );
 	}
 
-	Vector vecAngles = UTIL_VecToAngles( vecDir.Normalize() );
+	UTIL_VecToAngles( vecDir.Normalize() );	// sic: thrown away
 
-	PLAYBACK_EVENT_FULL( FEV_RELIABLE, edict(), g_usGaussFire, 0.0, (float *)&vecMuzzle, (float *)&vecAngles, 0.0, 0.0, 1, iGun, 0, 1 );
+	// the event gets the trace's plane normal and end point
+	PLAYBACK_EVENT_FULL( FEV_RELIABLE, edict(), g_usGaussFire, 0.0, (float *)&tr.vecPlaneNormal, (float *)&tr.vecEndPos, 0.0, 0.0, 1, iGun, 0, 1 );
 }
 
 //=========================================================
@@ -722,7 +723,7 @@ void CBaseBandit :: Shotgun ( void )
 	Vector vecMuzzle;
 	GET_ATTACHMENT( ENT(pev), 0, vecMuzzle, NULL );
 
-	PLAYBACK_EVENT_FULL( FEV_RELIABLE, ENT(pev), m_usShotgun, 0.0, (float *)&vecMuzzle, (float *)&vecForward, 0.0, 0.0, 0, 0, 0, 0 );
+	PLAYBACK_EVENT_FULL( FEV_RELIABLE, ENT(pev), m_usShotgun, 0.0, (float *)&vecMuzzle, (float *)&vecShootDir, 0.0, 0.0, 0, 0, 0, 0 );	// sic: vecForward isn't used
 
 	FireBullets( 6, vecShootOrigin, vecShootDir, VECTOR_CONE_15DEGREES, 4096, BULLET_PLAYER_BUCKSHOT, 0, gSkillData.demomanDmgShotgun );
 

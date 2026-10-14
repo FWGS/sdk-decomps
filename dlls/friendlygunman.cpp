@@ -344,7 +344,7 @@ void CFriendlyGunman :: FireShotgun ( void )
 	Vector vecMuzzle;
 	GET_ATTACHMENT( ENT(pev), 0, vecMuzzle, NULL );
 
-	PLAYBACK_EVENT_FULL( FEV_RELIABLE, ENT(pev), m_usShotgun, 0.0, (float *)&vecMuzzle, (float *)&vecForward, 0.0, 0.0, 0, 0, 0, 0 );
+	PLAYBACK_EVENT_FULL( FEV_RELIABLE, ENT(pev), m_usShotgun, 0.0, (float *)&vecMuzzle, (float *)&vecShootDir, 0.0, 0.0, 0, 0, 0, 0 );	// sic: vecForward isn't used
 
 	FireBullets( gSkillData.plrDmgBuckshot, vecShootOrigin, vecShootDir, VECTOR_CONE_15DEGREES, 4096, BULLET_PLAYER_BUCKSHOT, 0 );
 
