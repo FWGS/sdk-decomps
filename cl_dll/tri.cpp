@@ -563,7 +563,15 @@ void DrawSprites( void )
 		if ( flBrightness < 1 )
 			flBrightness = 1;
 
-		if ( effect.m_iBlue ? ( flFrames > effect.m_iBlue ) : ( flBrightness < 4 ) )
+		if ( effect.m_iBlue )
+		{
+			if ( flFrames > effect.m_iBlue )
+			{
+				g_Effects.Remove( effect.m_iId );
+				continue;
+			}
+		}
+		else if ( flBrightness < 4 )
 		{
 			g_Effects.Remove( effect.m_iId );
 			continue;
@@ -585,9 +593,9 @@ void DrawSprites( void )
 
 		vecOrigin = vecOrigin + vecNormal * 1;
 		vecOrigin = vecOrigin + right * -flScale * 0.5;
-		vecOrigin[0] = up[0] * flScale / 2 + vecOrigin[0];
-		vecOrigin[1] = up[1] * flScale / 2 + vecOrigin[1];
-		vecOrigin[2] = vecOrigin[2] - up[2] * flScale / 2;
+		vecOrigin.x = up.x * flScale / 2 + vecOrigin.x;
+		vecOrigin.y = up.y * flScale / 2 + vecOrigin.y;
+		vecOrigin.z = vecOrigin.z - up.z * flScale / 2;
 
 		vecPoint2 = vecOrigin + right * flScale;
 
@@ -596,8 +604,8 @@ void DrawSprites( void )
 		vecPoint3.z = ( right.z + up.z ) * flScale + vecOrigin.z;
 
 		vecPoint4.x = vecOrigin.x - up.x * flScale;
-		vecPoint4.y = vecOrigin.y - up.y * flScale;
-		vecPoint4.z = vecOrigin.z + up.z * flScale;
+		vecPoint4[1] = vecOrigin.y - up.y * flScale;
+		vecPoint4[2] = vecOrigin.z + up.z * flScale;
 
 		gEngfuncs.pTriAPI->RenderMode( kRenderTransAdd );
 		gEngfuncs.pTriAPI->CullFace( TRI_FRONT );
@@ -605,13 +613,13 @@ void DrawSprites( void )
 		gEngfuncs.pTriAPI->Color4f( 1, 1, 1, flBrightness / 255 );
 
 		gEngfuncs.pTriAPI->TexCoord2f( 0, 0 );
-		gEngfuncs.pTriAPI->Vertex3f( vecOrigin[0], vecOrigin[1], vecOrigin[2] );
+		gEngfuncs.pTriAPI->Vertex3f( vecOrigin.x, vecOrigin.y, vecOrigin.z );
 		gEngfuncs.pTriAPI->TexCoord2f( 0, 1 );
-		gEngfuncs.pTriAPI->Vertex3f( vecPoint2[0], vecPoint2[1], vecPoint2[2] );
+		gEngfuncs.pTriAPI->Vertex3f( vecPoint2.x, vecPoint2.y, vecPoint2.z );
 		gEngfuncs.pTriAPI->TexCoord2f( 1, 1 );
-		gEngfuncs.pTriAPI->Vertex3f( vecPoint3[0], vecPoint3[1], vecPoint3[2] );
+		gEngfuncs.pTriAPI->Vertex3f( vecPoint3.x, vecPoint3.y, vecPoint3.z );
 		gEngfuncs.pTriAPI->TexCoord2f( 1, 0 );
-		gEngfuncs.pTriAPI->Vertex3f( vecPoint4[0], vecPoint4[1], vecPoint4[2] );
+		gEngfuncs.pTriAPI->Vertex3f( vecPoint4.x, vecPoint4.y, vecPoint4.z );
 
 		gEngfuncs.pTriAPI->End();
 		gEngfuncs.pTriAPI->RenderMode( kRenderNormal );
