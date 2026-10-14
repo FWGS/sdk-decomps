@@ -32,6 +32,14 @@ public:
 public:
 	CTemperaturePanel( int x, int y, int wide, int tall );
 
+	// the health HUD shows one text by the heat, or none
+	void ShowTexts( bool bWarning, bool bDanger, bool bMalfunction )
+	{
+		m_pWarning->setVisible( bWarning );
+		m_pDanger->setVisible( bDanger );
+		m_pMalfunction->setVisible( bMalfunction );
+	}
+
 	virtual void paintBackground( void )
 	{
 	}

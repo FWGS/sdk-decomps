@@ -380,7 +380,28 @@ void CHud :: VidInit( void )
 			int index = 0;
 			for ( j = 0; j < m_iSpriteCountAllRes; j++ )
 			{
-				if ( p->iRes == m_iRes )
+				// Gunman: at 640 wide the glows come from the 320 list
+				int bLoad = TRUE;
+				if ( ScreenWidth == 640 && strstr( p->szName, "glow_" ) )
+				{
+					if ( p->iRes == 640 )
+					{
+						bLoad = FALSE;
+					}
+					else
+					{
+						char sz[256];
+						sprintf(sz, "sprites/%s.spr", p->szSprite);
+						m_rghSprites[index] = SPR_Load(sz);
+						m_rgrcRects[index] = p->rc;
+						strncpy( &m_rgszSpriteNames[index * MAX_SPRITE_NAME_LENGTH], p->szName, MAX_SPRITE_NAME_LENGTH );
+
+						bLoad = FALSE;
+						index++;
+					}
+				}
+
+				if ( p->iRes == m_iRes && bLoad )
 				{
 					char sz[256];
 					sprintf(sz, "sprites/%s.spr", p->szSprite);
@@ -403,7 +424,25 @@ void CHud :: VidInit( void )
 		int index = 0;
 		for ( int j = 0; j < m_iSpriteCountAllRes; j++ )
 		{
-			if ( p->iRes == m_iRes )
+			// Gunman: at 640 wide the glows come from the 320 list
+			int bLoad = TRUE;
+			if ( ScreenWidth == 640 && strstr( p->szName, "glow_" ) )
+			{
+				if ( p->iRes == 640 )
+				{
+					bLoad = FALSE;
+				}
+				else
+				{
+					char sz[256];
+					sprintf( sz, "sprites/%s.spr", p->szSprite );
+					m_rghSprites[index] = SPR_Load(sz);
+					index++;
+					bLoad = FALSE;
+				}
+			}
+
+			if ( p->iRes == m_iRes && bLoad )
 			{
 				char sz[256];
 				sprintf( sz, "sprites/%s.spr", p->szSprite );
