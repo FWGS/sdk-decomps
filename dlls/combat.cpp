@@ -1798,12 +1798,12 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 		} while (z > 1);
 
 		Vector vecDir = vecDirShooting +
-						vecRight * (x * vecSpread.x) +
-						vecUp * (y * vecSpread.y);
+						x * vecSpread.x * vecRight +
+						y * vecSpread.y * vecUp;
 		Vector vecEnd;
 
 		vecEnd = vecSrc + vecDir * flDistance;
-		UTIL_TraceLine(vecSrc, vecEnd, dont_ignore_monsters, ENT(pev)/*pentIgnore*/, &tr);
+		UTIL_TraceLine(vecSrc, vecEnd, dont_ignore_monsters, pev->pContainingEntity/*pentIgnore*/, &tr);
 
 		tracer = 0;
 		if (iTracerFreq != 0 && (tracerCount++ % iTracerFreq) == 0)
@@ -1853,17 +1853,17 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 				DecalGunshot( &tr, iBulletType );
 				break;
 
-			case BULLET_PLAYER_MP5:		
-				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgMP5, vecDir, &tr, DMG_BULLET); 
-				TEXTURETYPE_Check(&tr, vecSrc, vecEnd, iBulletType);
-				break;
-
 			case BULLET_PLAYER_BUCKSHOT:	
 				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgBuckshot, vecDir, &tr, DMG_BULLET); 
 				if ( !tracer )
 				{
 					TEXTURETYPE_Check(&tr, vecSrc, vecEnd, iBulletType);
 				}
+				break;
+
+			case BULLET_PLAYER_MP5:		
+				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgMP5, vecDir, &tr, DMG_BULLET); 
+				TEXTURETYPE_Check(&tr, vecSrc, vecEnd, iBulletType);
 				break;
 
 			case BULLET_MONSTER_12MM:
