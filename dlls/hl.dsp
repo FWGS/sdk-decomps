@@ -452,6 +452,18 @@ SOURCE=.\ourano.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\raptor.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\renesaur.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\scorpion.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\aigirl.cpp
 # End Source File
 # Begin Source File
