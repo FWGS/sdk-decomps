@@ -32,7 +32,7 @@
 #include "soundent.h"
 #include "player.h"
 #include "decals.h"
-#include "vehicle.h"
+#include "vehicletank.h"
 #include "sphereexplosion.h"
 
 extern DLL_GLOBAL int g_iSkillLevel;

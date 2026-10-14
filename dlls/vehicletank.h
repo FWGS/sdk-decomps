@@ -16,8 +16,8 @@
 // Gunman's drivable tank: a studio model entity that drives
 // and three brush parts (body, turret, barrel) that follow it
 //=========================================================
-#ifndef VEHICLE_H
-#define VEHICLE_H
+#ifndef VEHICLETANK_H
+#define VEHICLETANK_H
 
 class CBasePlayer;
 class CVehicleTankBSP;
@@ -179,4 +179,4 @@ public:
 // brings an angle into (-180, 180]
 extern float UTIL_AngleNormalize( float flAngle );
 
-#endif // VEHICLE_H
+#endif // VEHICLETANK_H

@@ -520,7 +520,7 @@ SOURCE=.\spchemicalgun.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\vehicle.cpp
+SOURCE=.\vehicletank.cpp
 # End Source File
 # Begin Source File
 

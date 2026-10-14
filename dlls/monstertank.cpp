@@ -30,7 +30,7 @@
 #define SF_GENERICMONSTER_NOTSOLID		4
 #define SF_GENERICMONSTER_POINTENTITY	32
 
-// the drivable tank's shell (vehicle.cpp declares it in full; vehicle.h
+// the drivable tank's shell (vehicletank.cpp declares it in full; vehicletank.h
 // can't, triggers.cpp includes it without weapons.h)
 class CVehicleTankShell : public CGrenade
 {

@@ -30,7 +30,7 @@
 #include "plane.h"
 #include "animation.h"
 #include "decals.h"
-#include "vehicle.h"
+#include "vehicletank.h"
 
 extern int gmsgTank;
 extern int gmsgTankBody;

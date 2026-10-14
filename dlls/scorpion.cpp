@@ -25,7 +25,7 @@
 #include "cbase.h"
 #include "monsters.h"
 #include "schedule.h"
-#include "vehicle.h"
+#include "vehicletank.h"
 
 //=========================================================
 // Monster's Anim Events Go Here
