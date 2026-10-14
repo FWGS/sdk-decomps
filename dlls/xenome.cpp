@@ -484,9 +484,9 @@ void CXenome::ShootDart( int iRight )
 		Vector vecSrc = GetShootPosition( iRight );
 		Vector vecDir = ShootAtEnemy( vecSrc );
 
-		vecDir = vecDir.Normalize( );
+		vecDir = vecDir.Normalize( ) * 2000;
 
-		CXenomeShot::Shoot( pev, vecSrc, vecDir * 2000 );
+		CXenomeShot::Shoot( pev, vecSrc, vecDir );
 		RangeAttackSound( );
 	}
 }
