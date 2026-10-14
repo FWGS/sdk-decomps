@@ -1329,6 +1329,8 @@ public:
 		}
 	}
 
+	// no background: only the frame images show
+	virtual void paintBackground( void ) {}
 	virtual void paint( void );
 };
 
