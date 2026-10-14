@@ -2011,7 +2011,7 @@ void EV_SphereExplode( event_args_t *args )
 
 			iLength = abs( (int)vecVelocity.Length() );
 			if ( iLength >= 100 )
-				gEngfuncs.pEfxAPI->R_UserTracerParticle( origin, vecVelocity, flRadius * 2.5 / iLength, 5, 3, 0, NULL );
+				gEngfuncs.pEfxAPI->R_UserTracerParticle( origin, vecVelocity, ( flRadius * 2.5 ) / iLength, 5, 3, 0, NULL );
 		}
 	}
 
