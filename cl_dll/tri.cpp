@@ -322,9 +322,9 @@ void DrawShocks( void )
 		vecPoint3.y = ( right.y - up.y ) * flScale + vecOrigin.y;
 		vecPoint3.z = ( right.z + up.z ) * flScale + vecOrigin.z;
 
-		vecPoint4[0] = vecOrigin[0] - up[0] * flScale;
-		vecPoint4[1] = vecOrigin[1] - up[1] * flScale;
-		vecPoint4[2] = vecOrigin[2] + up[2] * flScale;
+		vecPoint4.x = vecOrigin.x - up.x * flScale;
+		vecPoint4[1] = vecOrigin.y - up.y * flScale;
+		vecPoint4[2] = vecOrigin.z + up.z * flScale;
 
 		gEngfuncs.pTriAPI->RenderMode( kRenderTransAdd );
 		gEngfuncs.pTriAPI->CullFace( TRI_FRONT );
