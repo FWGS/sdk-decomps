@@ -1176,7 +1176,7 @@ void CMantaBomb :: MantaBombTouch( CBaseEntity *pOther )
 	else
 		UTIL_DecalTrace( &tr, DECAL_SCORCH2 );
 
-	CSoundEnt::InsertSound ( bits_SOUND_COMBAT, pev->origin, NORMAL_EXPLOSION_VOLUME, 3.0 );
+	CSoundEnt::InsertSound ( bits_SOUND_COMBAT, pev->origin, BIG_EXPLOSION_VOLUME, 3.0 );
 	entvars_t *pevOwner;
 	if ( pev->owner )
 		pevOwner = VARS( pev->owner );
