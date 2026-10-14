@@ -1218,7 +1218,8 @@ Vector CVehicleTank::PushAway( void )
 	{
 		UTIL_MakeVectors( pev->angles + pev->avelocity * 0.1 );
 
-		Vector vecDir = ( m_vecCollision - pev->origin ).Normalize();
+		Vector vecDir;
+		vecDir = ( m_vecCollision - pev->origin ).Normalize();
 		Vector vecPush;
 		if ( DotProduct( vecDir, gpGlobals->v_forward ) > 0 && pev->avelocity.y >= 0 )
 			vecPush = m_vecCollision - pev->origin;
@@ -1231,8 +1232,7 @@ Vector CVehicleTank::PushAway( void )
 		if ( pev->avelocity.y < 0 )
 			vecPush = m_vecCollision - pev->origin;
 
-		Vector vecTurn;
-		vecTurn = UTIL_VecToAngles( vecPush.Normalize() );
+		Vector vecTurn = UTIL_VecToAngles( vecPush.Normalize() );
 		Vector vecForward, vecRight;
 		UTIL_MakeVectorsPrivate( vecTurn, vecForward, vecRight, NULL );
 
