@@ -639,8 +639,10 @@ void CDml::FireSpiral( void )
 
 	EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/dml_fire.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 93 + RANDOM_LONG(0,0xF));
 
-	if ( m_iClip || !m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] )
+	if ( m_iClip )
 		SendWeaponAnim( DML_FIRE );
+	else if ( !m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] )
+		SendWeaponAnim( DML_FIRE );	// sic: the same animation
 
 	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
