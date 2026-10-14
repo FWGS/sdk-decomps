@@ -165,9 +165,9 @@ void CAnimeRocket::AccelerateThink( void )
 		// turn toward the target, at most 20 units a think
 		Vector vecDir = vecTarget - pev->origin;
 		vecDir = vecDir.Normalize() * 128;
-		Vector vecCurrent = pev->velocity.Normalize() * 128;
-		Vector vecTurn;
-		vecTurn = vecDir - vecCurrent;
+		Vector vecCurrent;
+		vecCurrent = pev->velocity.Normalize() * 128;
+		Vector vecTurn = vecDir - vecCurrent;
 		if ( vecTurn.Length() > 20 )
 			vecTurn = vecTurn.Normalize() * 20;
 
