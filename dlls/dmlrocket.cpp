@@ -760,7 +760,7 @@ void CDmlRocket::BigThink( void )
 
 	while ( ( pEntity = UTIL_FindEntityInSphere( pEntity, pev->origin, 50 ) ) != NULL )
 	{
-		if ( pEntity->pev->takedamage && pEntity->edict() != pev->owner && pEntity != this && ( pEntity->pev->velocity.y >= 1 || pev->velocity.y <= -1 ) && FClassnameIs( pev, STRING( pEntity->pev->classname ) ) )
+		if ( pEntity->pev->takedamage && pEntity->edict() != pev->owner && this != pEntity && ( pEntity->pev->velocity.y >= 1 || pev->velocity.y <= -1 ) && FClassnameIs( pev, STRING( pEntity->pev->classname ) ) )
 		{
 			float x = pEntity->pev->origin.x - pev->origin.x;
 			float y = pEntity->pev->origin.y - pev->origin.y;
@@ -782,7 +782,7 @@ void CDmlRocket::BigThink( void )
 				if ( !pBrother )
 					return;
 
-				if ( pEntity->edict() != pev->owner && pEntity != pBrother && ( pEntity->pev->velocity.y >= 1 || pev->velocity.y <= -1 ) && FClassnameIs( pev, STRING( pEntity->pev->classname ) ) )
+				if ( pEntity->edict() != pev->owner && pBrother != pEntity && ( pEntity->pev->velocity.y >= 1 || pev->velocity.y <= -1 ) && FClassnameIs( pev, STRING( pEntity->pev->classname ) ) )
 				{
 					float x = pEntity->pev->origin.x - pBrother->pev->origin.x;
 					float y = pEntity->pev->origin.y - pBrother->pev->origin.y;
