@@ -63,31 +63,31 @@ int CHudDmlCross::MsgFunc_DmlCross(const char *pszName,  int iSize, void *pbuf )
 		if ( gHUD.m_Ammo.m_pWeapon )
 			SetCrosshair( gHUD.m_Ammo.m_pWeapon->hCrosshair, gHUD.m_Ammo.m_pWeapon->rcCrosshair, 255, 255, 255 );
 		Reset();
-		return 1;
+		break;
 
 	case 1:
-		m_iMode = 0;
 		m_iFlags |= HUD_ACTIVE;
+		m_iMode = 0;
 		m_flRed = 255;
 		m_flGreen = 255;
 		m_flBlue = 255;
-		return 1;
+		break;
 
 	case 2:
-		m_iMode = 2;
 		m_iFlags |= HUD_ACTIVE;
+		m_iMode = 2;
 		m_flRed = 255;
 		m_flGreen = 255;
 		m_flBlue = 255;
-		return 1;
+		break;
 
 	case 3:
-		m_iMode = 1;
 		m_iFlags |= HUD_ACTIVE;
+		m_iMode = 1;
 		m_flRed = 255;
 		m_flGreen = 255;
 		m_flBlue = 255;
-		return 1;
+		break;
 	}
 
 	return 1;
