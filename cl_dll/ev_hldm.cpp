@@ -239,6 +239,7 @@ bool EV_HLDM_TextureEffect( int idx, pmtrace_t *ptr, float *vecSrc, float *vecEn
 	char *pTextureName;
 	char texname[ 64 ];
 	char szbuffer[ 64 ];
+	vec3_t vecVelocity, vecOrigin;
 
 	entity = gEngfuncs.pEventAPI->EV_IndexFromTrace( ptr );
 
@@ -296,7 +297,6 @@ bool EV_HLDM_TextureEffect( int idx, pmtrace_t *ptr, float *vecSrc, float *vecEn
 			if ( chTextureType == CHAR_TEX_VENT || chTextureType == CHAR_TEX_TILE )
 			{
 				vec3_t angles, forward, right, up;
-				vec3_t vecVelocity, vecOrigin;
 				int iModel;
 				TEMPENTITY *pTent;
 
