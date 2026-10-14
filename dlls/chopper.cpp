@@ -461,17 +461,23 @@ void CChopper :: HuntThink( void )
 	Flight( );
 
 	UTIL_MakeAimVectors( pev->angles );
-	(gpGlobals->v_up * 800 + pev->velocity).Normalize( );	// sic: the estimate is thrown away
+	Vector vecEst = (gpGlobals->v_up * 800 + pev->velocity).Normalize( );	// sic: not used
 
 	if ( m_iBullets == 0 )
 	{
 		ResetStrafe( );
 	}
-	else if ( CanStrafe( ) && (m_flLastSeen + 1 > gpGlobals->time) && (m_flPrevSeen + 2 < gpGlobals->time) && FireGun( ) )
+	else if ( CanStrafe( ) )
 	{
-		// slow down if we're fireing
-		if (m_flGoalSpeed > 150)
-			m_flGoalSpeed = 150;
+		if ((m_flLastSeen + 1 > gpGlobals->time) && (m_flPrevSeen + 2 < gpGlobals->time))
+		{
+			if (FireGun( ))
+			{
+				// slow down if we're fireing
+				if (m_flGoalSpeed > 150)
+					m_flGoalSpeed = 150;
+			}
+		}
 	}
 }
 
