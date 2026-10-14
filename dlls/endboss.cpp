@@ -39,7 +39,8 @@ extern DLL_GLOBAL int g_iSkillLevel;
 
 //=========================================================
 // endboss_kataball - the katagun's ball. It homes in on
-// the boss's enemy and tells the map what it hit.
+// the boss's enemy and tells the map what it hit. The class
+// is a copy of the rocket's, down to its saved fields.
 //=========================================================
 class CEndBossKataball : public CGrenade
 {
@@ -1060,7 +1061,7 @@ int CEndBoss::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float
 	if ( pevInflictor->owner == edict( ) )
 		return 0;
 
-	// taunt a player on foot
+	// a player on foot who hits it gets a hurt line now and then
 	CBaseEntity *pAttacker = CBaseEntity::Instance( pevAttacker );
 	if ( pAttacker && pAttacker->IsPlayer( ) && ((CBasePlayer *)pAttacker)->m_pVehicle == NULL && m_fNextSpeak < gpGlobals->time )
 	{
@@ -1080,6 +1081,7 @@ int CEndBoss::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float
 	{
 		if ( FClassnameIs( pevInflictor, "vehicle_tank_shell" ) || FClassnameIs( pevInflictor, "vehicle_tank_rocket" ) )
 		{
+			// past 15 hits, five hits turn into one more on the kataball count
 			m_iEnemyHitMe++;
 			if ( m_iEnemyHitMe > 10 && m_iEnemyHitMe - 15 > 0 )
 			{
