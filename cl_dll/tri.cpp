@@ -473,7 +473,7 @@ void DrawBeams( void )
 			continue;
 		}
 
-		vecOrigin = effect.m_vecAngles * ( ( flTime - effect.m_flStartTime ) * effect.m_flMaxScale * 30 ) + pEntity->origin;
+		vecOrigin = effect.m_vecAngles * ( ( flTime - effect.m_flStartTime ) * effect.m_flMaxScale * 30 ) + pEntity->curstate.origin;
 
 		if ( flBrightness < 1 )
 			flBrightness = 1;
@@ -810,18 +810,16 @@ void InitSphere( void )
 	{
 		float flPhi = ( i + 1 ) * ( (float)M_PI / ( SPHERE_STACKS + 1 ) );
 		float flY = cos( flPhi );
-		float flRadius = sin( flPhi );
 
 		for ( j = 0; j < SPHERE_SLICES; j++ )
 		{
 			int iPoint = 2 + i * SPHERE_SLICES + j;
 			float flTheta = j * ( (float)M_PI / ( SPHERE_SLICES / 2 ) );
-			float flX = sin( flTheta ) * flRadius;
-			float flZ = cos( flTheta ) * flRadius;
+			float flX, flZ;
 
-			g_vecSpherePoints[ iPoint ].x = flX;
 			g_vecSpherePoints[ iPoint ].y = flY;
-			g_vecSpherePoints[ iPoint ].z = flZ;
+			g_vecSpherePoints[ iPoint ].x = flX = sin( flTheta ) * sin( flPhi );
+			g_vecSpherePoints[ iPoint ].z = flZ = cos( flTheta ) * sin( flPhi );
 
 			g_vecSphereTexCoords[ iPoint ].x = 1.0 - ( flX + 1.0 ) * 0.5;
 			g_vecSphereTexCoords[ iPoint ].y = 1.0 - ( flY + 1.0 ) * 0.5;
