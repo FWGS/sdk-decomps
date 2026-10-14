@@ -52,6 +52,14 @@ public:
 	void EXPORT IgniteThink( void );
 	void EXPORT AccelerateThink( void );
 
+	// IsInWorld without the speed test
+	BOOL InWorld( void )
+	{
+		return pev->origin.x >= -4096 && pev->origin.x <= 4096 &&
+			pev->origin.y >= -4096 && pev->origin.y <= 4096 &&
+			pev->origin.z >= -4096 && pev->origin.z <= 4096;
+	}
+
 	int	Save( CSave &save );
 	int Restore( CRestore &restore );
 	static TYPEDESCRIPTION m_SaveData[];
@@ -175,8 +183,7 @@ void CEndBossKataball::AccelerateThink( void )
 	pev->frame += 1;
 	pev->frame = (int)pev->frame % 9;
 
-	// check world boundaries
-	if ( pev->origin.x >= -4096 && pev->origin.x <= 4096 && pev->origin.y >= -4096 && pev->origin.y <= 4096 && pev->origin.z >= -4096 && pev->origin.z <= 4096 )
+	if ( InWorld( ) )
 	{
 		Vector vecTarget;
 		Vector vecDir;
@@ -193,39 +200,39 @@ void CEndBossKataball::AccelerateThink( void )
 		flSpeed = pev->velocity.Length( );
 
 		// speed up to a top speed that depends on the skill
-		if ( g_iSkillLevel == SKILL_MEDIUM )
+		switch ( g_iSkillLevel )
 		{
+		case SKILL_MEDIUM:
 			if ( flSpeed < 750 )
 				flSpeed += 7;
-		}
-		else if ( g_iSkillLevel == SKILL_HARD )
-		{
+			break;
+		case SKILL_HARD:
 			if ( flSpeed < 1000 )
 				flSpeed += 10;
-		}
-		else
-		{
+			break;
+		default:
 			if ( flSpeed < 500 )
 				flSpeed += 5;
+			break;
 		}
 
 		vecDir = vecTarget - pev->origin;
 		vecDir = vecDir.Normalize( );
 
 		// and turn harder at higher skill
-		if ( g_iSkillLevel == SKILL_MEDIUM )
+		switch ( g_iSkillLevel )
 		{
+		case SKILL_MEDIUM:
 			vecDir.z = vecDir.z * 1.25;
 			flTurn = 12;
-		}
-		else if ( g_iSkillLevel == SKILL_HARD )
-		{
+			break;
+		case SKILL_HARD:
 			flTurn = 17;
-		}
-		else
-		{
+			break;
+		default:
 			vecDir.z = vecDir.z * 1.5;
 			flTurn = 8;
+			break;
 		}
 
 		vecVelocity = pev->velocity.Normalize( ) * 128;
@@ -254,6 +261,14 @@ public:
 	void EXPORT IgniteThink( void );
 	void EXPORT AccelerateThink( void );
 	void EXPORT RocketTouch( CBaseEntity *pOther );
+
+	// IsInWorld without the speed test
+	BOOL InWorld( void )
+	{
+		return pev->origin.x >= -4096 && pev->origin.x <= 4096 &&
+			pev->origin.y >= -4096 && pev->origin.y <= 4096 &&
+			pev->origin.z >= -4096 && pev->origin.z <= 4096;
+	}
 
 	int	Save( CSave &save );
 	int Restore( CRestore &restore );
@@ -306,7 +321,9 @@ void CEndBossRocket::Spawn( void )
 	Vector vecTarget = ( m_hEnemy != NULL ) ? m_hEnemy->BodyTarget( pev->origin ) : pev->origin + vecForward * 1024;
 
 	// leave toward a random spot 64 units ahead of the boss
-	Vector vecSpot = pev->origin + vecForward * 64 + vecRight * ( RANDOM_FLOAT( 0, 64 ) - 32 ) + vecUp * ( RANDOM_FLOAT( 0, 64 ) - 32 );
+	Vector vecUpOffset = vecUp * ( RANDOM_FLOAT( 0, 64 ) - 32 );
+	Vector vecRightOffset = vecRight * ( RANDOM_FLOAT( 0, 64 ) - 32 );
+	Vector vecSpot = pev->origin + vecForward * 64 + vecRightOffset + vecUpOffset;
 	pev->velocity = ( vecSpot - pev->origin ).Normalize( ) * 500;
 	pev->angles = UTIL_VecToAngles( pev->velocity );
 
@@ -352,8 +369,7 @@ void CEndBossRocket::AccelerateThink( void )
 {
 	float flSpeed = pev->velocity.Length( );
 
-	// check world boundaries
-	if ( pev->origin.x >= -4096 && pev->origin.x <= 4096 && pev->origin.y >= -4096 && pev->origin.y <= 4096 && pev->origin.z >= -4096 && pev->origin.z <= 4096 )
+	if ( InWorld( ) )
 	{
 		Vector vecTarget;
 		Vector vecDir;
@@ -369,9 +385,7 @@ void CEndBossRocket::AccelerateThink( void )
 		vecVelocity = pev->velocity.Normalize( ) * 128;
 		pev->velocity = ( vecDir - vecVelocity ).Normalize( ) * 16 + vecVelocity;
 
-		flSpeed += 50;
-		if ( flSpeed >= 1000 )
-			flSpeed = 1000;
+		flSpeed = min( flSpeed + 50, 1000 );
 
 		pev->velocity = pev->velocity.Normalize( ) * flSpeed;
 		pev->angles = UTIL_VecToAngles( pev->velocity );
@@ -758,11 +772,6 @@ void CEndBoss::SetYawSpeed( void )
 
 	switch ( m_Activity )
 	{
-	case ACT_IDLE:
-	case ACT_TURN_LEFT:
-	case ACT_TURN_RIGHT:
-		ys = 40;
-		break;
 	case ACT_WALK:
 	case ACT_RUN:
 		ys = 60;
@@ -773,6 +782,11 @@ void CEndBoss::SetYawSpeed( void )
 		break;
 	case ACT_MELEE_ATTACK2:
 		ys = 70;
+		break;
+	case ACT_IDLE:
+	case ACT_TURN_LEFT:
+	case ACT_TURN_RIGHT:
+		ys = 40;
 		break;
 	}
 
@@ -910,12 +924,18 @@ void CEndBoss::HandleAnimEvent( MonsterEvent_t *pEvent )
 	case ENDBOSS_AE_STOMP:
 	{
 		float flDamage;
-		if ( g_iSkillLevel == SKILL_MEDIUM )
+		switch ( g_iSkillLevel )
+		{
+		case SKILL_MEDIUM:
 			flDamage = 150;
-		else if ( g_iSkillLevel == SKILL_HARD )
+			break;
+		case SKILL_HARD:
 			flDamage = 200;
-		else
+			break;
+		default:
 			flDamage = 130;
+			break;
+		}
 
 		UTIL_MakeVectors( pev->angles );
 		::RadiusDamage( pev->origin + gpGlobals->v_forward * 64, pev, pev, flDamage, 300, CLASS_NONE, DMG_CRUSH );
@@ -1358,10 +1378,10 @@ void CEndBoss::SetActivity( Activity NewActivity )
 {
 	int iSequence;
 
-	if ( NewActivity == ACT_RUN )
-		iSequence = LookupActivity( ACT_WALK );
-	else
+	if ( NewActivity != ACT_RUN )
 		iSequence = LookupActivity( NewActivity );
+	else
+		iSequence = LookupActivity( ACT_WALK );
 
 	m_Activity = NewActivity; // Go ahead and set this so it doesn't keep trying when the anim is not present
 
@@ -1398,14 +1418,14 @@ void CEndBoss::Spawn( void )
 	UTIL_SetSize( pev, Vector( -48, -48, 0 ), Vector( 48, 48, 300 ) );
 
 	m_fNextMachinegunAttack = m_fNextKataAttack = m_fNextRocketAttack = gpGlobals->time;
-	m_bHasKatagun = TRUE;
 	m_fNextSpeak = gpGlobals->time;
+	m_bHasKatagun = TRUE;
 
 	MonsterInit( );
 
 	m_flFieldOfView = VIEW_FIELD_FULL;
 	pev->view_ofs = Vector( 0, 0, 300 );
-	m_flDistLook = 4096;
+	m_flDistTooFar = 4096;
 	m_iEnemyHitMe = 0;
 	m_iKataFiring = 0;
 }
