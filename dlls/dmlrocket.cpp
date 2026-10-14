@@ -368,7 +368,7 @@ void CDmlRocket :: TrackTarget ( void )
 		vecFlightDir = pev->velocity.Normalize();
 
 	// measure how far the turn is, the wider the turn, the slow we'll go this time.
-	flDelta = DotProduct ( vecFlightDir, vecDirToEnemy );
+	flDelta = vecFlightDir.x * vecDirToEnemy.x + vecFlightDir.y * vecDirToEnemy.y + vecFlightDir.z * vecDirToEnemy.z;
 
 	if ( flDelta <= 0 )
 	{// no flying backwards, but we don't want to invert this, cause we'd go fast when we have to turn REAL far.
