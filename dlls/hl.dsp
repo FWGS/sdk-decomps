@@ -580,6 +580,10 @@ SOURCE=.\rustbot.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\gunner.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\beak.cpp
 # End Source File
 # Begin Source File
