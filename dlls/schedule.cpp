@@ -1345,6 +1345,8 @@ case TASK_GET_PATH_TO_BESTSCENT:
 					pev->ideal_yaw = UTIL_VecToYaw( pPlayer->pev->origin - pev->origin );
 			}
 			TaskComplete();
+			m_IdealActivity = ACT_IDLE;
+			RouteClear();
 			break;
 		}
 	case TASK_SUGGEST_STATE:
