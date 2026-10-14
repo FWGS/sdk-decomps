@@ -1422,9 +1422,12 @@ void CRustbot::AimHead( const Vector &vecTarget )
 
 	Vector vecOrigin;
 	vecOrigin = pev->origin;
-	int iHeadTurn = m_iHeadTurn;
 
-	float flDelta = UTIL_AngleDiff( UTIL_VecToYaw( vecTarget - vecOrigin ), m_iHeadTurn + pev->angles.y );
+	Vector vecDir = vecTarget - vecOrigin;
+	float flYaw = m_iHeadTurn + pev->angles.y;
+	float flTarget = UTIL_VecToYaw( vecDir );
+	int iHeadTurn = m_iHeadTurn;
+	float flDelta = UTIL_AngleDiff( flTarget, flYaw );
 
 	if ( flDelta > 180 )
 		flDelta -= 360;
