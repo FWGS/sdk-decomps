@@ -47,7 +47,7 @@ int CHudTank::Init(void)
 {
 	HOOK_MESSAGE(TankBody);
 	HOOK_MESSAGE(TurretPos);
-	HOOK_COMMAND("honk", Honk);
+	HOOK_COMMAND("Honk", Honk);
 
 	gHUD.AddHudElem(this);
 
