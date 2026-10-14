@@ -743,7 +743,8 @@ void CBeamGun::ShotgunLightning( Vector vecSrc, Vector vecDir, TraceResult tr )
 						x * flSpread * gpGlobals->v_right +
 						y * flSpread * gpGlobals->v_up;
 		Vector vecStart = vecSrc + gpGlobals->v_right * 4;
-		Vector vecEnd = vecSpreadDir * Configuration.range + vecSrc;
+		float flRange = Configuration.range;
+		Vector vecEnd = vecSpreadDir * flRange + vecSrc;
 		TraceResult tr2;
 
 		UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, ENT( m_pPlayer->pev ), &tr2 );
