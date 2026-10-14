@@ -74,6 +74,7 @@ void CClusterGod::ShootClusterGrenades( void )
 {
 	TraceResult tr;
 	Vector vecDir;
+	Vector vecEnd;
 
 	pev->angles.x = RANDOM_FLOAT( -90, -70 );
 	pev->angles.y = RANDOM_FLOAT( -90, 90 );
@@ -81,7 +82,7 @@ void CClusterGod::ShootClusterGrenades( void )
 
 	UTIL_MakeVectors( pev->angles );
 	vecDir = gpGlobals->v_forward;
-	Vector vecEnd = pev->origin + vecDir * 2048;	// sic: unused
+	vecEnd = pev->origin + vecDir * 2048;	// sic: unused
 
 	UTIL_TraceLine( pev->origin, pev->origin + vecDir * 128, dont_ignore_monsters, pev->owner, &tr );
 
@@ -90,8 +91,7 @@ void CClusterGod::ShootClusterGrenades( void )
 		CBaseEntity *pHit = CBaseEntity::Instance( tr.pHit );
 		if ( pHit && !( pHit->pev->flags & FL_CONVEYOR ) )
 		{
-			Vector angles;
-			angles = UTIL_VecToAngles( tr.vecPlaneNormal );
+			Vector angles = UTIL_VecToAngles( tr.vecPlaneNormal );
 			UTIL_MakeVectors( angles );
 			vecDir = gpGlobals->v_forward;
 		}
@@ -189,6 +189,7 @@ void CClusterExplosion::ClusterExplode( CBaseEntity *pActivator, CBaseEntity *pC
 {
 	TraceResult tr;
 	Vector vecDir;
+	Vector vecEnd;
 
 	pev->angles.x = RANDOM_FLOAT( -90, -70 );
 	pev->angles.y = RANDOM_FLOAT( -90, 90 );
@@ -196,7 +197,7 @@ void CClusterExplosion::ClusterExplode( CBaseEntity *pActivator, CBaseEntity *pC
 
 	UTIL_MakeVectors( pev->angles );
 	vecDir = gpGlobals->v_forward;
-	Vector vecEnd = pev->origin + vecDir * 2048;	// sic: unused
+	vecEnd = pev->origin + vecDir * 2048;	// sic: unused
 
 	UTIL_TraceLine( pev->origin, pev->origin + vecDir * 128, dont_ignore_monsters, pev->owner, &tr );
 
@@ -205,8 +206,7 @@ void CClusterExplosion::ClusterExplode( CBaseEntity *pActivator, CBaseEntity *pC
 		CBaseEntity *pHit = CBaseEntity::Instance( tr.pHit );
 		if ( pHit && !( pHit->pev->flags & FL_CONVEYOR ) )
 		{
-			Vector angles;
-			angles = UTIL_VecToAngles( tr.vecPlaneNormal );
+			Vector angles = UTIL_VecToAngles( tr.vecPlaneNormal );
 			UTIL_MakeVectors( angles );
 			vecDir = gpGlobals->v_forward;
 		}
