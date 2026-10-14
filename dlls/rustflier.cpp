@@ -379,6 +379,11 @@ void CRustFlier :: HuntThink( void )
 
 	Flight( );
 
+	// sic: never runs; retail inlines the estimate below only with one
+	// more call in the function, so some dead code like this was there
+	if ( 0 )
+		ResetStrafe( );
+
 	// a gagged flier holds its fire
 	if ( !(pev->spawnflags & SF_MONSTER_GAG) )
 	{
