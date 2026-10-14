@@ -30,6 +30,8 @@
 #include "event_args.h"
 #include "in_defs.h"
 #include "effectlist.h"
+#include "vgui_TeamFortressViewport.h"
+#include "vgui_CustomizationMenu.h"
 
 #include <string.h>
 
@@ -237,6 +239,7 @@ bool EV_HLDM_TextureEffect( int idx, pmtrace_t *ptr, float *vecSrc, float *vecEn
 	char *pTextureName;
 	char texname[ 64 ];
 	char szbuffer[ 64 ];
+	vec3_t vecVelocity, vecOrigin;
 
 	entity = gEngfuncs.pEventAPI->EV_IndexFromTrace( ptr );
 
@@ -294,7 +297,6 @@ bool EV_HLDM_TextureEffect( int idx, pmtrace_t *ptr, float *vecSrc, float *vecEn
 			if ( chTextureType == CHAR_TEX_VENT || chTextureType == CHAR_TEX_TILE )
 			{
 				vec3_t angles, forward, right, up;
-				vec3_t vecVelocity, vecOrigin;
 				int iModel;
 				TEMPENTITY *pTent;
 
@@ -805,7 +807,7 @@ void EV_FireGWShotgun( event_args_t *args )
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 
-		switch ( args->iparam2 )
+		switch ( iShells )
 		{
 		case 1:
 			gEngfuncs.pEventAPI->EV_WeaponAnimation( 3, 2 );
@@ -834,7 +836,7 @@ void EV_FireGWShotgun( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	EV_HLDM_FireBullets( idx, forward, right, up, iShells * 4, vecSrc, vecAiming, vecSpread, 2048, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1] );
+	EV_HLDM_FireBullets( idx, forward, right, up, args->iparam2 * 4, vecSrc, vecAiming, vecSpread, 2048, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1] );
 
 	if ( EV_IsLocal( idx ) )
 	{
@@ -1445,13 +1447,19 @@ void EV_FireGauss( event_args_t *args )
 
 void EV_Cleanup( event_args_t *args )
 {
-	if ( EV_IsLocal( args->entindex ) )
+	int idx;
+
+	idx = args->entindex;
+	if ( EV_IsLocal( idx ) )
 	{
 		cl_entity_t *view = gEngfuncs.GetViewModel();
 
 		if ( view )
 			view->curstate.renderfx = kRenderFxNone;
 	}
+
+	if ( gViewPort && gViewPort->m_pCustomizationMenu )
+		gViewPort->m_pCustomizationMenu->HideAll();
 }
 
 void EV_BatbotBeam( event_args_t *args )
@@ -2003,7 +2011,7 @@ void EV_SphereExplode( event_args_t *args )
 
 			iLength = abs( (int)vecVelocity.Length() );
 			if ( iLength >= 100 )
-				gEngfuncs.pEfxAPI->R_UserTracerParticle( origin, vecVelocity, flRadius * 2.5 / iLength, 5, 3, 0, NULL );
+				gEngfuncs.pEfxAPI->R_UserTracerParticle( origin, vecVelocity, ( flRadius * 2.5 ) / iLength, 5, 3, 0, NULL );
 		}
 	}
 

@@ -133,14 +133,18 @@ void DrawSphere( int iUnused, Vector &origin, float flRadius, float flUnused, fl
 	gEngfuncs.pTriAPI->Begin( TRI_TRIANGLES );
 	gEngfuncs.pTriAPI->Color4f( color[0] / 255.0, color[1] / 255.0, color[2] / 255.0, flAlpha / 255.0 );
 
+	int *pTris = g_iSphereTris;
+
 	for ( int i = 0; i < SPHERE_TRIS; i++ )
 	{
-		int *pTri = &g_iSphereTris[ i * 3 ];
+		int *pTri = pTris;
+		pTris += 3;
 
 		for ( int j = 0; j < 3; j++ )
 		{
 			int iPoint = *pTri;
-			Vector vecPoint = g_vecSpherePoints[ iPoint ];
+			Vector vecPoint;
+			vecPoint = g_vecSpherePoints[ iPoint ];
 
 			gEngfuncs.pTriAPI->TexCoord2f( g_vecSphereTexCoords[ iPoint ].x, g_vecSphereTexCoords[ iPoint ].z );
 			gEngfuncs.pTriAPI->Vertex3fv( vecPoint * flRadius + origin );
@@ -162,7 +166,7 @@ A twisting strip along dir, flLength long and flWidth wide
 void DrawStrip( float *origin, float *dir, float flWidth, float flLength, int iSegments, float flBrightness )
 {
 	vec3_t angles, forward, right, up;
-	vec3_t vecPoint1, vecPoint2;
+	vec3_t vecPoint[2];
 	float flStep;
 	float v;
 
@@ -184,18 +188,18 @@ void DrawStrip( float *origin, float *dir, float flWidth, float flLength, int iS
 		angles[2] = fmod( v * 360 + angles[2], 360 );
 		AngleVectors( angles, forward, right, up );
 
-		vecPoint1[0] = forward[0] * flLength + origin[0] - up[0] * flWidth;
-		vecPoint1[1] = forward[1] * flLength + origin[1] - up[1] * flWidth;
-		vecPoint1[2] = -forward[2] * flLength + origin[2] + up[2] * flWidth;
+		vecPoint[0][0] = forward[0] * flLength + origin[0] + ( -( up[0] * flWidth ) );
+		vecPoint[0][1] = forward[1] * flLength + ( -( up[1] * flWidth ) ) + origin[1];
+		vecPoint[0][2] = ( -( forward[2] * flLength ) ) + origin[2] + up[2] * flWidth;
 
-		vecPoint2[0] = origin[0] - up[0] * flWidth;
-		vecPoint2[1] = origin[1] - up[1] * flWidth;
-		vecPoint2[2] = origin[2] + up[2] * flWidth;
+		vecPoint[1][0] = ( -( up[0] * flWidth ) ) + origin[0];
+		vecPoint[1][1] = ( -( up[1] * flWidth ) ) + origin[1];
+		vecPoint[1][2] = up[2] * flWidth + origin[2];
 
 		gEngfuncs.pTriAPI->TexCoord2f( 0, v );
-		gEngfuncs.pTriAPI->Vertex3fv( vecPoint1 );
+		gEngfuncs.pTriAPI->Vertex3fv( vecPoint[0] );
 		gEngfuncs.pTriAPI->TexCoord2f( 1, v );
-		gEngfuncs.pTriAPI->Vertex3fv( vecPoint2 );
+		gEngfuncs.pTriAPI->Vertex3fv( vecPoint[1] );
 	}
 
 	gEngfuncs.pTriAPI->End();
@@ -235,10 +239,13 @@ void DrawFlameFan( float *origin, float *dir, float flScale, int iSegments, floa
 		angles[2] = fmod( v * 360.0 + angles[2], 360 );
 		AngleVectors( angles, forward, right, up );
 
-		iWidth = ( iType == EFFECT_FLAME ) + 1;
+		if ( iType == EFFECT_FLAME )
+			iWidth = 2;
+		else
+			iWidth = 1;
 
-		vecPoint[0] = -( iWidth * up[0] * flScale ) + origin[0];
-		vecPoint[1] = -( iWidth * up[1] * flScale ) + origin[1];
+		vecPoint[0] = ( -( iWidth * up[0] * flScale ) ) + origin[0];
+		vecPoint[1] = ( -( iWidth * up[1] * flScale ) ) + origin[1];
 		vecPoint[2] = iWidth * up[2] * flScale + origin[2];
 
 		vecTip[0] = origin[0] - forward[0] * flScale;
@@ -279,25 +286,25 @@ void DrawShocks( void )
 		if ( g_Effects[i].m_iType != EFFECT_SHOCK )
 			continue;
 
-		float flBrightness = g_Effects[i].m_flBrightness - ( flTime - g_Effects[i].m_flStartTime ) * g_Effects[i].m_flFadeSpeed * 30;
-		float flScale = ( flTime - g_Effects[i].m_flStartTime ) * g_Effects[i].m_flScaleSpeed * 30 + g_Effects[i].m_flScale;
+		float flBrightness = g_Effects[i].m_flBrightness - g_Effects[i].m_flFadeSpeed * ( flTime - g_Effects[i].m_flStartTime ) * 30;
+		float flScale = g_Effects[i].m_flScale + g_Effects[i].m_flScaleSpeed * ( flTime - g_Effects[i].m_flStartTime ) * 30;
 
 		if ( flBrightness < 1 )
 			flBrightness = 1;
 
-		if ( flScale > g_Effects[i].m_flMaxScale )
+		if ( g_Effects[i].m_flMaxScale < flScale )
 		{
 			g_Effects.Remove( g_Effects[i].m_iId );
 			continue;
 		}
 
-		vec3_t vecOrigin, vecNormal, vecAngles, angles, forward, right, up;
+		vec3_t vecOrigin, vecAngles, angles, forward, right, up;
 		vec3_t vecPoint2, vecPoint3, vecPoint4;
 
 		gEngfuncs.pTriAPI->SpriteTexture( (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/gaussshock.spr" ) ), 0 );
 
 		vecOrigin = g_Effects[i].m_vecOrigin;
-		vecNormal = g_Effects[i].m_vecAngles;
+		vec3_t vecNormal = g_Effects[i].m_vecAngles;
 		VectorAngles( vecNormal, vecAngles );
 		angles = vecAngles;
 		AngleVectors( angles, forward, right, up );
@@ -315,9 +322,9 @@ void DrawShocks( void )
 		vecPoint3.y = ( right.y - up.y ) * flScale + vecOrigin.y;
 		vecPoint3.z = ( right.z + up.z ) * flScale + vecOrigin.z;
 
-		vecPoint4[0] = vecOrigin[0] - up[0] * flScale;
-		vecPoint4[1] = vecOrigin[1] - up[1] * flScale;
-		vecPoint4[2] = vecOrigin[2] + up[2] * flScale;
+		vecPoint4.x = vecOrigin.x - up.x * flScale;
+		vecPoint4.y = vecOrigin.y - up.y * flScale;
+		vecPoint4[2] = vecOrigin.z + up.z * flScale;
 
 		gEngfuncs.pTriAPI->RenderMode( kRenderTransAdd );
 		gEngfuncs.pTriAPI->CullFace( TRI_FRONT );
@@ -370,8 +377,8 @@ void DrawFlameStrip( float *origin, float *dir, float flScale, int iSegments, fl
 		angles[2] = fmod( v * 360.0 + angles[2], 360 );
 		AngleVectors( angles, forward, right, up );
 
-		vecPoint[0] = -( up[0] * flScale ) + origin[0];
-		vecPoint[1] = -( up[1] * flScale ) + origin[1];
+		vecPoint[0] = ( -( up[0] * flScale ) ) + origin[0];
+		vecPoint[1] = ( -( up[1] * flScale ) ) + origin[1];
 		vecPoint[2] = up[2] * flScale + origin[2];
 
 		vecTip[0] = origin[0] - forward[0] * flScale * -6;
@@ -466,9 +473,12 @@ void DrawBeams( void )
 			continue;
 		}
 
-		vecOrigin = effect.m_vecAngles * ( ( flTime - effect.m_flStartTime ) * effect.m_flMaxScale * 30 ) + pEntity->origin;
+		vecOrigin = effect.m_vecAngles * ( ( flTime - effect.m_flStartTime ) * effect.m_flMaxScale * 30 ) + pEntity->curstate.origin;
 
-		if ( flBrightness < 1 || flBrightness < 5 )
+		if ( flBrightness < 1 )
+			flBrightness = 1;
+
+		if ( flBrightness < 5 )
 		{
 			g_Effects.Remove( effect.m_iId );
 		}
@@ -500,7 +510,10 @@ void DrawRings( void )
 			float flBrightness = effect.m_flBrightness - ( flTime - effect.m_flStartTime ) * effect.m_flFadeSpeed * 30;
 			float flScale = ( flTime - effect.m_flStartTime ) * effect.m_flScaleSpeed * 30 + effect.m_flScale + 7;
 
-			if ( flBrightness < 1 || flBrightness < 5 )
+			if ( flBrightness < 1 )
+				flBrightness = 1;
+
+			if ( flBrightness < 5 )
 			{
 				g_Effects.Remove( effect.m_iId );
 			}
@@ -550,7 +563,15 @@ void DrawSprites( void )
 		if ( flBrightness < 1 )
 			flBrightness = 1;
 
-		if ( effect.m_iBlue ? ( flFrames > effect.m_iBlue ) : ( flBrightness < 4 ) )
+		if ( effect.m_iBlue )
+		{
+			if ( flFrames > effect.m_iBlue )
+			{
+				g_Effects.Remove( effect.m_iId );
+				continue;
+			}
+		}
+		else if ( flBrightness < 4 )
 		{
 			g_Effects.Remove( effect.m_iId );
 			continue;
@@ -559,22 +580,22 @@ void DrawSprites( void )
 		if ( !effect.m_pSprite )
 			continue;
 
-		vec3_t vecOrigin, vecNormal, vecAngles, angles, forward, right, up;
+		vec3_t vecOrigin, vecAngles, angles, forward, right, up;
 		vec3_t vecPoint2, vecPoint3, vecPoint4;
 
 		gEngfuncs.pTriAPI->SpriteTexture( effect.m_pSprite, (int)flFrame );
 
 		vecOrigin = g_Effects[i].m_vecOrigin;
-		vecNormal = g_Effects[i].m_vecAngles;
+		vec3_t vecNormal = g_Effects[i].m_vecAngles;
 		VectorAngles( vecNormal, vecAngles );
 		angles = vecAngles;
 		AngleVectors( angles, forward, right, up );
 
 		vecOrigin = vecOrigin + vecNormal * 1;
 		vecOrigin = vecOrigin + right * -flScale * 0.5;
-		vecOrigin[0] = up[0] * flScale / 2 + vecOrigin[0];
-		vecOrigin[1] = up[1] * flScale / 2 + vecOrigin[1];
-		vecOrigin[2] = vecOrigin[2] - up[2] * flScale / 2;
+		vecOrigin.x = up.x * flScale / 2 + vecOrigin.x;
+		vecOrigin.y = up.y * flScale / 2 + vecOrigin.y;
+		vecOrigin.z = vecOrigin.z - up.z * flScale / 2;
 
 		vecPoint2 = vecOrigin + right * flScale;
 
@@ -584,7 +605,7 @@ void DrawSprites( void )
 
 		vecPoint4.x = vecOrigin.x - up.x * flScale;
 		vecPoint4.y = vecOrigin.y - up.y * flScale;
-		vecPoint4.z = vecOrigin.z + up.z * flScale;
+		vecPoint4[2] = vecOrigin.z + up.z * flScale;
 
 		gEngfuncs.pTriAPI->RenderMode( kRenderTransAdd );
 		gEngfuncs.pTriAPI->CullFace( TRI_FRONT );
@@ -592,13 +613,13 @@ void DrawSprites( void )
 		gEngfuncs.pTriAPI->Color4f( 1, 1, 1, flBrightness / 255 );
 
 		gEngfuncs.pTriAPI->TexCoord2f( 0, 0 );
-		gEngfuncs.pTriAPI->Vertex3f( vecOrigin[0], vecOrigin[1], vecOrigin[2] );
+		gEngfuncs.pTriAPI->Vertex3f( vecOrigin.x, vecOrigin.y, vecOrigin.z );
 		gEngfuncs.pTriAPI->TexCoord2f( 0, 1 );
-		gEngfuncs.pTriAPI->Vertex3f( vecPoint2[0], vecPoint2[1], vecPoint2[2] );
+		gEngfuncs.pTriAPI->Vertex3f( vecPoint2.x, vecPoint2.y, vecPoint2.z );
 		gEngfuncs.pTriAPI->TexCoord2f( 1, 1 );
-		gEngfuncs.pTriAPI->Vertex3f( vecPoint3[0], vecPoint3[1], vecPoint3[2] );
+		gEngfuncs.pTriAPI->Vertex3f( vecPoint3.x, vecPoint3.y, vecPoint3.z );
 		gEngfuncs.pTriAPI->TexCoord2f( 1, 0 );
-		gEngfuncs.pTriAPI->Vertex3f( vecPoint4[0], vecPoint4[1], vecPoint4[2] );
+		gEngfuncs.pTriAPI->Vertex3f( vecPoint4.x, vecPoint4.y, vecPoint4.z );
 
 		gEngfuncs.pTriAPI->End();
 		gEngfuncs.pTriAPI->RenderMode( kRenderNormal );
@@ -639,12 +660,11 @@ void DrawFlames( void )
 		if ( effect.m_iType != EFFECT_FLAME && effect.m_iType != EFFECT_FLAME2 && effect.m_iType != EFFECT_FLAME3 )
 			continue;
 
-		vec3_t vecOrigin;
 		float flBrightness = effect.m_flBrightness - ( flTime - effect.m_flStartTime ) * effect.m_flFadeSpeed * 30;
 		float flScale = ( flTime - effect.m_flStartTime ) * effect.m_flScaleSpeed * 30 + effect.m_flScale;
 
 		// EFFECT_FLAME3 flies off along its direction
-		vecOrigin = effect.m_vecAngles * 50 * 30 * ( flTime - effect.m_flStartTime ) + effect.m_vecOrigin;
+		vec3_t vecOrigin = effect.m_vecAngles * 50 * 30 * ( flTime - effect.m_flStartTime ) + effect.m_vecOrigin;
 
 		if ( flBrightness < 1 )
 			flBrightness = 1;
@@ -797,18 +817,16 @@ void InitSphere( void )
 	{
 		float flPhi = ( i + 1 ) * ( (float)M_PI / ( SPHERE_STACKS + 1 ) );
 		float flY = cos( flPhi );
-		float flRadius = sin( flPhi );
 
 		for ( j = 0; j < SPHERE_SLICES; j++ )
 		{
 			int iPoint = 2 + i * SPHERE_SLICES + j;
 			float flTheta = j * ( (float)M_PI / ( SPHERE_SLICES / 2 ) );
-			float flX = sin( flTheta ) * flRadius;
-			float flZ = cos( flTheta ) * flRadius;
+			float flX, flZ;
 
-			g_vecSpherePoints[ iPoint ].x = flX;
 			g_vecSpherePoints[ iPoint ].y = flY;
-			g_vecSpherePoints[ iPoint ].z = flZ;
+			g_vecSpherePoints[ iPoint ].x = flX = sin( flTheta ) * sin( flPhi );
+			g_vecSpherePoints[ iPoint ].z = flZ = cos( flTheta ) * sin( flPhi );
 
 			g_vecSphereTexCoords[ iPoint ].x = 1.0 - ( flX + 1.0 ) * 0.5;
 			g_vecSphereTexCoords[ iPoint ].y = 1.0 - ( flY + 1.0 ) * 0.5;
