@@ -1249,14 +1249,12 @@ Vector CVehicleTank::PushAway( void )
 //=========================================================
 Vector CVehicleTank::Slide( Vector vecVelocity, Vector vecNormal )
 {
-	Vector vecN = vecNormal.Normalize();
-	float flDot = DotProduct( vecVelocity.Normalize(), vecN );
+	float flDot = DotProduct( vecVelocity.Normalize(), vecNormal.Normalize() );
 	float flSpeed = vecVelocity.Length();
 
 	vecVelocity = vecVelocity.Normalize() * flSpeed * ( 1 - flDot );
 
-	Vector vecSide;
-	vecSide = CrossProduct( Vector( 0, 0, 1 ), vecNormal );
+	Vector vecSide = CrossProduct( Vector( 0, 0, 1 ), vecNormal );
 	vecSide = vecSide.Normalize();
 	float flNormal = DotProduct( vecVelocity, vecNormal );
 	Vector vecProj = flNormal * vecNormal;
