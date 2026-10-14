@@ -64,7 +64,7 @@ char *CTalkMonster::m_szFriends[TLK_CFRIENDS] =
 
 Task_t	tlIdleResponse[] =
 {
-	{ TASK_SET_ACTIVITY,	(float)ACT_IDLE	},// Stop and listen
+	{ TASK_SET_ACTIVITY_IDLE,	(float)0 },// Stop and listen
 	{ TASK_WAIT,			(float)0.5		},// Wait until sure it's me they are talking to
 	{ TASK_TLK_EYECONTACT,	(float)0		},// Wait until speaker is done
 	{ TASK_TLK_RESPOND,		(float)0		},// Wait and then say my response
@@ -254,14 +254,14 @@ Schedule_t	slMoveAwayFollow[] =
 Task_t	tlTlkIdleWatchClient[] =
 {
 	{ TASK_STOP_MOVING,			0				},
-	{ TASK_SET_ACTIVITY,		(float)ACT_IDLE	},
+	{ TASK_SET_ACTIVITY_IDLE,		(float)0 },
 	{ TASK_TLK_LOOK_AT_CLIENT,	(float)6		},
 };
 
 Task_t	tlTlkIdleWatchClientStare[] =
 {
 	{ TASK_STOP_MOVING,			0				},
-	{ TASK_SET_ACTIVITY,		(float)ACT_IDLE	},
+	{ TASK_SET_ACTIVITY_IDLE,		(float)0 },
 	{ TASK_TLK_CLIENT_STARE,	(float)6		},
 	{ TASK_TLK_STARE,			(float)0		},
 	{ TASK_TLK_IDEALYAW,		(float)0		},// look at who I'm talking to

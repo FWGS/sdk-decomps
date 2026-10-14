@@ -31,7 +31,7 @@
 Task_t	tlFail[] =
 {
 	{ TASK_STOP_MOVING,			0				},
-	{ TASK_SET_ACTIVITY,		(float)ACT_IDLE },
+	{ TASK_SET_ACTIVITY_IDLE,		(float)0 },
 	{ TASK_WAIT,				(float)2		},
 	{ TASK_WAIT_PVS,			(float)0		},
 };
@@ -53,7 +53,7 @@ Schedule_t	slFail[] =
 Task_t	tlIdleStand1[] =
 {
 	{ TASK_STOP_MOVING,			0				},
-	{ TASK_SET_ACTIVITY,		(float)ACT_IDLE },
+	{ TASK_SET_ACTIVITY_IDLE,		(float)0 },
 	{ TASK_WAIT,				(float)5		},// repick IDLESTAND every five seconds. gives us a chance to pick an active idle, fidget, etc.
 };
 
@@ -131,7 +131,7 @@ Schedule_t	slIdleWalk[] =
 Task_t	tlAmbush[] =
 {
 	{ TASK_STOP_MOVING,			0				},
-	{ TASK_SET_ACTIVITY,		(float)ACT_IDLE },
+	{ TASK_SET_ACTIVITY_IDLE,		(float)0 },
 	{ TASK_WAIT_INDEFINITE,		(float)0		},
 };
 
@@ -199,7 +199,7 @@ Schedule_t slActiveIdle[] =
 Task_t tlWakeAngry1[] =
 {
 	{ TASK_STOP_MOVING,			0				},
-	{ TASK_SET_ACTIVITY,		(float)ACT_IDLE },
+	{ TASK_SET_ACTIVITY_IDLE,		(float)0 },
 	{ TASK_SOUND_WAKE,			(float)0	},
 	{ TASK_FACE_IDEAL,			(float)0	},
 };
@@ -221,7 +221,7 @@ Schedule_t slWakeAngry[] =
 Task_t	tlAlertFace1[] =
 {
 	{ TASK_STOP_MOVING,				0				},
-	{ TASK_SET_ACTIVITY,			(float)ACT_IDLE	},
+	{ TASK_SET_ACTIVITY_IDLE,			(float)0 },
 	{ TASK_FACE_IDEAL,				(float)0		},
 };
 
@@ -269,7 +269,7 @@ Schedule_t	slAlertSmallFlinch[] =
 Task_t	tlAlertStand1[] =
 {
 	{ TASK_STOP_MOVING,			0						 },
-	{ TASK_SET_ACTIVITY,		(float)ACT_IDLE			 },
+	{ TASK_SET_ACTIVITY_IDLE,		(float)0 },
 	{ TASK_WAIT,				(float)20				 },
 	{ TASK_SUGGEST_STATE,		(float)MONSTERSTATE_IDLE },
 };
@@ -343,7 +343,7 @@ Schedule_t	slInvestigateSound[] =
 Task_t	tlCombatStand1[] =
 {
 	{ TASK_STOP_MOVING,			0				},
-	{ TASK_SET_ACTIVITY,		(float)ACT_IDLE },
+	{ TASK_SET_ACTIVITY_IDLE,		(float)0 },
 	{ TASK_WAIT_INDEFINITE,		(float)0		},
 };
 
@@ -368,7 +368,7 @@ Schedule_t	slCombatStand[] =
 Task_t	tlCombatFace1[] =
 {
 	{ TASK_STOP_MOVING,				0				},
-	{ TASK_SET_ACTIVITY,			(float)ACT_IDLE	},
+	{ TASK_SET_ACTIVITY_IDLE,			(float)0 },
 	{ TASK_FACE_ENEMY,				(float)0		},
 };
 
@@ -393,7 +393,7 @@ Schedule_t	slCombatFace[] =
 Task_t	tlStandoff[] =
 {
 	{ TASK_STOP_MOVING,				(float)0					},
-	{ TASK_SET_ACTIVITY,			(float)ACT_IDLE				},
+	{ TASK_SET_ACTIVITY_IDLE,			(float)0 },
 	{ TASK_WAIT_FACE_ENEMY,			(float)2					},
 };
 
@@ -637,6 +637,7 @@ Schedule_t slChaseEnemy[] =
 // Chase enemy failure schedule
 Task_t	tlChaseEnemyFailed[] =
 {
+	{ TASK_SET_FAIL_SCHEDULE,	(float)SCHED_FAIL			},
 	{ TASK_STOP_MOVING,				(float)0					},
 	{ TASK_WAIT,					(float)0.2					},
 	{ TASK_FIND_COVER_FROM_ENEMY,	(float)0					},
@@ -671,6 +672,7 @@ Schedule_t	slChaseEnemyFailed[] =
 //=========================================================
 Task_t tlSmallFlinch[] =
 {
+	{ TASK_SOUND_PAIN,			(float)0					},
 	{ TASK_REMEMBER,			(float)bits_MEMORY_FLINCHED },
 	{ TASK_STOP_MOVING,			0	},
 	{ TASK_SMALL_FLINCH,		0	},
