@@ -238,7 +238,9 @@ void CEndBossKataball::AccelerateThink( void )
 
 		vecVelocity = pev->velocity.Normalize( ) * 128;
 		vecSteer = vecDir.Normalize( ) * flTurn;
-		pev->velocity = ( vecSteer + vecVelocity ).Normalize( ) * flSpeed;
+		Vector vecNew;
+		vecNew = vecSteer + vecVelocity;
+		pev->velocity = vecNew.Normalize( ) * flSpeed;
 		pev->angles = UTIL_VecToAngles( pev->velocity );
 	}
 	else
