@@ -816,8 +816,7 @@ void CGunner::HandleAnimEvent( MonsterEvent_t *pEvent )
 
 			Vector vecForward;
 			UTIL_MakeVectorsPrivate( pev->angles, vecForward, NULL, NULL );
-			Vector vecKick;
-			vecKick = vecForward * 100;			// sic: never used
+			vecForward = vecForward * 100;		// sic: never used
 			Vector vecArm = GetArmPosition( GUNNER_ARM_RIGHT );	// sic: never used
 
 			CBaseEntity *pHurt = CheckEnemyMeleeHit( 200, 30, DMG_SLASH, 0, 0 );
