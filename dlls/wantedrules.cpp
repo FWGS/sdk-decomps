@@ -143,10 +143,10 @@ BOOL CWantedMultiplay::ClientCommand( CBasePlayer *pPlayer, const char *pcmd )
 
 		if ( CMD_ARGC() > 1 )
 		{
-			// retail also stores 1 when the number is below 2; spelled as an
-			// else, VC6 allocates the registers of the whole function differently
 			if ( atoi( CMD_ARGV( 1 ) ) > 1 )
 				iCount = atoi( CMD_ARGV( 1 ) );
+			else
+				iCount = 1;
 		}
 
 		if ( FStrEq( pcmd, "addbot" ) )
@@ -167,12 +167,10 @@ BOOL CWantedMultiplay::ClientCommand( CBasePlayer *pPlayer, const char *pcmd )
 	if ( FStrEq( pcmd, "godon" ) )
 	{
 		pPlayer->pev->flags |= FL_GODMODE;
-		return TRUE;
 	}
 	else if ( FStrEq( pcmd, "godoff" ) )
 	{
 		pPlayer->pev->flags &= ~FL_GODMODE;
-		return TRUE;
 	}
 	else if ( FStrEq( pcmd, "specon" ) )
 	{
@@ -201,13 +199,11 @@ BOOL CWantedMultiplay::ClientCommand( CBasePlayer *pPlayer, const char *pcmd )
 				i = 1;	// sic: the loop goes on with player 2
 			}
 		}
-		return TRUE;
 	}
 	else if ( FStrEq( pcmd, "specoff" ) )
 	{
 		SET_VIEW( pPlayer->edict(), pPlayer->edict() );
 		pPlayer->m_afPhysicsFlags &= ~PFLAG_OBSERVER;
-		return TRUE;
 	}
 	else if ( FStrEq( pcmd, "drawnodes" ) )
 	{
@@ -218,7 +214,6 @@ BOOL CWantedMultiplay::ClientCommand( CBasePlayer *pPlayer, const char *pcmd )
 		}
 		else
 			m_pDrawNode = NULL;
-		return TRUE;
 	}
 
 	return TRUE;
