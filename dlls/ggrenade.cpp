@@ -423,66 +423,8 @@ CGrenade * CGrenade:: ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector v
 }
 
 
-CGrenade * CGrenade :: ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity )
-{
-	CGrenade *pGrenade = GetClassPtr( (CGrenade *)NULL );
-	pGrenade->pev->movetype = MOVETYPE_BOUNCE;
-	pGrenade->pev->classname = MAKE_STRING( "grenade" );
-	
-	pGrenade->pev->solid = SOLID_BBOX;
-
-	SET_MODEL(ENT(pGrenade->pev), "models/grenade.mdl");	// Change this to satchel charge model
-
-	UTIL_SetSize(pGrenade->pev, Vector( 0, 0, 0), Vector(0, 0, 0));
-
-	pGrenade->pev->dmg = 200;
-	UTIL_SetOrigin( pGrenade->pev, vecStart );
-	pGrenade->pev->velocity = vecVelocity;
-	pGrenade->pev->angles = g_vecZero;
-	pGrenade->pev->owner = ENT(pevOwner);
-	
-	// Detonate in "time" seconds
-	pGrenade->SetThink( SUB_DoNothing );
-	pGrenade->SetUse( DetonateUse );
-	pGrenade->SetTouch( SlideTouch );
-	pGrenade->pev->spawnflags = SF_DETONATE;
-
-	pGrenade->pev->friction = 0.9;
-
-	return pGrenade;
-}
-
-
-
-void CGrenade :: UseSatchelCharges( entvars_t *pevOwner, SATCHELCODE code )
-{
-	edict_t *pentFind;
-	edict_t *pentOwner;
-
-	if ( !pevOwner )
-		return;
-
-	CBaseEntity	*pOwner = CBaseEntity::Instance( pevOwner );
-
-	pentOwner = pOwner->edict();
-
-	pentFind = FIND_ENTITY_BY_CLASSNAME( NULL, "grenade" );
-	while ( !FNullEnt( pentFind ) )
-	{
-		CBaseEntity *pEnt = Instance( pentFind );
-		if ( pEnt )
-		{
-			if ( FBitSet( pEnt->pev->spawnflags, SF_DETONATE ) && pEnt->pev->owner == pentOwner )
-			{
-				if ( code == SATCHEL_DETONATE )
-					pEnt->Use( pOwner, pOwner, USE_ON, 0 );
-				else	// SATCHEL_RELEASE
-					pEnt->pev->owner = NULL;
-			}
-		}
-		pentFind = FIND_ENTITY_BY_CLASSNAME( pentFind, "grenade" );
-	}
-}
+// Wanted dropped the satchel charge's ShootSatchelCharge and UseSatchelCharges
+// here (weapons.h still declares them).
 
 //======================end grenade
 
