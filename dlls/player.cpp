@@ -606,9 +606,9 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		}
 		if (bitsDamage & DMG_SHOCK)
 		{
+			fShock = TRUE;
 			bitsDamage &= ~DMG_SHOCK;
 			ffound = TRUE;
-			fShock = TRUE;
 		}
 	}
 
