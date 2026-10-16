@@ -152,25 +152,6 @@ struct skilldata_t
 	float plrLeg;
 	float plrArm;
 
-// SDK fields POV removed; kept here while SDK code still uses them
-	float barneyHealth;
-	float plrDmgCrowbar;
-	float plrDmg9MM;
-	float plrDmg357;
-	float plrDmgMP5;
-	float plrDmgBuckshot;
-	float plrDmgCrossbowClient;
-	float plrDmgCrossbowMonster;
-	float plrDmgGauss;
-	float plrDmgEgonNarrow;
-	float plrDmgEgonWide;
-	float plrDmgHornet;
-	float plrDmgHandGrenade;
-	float plrDmgSatchel;
-	float suitchargerCapacity;
-	float batteryCapacity;
-	float healthchargerCapacity;
-	float healthkitCapacity;
 };
 
 extern	DLL_GLOBAL	skilldata_t	gSkillData;
