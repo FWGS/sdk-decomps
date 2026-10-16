@@ -208,7 +208,7 @@ botname_t *BotPickName( void )
 	for ( i = 0; i < NUM_BOT_NAMES; i++ )
 	{
 		fUsed = FALSE;
-		for ( j = 1; j < gpGlobals->maxClients; j++ )
+		for ( j = 1; j < gpGlobals->maxClients; j++ )	// sic: skips the last slot
 		{
 			CBaseEntity *pPlayer = UTIL_PlayerByIndex( j );
 
@@ -235,7 +235,7 @@ botname_t *BotPickName( void )
 			sprintf( g_rgBotNames[NUM_BOT_NAMES].pszName, "Cowbot%i", i );
 
 			fUsed = FALSE;
-			for ( j = 1; j < gpGlobals->maxClients; j++ )
+			for ( j = 1; j < gpGlobals->maxClients; j++ )	// sic
 			{
 				CBaseEntity *pPlayer = UTIL_PlayerByIndex( j );
 
@@ -278,7 +278,7 @@ BOOL BotFindProfile( void )
 	while ( 1 )
 	{
 		fUsed = FALSE;
-		for ( i = 1; i < gpGlobals->maxClients; i++ )
+		for ( i = 1; i < gpGlobals->maxClients; i++ )	// sic: skips the last slot
 		{
 			CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
 
