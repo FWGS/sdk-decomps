@@ -533,6 +533,8 @@ public:
 	void InitTrigger( void );
 
 	virtual int	ObjectCaps( void ) { return CBaseToggle :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+
+	float	m_flNextHealSound;	// POV, name ours: trigger_hurt's healing sound
 };
 
 LINK_ENTITY_TO_CLASS( trigger, CBaseTrigger );

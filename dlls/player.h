@@ -38,6 +38,8 @@
 //-----------------------------------------------------
 //This is Half-Life player entity
 //-----------------------------------------------------
+#define MAX_STORIES		40		// journal entries (story/storyid_NN.dat)
+
 #define CSUITPLAYLIST	4		// max of 4 suit sentences queued up at any time
 
 #define SUIT_GROUP			TRUE
@@ -79,9 +81,25 @@ public:
 	int					m_iExtraSoundTypes;// additional classification for this weapon's sound
 	int					m_iWeaponFlash;// brightness of the weapon flash
 	float				m_flStopExtraSoundTime;
+
+	// POV (names ours where the save table doesn't give one)
+	BOOL				m_fGamePaused;			// impulse 80 toggles it
+	int					m_iUnused1;				// no code uses it
+	BOOL				m_fStoryShown;			// a journal entry is on screen
+	int					m_iStoryIcon;			// last StoryIcon state sent
+	int					m_iLastStoryID;			// saved as FIELD_BOOLEAN
+	BOOL				m_fStoryNavigate;
+	BOOL				m_fStoryAlreadyFreezed;	// the player was frozen when the journal opened
+	BOOL				m_fStoriesFound[MAX_STORIES + 1];	// MAX_STORIES of them saved
+	BOOL				m_fStoriesRead[MAX_STORIES + 1];
+	BOOL				m_fFlashLightON;		// dark vision
+	int					m_iBreakIcon;			// last BreakIcon state sent
 	
 	float				m_flFlashLightTime;	// Time until next battery draw/Recharge
 	int					m_iFlashBattery;		// Flashlight Battery Draw
+	float				m_flNextFlashlightLight;
+	BOOL				m_fFlashLightRestore;
+	int					m_iHornetStatus;		// which hornet gun weapon_hornetgun gave
 
 	int					m_afButtonLast;
 	int					m_afButtonPressed;
@@ -138,6 +156,7 @@ public:
 
 	BOOL			m_fNoPlayerSound;	// a debugging feature. Player makes no sound if this is true. 
 	BOOL			m_fLongJump; // does this player have the longjump module?
+	BOOL			m_fDidHolster;
 
 	float       m_tSneaking;
 	int			m_iUpdateTime;		// stores the number of frame ticks before sending HUD update messages
@@ -170,6 +189,11 @@ public:
 
 	virtual void Spawn( void );
 	void Pain( void );
+
+	virtual void ShowStory( int iStoryID );	// names ours
+	virtual void CloseStory( void );
+	void SetBreakIcon( int iState );
+	void SetStoryIcon( int iState, int iStoryID );
 
 //	virtual void Think( void );
 	virtual void Jump( void );

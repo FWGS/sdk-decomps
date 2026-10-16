@@ -548,3 +548,18 @@ int UTIL_SharedRandomLong( unsigned int seed, int low, int high );
 float UTIL_SharedRandomFloat( unsigned int seed, float low, float high );
 
 float UTIL_WeaponTimeBase( void );
+
+// POV: the story journal (names ours unless an error message gives them)
+class CBasePlayer;
+BOOL UTIL_StrIEq( const char *psz1, const char *psz2 );
+void UTIL_StoryShow( CBasePlayer *pPlayer, int iStoryID );
+void UTIL_StoryHide( CBasePlayer *pPlayer );
+void UTIL_StoryUpdateIcon( CBasePlayer *pPlayer );
+int UTIL_StoryFirst( CBasePlayer *pPlayer );
+int UTIL_StoryPrev( CBasePlayer *pPlayer, int iStoryID );
+int UTIL_StoryNext( CBasePlayer *pPlayer, int iStoryID );
+int UTIL_StoryLast( CBasePlayer *pPlayer );
+void UTIL_StoryTitleFile( int iStoryID, char *pszFile );
+void UTIL_StoryBodyFile( int iStoryID, char *pszFile );
+int UTIL_StoryGetCodeStoryID( int iszCode );
+void UTIL_PauseGame( CBasePlayer *pPlayer, BOOL fPause );

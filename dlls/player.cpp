@@ -76,8 +76,20 @@ extern CGraph	WorldGraph;
 // Global Savedata for player
 TYPEDESCRIPTION	CBasePlayer::m_playerSaveData[] = 
 {
+	DEFINE_FIELD( CBasePlayer, m_iLastStoryID, FIELD_BOOLEAN ),
+	DEFINE_ARRAY( CBasePlayer, m_fStoriesFound, FIELD_BOOLEAN, MAX_STORIES ),
+	DEFINE_ARRAY( CBasePlayer, m_fStoriesRead, FIELD_BOOLEAN, MAX_STORIES ),
+	DEFINE_FIELD( CBasePlayer, m_fStoryNavigate, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CBasePlayer, m_fStoryAlreadyFreezed, FIELD_BOOLEAN ),
+
+	DEFINE_FIELD( CBasePlayer, m_fFlashLightON, FIELD_BOOLEAN ),
 	DEFINE_FIELD( CBasePlayer, m_flFlashLightTime, FIELD_TIME ),
 	DEFINE_FIELD( CBasePlayer, m_iFlashBattery, FIELD_INTEGER ),
+	DEFINE_FIELD( CBasePlayer, m_flNextFlashlightLight, FIELD_TIME ),
+	DEFINE_FIELD( CBasePlayer, m_fFlashLightRestore, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CBasePlayer, m_iHornetStatus, FIELD_INTEGER ),
+	DEFINE_FIELD( CBasePlayer, m_flSndRoomtype, FIELD_FLOAT ),
+	DEFINE_FIELD( CBasePlayer, m_flSndRange, FIELD_FLOAT ),
 
 	DEFINE_FIELD( CBasePlayer, m_afButtonLast, FIELD_INTEGER ),
 	DEFINE_FIELD( CBasePlayer, m_afButtonPressed, FIELD_INTEGER ),
@@ -116,6 +128,7 @@ TYPEDESCRIPTION	CBasePlayer::m_playerSaveData[] =
 	DEFINE_FIELD( CBasePlayer, m_iExtraSoundTypes, FIELD_INTEGER ),
 	DEFINE_FIELD( CBasePlayer, m_iWeaponFlash, FIELD_INTEGER ),
 	DEFINE_FIELD( CBasePlayer, m_fLongJump, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CBasePlayer, m_fDidHolster, FIELD_BOOLEAN ),
 	DEFINE_FIELD( CBasePlayer, m_fInitHUD, FIELD_BOOLEAN ),
 	DEFINE_FIELD( CBasePlayer, m_tbdPrev, FIELD_TIME ),
 
@@ -129,8 +142,6 @@ TYPEDESCRIPTION	CBasePlayer::m_playerSaveData[] =
 	//DEFINE_FIELD( CBasePlayer, m_fKnownItem, FIELD_INTEGER ), // reset to zero on load
 	//DEFINE_FIELD( CBasePlayer, m_iPlayerSound, FIELD_INTEGER ),	// Don't restore, set in Precache()
 	//DEFINE_FIELD( CBasePlayer, m_pentSndLast, FIELD_EDICT ),	// Don't restore, client needs reset
-	//DEFINE_FIELD( CBasePlayer, m_flSndRoomtype, FIELD_FLOAT ),	// Don't restore, client needs reset
-	//DEFINE_FIELD( CBasePlayer, m_flSndRange, FIELD_FLOAT ),	// Don't restore, client needs reset
 	//DEFINE_FIELD( CBasePlayer, m_fNewAmmo, FIELD_INTEGER ), // Don't restore, client needs reset
 	//DEFINE_FIELD( CBasePlayer, m_flgeigerRange, FIELD_FLOAT ),	// Don't restore, reset in Precache()
 	//DEFINE_FIELD( CBasePlayer, m_flgeigerDelay, FIELD_FLOAT ),	// Don't restore, reset in Precache()
@@ -157,6 +168,9 @@ int giPrecacheGrunt = 0;
 int gmsgShake = 0;
 int gmsgFade = 0;
 int gmsgSelAmmo = 0;
+int gmsgVGUIMenu = 0;
+int gmsgBreakIcon = 0;
+int gmsgStoryIcon = 0;
 int gmsgFlashlight = 0;
 int gmsgFlashBattery = 0;
 int gmsgResetHUD = 0;
@@ -199,14 +213,17 @@ void LinkUserMessages( void )
 	gmsgSelAmmo = REG_USER_MSG("SelAmmo", sizeof(SelAmmo));
 	gmsgCurWeapon = REG_USER_MSG("CurWeapon", 3);
 	gmsgGeigerRange = REG_USER_MSG("Geiger", 1);
+	gmsgVGUIMenu = REG_USER_MSG("VGUIMenu", 1);
+	gmsgBreakIcon = REG_USER_MSG("BreakIcon", 1);
+	gmsgStoryIcon = REG_USER_MSG("StoryIcon", 1);
 	gmsgFlashlight = REG_USER_MSG("Flashlight", 2);
 	gmsgFlashBattery = REG_USER_MSG("FlashBat", 1);
 	gmsgHealth = REG_USER_MSG( "Health", 1 );
 	gmsgDamage = REG_USER_MSG( "Damage", 12 );
 	gmsgBattery = REG_USER_MSG( "Battery", 2);
 	gmsgTrain = REG_USER_MSG( "Train", 1);
-	gmsgHudText = REG_USER_MSG( "HudText", -1 );
 	gmsgSayText = REG_USER_MSG( "SayText", -1 );
+	gmsgHudText = REG_USER_MSG( "HudText", -1 );
 	gmsgTextMsg = REG_USER_MSG( "TextMsg", -1 );
 	gmsgWeaponList = REG_USER_MSG("WeaponList", -1);
 	gmsgResetHUD = REG_USER_MSG("ResetHUD", 1);		// called every respawn
@@ -3456,6 +3473,62 @@ CBaseEntity *FindEntityForward( CBaseEntity *pMe )
 		return pHit;
 	}
 	return NULL;
+}
+
+
+// POV: the BreakIcon and StoryIcon HUD icons and the story journal
+void CBasePlayer :: SetBreakIcon( int iState )
+{
+	if ( iState != m_iBreakIcon )
+	{
+		m_iBreakIcon = iState;
+		MESSAGE_BEGIN( MSG_ONE, gmsgBreakIcon, NULL, pev );
+			WRITE_BYTE( iState );
+		MESSAGE_END();
+	}
+}
+
+void CBasePlayer :: SetStoryIcon( int iState, int iStoryID )
+{
+	if ( iState == TRUE )
+	{
+		m_iLastStoryID = iStoryID;
+		if ( !m_fStoriesFound[iStoryID] )
+		{
+			EMIT_SOUND( ENT(pev), CHAN_ITEM, "common/story1.wav", 1, ATTN_NONE );
+			m_fStoriesFound[iStoryID] = TRUE;
+		}
+	}
+
+	m_iStoryIcon = iState;
+	MESSAGE_BEGIN( MSG_ONE, gmsgStoryIcon, NULL, pev );
+		WRITE_BYTE( iState );
+	MESSAGE_END();
+}
+
+void CBasePlayer :: ShowStory( int iStoryID )
+{
+	if ( pev->flags & FL_FROZEN )
+	{
+		m_fStoryAlreadyFreezed = TRUE;
+	}
+	else
+	{
+		m_fStoryAlreadyFreezed = FALSE;
+		EnableControl( FALSE );
+	}
+
+	UTIL_StoryShow( this, iStoryID );
+	m_fStoryShown = TRUE;
+}
+
+void CBasePlayer :: CloseStory( void )
+{
+	if ( !m_fStoryAlreadyFreezed )
+		EnableControl( TRUE );
+
+	UTIL_StoryHide( this );
+	m_fStoryShown = FALSE;
 }
 
 

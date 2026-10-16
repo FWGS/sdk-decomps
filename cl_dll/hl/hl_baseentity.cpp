@@ -232,6 +232,8 @@ void CBasePlayer::PlayerDeathThink(void) { }
 void CBasePlayer::StartDeathCam( void ) { }
 void CBasePlayer::StartObserver( Vector vecPosition, Vector vecViewAngle ) { }
 void CBasePlayer::PlayerUse ( void ) { }
+void CBasePlayer::ShowStory( int iStoryID ) { }
+void CBasePlayer::CloseStory( void ) { }
 void CBasePlayer::Jump() { }
 void CBasePlayer::Duck( ) { }
 int  CBasePlayer::Classify ( void ) { return 0; }

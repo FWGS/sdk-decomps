@@ -1129,7 +1129,7 @@ int CBasePlayerWeapon::ExtractAmmo( CBasePlayerWeapon *pWeapon )
 
 	if ( pszAmmo2() != NULL )
 	{
-		iReturn = pWeapon->AddSecondaryAmmo( 0, (char *)pszAmmo2(), iMaxAmmo2() );
+		iReturn = pWeapon->AddSecondaryAmmo( m_iDefaultAmmo2, (char *)pszAmmo2(), iMaxAmmo2() );
 	}
 
 	return iReturn;

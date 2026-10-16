@@ -145,6 +145,303 @@ float UTIL_SharedRandomFloat( unsigned int seed, float low, float high )
 	}
 }
 
+// POV: the story journal. area_story names an entry by a code ("povc01_02");
+// the journal shows story/storyid_NN_t.dat (title) and storyid_NN.dat (text)
+// through the MOTD message, in chunks as the multiplayer MOTD.
+extern int gmsgMOTD;
+
+#define STORY_CHUNK		60
+
+struct storycode_t
+{
+	char *pszCode;
+	char *pszID;
+};
+
+storycode_t g_StoryCodes[] =
+{
+	{ "povhz01_01", "0" },
+	{ "povc00_01", "0" },
+	{ "povc00_02", "1" },
+	{ "povc00b_01", "2" },
+	{ "povc00b_02", "3" },
+	{ "povc01_01", "4" },
+	{ "povc01_02", "5" },
+	{ "povc01b_01", "6" },
+	{ "povc01c_01", "7" },
+	{ "povc01c_02", "8" },
+	{ "povc01d_01", "9" },
+	{ "povc01e_01", "10" },
+	{ "povc01e_02", "11" },
+	{ "povc02_01", "12" },
+	{ "povc02b_01", "13" },
+	{ "povc02h_01", "14" },
+	{ "povc02c_01", "15" },
+	{ "povc02d_01", "16" },
+	{ "povc02e_01", "17" },
+	{ "povc02f_01", "18" },
+	{ "povc03_01", "19" },
+	{ "povc03_02", "20" },
+	{ "povc03d_01", "21" },
+	{ "povc03b_01", "22" },
+	{ "povc03e_01", "23" },
+	{ "povc04_01", "24" },
+	{ "povc04b_01", "25" },
+	{ "povc04c_01", "26" },
+	{ "povc04d_01", "27" },
+	{ "povc04e_01", "28" },
+	{ "povc05_01", "29" },
+	{ "povc05b_01", "30" },
+	{ "povc05c_01", "31" },
+	{ "povc05e_01", "32" },
+	{ "povc05d_01", "33" },
+	{ "povc05d_02", "34" },
+	{ "povc06_01", "35" },
+	{ "povc06b_01", "36" },
+	{ "povc06c_01", "37" },
+	{ "povc06d_01", "38" },
+	{ "povc06e_01", "39" },
+};
+
+BOOL UTIL_StrIEq( const char *psz1, const char *psz2 )
+{
+	return !stricmp( psz1, psz2 );
+}
+
+void UTIL_StoryShow( CBasePlayer *pPlayer, int iStoryID )
+{
+	char szNum[8];
+	char szTitle[64];
+	char szFile[MAX_PATH];
+	int iLength;
+
+	if ( !pPlayer )
+	{
+		ALERT( at_console, "UTIL_StoryShow: ERROR - need a valid player!\n" );
+		return;
+	}
+
+	if ( !pPlayer->m_fStoryNavigate )
+		UTIL_PauseGame( pPlayer, TRUE );
+
+	// entry number of all: "N/40"
+	itoa( iStoryID + 1, szNum, 10 );
+	strcpy( szTitle, szNum );
+	strcat( szTitle, "/" );
+	itoa( MAX_STORIES, szNum, 10 );
+	strcat( szTitle, szNum );
+
+	MESSAGE_BEGIN( MSG_ONE, gmsgMOTD, NULL, pPlayer->pev );
+		WRITE_BYTE( 0 );
+		WRITE_STRING( szTitle );
+	MESSAGE_END();
+
+	// the title, starred while unread
+	UTIL_StoryTitleFile( iStoryID, szFile );
+	char *pFile = (char *)LOAD_FILE_FOR_ME( szFile, &iLength );
+	if ( pFile )
+	{
+		strcpy( szTitle, pFile );
+		FREE_FILE( pFile );
+		if ( !pPlayer->m_fStoriesRead[iStoryID] )
+			strcat( szTitle, "*" );
+	}
+	else
+	{
+		ALERT( at_console, "UTIL_StoryShow: ERROR - couldn't find title file %s !\n", szFile );
+		strcpy( szTitle, "????" );
+	}
+
+	MESSAGE_BEGIN( MSG_ONE, gmsgMOTD, NULL, pPlayer->pev );
+		WRITE_BYTE( 0 );
+		WRITE_STRING( szTitle );
+	MESSAGE_END();
+
+	// the text, chunk by chunk
+	UTIL_StoryBodyFile( iStoryID, szFile );
+	char *pFileList;
+	char *aFileList = pFileList = (char *)LOAD_FILE_FOR_ME( szFile, &iLength );
+	if ( aFileList )
+	{
+		int char_count = 0;
+
+		while ( pFileList && *pFileList && char_count < iLength )
+		{
+			char chunk[STORY_CHUNK+1];
+
+			if ( strlen( pFileList ) < STORY_CHUNK )
+			{
+				strcpy( chunk, pFileList );
+			}
+			else
+			{
+				strncpy( chunk, pFileList, STORY_CHUNK );
+				chunk[STORY_CHUNK] = 0;		// strncpy doesn't always append the null terminator
+			}
+
+			char_count += strlen( chunk );
+			if ( char_count < iLength )
+				pFileList = aFileList + char_count; 
+			else
+				*pFileList = 0;
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgMOTD, NULL, pPlayer->pev );
+				WRITE_BYTE( *pFileList ? FALSE : TRUE );	// FALSE means there is still more message to come
+				WRITE_STRING( chunk );
+			MESSAGE_END();
+		}
+
+		FREE_FILE( aFileList );
+	}
+	else
+	{
+		ALERT( at_console, "UTIL_StoryShow: ERROR - couldn't find body file %s !\n", szFile );
+		strcpy( szTitle, "????" );
+		MESSAGE_BEGIN( MSG_ONE, gmsgMOTD, NULL, pPlayer->pev );
+			WRITE_BYTE( 1 );
+			WRITE_STRING( szTitle );
+		MESSAGE_END();
+	}
+
+	pPlayer->m_iLastStoryID = iStoryID;
+	pPlayer->m_fStoriesFound[iStoryID] = TRUE;
+	pPlayer->m_fStoriesRead[iStoryID] = TRUE;
+	UTIL_StoryUpdateIcon( pPlayer );
+}
+
+void UTIL_StoryHide( CBasePlayer *pPlayer )
+{
+	if ( !pPlayer )
+	{
+		ALERT( at_console, "UTIL_StoryHide: ERROR - need a valid player!\n" );
+		return;
+	}
+
+	if ( !pPlayer->m_fStoryNavigate )
+		UTIL_PauseGame( pPlayer, FALSE );
+
+	UTIL_StoryUpdateIcon( pPlayer );
+}
+
+// the HUD icon stays while an entry is found but unread
+void UTIL_StoryUpdateIcon( CBasePlayer *pPlayer )
+{
+	for ( int i = 0; i < MAX_STORIES; i++ )
+	{
+		if ( pPlayer->m_fStoriesFound[i] == TRUE && !pPlayer->m_fStoriesRead[i] )
+		{
+			pPlayer->SetStoryIcon( TRUE, pPlayer->m_iLastStoryID );
+			return;
+		}
+	}
+
+	pPlayer->SetStoryIcon( FALSE, 0 );
+}
+
+int UTIL_StoryFirst( CBasePlayer *pPlayer )
+{
+	for ( int i = 0; i < MAX_STORIES; i++ )
+	{
+		if ( pPlayer->m_fStoriesFound[i] == TRUE )
+			return i;
+	}
+
+	return 0;
+}
+
+int UTIL_StoryPrev( CBasePlayer *pPlayer, int iStoryID )
+{
+	if ( iStoryID == 0 )
+		return 0;
+
+	for ( int i = iStoryID - 1; i > 0; i-- )
+	{
+		if ( pPlayer->m_fStoriesFound[i] == TRUE )
+			return i;
+	}
+
+	return 0;
+}
+
+int UTIL_StoryNext( CBasePlayer *pPlayer, int iStoryID )
+{
+	if ( iStoryID == MAX_STORIES )
+		return MAX_STORIES;
+
+	for ( int i = iStoryID + 1; i < MAX_STORIES; i++ )
+	{
+		if ( pPlayer->m_fStoriesFound[i] == TRUE )
+			return i;
+	}
+
+	return iStoryID;
+}
+
+int UTIL_StoryLast( CBasePlayer *pPlayer )
+{
+	for ( int i = MAX_STORIES - 1; i > 0; i-- )
+	{
+		if ( pPlayer->m_fStoriesFound[i] == TRUE )
+			return i;
+	}
+
+	return 0;
+}
+
+void UTIL_StoryTitleFile( int iStoryID, char *pszFile )
+{
+	char szNum[8];
+
+	itoa( iStoryID, szNum, 10 );
+	strcpy( pszFile, "story/storyid_" );
+	if ( iStoryID < 10 )
+		strcat( pszFile, "0" );
+	strcat( pszFile, szNum );
+	strcat( pszFile, "_t.dat" );
+}
+
+void UTIL_StoryBodyFile( int iStoryID, char *pszFile )
+{
+	char szNum[8];
+
+	itoa( iStoryID, szNum, 10 );
+	strcpy( pszFile, "story/storyid_" );
+	if ( iStoryID < 10 )
+		strcat( pszFile, "0" );
+	strcat( pszFile, szNum );
+	strcat( pszFile, ".dat" );
+}
+
+int UTIL_StoryGetCodeStoryID( int iszCode )
+{
+	for ( int i = 0; i < ARRAYSIZE( g_StoryCodes ); i++ )
+	{
+		if ( UTIL_StrIEq( g_StoryCodes[i].pszCode, STRING( iszCode ) ) )
+			return atoi( g_StoryCodes[i].pszID );
+	}
+
+	ALERT( at_console, "UTIL_StoryGetCodeStoryID: Warning - couldnt find story code %s\n", STRING( iszCode ) );
+	return atoi( STRING( iszCode ) );
+}
+
+// the engine pauses through the first client's "pause" command
+void UTIL_PauseGame( CBasePlayer *pPlayer, BOOL fPause )
+{
+	if ( pPlayer->m_fGamePaused != fPause )
+	{
+		pPlayer->m_fGamePaused = fPause;
+
+		edict_t *pClient = INDEXENT( 1 );
+		if ( pClient )
+		{
+			CLIENT_COMMAND( pClient, "pause\n" );
+			return;
+		}
+
+		ALERT( at_console, "UTIL_PauseGame: ERROR - failed to pause the game!\n" );
+	}
+}
+
 void UTIL_ParametricRocket( entvars_t *pev, Vector vecOrigin, Vector vecAngles, edict_t *owner )
 {	
 	pev->startpos = vecOrigin;
