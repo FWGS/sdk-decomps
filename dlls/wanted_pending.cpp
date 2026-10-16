@@ -10,10 +10,6 @@
 #include	"util.h"
 #include	"cbase.h"
 #include	"player.h"
-#include	"weapons.h"
-#include	"gamerules.h"
-#include	"teamplay_gamerules.h"
-#include	"highnoon.h"
 #include	"bot.h"
 
 // ---- the Cow-Bots (bot.h): the bot job replaces these placeholders ----
