@@ -77,6 +77,7 @@ public:
 
 	BOOL  CheckMeleeAttack1 ( float flDot, float flDist );
 	BOOL  CheckRangeAttack1 ( float flDot, float flDist );
+	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );	// POV
 
 	float ChangeYaw( int speed );
 	Activity GetStoppedActivity( void );
@@ -379,6 +380,31 @@ BOOL CIchthyosaur :: CheckRangeAttack1 ( float flDot, float flDist )
 	}
 
 	return FALSE;
+}
+
+//=========================================================
+// TakeDamage - POV: answer the player's shots
+//=========================================================
+int CIchthyosaur :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
+{
+	if ( m_MonsterState != MONSTERSTATE_PRONE && !(m_afMemory & bits_MEMORY_PROVOKED) )
+	{
+		switch ( UTIL_PlayerProvoke( this, pevAttacker ) )
+		{
+		case 1:
+			PainSound( );
+		case 2:
+			AttackSound( );
+			Remember( bits_MEMORY_SUSPICIOUS );
+			break;
+		case 3:
+			AlertSound( );
+			Remember( bits_MEMORY_PROVOKED );
+			break;
+		}
+	}
+
+	return CFlyingMonster::TakeDamage( pevInflictor, pevAttacker, flDamage, bitsDamageType );
 }
 
 //=========================================================
