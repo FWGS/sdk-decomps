@@ -38,7 +38,7 @@
 #include	"decals.h"
 
 extern DLL_GLOBAL BOOL g_fLoading;			// POV
-extern DLL_GLOBAL BOOL g_fNoPickupSound;	// POV
+extern int gEvilImpulse101;
 extern DLL_GLOBAL short g_sModelIndexWExplosion;
 
 // view model animations (names ours)
@@ -1024,7 +1024,7 @@ void CStukabat::IdleSound( float flVolume )
 
 BOOL CStukabat::Deploy( )
 {
-	if ( !g_fNoPickupSound )
+	if ( !gEvilImpulse101 )
 		DeploySound( );
 
 	m_flNextPrimaryAttack = gpGlobals->time + 1.5;

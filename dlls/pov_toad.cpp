@@ -33,7 +33,7 @@
 #include "gamerules.h"
 
 extern DLL_GLOBAL BOOL g_fLoading;			// POV
-extern DLL_GLOBAL BOOL g_fNoPickupSound;	// POV
+extern int gEvilImpulse101;
 
 enum w_toad_e {	// names ours
 	WTOAD_IDLE1 = 0,
@@ -599,7 +599,7 @@ int CToad::GetItemInfo(ItemInfo *p)
 
 BOOL CToad::Deploy( )
 {
-	if ( !g_fNoPickupSound )
+	if ( !gEvilImpulse101 )
 	{
 		// play hunt sound
 		float flRndSound = RANDOM_FLOAT ( 0 , 1 );
