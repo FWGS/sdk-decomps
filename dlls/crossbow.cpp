@@ -260,7 +260,7 @@ LINK_ENTITY_TO_CLASS( weapon_crossbow, CCrossbow );
 void CCrossbow::Spawn( )
 {
 	Precache( );
-	m_iId = WEAPON_CROSSBOW;
+	m_iId = WEAPON_BOW;
 	SET_MODEL(ENT(pev), "models/w_crossbow.mdl");
 
 	m_iDefaultAmmo = CROSSBOW_DEFAULT_GIVE;
@@ -303,7 +303,7 @@ int CCrossbow::GetItemInfo(ItemInfo *p)
 	p->iMaxClip = CROSSBOW_MAX_CLIP;
 	p->iSlot = 2;
 	p->iPosition = 2;
-	p->iId = WEAPON_CROSSBOW;
+	p->iId = WEAPON_BOW;
 	p->iFlags = 0;
 	p->iWeight = CROSSBOW_WEIGHT;
 	return 1;

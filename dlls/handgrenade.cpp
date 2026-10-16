@@ -57,7 +57,7 @@ LINK_ENTITY_TO_CLASS( weapon_handgrenade, CHandGrenade );
 void CHandGrenade::Spawn( )
 {
 	Precache( );
-	m_iId = WEAPON_HANDGRENADE;
+	m_iId = WEAPON_DYNAMITE;
 	SET_MODEL(ENT(pev), "models/w_grenade.mdl");
 
 	pev->dmg = gSkillData.plrDmgHandGrenade;
@@ -85,7 +85,7 @@ int CHandGrenade::GetItemInfo(ItemInfo *p)
 	p->iMaxClip = WEAPON_NOCLIP;
 	p->iSlot = 4;
 	p->iPosition = 0;
-	p->iId = m_iId = WEAPON_HANDGRENADE;
+	p->iId = m_iId = WEAPON_DYNAMITE;
 	p->iWeight = HANDGRENADE_WEIGHT;
 	p->iFlags = ITEM_FLAG_LIMITINWORLD | ITEM_FLAG_EXHAUSTIBLE;
 
@@ -115,7 +115,7 @@ void CHandGrenade::Holster( int skiplocal /* = 0 */ )
 	else
 	{
 		// no more grenades!
-		m_pPlayer->pev->weapons &= ~(1<<WEAPON_HANDGRENADE);
+		m_pPlayer->pev->weapons &= ~(1<<WEAPON_DYNAMITE);
 		SetThink( DestroyItem );
 		pev->nextthink = gpGlobals->time + 0.1;
 	}

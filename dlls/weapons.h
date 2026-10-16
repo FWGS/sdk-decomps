@@ -62,21 +62,21 @@ public:
 #define ITEM_BATTERY		4
 
 #define WEAPON_NONE				0
-#define WEAPON_CROWBAR			1
-#define	WEAPON_GLOCK			2
-#define WEAPON_PYTHON			3
-#define WEAPON_MP5				4
-#define WEAPON_CHAINGUN			5
-#define WEAPON_CROSSBOW			6
+// Wanted's weapons: ids from their GetItemInfo, names ours
+#define WEAPON_PICK				1
+#define WEAPON_PISTOL			3	// weapon_pistol, python.cpp
+#define WEAPON_GATTLINGGUN		4
+#define WEAPON_BOW				6	// crossbow.cpp
 #define WEAPON_SHOTGUN			7
+#define WEAPON_KNIFE			9
+#define WEAPON_DYNAMITE			12	// handgrenade.cpp
+#define WEAPON_BEARTRAP			14
+#define WEAPON_SCORPION			15
+#define WEAPON_COLTS			16
+#define WEAPON_WINCHESTER		17
+#define WEAPON_BUFFALO			18
+#define WEAPON_CANNON			19
 #define WEAPON_RPG				20	// Wanted moved it
-#define WEAPON_GAUSS			9
-#define WEAPON_EGON				10
-#define WEAPON_HORNETGUN		11
-#define WEAPON_HANDGRENADE		12
-#define WEAPON_TRIPMINE			13
-#define	WEAPON_SATCHEL			14
-#define	WEAPON_SNARK			15
 
 #define WEAPON_ALLWEAPONS		(~(1<<WEAPON_SUIT))
 

@@ -69,7 +69,7 @@ int CPython::GetItemInfo(ItemInfo *p)
 	p->iFlags = 0;
 	p->iSlot = 1;
 	p->iPosition = 1;
-	p->iId = m_iId = WEAPON_PYTHON;
+	p->iId = m_iId = WEAPON_PISTOL;
 	p->iWeight = PYTHON_WEIGHT;
 
 	return 1;
@@ -91,7 +91,7 @@ void CPython::Spawn( )
 {
 	pev->classname = MAKE_STRING("weapon_357"); // hack to allow for old names
 	Precache( );
-	m_iId = WEAPON_PYTHON;
+	m_iId = WEAPON_PISTOL;
 	SET_MODEL(ENT(pev), "models/w_357.mdl");
 
 	m_iDefaultAmmo = PYTHON_DEFAULT_GIVE;
