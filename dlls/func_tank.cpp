@@ -570,9 +570,7 @@ edict_t *CFuncTank :: FindTarget( edict_t *pPlayer )
 		{
 			barrelEnd = BarrelPosition();
 			targetPosition = pTarget->v.origin + pTarget->v.view_ofs;
-			float range = (targetPosition - barrelEnd).Length();
-
-			if ( InRange( range ) && TargetVisible( pEntity->edict() ) && fTarget )
+			if ( InRange( (targetPosition - barrelEnd).Length() ) && TargetVisible( pEntity->edict() ) && fTarget )
 			{
 				barrelEnd = BarrelPosition();
 				targetPosition = pTarget->v.origin + pTarget->v.view_ofs;
