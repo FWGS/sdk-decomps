@@ -263,6 +263,8 @@ void CHighNoon::ClientDisconnected( edict_t *pClient )
 {
 	m_iPlayers--;
 
+	BOOL fFled = FALSE;
+
 	if ( m_pChampion && pClient == m_pChampion->edict() )
 	{
 		// the challenger takes the champion's place
@@ -273,13 +275,16 @@ void CHighNoon::ClientDisconnected( edict_t *pClient )
 		}
 		else
 			m_pChampion = NULL;
-		char *pszText = UTIL_VarArgs( "%s fled town!.\n", STRING( pClient->v.netname ) );
-		UTIL_ClientPrintAll( HUD_PRINTCENTER, pszText );
-		EndMatch();
+		fFled = TRUE;
 	}
 	else if ( m_pChallenger && pClient == m_pChallenger->edict() )
 	{
 		m_pChallenger = NULL;
+		fFled = TRUE;
+	}
+
+	if ( fFled )
+	{
 		char *pszText = UTIL_VarArgs( "%s fled town!.\n", STRING( pClient->v.netname ) );
 		UTIL_ClientPrintAll( HUD_PRINTCENTER, pszText );
 		EndMatch();
