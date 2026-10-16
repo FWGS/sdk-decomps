@@ -39,26 +39,120 @@ public:
 	void Die( void );
 };
 
-class CCineScientist : public CLegacyCineMonster
+// Wanted replaced the scientist and barney dummies with its own characters
+// (class names ours); no map uses any of them and their models don't ship.
+class CCineWtowna : public CLegacyCineMonster
 {
 public:
-	void Spawn( void ) { CineSpawn("models/cine-scientist.mdl"); }
+	void Spawn( void ) { CineSpawn("models/cine-twnwestA.mdl"); }
 };
-class CCine2Scientist : public CLegacyCineMonster
+
+class CCineTiedColonel : public CLegacyCineMonster
 {
 public:
-	void Spawn( void ) { CineSpawn("models/cine2-scientist.mdl"); }
+	void Spawn( void ) { CineSpawn("models/cine-colonel_tied.mdl"); }
 };
+
+class CCineWtownb : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine-twnwestB.mdl"); }
+};
+
+class CCineTownmex : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine-townmex.mdl"); }
+};
+
+class CCineMasala : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine-masala.mdl"); }
+};
+
+class CCineNagatow : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine-nagatow.mdl"); }
+};
+
+class CCineCrispen : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine-crispen.mdl"); }
+};
+
+class CCineDave : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine-dave.mdl"); }
+};
+
 class CCinePanther : public CLegacyCineMonster
 {
 public:
 	void Spawn( void ) { CineSpawn("models/cine-panther.mdl"); }
 };
 
-class CCineBarney : public CLegacyCineMonster
+class CCineHoss : public CLegacyCineMonster
 {
 public:
-	void Spawn( void ) { CineSpawn("models/cine-barney.mdl"); }
+	void Spawn( void ) { CineSpawn("models/cine-hoss.mdl"); }
+};
+
+class CCineAnnie : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine-annie.mdl"); }
+};
+
+class CCine2Wtowna : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine2-twnwestA.mdl"); }
+};
+
+class CCine2TiedColonel : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine2-colonel_tied.mdl"); }
+};
+
+class CCine2Wtownb : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine2-twn2west.mdl"); }
+};
+
+class CCine2Townmex : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine2-townmex.mdl"); }
+};
+
+class CCine2Masala : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine2-masala.mdl"); }
+};
+
+class CCine2Nagatow : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine2-nagatow.mdl"); }
+};
+
+class CCine2Crispen : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine2-crispen.mdl"); }
+};
+
+class CCine2Dave : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine2-dave.mdl"); }
 };
 
 class CCine2HeavyWeapons : public CLegacyCineMonster
@@ -73,30 +167,101 @@ public:
 	void Spawn( void ) { CineSpawn("models/cine2_slave.mdl"); }
 };
 
-class CCine3Scientist : public CLegacyCineMonster
+class CCine3Wtowna : public CLegacyCineMonster
 {
 public:
-	void Spawn( void ) { CineSpawn("models/cine3-scientist.mdl"); }
+	void Spawn( void ) { CineSpawn("models/cine3-twnwestA.mdl"); }
 };
 
-class CCine3Barney : public CLegacyCineMonster
+class CCine3TiedColonel : public CLegacyCineMonster
 {
 public:
-	void Spawn( void ) { CineSpawn("models/cine3-barney.mdl"); }
+	void Spawn( void ) { CineSpawn("models/cine3-colonel_tied.mdl"); }
+};
+
+class CCine3Wtownb : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine3-twn2west.mdl"); }
+};
+
+class CCine3Townmex : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine3-townmex.mdl"); }
+};
+
+class CCine3Masala : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine3-masala.mdl"); }
+};
+
+class CCine3Nagatow : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine3-nagatow.mdl"); }
+};
+
+class CCine3Crispen : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine3-crispen.mdl"); }
+};
+
+class CCine3Dave : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine3-dave.mdl"); }
+};
+
+class CCine3Hoss : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine3-hoss.mdl"); }
+};
+
+class CCine3Annie : public CLegacyCineMonster
+{
+public:
+	void Spawn( void ) { CineSpawn("models/cine3-annie.mdl"); }
 };
 
 //
 // ********** Scientist SPAWN **********
 //
 
-LINK_ENTITY_TO_CLASS( monster_cine_scientist, CCineScientist );
+LINK_ENTITY_TO_CLASS( monster_cine_wtowna, CCineWtowna );
+LINK_ENTITY_TO_CLASS( monster_cine_tiedcolonel, CCineTiedColonel );
+LINK_ENTITY_TO_CLASS( monster_cine_wtownb, CCineWtownb );
+LINK_ENTITY_TO_CLASS( monster_cine_townmex, CCineTownmex );
+LINK_ENTITY_TO_CLASS( monster_cine_masala, CCineMasala );
+LINK_ENTITY_TO_CLASS( monster_cine_nagatow, CCineNagatow );
+LINK_ENTITY_TO_CLASS( monster_cine_crispen, CCineCrispen );
+LINK_ENTITY_TO_CLASS( monster_cine_dave, CCineDave );
 LINK_ENTITY_TO_CLASS( monster_cine_panther, CCinePanther );
-LINK_ENTITY_TO_CLASS( monster_cine_barney, CCineBarney );
-LINK_ENTITY_TO_CLASS( monster_cine2_scientist, CCine2Scientist );
+LINK_ENTITY_TO_CLASS( monster_cine_hoss, CCineHoss );
+LINK_ENTITY_TO_CLASS( monster_cine_annie, CCineAnnie );
+LINK_ENTITY_TO_CLASS( monster_cine2_wtowna, CCine2Wtowna );
+LINK_ENTITY_TO_CLASS( monster_cine2_tiedcolonel, CCine2TiedColonel );
+LINK_ENTITY_TO_CLASS( monster_cine2_wtownb, CCine2Wtownb );
+LINK_ENTITY_TO_CLASS( monster_cine2_townmex, CCine2Townmex );
+LINK_ENTITY_TO_CLASS( monster_cine2_masala, CCine2Masala );
+LINK_ENTITY_TO_CLASS( monster_cine2_nagatow, CCine2Nagatow );
+LINK_ENTITY_TO_CLASS( monster_cine2_crispen, CCine2Crispen );
+LINK_ENTITY_TO_CLASS( monster_cine2_dave, CCine2Dave );
 LINK_ENTITY_TO_CLASS( monster_cine2_hvyweapons, CCine2HeavyWeapons );
 LINK_ENTITY_TO_CLASS( monster_cine2_slave, CCine2Slave );
-LINK_ENTITY_TO_CLASS( monster_cine3_scientist, CCine3Scientist );
-LINK_ENTITY_TO_CLASS( monster_cine3_barney, CCine3Barney );
+LINK_ENTITY_TO_CLASS( monster_cine3_wtowna, CCine3Wtowna );
+LINK_ENTITY_TO_CLASS( monster_cine3_tiedcolonel, CCine3TiedColonel );
+LINK_ENTITY_TO_CLASS( monster_cine3_wtownb, CCine3Wtownb );
+LINK_ENTITY_TO_CLASS( monster_cine3_townmex, CCine3Townmex );
+LINK_ENTITY_TO_CLASS( monster_cine3_masala, CCine3Masala );
+LINK_ENTITY_TO_CLASS( monster_cine3_nagatow, CCine3Nagatow );
+LINK_ENTITY_TO_CLASS( monster_cine3_crispen, CCine3Crispen );
+LINK_ENTITY_TO_CLASS( monster_cine3_dave, CCine3Dave );
+LINK_ENTITY_TO_CLASS( monster_cine3_hoss, CCine3Hoss );
+LINK_ENTITY_TO_CLASS( monster_cine3_annie, CCine3Annie );
 
 //
 // ********** Scientist SPAWN **********
