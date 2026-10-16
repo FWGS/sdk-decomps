@@ -210,6 +210,16 @@ void CBaseDoor::KeyValue( KeyValueData *pkvd )
 		m_bStopSnd = atof(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "movesndwav"))
+	{
+		pev->noiseMoving = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "stopsndwav"))
+	{
+		pev->noiseArrived = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
 	else if (FStrEq(pkvd->szKeyName, "healthvalue"))
 	{
 		m_bHealthValue = atof(pkvd->szValue);
@@ -383,6 +393,16 @@ void CBaseDoor::Precache( void )
 		PRECACHE_SOUND ("doors/doormove10.wav");
 		pev->noiseMoving = ALLOC_STRING("doors/doormove10.wav");
 		break;
+	case	11:
+		// POV: the movesndwav file
+		if ( pev->noiseMoving )
+			PRECACHE_SOUND( (char *)STRING(pev->noiseMoving) );
+		else
+		{
+			ALERT( at_console, "Door: ERROR - custom moving sound with no sound given!\n" );
+			pev->noiseMoving = ALLOC_STRING("common/null.wav");
+		}
+		break;
 	default:
 		pev->noiseMoving = ALLOC_STRING("common/null.wav");
 		break;
@@ -425,6 +445,16 @@ void CBaseDoor::Precache( void )
 	case	8:
 		PRECACHE_SOUND ("doors/doorstop8.wav");
 		pev->noiseArrived = ALLOC_STRING("doors/doorstop8.wav");
+		break;
+	case	9:
+		// POV: the stopsndwav file
+		if ( pev->noiseArrived )
+			PRECACHE_SOUND( (char *)STRING(pev->noiseArrived) );
+		else
+		{
+			ALERT( at_console, "Door: ERROR - custom stop sound with no sound given!\n" );
+			pev->noiseArrived = ALLOC_STRING("common/null.wav");
+		}
 		break;
 	default:
 		pev->noiseArrived = ALLOC_STRING("common/null.wav");
@@ -710,6 +740,13 @@ void CBaseDoor::Blocked( CBaseEntity *pOther )
 
 	if (m_flWait >= 0)
 	{
+		// POV: a player doesn't stop a door that is opening
+		if ( pOther->IsPlayer() && ( m_toggle_state == TS_AT_BOTTOM || m_toggle_state == TS_GOING_UP ) )
+			return;
+
+		if ( !FBitSet( pev->spawnflags, SF_DOOR_SILENT ) )
+			STOP_SOUND( ENT(pev), CHAN_STATIC, (char*)STRING(pev->noiseMoving) );
+
 		if (m_toggle_state == TS_GOING_DOWN)
 		{
 			DoorGoUp();
