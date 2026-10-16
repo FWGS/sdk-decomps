@@ -1290,6 +1290,8 @@ void CStukabat::StukabatIdle( void )
 		}
 
 		IdleSound( 0.7 );
+		pev->nextthink = gpGlobals->time + 0.2;
+		return;
 	}
 	else
 	{
