@@ -310,6 +310,25 @@ int CBullsquid :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, f
 		m_flLastHurtTime = gpGlobals->time;
 	}
 
+	// POV: answer the player's shots
+	if ( m_MonsterState != MONSTERSTATE_PRONE && !(m_afMemory & bits_MEMORY_PROVOKED) )
+	{
+		switch ( UTIL_PlayerProvoke( this, pevAttacker ) )
+		{
+		case 1:
+			PainSound( );
+			break;
+		case 2:
+			AttackSound( );
+			Remember( bits_MEMORY_SUSPICIOUS );
+			break;
+		case 3:
+			AlertSound( );
+			Remember( bits_MEMORY_PROVOKED );
+			break;
+		}
+	}
+
 	return CBaseMonster :: TakeDamage ( pevInflictor, pevAttacker, flDamage, bitsDamageType );
 }
 
@@ -605,7 +624,7 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 
 		case BSQUID_AE_HOP:
 		{
-			float flGravity = g_psv_gravity->value;
+			float flGravity = CVAR_GET_FLOAT( "sv_gravity" );	// POV
 
 			// throw the squid up into the air on this frame.
 			if ( FBitSet ( pev->flags, FL_ONGROUND ) )
