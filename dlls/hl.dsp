@@ -456,6 +456,10 @@ SOURCE=.\schedule.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\scorpion.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\scripted.cpp
 # End Source File
 # Begin Source File
