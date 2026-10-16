@@ -284,7 +284,7 @@ Panel* ScoreTablePanel::getCellRenderer(int column,int row,bool columnSelected,b
 //-----------------------------------------------------------------------------
 ScorePanel::ScorePanel(int x,int y,int wide,int tall) : Panel(x,y,wide,tall)
 {
-	setBorder( new LineBorder( Color(255 * 0.7,170 * 0.7,0,0) ) );
+	setBorder( new LineBorder( Color(0,255 * 0.7,0,0) ) );
 	setBgColor( 0,0,0, 100 );
 
 	m_pTitleLabel = new Label( "  SCORES", 0,0, wide, SBOARD_TITLE_SIZE_Y );
