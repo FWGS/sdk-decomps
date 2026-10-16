@@ -536,6 +536,10 @@ SOURCE=.\pov_spfsci.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_sphere.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_sslave.cpp
 # End Source File
 # Begin Source File
