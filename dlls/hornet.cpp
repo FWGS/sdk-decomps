@@ -109,7 +109,7 @@ void CHornet :: Spawn( void )
 
 	if ( !FNullEnt(pev->owner) && (pev->owner->v.flags & FL_CLIENT) )
 	{
-		pev->dmg = gSkillData.plrDmgHornet;
+		pev->dmg = 7;	// POV: the player's hornet damage cvar is gone
 	}
 	else
 	{
@@ -147,12 +147,39 @@ void CHornet :: Precache()
 //=========================================================
 int CHornet::IRelationship ( CBaseEntity *pTarget )
 {
+	if ( FNullEnt( pTarget->pev ) )
+	{
+		return R_NO;
+	}
+
 	if ( pTarget->pev->modelindex == pev->modelindex )
 	{
 		return R_NO;
 	}
 
-	return CBaseMonster :: IRelationship( pTarget );
+	// POV: a provoked alien grunt's hornets go for the player, and the
+	// player's hornets for a provoked alien grunt
+	if ( FClassnameIs( VARS( pev->owner ), "monster_alien_grunt" ) && pTarget->IsPlayer() )
+	{
+		CBaseMonster *pOwner = (CBaseMonster *)CBaseEntity::Instance( pev->owner );
+		if ( pOwner && pOwner->HasMemory( bits_MEMORY_PROVOKED ) )
+			return R_HT;
+	}
+
+	if ( Classify() == CLASS_PLAYER_BIOWEAPON && FClassnameIs( pTarget->pev, "monster_alien_grunt" ) )
+	{
+		CBaseMonster *pAGrunt = (CBaseMonster *)CBaseEntity::Instance( pTarget->pev );
+		if ( pAGrunt && pAGrunt->HasMemory( bits_MEMORY_PROVOKED ) )
+			return R_HT;
+	}
+
+	// POV: hornets leave the apache and the armed loader alone
+	if ( !FClassnameIs( pTarget->pev, "monster_apache" ) && !FClassnameIs( pTarget->pev, "monster_loader_armed" ) )
+	{
+		return CBaseMonster :: IRelationship( pTarget );
+	}
+
+	return R_NO;
 }
 
 //=========================================================
@@ -414,7 +441,7 @@ void CHornet::DieTouch ( CBaseEntity *pOther )
 		case 2:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hornet/ag_hornethit3.wav", 1, ATTN_NORM);	break;
 		}
 		
-		pOther->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_BULLET );
+		pOther->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_BULLET | DMG_NEVERGIB );
 	}
 
 	pev->modelindex = 0;// so will disappear for the 0.1 secs we wait until NEXTTHINK gets rid
