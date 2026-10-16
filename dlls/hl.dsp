@@ -460,6 +460,10 @@ SOURCE=.\pov_hev_bluehelmet.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_hev_orangehelmet.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_panther.cpp
 # End Source File
 # Begin Source File
