@@ -508,6 +508,10 @@ SOURCE=.\pov_panther.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_relationship.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_scientist.cpp
 # End Source File
 # Begin Source File
