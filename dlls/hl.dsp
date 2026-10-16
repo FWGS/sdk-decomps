@@ -440,6 +440,10 @@ SOURCE=.\pov_barn.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_panther.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\python.cpp
 # End Source File
 # Begin Source File
