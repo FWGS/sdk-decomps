@@ -322,6 +322,10 @@ SOURCE=.\vgui_teammenu.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\vgui_telegram.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\view.cpp
 # End Source File
 # End Group

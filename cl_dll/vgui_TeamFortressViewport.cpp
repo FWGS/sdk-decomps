@@ -1497,6 +1497,11 @@ void TeamFortressViewport::ShowVGUIMenu( int iMenu )
 		pNewMenu = ShowClassMenu();
 		break;
 
+	// Wanted: menu 0 closes whatever is open
+	case 0:
+		HideVGUIMenu();
+		return;
+
 	default:
 		break;
 	}
@@ -1600,7 +1605,7 @@ CMenuPanel* TeamFortressViewport::ShowClassMenu()
 void TeamFortressViewport::CreateClassMenu()
 {
 	// Create the panel
-	m_pClassMenu = new CClassMenuPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pClassMenu = new CTelegramPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
 	m_pClassMenu->setParent(this);
 	m_pClassMenu->setVisible( false );
 }
@@ -1665,8 +1670,6 @@ void TeamFortressViewport::UpdateOnPlayerInfo()
 {
 	if (m_pTeamMenu)
 		m_pTeamMenu->Update();
-	if (m_pClassMenu)
-		m_pClassMenu->Update();
 	if (m_pScoreBoard)
 		m_pScoreBoard->Update();
 }
@@ -1719,11 +1722,6 @@ void TeamFortressViewport::paintBackground()
 	if ( g_iTeamNumber != m_iCurrentTeamNumber )
 	{
 		UpdateCommandMenu();
-
-		if ( m_pClassMenu )
-		{
-			m_pClassMenu->Update();
-		}
 
 		m_iCurrentTeamNumber = g_iTeamNumber;
 	}
@@ -1967,6 +1965,11 @@ int TeamFortressViewport::MsgFunc_VGUIMenu(const char *pszName, int iSize, void 
 	{
 		strncpy( m_sMapName, READ_STRING(), sizeof(m_sMapName) );
 		m_sMapName[ sizeof(m_sMapName) - 1 ] = '\0';
+	}
+	// Wanted: the telegram menu carries the name of its picture
+	else if (iMenu == MENU_CLASS)
+	{
+		strcpy( g_szTelegram, READ_STRING() );
 	}
 
 	// Bring up the menu6

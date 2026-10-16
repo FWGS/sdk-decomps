@@ -42,6 +42,7 @@ class ServerBrowser;
 class DragNDropPanel;
 class CTransparentPanel;
 class CClassMenuPanel;
+class CTelegramPanel;
 class CTeamMenuPanel;
 
 char* GetVGUITGAName(const char *pszName);
@@ -51,6 +52,7 @@ extern char *sTFClassSelection[];
 extern int sTFValidClassInts[];
 extern char *sLocalisedClasses[];
 extern int iTeamColors[5][3];
+extern char g_szTelegram[128];	// Wanted: the telegram image the VGUIMenu message names (name ours)
 
 #define MAX_SERVERNAME_LENGTH	32
 
@@ -392,7 +394,7 @@ public:
 	// VGUI Menus
 	CMenuPanel		*m_pCurrentMenu;
 	CTeamMenuPanel	*m_pTeamMenu;
-	CClassMenuPanel	*m_pClassMenu;
+	CTelegramPanel	*m_pClassMenu;	// Wanted: menu 3 shows the telegram
 	ScorePanel		*m_pScoreBoard;
 	char			m_szServerName[ MAX_SERVERNAME_LENGTH ];
 };
@@ -1144,6 +1146,22 @@ public:
 		CMenuPanel::Reset();
 		m_iCurrentInfo = 0;
 	}
+};
+
+// Wanted: the telegram, a full-screen picture that takes menu 3's place
+// (vgui_telegram.cpp; the class name is ours)
+class CTelegramPanel : public CMenuPanel
+{
+private:
+	CTransparentPanel	*m_pClassInfoPanel;
+	ScrollPanel			*m_pScrollPanel;
+	CImageLabel			*m_pClassImage;
+
+public:
+	CTelegramPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall);
+
+	virtual void Open( void );
+	virtual void Initialize( void );
 };
 
 class CTeamMenuPanel : public CMenuPanel
