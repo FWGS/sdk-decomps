@@ -184,6 +184,7 @@ public:
 	void	LostEnemy( void );
 	void	SetEnemy( CBaseEntity *pEnemy, int fChickenCarrier );
 	void	Update( CBot *pBot );
+	float	SeenTime( void ) { return m_flSeenTime; }
 
 	float	m_flTime;
 	BOOL	m_fSeen;
@@ -217,6 +218,7 @@ public:
 	float	AimSkill( void ) { return SkillAdjust( m_flAim ); }
 	float	RateWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pItem, float flDist );
 	BOOL	Load( char *pszFile );
+	float	Aggression( void ) { return m_flAggression; }
 
 	char	m_szName[64];
 	char	m_szModel[64];

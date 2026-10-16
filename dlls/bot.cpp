@@ -363,7 +363,7 @@ void CBot::LookAround( int iRange )
 	{
 		m_flNextEnemyCheck = gpGlobals->time + 0.3;
 
-		if ( !HasEnemy() || gpGlobals->time - m_Memory.m_flSeenTime > 3 )
+		if ( !HasEnemy() || gpGlobals->time - m_Memory.SeenTime() > 3 )
 		{
 			fFlag = FALSE;
 
@@ -684,7 +684,7 @@ void CBot::CheckMelee( void )
 				return;
 			}
 		}
-		else if ( pev->armorvalue + pev->health <= 140 - m_Profile.m_flAggression || !HasGun() )
+		else if ( pev->armorvalue + pev->health <= 140 - m_Profile.Aggression() || !HasGun() )
 		{
 			m_fMelee = FALSE;
 			return;
@@ -778,7 +778,7 @@ void CBot::CheckEnemy( void )
 
 	if ( GetEnemy()->pev->deadflag == DEAD_NO )
 	{
-		if ( GetEnemy()->pev->takedamage != DAMAGE_NO && gpGlobals->time - m_Memory.m_flSeenTime <= ( m_Profile.m_flAggression - 50 ) / 10 + 10 && !HasNamedPlayerItem( "ctc_chicken" ) )
+		if ( GetEnemy()->pev->takedamage != DAMAGE_NO && gpGlobals->time - m_Memory.SeenTime() <= ( m_Profile.m_flAggression - 50 ) / 10 + 10 && !HasNamedPlayerItem( "ctc_chicken" ) )
 			return;
 	}
 
