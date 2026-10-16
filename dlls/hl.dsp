@@ -312,6 +312,10 @@ SOURCE=.\herbs.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\hoss.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\items.cpp
 # End Source File
 # Begin Source File
