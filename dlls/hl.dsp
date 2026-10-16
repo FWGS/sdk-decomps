@@ -232,6 +232,10 @@ SOURCE=.\effects.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\elixer.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\explode.cpp
 # End Source File
 # Begin Source File
