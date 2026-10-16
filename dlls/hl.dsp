@@ -168,6 +168,10 @@ SOURCE=.\animation.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\annie.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\bag1.cpp
 # End Source File
 # Begin Source File
