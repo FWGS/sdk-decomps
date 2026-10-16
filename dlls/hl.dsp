@@ -512,6 +512,10 @@ SOURCE=.\pov_hornetgundual.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_hornetgunsingle.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_justbarn.cpp
 # End Source File
 # Begin Source File
