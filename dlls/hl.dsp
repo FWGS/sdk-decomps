@@ -196,6 +196,10 @@ SOURCE=.\bottle.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\buffalo.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\buttons.cpp
 # End Source File
 # Begin Source File
