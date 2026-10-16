@@ -368,6 +368,10 @@ SOURCE=.\pathcorner.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pick.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\plane.cpp
 # End Source File
 # Begin Source File
