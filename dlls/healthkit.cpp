@@ -30,27 +30,24 @@ class CHealthKit : public CItem
 	void Precache( void );
 	BOOL MyTouch( CBasePlayer *pPlayer );
 
-/*
 	virtual int		Save( CSave &save ); 
 	virtual int		Restore( CRestore &restore );
 	
 	static	TYPEDESCRIPTION m_SaveData[];
-*/
 
+	float	m_flSoundTimeHK;	// POV
 };
 
 
 LINK_ENTITY_TO_CLASS( item_healthkit, CHealthKit );
 
-/*
 TYPEDESCRIPTION	CHealthKit::m_SaveData[] = 
 {
-
+	DEFINE_FIELD( CHealthKit, m_flSoundTimeHK, FIELD_TIME ),
 };
 
 
 IMPLEMENT_SAVERESTORE( CHealthKit, CItem);
-*/
 
 void CHealthKit :: Spawn( void )
 {
@@ -68,26 +65,7 @@ void CHealthKit::Precache( void )
 
 BOOL CHealthKit::MyTouch( CBasePlayer *pPlayer )
 {
-	if ( pPlayer->TakeHealth( gSkillData.healthkitCapacity, DMG_GENERIC ) )
-	{
-		MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
-			WRITE_STRING( STRING(pev->classname) );
-		MESSAGE_END();
-
-		EMIT_SOUND(ENT(pPlayer->pev), CHAN_ITEM, "items/smallmedkit1.wav", 1, ATTN_NORM);
-
-		if ( g_pGameRules->ItemShouldRespawn( this ) )
-		{
-			Respawn();
-		}
-		else
-		{
-			UTIL_Remove(this);	
-		}
-
-		return TRUE;
-	}
-
+	// POV: the health kit is a prop
 	return FALSE;
 }
 
@@ -161,9 +139,16 @@ void CWallHealth::Spawn()
 	UTIL_SetOrigin(pev, pev->origin);		// set size and link into world
 	UTIL_SetSize(pev, pev->mins, pev->maxs);
 	SET_MODEL(ENT(pev), STRING(pev->model) );
-	m_iJuice = gSkillData.healthchargerCapacity;
+	m_iJuice = 100;	// POV: the charger skill cvars are gone
 	pev->frame = 0;			
 
+	// POV: one charger in four is empty
+	if ( RANDOM_LONG( 1, 4 ) == 1 )
+	{
+		pev->frame = 1;
+		m_iJuice = 0;
+		Off();
+	}
 }
 
 void CWallHealth::Precache()
@@ -190,53 +175,18 @@ void CWallHealth::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE u
 		Off();
 	}
 
-	// if the player doesn't have the suit, or there is no juice left, make the deny noise
-	if ((m_iJuice <= 0) || (!(pActivator->pev->weapons & (1<<WEAPON_SUIT))))
+	// POV: the charger only ever makes the deny noise
+	if (m_flSoundTime <= gpGlobals->time)
 	{
-		if (m_flSoundTime <= gpGlobals->time)
-		{
-			m_flSoundTime = gpGlobals->time + 0.62;
-			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/medshotno1.wav", 1.0, ATTN_NORM );
-		}
-		return;
+		m_flSoundTime = gpGlobals->time + 0.62;
+		EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/medshotno1.wav", 1.0, ATTN_NORM );
 	}
-
-	pev->nextthink = pev->ltime + 0.25;
-	SetThink(Off);
-
-	// Time to recharge yet?
-
-	if (m_flNextCharge >= gpGlobals->time)
-		return;
-
-	// Play the on sound or the looping charging sound
-	if (!m_iOn)
-	{
-		m_iOn++;
-		EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/medshot4.wav", 1.0, ATTN_NORM );
-		m_flSoundTime = 0.56 + gpGlobals->time;
-	}
-	if ((m_iOn == 1) && (m_flSoundTime <= gpGlobals->time))
-	{
-		m_iOn++;
-		EMIT_SOUND(ENT(pev), CHAN_STATIC, "items/medcharge4.wav", 1.0, ATTN_NORM );
-	}
-
-
-	// charge the player
-	if ( pActivator->TakeHealth( 1, DMG_GENERIC ) )
-	{
-		m_iJuice--;
-	}
-
-	// govern the rate of charge
-	m_flNextCharge = gpGlobals->time + 0.1;
 }
 
 void CWallHealth::Recharge(void)
 {
 		EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/medshot4.wav", 1.0, ATTN_NORM );
-	m_iJuice = gSkillData.healthchargerCapacity;
+	m_iJuice = 100;
 	pev->frame = 0;			
 	SetThink( SUB_DoNothing );
 }
