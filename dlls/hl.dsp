@@ -484,6 +484,10 @@ SOURCE=.\skill.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\smallminer.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\sound.cpp
 # End Source File
 # Begin Source File
