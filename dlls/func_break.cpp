@@ -23,11 +23,12 @@
 #include "util.h"
 #include "cbase.h"
 #include "saverestore.h"
+
+extern DLL_GLOBAL Vector		g_vecAttackDir;
+
 #include "func_break.h"
 #include "decals.h"
 #include "explode.h"
-
-extern DLL_GLOBAL Vector		g_vecAttackDir;
 
 // =================== FUNC_Breakable ==============================================
 
