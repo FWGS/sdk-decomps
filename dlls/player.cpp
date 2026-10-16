@@ -541,10 +541,8 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	// handle all bits set in this damage message,
 	// let the suit give player the diagnosis
 
+	BOOL fShock = ( bitsDamage & DMG_SHOCK ) ? TRUE : FALSE; // POV: no pain sounds for shock damage
 	m_bitsDamageType |= bitsDamage; // Save this so we can report it to the client
-	BOOL fShock = FALSE;
-	if ( bitsDamage & DMG_SHOCK )
-		fShock = TRUE;
 	m_bitsHUDDamage = -1;  // make sure the damage bits get resent
 
 	// POV: no suit, so no diagnosis
