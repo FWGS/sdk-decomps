@@ -38,6 +38,10 @@
 
 extern DLL_GLOBAL ULONG		g_ulModelIndexPlayer;
 extern DLL_GLOBAL BOOL		g_fGameOver;
+extern DLL_GLOBAL BOOL		g_fLoading;	// POV, name ours: a level was just loaded or restored
+extern DLL_GLOBAL float		g_flFadeEndTime;
+extern DLL_GLOBAL BOOL		g_fNoPickupSound;
+extern float g_flWeaponCheat;
 extern DLL_GLOBAL	BOOL	g_fDrawLines;
 int gEvilImpulse101;
 extern DLL_GLOBAL int		g_iSkillLevel, gDisplayTitle;
@@ -64,7 +68,7 @@ extern CGraph	WorldGraph;
 #define TRAIN_FAST		0x04 
 #define TRAIN_BACK		0x05
 
-#define	FLASH_DRAIN_TIME	 1.2 //100 units/3 minutes
+#define	FLASH_DRAIN_TIME	 2.0 //100 units/3 minutes
 #define	FLASH_CHARGE_TIME	 0.2 // 100 units/20 seconds  (seconds per unit)
 
 
@@ -1085,7 +1089,7 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 WaterMove
 ============
 */
-#define AIRTIME	12		// lung full of air lasts this many seconds
+#define AIRTIME	50		// lung full of air lasts this many seconds (POV: 50)
 
 void CBasePlayer::WaterMove()
 {
@@ -2042,6 +2046,7 @@ void CBasePlayer::PreThink(void)
 				//ALERT( at_error, "In train mode with no train!\n" );
 				m_afPhysicsFlags &= ~PFLAG_ONTRAIN;
 				m_iTrain = TRAIN_NEW|TRAIN_OFF;
+				ALERT( at_console, "PreThink end 3\n" );
 				return;
 			}
 		}
@@ -2050,6 +2055,7 @@ void CBasePlayer::PreThink(void)
 			// Turn off the train if you jump, strafe, or the train controls go dead
 			m_afPhysicsFlags &= ~PFLAG_ONTRAIN;
 			m_iTrain = TRAIN_NEW|TRAIN_OFF;
+			ALERT( at_console, "PreThink end 4\n" );
 			return;
 		}
 
@@ -2793,6 +2799,29 @@ void CBasePlayer::PostThink()
 			SetAnimation( PLAYER_WALK );
 	}
 
+	// POV: the first think after a level load or restore resends dark vision,
+	// the story icon and the sound room
+	if ( g_fLoading == TRUE )
+	{
+		if ( FlashlightIsOn() )
+			FlashlightTurnOn( FALSE );
+		else
+			FlashlightTurnOff( FALSE );
+
+		UTIL_StoryUpdateIcon( this );
+
+		m_pentSndLast = ENT(pev);
+		MESSAGE_BEGIN( MSG_ONE, SVC_ROOMTYPE, NULL, pev );
+			WRITE_SHORT( (short)m_flSndRoomtype );
+		MESSAGE_END();
+
+		g_fLoading = FALSE;
+	}
+	else
+	{
+		FlashlightUpdate();
+	}
+
 	StudioFrameAdvance( );
 	CheckPowerups(pev);
 
@@ -2966,6 +2995,8 @@ ReturnSpot:
 
 void CBasePlayer::Spawn( void )
 {
+	g_fLoading = TRUE;
+
 	pev->classname		= MAKE_STRING("player");
 	pev->health			= 100;
 	pev->armorvalue		= 0;
@@ -2986,6 +3017,7 @@ void CBasePlayer::Spawn( void )
 	m_bitsDamageType	= 0;
 	m_afPhysicsFlags	= 0;
 	m_fLongJump			= FALSE;// no longjump module. 
+	m_fDidHolster		= FALSE;
 
 	g_engfuncs.pfnSetPhysicsKeyValue( edict(), "slj", "0" );
 	g_engfuncs.pfnSetPhysicsKeyValue( edict(), "hl", "1" );
@@ -3002,12 +3034,32 @@ void CBasePlayer::Spawn( void )
 	m_iStepLeft = 0;
 	m_flFieldOfView		= 0.5;// some monsters use this to determine whether or not the player is looking at them.
 
-	m_bloodColor	= BLOOD_COLOR_RED;
+	m_bloodColor	= BLOOD_COLOR_YELLOW;
 	m_flNextAttack	= UTIL_WeaponTimeBase();
 	StartSneaking();
 
+	m_fFlashLightON = FALSE;
 	m_iFlashBattery = 99;
 	m_flFlashLightTime = 1; // force first message
+	m_fFlashLightRestore = FALSE;
+	m_iHornetStatus = 0;
+
+	g_flFadeEndTime = gpGlobals->time - 1.0;
+	g_fNoPickupSound = FALSE;
+
+	// the journal: only the first entry is known
+	m_fStoryShown = FALSE;
+	m_fShowingStoryIcon = 0;
+	m_iLastStoryID = 0;
+	m_fStoryNavigate = FALSE;
+	m_fGamePaused = FALSE;
+	m_fStoriesFound[0] = TRUE;
+	m_fStoriesRead[0] = TRUE;
+	for ( int i = 1; i < MAX_STORIES; i++ )
+	{
+		m_fStoriesFound[i] = FALSE;
+		m_fStoriesRead[i] = FALSE;
+	}
 
 // dont let uninitialized value here hurt the player
 	m_flFallVelocity = 0;
@@ -3043,7 +3095,7 @@ void CBasePlayer::Spawn( void )
 	m_iClientBattery = -1;
 
 	// reset all ammo values to 0
-	for ( int i = 0; i < MAX_AMMO_SLOTS; i++ )
+	for ( i = 0; i < MAX_AMMO_SLOTS; i++ )
 	{
 		m_rgAmmo[i] = 0;
 		m_rgAmmoLast[i] = 0;  // client ammo values also have to be reset  (the death hud clear messages does on the client side)
@@ -3122,6 +3174,8 @@ int CBasePlayer::Restore( CRestore &restore )
 	if ( !CBaseMonster::Restore(restore) )
 		return 0;
 
+	g_fLoading = TRUE;
+
 	int status = restore.ReadFields( "PLAYER", this, m_playerSaveData, ARRAYSIZE(m_playerSaveData) );
 
 	SAVERESTOREDATA *pSaveData = (SAVERESTOREDATA *)gpGlobals->pSaveData;
@@ -3141,7 +3195,7 @@ int CBasePlayer::Restore( CRestore &restore )
 	pev->fixangle = TRUE;           // turn this way immediately
 
 // Copied from spawn() for now
-	m_bloodColor	= BLOOD_COLOR_RED;
+	m_bloodColor	= BLOOD_COLOR_YELLOW;
 
     g_ulModelIndexPlayer = pev->modelindex;
 
@@ -3155,6 +3209,11 @@ int CBasePlayer::Restore( CRestore &restore )
 	{
 		UTIL_SetSize(pev, VEC_HULL_MIN, VEC_HULL_MAX);
 	}
+
+	// POV: cheats follow sv_cheats after a load too; the game isn't paused
+	g_flWeaponCheat = CVAR_GET_FLOAT( "sv_cheats" );
+	m_fGamePaused = FALSE;
+	g_flFadeEndTime = gpGlobals->time - 1.0;
 
 	RenewItems();
 
@@ -3487,7 +3546,7 @@ void CBasePlayer :: SetStoryIcon( int iState, int iStoryID )
 		}
 	}
 
-	m_iStoryIcon = iState;
+	m_fShowingStoryIcon = iState;
 	MESSAGE_BEGIN( MSG_ONE, gmsgStoryIcon, NULL, pev );
 		WRITE_BYTE( iState );
 	MESSAGE_END();
@@ -3519,13 +3578,15 @@ void CBasePlayer :: CloseStory( void )
 }
 
 
+// POV: the flashlight is the alien slave's dark vision, a dim red light
+// around the player
 BOOL CBasePlayer :: FlashlightIsOn( void )
 {
-	return FBitSet(pev->effects, EF_DIMLIGHT);
+	return m_fFlashLightON;
 }
 
 
-void CBasePlayer :: FlashlightTurnOn( void )
+void CBasePlayer :: FlashlightTurnOn( BOOL fSound )
 {
 	if ( !g_pGameRules->FAllowFlashlight() )
 	{
@@ -3534,30 +3595,57 @@ void CBasePlayer :: FlashlightTurnOn( void )
 
 	if ( (pev->weapons & (1<<WEAPON_SUIT)) )
 	{
-		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, SOUND_FLASHLIGHT_ON, 1.0, ATTN_NORM, 0, PITCH_NORM );
-		SetBits(pev->effects, EF_DIMLIGHT);
+		if ( fSound )
+			EMIT_SOUND_DYN( ENT(pev), CHAN_ITEM, SOUND_FLASHLIGHT_ON, 1.0, ATTN_NORM, 0, PITCH_NORM );
+		m_fFlashLightON = TRUE;
 		MESSAGE_BEGIN( MSG_ONE, gmsgFlashlight, NULL, pev );
 		WRITE_BYTE(1);
 		WRITE_BYTE(m_iFlashBattery);
 		MESSAGE_END();
 
+		m_fFlashLightRestore = TRUE;
+		m_flNextFlashlightLight = 0;
 		m_flFlashLightTime = FLASH_DRAIN_TIME + gpGlobals->time;
 
 	}
 }
 
 
-void CBasePlayer :: FlashlightTurnOff( void )
+void CBasePlayer :: FlashlightTurnOff( BOOL fSound )
 {
-	EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, SOUND_FLASHLIGHT_OFF, 1.0, ATTN_NORM, 0, PITCH_NORM );
-    ClearBits(pev->effects, EF_DIMLIGHT);
+	if ( fSound )
+		EMIT_SOUND_DYN( ENT(pev), CHAN_ITEM, SOUND_FLASHLIGHT_OFF, 1.0, ATTN_NORM, 0, PITCH_NORM );
+	m_fFlashLightON = FALSE;
 	MESSAGE_BEGIN( MSG_ONE, gmsgFlashlight, NULL, pev );
 	WRITE_BYTE(0);
 	WRITE_BYTE(m_iFlashBattery);
 	MESSAGE_END();
 
+	m_fFlashLightRestore = TRUE;
 	m_flFlashLightTime = FLASH_CHARGE_TIME + gpGlobals->time;
 
+}
+
+
+void CBasePlayer :: FlashlightUpdate( void )
+{
+	if ( FlashlightIsOn() && m_flNextFlashlightLight <= gpGlobals->time )
+	{
+		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+			WRITE_BYTE( TE_DLIGHT );
+			WRITE_COORD( pev->origin.x );	// X
+			WRITE_COORD( pev->origin.y );	// Y
+			WRITE_COORD( pev->origin.z );	// Z
+			WRITE_BYTE( 40 );		// radius * 0.1
+			WRITE_BYTE( 32 );		// r
+			WRITE_BYTE( 0 );		// g
+			WRITE_BYTE( 0 );		// b
+			WRITE_BYTE( 1 );		// time * 10
+			WRITE_BYTE( 1 );		// decay * 0.1
+		MESSAGE_END( );
+
+		m_flNextFlashlightLight = gpGlobals->time + 0.1;
+	}
 }
 
 /*
@@ -3599,6 +3687,28 @@ void CBasePlayer::ImpulseCommands( )
 	int iImpulse = (int)pev->impulse;
 	switch (iImpulse)
 	{
+	case 80:	// POV: pause (bound to PAUSE)
+		{
+		BOOL fPause;
+		if ( m_fGamePaused == TRUE )
+			fPause = FALSE;
+		else
+		{
+			UTIL_ShowMessageAll( "GAMEPAUSED" );
+			fPause = TRUE;
+		}
+		UTIL_PauseGame( this, fPause );
+		m_fGamePaused = fPause;
+		}
+		break;
+
+	case 81:	// POV: open the journal at the last entry (bound to S)
+		if ( FBitSet( pev->flags, FL_FROZEN ) )
+			return;
+		m_fStoryNavigate = FALSE;
+		ShowStory( m_iLastStoryID );
+		break;
+
 	case 99:
 		{
 
@@ -3628,11 +3738,11 @@ void CBasePlayer::ImpulseCommands( )
         // temporary flashlight for level designers
         if ( FlashlightIsOn() )
 		{
-			FlashlightTurnOff();
+			FlashlightTurnOff( TRUE );
 		}
         else 
 		{
-			FlashlightTurnOn();
+			FlashlightTurnOn( TRUE );
 		}
 		break;
 
@@ -3680,8 +3790,40 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 	CBaseEntity *pEntity;
 	TraceResult tr;
 
+	int i;
+
 	switch ( iImpulse )
 	{
+	case 11:	// POV: everything for testing the last chapter
+		ALERT( at_console, "POV: setting to start of povc05\n" );
+		gEvilImpulse101 = TRUE;
+		if ( !(pev->weapons & (1<<WEAPON_SUIT)) )
+			pev->weapons |= (1<<WEAPON_SUIT);
+		TakeHealth( 100, DMG_GENERIC );
+		g_fNoPickupSound = TRUE;
+		GiveNamedItem( "weapon_xhand" );
+		g_fNoPickupSound = FALSE;
+		GiveNamedItem( "weapon_toad" );
+		GiveNamedItem( "weapon_toad" );
+		GiveNamedItem( "weapon_snark" );
+		GiveNamedItem( "weapon_snark" );
+		GiveNamedItem( "weapon_hornetgunsingle" );
+		GiveNamedItem( "weapon_hornetgundual" );
+		m_iHornetStatus = 2;
+		for ( i = 0; i < 29; i++ )
+		{
+			m_fStoriesFound[i] = TRUE;
+			m_fStoriesRead[i] = TRUE;
+		}
+		m_iLastStoryID = 28;
+		UTIL_StoryUpdateIcon( this );
+		gEvilImpulse101 = FALSE;
+		break;
+
+	case 75:	// POV: take everything away
+		RemoveAllItems( TRUE );
+		break;
+
 	case 76:
 		{
 			if (!giPrecacheGrunt)
@@ -3697,35 +3839,51 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 			break;
 		}
 
+	case 77:	// POV: the alien slave's hands
+		if ( !(pev->weapons & (1<<WEAPON_SUIT)) )
+			pev->weapons |= (1<<WEAPON_SUIT);
+		g_fNoPickupSound = TRUE;
+		GiveNamedItem( "weapon_xhand" );
+		g_fNoPickupSound = FALSE;
+		break;
+
+	case 78:
+		ALERT( at_console, "POV - map name: %s\n", STRING( gpGlobals->mapname ) );
+		break;
+
+	case 82:	// POV: journal state
+		for ( i = 0; i < MAX_STORIES; i++ )
+			ALERT( at_console, "Story Array Status %d - %d %d\n", i, m_fStoriesFound[i], m_fStoriesRead[i] );
+		ALERT( at_console, "Story m_iLastStoryID - %d\n", m_iLastStoryID );
+		ALERT( at_console, "Story m_fShowingStoryIcon - %d\n", m_fShowingStoryIcon );
+		break;
+
+	case 83:	// POV: every journal entry found, none read
+		for ( i = 0; i < MAX_STORIES; i++ )
+		{
+			m_fStoriesFound[i] = TRUE;
+			m_fStoriesRead[i] = FALSE;
+		}
+		m_iLastStoryID = 1;
+		SetStoryIcon( TRUE, 1 );
+		break;
 
 	case 101:
+		ALERT( at_console, "Cheater!?\n" );
 		gEvilImpulse101 = TRUE;
-		GiveNamedItem( "item_suit" );
-		GiveNamedItem( "item_battery" );
-		GiveNamedItem( "weapon_crowbar" );
-		GiveNamedItem( "weapon_9mmhandgun" );
-		GiveNamedItem( "ammo_9mmclip" );
-		GiveNamedItem( "weapon_shotgun" );
-		GiveNamedItem( "ammo_buckshot" );
-		GiveNamedItem( "weapon_9mmAR" );
-		GiveNamedItem( "ammo_9mmAR" );
-		GiveNamedItem( "ammo_ARgrenades" );
-		GiveNamedItem( "weapon_handgrenade" );
-		GiveNamedItem( "weapon_tripmine" );
-#ifndef OEM_BUILD
-		GiveNamedItem( "weapon_357" );
-		GiveNamedItem( "ammo_357" );
-		GiveNamedItem( "weapon_crossbow" );
-		GiveNamedItem( "ammo_crossbow" );
-		GiveNamedItem( "weapon_egon" );
-		GiveNamedItem( "weapon_gauss" );
-		GiveNamedItem( "ammo_gaussclip" );
-		GiveNamedItem( "weapon_rpg" );
-		GiveNamedItem( "ammo_rpgclip" );
-		GiveNamedItem( "weapon_satchel" );
+		if ( !(pev->weapons & (1<<WEAPON_SUIT)) )
+			pev->weapons |= (1<<WEAPON_SUIT);
+		TakeHealth( 25, DMG_GENERIC );
+		g_fNoPickupSound = TRUE;
+		GiveNamedItem( "weapon_xhand" );
+		g_fNoPickupSound = FALSE;
+		GiveNamedItem( "weapon_stukabat" );
+		GiveNamedItem( "weapon_toad" );
 		GiveNamedItem( "weapon_snark" );
-		GiveNamedItem( "weapon_hornetgun" );
-#endif
+		GiveNamedItem( "weapon_hornetgunsingle" );
+		GiveNamedItem( "weapon_hornetgundual" );
+		m_iHornetStatus = 2;
+		UTIL_StoryUpdateIcon( this );
 		gEvilImpulse101 = FALSE;
 		break;
 
@@ -3913,7 +4071,8 @@ int CBasePlayer::RemovePlayerItem( CBasePlayerItem *pItem )
 	if (m_pActiveItem == pItem)
 	{
 		ResetAutoaim( );
-		pItem->Holster( );
+		HolsterItem( );
+		m_fDidHolster = FALSE;
 		pItem->pev->nextthink = 0;// crowbar may be trying to swing again, etc.
 		pItem->SetThink( NULL );
 		m_pActiveItem = NULL;
@@ -4231,7 +4390,7 @@ void CBasePlayer :: UpdateClientData( void )
 				m_iFlashBattery--;
 				
 				if (!m_iFlashBattery)
-					FlashlightTurnOff();
+					FlashlightTurnOff( TRUE );
 			}
 		}
 		else
@@ -4318,7 +4477,7 @@ void CBasePlayer :: UpdateClientData( void )
 	// Update all the items
 	for ( int i = 0; i < MAX_ITEM_TYPES; i++ )
 	{
-		if ( m_rgpPlayerItems[i] )  // each item updates it's successors
+		if ( m_rgpPlayerItems[i] && !FNullEnt( m_rgpPlayerItems[i]->edict() ) )  // each item updates it's successors
 			m_rgpPlayerItems[i]->UpdateClientData( this );
 	}
 
@@ -4375,10 +4534,13 @@ int CBasePlayer :: Illumination( void )
 
 void CBasePlayer :: EnableControl(BOOL fControl)
 {
-	if (!fControl)
-		pev->flags |= FL_FROZEN;
-	else
+	if (fControl)
 		pev->flags &= ~FL_FROZEN;
+	else
+	{
+		pev->velocity = g_vecZero;	// POV: stop where you are
+		pev->flags |= FL_FROZEN;
+	}
 
 }
 
@@ -4578,7 +4740,7 @@ Vector CBasePlayer :: AutoaimDeflection( Vector &vecSrc, float flDist, float flD
 		}
 
 		// don't shoot at friends
-		if (IRelationship( pEntity ) < 0)
+		if (IRelationship( pEntity ) < R_DL)	// POV: R_NO targets (as well as allies) get no autoaim
 		{
 			if ( !pEntity->IsPlayer() && !g_pGameRules->IsDeathmatch())
 				// ALERT( at_console, "friend\n");
@@ -4802,11 +4964,12 @@ BOOL CBasePlayer :: SwitchWeapon( CBasePlayerItem *pWeapon )
 	
 	if (m_pActiveItem)
 	{
-		m_pActiveItem->Holster( );
+		HolsterItem( );
 	}
 
 	m_pActiveItem = pWeapon;
-	pWeapon->Deploy( );
+	if (!m_fDidHolster)
+		pWeapon->Deploy( );
 
 	return TRUE;
 }

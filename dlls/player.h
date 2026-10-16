@@ -55,8 +55,8 @@
 
 #define CSUITNOREPEAT		32
 
-#define	SOUND_FLASHLIGHT_ON		"items/flashlight1.wav"
-#define	SOUND_FLASHLIGHT_OFF	"items/flashlight1.wav"
+#define	SOUND_FLASHLIGHT_ON		"player/eyeon.wav"	// POV: dark vision
+#define	SOUND_FLASHLIGHT_OFF	"player/eyeoff.wav"
 
 #define TEAM_NAME_LENGTH	16
 
@@ -86,7 +86,7 @@ public:
 	BOOL				m_fGamePaused;			// impulse 80 toggles it
 	int					m_iUnused1;				// no code uses it
 	BOOL				m_fStoryShown;			// a journal entry is on screen
-	int					m_iStoryIcon;			// last StoryIcon state sent
+	int					m_fShowingStoryIcon;			// last StoryIcon state sent
 	int					m_iLastStoryID;			// saved as FIELD_BOOLEAN
 	BOOL				m_fStoryNavigate;
 	BOOL				m_fStoryAlreadyFreezed;	// the player was frozen when the journal opened
@@ -235,8 +235,9 @@ public:
 	virtual void	Precache( void );
 	BOOL			IsOnLadder( void );
 	BOOL			FlashlightIsOn( void );
-	void			FlashlightTurnOn( void );
-	void			FlashlightTurnOff( void );
+	void			FlashlightTurnOn( BOOL fSound );
+	void			FlashlightTurnOff( BOOL fSound );
+	void			FlashlightUpdate( void );	// POV, name ours
 	
 	void UpdatePlayerSound ( void );
 	void DeathSound ( void );
