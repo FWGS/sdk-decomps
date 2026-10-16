@@ -41,7 +41,6 @@ extern int gmsgMOTD;
 
 CHalfLifeMultiplay :: CHalfLifeMultiplay()
 {
-	RefreshSkillData();
 	m_flIntermissionEndTime = 0;
 	
 	// 11/8/98
@@ -459,6 +458,8 @@ void CHalfLifeMultiplay :: PlayerSpawn( CBasePlayer *pPlayer )
 	BOOL		addDefault;
 	CBaseEntity	*pWeaponEntity = NULL;
 
+	pPlayer->pev->movetype = MOVETYPE_WALK;
+	pPlayer->pev->solid = SOLID_SLIDEBOX;
 	pPlayer->pev->weapons |= (1<<WEAPON_SUIT);
 	
 	addDefault = TRUE;
@@ -471,9 +472,9 @@ void CHalfLifeMultiplay :: PlayerSpawn( CBasePlayer *pPlayer )
 
 	if ( addDefault )
 	{
-		pPlayer->GiveNamedItem( "weapon_crowbar" );
-		pPlayer->GiveNamedItem( "weapon_9mmhandgun" );
-		pPlayer->GiveAmmo( 68, "9mm", _9MM_MAX_CARRY );// 4 full reloads
+		pPlayer->GiveNamedItem( "weapon_knife" );
+		pPlayer->GiveNamedItem( "weapon_pistol" );
+		pPlayer->GiveAmmo( 68, "pistol", _357_MAX_CARRY );
 	}
 }
 
