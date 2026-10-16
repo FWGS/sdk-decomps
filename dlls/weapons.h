@@ -69,7 +69,7 @@ public:
 #define WEAPON_CHAINGUN			5
 #define WEAPON_CROSSBOW			6
 #define WEAPON_SHOTGUN			7
-#define WEAPON_RPG				8
+#define WEAPON_RPG				20	// Wanted moved it
 #define WEAPON_GAUSS			9
 #define WEAPON_EGON				10
 #define WEAPON_HORNETGUN		11
