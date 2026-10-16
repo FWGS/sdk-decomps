@@ -46,7 +46,7 @@ public:
 	// POV
 	void TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType);
 	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
-	void MonsterThink( void );
+	void EXPORT MonsterThink( void );	// exported in retail
 	void KeyValue( KeyValueData *pkvd );
 
 	virtual int		Save( CSave &save );
