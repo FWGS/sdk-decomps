@@ -508,6 +508,10 @@ SOURCE=.\pov_hev_spfxtbu.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_hornetgundual.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_justbarn.cpp
 # End Source File
 # Begin Source File
