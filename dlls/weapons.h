@@ -317,6 +317,7 @@ public:
 	virtual BOOL CanDeploy( void );
 	virtual BOOL IsUseable( void );
 	BOOL DefaultDeploy( char *szViewModel, char *szWeaponModel, int iAnim, char *szAnimExt, int skiplocal = 0 );
+	void DefaultHolster( int iAnim, float fIdleDelay, float fAttackDelay );	// POV, name ours
 	int DefaultReload( int iClipSize, int iAnim, float fDelay );
 
 	virtual void ItemPostFrame( void );	// called each frame by the player PostThink

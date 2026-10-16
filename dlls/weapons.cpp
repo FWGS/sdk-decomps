@@ -33,6 +33,7 @@
 
 extern CGraph	WorldGraph;
 extern int gEvilImpulse101;
+extern DLL_GLOBAL BOOL g_fNoPickupSound;	// POV
 
 
 #define NOT_USED 255
@@ -64,15 +65,7 @@ MULTIDAMAGE gMultiDamage;
 //=========================================================
 int MaxAmmoCarry( int iszName )
 {
-	for ( int i = 0;  i < MAX_WEAPONS; i++ )
-	{
-		if ( CBasePlayerItem::ItemInfoArray[i].pszAmmo1 && !strcmp( STRING(iszName), CBasePlayerItem::ItemInfoArray[i].pszAmmo1 ) )
-			return CBasePlayerItem::ItemInfoArray[i].iMaxAmmo1;
-		if ( CBasePlayerItem::ItemInfoArray[i].pszAmmo2 && !strcmp( STRING(iszName), CBasePlayerItem::ItemInfoArray[i].pszAmmo2 ) )
-			return CBasePlayerItem::ItemInfoArray[i].iMaxAmmo2;
-	}
-
-	ALERT( at_console, "MaxAmmoCarry() doesn't recognize '%s'!\n", STRING( iszName ) );
+	// POV: no ammunition to carry
 	return -1;
 }
 
@@ -318,31 +311,51 @@ void W_Precache(void)
 	UTIL_PrecacheOther( "item_security" );
 	UTIL_PrecacheOther( "item_longjump" );
 
-	// shotgun
-	UTIL_PrecacheOtherWeapon( "weapon_shotgun" );
-	UTIL_PrecacheOther( "ammo_buckshot" );
+	// POV: the XTBS props
+	UTIL_PrecacheOther( "item_xtbs" );
+	UTIL_PrecacheOther( "item_xtbs_silver_onfloor" );
+	UTIL_PrecacheOther( "item_xtbs_silver_floating" );
+
+	// POV: the alien slave's hands
+	UTIL_PrecacheOtherWeapon( "weapon_xhand" );
+
+	// POV: the SDK's weapons are props now (UTIL_PrecacheOther)
 
 	// crowbar
-	UTIL_PrecacheOtherWeapon( "weapon_crowbar" );
+	UTIL_PrecacheOther( "weapon_crowbar" );
 
 	// glock
-	UTIL_PrecacheOtherWeapon( "weapon_9mmhandgun" );
+	UTIL_PrecacheOther( "weapon_9mmhandgun" );
 	UTIL_PrecacheOther( "ammo_9mmclip" );
 
+	// shotgun
+	UTIL_PrecacheOther( "weapon_shotgun" );
+	UTIL_PrecacheOther( "ammo_buckshot" );
+
+	// hand grenade
+	UTIL_PrecacheOther( "weapon_handgrenade" );
+
 	// mp5
-	UTIL_PrecacheOtherWeapon( "weapon_9mmAR" );
+	UTIL_PrecacheOther( "weapon_9mmAR" );
 	UTIL_PrecacheOther( "ammo_9mmAR" );
 	UTIL_PrecacheOther( "ammo_ARgrenades" );
 
+	// POV's props
+	UTIL_PrecacheOther( "weapon_9mmm41a" );
+	UTIL_PrecacheOther( "weapon_beretta" );
+	UTIL_PrecacheOther( "weapon_vulcan" );
+	UTIL_PrecacheOther( "ammo_vulcan" );
+	UTIL_PrecacheOther( "weapon_loader" );
+
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 	// python
-	UTIL_PrecacheOtherWeapon( "weapon_357" );
+	UTIL_PrecacheOther( "weapon_357" );
 	UTIL_PrecacheOther( "ammo_357" );
 #endif
 	
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 	// gauss
-	UTIL_PrecacheOtherWeapon( "weapon_gauss" );
+	UTIL_PrecacheOther( "weapon_gauss" );
 	UTIL_PrecacheOther( "ammo_gaussclip" );
 #endif
 
@@ -352,36 +365,41 @@ void W_Precache(void)
 	UTIL_PrecacheOther( "ammo_rpgclip" );
 #endif
 
+	// POV: the stukabat
+	UTIL_PrecacheOtherWeapon( "weapon_stukabat" );
+
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 	// crossbow
-	UTIL_PrecacheOtherWeapon( "weapon_crossbow" );
+	UTIL_PrecacheOther( "weapon_crossbow" );
 	UTIL_PrecacheOther( "ammo_crossbow" );
 #endif
 
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 	// egon
-	UTIL_PrecacheOtherWeapon( "weapon_egon" );
+	UTIL_PrecacheOther( "weapon_egon" );
 #endif
 
 	// tripmine
-	UTIL_PrecacheOtherWeapon( "weapon_tripmine" );
+	UTIL_PrecacheOther( "weapon_tripmine" );
 
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 	// satchel charge
-	UTIL_PrecacheOtherWeapon( "weapon_satchel" );
+	UTIL_PrecacheOther( "weapon_satchel" );
 #endif
-
-	// hand grenade
-	UTIL_PrecacheOtherWeapon("weapon_handgrenade");
 
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 	// squeak grenade
 	UTIL_PrecacheOtherWeapon( "weapon_snark" );
 #endif
 
+	// POV: the toad
+	UTIL_PrecacheOtherWeapon( "weapon_toad" );
+
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 	// hornetgun
-	UTIL_PrecacheOtherWeapon( "weapon_hornetgun" );
+	UTIL_PrecacheOther( "weapon_hornetgun" );
+	UTIL_PrecacheOtherWeapon( "weapon_hornetgunsingle" );
+	UTIL_PrecacheOtherWeapon( "weapon_hornetgundual" );
 #endif
 
 
@@ -612,7 +630,8 @@ void CBasePlayerItem::DefaultTouch( CBaseEntity *pOther )
 	if (pOther->AddPlayerItem( this ))
 	{
 		AttachToPlayer( pPlayer );
-		EMIT_SOUND(ENT(pPlayer->pev), CHAN_ITEM, "items/gunpickup2.wav", 1, ATTN_NORM);
+		if ( !g_fNoPickupSound )
+			EMIT_SOUND(ENT(pPlayer->pev), CHAN_ITEM, "items/gunpickup2.wav", 1, ATTN_NORM);
 	}
 
 	SUB_UseTargets( pOther, USE_TOGGLE, 0 ); // UNDONE: when should this happen?
@@ -984,6 +1003,19 @@ BOOL CBasePlayerWeapon :: DefaultDeploy( char *szViewModel, char *szWeaponModel,
 }
 
 
+// POV, name ours: every POV weapon's Holster plays its holster animation
+// through this
+void CBasePlayerWeapon :: DefaultHolster( int iAnim, float fIdleDelay, float fAttackDelay )
+{
+	m_fInReload = FALSE;
+	SendWeaponAnim( iAnim );
+
+	m_flTimeWeaponIdle = fIdleDelay + gpGlobals->time;
+	m_pPlayer->m_flNextAttack = fAttackDelay + gpGlobals->time;
+	m_flNextPrimaryAttack = fAttackDelay + gpGlobals->time;
+	m_flNextSecondaryAttack = fAttackDelay + gpGlobals->time;
+}
+
 BOOL CBasePlayerWeapon :: DefaultReload( int iClipSize, int iAnim, float fDelay )
 {
 	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -1255,70 +1287,7 @@ void CWeaponBox::Kill( void )
 //=========================================================
 void CWeaponBox::Touch( CBaseEntity *pOther )
 {
-	if ( !(pev->flags & FL_ONGROUND ) )
-	{
-		return;
-	}
-
-	if ( !pOther->IsPlayer() )
-	{
-		// only players may touch a weaponbox.
-		return;
-	}
-
-	if ( !pOther->IsAlive() )
-	{
-		// no dead guys.
-		return;
-	}
-
-	CBasePlayer *pPlayer = (CBasePlayer *)pOther;
-	int i;
-
-// dole out ammo
-	for ( i = 0 ; i < MAX_AMMO_SLOTS ; i++ )
-	{
-		if ( !FStringNull( m_rgiszAmmo[ i ] ) )
-		{
-			// there's some ammo of this type. 
-			pPlayer->GiveAmmo( m_rgAmmo[ i ], (char *)STRING( m_rgiszAmmo[ i ] ), MaxAmmoCarry( m_rgiszAmmo[ i ] ) );
-
-			//ALERT ( at_console, "Gave %d rounds of %s\n", m_rgAmmo[i], STRING(m_rgiszAmmo[i]) );
-
-			// now empty the ammo from the weaponbox since we just gave it to the player
-			m_rgiszAmmo[ i ] = iStringNull;
-			m_rgAmmo[ i ] = 0;
-		}
-	}
-
-// go through my weapons and try to give the usable ones to the player. 
-// it's important the the player be given ammo first, so the weapons code doesn't refuse 
-// to deploy a better weapon that the player may pick up because he has no ammo for it.
-	for ( i = 0 ; i < MAX_ITEM_TYPES ; i++ )
-	{
-		if ( m_rgpPlayerItems[ i ] )
-		{
-			CBasePlayerItem *pItem;
-
-			// have at least one weapon in this slot
-			while ( m_rgpPlayerItems[ i ] )
-			{
-				//ALERT ( at_console, "trying to give %s\n", STRING( m_rgpPlayerItems[ i ]->pev->classname ) );
-
-				pItem = m_rgpPlayerItems[ i ];
-				m_rgpPlayerItems[ i ] = m_rgpPlayerItems[ i ]->m_pNext;// unlink this weapon from the box
-
-				if ( pPlayer->AddPlayerItem( pItem ) )
-				{
-					pItem->AttachToPlayer( pPlayer );
-				}
-			}
-		}
-	}
-
-	EMIT_SOUND( pOther->edict(), CHAN_ITEM, "items/gunpickup2.wav", 1, ATTN_NORM );
-	SetTouch(NULL);
-	UTIL_Remove(this);
+	// POV: weapon boxes give nothing
 }
 
 //=========================================================
