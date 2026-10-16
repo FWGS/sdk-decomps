@@ -488,6 +488,14 @@ SOURCE=.\pov_hev_spfxtbu.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_justbarn.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\pov_kate.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_panther.cpp
 # End Source File
 # Begin Source File
