@@ -37,6 +37,9 @@
 #define SF_TRIGGER_HURT_CLIENTONLYTOUCH 32// only clients may touch this trigger.
 
 extern DLL_GLOBAL BOOL		g_fGameOver;
+extern DLL_GLOBAL BOOL		g_fLoading;		// POV, name ours: a level was just loaded or restored
+extern DLL_GLOBAL BOOL		g_fNoPickupSound;	// POV, name ours
+extern DLL_GLOBAL int		g_iSkillLevel;
 
 extern void SetMovedir(entvars_t* pev);
 extern Vector VecBModelOrigin( entvars_t* pevBModel );
@@ -906,6 +909,7 @@ public:
 	void EXPORT CounterUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT ToggleUse ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void InitTrigger( void );
+	void Precache( void );
 
 	virtual int	ObjectCaps( void ) { return CBaseToggle :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
 
@@ -974,8 +978,8 @@ class CTriggerMonsterJump : public CBaseTrigger
 {
 public:
 	void Spawn( void );
-	void Touch( CBaseEntity *pOther );
-	void Think( void );
+	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void Jump( CBaseEntity *pOther );	// POV, name ours: was Touch
 };
 
 LINK_ENTITY_TO_CLASS( trigger_monsterjump, CTriggerMonsterJump );
@@ -986,28 +990,26 @@ void CTriggerMonsterJump :: Spawn ( void )
 	SetMovedir ( pev );
 	
 	InitTrigger ();
+}
 
-	pev->nextthink = 0;
-	pev->speed = 200;
-	m_flHeight = 150;
 
-	if ( !FStringNull ( pev->targetname ) )
-	{// if targetted, spawn turned off
-		pev->solid = SOLID_NOT;
-		UTIL_SetOrigin( pev, pev->origin ); // Unlink from trigger list
-		SetUse( ToggleUse );
+// POV: when fired, tosses every living monster inside the trigger
+void CTriggerMonsterJump :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	CBaseEntity *pList[10];
+
+	int count = UTIL_EntitiesInBox( pList, 10, pev->mins, pev->maxs, FL_MONSTER );
+	if ( count )
+	{
+		for ( int i = 0; i < count; i++ )
+		{
+			if ( pList[i] != this && pList[i]->pev->deadflag == DEAD_NO )
+				Jump( pList[i] );
+		}
 	}
 }
 
-
-void CTriggerMonsterJump :: Think( void )
-{
-	pev->solid = SOLID_NOT;// kill the trigger for now !!!UNDONE
-	UTIL_SetOrigin( pev, pev->origin ); // Unlink from trigger list
-	SetThink( NULL );
-}
-
-void CTriggerMonsterJump :: Touch( CBaseEntity *pOther )
+void CTriggerMonsterJump :: Jump( CBaseEntity *pOther )
 {
 	entvars_t *pevOther = pOther->pev;
 
@@ -1025,7 +1027,7 @@ void CTriggerMonsterJump :: Touch( CBaseEntity *pOther )
 
 	// toss the monster!
 	pevOther->velocity = pev->movedir * pev->speed;
-	pevOther->velocity.z += m_flHeight;
+	pevOther->velocity.z += pev->health;
 	pev->nextthink = gpGlobals->time;
 }
 
@@ -1176,6 +1178,270 @@ void CTargetCDAudio::Play( void )
 }
 
 //=====================================
+//
+// POV: target_fileplay - plays a sound file at the player
+//
+class CTargetFilePlay : public CPointEntity
+{
+public:
+	void			Spawn( void );
+	void			Precache( void );
+	void			KeyValue( KeyValueData *pkvd );
+
+	virtual void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	int		m_iszFileToPlay;
+	float	m_flVolume;
+};
+
+LINK_ENTITY_TO_CLASS( target_fileplay, CTargetFilePlay );
+
+TYPEDESCRIPTION	CTargetFilePlay::m_SaveData[] = 
+{
+	DEFINE_FIELD( CTargetFilePlay, m_iszFileToPlay, FIELD_STRING ),
+	DEFINE_FIELD( CTargetFilePlay, m_flVolume, FIELD_FLOAT ),
+};
+
+IMPLEMENT_SAVERESTORE(CTargetFilePlay,CBaseEntity);
+
+void CTargetFilePlay :: KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "filetoplay"))
+	{
+		m_iszFileToPlay = ALLOC_STRING( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "volume"))
+	{
+		if ( atoi( pkvd->szValue ) >= 0 && atoi( pkvd->szValue ) <= 10 )
+			m_flVolume = atoi( pkvd->szValue );
+		else
+			m_flVolume = 10;
+		pkvd->fHandled = TRUE;
+	}
+	else
+		pkvd->fHandled = FALSE;
+}
+
+void CTargetFilePlay :: Spawn( void )
+{
+	Precache();
+
+	pev->solid = SOLID_NOT;
+	pev->movetype = MOVETYPE_NONE;
+}
+
+void CTargetFilePlay :: Precache( void )
+{
+	if ( m_iszFileToPlay )
+		PRECACHE_SOUND( (char *)STRING( m_iszFileToPlay ) );
+}
+
+void CTargetFilePlay::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	if ( m_iszFileToPlay )
+	{
+		CBaseEntity *pPlayer = UTIL_FindEntityByClassname( NULL, "player" );
+		if ( pPlayer )
+			UTIL_EmitAmbientSound( pPlayer->edict(), pPlayer->pev->origin, STRING( m_iszFileToPlay ), m_flVolume, ATTN_NONE, 0, PITCH_NORM );
+		else
+			ALERT( at_console, "target_fileplay: ERROR - couldn't find player!!\n" );
+	}
+	else
+		ALERT( at_console, "target_fileplay: ERROR - no file to play given!!\n" );
+}
+
+//=====================================
+//
+// POV: trigger_sound - sets the player's DSP room type (in health) by
+// brush, as env_sound does by radius
+//
+class CTriggerSound : public CBaseTrigger	// name ours
+{
+public:
+	void Spawn( void );
+
+	virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void Touch ( CBaseEntity *pOther );
+	void SetRoomType( float flRoomtype, float flRange );	// name ours
+};
+
+LINK_ENTITY_TO_CLASS( trigger_sound, CTriggerSound );
+
+void CTriggerSound :: Touch ( CBaseEntity *pOther )
+{
+	if ( pOther->IsPlayer() )
+		SetRoomType( pev->health, 64 );
+}
+
+void CTriggerSound :: Spawn( void )
+{
+	InitTrigger();
+}
+
+void CTriggerSound::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	SetRoomType( pev->health, 64 );
+}
+
+void CTriggerSound :: SetRoomType( float flRoomtype, float flRange )
+{
+	CBasePlayer *pPlayer = (CBasePlayer *)UTIL_FindEntityByClassname( NULL, "player" );
+
+	if ( pPlayer->m_flSndRoomtype != flRoomtype )
+	{
+		if ( pPlayer->pev->waterlevel == 3 )
+		{
+			ALERT( at_console, "trigger_sound: underwater not setting to %d - %s\n", (int)flRoomtype, UTIL_RoomTypeName( flRoomtype ) );
+			pPlayer->m_flSndRoomtype = 0;
+			return;
+		}
+
+		ALERT( at_console, "trigger_sound: set to %d - %s \n", (int)flRoomtype, UTIL_RoomTypeName( flRoomtype ) );
+
+		pPlayer->m_pentSndLast = ENT(pev);
+		pPlayer->m_flSndRoomtype = flRoomtype;
+		pPlayer->m_flSndRange = flRange;
+
+		MESSAGE_BEGIN( MSG_ONE, SVC_ROOMTYPE, NULL, pPlayer->edict() );
+			WRITE_SHORT( (short)flRoomtype );
+		MESSAGE_END();
+	}
+}
+
+//=====================================
+//
+// POV: trigger_xhand - gives the player the alien slave hands (and the
+// suit), without the pickup sound
+//
+class CTriggerXHand : public CBaseTrigger	// name ours
+{
+public:
+	void Spawn( void );
+
+	virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+};
+
+LINK_ENTITY_TO_CLASS( trigger_xhand, CTriggerXHand );
+
+void CTriggerXHand :: Spawn( void )
+{
+	InitTrigger();
+}
+
+void CTriggerXHand::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	CBasePlayer *pPlayer = (CBasePlayer *)UTIL_FindEntityByClassname( NULL, "player" );
+
+	if ( pPlayer )
+	{
+		if ( !(pPlayer->pev->weapons & (1<<WEAPON_SUIT)) )
+			pPlayer->pev->weapons |= (1<<WEAPON_SUIT);
+
+		g_fNoPickupSound = TRUE;
+		pPlayer->GiveNamedItem( "weapon_xhand" );
+		g_fNoPickupSound = FALSE;
+	}
+	else
+		ALERT( at_console, "Cant give weapon_xhand!!\n" );
+}
+
+//=====================================
+//
+// POV: trigger_die - kills the monster named monstername
+//
+class CTriggerDie : public CBaseTrigger
+{
+public:
+	void Spawn( void );
+	void KeyValue( KeyValueData *pkvd );
+
+	virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	char	m_sDieMonster[32];
+};
+
+LINK_ENTITY_TO_CLASS( trigger_die, CTriggerDie );
+
+TYPEDESCRIPTION	CTriggerDie::m_SaveData[] = 
+{
+	DEFINE_ARRAY( CTriggerDie, m_sDieMonster, FIELD_CHARACTER, 32 ),
+};
+
+IMPLEMENT_SAVERESTORE(CTriggerDie,CBaseEntity);
+
+void CTriggerDie :: Spawn( void )
+{
+}
+
+void CTriggerDie::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	CBaseEntity *pMonster = UTIL_FindEntityByTargetname( NULL, m_sDieMonster );
+
+	if ( !pMonster )
+	{
+		ALERT( at_console, "trigger_die: didn't find monster! Name too big? (MAX: 32)\n" );
+		return;
+	}
+
+	pMonster->TakeDamage( pev, pev, pMonster->pev->health + 1, DMG_GENERIC );
+}
+
+void CTriggerDie :: KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "monstername"))
+	{
+		strcpy( m_sDieMonster, pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CBaseTrigger::KeyValue( pkvd );
+}
+
+//=====================================
+//
+// POV: trigger_showgametitle - shows the game title (the GameTitle message)
+//
+class CTriggerShowGameTitle : public CBaseTrigger	// name ours
+{
+public:
+	void Spawn( void );
+
+	virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+};
+
+LINK_ENTITY_TO_CLASS( trigger_showgametitle, CTriggerShowGameTitle );
+
+void CTriggerShowGameTitle :: Spawn( void )
+{
+}
+
+void CTriggerShowGameTitle::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	int iGameTitle = REG_USER_MSG( "GameTitle", 1 );	// name ours
+
+	CBaseEntity *pPlayer = UTIL_FindEntityByClassname( NULL, "player" );
+	if ( pPlayer )
+	{
+		MESSAGE_BEGIN( MSG_ONE, iGameTitle, NULL, pPlayer->edict() );
+			WRITE_BYTE( 0 );
+		MESSAGE_END();
+	}
+	else
+		ALERT( at_console, "trigger_showgametitle: ERROR - player not found!!\n" );
+}
+
+//=====================================
 
 //
 // trigger_hurt - hurts anything that touches it. if the trigger has a targetname, firing it will toggle state
@@ -1184,6 +1450,7 @@ void CTargetCDAudio::Play( void )
 
 void CTriggerHurt :: Spawn( void )
 {
+	CBaseTrigger::Precache();
 	InitTrigger();
 	SetTouch ( HurtTouch );
 
@@ -1287,6 +1554,11 @@ void CBaseTrigger :: ToggleUse ( CBaseEntity *pActivator, CBaseEntity *pCaller, 
 	UTIL_SetOrigin( pev, pev->origin );
 }
 
+void CBaseTrigger :: Precache( void )
+{
+	PRECACHE_SOUND( "ambience/healingpond1.wav" );
+}
+
 // When touched, a hurt trigger does DMG points of damage each half-second
 void CBaseTrigger :: HurtTouch ( CBaseEntity *pOther )
 {
@@ -1379,7 +1651,14 @@ void CBaseTrigger :: HurtTouch ( CBaseEntity *pOther )
 #endif
 
 	if ( fldmg < 0 )
-		pOther->TakeHealth( -fldmg, m_bitsDamageInflict );
+	{
+		// POV: the healing sound, once a second
+		if ( pOther->TakeHealth( -fldmg, m_bitsDamageInflict ) == 1 && gpGlobals->time > m_flNextHealSound )
+		{
+			EMIT_SOUND_DYN( ENT(pev), CHAN_ITEM, "ambience/healingpond1.wav", 0.8, 0.8, 0, PITCH_NORM );
+			m_flNextHealSound = gpGlobals->time + 1.0;
+		}
+	}
 	else
 		pOther->TakeDamage( pev, pev, fldmg, m_bitsDamageInflict );
 
@@ -1588,36 +1867,45 @@ void CBaseTrigger :: MultiWaitOver( void )
 //
 void CBaseTrigger::CounterUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	m_cTriggersLeft--;
-	m_hActivator = pActivator;
-
-	if (m_cTriggersLeft < 0)
-		return;
-	
-	BOOL fTellActivator =
-		(FClassnameIs(m_hActivator->pev, "player") &&
-		!FBitSet(pev->spawnflags, SPAWNFLAG_NOMESSAGE));
-	if (m_cTriggersLeft != 0)
+	// POV: the player is always the activator
+	CBaseEntity *pPlayer = UTIL_FindEntityByClassname( NULL, "player" );
+	if ( pPlayer )
 	{
-		if (fTellActivator)
-		{
-			// UNDONE: I don't think we want these Quakesque messages
-			switch (m_cTriggersLeft)
-			{
-			case 1:		ALERT(at_console, "Only 1 more to go...");		break;
-			case 2:		ALERT(at_console, "Only 2 more to go...");		break;
-			case 3:		ALERT(at_console, "Only 3 more to go...");		break;
-			default:	ALERT(at_console, "There are more to go...");	break;
-			}
-		}
-		return;
-	}
+		m_cTriggersLeft--;
+		m_hActivator = pPlayer;
 
-	// !!!UNDONE: I don't think we want these Quakesque messages
-	if (fTellActivator)
-		ALERT(at_console, "Sequence completed!");
-	
-	ActivateMultiTrigger( m_hActivator );
+		if (m_cTriggersLeft < 0)
+			return;
+		
+		BOOL fTellActivator =
+			(FClassnameIs(m_hActivator->pev, "player") &&
+			!FBitSet(pev->spawnflags, SPAWNFLAG_NOMESSAGE));
+		if (m_cTriggersLeft != 0)
+		{
+			if (fTellActivator)
+			{
+				// UNDONE: I don't think we want these Quakesque messages
+				switch (m_cTriggersLeft)
+				{
+				case 1:		ALERT(at_console, "Only 1 more to go...");		break;
+				case 2:		ALERT(at_console, "Only 2 more to go...");		break;
+				case 3:		ALERT(at_console, "Only 3 more to go...");		break;
+				default:	ALERT(at_console, "There are more to go...");	break;
+				}
+			}
+			return;
+		}
+
+		// !!!UNDONE: I don't think we want these Quakesque messages
+		if (fTellActivator)
+			ALERT(at_console, "Sequence completed!");
+		
+		ActivateMultiTrigger( m_hActivator );
+	}
+	else
+	{
+		ALERT( at_console, "CounterUse: ERROR - couldn't find player!!\n" );
+	}
 }
 
 
@@ -1863,6 +2151,18 @@ void CChangeLevel :: ChangeLevelNow( CBaseEntity *pActivator )
 		ALERT( at_aiconsole, "Player isn't in the transition volume %s, aborting\n", m_szLandmarkName );
 		return;
 	}
+
+	// POV: the next level is loading; close the journal
+	g_fLoading = TRUE;
+
+	CBasePlayer *pClient = (CBasePlayer *)UTIL_FindEntityByClassname( NULL, "player" );	// name ours
+	if ( pClient )
+	{
+		if ( pClient->m_fStoryShown == TRUE )
+			pClient->CloseStory();
+	}
+	else
+		ALERT( at_console, "ChangeLevelNow: ERROR - couldn't find player!\n" );
 
 	// Create an entity to fire the changetarget
 	if ( m_changeTarget )
@@ -2367,10 +2667,6 @@ LINK_ENTITY_TO_CLASS( trigger_endsection, CTriggerEndSection );
 
 void CTriggerEndSection::EndSectionUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	// Only save on clients
-	if ( pActivator && !pActivator->IsNetClient() )
-		return;
-    
 	SetUse( NULL );
 
 	if ( pev->message )
@@ -2525,6 +2821,7 @@ public:
 	void KeyValue( KeyValueData *pkvd );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT FollowTarget( void );
+	void EXPORT WaitToLoadFinishThink( void );
 	void Move(void);
 
 	virtual int		Save( CSave &save );
@@ -2544,7 +2841,11 @@ public:
 	float m_initialSpeed;
 	float m_acceleration;
 	float m_deceleration;
+	float m_turnSpeed;		// POV
 	int	  m_state;
+	BOOL  m_bAlreadyFreezed;	// POV: the player was frozen already
+	BOOL  m_bFistOnCamera;		// POV: no other camera was on (sic)
+	BOOL  m_bLastOnCamera;		// POV: the camera turned on last
 	
 };
 LINK_ENTITY_TO_CLASS( trigger_camera, CTriggerCamera );
@@ -2565,9 +2866,55 @@ TYPEDESCRIPTION	CTriggerCamera::m_SaveData[] =
 	DEFINE_FIELD( CTriggerCamera, m_acceleration, FIELD_FLOAT ),
 	DEFINE_FIELD( CTriggerCamera, m_deceleration, FIELD_FLOAT ),
 	DEFINE_FIELD( CTriggerCamera, m_state, FIELD_INTEGER ),
+	DEFINE_FIELD( CTriggerCamera, m_bAlreadyFreezed, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CTriggerCamera, m_bFistOnCamera, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CTriggerCamera, m_bLastOnCamera, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CTriggerCamera, m_turnSpeed, FIELD_FLOAT ),
 };
 
-IMPLEMENT_SAVERESTORE(CTriggerCamera,CBaseDelay);
+int CTriggerCamera::Restore( CRestore &restore )
+{
+	if ( !CBaseEntity::Restore(restore) )
+		return 0;
+
+	int status = restore.ReadFields( "CTriggerCamera", this, m_SaveData, ARRAYSIZE(m_SaveData) );
+
+	// POV: the camera that was on last takes the view again once the level has loaded
+	if ( m_state == 1 && m_bLastOnCamera == 1 )
+	{
+		SetThink( WaitToLoadFinishThink );
+		pev->nextthink = gpGlobals->time + 0.1;
+	}
+
+	return status;
+}
+
+int CTriggerCamera::Save( CSave &save )
+{
+	if ( !CBaseEntity::Save(save) )
+		return 0;
+	return save.WriteFields( "CTriggerCamera", this, m_SaveData, ARRAYSIZE(m_SaveData) );
+}
+
+void CTriggerCamera::WaitToLoadFinishThink( void )
+{
+	if ( g_fLoading == TRUE )
+	{
+		pev->nextthink = gpGlobals->time + 0.1;
+		return;
+	}
+
+	m_hPlayer = CBaseEntity::Instance( g_engfuncs.pfnPEntityOfEntIndex( 1 ) );
+
+	SET_VIEW( m_hPlayer->edict(), edict() );
+
+	SET_MODEL( ENT(pev), STRING(m_hPlayer->pev->model) );
+
+	SetThink( FollowTarget );
+	pev->nextthink = gpGlobals->time;
+
+	Move();
+}
 
 void CTriggerCamera::Spawn( void )
 {
@@ -2575,12 +2922,19 @@ void CTriggerCamera::Spawn( void )
 	pev->solid = SOLID_NOT;							// Remove model & collisions
 	pev->renderamt = 0;								// The engine won't draw this model if this is set to 0 and blending is on
 	pev->rendermode = kRenderTransTexture;
+	pev->angles = g_vecZero;
 
 	m_initialSpeed = pev->speed;
 	if ( m_acceleration == 0 )
 		m_acceleration = 500;
 	if ( m_deceleration == 0 )
 		m_deceleration = 500;
+	if ( m_turnSpeed == 0 )
+		m_turnSpeed = 40;
+
+	m_bAlreadyFreezed = FALSE;
+	m_bFistOnCamera = FALSE;
+	m_bLastOnCamera = FALSE;
 }
 
 
@@ -2606,6 +2960,13 @@ void CTriggerCamera :: KeyValue( KeyValueData *pkvd )
 		m_deceleration = atof( pkvd->szValue );
 		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "turnspeed"))
+	{
+		m_turnSpeed = atof( pkvd->szValue );
+		if ( m_turnSpeed > 120 )
+			m_turnSpeed = 120;
+		pkvd->fHandled = TRUE;
+	}
 	else
 		CBaseDelay::KeyValue( pkvd );
 }
@@ -2621,9 +2982,35 @@ void CTriggerCamera::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 	m_state = !m_state;
 	if (m_state == 0)
 	{
+		// POV: the first camera turned off forgets which camera was on last
+		if ( m_bFistOnCamera == TRUE )
+		{
+			CBaseEntity *pCamera = UTIL_FindEntityByClassname( NULL, "trigger_camera" );
+			while ( pCamera )
+			{
+				((CTriggerCamera *)pCamera)->m_bLastOnCamera = FALSE;
+				pCamera = UTIL_FindEntityByClassname( pCamera, "trigger_camera" );
+			}
+		}
 		m_flReturnTime = gpGlobals->time;
 		return;
 	}
+
+	// POV: remember which camera is the first one on and which the last one
+	m_bFistOnCamera = TRUE;
+	CBaseEntity *pCamera = UTIL_FindEntityByClassname( NULL, "trigger_camera" );
+	while ( pCamera )
+	{
+		if ( pCamera != this )
+		{
+			if ( ((CTriggerCamera *)pCamera)->m_state == 1 )
+				m_bFistOnCamera = FALSE;
+			((CTriggerCamera *)pCamera)->m_bLastOnCamera = FALSE;
+		}
+		pCamera = UTIL_FindEntityByClassname( pCamera, "trigger_camera" );
+	}
+	m_bLastOnCamera = TRUE;
+
 	if ( !pActivator || !pActivator->IsPlayer() )
 	{
 		pActivator = CBaseEntity::Instance(g_engfuncs.pfnPEntityOfEntIndex( 1 ));
@@ -2653,7 +3040,10 @@ void CTriggerCamera::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 
 	if (FBitSet (pev->spawnflags, SF_CAMERA_PLAYER_TAKECONTROL ) )
 	{
-		((CBasePlayer *)pActivator)->EnableControl(FALSE);
+		if ( FBitSet( ((CBaseEntity *)m_hPlayer)->pev->flags, FL_FROZEN ) )
+			m_bAlreadyFreezed = TRUE;
+		else
+			((CBasePlayer *)((CBaseEntity *)m_hPlayer))->EnableControl(FALSE);
 	}
 
 	if ( m_sPath )
@@ -2672,6 +3062,13 @@ void CTriggerCamera::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 			m_targetSpeed = m_pentPath->pev->speed;
 		
 		m_flStopTime += m_pentPath->GetDelay();
+	}
+
+	// POV: look at the target right away
+	if ( m_hTarget != NULL )
+	{
+		pev->angles = UTIL_VecToAngles( m_hTarget->pev->origin - pev->origin );
+		pev->angles.x = -pev->angles.x;
 	}
 
 	// copy over player information
@@ -2711,7 +3108,8 @@ void CTriggerCamera::FollowTarget( )
 		if (m_hPlayer->IsAlive( ))
 		{
 			SET_VIEW( m_hPlayer->edict(), m_hPlayer->edict() );
-			((CBasePlayer *)((CBaseEntity *)m_hPlayer))->EnableControl(TRUE);
+			if ( !m_bAlreadyFreezed )
+				((CBasePlayer *)((CBaseEntity *)m_hPlayer))->EnableControl(TRUE);
 		}
 		SUB_UseTargets( this, USE_TOGGLE, 0 );
 		pev->avelocity = Vector( 0, 0, 0 );
@@ -2741,8 +3139,8 @@ void CTriggerCamera::FollowTarget( )
 	if (dy > 180) 
 		dy = dy - 360;
 
-	pev->avelocity.x = dx * 40 * gpGlobals->frametime;
-	pev->avelocity.y = dy * 40 * gpGlobals->frametime;
+	pev->avelocity.x = dx * m_turnSpeed * gpGlobals->frametime;
+	pev->avelocity.y = dy * m_turnSpeed * gpGlobals->frametime;
 
 
 	if (!(FBitSet (pev->spawnflags, SF_CAMERA_PLAYER_TAKECONTROL)))	
