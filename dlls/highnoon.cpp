@@ -471,11 +471,11 @@ void CHighNoon::StartRound( void )
 
 	for ( int j = 0; j < cMaxAmmo; j++ )
 	{
+		CBaseEntity *pPrev = NULL;
 		if ( !cAmmo )
 			break;
 
 		int iPick = RANDOM_LONG( 0, cAmmo - 1 );
-		CBaseEntity *pPrev = NULL;
 		CBaseEntity *pAmmo = pAmmoList;
 		if ( !pAmmo )
 			break;
