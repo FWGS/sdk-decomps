@@ -25,6 +25,7 @@
 #include "cbase.h"
 
 
+#define SF_LIGHT_RANDOM_PATTERN		2	// POV, name ours
 
 class CLight : public CPointEntity
 {
@@ -32,6 +33,7 @@ public:
 	virtual void	KeyValue( KeyValueData* pkvd ); 
 	virtual void	Spawn( void );
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void	RandomPattern( void );		// POV, name ours
 
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
@@ -41,6 +43,8 @@ public:
 private:
 	int		m_iStyle;
 	int		m_iszPattern;
+	int		m_iszRandPattMin;	// POV
+	int		m_iszRandPattMax;
 };
 LINK_ENTITY_TO_CLASS( light, CLight );
 
@@ -48,6 +52,8 @@ TYPEDESCRIPTION	CLight::m_SaveData[] =
 {
 	DEFINE_FIELD( CLight, m_iStyle, FIELD_INTEGER ),
 	DEFINE_FIELD( CLight, m_iszPattern, FIELD_STRING ),
+	DEFINE_FIELD( CLight, m_iszRandPattMin, FIELD_STRING ),
+	DEFINE_FIELD( CLight, m_iszRandPattMax, FIELD_STRING ),
 };
 
 IMPLEMENT_SAVERESTORE( CLight, CPointEntity );
@@ -73,6 +79,16 @@ void CLight :: KeyValue( KeyValueData* pkvd)
 		m_iszPattern = ALLOC_STRING( pkvd->szValue );
 		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "pattmin"))
+	{
+		m_iszRandPattMin = ALLOC_STRING( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "pattmax"))
+	{
+		m_iszRandPattMax = ALLOC_STRING( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
 	else
 	{
 		CPointEntity::KeyValue( pkvd );
@@ -88,6 +104,9 @@ If targeted, it will toggle between on or off.
 
 void CLight :: Spawn( void )
 {
+	if (FBitSet(pev->spawnflags, SF_LIGHT_RANDOM_PATTERN))
+		RandomPattern();
+
 	if (FStringNull(pev->targetname))
 	{       // inert light
 		REMOVE_ENTITY(ENT(pev));
@@ -107,8 +126,60 @@ void CLight :: Spawn( void )
 }
 
 
+// POV: a pattern of 20 random styles between pattmin and pattmax
+void CLight :: RandomPattern( void )
+{
+	if (FStringNull(pev->targetname))
+	{
+		ALERT( at_console, "Light: ERROR - random pattern lights need a targetname!\n" );
+		return;
+	}
+
+	int count = 0;
+	edict_t *pent = NULL;
+
+	while ( !FNullEnt( pent = FIND_ENTITY_BY_TARGETNAME( pent, STRING( pev->targetname ) ) ) )
+		count++;
+
+	if ( count != 1 )
+	{
+		ALERT( at_console, "Light: ERROR - %s random pattern lights need a UNIQUE targetname!\n", STRING( pev->targetname ) );
+		return;
+	}
+
+	int iMin, iMax;
+
+	if ( m_iszRandPattMin )
+		iMin = UTIL_LightPatternIndex( STRING( m_iszRandPattMin ) );
+	else
+		iMin = UTIL_LightPatternIndex( "a" );
+
+	if ( m_iszRandPattMax )
+		iMax = UTIL_LightPatternIndex( STRING( m_iszRandPattMax ) );
+	else
+		iMax = UTIL_LightPatternIndex( "z" );
+
+	if ( iMin > iMax )
+	{
+		ALERT( at_console, "Light: ERROR - MinVal random bigger then MaxVal random!\n" );
+		return;
+	}
+
+	char szPattern[21];
+
+	strcpy( szPattern, UTIL_LightPattern( RANDOM_LONG( iMin, iMax ) ) );
+	for ( int i = 1; i < 20; i++ )
+		strcat( szPattern, UTIL_LightPattern( RANDOM_LONG( iMin, iMax ) ) );
+
+	m_iszPattern = ALLOC_STRING( szPattern );
+	LIGHT_STYLE( m_iStyle, szPattern );
+}
+
+
 void CLight :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
+	ALERT( at_console, "CLight :: Use START !! %s \n", STRING( pev->classname ) );
+
 	if (m_iStyle >= 32)
 	{
 		if ( !ShouldToggle( useType, !FBitSet(pev->spawnflags, SF_LIGHT_START_OFF) ) )
@@ -128,6 +199,8 @@ void CLight :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 			SetBits(pev->spawnflags, SF_LIGHT_START_OFF);
 		}
 	}
+
+	ALERT( at_console, "CLight :: Use END !! %s \n", STRING( pev->classname ) );
 }
 
 //
