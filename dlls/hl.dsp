@@ -549,6 +549,14 @@ SOURCE=.\world.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\wtowna.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wtownb.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\wanted_pending.cpp
 # End Source File
 # End Group
