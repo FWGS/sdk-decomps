@@ -883,7 +883,7 @@ void CALoader :: Spawn()
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
 	m_bloodColor		= DONT_BLEED;
-	pev->health			= gSkillData.gargantuaHealth * 1.2;
+	pev->health			= ( gSkillData.gargantuaHealth * 1.2 );	// sic: the parentheses give retail's scheduling
 	pev->view_ofs		= Vector ( 0, 0, 120 );// position of the eyes relative to monster's origin.
 	m_flFieldOfView		= -0.7;
 	m_MonsterState		= MONSTERSTATE_NONE;
