@@ -1192,7 +1192,7 @@ void CBot::Wobble( float flPercent, int iPriority )
 {
 	if ( iPriority > m_iMovePriority )
 	{
-		flPercent = flPercent * 0.01;
+		flPercent = flPercent / 100;
 		Vector vecRandom = Vector( RANDOM_FLOAT( -flPercent, flPercent ), RANDOM_FLOAT( -flPercent, flPercent ), RANDOM_FLOAT( -flPercent, flPercent ) );
 		m_vecMoveVelocity = m_vecMoveVelocity.Normalize() + vecRandom;
 		m_vecMoveVelocity = m_vecMoveVelocity.Normalize() * CVAR_GET_FLOAT( "sv_maxspeed" );
@@ -1202,7 +1202,7 @@ void CBot::Wobble( float flPercent, int iPriority )
 	else if ( iPriority == m_iMovePriority )
 	{
 		Vector vecOld = m_vecMoveVelocity * m_cMoveGoals;
-		flPercent = flPercent * 0.01;
+		flPercent = flPercent / 100;
 		Vector vecRandom = Vector( RANDOM_FLOAT( -flPercent, flPercent ), RANDOM_FLOAT( -flPercent, flPercent ), RANDOM_FLOAT( -flPercent, flPercent ) );
 		m_vecMoveVelocity = m_vecMoveVelocity.Normalize() + vecRandom;
 		m_vecMoveVelocity = m_vecMoveVelocity.Normalize() * CVAR_GET_FLOAT( "sv_maxspeed" );
