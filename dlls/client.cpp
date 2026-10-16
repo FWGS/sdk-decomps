@@ -377,6 +377,48 @@ void ClientCommand( edict_t *pEntity )
 	{
 		GetClassPtr((CBasePlayer *)pev)->SelectLastItem();
 	}
+	// POV: the journal's buttons
+	else if ( FStrEq( pcmd, "storyfirst" ) || FStrEq( pcmd, "storyprev" ) || FStrEq( pcmd, "storynext" ) || FStrEq( pcmd, "storylast" ) )
+	{
+		CBasePlayer *pPlayer = GetClassPtr((CBasePlayer *)pev);
+		if ( pPlayer )
+		{
+			pPlayer->m_fStoryNavigate = TRUE;
+			if ( pPlayer->m_fStoryShown == TRUE )
+				pPlayer->CloseStory();
+
+			int iStoryID;
+			if ( FStrEq( pcmd, "storyfirst" ) )
+				iStoryID = UTIL_StoryFirst( pPlayer );
+			else if ( FStrEq( pcmd, "storyprev" ) )
+				iStoryID = UTIL_StoryPrev( pPlayer, pPlayer->m_iLastStoryID );
+			else if ( FStrEq( pcmd, "storynext" ) )
+				iStoryID = UTIL_StoryNext( pPlayer, pPlayer->m_iLastStoryID );
+			else
+				iStoryID = UTIL_StoryLast( pPlayer );
+
+			EMIT_SOUND( ENT(pev), CHAN_ITEM, "common/story2.wav", 1, ATTN_NORM );
+			pPlayer->ShowStory( iStoryID );
+		}
+		else
+		{
+			ALERT( at_console, "story(turn) client command: ERROR - couldn't find player!\n" );
+		}
+	}
+	else if ( FStrEq( pcmd, "storyclose" ) )
+	{
+		CBasePlayer *pPlayer = GetClassPtr((CBasePlayer *)pev);
+		if ( pPlayer )
+		{
+			pPlayer->m_fStoryNavigate = FALSE;
+			if ( pPlayer->m_fStoryShown == TRUE )
+				pPlayer->CloseStory();
+		}
+		else
+		{
+			ALERT( at_console, "storyclose client command: ERROR - couldn't find player!\n" );
+		}
+	}
 	else if ( g_pGameRules->ClientCommand( GetClassPtr((CBasePlayer *)pev), pcmd ) )
 	{
 		// MenuSelect returns true only if the command is properly handled,  so don't print a warning
@@ -547,6 +589,9 @@ void ClientPrecache( void )
 	
 	PRECACHE_SOUND("player/pl_fallpain2.wav");		
 	PRECACHE_SOUND("player/pl_fallpain3.wav");		
+
+	PRECACHE_SOUND("player/pl_die1.wav");		// POV
+	PRECACHE_SOUND("player/pl_die2.wav");
 	
 	PRECACHE_SOUND("player/pl_step1.wav");		// walk on concrete
 	PRECACHE_SOUND("player/pl_step2.wav");
@@ -639,6 +684,10 @@ void ClientPrecache( void )
 	PRECACHE_SOUND("common/wpn_select.wav");
 	PRECACHE_SOUND("common/wpn_denyselect.wav");
 
+	// POV: the journal
+	PRECACHE_SOUND("common/story1.wav");
+	PRECACHE_SOUND("common/story2.wav");
+
 
 	// geiger sounds
 
@@ -651,6 +700,19 @@ void ClientPrecache( void )
 
 	if (giPrecacheGrunt)
 		UTIL_PrecacheOther("monster_human_grunt");
+}
+
+// POV: Sys_Error moved before GetGameDescription
+/*
+================
+Sys_Error
+
+Engine is going to shut down, allows setting a breakpoint in game .dll to catch that occasion
+================
+*/
+void Sys_Error( const char *error_string )
+{
+	// Default case, do nothing.  MOD AUTHORS:  Add code ( e.g., _asm { int 3 }; here to cause a breakpoint for debugging your game .dlls
 }
 
 /*
@@ -666,18 +728,6 @@ const char *GetGameDescription()
 		return g_pGameRules->GetGameDescription();
 	else
 		return "Half-Life";
-}
-
-/*
-================
-Sys_Error
-
-Engine is going to shut down, allows setting a breakpoint in game .dll to catch that occasion
-================
-*/
-void Sys_Error( const char *error_string )
-{
-	// Default case, do nothing.  MOD AUTHORS:  Add code ( e.g., _asm { int 3 }; here to cause a breakpoint for debugging your game .dlls
 }
 
 /*
