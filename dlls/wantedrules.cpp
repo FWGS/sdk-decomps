@@ -91,7 +91,7 @@ void CWantedMultiplay::Init( void )
 	}
 	g_BotNav.m_pTail = NULL;
 	g_BotNav.m_pHead = NULL;
-	g_BotNav.m_cNodes = 0;
+	g_BotNav.m_pLandmarks = NULL;
 	g_BotNav.ClearGrid();
 
 	if ( g_fInitialRules )

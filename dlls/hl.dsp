@@ -204,6 +204,22 @@ SOURCE=.\bmodels.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\bot.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\botattack.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\botmove.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\botnav.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\bottle.cpp
 # End Source File
 # Begin Source File
