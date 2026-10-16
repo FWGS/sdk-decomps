@@ -474,13 +474,6 @@ void CSqueakGrenade::SuperBounceTouch( CBaseEntity *pOther )
 
 
 
-// POV: what the view model's snarks say while they fidget (name ours)
-const char *pVModelSounds[] = 
-{
-	"squeek/sqk_idle1.wav",
-	"squeek/sqk_idle2.wav",
-};
-
 class CSqueak : public CBasePlayerWeapon
 {
 public:
@@ -513,6 +506,13 @@ TYPEDESCRIPTION	CSqueak::m_SaveData[] =
 	DEFINE_FIELD( CSqueak, m_iSoundPlayed, FIELD_INTEGER ),
 };
 IMPLEMENT_SAVERESTORE( CSqueak, CBasePlayerWeapon );
+
+// POV: what the view model's snarks say while they fidget (name ours)
+const char *pVModelSounds[] = 
+{
+	"squeek/sqk_idle1.wav",
+	"squeek/sqk_idle2.wav",
+};
 
 
 void CSqueak::Spawn( )
