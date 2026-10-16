@@ -27,6 +27,7 @@
 #include "saverestore.h"
 #include "trains.h"			// trigger_camera has train functionality
 #include "gamerules.h"
+#include "weapons.h"			// POV: trigger_playerfreeze holsters the weapon
 
 #define	SF_TRIGGER_PUSH_START_OFF	2//spawnflag that makes trigger_push spawn turned OFF
 #define SF_TRIGGER_HURT_TARGETONCE	1// Only fire hurt target once
@@ -252,7 +253,362 @@ void CTriggerRelay::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 
 
 //**********************************************************
-// The Multimanager Entity - when fired, will fire up to 16 targets 
+// POV: trigger_random - fires its target again and again, after a random
+// time between durationmin and durationmax, once it has been triggered.
+
+#define SF_RANDOM_FIREONCE		0x0001
+
+class CTriggerRandom : public CBaseDelay
+{
+public:
+	void KeyValue( KeyValueData *pkvd );
+	void Spawn( void );
+	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void Think( void );
+	float RandomDuration( void );	// name ours
+
+	int ObjectCaps( void ) { return CBaseDelay::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+
+	static	TYPEDESCRIPTION m_SaveData[];
+
+private:
+	float	m_flDurationMin;
+	float	m_flDurationMax;
+	BOOL	m_bAlreadyUsed;
+};
+LINK_ENTITY_TO_CLASS( trigger_random, CTriggerRandom );
+
+TYPEDESCRIPTION	CTriggerRandom::m_SaveData[] =
+{
+	DEFINE_FIELD( CTriggerRandom, m_bAlreadyUsed, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CTriggerRandom, m_flDurationMin, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CTriggerRandom, m_flDurationMax, FIELD_BOOLEAN ),
+};
+
+IMPLEMENT_SAVERESTORE(CTriggerRandom,CBaseDelay);
+
+void CTriggerRandom::KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "durationmin"))
+	{
+		m_flDurationMin = atof( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "durationmax"))
+	{
+		m_flDurationMax = atof( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CBaseDelay::KeyValue( pkvd );
+}
+
+
+void CTriggerRandom::Spawn( void )
+{
+	m_bAlreadyUsed = FALSE;
+	m_flDelay = 0;
+}
+
+
+void CTriggerRandom::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	if ( m_bAlreadyUsed )
+	{
+		ALERT( at_console, "trigger_random: warning - already activated\n" );
+		return;
+	}
+
+	if ( m_flDurationMax < m_flDurationMin )
+	{
+		ALERT( at_console, "trigger_random: ERROR - Minimun time is greater then Maximum!\n" );
+		return;
+	}
+
+	if ( m_flDurationMax == m_flDurationMin )
+	{
+		ALERT( at_console, "trigger_random: ERROR - Minimun time is equal to Maximum!\n" );
+		return;
+	}
+
+	m_bAlreadyUsed = TRUE;
+	pev->nextthink = gpGlobals->time + RandomDuration();
+}
+
+
+float CTriggerRandom::RandomDuration( void )
+{
+	return RANDOM_FLOAT( m_flDurationMin, m_flDurationMax );
+}
+
+
+void CTriggerRandom::Think( void )
+{
+	if ( pev->target )
+		FireTargets( STRING(pev->target), this, this, USE_TOGGLE, 0 );
+
+	if ( pev->spawnflags & SF_RANDOM_FIREONCE )
+		UTIL_Remove( this );
+
+	pev->nextthink = gpGlobals->time + RandomDuration();
+}
+
+
+//**********************************************************
+// POV: trigger_playerfreeze - freezes the player, or lets him go again
+
+#define SF_PLAYERFREEZE_KEEPWEAPON	0x0002	// name ours: don't holster the weapon
+
+class CTriggerPlayerFreeze : public CBaseDelay
+{
+public:
+	void Spawn( void );
+	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+
+	int ObjectCaps( void ) { return CBaseDelay::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+
+	static	TYPEDESCRIPTION m_SaveData[];
+
+private:
+	BOOL	m_bPlayerFreezed;
+	BOOL	m_bFlashLightWasON;
+};
+LINK_ENTITY_TO_CLASS( trigger_playerfreeze, CTriggerPlayerFreeze );
+
+TYPEDESCRIPTION	CTriggerPlayerFreeze::m_SaveData[] =
+{
+	DEFINE_FIELD( CTriggerPlayerFreeze, m_bPlayerFreezed, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CTriggerPlayerFreeze, m_bFlashLightWasON, FIELD_BOOLEAN ),
+};
+
+IMPLEMENT_SAVERESTORE(CTriggerPlayerFreeze,CBaseDelay);
+
+void CTriggerPlayerFreeze::Spawn( void )
+{
+	m_bPlayerFreezed = FALSE;
+}
+
+
+void CTriggerPlayerFreeze::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	CBasePlayer *pPlayer = (CBasePlayer *)UTIL_FindEntityByClassname( NULL, "player" );
+
+	if ( pPlayer )
+	{
+		if ( m_bPlayerFreezed )
+		{
+			pPlayer->EnableControl( TRUE );
+
+			if ( !(pev->spawnflags & SF_PLAYERFREEZE_KEEPWEAPON) && pPlayer->m_pActiveItem )
+				pPlayer->m_pActiveItem->Deploy();
+
+			if ( m_bFlashLightWasON )
+				pPlayer->FlashlightTurnOn( FALSE );
+		}
+		else
+		{
+			m_bFlashLightWasON = pPlayer->FlashlightIsOn();
+			if ( m_bFlashLightWasON )
+				pPlayer->FlashlightTurnOff( FALSE );
+
+			if ( !(pev->spawnflags & SF_PLAYERFREEZE_KEEPWEAPON) && pPlayer->m_pActiveItem )
+			{
+				pPlayer->m_pActiveItem->Holster();
+				pPlayer->pev->weaponmodel = 0;
+			}
+
+			pPlayer->EnableControl( FALSE );
+		}
+
+		m_bPlayerFreezed = !m_bPlayerFreezed;
+	}
+	else
+	{
+		ALERT( at_console, "trigger_playerfreeze: ERROR - didn't find player\n" );
+	}
+}
+
+
+//**********************************************************
+// POV: trigger_trogglehud - hides the HUD, or shows it again
+
+class CTriggerTroggleHud : public CBaseDelay
+{
+public:
+	void Spawn( void );
+	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+
+	int ObjectCaps( void ) { return CBaseDelay::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+
+	static	TYPEDESCRIPTION m_SaveData[];
+
+private:
+	BOOL	m_bHudShowing;
+	int		m_iHudStatus;
+};
+LINK_ENTITY_TO_CLASS( trigger_trogglehud, CTriggerTroggleHud );
+
+TYPEDESCRIPTION	CTriggerTroggleHud::m_SaveData[] =
+{
+	DEFINE_FIELD( CTriggerTroggleHud, m_bHudShowing, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CTriggerTroggleHud, m_iHudStatus, FIELD_INTEGER ),
+};
+
+IMPLEMENT_SAVERESTORE(CTriggerTroggleHud,CBaseDelay);
+
+void CTriggerTroggleHud::Spawn( void )
+{
+	m_bHudShowing = TRUE;
+}
+
+
+void CTriggerTroggleHud::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	CBasePlayer *pPlayer = (CBasePlayer *)UTIL_FindEntityByClassname( NULL, "player" );
+
+	if ( pPlayer )
+	{
+		if ( m_bHudShowing )
+		{
+			m_iHudStatus = pPlayer->m_iHideHUD;
+			pPlayer->m_iHideHUD |= HIDEHUD_WEAPONS | HIDEHUD_FLASHLIGHT | HIDEHUD_HEALTH;
+		}
+		else
+		{
+			pPlayer->m_iHideHUD = m_iHudStatus;
+		}
+
+		m_bHudShowing = !m_bHudShowing;
+	}
+	else
+	{
+		ALERT( at_console, "trigger_trogglehud: ERROR - didn't find player\n" );
+	}
+}
+
+
+//**********************************************************
+// POV: trigger_move - moves an entity (the player, a monster) to the
+// trigger's target, like a teleport.
+
+#define SF_MOVE_KEEPVELOCITY	0x0001	// name ours
+
+class CTriggerMove : public CBaseDelay
+{
+public:
+	void KeyValue( KeyValueData *pkvd );
+	void Spawn( void );
+	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+
+	int ObjectCaps( void ) { return CBaseDelay::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+
+	static	TYPEDESCRIPTION m_SaveData[];
+
+private:
+	int		m_iszEntToMove;
+};
+LINK_ENTITY_TO_CLASS( trigger_move, CTriggerMove );
+
+TYPEDESCRIPTION	CTriggerMove::m_SaveData[] =
+{
+	DEFINE_FIELD( CTriggerMove, m_iszEntToMove, FIELD_STRING ),
+};
+
+IMPLEMENT_SAVERESTORE(CTriggerMove,CBaseDelay);
+
+void CTriggerMove::KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "enttomove"))
+	{
+		m_iszEntToMove = ALLOC_STRING( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CBaseDelay::KeyValue( pkvd );
+}
+
+
+void CTriggerMove::Spawn( void )
+{
+}
+
+
+void CTriggerMove::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	if ( !m_iszEntToMove )
+	{
+		ALERT( at_console, "trigger_move: ERROR - invalid Entity To Move\n" );
+		return;
+	}
+
+	CBaseEntity *pEntity = CBaseEntity::Instance( FIND_ENTITY_BY_TARGETNAME( NULL, STRING(m_iszEntToMove) ) );
+	if ( !pEntity )
+	{
+		ALERT( at_console, "trigger_move: ERROR - couldnt find Entity To Move\n" );
+		return;
+	}
+
+	if ( !pev->target )
+	{
+		ALERT( at_console, "trigger_move: ERROR - invalid destination to move\n" );
+		return;
+	}
+
+	edict_t	*pentTarget = FIND_ENTITY_BY_TARGETNAME( NULL, STRING(pev->target) );
+	if ( FNullEnt(pentTarget) )
+	{
+		ALERT( at_console, "trigger_move: ERROR - couldnt find destination to move\n" );
+		return;
+	}
+
+	entvars_t* pevToucher = pEntity->pev;
+
+	if ( pevToucher->deadflag != DEAD_DEAD && !FBitSet( pevToucher->flags, FL_CLIENT|FL_MONSTER ) )
+	{
+		if ( !FClassnameIs( pevToucher, "monster_sitting_scientist" ) )
+		{
+			ALERT( at_console, "trigger_move: ERROR - Entity To Move not player or monster\n" );
+			return;
+		}
+	}
+
+	Vector tmp = VARS( pentTarget )->origin;
+
+	if ( pEntity->IsPlayer() )
+	{
+		tmp.z -= pEntity->pev->mins.z;// make origin adjustments in case the teleportee is a player. (origin in center, not at feet)
+	}
+
+	tmp.z++;
+
+	pEntity->pev->flags &= ~FL_ONGROUND;
+
+	UTIL_SetOrigin( pEntity->pev, tmp );
+
+	pEntity->pev->angles = pentTarget->v.angles;
+
+	if ( pEntity->IsPlayer() )
+	{
+		pEntity->pev->v_angle = pentTarget->v.angles;
+	}
+
+	pEntity->pev->fixangle = TRUE;
+
+	if ( !(pev->spawnflags & SF_MOVE_KEEPVELOCITY) )
+		pEntity->pev->velocity = pEntity->pev->basevelocity = g_vecZero;
+}
+
+
+//**********************************************************
+// The Multimanager Entity - when fired, will fire up to 16 targets
 // at specified times.
 // FLAG:		THREAD (create clones when triggered)
 // FLAG:		CLONE (this is a clone for a threaded execution)
@@ -334,6 +690,11 @@ void CMultiManager :: KeyValue( KeyValueData *pkvd )
 			UTIL_StripToken( pkvd->szKeyName, tmp );
 			m_iTargetName [ m_cTargets ] = ALLOC_STRING( tmp );
 			m_flTargetDelay [ m_cTargets ] = atof (pkvd->szValue);
+
+			// POV: warn about target names longer than 20 characters
+			if ( m_iTargetName [ m_cTargets ] && strlen( STRING( m_iTargetName [ m_cTargets ] ) ) > 20 )
+				ALERT( at_console, "==================>     NAME TOO BIG %d !!!!! %s <==================\n", strlen( STRING( m_iTargetName [ m_cTargets ] ) ), STRING( m_iTargetName [ m_cTargets ] ) );
+
 			m_cTargets++;
 			pkvd->fHandled = TRUE;
 		}
@@ -387,11 +748,25 @@ BOOL CMultiManager::HasTarget( string_t targetname )
 void CMultiManager :: ManagerThink ( void )
 {
 	float	time;
+	char	*pszTarget = "";	// sic: POV copies the name into a string literal
 
 	time = gpGlobals->time - m_startTime;
 	while ( m_index < m_cTargets && m_flTargetDelay[ m_index ] <= time )
 	{
-		FireTargets( STRING( m_iTargetName[ m_index ] ), m_hActivator, this, USE_TOGGLE, 0 );
+		strcpy( pszTarget, STRING( m_iTargetName[ m_index ] ) );
+
+		// POV: "-name" removes every entity with that name
+		if ( pszTarget[0] == '-' )
+		{
+			edict_t *pentTarget = FIND_ENTITY_BY_TARGETNAME( NULL, &pszTarget[1] );
+			while ( !FNullEnt( pentTarget ) )
+			{
+				UTIL_Remove( CBaseEntity::Instance( pentTarget ) );
+				pentTarget = FIND_ENTITY_BY_TARGETNAME( pentTarget, &pszTarget[1] );
+			}
+		}
+		else
+			FireTargets( STRING( m_iTargetName[ m_index ] ), m_hActivator, this, USE_TOGGLE, 0 );
 		m_index++;
 	}
 

@@ -405,7 +405,7 @@ void PlayLockSounds(entvars_t *pev, locksound_t *pls, int flocked, int fbutton);
 // MultiSouce
 //
 
-#define MAX_MULTI_TARGETS	16 // maximum number of targets a single multi_manager entity may be assigned.
+#define MAX_MULTI_TARGETS	24 // maximum number of targets a single multi_manager entity may be assigned. (POV: 24, was 16)
 #define MS_MAX_TARGETS 32
 
 class CMultiSource : public CPointEntity
