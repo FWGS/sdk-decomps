@@ -37,7 +37,7 @@
 #include	"gamerules.h"
 #include	"decals.h"
 
-extern DLL_GLOBAL BOOL g_fLoading;			// POV
+extern DLL_GLOBAL BOOL g_fLevelLoaded;			// POV
 extern int gEvilImpulse101;
 extern DLL_GLOBAL short g_sModelIndexWExplosion;
 
@@ -1130,7 +1130,7 @@ void CStukabat::SecondaryAttack( void )
 
 void CStukabat::WeaponIdle( void )
 {
-	if ( g_fLoading == TRUE )
+	if ( g_fLevelLoaded == TRUE )
 	{
 		StopVModelSound( );
 		return;

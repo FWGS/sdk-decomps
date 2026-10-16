@@ -32,7 +32,7 @@
 #include "soundent.h"
 #include "gamerules.h"
 
-extern DLL_GLOBAL BOOL g_fLoading;			// POV
+extern DLL_GLOBAL BOOL g_fLevelLoaded;			// POV
 extern int gEvilImpulse101;
 
 enum w_toad_e {	// names ours
@@ -710,7 +710,7 @@ void CToad::SecondaryAttack( void )
 
 void CToad::WeaponIdle( void )
 {
-	if ( g_fLoading == TRUE )
+	if ( g_fLevelLoaded == TRUE )
 	{
 		StopVModelSound( );
 		return;

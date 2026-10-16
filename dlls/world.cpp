@@ -41,7 +41,7 @@ extern CBaseEntity				*g_pLastSpawn;
 DLL_GLOBAL edict_t				*g_pBodyQueueHead;
 CGlobalState					gGlobalState;
 extern DLL_GLOBAL	int			gDisplayTitle;
-extern DLL_GLOBAL	BOOL		g_fLoading;	// POV, name ours
+extern DLL_GLOBAL	BOOL		g_fLevelLoaded;	// POV, name ours
 
 extern void W_Precache(void);
 
@@ -181,7 +181,7 @@ void POVDECAL :: PlaceDecal( void )
 	int			entityIndex;
 
 	// wait until the level is loaded
-	if ( g_fLoading == TRUE )
+	if ( g_fLevelLoaded == TRUE )
 	{
 		pev->nextthink = gpGlobals->time + 0.1;
 		return;
@@ -532,7 +532,7 @@ float g_flWeaponCheat;
 
 void CWorld :: Spawn( void )
 {
-	g_fLoading = TRUE;	// POV
+	g_fLevelLoaded = TRUE;	// POV
 	g_fGameOver = FALSE;
 	Precache( );
 	g_flWeaponCheat = CVAR_GET_FLOAT( "sv_cheats" );  // Is the impulse 101 command allowed?

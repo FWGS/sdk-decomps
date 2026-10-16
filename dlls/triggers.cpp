@@ -38,8 +38,8 @@
 #define SF_TRIGGER_HURT_CLIENTONLYTOUCH 32// only clients may touch this trigger.
 
 extern DLL_GLOBAL BOOL		g_fGameOver;
-extern DLL_GLOBAL BOOL		g_fLoading;		// POV, name ours: a level was just loaded or restored
-extern DLL_GLOBAL BOOL		g_fNoPickupSound;	// POV, name ours
+extern DLL_GLOBAL BOOL		g_fLevelLoaded;		// POV, name ours: a level was just loaded or restored
+extern DLL_GLOBAL BOOL		g_fSilentPickup;	// POV, name ours
 
 extern void SetMovedir(entvars_t* pev);
 extern Vector VecBModelOrigin( entvars_t* pevBModel );
@@ -1343,9 +1343,9 @@ void CTriggerXHand::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 		if ( !(pPlayer->pev->weapons & (1<<WEAPON_SUIT)) )
 			pPlayer->pev->weapons |= (1<<WEAPON_SUIT);
 
-		g_fNoPickupSound = TRUE;
+		g_fSilentPickup = TRUE;
 		pPlayer->GiveNamedItem( "weapon_xhand" );
-		g_fNoPickupSound = FALSE;
+		g_fSilentPickup = FALSE;
 	}
 	else
 		ALERT( at_console, "Cant give weapon_xhand!!\n" );
@@ -2153,7 +2153,7 @@ void CChangeLevel :: ChangeLevelNow( CBaseEntity *pActivator )
 	}
 
 	// POV: the next level is loading; close the journal
-	g_fLoading = TRUE;
+	g_fLevelLoaded = TRUE;
 
 	CBasePlayer *pClient = (CBasePlayer *)UTIL_FindEntityByClassname( NULL, "player" );	// name ours
 	if ( pClient )
@@ -2898,7 +2898,7 @@ int CTriggerCamera::Save( CSave &save )
 
 void CTriggerCamera::WaitToLoadFinishThink( void )
 {
-	if ( g_fLoading == TRUE )
+	if ( g_fLevelLoaded == TRUE )
 	{
 		pev->nextthink = gpGlobals->time + 0.1;
 		return;

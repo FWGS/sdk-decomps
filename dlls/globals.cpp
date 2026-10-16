@@ -35,8 +35,10 @@ DLL_GLOBAL Vector		g_vecAttackDir;
 DLL_GLOBAL int			g_iSkillLevel;
 DLL_GLOBAL int			gDisplayTitle;
 DLL_GLOBAL BOOL			g_fGameOver;
-DLL_GLOBAL BOOL			g_fLoading;		// POV, name ours: a level was just loaded or restored
+// POV's globals; names ours. VC6 orders uninitialised globals by a hash of
+// their names, and these names give retail's .bss layout (tools/bss_try.py).
+DLL_GLOBAL BOOL			g_fLevelLoaded;		// POV, name ours: a level was just loaded or restored
 DLL_GLOBAL float		g_flFadeEndTime;	// POV, name ours: when the last screen fade ends
-DLL_GLOBAL BOOL			g_fNoPickupSound;	// POV, name ours: items given by code are silent
+DLL_GLOBAL BOOL			g_fSilentPickup;	// POV, name ours: items given by code are silent
 DLL_GLOBAL const Vector	g_vecZero = Vector(0,0,0);
 DLL_GLOBAL int			g_Language;

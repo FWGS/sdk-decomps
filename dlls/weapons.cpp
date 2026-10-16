@@ -33,7 +33,7 @@
 
 extern CGraph	WorldGraph;
 extern int gEvilImpulse101;
-extern DLL_GLOBAL BOOL g_fNoPickupSound;	// POV
+extern DLL_GLOBAL BOOL g_fSilentPickup;	// POV
 
 
 #define NOT_USED 255
@@ -630,7 +630,7 @@ void CBasePlayerItem::DefaultTouch( CBaseEntity *pOther )
 	if (pOther->AddPlayerItem( this ))
 	{
 		AttachToPlayer( pPlayer );
-		if ( !g_fNoPickupSound )
+		if ( !g_fSilentPickup )
 			EMIT_SOUND(ENT(pPlayer->pev), CHAN_ITEM, "items/gunpickup2.wav", 1, ATTN_NORM);
 	}
 

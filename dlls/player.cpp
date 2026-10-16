@@ -38,9 +38,9 @@
 
 extern DLL_GLOBAL ULONG		g_ulModelIndexPlayer;
 extern DLL_GLOBAL BOOL		g_fGameOver;
-extern DLL_GLOBAL BOOL		g_fLoading;	// POV, name ours: a level was just loaded or restored
+extern DLL_GLOBAL BOOL		g_fLevelLoaded;	// POV, name ours: a level was just loaded or restored
 extern DLL_GLOBAL float		g_flFadeEndTime;
-extern DLL_GLOBAL BOOL		g_fNoPickupSound;
+extern DLL_GLOBAL BOOL		g_fSilentPickup;
 extern float g_flWeaponCheat;
 extern DLL_GLOBAL	BOOL	g_fDrawLines;
 int gEvilImpulse101;
@@ -2801,7 +2801,7 @@ void CBasePlayer::PostThink()
 
 	// POV: the first think after a level load or restore resends dark vision,
 	// the story icon and the sound room
-	if ( g_fLoading == TRUE )
+	if ( g_fLevelLoaded == TRUE )
 	{
 		if ( FlashlightIsOn() )
 			FlashlightTurnOn( FALSE );
@@ -2815,7 +2815,7 @@ void CBasePlayer::PostThink()
 			WRITE_SHORT( (short)m_flSndRoomtype );
 		MESSAGE_END();
 
-		g_fLoading = FALSE;
+		g_fLevelLoaded = FALSE;
 	}
 	else
 	{
@@ -2995,7 +2995,7 @@ ReturnSpot:
 
 void CBasePlayer::Spawn( void )
 {
-	g_fLoading = TRUE;
+	g_fLevelLoaded = TRUE;
 
 	pev->classname		= MAKE_STRING("player");
 	pev->health			= 100;
@@ -3045,7 +3045,7 @@ void CBasePlayer::Spawn( void )
 	m_iHornetStatus = 0;
 
 	g_flFadeEndTime = gpGlobals->time - 1.0;
-	g_fNoPickupSound = FALSE;
+	g_fSilentPickup = FALSE;
 
 	// the journal: only the first entry is known
 	m_fStoryShown = FALSE;
@@ -3174,7 +3174,7 @@ int CBasePlayer::Restore( CRestore &restore )
 	if ( !CBaseMonster::Restore(restore) )
 		return 0;
 
-	g_fLoading = TRUE;
+	g_fLevelLoaded = TRUE;
 
 	int status = restore.ReadFields( "PLAYER", this, m_playerSaveData, ARRAYSIZE(m_playerSaveData) );
 
@@ -3800,9 +3800,9 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 		if ( !(pev->weapons & (1<<WEAPON_SUIT)) )
 			pev->weapons |= (1<<WEAPON_SUIT);
 		TakeHealth( 100, DMG_GENERIC );
-		g_fNoPickupSound = TRUE;
+		g_fSilentPickup = TRUE;
 		GiveNamedItem( "weapon_xhand" );
-		g_fNoPickupSound = FALSE;
+		g_fSilentPickup = FALSE;
 		GiveNamedItem( "weapon_toad" );
 		GiveNamedItem( "weapon_toad" );
 		GiveNamedItem( "weapon_snark" );
@@ -3842,9 +3842,9 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 	case 77:	// POV: the alien slave's hands
 		if ( !(pev->weapons & (1<<WEAPON_SUIT)) )
 			pev->weapons |= (1<<WEAPON_SUIT);
-		g_fNoPickupSound = TRUE;
+		g_fSilentPickup = TRUE;
 		GiveNamedItem( "weapon_xhand" );
-		g_fNoPickupSound = FALSE;
+		g_fSilentPickup = FALSE;
 		break;
 
 	case 78:
@@ -3874,9 +3874,9 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 		if ( !(pev->weapons & (1<<WEAPON_SUIT)) )
 			pev->weapons |= (1<<WEAPON_SUIT);
 		TakeHealth( 25, DMG_GENERIC );
-		g_fNoPickupSound = TRUE;
+		g_fSilentPickup = TRUE;
 		GiveNamedItem( "weapon_xhand" );
-		g_fNoPickupSound = FALSE;
+		g_fSilentPickup = FALSE;
 		GiveNamedItem( "weapon_stukabat" );
 		GiveNamedItem( "weapon_toad" );
 		GiveNamedItem( "weapon_snark" );

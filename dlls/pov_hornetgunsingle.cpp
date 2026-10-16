@@ -31,7 +31,7 @@
 #include "gamerules.h"
 
 
-extern DLL_GLOBAL BOOL g_fLoading;
+extern DLL_GLOBAL BOOL g_fLevelLoaded;
 
 enum hgun_e {
 	HGUN_IDLE1 = 0,
@@ -373,7 +373,7 @@ void CSingleHgun::Reload( void )
 
 void CSingleHgun::WeaponIdle( void )
 {
-	if ( g_fLoading == TRUE )
+	if ( g_fLevelLoaded == TRUE )
 	{
 		StopVModelSound( );
 		return;
