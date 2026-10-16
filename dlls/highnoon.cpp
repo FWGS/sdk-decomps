@@ -509,10 +509,10 @@ void CHighNoon::StartRound( void )
 	char *pszText = UTIL_VarArgs( "\n\n\n%s (%s kill%s)\n\nVS\n\n%s (%s kill%s)!\n",
 		STRING( m_pChampion->pev->netname ),
 		m_iWins[0] ? IntToString( m_iWins[0], s_szWins[0] ) : "no",
-		( m_iWins[0] == 1 ) ? "" : "s",
+		( m_iWins[0] != 1 ) ? "s" : "",
 		STRING( m_pChallenger->pev->netname ),
 		m_iWins[1] ? IntToString( m_iWins[1], s_szWins[1] ) : "no",
-		( m_iWins[1] == 1 ) ? "" : "s" );
+		( m_iWins[1] != 1 ) ? "s" : "" );
 	UTIL_ClientPrintAll( HUD_PRINTCENTER, pszText );
 
 	m_fMatchActive = TRUE;
