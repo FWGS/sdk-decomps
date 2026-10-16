@@ -314,6 +314,20 @@ int CLeech::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float f
 		pev->velocity = (pev->origin - pevInflictor->origin).Normalize() * 25;
 	}
 
+	// POV: answer the player's shots
+	if ( m_MonsterState != MONSTERSTATE_PRONE && !(m_afMemory & bits_MEMORY_PROVOKED) )
+	{
+		switch ( UTIL_PlayerProvoke( this, pevAttacker ) )
+		{
+		case 1:
+		case 2:
+		case 3:
+			AttackSound( );
+			Remember( bits_MEMORY_SUSPICIOUS );
+			break;
+		}
+	}
+
 	return CBaseMonster::TakeDamage( pevInflictor, pevAttacker, flDamage, bitsDamageType );
 }
 
