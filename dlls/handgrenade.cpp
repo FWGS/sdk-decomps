@@ -20,9 +20,14 @@
 #include "nodes.h"
 #include "player.h"
 
+// Wanted: dynamite. The SDK's hand grenade with a four-second fuse, lit
+// with a flash when the attack is pressed; let go after the lighting
+// animation and the stick is thrown (CGrenade::ShootTimed, ggrenade.cpp).
+// Held four seconds or more, it goes off as soon as it is let go.
 
 #define	HANDGRENADE_PRIMARY_VOLUME		450
 
+// sequences of models/v_dynamite.mdl
 enum handgrenade_e {
 	HANDGRENADE_IDLE = 0,
 	HANDGRENADE_FIDGET,
@@ -51,18 +56,18 @@ public:
 	float m_flStartThrow;
 	float m_flReleaseThrow;
 };
-LINK_ENTITY_TO_CLASS( weapon_handgrenade, CHandGrenade );
+LINK_ENTITY_TO_CLASS( weapon_dynamite, CHandGrenade );
 
 
 void CHandGrenade::Spawn( )
 {
 	Precache( );
 	m_iId = WEAPON_DYNAMITE;
-	SET_MODEL(ENT(pev), "models/w_grenade.mdl");
+	SET_MODEL(ENT(pev), "models/w_dynamite.mdl");
 
 	pev->dmg = gSkillData.plrDmgHandGrenade;
 
-	m_iDefaultAmmo = HANDGRENADE_DEFAULT_GIVE;
+	m_iDefaultAmmo = 5;
 
 	FallInit();// get ready to fall down.
 }
@@ -70,16 +75,17 @@ void CHandGrenade::Spawn( )
 
 void CHandGrenade::Precache( void )
 {
-	PRECACHE_MODEL("models/w_grenade.mdl");
-	PRECACHE_MODEL("models/v_grenade.mdl");
-	PRECACHE_MODEL("models/p_grenade.mdl");
+	PRECACHE_MODEL("models/w_dynamite.mdl");
+	PRECACHE_MODEL("models/v_dynamite.mdl");
+	PRECACHE_MODEL("models/p_dynamite.mdl");
+	PRECACHE_MODEL("sprites/dynamite_fuse.spr");
 }
 
 int CHandGrenade::GetItemInfo(ItemInfo *p)
 {
 	p->pszName = STRING(pev->classname);
-	p->pszAmmo1 = "Hand Grenade";
-	p->iMaxAmmo1 = HANDGRENADE_MAX_CARRY;
+	p->pszAmmo1 = "dynamite";
+	p->iMaxAmmo1 = 20;
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
@@ -96,7 +102,7 @@ int CHandGrenade::GetItemInfo(ItemInfo *p)
 BOOL CHandGrenade::Deploy( )
 {
 	m_flReleaseThrow = -1;
-	return DefaultDeploy( "models/v_grenade.mdl", "models/p_grenade.mdl", HANDGRENADE_DRAW, "crowbar" );
+	return DefaultDeploy( "models/v_dynamite.mdl", "models/p_dynamite.mdl", HANDGRENADE_DRAW, "pick" );
 }
 
 BOOL CHandGrenade::CanHolster( void )
@@ -131,13 +137,19 @@ void CHandGrenade::PrimaryAttack()
 		m_flReleaseThrow = 0;
 
 		SendWeaponAnim( HANDGRENADE_PINPULL );
-		m_flTimeWeaponIdle = gpGlobals->time + 0.5;
+
+		// striking the match
+		m_pPlayer->pev->effects = (int)(m_pPlayer->pev->effects) | EF_MUZZLEFLASH;
+
+		m_flTimeWeaponIdle = gpGlobals->time + 1.983;
 	}
 }
 
 
 void CHandGrenade::WeaponIdle( void )
 {
+	m_pPlayer->m_iFOV = 0;
+
 	if (m_flReleaseThrow == 0)
 		m_flReleaseThrow = gpGlobals->time;
 
@@ -163,8 +175,8 @@ void CHandGrenade::WeaponIdle( void )
 
 		Vector vecThrow = gpGlobals->v_forward * flVel + m_pPlayer->pev->velocity;
 
-		// alway explode 3 seconds after the pin was pulled
-		float time = m_flStartThrow - gpGlobals->time + 3.0;
+		// alway explode 4 seconds after the fuse was lit
+		float time = m_flStartThrow - gpGlobals->time + 4.0;
 		if (time < 0)
 			time = 0;
 
@@ -228,12 +240,12 @@ void CHandGrenade::WeaponIdle( void )
 		if (flRand <= 0.75)
 		{
 			iAnim = HANDGRENADE_IDLE;
-			m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );// how long till we do this again.
+			m_flTimeWeaponIdle = gpGlobals->time + 1.1;
 		}
 		else 
 		{
 			iAnim = HANDGRENADE_FIDGET;
-			m_flTimeWeaponIdle = gpGlobals->time + 75.0 / 30.0;
+			m_flTimeWeaponIdle = gpGlobals->time + 3.266;
 		}
 
 		SendWeaponAnim( iAnim );
