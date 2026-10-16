@@ -22,8 +22,8 @@
 
 
 #define RGB_YELLOWISH 0x0000FF00 //0,255,0: POV's HUD is green
-#define RGB_REDISH 0x00FF1010 //255,160,0
-#define RGB_GREENISH 0x0000A000 //0,160,0
+#define RGB_REDISH 0x00FA0000 //250,0,0
+#define RGB_GREENISH 0x0000C000 //0,192,0
 
 #include "wrect.h"
 #include "cl_dll.h"

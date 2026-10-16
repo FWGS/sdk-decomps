@@ -669,6 +669,9 @@ int CHudAmmo::MsgFunc_WeaponList(const char *pszName, int iSize, void *pbuf )
 // Slot button pressed
 void CHudAmmo::SlotInput( int iSlot )
 {
+	if ( iSlot >= MAX_WEAPON_SLOTS )
+		return;
+
 	// Let the Viewport use it first, for menus
 	if ( gViewPort && gViewPort->SlotInput( iSlot ) )
 		return;
@@ -926,18 +929,15 @@ int CHudAmmo::Draw(float flTime)
 	{
 		int iIconWidth = m_pWeapon->rcAmmo2.right - m_pWeapon->rcAmmo2.left;
 
-		// Do we have secondary ammo?
-		if ((pw->iAmmo2Type != 0) && (gWR.CountAmmo(pw->iAmmo2Type) > 0))
-		{
-			y -= gHUD.m_iFontHeight + gHUD.m_iFontHeight/4;
-			x = ScreenWidth - 4 * AmmoWidth - iIconWidth;
-			x = gHUD.DrawHudNumber(x, y, iFlags|DHN_3DIGITS, gWR.CountAmmo(pw->iAmmo2Type), r, g, b);
+		// shown even when it's empty
+		y -= gHUD.m_iFontHeight + gHUD.m_iFontHeight/4;
+		x = ScreenWidth - 4 * AmmoWidth - iIconWidth;
+		x = gHUD.DrawHudNumber(x, y, iFlags|DHN_3DIGITS, gWR.CountAmmo(pw->iAmmo2Type), r, g, b);
 
-			// Draw the ammo Icon
-			SPR_Set(m_pWeapon->hAmmo2, r, g, b);
-			int iOffset = (m_pWeapon->rcAmmo2.bottom - m_pWeapon->rcAmmo2.top)/8;
-			SPR_DrawAdditive(0, x, y - iOffset, &m_pWeapon->rcAmmo2);
-		}
+		// Draw the ammo Icon
+		SPR_Set(m_pWeapon->hAmmo2, r, g, b);
+		int iOffset = (m_pWeapon->rcAmmo2.bottom - m_pWeapon->rcAmmo2.top)/8;
+		SPR_DrawAdditive(0, x, y - iOffset, &m_pWeapon->rcAmmo2);
 	}
 	return 1;
 }
@@ -1156,6 +1156,7 @@ int CHudAmmo::DrawWList(float flTime)
 				{
 					UnpackRGB(r,g,b, RGB_REDISH);
 					a = 96;
+					ScaleColors(r, g, b, a);
 				}
 
 				FillRGBA( x, y, giBucketWidth, giBucketHeight, r, g, b, a );
