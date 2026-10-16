@@ -137,6 +137,16 @@ int CBarnacle::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, floa
 		flDamage = pev->health;
 	}
 
+	// POV: a provoked barnacle lashes its tongue
+	if ( m_MonsterState != MONSTERSTATE_PRONE && !(m_afMemory & bits_MEMORY_PROVOKED) )
+	{
+		if ( UTIL_PlayerProvoke( this, pevAttacker ) == 3 )
+		{
+			EMIT_SOUND( ENT(pev), CHAN_WEAPON, "barnacle/bcl_tongue1.wav", 1, ATTN_NORM );
+			Remember( bits_MEMORY_PROVOKED );
+		}
+	}
+
 	return CBaseMonster::TakeDamage( pevInflictor, pevAttacker, flDamage, bitsDamageType );
 }
 
@@ -383,6 +393,7 @@ void CBarnacle :: Precache()
 	PRECACHE_SOUND("barnacle/bcl_chew3.wav");
 	PRECACHE_SOUND("barnacle/bcl_die1.wav" );
 	PRECACHE_SOUND("barnacle/bcl_die3.wav" );
+	PRECACHE_SOUND("barnacle/bcl_tongue1.wav" );	// POV
 }	
 
 //=========================================================
