@@ -500,6 +500,10 @@ SOURCE=.\pov_panther.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_scientist.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_spforce.cpp
 # End Source File
 # Begin Source File
@@ -765,6 +769,10 @@ SOURCE=.\saverestore.h
 # Begin Source File
 
 SOURCE=.\schedule.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\scientist.h
 # End Source File
 # Begin Source File
 
