@@ -605,10 +605,10 @@ BOOL CBot::CanNotice( CBaseEntity *pEntity )
 	if ( FInViewCone( pEntity ) )
 		return TRUE;
 
-	if ( pEntity->IsPlayer() && 1000 - m_Profile.SkillAdjust( m_Profile.m_flNotice ) * 10 <= ((CBasePlayer *)pEntity)->m_iTargetVolume )
+	if ( pEntity->IsPlayer() && ((CBasePlayer *)pEntity)->m_iTargetVolume >= 1000 - m_Profile.NoticeSkill() * 10 )
 		return TRUE;
 
-	float flDist = ( pev->origin - pEntity->pev->origin ).Length();
+	float flDist = Vector( pev->origin - pEntity->pev->origin ).Length();
 
 	if ( flDist > 8192 )
 		flDist = 8192;
@@ -616,7 +616,7 @@ BOOL CBot::CanNotice( CBaseEntity *pEntity )
 		flDist = 32;
 
 	float flRatio = 8192 / flDist;
-	float flSkill = m_Profile.SkillAdjust( m_Profile.m_flNotice );
+	float flSkill = m_Profile.NoticeSkill();
 	float flRandom = RANDOM_FLOAT( 1, 65536 );
 	flSkill = flSkill / 100 - 0.5;
 
