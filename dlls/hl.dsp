@@ -476,6 +476,14 @@ SOURCE=.\pov_hev_spforce.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_hev_spfsci.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\pov_hev_spfscihelmet.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_panther.cpp
 # End Source File
 # Begin Source File
