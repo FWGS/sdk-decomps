@@ -268,6 +268,12 @@ int CHGrunt::IRelationship ( CBaseEntity *pTarget )
 		return R_NM;
 	}
 
+	// POV: the special forces are no friends of the marines
+	if ( FClassnameIs( pTarget->pev, "monster_human_spforce" ) || FClassnameIs( pTarget->pev, "monster_hev_spforce" ) || FClassnameIs( pTarget->pev, "monster_hev_spforce_xtbu" ) )
+	{
+		return R_HT;
+	}
+
 	return CSquadMonster::IRelationship( pTarget );
 }
 
@@ -276,36 +282,20 @@ int CHGrunt::IRelationship ( CBaseEntity *pTarget )
 //=========================================================
 void CHGrunt :: GibMonster ( void )
 {
-	Vector	vecGunPos;
-	Vector	vecGunAngles;
-
 	if ( GetBodygroup( 2 ) != 2 )
 	{// throw a gun if the grunt has one
-		GetAttachment( 0, vecGunPos, vecGunAngles );
-		
-		CBaseEntity *pGun;
 		if (FBitSet( pev->weapons, HGRUNT_SHOTGUN ))
 		{
-			pGun = DropItem( "weapon_shotgun", vecGunPos, vecGunAngles );
+			UTIL_DropGun( this, "weapon_shotgun", TRUE );
 		}
 		else
 		{
-			pGun = DropItem( "weapon_9mmAR", vecGunPos, vecGunAngles );
-		}
-		if ( pGun )
-		{
-			pGun->pev->velocity = Vector (RANDOM_FLOAT(-100,100), RANDOM_FLOAT(-100,100), RANDOM_FLOAT(200,300));
-			pGun->pev->avelocity = Vector ( 0, RANDOM_FLOAT( 200, 400 ), 0 );
+			UTIL_DropGun( this, "weapon_9mmAR", TRUE );
 		}
 	
 		if (FBitSet( pev->weapons, HGRUNT_GRENADELAUNCHER ))
 		{
-			pGun = DropItem( "ammo_ARgrenades", vecGunPos, vecGunAngles );
-			if ( pGun )
-			{
-				pGun->pev->velocity = Vector (RANDOM_FLOAT(-100,100), RANDOM_FLOAT(-100,100), RANDOM_FLOAT(200,300));
-				pGun->pev->avelocity = Vector ( 0, RANDOM_FLOAT( 200, 400 ), 0 );
-			}
+			UTIL_DropGun( this, "ammo_ARgrenades", TRUE );
 		}
 	}
 
@@ -443,7 +433,7 @@ BOOL CHGrunt :: CheckMeleeAttack1 ( float flDot, float flDist )
 //=========================================================
 BOOL CHGrunt :: CheckRangeAttack1 ( float flDot, float flDist )
 {
-	if ( !HasConditions( bits_COND_ENEMY_OCCLUDED ) && flDist <= 2048 && flDot >= 0.5 && NoFriendlyFire() )
+	if ( !HasConditions( bits_COND_ENEMY_OCCLUDED ) && flDist <= m_flDistTooFar && flDot >= 0.5 && NoFriendlyFire() )
 	{
 		TraceResult	tr;
 
@@ -454,11 +444,13 @@ BOOL CHGrunt :: CheckRangeAttack1 ( float flDot, float flDist )
 		}
 
 		Vector vecSrc = GetGunPosition();
+		CBaseEntity *pEnemy = m_hEnemy;
 
 		// verify that a bullet fired from the gun will hit the enemy before the world.
-		UTIL_TraceLine( vecSrc, m_hEnemy->BodyTarget(vecSrc), ignore_monsters, ignore_glass, ENT(pev), &tr);
+		Vector vecTarget = pEnemy->BodyTarget(vecSrc) - pEnemy->pev->origin + m_vecEnemyLKP;
+		UTIL_TraceLine( vecSrc, vecTarget, dont_ignore_monsters, dont_ignore_glass, ENT(pev), &tr);
 
-		if ( tr.flFraction == 1.0 )
+		if ( tr.flFraction == 1.0 || (tr.pHit && GET_PRIVATE(tr.pHit) == pEnemy) )
 		{
 			return TRUE;
 		}
@@ -798,9 +790,10 @@ void CHGrunt :: Shoot ( void )
 
 	Vector	vecShellVelocity = gpGlobals->v_right * RANDOM_FLOAT(40,90) + gpGlobals->v_up * RANDOM_FLOAT(75,200) + gpGlobals->v_forward * RANDOM_FLOAT(-40, 40);
 	EjectBrass ( vecShootOrigin - vecShootDir * 24, vecShellVelocity, pev->angles.y, m_iBrassShell, TE_BOUNCE_SHELL); 
-	FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_10DEGREES, 2048, BULLET_MONSTER_MP5 ); // shoot +-5 degrees
+	FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_10DEGREES, m_flDistTooFar, BULLET_MONSTER_MP5 ); // shoot +-5 degrees
 
 	pev->effects |= EF_MUZZLEFLASH;
+	UTIL_MuzzleLight( this, vecShootOrigin );
 	
 	m_cAmmoLoaded--;// take away a bullet!
 
@@ -825,9 +818,10 @@ void CHGrunt :: Shotgun ( void )
 
 	Vector	vecShellVelocity = gpGlobals->v_right * RANDOM_FLOAT(40,90) + gpGlobals->v_up * RANDOM_FLOAT(75,200) + gpGlobals->v_forward * RANDOM_FLOAT(-40, 40);
 	EjectBrass ( vecShootOrigin - vecShootDir * 24, vecShellVelocity, pev->angles.y, m_iShotgunShell, TE_BOUNCE_SHOTSHELL); 
-	FireBullets(gSkillData.hgruntShotgunPellets, vecShootOrigin, vecShootDir, VECTOR_CONE_15DEGREES, 2048, BULLET_PLAYER_BUCKSHOT, 0 ); // shoot +-7.5 degrees
+	FireBullets(gSkillData.hgruntShotgunPellets, vecShootOrigin, vecShootDir, VECTOR_CONE_15DEGREES, m_flDistTooFar, BULLET_PLAYER_BUCKSHOT, 0 ); // shoot +-7.5 degrees
 
 	pev->effects |= EF_MUZZLEFLASH;
+	UTIL_MuzzleLight( this, vecShootOrigin );
 	
 	m_cAmmoLoaded--;// take away a bullet!
 
@@ -848,26 +842,21 @@ void CHGrunt :: HandleAnimEvent( MonsterEvent_t *pEvent )
 	{
 		case HGRUNT_AE_DROP_GUN:
 			{
-			Vector	vecGunPos;
-			Vector	vecGunAngles;
-
-			GetAttachment( 0, vecGunPos, vecGunAngles );
-
 			// switch to body group with no gun.
 			SetBodygroup( GUN_GROUP, GUN_NONE );
 
 			// now spawn a gun.
 			if (FBitSet( pev->weapons, HGRUNT_SHOTGUN ))
 			{
-				 DropItem( "weapon_shotgun", vecGunPos, vecGunAngles );
+				 UTIL_DropGun( this, "weapon_shotgun", TRUE );
 			}
 			else
 			{
-				 DropItem( "weapon_9mmAR", vecGunPos, vecGunAngles );
+				 UTIL_DropGun( this, "weapon_9mmAR", TRUE );
 			}
 			if (FBitSet( pev->weapons, HGRUNT_GRENADELAUNCHER ))
 			{
-				DropItem( "ammo_ARgrenades", BodyTarget( pev->origin ), vecGunAngles );
+				UTIL_DropGun( this, "ammo_ARgrenades", TRUE );
 			}
 
 			}
@@ -949,6 +938,7 @@ void CHGrunt :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			if ( pHurt )
 			{
 				// SOUND HERE!
+				EMIT_SOUND( ENT(pev), CHAN_WEAPON, "common/kick.wav", 1, ATTN_NORM );
 				UTIL_MakeVectors( pev->angles );
 				pHurt->pev->punchangle.x = 15;
 				pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_forward * 100 + gpGlobals->v_up * 50;
@@ -1050,16 +1040,6 @@ void CHGrunt :: Precache()
 	PRECACHE_SOUND( "hgrunt/gr_mgun1.wav" );
 	PRECACHE_SOUND( "hgrunt/gr_mgun2.wav" );
 	
-	PRECACHE_SOUND( "hgrunt/gr_die1.wav" );
-	PRECACHE_SOUND( "hgrunt/gr_die2.wav" );
-	PRECACHE_SOUND( "hgrunt/gr_die3.wav" );
-
-	PRECACHE_SOUND( "hgrunt/gr_pain1.wav" );
-	PRECACHE_SOUND( "hgrunt/gr_pain2.wav" );
-	PRECACHE_SOUND( "hgrunt/gr_pain3.wav" );
-	PRECACHE_SOUND( "hgrunt/gr_pain4.wav" );
-	PRECACHE_SOUND( "hgrunt/gr_pain5.wav" );
-
 	PRECACHE_SOUND( "hgrunt/gr_reload1.wav" );
 
 	PRECACHE_SOUND( "weapons/glauncher.wav" );
@@ -1067,6 +1047,7 @@ void CHGrunt :: Precache()
 	PRECACHE_SOUND( "weapons/sbarrel1.wav" );
 
 	PRECACHE_SOUND("zombie/claw_miss2.wav");// because we use the basemonster SWIPE animation event
+	PRECACHE_SOUND("common/kick.wav");	// POV
 
 	// get voice pitch
 	if (RANDOM_LONG(0,1))
@@ -1163,35 +1144,11 @@ void CHGrunt :: PainSound ( void )
 {
 	if ( gpGlobals->time > m_flNextPainTime )
 	{
-#if 0
-		if ( RANDOM_LONG(0,99) < 5 )
+		// POV: pain sentences
+		if (FOkToSpeak())
 		{
-			// pain sentences are rare
-			if (FOkToSpeak())
-			{
-				SENTENCEG_PlayRndSz(ENT(pev), "HG_PAIN", HGRUNT_SENTENCE_VOLUME, ATTN_NORM, 0, PITCH_NORM);
-				JustSpoke();
-				return;
-			}
-		}
-#endif 
-		switch ( RANDOM_LONG(0,6) )
-		{
-		case 0:	
-			EMIT_SOUND( ENT(pev), CHAN_VOICE, "hgrunt/gr_pain3.wav", 1, ATTN_NORM );	
-			break;
-		case 1:
-			EMIT_SOUND( ENT(pev), CHAN_VOICE, "hgrunt/gr_pain4.wav", 1, ATTN_NORM );	
-			break;
-		case 2:
-			EMIT_SOUND( ENT(pev), CHAN_VOICE, "hgrunt/gr_pain5.wav", 1, ATTN_NORM );	
-			break;
-		case 3:
-			EMIT_SOUND( ENT(pev), CHAN_VOICE, "hgrunt/gr_pain1.wav", 1, ATTN_NORM );	
-			break;
-		case 4:
-			EMIT_SOUND( ENT(pev), CHAN_VOICE, "hgrunt/gr_pain2.wav", 1, ATTN_NORM );	
-			break;
+			SENTENCEG_PlayRndSz(ENT(pev), "HG_PAIN", HGRUNT_SENTENCE_VOLUME, ATTN_NORM, 0, m_voicePitch);
+			JustSpoke();
 		}
 
 		m_flNextPainTime = gpGlobals->time + 1;
@@ -1203,18 +1160,8 @@ void CHGrunt :: PainSound ( void )
 //=========================================================
 void CHGrunt :: DeathSound ( void )
 {
-	switch ( RANDOM_LONG(0,2) )
-	{
-	case 0:	
-		EMIT_SOUND( ENT(pev), CHAN_VOICE, "hgrunt/gr_die1.wav", 1, ATTN_IDLE );	
-		break;
-	case 1:
-		EMIT_SOUND( ENT(pev), CHAN_VOICE, "hgrunt/gr_die2.wav", 1, ATTN_IDLE );	
-		break;
-	case 2:
-		EMIT_SOUND( ENT(pev), CHAN_VOICE, "hgrunt/gr_die3.wav", 1, ATTN_IDLE );	
-		break;
-	}
+	// POV: death sentences
+	SENTENCEG_PlayRndSz(ENT(pev), "HG_DIE", HGRUNT_SENTENCE_VOLUME, ATTN_NORM, 0, m_voicePitch);
 }
 
 //=========================================================
