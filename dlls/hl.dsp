@@ -448,6 +448,10 @@ SOURCE=.\teamplay_gamerules.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\telegram.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\telegraphkey.cpp
 # End Source File
 # Begin Source File
