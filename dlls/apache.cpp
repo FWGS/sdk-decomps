@@ -206,6 +206,10 @@ void CApache :: Killed( entvars_t *pevAttacker, int iGib )
 	pev->health = 0;
 	pev->takedamage = DAMAGE_NO;
 
+	// POV: fire the death trigger now (FCheckAITrigger checks the health
+	// of an apache)
+	FCheckAITrigger();
+
 	if (pev->spawnflags & SF_NOWRECKAGE)
 	{
 		m_flNextRocket = gpGlobals->time + 4.0;
