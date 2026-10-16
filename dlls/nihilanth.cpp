@@ -1217,6 +1217,26 @@ void CNihilanth::CommandUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_
 
 int CNihilanth :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType )
 {
+	BOOL fSpoke = FALSE;
+
+	// POV: answer the player's shots
+	if ( m_MonsterState != MONSTERSTATE_PRONE && !(m_afMemory & bits_MEMORY_PROVOKED) )
+	{
+		switch ( UTIL_PlayerProvoke( this, pevAttacker ) )
+		{
+		case 2:
+			PainSound( );
+			fSpoke = TRUE;
+			Remember( bits_MEMORY_SUSPICIOUS );
+			break;
+		case 3:
+			EMIT_SOUND( edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY( pAttackSounds ), 1.0, 0.2 ); 
+			fSpoke = TRUE;
+			Remember( bits_MEMORY_PROVOKED );
+			break;
+		}
+	}
+
 	if (pevInflictor->owner == edict())
 		return 0;
 
@@ -1227,7 +1247,8 @@ int CNihilanth :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, f
 			return 0;
 	}
 	
-	PainSound( );
+	if ( !fSpoke )
+		PainSound( );
 
 	pev->health -= flDamage;
 	return 0;
