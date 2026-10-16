@@ -64,9 +64,6 @@ void CWorldItem::Spawn( void )
 	case 42: // ITEM_ANTIDOTE:
 		pEntity = CBaseEntity::Create( "item_antidote", pev->origin, pev->angles );
 		break;
-	case 43: // ITEM_SECURITY:
-		pEntity = CBaseEntity::Create( "item_security", pev->origin, pev->angles );
-		break;
 	case 45: // ITEM_SUIT:
 		pEntity = CBaseEntity::Create( "item_suit", pev->origin, pev->angles );
 		break;
@@ -188,6 +185,8 @@ class CItemSuit : public CItem
 		if ( pPlayer->pev->weapons & (1<<WEAPON_SUIT) )
 			return FALSE;
 
+		CBaseEntity::Create( "weapon_pistol", pev->origin, pev->angles );	// the suit comes with a pistol
+
 		if ( pev->spawnflags & SF_SUIT_SHORTLOGON )
 			EMIT_SOUND_SUIT(pPlayer->edict(), "!HEV_A0");		// short version of suit logon,
 		else
@@ -275,26 +274,3 @@ class CItemAntidote : public CItem
 };
 
 LINK_ENTITY_TO_CLASS(item_antidote, CItemAntidote);
-
-
-class CItemSecurity : public CItem
-{
-	void Spawn( void )
-	{ 
-		Precache( );
-		SET_MODEL(ENT(pev), "models/w_security.mdl");
-		CItem::Spawn( );
-	}
-	void Precache( void )
-	{
-		PRECACHE_MODEL ("models/w_security.mdl");
-	}
-	BOOL MyTouch( CBasePlayer *pPlayer )
-	{
-		pPlayer->m_rgItems[ITEM_SECURITY] += 1;
-		return TRUE;
-	}
-};
-
-LINK_ENTITY_TO_CLASS(item_security, CItemSecurity);
-

@@ -547,6 +547,9 @@ void CWorld :: Precache( void )
 	{
 		PRECACHE_MODEL( "models/hgibs.mdl" );
 		PRECACHE_MODEL( "models/agibs.mdl" );
+		PRECACHE_MODEL( "models/pumagibs.mdl" );
+		PRECACHE_MODEL( "models/beargibs.mdl" );
+		PRECACHE_MODEL( "models/snakegibs.mdl" );
 	}
 
 	PRECACHE_SOUND ("weapons/ric1.wav");
