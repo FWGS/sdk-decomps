@@ -260,7 +260,7 @@ BOOL CBaseMonster :: HasHumanGibs( void )
 	if ( myClass == CLASS_HUMAN_MILITARY ||
 		 myClass == CLASS_PLAYER_ALLY	||
 		 myClass == CLASS_HUMAN_PASSIVE  ||
-		 myClass == CLASS_PLAYER )
+		 myClass == CLASS_HUMAN_SPFORCE )	// POV: was CLASS_PLAYER
 
 		 return TRUE;
 
@@ -277,7 +277,8 @@ BOOL CBaseMonster :: HasAlienGibs( void )
 		 myClass == CLASS_ALIEN_PASSIVE  ||
 		 myClass == CLASS_INSECT  ||
 		 myClass == CLASS_ALIEN_PREDATOR  ||
-		 myClass == CLASS_ALIEN_PREY )
+		 myClass == CLASS_ALIEN_PREY  ||
+		 myClass == CLASS_PLAYER )	// POV: the player is an alien slave
 
 		 return TRUE;
 
@@ -744,6 +745,17 @@ void CGib :: BounceGibTouch ( CBaseEntity *pOther )
 			volume = 0.8 * min(1.0, ((float)zvel) / 450.0);
 
 			CBreakable::MaterialSoundRandom( edict(), (Materials)m_material, volume );
+		}
+		// POV: shells clink
+		else if ( m_material == matNone && UTIL_StrIEq( STRING( pev->model ), "shell.mdl" ) && RANDOM_LONG(0,2) == 0 )
+		{
+			ALERT( at_console, "ItIsShell!! %s \n", STRING( pev->model ) );
+			switch ( RANDOM_LONG(0,2) )
+			{
+			case 0:	EMIT_SOUND_DYN(ENT(pev), CHAN_BODY, "player/pl_shell1.wav", 1, ATTN_IDLE, 0, PITCH_NORM);	break;
+			case 1:	EMIT_SOUND_DYN(ENT(pev), CHAN_BODY, "player/pl_shell2.wav", 1, ATTN_IDLE, 0, PITCH_NORM);	break;
+			case 2:	EMIT_SOUND_DYN(ENT(pev), CHAN_BODY, "player/pl_shell3.wav", 1, ATTN_IDLE, 0, PITCH_NORM);	break;
+			}
 		}
 	}
 }
@@ -1451,24 +1463,8 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 			} 
 			else switch(iBulletType)
 			{
+			// POV: no player bullets
 			default:
-			case BULLET_PLAYER_9MM:		
-				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg9MM, vecDir, &tr, DMG_BULLET); 
-				break;
-
-			case BULLET_PLAYER_MP5:		
-				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgMP5, vecDir, &tr, DMG_BULLET); 
-				break;
-
-			case BULLET_PLAYER_BUCKSHOT:	
-				 // make distance based!
-				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgBuckshot, vecDir, &tr, DMG_BULLET); 
-				break;
-			
-			case BULLET_PLAYER_357:		
-				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg357, vecDir, &tr, DMG_BULLET); 
-				break;
-
 			case BULLET_MONSTER_9MM:
 				pEntity->TraceAttack(pevAttacker, gSkillData.monDmg9MM, vecDir, &tr, DMG_BULLET);
 				
