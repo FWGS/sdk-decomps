@@ -58,6 +58,10 @@ const char *CBreakable::pSpawnObjects[] =
 	"weapon_satchel",	// 19
 	"weapon_snark",		// 20
 	"weapon_hornetgun",	// 21
+	"weapon_toad",		// 22
+	"weapon_stukabat",	// 23
+	"weapon_vulcan",	// 24
+	"item_xtbs",		// 25
 };
 
 void CBreakable::KeyValue( KeyValueData* pkvd )
@@ -150,7 +154,13 @@ void CBreakable::Spawn( void )
 	else
 		pev->takedamage	= DAMAGE_YES;
   
-	pev->solid		= SOLID_BSP;
+	// POV: spawnflag 16 makes it not solid
+	if ( pev->spawnflags & 16 )
+		pev->solid		= SOLID_NOT;
+	else
+		pev->solid		= SOLID_BSP;
+
+	pev->max_health	= pev->health;
     pev->movetype	= MOVETYPE_PUSH;
     m_angle			= pev->angles.y;
 	pev->angles.y	= 0;
@@ -537,8 +547,10 @@ int CBreakable :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, f
 		vecTemp = pevInflictor->origin - ( pev->absmin + ( pev->size * 0.5 ) );
 		
 		// if a client hit the breakable with a crowbar, and breakable is crowbar-sensitive, break it now.
+		// POV: so does a client's slash
 		if ( FBitSet ( pevAttacker->flags, FL_CLIENT ) &&
-				 FBitSet ( pev->spawnflags, SF_BREAK_CROWBAR ) && (bitsDamageType & DMG_CLUB))
+				 FBitSet ( pev->spawnflags, SF_BREAK_CROWBAR ) && (bitsDamageType & DMG_CLUB) ||
+			 FBitSet ( pevAttacker->flags, FL_CLIENT ) && (bitsDamageType & DMG_SLASH) )
 			flDamage = pev->health;
 	}
 	else
@@ -562,12 +574,16 @@ int CBreakable :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, f
 	g_vecAttackDir = vecTemp.Normalize();
 		
 // do the damage
-	pev->health -= flDamage;
-	if (pev->health <= 0)
+	// POV: spawnflag 8 makes it immune to the player
+	if ( !UTIL_StrIEq( STRING(pevAttacker->classname), "player" ) || !FBitSet( pev->spawnflags, 8 ) )
 	{
-		Killed( pevAttacker, GIB_NORMAL );
-		Die();
-		return 0;
+		pev->health -= flDamage;
+		if (pev->health <= 0)
+		{
+			Killed( pevAttacker, GIB_NORMAL );
+			Die();
+			return 0;
+		}
 	}
 
 	// Make a shard noise each time func breakable is hit.
@@ -745,8 +761,8 @@ void CBreakable::Die( void )
 
 	SetThink( SUB_Remove );
 	pev->nextthink = pev->ltime + 0.1;
-	if ( m_iszSpawnObject )
-		CBaseEntity::Create( (char *)STRING(m_iszSpawnObject), VecBModelOrigin(pev), pev->angles, edict() );
+	if ( m_iszSpawnObject )	// POV: facing a random way
+		CBaseEntity::Create( (char *)STRING(m_iszSpawnObject), VecBModelOrigin(pev), Vector( pev->angles.x, RANDOM_LONG( 0, 359 ), pev->angles.z ), edict() );
 
 
 	if ( Explodable() )
