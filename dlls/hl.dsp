@@ -436,6 +436,10 @@ SOURCE=..\pm_shared\pm_shared.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_archer.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_barn.cpp
 # End Source File
 # Begin Source File
