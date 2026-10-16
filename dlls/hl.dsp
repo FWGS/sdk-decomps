@@ -496,6 +496,10 @@ SOURCE=.\tempmonster.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\townmex.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\triggers.cpp
 # End Source File
 # Begin Source File
