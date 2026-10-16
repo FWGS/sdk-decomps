@@ -225,7 +225,7 @@ void CHeadCrab :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			Vector vecJumpDir;
 			if (m_hEnemy != NULL)
 			{
-				float gravity = g_psv_gravity->value;
+				float gravity = CVAR_GET_FLOAT( "sv_gravity" );	// POV
 				if (gravity <= 1)
 					gravity = 1;
 
