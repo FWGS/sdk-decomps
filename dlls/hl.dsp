@@ -448,6 +448,14 @@ SOURCE=.\pov_gordon.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_hev_barney.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\pov_hev_barniel.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_panther.cpp
 # End Source File
 # Begin Source File
