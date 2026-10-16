@@ -82,10 +82,16 @@ public:
 	virtual int DeadPlayerWeapons( CBasePlayer *pPlayer );
 	virtual const char *SetDefaultPlayerTeam( CBasePlayer *pPlayer );
 
-	int m_iUnknown220;		// +0x220 (the CTC file names these)
-	int m_iUnknown224[2];	// +0x224
-	int m_iUnknown22c[2];	// +0x22c
+	void UpdateTeamScore( CBasePlayer *pPlayer, const char *pszChickenTeam );
+
+	BOOL m_fAutoTeam;		// the player asked for the team with fewer players
+	int m_iTeamScore[2];
+	int m_iTeamDeaths[2];
 };
 
 extern char *g_pszTeamNames[2];		// "Outlaws", "Rustlers"
+extern char *g_pszTeamModels[2];	// their player models: "rogan", "twnwest"
+extern float g_flChickenAway[2];	// per team: when the dropped chicken goes home; -1 carried, 0 home
+extern float g_flChickenHushTime;
+extern CBaseEntity *g_pWaitingChickens;
 extern void ShowPlayerMenu( CBasePlayer *pPlayer, char *pszText, int bitsValidSlots, int nDisplayTime, BOOL fNeedMore );

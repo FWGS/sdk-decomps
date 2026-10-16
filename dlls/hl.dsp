@@ -260,6 +260,14 @@ SOURCE=.\crossbow.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\ctc.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\ctc_gamerules.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\dave.cpp
 # End Source File
 # Begin Source File
