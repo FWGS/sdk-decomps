@@ -21,6 +21,14 @@
 #include	"extdll.h"
 #include	"util.h"
 #include	"cbase.h"
+#include	"monsters.h"
+#include	"talkmonster.h"
+#include	"schedule.h"
+#include	"defaultai.h"
+#include	"scripted.h"
+#include	"weapons.h"
+#include	"soundent.h"
+#include	"animation.h"
 #include	"basebarn.h"
 
 class CBarniel : public CBaseBarn	// name ours
