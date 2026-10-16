@@ -713,7 +713,7 @@ Vector CBot::AvoidWalls( Vector &vecDir )
 
 		if ( !m_iDodgeDir )
 		{
-			m_iDodgeDir = ( abs( (int)flDiffRight ) >= abs( (int)flDiffLeft ) ) + 1;
+			m_iDodgeDir = ( abs( (int)flDiffLeft ) <= abs( (int)flDiffRight ) ) + 1;
 			if ( !RANDOM_LONG( 0, 3 ) )
 				m_iDodgeDir = ( m_iDodgeDir == 1 ) ? 2 : 1;
 		}
@@ -731,7 +731,7 @@ Vector CBot::AvoidWalls( Vector &vecDir )
 
 		vecAngles.y = vecAngles.y - flTurn;
 		float flOff = flYaw - vecAngles.y;
-		if ( abs( (int)flOff ) > 20 )
+		if ( abs( (int)flOff ) > 20.0f )
 		{
 			if ( flOff < 0 )
 				vecAngles.y = flYaw - 20;
