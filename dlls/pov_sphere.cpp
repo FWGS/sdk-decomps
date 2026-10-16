@@ -155,14 +155,14 @@ void CSphere :: IdleSound( void )
 {
 	EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, pIdleSounds[ RANDOM_LONG(0,ARRAYSIZE(pIdleSounds)-1) ], 1.0, ATTN_STATIC, 0, PITCH_NORM );
 
-	TraceResult tr;
+	TraceResult tr, tr1;
+	Vector vecSrc, vecAim;
 	float flDist = 1.0;
 
 	UTIL_MakeAimVectors( pev->angles );
-	Vector vecSrc = pev->origin + gpGlobals->v_up * 36 + gpGlobals->v_right * 16 + gpGlobals->v_forward * 32;
+	vecSrc = pev->origin + gpGlobals->v_up * 36 + gpGlobals->v_right * 16 + gpGlobals->v_forward * 32;
 
-	Vector vecAim = gpGlobals->v_right * RANDOM_FLOAT( 0, 1 ) + gpGlobals->v_up * RANDOM_FLOAT( -1, 1 );
-	TraceResult tr1;
+	vecAim = gpGlobals->v_right * RANDOM_FLOAT( 0, 1 ) + gpGlobals->v_up * RANDOM_FLOAT( -1, 1 );
 	UTIL_TraceLine ( vecSrc, vecSrc + vecAim * 512, dont_ignore_monsters, ENT( pev ), &tr1);
 	if (flDist > tr1.flFraction)
 	{
@@ -991,18 +991,19 @@ void CSphere :: ClearBeams( void )
 //=========================================================
 void CSphere :: ArmBeams( void )
 {
+	TraceResult tr, tr1;
+	Vector vecSrc, vecAim;
+
 	for ( m_iBeams = 0; m_iBeams < SPHERE_MAX_BEAMS; m_iBeams++ )
 	{
-		TraceResult tr;
 		float flDist = 1.0;
 
 		UTIL_MakeAimVectors( pev->angles );
-		Vector vecSrc = pev->origin + gpGlobals->v_up * 36 + gpGlobals->v_right * 16 + gpGlobals->v_forward * 32;
+		vecSrc = pev->origin + gpGlobals->v_up * 36 + gpGlobals->v_right * 16 + gpGlobals->v_forward * 32;
 
 		for (int i = 0; i < 3; i++)
 		{
-			Vector vecAim = gpGlobals->v_right * RANDOM_FLOAT( 0, 1 ) + gpGlobals->v_up * RANDOM_FLOAT( -1, 1 );
-			TraceResult tr1;
+			vecAim = gpGlobals->v_right * RANDOM_FLOAT( 0, 1 ) + gpGlobals->v_up * RANDOM_FLOAT( -1, 1 );
 			UTIL_TraceLine ( vecSrc, vecSrc + vecAim * 512, dont_ignore_monsters, ENT( pev ), &tr1);
 			if (flDist > tr1.flFraction)
 			{
