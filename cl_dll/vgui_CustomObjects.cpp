@@ -168,7 +168,7 @@ void CommandButton::paint()
 	// draw armed button text in white
 	if ( isArmed() )
 	{
-		setFgColor( Scheme::sc_secondary2 );
+		setFgColor( 0, 160, 0, 100 );
 	}
 	else
 	{
@@ -182,8 +182,8 @@ void CommandButton::paintBackground()
 {
 	if ( isArmed() )
 	{
-		// Orange highlight background
-		drawSetColor( Scheme::sc_primary2 );
+		// Green highlight background
+		drawSetColor( 0, 160, 0, 100 );
 		drawFilledRect(0,0,_size[0],_size[1]);
 	}
 
@@ -380,7 +380,7 @@ void CTFSlider::paintBackground( void )
 	if( isVertical() )
 	{
 		// Nob Fill
-		drawSetColor( Scheme::sc_primary2 );
+		drawSetColor( 0, 160, 0, 100 );
 		drawFilledRect( 0,nobx,wide,noby );
 
 		// Nob Outline
@@ -390,7 +390,7 @@ void CTFSlider::paintBackground( void )
 	else
 	{
 		// Nob Fill
-		drawSetColor( Scheme::sc_primary2 );
+		drawSetColor( 0, 160, 0, 100 );
 		drawFilledRect( nobx,0,noby,tall );
 
 		// Nob Outline
