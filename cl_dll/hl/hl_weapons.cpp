@@ -45,8 +45,6 @@ static globalvars_t	Globals;
 
 static CBasePlayerWeapon *g_pWpns[ 32 ];
 
-// HLDM Weapon placeholder entities.
-CGlock g_Glock;
 
 /*
 ======================
@@ -554,9 +552,6 @@ void HUD_InitClientWeapons( void )
 
 	// Allocate a slot for the local player
 	HUD_PrepEntity( &player		, NULL );
-
-	// Allocate slot(s) for each weapon that we are going to be predicting
-	HUD_PrepEntity( &g_Glock	, &player );
 }
 
 /*
@@ -586,9 +581,6 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	// FIXME, make this a method in each weapon?  where you pass in an entity_state_t *?
 	switch ( from->client.m_iId )
 	{
-	case WEAPON_GLOCK:
-		pWeapon = &g_Glock;
-		break;
 	}
 
 	// We are not predicting the current weapon, just bow out here.
