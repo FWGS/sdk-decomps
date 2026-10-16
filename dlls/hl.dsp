@@ -517,6 +517,10 @@ SOURCE=.\wheelside.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\winchester.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\world.cpp
 # End Source File
 # Begin Source File
