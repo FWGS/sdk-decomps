@@ -27,7 +27,10 @@ struct skilldata_t
 
 	float apacheHealth;
 	
-	float barneyHealth;
+	// POV: CBaseBarn's three families instead of barneyHealth (names ours)
+	float normbarnsHealth;
+	float hevbarnsHealth;
+	float specbarnsHealth;
 
 	float bigmommaHealthFactor;		// Multiply each node's health by this
 	float bigmommaDmgSlash;			// melee attack damage
@@ -49,10 +52,17 @@ struct skilldata_t
 	float headcrabHealth;
 	float headcrabDmgBite;
 
+	float ratHealth;		// POV, name ours: sk_leech_*
+	float ratDmgBite;
+
 	float hgruntHealth;
 	float hgruntDmgKick;
 	float hgruntShotgunPellets;
 	float hgruntGrenadeSpeed;
+
+	float spforceHealth;		// POV, names ours: sk_hgrunt_*
+	float spforceDmgKick;
+	float spforceGrenadeSpeed;
 
 	float houndeyeHealth;
 	float houndeyeDmgBlast;
@@ -62,8 +72,19 @@ struct skilldata_t
 	float slaveDmgClawrake;
 	float slaveDmgZap;
 
+	float sphereHealth;		// POV, names ours
+	float sphereDmgZap;
+
+	float pantherHealth;
+	float pantherDmgClaw;
+	float pantherDmgClawrake;
+	float pantherDmgZap;
+
 	float ichthyosaurHealth;
 	float ichthyosaurDmgShake;
+
+	float archerHealth;		// POV, names ours: half the ichthyosaur's
+	float archerDmgShake;
 
 	float leechHealth;
 	float leechDmgBite;
@@ -77,10 +98,15 @@ struct skilldata_t
 	float nihilanthZap;
 
 	float scientistHealth;
+	float workerHealth;		// POV, name ours: sk_scientist_health
 
 	float snarkHealth;
 	float snarkDmgBite;
 	float snarkDmgPop;
+
+	float toadHealth;		// POV, names ours
+	float toadDmgBite;
+	float toadDmgPop;
 
 	float zombieHealth;
 	float zombieDmgOneSlash;
@@ -92,34 +118,24 @@ struct skilldata_t
 
 
 // Player Weapons
-	float plrDmgCrowbar;
-	float plrDmg9MM;
-	float plrDmg357;
-	float plrDmgMP5;
-	float plrDmgM203Grenade;
-	float plrDmgBuckshot;
-	float plrDmgCrossbowClient;
-	float plrDmgCrossbowMonster;
+	float plrDmgMelee;		// POV, names ours: the alien slave's hands
+	float plrDmgZapBeam;
+	float plrChargeTime;
+	float plrOldTime;
+	float plrZapHeal;
+	float plrDmgStukabat;		// POV, names ours
+	float plrStukabatFlyTime;
 	float plrDmgRPG;
-	float plrDmgGauss;
-	float plrDmgEgonNarrow;
-	float plrDmgEgonWide;
-	float plrDmgHornet;
-	float plrDmgHandGrenade;
-	float plrDmgSatchel;
 	float plrDmgTripmine;
 	
 // weapons shared by monsters
 	float monDmg9MM;
 	float monDmgMP5;
+	float plrDmgM203Grenade;	// POV: from sk_9mmAR_grenade
 	float monDmg12MM;
 	float monDmgHornet;
 
 // health/suit charge
-	float suitchargerCapacity;
-	float batteryCapacity;
-	float healthchargerCapacity;
-	float healthkitCapacity;
 	float scientistHeal;
 
 // monster damage adj
@@ -135,6 +151,26 @@ struct skilldata_t
 	float plrStomach;
 	float plrLeg;
 	float plrArm;
+
+// SDK fields POV removed; kept here while SDK code still uses them
+	float barneyHealth;
+	float plrDmgCrowbar;
+	float plrDmg9MM;
+	float plrDmg357;
+	float plrDmgMP5;
+	float plrDmgBuckshot;
+	float plrDmgCrossbowClient;
+	float plrDmgCrossbowMonster;
+	float plrDmgGauss;
+	float plrDmgEgonNarrow;
+	float plrDmgEgonWide;
+	float plrDmgHornet;
+	float plrDmgHandGrenade;
+	float plrDmgSatchel;
+	float suitchargerCapacity;
+	float batteryCapacity;
+	float healthchargerCapacity;
+	float healthkitCapacity;
 };
 
 extern	DLL_GLOBAL	skilldata_t	gSkillData;

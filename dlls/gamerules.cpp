@@ -134,8 +134,10 @@ void CGameRules::RefreshSkillData ( void )
 	// Apache 
 	gSkillData.apacheHealth = GetSkillCvar( "sk_apache_health");
 
-	// Barney
-	gSkillData.barneyHealth = GetSkillCvar( "sk_barney_health");
+	// POV: CBaseBarn's families (instead of Barney)
+	gSkillData.normbarnsHealth = GetSkillCvar( "sk_normbarns_health");
+	gSkillData.hevbarnsHealth = GetSkillCvar( "sk_hevbarns_health");
+	gSkillData.specbarnsHealth = GetSkillCvar( "sk_specbarns_health");
 
 	// Big Momma
 	gSkillData.bigmommaHealthFactor = GetSkillCvar( "sk_bigmomma_health_factor" );
@@ -162,11 +164,20 @@ void CGameRules::RefreshSkillData ( void )
 	gSkillData.headcrabHealth = GetSkillCvar( "sk_headcrab_health");
 	gSkillData.headcrabDmgBite = GetSkillCvar( "sk_headcrab_dmg_bite");
 
+	// POV: Rat
+	gSkillData.ratHealth = GetSkillCvar( "sk_leech_health");
+	gSkillData.ratDmgBite = GetSkillCvar( "sk_leech_dmg_bite");
+
 	// Hgrunt 
 	gSkillData.hgruntHealth = GetSkillCvar( "sk_hgrunt_health");
 	gSkillData.hgruntDmgKick = GetSkillCvar( "sk_hgrunt_kick");
 	gSkillData.hgruntShotgunPellets = GetSkillCvar( "sk_hgrunt_pellets");
 	gSkillData.hgruntGrenadeSpeed = GetSkillCvar( "sk_hgrunt_gspeed");
+
+	// POV: Special forces
+	gSkillData.spforceHealth = GetSkillCvar( "sk_hgrunt_health");
+	gSkillData.spforceDmgKick = GetSkillCvar( "sk_hgrunt_kick");
+	gSkillData.spforceGrenadeSpeed = GetSkillCvar( "sk_hgrunt_gspeed");
 
 	// Houndeye
 	gSkillData.houndeyeHealth = GetSkillCvar( "sk_houndeye_health");
@@ -178,9 +189,23 @@ void CGameRules::RefreshSkillData ( void )
 	gSkillData.slaveDmgClawrake = GetSkillCvar( "sk_islave_dmg_clawrake");
 	gSkillData.slaveDmgZap = GetSkillCvar( "sk_islave_dmg_zap");
 
+	// POV: Sphere
+	gSkillData.sphereHealth = GetSkillCvar( "sk_sphere_health");
+	gSkillData.sphereDmgZap = GetSkillCvar( "sk_sphere_dmg_zap");
+
+	// POV: Panther
+	gSkillData.pantherHealth = GetSkillCvar( "sk_panther_health");
+	gSkillData.pantherDmgClaw = GetSkillCvar( "sk_panther_dmg_claw");
+	gSkillData.pantherDmgClawrake = GetSkillCvar( "sk_panther_dmg_clawrake");
+	gSkillData.pantherDmgZap = GetSkillCvar( "sk_panther_dmg_zap");
+
 	// Icthyosaur
 	gSkillData.ichthyosaurHealth = GetSkillCvar( "sk_ichthyosaur_health");
 	gSkillData.ichthyosaurDmgShake = GetSkillCvar( "sk_ichthyosaur_shake");
+
+	// POV: Archer
+	gSkillData.archerHealth = GetSkillCvar( "sk_ichthyosaur_health") / 2;
+	gSkillData.archerDmgShake = GetSkillCvar( "sk_ichthyosaur_shake") / 2;
 
 	// Leech
 	gSkillData.leechHealth = GetSkillCvar( "sk_leech_health");
@@ -200,10 +225,18 @@ void CGameRules::RefreshSkillData ( void )
 	// Scientist
 	gSkillData.scientistHealth = GetSkillCvar( "sk_scientist_health");
 
+	// POV: Worker
+	gSkillData.workerHealth = GetSkillCvar( "sk_scientist_health");
+
 	// Snark
 	gSkillData.snarkHealth = GetSkillCvar( "sk_snark_health");
 	gSkillData.snarkDmgBite = GetSkillCvar( "sk_snark_dmg_bite");
 	gSkillData.snarkDmgPop = GetSkillCvar( "sk_snark_dmg_pop");
+
+	// POV: Toad
+	gSkillData.toadHealth = GetSkillCvar( "sk_toad_health");
+	gSkillData.toadDmgBite = GetSkillCvar( "sk_toad_dmg_bite");
+	gSkillData.toadDmgPop = GetSkillCvar( "sk_toad_dmg_pop");
 
 	// Zombie
 	gSkillData.zombieHealth = GetSkillCvar( "sk_zombie_health");
@@ -221,43 +254,19 @@ void CGameRules::RefreshSkillData ( void )
 
 // PLAYER WEAPONS
 
-	// Crowbar whack
-	gSkillData.plrDmgCrowbar = GetSkillCvar( "sk_plr_crowbar");
-
-	// Glock Round
-	gSkillData.plrDmg9MM = GetSkillCvar( "sk_plr_9mm_bullet");
-
-	// 357 Round
-	gSkillData.plrDmg357 = GetSkillCvar( "sk_plr_357_bullet");
-
-	// MP5 Round
-	gSkillData.plrDmgMP5 = GetSkillCvar( "sk_plr_9mmAR_bullet");
-
-	// M203 grenade
-	gSkillData.plrDmgM203Grenade = GetSkillCvar( "sk_plr_9mmAR_grenade");
-
-	// Shotgun buckshot
-	gSkillData.plrDmgBuckshot = GetSkillCvar( "sk_plr_buckshot");
-
-	// Crossbow
-	gSkillData.plrDmgCrossbowClient = GetSkillCvar( "sk_plr_xbow_bolt_client");
-	gSkillData.plrDmgCrossbowMonster = GetSkillCvar( "sk_plr_xbow_bolt_monster");
+	// POV: the alien slave's hands
+	gSkillData.plrDmgMelee = GetSkillCvar( "sk_plr_dmgmelee");
+	gSkillData.plrDmgZapBeam = GetSkillCvar( "sk_plr_dmgzapbeam");
+	gSkillData.plrChargeTime = GetSkillCvar( "sk_plr_chargetime");
+	gSkillData.plrOldTime = GetSkillCvar( "sk_plr_oldtime");
+	gSkillData.plrZapHeal = GetSkillCvar( "sk_plr_zapheal");
 
 	// RPG
 	gSkillData.plrDmgRPG = GetSkillCvar( "sk_plr_rpg");
 
-	// Gauss gun
-	gSkillData.plrDmgGauss = GetSkillCvar( "sk_plr_gauss");
-
-	// Egon Gun
-	gSkillData.plrDmgEgonNarrow = GetSkillCvar( "sk_plr_egon_narrow");
-	gSkillData.plrDmgEgonWide = GetSkillCvar( "sk_plr_egon_wide");
-
-	// Hand Grendade
-	gSkillData.plrDmgHandGrenade = GetSkillCvar( "sk_plr_hand_grenade");
-
-	// Satchel Charge
-	gSkillData.plrDmgSatchel = GetSkillCvar( "sk_plr_satchel");
+	// POV: Stukabat
+	gSkillData.plrDmgStukabat = GetSkillCvar( "sk_plr_stukabat");
+	gSkillData.plrStukabatFlyTime = GetSkillCvar( "sk_plr_stukaflytime");
 
 	// Tripmine
 	gSkillData.plrDmgTripmine = GetSkillCvar( "sk_plr_tripmine");
@@ -265,25 +274,13 @@ void CGameRules::RefreshSkillData ( void )
 	// MONSTER WEAPONS
 	gSkillData.monDmg12MM = GetSkillCvar( "sk_12mm_bullet");
 	gSkillData.monDmgMP5 = GetSkillCvar ("sk_9mmAR_bullet" );
+	gSkillData.plrDmgM203Grenade = GetSkillCvar( "sk_9mmAR_grenade");	// POV
 	gSkillData.monDmg9MM = GetSkillCvar( "sk_9mm_bullet");
 
 	// MONSTER HORNET
 	gSkillData.monDmgHornet = GetSkillCvar( "sk_hornet_dmg");
 
-	// PLAYER HORNET
-// Up to this point, player hornet damage and monster hornet damage were both using
-// monDmgHornet to determine how much damage to do. In tuning the hivehand, we now need
-// to separate player damage and monster hivehand damage. Since it's so late in the project, we've
-// added plrDmgHornet to the SKILLDATA struct, but not to the engine CVar list, so it's inaccesible
-// via SKILLS.CFG. Any player hivehand tuning must take place in the code. (sjb)
-	gSkillData.plrDmgHornet = 7;
-
-
 	// HEALTH/CHARGE
-	gSkillData.suitchargerCapacity = GetSkillCvar( "sk_suitcharger" );
-	gSkillData.batteryCapacity = GetSkillCvar( "sk_battery" );
-	gSkillData.healthchargerCapacity = GetSkillCvar ( "sk_healthcharger" );
-	gSkillData.healthkitCapacity = GetSkillCvar ( "sk_healthkit" );
 	gSkillData.scientistHeal = GetSkillCvar ( "sk_scientist_heal" );
 
 	// monster damage adj
