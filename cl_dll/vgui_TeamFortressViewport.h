@@ -577,6 +577,10 @@ extern int g_iStoryNavigate;
 class CMenuHandler_StoryFirst : public ActionSignal
 {
 public:
+	CMenuHandler_StoryFirst( void )
+	{
+	}
+
 	virtual void actionPerformed(Panel* panel)
 	{
 		g_iStoryNavigate = 1;
@@ -588,6 +592,10 @@ public:
 class CMenuHandler_StoryPrev : public ActionSignal
 {
 public:
+	CMenuHandler_StoryPrev( void )
+	{
+	}
+
 	virtual void actionPerformed(Panel* panel)
 	{
 		g_iStoryNavigate = 1;
@@ -599,6 +607,10 @@ public:
 class CMenuHandler_StoryClose : public ActionSignal
 {
 public:
+	CMenuHandler_StoryClose( void )
+	{
+	}
+
 	virtual void actionPerformed(Panel* panel)
 	{
 		g_iStoryNavigate = 0;
@@ -610,6 +622,10 @@ public:
 class CMenuHandler_StoryNext : public ActionSignal
 {
 public:
+	CMenuHandler_StoryNext( void )
+	{
+	}
+
 	virtual void actionPerformed(Panel* panel)
 	{
 		g_iStoryNavigate = 1;
@@ -621,6 +637,10 @@ public:
 class CMenuHandler_StoryLast : public ActionSignal
 {
 public:
+	CMenuHandler_StoryLast( void )
+	{
+	}
+
 	virtual void actionPerformed(Panel* panel)
 	{
 		g_iStoryNavigate = 1;

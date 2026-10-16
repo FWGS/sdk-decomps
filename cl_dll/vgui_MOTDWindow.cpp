@@ -155,7 +155,7 @@ CMessageWindowPanel::CMessageWindowPanel( const char *szMOTD, const char *szTitl
 	pButton->setParent(this);
 	pButton->addActionSignal(new CMenuHandler_StoryFirst());
 
-	pButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "<      " ), iXPos + YRES(8)*2 + YRES(60), iYPos + iYSize - YRES(8) - BUTTON_SIZE_Y, YRES(60), BUTTON_SIZE_Y );
+	pButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "<      " ), iXPos + (YRES(8)*2) + YRES(60), iYPos + iYSize - YRES(8) - BUTTON_SIZE_Y, YRES(60), BUTTON_SIZE_Y );
 	pButton->setContentAlignment( vgui::Label::a_center );
 	pButton->setParent(this);
 	pButton->addActionSignal(new CMenuHandler_StoryPrev());
