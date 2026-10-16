@@ -444,6 +444,10 @@ SOURCE=.\pov_barniel.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_brave.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_gordon.cpp
 # End Source File
 # Begin Source File

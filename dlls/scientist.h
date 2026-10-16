@@ -98,4 +98,36 @@ public:
 	float m_fearTime;
 };
 
+//=======================================================
+// Brave scientist (monster_scientist_brave; class name
+// ours, after POV's CBrvWorker)
+//=======================================================
+
+class CBrvScientist : public CScientist
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	void TalkInit( void );
+
+	int  Classify ( void );
+	void HandleAnimEvent( MonsterEvent_t *pEvent );
+	BOOL CheckMeleeAttack1 ( float flDot, float flDist );
+	void SetActivity ( Activity NewActivity );
+	void RunTask( Task_t *pTask );
+	void StartTask( Task_t *pTask );
+	void AlertSound( void );
+	void SetAnswerQuestion( CTalkMonster *pSpeaker );
+
+	Schedule_t *GetScheduleOfType ( int Type );
+	Schedule_t *GetSchedule ( void );
+	MONSTERSTATE GetIdealState ( void );
+
+	CBaseEntity *Kick( void );
+	void AttackMissSound( void );
+	void AttackHitSound( void );
+
+	CUSTOM_SCHEDULES;
+};
+
 #endif		//SCIENTIST_H
