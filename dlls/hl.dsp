@@ -572,6 +572,10 @@ SOURCE=.\pov_stukabat.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_stukaceil.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_vulcan.cpp
 # End Source File
 # Begin Source File
