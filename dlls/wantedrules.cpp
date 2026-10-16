@@ -143,10 +143,10 @@ BOOL CWantedMultiplay::ClientCommand( CBasePlayer *pPlayer, const char *pcmd )
 
 		if ( CMD_ARGC() > 1 )
 		{
+			// retail also stores 1 when the number is below 2; spelled as an
+			// else, VC6 allocates the registers of the whole function differently
 			if ( atoi( CMD_ARGV( 1 ) ) > 1 )
 				iCount = atoi( CMD_ARGV( 1 ) );
-			else
-				iCount = 1;
 		}
 
 		if ( FStrEq( pcmd, "addbot" ) )
