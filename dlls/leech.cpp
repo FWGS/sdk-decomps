@@ -111,7 +111,6 @@ public:
 	void Activate( void );
 	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
 	int	Classify( void ) { return CLASS_INSECT; }
-	int IRelationship( CBaseEntity *pTarget );
 
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
@@ -263,15 +262,6 @@ void CLeech::SwitchLeechState( void )
 		}
 	}
 }
-
-
-int CLeech::IRelationship( CBaseEntity *pTarget )
-{
-	if ( pTarget->IsPlayer() )
-		return R_DL;
-	return CBaseMonster::IRelationship( pTarget );
-}
-
 
 
 void CLeech::AttackSound( void )
