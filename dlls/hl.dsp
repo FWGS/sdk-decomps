@@ -500,6 +500,10 @@ SOURCE=.\singleplay_gamerules.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\skelly.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\skill.cpp
 # End Source File
 # Begin Source File
