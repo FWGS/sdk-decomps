@@ -25,6 +25,7 @@
 #include	"effects.h"
 #include	"weapons.h"
 #include	"soundent.h"
+#include	"decals.h"	// POV
 
 extern DLL_GLOBAL int		g_iSkillLevel;
 
@@ -47,7 +48,7 @@ public:
 	void SetYawSpeed( void );
 	int	 ISoundMask( void );
 	int  Classify ( void );
-	int  IRelationship( CBaseEntity *pTarget );
+//	int  IRelationship( CBaseEntity *pTarget );	// POV: gone
 	void HandleAnimEvent( MonsterEvent_t *pEvent );
 	BOOL CheckRangeAttack1 ( float flDot, float flDist );
 	BOOL CheckRangeAttack2 ( float flDot, float flDist );
@@ -151,6 +152,7 @@ int	CISlave :: Classify ( void )
 }
 
 
+/* POV: gone
 int CISlave::IRelationship( CBaseEntity *pTarget )
 {
 	if ( (pTarget->IsPlayer()) )
@@ -158,11 +160,16 @@ int CISlave::IRelationship( CBaseEntity *pTarget )
 			return R_NO;
 	return CBaseMonster::IRelationship( pTarget );
 }
+*/
 
 
 void CISlave :: CallForHelp( char *szClassname, float flDist, EHANDLE hEnemy, Vector &vecLocation )
 {
 	// ALERT( at_aiconsole, "help " );
+
+	// POV: not against the player
+	if ( hEnemy->IsPlayer() )
+		return;
 
 	// skip ones not on my netname
 	if ( FStringNull( pev->netname ))
@@ -178,7 +185,6 @@ void CISlave :: CallForHelp( char *szClassname, float flDist, EHANDLE hEnemy, Ve
 			CBaseMonster *pMonster = pEntity->MyMonsterPointer( );
 			if (pMonster)
 			{
-				pMonster->m_afMemory |= bits_MEMORY_PROVOKED;
 				pMonster->PushEnemy( hEnemy, vecLocation );
 			}
 		}
@@ -355,9 +361,8 @@ void CISlave :: HandleAnimEvent( MonsterEvent_t *pEvent )
 
 		case ISLAVE_AE_ZAP_POWERUP:
 		{
-			// speed up attack when on hard
-			if (g_iSkillLevel == SKILL_HARD)
-				pev->framerate = 1.5;
+			// speed up attack (POV: always)
+			pev->framerate = 1.5;
 
 			UTIL_MakeAimVectors( pev->angles );
 
@@ -370,8 +375,8 @@ void CISlave :: HandleAnimEvent( MonsterEvent_t *pEvent )
 					WRITE_COORD(vecSrc.y);	// Y
 					WRITE_COORD(vecSrc.z);	// Z
 					WRITE_BYTE( 12 );		// radius * 0.1
-					WRITE_BYTE( 255 );		// r
-					WRITE_BYTE( 180 );		// g
+					WRITE_BYTE( 180 );		// r
+					WRITE_BYTE( 255 );		// g
 					WRITE_BYTE( 96 );		// b
 					WRITE_BYTE( 20 / pev->framerate );		// time * 10
 					WRITE_BYTE( 0 );		// decay * 0.1
@@ -455,6 +460,12 @@ void CISlave :: HandleAnimEvent( MonsterEvent_t *pEvent )
 BOOL CISlave :: CheckRangeAttack1 ( float flDot, float flDist )
 {
 	if (m_flNextAttack > gpGlobals->time)
+	{
+		return FALSE;
+	}
+
+	// POV: don't zap the player
+	if (m_hEnemy != NULL && m_hEnemy->IsPlayer())
 	{
 		return FALSE;
 	}
@@ -584,18 +595,40 @@ void CISlave :: Precache()
 int CISlave :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
 {
 	// don't slash one of your own
-	if ((bitsDamageType & DMG_SLASH) && pevAttacker && IRelationship( Instance(pevAttacker) ) < R_DL)
+	if (!UTIL_StrIEq(STRING(pevAttacker->classname), "player") && (bitsDamageType & DMG_SLASH) && pevAttacker && IRelationship( Instance(pevAttacker) ) < R_DL)
 		return 0;
 
-	m_afMemory |= bits_MEMORY_PROVOKED;
+	// POV: answer the player's shots
+	if ( m_MonsterState != MONSTERSTATE_PRONE && !HasMemory( bits_MEMORY_PROVOKED ) )
+	{
+		switch ( UTIL_PlayerProvoke( this, pevAttacker ) )
+		{
+		case 1:
+			PainSound( );
+			break;
+		case 2:
+			PainSound( );
+			Remember( bits_MEMORY_SUSPICIOUS );
+			break;
+		case 3:
+			AlertSound( );
+			Remember( bits_MEMORY_PROVOKED );
+			break;
+		}
+	}
+
 	return CSquadMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
 }
 
 
 void CISlave::TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType)
 {
+	// POV: shocks ricochet and hardly hurt
 	if (bitsDamageType & DMG_SHOCK)
-		return;
+	{
+		UTIL_Ricochet( ptr->vecEndPos, 2.0 );
+		flDamage = 0.1;
+	}
 
 	CSquadMonster::TraceAttack( pevAttacker, flDamage, vecDir, ptr, bitsDamageType );
 }
@@ -661,8 +694,6 @@ Schedule_t *CISlave :: GetSchedule( void )
 
 		if ( pSound && (pSound->m_iType & bits_SOUND_DANGER) )
 			return GetScheduleOfType( SCHED_TAKE_COVER_FROM_BEST_SOUND );
-		if ( pSound->m_iType & bits_SOUND_COMBAT )
-			m_afMemory |= bits_MEMORY_PROVOKED;
 	}
 
 	switch (m_MonsterState)
@@ -838,9 +869,17 @@ void CISlave :: ZapBeam( int side )
 	m_iBeams++;
 
 	pEntity = CBaseEntity::Instance(tr.pHit);
-	if (pEntity != NULL && pEntity->pev->takedamage)
+	if (pEntity != NULL)
 	{
-		pEntity->TraceAttack( pev, gSkillData.slaveDmgZap, vecAim, &tr, DMG_SHOCK );
+		if (pEntity->pev->takedamage)
+		{
+			pEntity->TraceAttack( pev, gSkillData.slaveDmgZap, vecAim, &tr, DMG_SHOCK | DMG_NEVERGIB );	// POV: never gib
+		}
+		else if (pEntity->Classify() == CLASS_NONE)
+		{
+			// POV: scorch the world
+			UTIL_DecalTrace( &tr, RANDOM_LONG( DECAL_SMALLSCORCH1, DECAL_SMALLSCORCH3 ) );
+		}
 	}
 	UTIL_EmitAmbientSound( ENT(pev), tr.vecEndPos, "weapons/electro4.wav", 0.5, ATTN_NORM, 0, RANDOM_LONG( 140, 160 ) );
 }
