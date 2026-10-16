@@ -115,7 +115,6 @@ TYPEDESCRIPTION	CBasePlayer::m_playerSaveData[] =
 	DEFINE_FIELD( CBasePlayer, m_iWeaponVolume, FIELD_INTEGER ),
 	DEFINE_FIELD( CBasePlayer, m_iExtraSoundTypes, FIELD_INTEGER ),
 	DEFINE_FIELD( CBasePlayer, m_iWeaponFlash, FIELD_INTEGER ),
-	DEFINE_FIELD( CBasePlayer, m_fLongJump, FIELD_BOOLEAN ),
 	DEFINE_FIELD( CBasePlayer, m_fInitHUD, FIELD_BOOLEAN ),
 	DEFINE_FIELD( CBasePlayer, m_tbdPrev, FIELD_TIME ),
 
@@ -1530,14 +1529,6 @@ void CBasePlayer::Jump()
 
 	SetAnimation( PLAYER_JUMP );
 
-	if ( FBitSet(pev->flags, FL_DUCKING ) || FBitSet(m_afPhysicsFlags, PFLAG_DUCKING) )
-	{
-		if ( m_fLongJump && (pev->button & IN_DUCK) && gpGlobals->time - m_flDuckTime < 1 && pev->velocity.Length() > 50 )
-		{
-			SetAnimation( PLAYER_SUPERJUMP );
-		}
-	}
-	
 	// If you're standing on a conveyor, add it's velocity to yours (for momentum)
 	entvars_t *pevGround = VARS(pev->groundentity);
 	if ( pevGround && (pevGround->flags & FL_CONVEYOR) )
@@ -2994,7 +2985,6 @@ void CBasePlayer::Spawn( void )
 	m_bitsHUDDamage		= -1;
 	m_bitsDamageType	= 0;
 	m_afPhysicsFlags	= 0;
-	m_fLongJump			= FALSE;// no longjump module. 
 
 	g_engfuncs.pfnSetPhysicsKeyValue( edict(), "slj", "0" );
 	g_engfuncs.pfnSetPhysicsKeyValue( edict(), "hl", "1" );

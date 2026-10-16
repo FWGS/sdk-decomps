@@ -248,7 +248,7 @@ public:
 		virtual BOOL FValidateHintType( short sHint );
 		int FindHintNode ( void );
 		virtual BOOL FCanActiveIdle ( void );
-		void SetTurnActivity ( void );
+		virtual void SetTurnActivity ( void );
 		float FLSoundVolume ( CSound *pSound );
 
 		BOOL MoveToNode( Activity movementAct, float waitTime, const Vector &goal );
@@ -298,6 +298,9 @@ public:
 	void		 CallGibMonster( void );
 	virtual BOOL	HasHumanGibs( void );
 	virtual BOOL	HasAlienGibs( void );
+	virtual BOOL	HasPumaGibs( void );	// names ours: Classify() is CLASS_PUMA,
+	virtual BOOL	HasBearGibs( void );	// CLASS_BEAR or CLASS_SNAKE; GibMonster
+	virtual BOOL	HasSnakeGibs( void );	// throws that animal's gibs
 	virtual void	FadeMonster( void );	// Called instead of GibMonster() when gibs are disabled
 
 	Vector ShootAtEnemy( const Vector &shootOrigin );

@@ -285,6 +285,24 @@ BOOL CBaseMonster :: HasAlienGibs( void )
 }
 
 
+BOOL CBaseMonster :: HasPumaGibs( void )
+{
+	return Classify() == CLASS_PUMA;
+}
+
+
+BOOL CBaseMonster :: HasBearGibs( void )
+{
+	return Classify() == CLASS_BEAR;
+}
+
+
+BOOL CBaseMonster :: HasSnakeGibs( void )
+{
+	return Classify() == CLASS_SNAKE;
+}
+
+
 void CBaseMonster::FadeMonster( void )
 {
 	StopAnimation();

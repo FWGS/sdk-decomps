@@ -104,6 +104,7 @@ public:
 // these are time-sensitive things that we keep track of
 	float				m_flTimeStepSound;	// when the last stepping sound was made
 	float				m_flTimeWeaponIdle; // when to play another weapon idle animation.
+	int					m_iUnused2cc;		// no code touches it; name ours
 	float				m_flSwimTime;		// how long player has been underwater
 	float				m_flDuckTime;		// how long we've been ducking
 	float				m_flWallJumpTime;	// how long until next walljump
@@ -137,7 +138,6 @@ public:
 	float				m_fDeadTime;			// the time at which the player died  (used in PlayerDeathThink())
 
 	BOOL			m_fNoPlayerSound;	// a debugging feature. Player makes no sound if this is true. 
-	BOOL			m_fLongJump; // does this player have the longjump module?
 
 	float       m_tSneaking;
 	int			m_iUpdateTime;		// stores the number of frame ticks before sending HUD update messages

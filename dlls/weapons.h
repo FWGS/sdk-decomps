@@ -230,11 +230,11 @@ public:
 	void EXPORT DestroyItem( void );
 	void EXPORT DefaultTouch( CBaseEntity *pOther );	// default weapon touch
 	void EXPORT FallThink ( void );// when an item is first spawned, this think is run to determine when the object has hit the ground.
-	void EXPORT Materialize( void );// make a weapon visible and tangible
+	virtual void EXPORT Materialize( void );// make a weapon visible and tangible
 	void EXPORT AttemptToMaterialize( void );  // the weapon desires to become visible and tangible, if the game rules allow for it
 	CBaseEntity* Respawn ( void );// copy a weapon
 	void FallInit( void );
-	void CheckRespawn( void );
+	virtual void CheckRespawn( void );
 	virtual int GetItemInfo(ItemInfo *p) { return 0; };	// returns 0 if struct not filled out
 	virtual BOOL CanDeploy( void ) { return TRUE; };
 	virtual BOOL Deploy( )								// returns is deploy was successful
@@ -341,6 +341,7 @@ public:
 	float	m_flNextPrimaryAttack;								// soonest time ItemPostFrame will call PrimaryAttack
 	float	m_flNextSecondaryAttack;							// soonest time ItemPostFrame will call SecondaryAttack
 	float	m_flTimeWeaponIdle;									// soonest time ItemPostFrame will call WeaponIdle
+	int		m_iUnused5c;										// no code touches it; name ours
 	int		m_iPrimaryAmmoType;									// "primary" ammo index into players m_rgAmmo[]
 	int		m_iSecondaryAmmoType;								// "secondary" ammo index into players m_rgAmmo[]
 	int		m_iClip;											// number of shots left in the primary weapon clip, -1 it not used

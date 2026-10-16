@@ -59,6 +59,8 @@ enum
 class CGameRules
 {
 public:
+	virtual void Init( void ) {}	// names ours: sets up the game mode once the rules are installed
+	virtual int GetGameType( void ) { return 0; }	// info_wanteddetect's gametype: 2 CTC, 3 High Noon
 	virtual void RefreshSkillData( void );// fill skill data struct with proper values
 	virtual void Think( void ) = 0;// GR_Think - runs every server frame, should handle any timer tasks, periodic events, etc.
 	virtual BOOL IsAllowedToSpawn( CBaseEntity *pEntity ) = 0;  // Can this item spawn (eg monsters don't spawn in deathmatch).
