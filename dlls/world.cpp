@@ -105,8 +105,10 @@ BODY QUE
 
 // POV: infodecal remembers whether it was triggered and whether it sticks
 // to an entity, and goes across transitions; the decal is sent to the
-// clients once the level has finished loading
-class POVDECAL : public CBaseEntity
+// clients once the level has finished loading. The class keeps the SDK's
+// name (retail exports CDecal::PlaceDecal and TriggerDecal); its saved
+// data is named "POVDECAL".
+class CDecal : public CBaseEntity
 {
 public:
 	void	Spawn( void );
@@ -125,17 +127,17 @@ public:
 	BOOL	m_flRestoringSpawn;
 };
 
-LINK_ENTITY_TO_CLASS( infodecal, POVDECAL );
+LINK_ENTITY_TO_CLASS( infodecal, CDecal );
 
-TYPEDESCRIPTION	POVDECAL::m_SaveData[] = 
+TYPEDESCRIPTION	CDecal::m_SaveData[] = 
 {
-	DEFINE_FIELD( POVDECAL, m_flStuckOnEnt, FIELD_BOOLEAN ),
-	DEFINE_FIELD( POVDECAL, m_flAlreadyTriggered, FIELD_BOOLEAN ),
-	DEFINE_FIELD( POVDECAL, m_flRestoringSpawn, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CDecal, m_flStuckOnEnt, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CDecal, m_flAlreadyTriggered, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CDecal, m_flRestoringSpawn, FIELD_BOOLEAN ),
 };
 
 // UNDONE:  These won't get sent to joining players in multi-player
-void POVDECAL :: Spawn( void )
+void CDecal :: Spawn( void )
 {
 	if ( pev->skin < 0 || (gpGlobals->deathmatch && FBitSet( pev->spawnflags, SF_DECAL_NOTINDEATHMATCH )) )
 	{
@@ -164,7 +166,7 @@ void POVDECAL :: Spawn( void )
 	}
 }
 
-void POVDECAL :: TriggerDecal ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CDecal :: TriggerDecal ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	// this is set up as a USE function for infodecals that have targetnames, so that the
 	// decal doesn't get applied until it is fired. (usually by a scripted sequence)
@@ -175,7 +177,7 @@ void POVDECAL :: TriggerDecal ( CBaseEntity *pActivator, CBaseEntity *pCaller, U
 }
 
 
-void POVDECAL :: PlaceDecal( void )
+void CDecal :: PlaceDecal( void )
 {
 	TraceResult trace;
 	int			entityIndex;
@@ -208,7 +210,7 @@ void POVDECAL :: PlaceDecal( void )
 }
 
 
-int POVDECAL::Restore( CRestore &restore )
+int CDecal::Restore( CRestore &restore )
 {
 	if ( !CBaseEntity::Restore( restore ) )
 		return 0;
@@ -217,7 +219,7 @@ int POVDECAL::Restore( CRestore &restore )
 }
 
 
-int POVDECAL::Save( CSave &save )
+int CDecal::Save( CSave &save )
 {
 	if ( !CBaseEntity::Save( save ) )
 		return 0;
@@ -230,7 +232,7 @@ int POVDECAL::Save( CSave &save )
 }
 
 
-void POVDECAL :: CheckStuck( TraceResult *ptr )
+void CDecal :: CheckStuck( TraceResult *ptr )
 {
 	m_flStuckOnEnt = FALSE;
 
@@ -242,7 +244,7 @@ void POVDECAL :: CheckStuck( TraceResult *ptr )
 }
 
 
-void POVDECAL :: KeyValue( KeyValueData *pkvd )
+void CDecal :: KeyValue( KeyValueData *pkvd )
 {
 	if (FStrEq(pkvd->szKeyName, "texture"))
 	{
