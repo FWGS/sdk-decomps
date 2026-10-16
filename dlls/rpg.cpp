@@ -64,7 +64,7 @@ public:
 	void Spawn( void );
 	void Precache( void );
 	void Reload( void );
-	int iItemSlot( void ) { return 4; }
+	int iItemSlot( void ) { return 3; }
 	int GetItemInfo(ItemInfo *p);
 	int AddToPlayer( CBasePlayer *pPlayer );
 
@@ -380,6 +380,13 @@ void CRpg::Reload( void )
 {
 	int iResult;
 
+	if ( m_pPlayer->m_fDidHolster )
+	{
+		// POV: still holstering
+		WeaponIdle( );
+		return;
+	}
+
 	if ( m_iClip == 1 )
 	{
 		// don't bother with any of this if don't need to reload.
@@ -468,8 +475,8 @@ int CRpg::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = RPG_MAX_CLIP;
-	p->iSlot = 3;
-	p->iPosition = 0;
+	p->iSlot = 2;
+	p->iPosition = 1;
 	p->iId = m_iId = WEAPON_RPG;
 	p->iFlags = 0;
 	p->iWeight = RPG_WEIGHT;
@@ -479,13 +486,7 @@ int CRpg::GetItemInfo(ItemInfo *p)
 
 int CRpg::AddToPlayer( CBasePlayer *pPlayer )
 {
-	if ( CBasePlayerWeapon::AddToPlayer( pPlayer ) )
-	{
-		MESSAGE_BEGIN( MSG_ONE, gmsgWeapPickup, NULL, pPlayer->pev );
-			WRITE_BYTE( m_iId );
-		MESSAGE_END();
-		return TRUE;
-	}
+	// POV: the rocket launcher can't be taken
 	return FALSE;
 }
 
@@ -513,11 +514,10 @@ BOOL CRpg::CanHolster( void )
 
 void CRpg::Holster( void )
 {
-	m_fInReload = FALSE;// cancel any reload in progress.
-
-	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
-	// m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
-	SendWeaponAnim( RPG_HOLSTER1 );
+	if ( m_iClip )
+		DefaultHolster( RPG_HOLSTER1, 0.8, 0.8 );
+	else
+		DefaultHolster( RPG_HOLSTER2, 0.8, 0.8 );
 	if (m_pSpot)
 	{
 		m_pSpot->Killed( NULL, GIB_NEVER );
@@ -529,6 +529,13 @@ void CRpg::Holster( void )
 
 void CRpg::PrimaryAttack()
 {
+	if ( m_pPlayer->m_fDidHolster )
+	{
+		// POV: still holstering
+		WeaponIdle( );
+		return;
+	}
+
 	if (m_iClip)
 	{
 		m_pPlayer->m_iWeaponVolume = LOUD_GUN_VOLUME;
@@ -571,6 +578,13 @@ void CRpg::PrimaryAttack()
 
 void CRpg::SecondaryAttack()
 {
+	if ( m_pPlayer->m_fDidHolster )
+	{
+		// POV: still holstering
+		WeaponIdle( );
+		return;
+	}
+
 	m_fSpotActive = ! m_fSpotActive;
 
 	if (!m_fSpotActive && m_pSpot)
@@ -585,6 +599,18 @@ void CRpg::SecondaryAttack()
 
 void CRpg::WeaponIdle( void )
 {
+	if ( m_pPlayer->m_fDidHolster )
+	{
+		// POV: the holster animation is over, draw the weapon again
+		if ( m_flTimeWeaponIdle <= gpGlobals->time )
+		{
+			m_pPlayer->m_fDidHolster = FALSE;
+			Deploy( );
+			UpdateItemInfo( );
+		}
+		return;
+	}
+
 	UpdateSpot( );
 
 	ResetEmptySound( );
@@ -670,23 +696,7 @@ class CRpgAmmo : public CBasePlayerAmmo
 	}
 	BOOL AddAmmo( CBaseEntity *pOther ) 
 	{ 
-		int iGive;
-
-		if ( g_pGameRules->IsMultiplayer() )
-		{
-			// hand out more ammo per rocket in multiplayer.
-			iGive = AMMO_RPGCLIP_GIVE * 2;
-		}
-		else
-		{
-			iGive = AMMO_RPGCLIP_GIVE;
-		}
-
-		if (pOther->GiveAmmo( iGive, "rockets", ROCKET_MAX_CARRY ) != -1)
-		{
-			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
-			return TRUE;
-		}
+		// POV: rockets can't be taken
 		return FALSE;
 	}
 };
