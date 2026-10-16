@@ -592,6 +592,10 @@ SOURCE=.\wagonwheel.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\wantedrules.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\weapons.cpp
 
 !IF  "$(CFG)" == "hl - Win32 Release"
@@ -650,6 +654,10 @@ SOURCE=.\animation.h
 # Begin Source File
 
 SOURCE=.\basemonster.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\bot.h
 # End Source File
 # Begin Source File
 
