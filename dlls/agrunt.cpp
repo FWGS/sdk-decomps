@@ -44,7 +44,7 @@ enum
 	TASK_AGRUNT_GET_PATH_TO_ENEMY_CORPSE,
 };
 
-int iAgruntMuzzleFlash;
+// int iAgruntMuzzleFlash;	// POV: a member now
 
 //=========================================================
 // Monster's Anim Events Go Here
@@ -95,6 +95,7 @@ public:
 	void AttackSound ( void );
 	void PrescheduleThink ( void );
 	void TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType);
+	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );	// POV
 	int IRelationship( CBaseEntity *pTarget );
 	void StopTalking ( void );
 	BOOL ShouldSpeak( void );
@@ -121,6 +122,8 @@ public:
 	float	m_flNextSpeakTime;
 	float	m_flNextWordTime;
 	int		m_iLastWord;
+
+	int		m_iAgruntMuzzleFlash;	// POV: was a global
 };
 LINK_ENTITY_TO_CLASS( monster_alien_grunt, CAGrunt );
 
@@ -132,6 +135,7 @@ TYPEDESCRIPTION	CAGrunt::m_SaveData[] =
 	DEFINE_FIELD( CAGrunt, m_flNextSpeakTime, FIELD_TIME ),
 	DEFINE_FIELD( CAGrunt, m_flNextWordTime, FIELD_TIME ),
 	DEFINE_FIELD( CAGrunt, m_iLastWord, FIELD_INTEGER ),
+	DEFINE_FIELD( CAGrunt, m_iAgruntMuzzleFlash, FIELD_INTEGER ),
 };
 
 IMPLEMENT_SAVERESTORE( CAGrunt, CSquadMonster );
@@ -263,11 +267,37 @@ void CAGrunt :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecD
 }
 
 //=========================================================
+// TakeDamage - POV: answer the player's shots
+//=========================================================
+int CAGrunt :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
+{
+	if ( m_MonsterState != MONSTERSTATE_PRONE && !HasMemory( bits_MEMORY_PROVOKED ) )
+	{
+		switch ( UTIL_PlayerProvoke( this, pevAttacker ) )
+		{
+		case 1:
+			PainSound( );
+			break;
+		case 2:
+			AttackSound( );
+			Remember( bits_MEMORY_SUSPICIOUS );
+			break;
+		case 3:
+			AlertSound( );
+			Remember( bits_MEMORY_PROVOKED );
+			break;
+		}
+	}
+
+	return CSquadMonster::TakeDamage( pevInflictor, pevAttacker, flDamage, bitsDamageType );
+}
+
+//=========================================================
 // StopTalking - won't speak again for 10-20 seconds.
 //=========================================================
 void CAGrunt::StopTalking( void )
 {
-	m_flNextWordTime = m_flNextSpeakTime = gpGlobals->time + 10 + RANDOM_LONG(0, 10);
+	m_flNextWordTime = m_flNextSpeakTime = gpGlobals->time + RANDOM_LONG(4, 8);	// POV: was 10-20 seconds
 }
 
 //=========================================================
@@ -459,7 +489,7 @@ void CAGrunt :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				WRITE_COORD( vecArmPos.x );	// pos
 				WRITE_COORD( vecArmPos.y );	
 				WRITE_COORD( vecArmPos.z );	
-				WRITE_SHORT( iAgruntMuzzleFlash );		// model
+				WRITE_SHORT( m_iAgruntMuzzleFlash );		// model
 				WRITE_BYTE( 6 );				// size * 10
 				WRITE_BYTE( 128 );			// brightness
 			MESSAGE_END();
@@ -575,6 +605,8 @@ void CAGrunt :: Spawn()
 	m_bloodColor		= BLOOD_COLOR_GREEN;
 	pev->effects		= 0;
 	pev->health			= gSkillData.agruntHealth;
+	if ( pev->spawnflags & 8 )	// POV: spawnflag 8 picks the second body
+		pev->body		= 1;
 	m_flFieldOfView		= 0.2;// indicates the width of this monster's forward view cone ( as a dotproduct result )
 	m_MonsterState		= MONSTERSTATE_NONE;
 	m_afCapability		= 0;
@@ -621,7 +653,7 @@ void CAGrunt :: Precache()
 
 	PRECACHE_SOUND( "hassault/hw_shoot1.wav" );
 
-	iAgruntMuzzleFlash = PRECACHE_MODEL( "sprites/muz4.spr" );
+	m_iAgruntMuzzleFlash = PRECACHE_MODEL( "sprites/muz4.spr" );
 
 	UTIL_PrecacheOther( "hornet" );
 }	
@@ -931,7 +963,7 @@ BOOL CAGrunt :: CheckRangeAttack1 ( float flDot, float flDist )
 		UTIL_MakeVectors( pev->angles );
 		GetAttachment( 0, vecArmPos, vecArmDir );
 //		UTIL_TraceLine( vecArmPos, vecArmPos + gpGlobals->v_forward * 256, ignore_monsters, ENT(pev), &tr);
-		UTIL_TraceLine( vecArmPos, m_hEnemy->BodyTarget(vecArmPos), dont_ignore_monsters, ENT(pev), &tr);
+		UTIL_TraceLine( vecArmPos, m_hEnemy->BodyTarget(vecArmPos), dont_ignore_monsters, dont_ignore_glass, ENT(pev), &tr);	// POV: glass stops hornets
 
 		if ( tr.flFraction == 1.0 || tr.pHit == m_hEnemy->edict() )
 		{
