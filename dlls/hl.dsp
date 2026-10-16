@@ -472,6 +472,10 @@ SOURCE=..\pm_shared\pm_shared.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\puma.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\python.cpp
 # End Source File
 # Begin Source File
