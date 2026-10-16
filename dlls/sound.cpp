@@ -940,6 +940,12 @@ void CEnvSound :: Think( void )
 		if (flRange < pPlayer->m_flSndRange || pPlayer->m_flSndRange == 0) 
 		{
 			// new entity is closer to player, so it wins.
+			// POV: look the player up again and tell the console
+			pentPlayer = FIND_CLIENT_IN_PVS(edict());
+			pPlayer = GetClassPtr( (CBasePlayer *)VARS(pentPlayer));
+
+			ALERT( at_console, "env_sound: set to %d - %s\n", (int)m_flRoomtype, UTIL_RoomTypeName( m_flRoomtype ) );
+
 			pPlayer->m_pentSndLast = ENT(pev);
 			pPlayer->m_flSndRoomtype = m_flRoomtype;
 			pPlayer->m_flSndRange = flRange;
@@ -1428,15 +1434,7 @@ void EMIT_SOUND_DYN(edict_t *entity, int channel, const char *sample, float volu
 
 void EMIT_SOUND_SUIT(edict_t *entity, const char *sample)
 {
-	float fvol;
-	int pitch = PITCH_NORM;
-
-	fvol = CVAR_GET_FLOAT("suitvolume");
-	if (RANDOM_LONG(0,1))
-		pitch = RANDOM_LONG(0,6) + 98;
-
-	if (fvol > 0.05)
-		EMIT_SOUND_DYN(entity, CHAN_STATIC, sample, fvol, ATTN_NORM, 0, pitch);
+	// POV: there is no HEV suit to speak
 }
 
 // play a sentence, randomly selected from the passed in group id, over the HEV suit speaker
