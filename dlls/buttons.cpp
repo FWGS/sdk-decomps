@@ -25,6 +25,8 @@
 #include "cbase.h"
 #include "saverestore.h"
 #include "doors.h"
+#include "monsters.h"
+#include "effects.h"
 
 
 #define SF_BUTTON_DONTMOVE		1
@@ -1132,12 +1134,14 @@ public:
 	static	TYPEDESCRIPTION m_SaveData[];
 
 	float	m_flDelay;
+	float	m_flSoundRad;	// POV: attenuation of the spark sounds
 };
 
 
 TYPEDESCRIPTION CEnvSpark::m_SaveData[] =
 {
 	DEFINE_FIELD( CEnvSpark, m_flDelay, FIELD_FLOAT),
+	DEFINE_FIELD( CEnvSpark, m_flSoundRad, FIELD_FLOAT),
 };
 
 IMPLEMENT_SAVERESTORE( CEnvSpark, CBaseEntity );
@@ -1180,6 +1184,7 @@ void CEnvSpark::Precache(void)
 	PRECACHE_SOUND( "buttons/spark4.wav" );
 	PRECACHE_SOUND( "buttons/spark5.wav" );
 	PRECACHE_SOUND( "buttons/spark6.wav" );
+	PRECACHE_MODEL( "sprites/flare3.spr" );
 }
 
 void CEnvSpark::KeyValue( KeyValueData *pkvd )
@@ -1196,6 +1201,18 @@ void CEnvSpark::KeyValue( KeyValueData *pkvd )
 				FStrEq(pkvd->szKeyName, "value2") ||
 				FStrEq(pkvd->szKeyName, "value3"))
 		pkvd->fHandled = TRUE;
+	else if (FStrEq(pkvd->szKeyName, "sparksoundrad"))
+	{
+		switch ( atoi( pkvd->szValue ) )
+		{
+		case 1: m_flSoundRad = ATTN_IDLE; break;
+		case 2: m_flSoundRad = ATTN_STATIC; break;
+		case 3: m_flSoundRad = ATTN_NORM; break;
+		case 4: m_flSoundRad = ATTN_NONE; break;
+		default: m_flSoundRad = ATTN_NORM; break;
+		}
+		pkvd->fHandled = TRUE;
+	}
 	else
 		CBaseEntity::KeyValue( pkvd );
 }
@@ -1203,7 +1220,48 @@ void CEnvSpark::KeyValue( KeyValueData *pkvd )
 void EXPORT CEnvSpark::SparkThink(void)
 {
 	pev->nextthink = gpGlobals->time + 0.1 + RANDOM_FLOAT (0, m_flDelay);
-	DoSpark( pev, pev->origin );
+
+	// POV: DoSpark with the spark's own sound radius
+	Vector tmp = pev->origin + pev->size * 0.5;
+	UTIL_Sparks( tmp );
+
+	float flVolume = RANDOM_FLOAT ( 0.25 , 0.75 ) * 0.4;//random volume range
+	switch ( (int)(RANDOM_FLOAT(0,1) * 6) )
+	{
+		case 0: EMIT_SOUND(ENT(pev), CHAN_VOICE, "buttons/spark1.wav", flVolume, m_flSoundRad);	break;
+		case 1: EMIT_SOUND(ENT(pev), CHAN_VOICE, "buttons/spark2.wav", flVolume, m_flSoundRad);	break;
+		case 2: EMIT_SOUND(ENT(pev), CHAN_VOICE, "buttons/spark3.wav", flVolume, m_flSoundRad);	break;
+		case 3: EMIT_SOUND(ENT(pev), CHAN_VOICE, "buttons/spark4.wav", flVolume, m_flSoundRad);	break;
+		case 4: EMIT_SOUND(ENT(pev), CHAN_VOICE, "buttons/spark5.wav", flVolume, m_flSoundRad);	break;
+		case 5: EMIT_SOUND(ENT(pev), CHAN_VOICE, "buttons/spark6.wav", flVolume, m_flSoundRad);	break;
+	}
+
+	// POV: spawnflag 2 lights the sparks up
+	if ( FBitSet( pev->spawnflags, 2 ) )
+	{
+		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+			WRITE_BYTE( TE_DLIGHT );
+			WRITE_COORD( pev->origin.x );	// X
+			WRITE_COORD( pev->origin.y );	// Y
+			WRITE_COORD( pev->origin.z );	// Z
+			WRITE_BYTE( 30 );		// radius * 0.1
+			WRITE_BYTE( 255 );		// r
+			WRITE_BYTE( 140 );		// g
+			WRITE_BYTE( 36 );		// b
+			WRITE_BYTE( 0 );		// time * 10
+			WRITE_BYTE( 3 );		// decay * 0.1
+		MESSAGE_END( );
+
+		CSprite *pGlow = CSprite::SpriteCreate( "sprites/flare3.spr", pev->origin, TRUE );
+		if ( pGlow )
+		{
+			pGlow->SetTransparency( kRenderGlow, 255, 140, 36, 192, kRenderFxNone );
+			pGlow->pev->nextthink = gpGlobals->time + 0.1;
+			pGlow->SetThink( SUB_Remove );
+		}
+		else
+			ALERT( at_console, "CEnvSpark: Warning - couln't create light glow!\n" );
+	}
 }
 
 void EXPORT CEnvSpark::SparkStart(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
@@ -1237,7 +1295,11 @@ LINK_ENTITY_TO_CLASS( button_target, CButtonTarget );
 void CButtonTarget::Spawn( void )
 {
 	pev->movetype	= MOVETYPE_PUSH;
-	pev->solid		= SOLID_BSP;
+	// POV: spawnflag 32 makes the target not solid
+	if ( FBitSet( pev->spawnflags, 32 ) )
+		pev->solid		= SOLID_NOT;
+	else
+		pev->solid		= SOLID_BSP;
 	SET_MODEL(ENT(pev), STRING(pev->model));
 	pev->takedamage = DAMAGE_YES;
 
