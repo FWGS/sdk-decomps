@@ -216,6 +216,10 @@ SOURCE=.\client.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\colonel.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\colts.cpp
 # End Source File
 # Begin Source File
@@ -229,6 +233,10 @@ SOURCE=.\crispen.cpp
 # Begin Source File
 
 SOURCE=.\crossbow.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\dave.cpp
 # End Source File
 # Begin Source File
 
