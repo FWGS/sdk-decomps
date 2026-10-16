@@ -528,6 +528,10 @@ SOURCE=.\pov_loader.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_m41a.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_object.cpp
 # End Source File
 # Begin Source File
