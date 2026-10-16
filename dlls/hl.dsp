@@ -468,6 +468,10 @@ SOURCE=.\util.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\wagonwheel.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\weapons.cpp
 
 !IF  "$(CFG)" == "hl - Win32 Release"
