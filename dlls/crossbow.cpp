@@ -249,7 +249,7 @@ public:
 	void SecondaryAttack( void );
 	int AddToPlayer( CBasePlayer *pPlayer );
 	BOOL Deploy( );
-	void Holster( int skiplocal = 0 );
+	void Holster( void );
 	void Reload( void );
 	void WeaponIdle( void );
 
@@ -317,7 +317,7 @@ BOOL CCrossbow::Deploy( )
 	return DefaultDeploy( "models/v_crossbow.mdl", "models/p_crossbow.mdl", CROSSBOW_DRAW2, "bow" );
 }
 
-void CCrossbow::Holster( int skiplocal /* = 0 */ )
+void CCrossbow::Holster( void )
 {
 	m_fInReload = FALSE;// cancel any reload in progress.
 

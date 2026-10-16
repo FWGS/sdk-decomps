@@ -47,7 +47,7 @@ public:
 	void SecondaryAttack( void );
 	BOOL Deploy( void );
 	BOOL IsUseable( void );
-	void Holster( int skiplocal = 0 );
+	void Holster( void );
 	void Reload( void );
 	void WeaponIdle( void );
 	float m_flNextAnimTime;
@@ -126,7 +126,7 @@ BOOL CHgun::Deploy( )
 	return DefaultDeploy( "models/v_hgun.mdl", "models/p_hgun.mdl", HGUN_UP, "hive" );
 }
 
-void CHgun::Holster( int skiplocal /* = 0 */ )
+void CHgun::Holster( void )
 {
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
 	// m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );

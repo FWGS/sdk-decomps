@@ -366,7 +366,7 @@ public:
 
 	void PrimaryAttack( void );
 	BOOL Deploy( void );
-	void Holster( int skiplocal = 0 );
+	void Holster( void );
 	void WeaponIdle( void );
 };
 LINK_ENTITY_TO_CLASS( weapon_tripmine, CTripmine );
@@ -424,7 +424,7 @@ BOOL CTripmine::Deploy( )
 }
 
 
-void CTripmine::Holster( int skiplocal /* = 0 */ )
+void CTripmine::Holster( void )
 {
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
 

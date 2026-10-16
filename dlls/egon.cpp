@@ -65,7 +65,7 @@ public:
 	int AddToPlayer( CBasePlayer *pPlayer );
 
 	BOOL Deploy( void );
-	void Holster( int skiplocal = 0 );
+	void Holster( void );
 
 	void CreateEffect( void );
 	void UpdateEffect( const Vector &startPoint, const Vector &endPoint, float timeBlend );
@@ -186,7 +186,7 @@ int CEgon::AddToPlayer( CBasePlayer *pPlayer )
 
 
 
-void CEgon::Holster( int skiplocal /* = 0 */ )
+void CEgon::Holster( void )
 {
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
 	// m_flTimeWeaponIdle = gpGlobals->time + UTIL_RandomFloat ( 10, 15 );

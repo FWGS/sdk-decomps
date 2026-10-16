@@ -241,7 +241,7 @@ public:
 		 { return TRUE; };
 
 	virtual BOOL CanHolster( void ) { return TRUE; };// can this weapon be put away right now?
-	virtual void Holster( int skiplocal = 0 );
+	virtual void Holster( void );
 	virtual void UpdateItemInfo( void ) { return; };
 
 	virtual void ItemPreFrame( void )	{ return; }		// called each frame by the player PreThink
@@ -328,7 +328,7 @@ public:
 	virtual int UpdateClientData( CBasePlayer *pPlayer );		// sends hud info to client dll, if things have changed
 	virtual void RetireWeapon( void );
 	virtual BOOL ShouldWeaponIdle( void ) {return FALSE; };
-	virtual void Holster( int skiplocal = 0 );
+	virtual void Holster( void );
 	virtual BOOL UseDecrement( void ) { return FALSE; };
 
 	int	PrimaryAmmoIndex(); 

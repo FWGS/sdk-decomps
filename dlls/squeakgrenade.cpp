@@ -418,7 +418,7 @@ public:
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
 	BOOL Deploy( void );
-	void Holster( int skiplocal = 0 );
+	void Holster( void );
 	void WeaponIdle( void );
 	int m_fJustThrown;
 };
@@ -487,7 +487,7 @@ BOOL CSqueak::Deploy( )
 }
 
 
-void CSqueak::Holster( int skiplocal /* = 0 */ )
+void CSqueak::Holster( void )
 {
 	m_pPlayer->m_flNextAttack = gpGlobals->time + 0.5;
 	

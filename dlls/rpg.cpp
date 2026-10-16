@@ -70,7 +70,7 @@ public:
 
 	BOOL Deploy( void );
 	BOOL CanHolster( void );
-	void Holster( int skiplocal = 0 );
+	void Holster( void );
 
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
@@ -511,7 +511,7 @@ BOOL CRpg::CanHolster( void )
 	return TRUE;
 }
 
-void CRpg::Holster( int skiplocal /* = 0 */ )
+void CRpg::Holster( void )
 {
 	m_fInReload = FALSE;// cancel any reload in progress.
 

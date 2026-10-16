@@ -46,7 +46,7 @@ public:
 	void PrimaryAttack( void );
 	BOOL Deploy( void );
 	BOOL CanHolster( void );
-	void Holster( int skiplocal = 0 );
+	void Holster( void );
 	void WeaponIdle( void );
 	float m_flStartThrow;
 	float m_flReleaseThrow;
@@ -105,7 +105,7 @@ BOOL CHandGrenade::CanHolster( void )
 	return ( m_flStartThrow == 0 );
 }
 
-void CHandGrenade::Holster( int skiplocal /* = 0 */ )
+void CHandGrenade::Holster( void )
 {
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
 	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType])

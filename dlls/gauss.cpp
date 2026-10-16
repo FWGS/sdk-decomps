@@ -55,7 +55,7 @@ public:
 	int AddToPlayer( CBasePlayer *pPlayer );
 
 	BOOL Deploy( void );
-	void Holster( int skiplocal = 0  );
+	void Holster( void );
 
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
@@ -177,7 +177,7 @@ BOOL CGauss::Deploy( )
 }
 
 
-void CGauss::Holster( int skiplocal /* = 0 */ )
+void CGauss::Holster( void )
 {
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
 	// m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );

@@ -45,7 +45,7 @@ public:
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
 	BOOL Deploy( void );
-	void Holster( int skiplocal = 0 );
+	void Holster( void );
 	void Reload( void );
 	void WeaponIdle( void );
 	float m_flSoundDelay;
@@ -133,7 +133,7 @@ BOOL CPython::Deploy( )
 }
 
 
-void CPython::Holster( int skiplocal /* = 0 */ )
+void CPython::Holster( void )
 {
 	m_fInReload = FALSE;// cancel any reload in progress.
 

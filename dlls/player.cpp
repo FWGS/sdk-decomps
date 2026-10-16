@@ -360,22 +360,16 @@ void CBasePlayer :: DeathSound( void )
 	}
 	*/
 
-	// temporarily using pain sounds for death sounds
-	switch (RANDOM_LONG(1,5)) 
+	// POV: the alien slave's own death sounds, no suit alarm
+	switch (RANDOM_LONG(0,1)) 
 	{
+	case 0: 
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_die1.wav", 1, ATTN_NORM);
+		break;
 	case 1: 
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain5.wav", 1, ATTN_NORM);
-		break;
-	case 2: 
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain6.wav", 1, ATTN_NORM);
-		break;
-	case 3: 
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain7.wav", 1, ATTN_NORM);
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_die2.wav", 1, ATTN_NORM);
 		break;
 	}
-
-	// play one of the suit death alarms
-	EMIT_GROUPNAME_SUIT(ENT(pev), "HEV_DEAD");
 }
 
 // override takehealth
@@ -395,6 +389,12 @@ Vector CBasePlayer :: GetGunPosition( )
 	
 	origin = pev->origin + pev->view_ofs;
 	return origin;
+}
+
+// POV: the player is an alien slave
+int CBasePlayer :: BloodColor( void )
+{
+	return m_bloodColor = BLOOD_COLOR_YELLOW;
 }
 
 //=========================================================
@@ -430,6 +430,12 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 		default:
 			break;
 		}
+
+		// POV: the panther hurts half as much, and shock doesn't hurt an alien slave
+		if ( UTIL_StrIEq( STRING( pevAttacker->classname ), "monster_alien_panther" ) )
+			flDamage /= 2;
+		else if ( bitsDamageType & DMG_SHOCK )
+			return;
 
 		SpawnBlood(ptr->vecEndPos, BloodColor(), flDamage);// a little surface blood.
 		TraceBleed( flDamage, vecDir, ptr, bitsDamageType );
@@ -477,7 +483,7 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	
 	CBaseEntity *pAttacker = CBaseEntity::Instance(pevAttacker);
 
-	if ( !g_pGameRules->FPlayerCanTakeDamage( this, pAttacker ) )
+	if ( !g_pGameRules->FPlayerCanTakeDamage( this, pAttacker, bitsDamageType ) )
 	{
 		// Refuse the damage
 		return 0;
@@ -531,94 +537,66 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	// handle all bits set in this damage message,
 	// let the suit give player the diagnosis
 
-	// UNDONE: add sounds for types of damage sustained (ie: burn, shock, slash )
-
-	// UNDONE: still need to record damage and heal messages for the following types
-
-		// DMG_BURN	
-		// DMG_FREEZE
-		// DMG_BLAST
-		// DMG_SHOCK
-
 	m_bitsDamageType |= bitsDamage; // Save this so we can report it to the client
+	BOOL fShock = FALSE;
+	if ( bitsDamage & DMG_SHOCK )
+		fShock = TRUE;
 	m_bitsHUDDamage = -1;  // make sure the damage bits get resent
 
+	// POV: no suit, so no diagnosis
 	while (fTookDamage && (!ftrivial || (bitsDamage & DMG_TIMEBASED)) && ffound && bitsDamage)
 	{
 		ffound = FALSE;
 
 		if (bitsDamage & DMG_CLUB)
 		{
-			if (fmajor)
-				SetSuitUpdate("!HEV_DMG4", FALSE, SUIT_NEXT_IN_30SEC);	// minor fracture
 			bitsDamage &= ~DMG_CLUB;
 			ffound = TRUE;
 		}
 		if (bitsDamage & (DMG_FALL | DMG_CRUSH))
 		{
-			if (fmajor)
-				SetSuitUpdate("!HEV_DMG5", FALSE, SUIT_NEXT_IN_30SEC);	// major fracture
-			else
-				SetSuitUpdate("!HEV_DMG4", FALSE, SUIT_NEXT_IN_30SEC);	// minor fracture
-	
 			bitsDamage &= ~(DMG_FALL | DMG_CRUSH);
 			ffound = TRUE;
 		}
 		
 		if (bitsDamage & DMG_BULLET)
 		{
-			if (m_lastDamageAmount > 5)
-				SetSuitUpdate("!HEV_DMG6", FALSE, SUIT_NEXT_IN_30SEC);	// blood loss detected
-			//else
-			//	SetSuitUpdate("!HEV_DMG0", FALSE, SUIT_NEXT_IN_30SEC);	// minor laceration
-			
 			bitsDamage &= ~DMG_BULLET;
 			ffound = TRUE;
 		}
 
 		if (bitsDamage & DMG_SLASH)
 		{
-			if (fmajor)
-				SetSuitUpdate("!HEV_DMG1", FALSE, SUIT_NEXT_IN_30SEC);	// major laceration
-			else
-				SetSuitUpdate("!HEV_DMG0", FALSE, SUIT_NEXT_IN_30SEC);	// minor laceration
-
 			bitsDamage &= ~DMG_SLASH;
 			ffound = TRUE;
 		}
 		
 		if (bitsDamage & DMG_SONIC)
 		{
-			if (fmajor)
-				SetSuitUpdate("!HEV_DMG2", FALSE, SUIT_NEXT_IN_1MIN);	// internal bleeding
 			bitsDamage &= ~DMG_SONIC;
 			ffound = TRUE;
 		}
 
 		if (bitsDamage & (DMG_POISON | DMG_PARALYZE))
 		{
-			SetSuitUpdate("!HEV_DMG3", FALSE, SUIT_NEXT_IN_1MIN);	// blood toxins detected
 			bitsDamage &= ~(DMG_POISON | DMG_PARALYZE);
 			ffound = TRUE;
 		}
 
 		if (bitsDamage & DMG_ACID)
 		{
-			SetSuitUpdate("!HEV_DET1", FALSE, SUIT_NEXT_IN_1MIN);	// hazardous chemicals detected
 			bitsDamage &= ~DMG_ACID;
 			ffound = TRUE;
 		}
 
 		if (bitsDamage & DMG_NERVEGAS)
 		{
-			SetSuitUpdate("!HEV_DET0", FALSE, SUIT_NEXT_IN_1MIN);	// biohazard detected
 			bitsDamage &= ~DMG_NERVEGAS;
 			ffound = TRUE;
 		}
 
 		if (bitsDamage & DMG_RADIATION)
 		{
-			SetSuitUpdate("!HEV_DET2", FALSE, SUIT_NEXT_IN_1MIN);	// radiation detected
 			bitsDamage &= ~DMG_RADIATION;
 			ffound = TRUE;
 		}
@@ -626,46 +604,38 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		{
 			bitsDamage &= ~DMG_SHOCK;
 			ffound = TRUE;
+			fShock = TRUE;
 		}
 	}
 
 	pev->punchangle.x = -2;
 
-	if (fTookDamage && !ftrivial && fmajor && flHealthPrev >= 75) 
+	// POV: pain sounds, none for shock
+	if ( fTookDamage && !fShock )
 	{
-		// first time we take major damage...
-		// turn automedic on if not on
-		SetSuitUpdate("!HEV_MED1", FALSE, SUIT_NEXT_IN_30MIN);	// automedic on
-
-		// give morphine shot if not given recently
-		SetSuitUpdate("!HEV_HEAL7", FALSE, SUIT_NEXT_IN_30MIN);	// morphine shot
-	}
-	
-	if (fTookDamage && !ftrivial && fcritical && flHealthPrev < 75)
-	{
-
-		// already took major damage, now it's critical...
-		if (pev->health < 6)
-			SetSuitUpdate("!HEV_HLTH3", FALSE, SUIT_NEXT_IN_10MIN);	// near death
-		else if (pev->health < 20)
-			SetSuitUpdate("!HEV_HLTH2", FALSE, SUIT_NEXT_IN_10MIN);	// health critical
-	
-		// give critical health warnings
-		if (!RANDOM_LONG(0,3) && flHealthPrev < 50)
-			SetSuitUpdate("!HEV_DMG7", FALSE, SUIT_NEXT_IN_5MIN); //seek medical attention
-	}
-
-	// if we're taking time based damage, warn about its continuing effects
-	if (fTookDamage && (bitsDamageType & DMG_TIMEBASED) && flHealthPrev < 75)
+		if ( fmajor || fcritical )
 		{
-			if (flHealthPrev < 50)
+			switch ( RANDOM_LONG( 0, 4 ) )
 			{
-				if (!RANDOM_LONG(0,3))
-					SetSuitUpdate("!HEV_DMG7", FALSE, SUIT_NEXT_IN_5MIN); //seek medical attention
+			case 0: EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain2.wav", 1, ATTN_NORM); break;
+			case 1: EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain4.wav", 1, ATTN_NORM); break;
+			case 2: EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain5.wav", 1, ATTN_NORM); break;
+			case 3: EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain6.wav", 1, ATTN_NORM); break;
+			case 4: EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain7.wav", 1, ATTN_NORM); break;
 			}
-			else
-				SetSuitUpdate("!HEV_HLTH1", FALSE, SUIT_NEXT_IN_10MIN);	// health dropping
 		}
+		else
+		{
+			switch ( RANDOM_LONG( 0, 9 ) )
+			{
+			case 0: EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain2.wav", 1, ATTN_NORM); break;
+			case 1: EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain4.wav", 1, ATTN_NORM); break;
+			case 2: EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain5.wav", 1, ATTN_NORM); break;
+			case 3: EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain6.wav", 1, ATTN_NORM); break;
+			case 4: EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain7.wav", 1, ATTN_NORM); break;
+			}
+		}
+	}
 
 	return fTookDamage;
 }
@@ -807,7 +777,8 @@ void CBasePlayer::RemoveAllItems( BOOL removeSuit )
 	if (m_pActiveItem)
 	{
 		ResetAutoaim( );
-		m_pActiveItem->Holster( );
+		HolsterItem( );
+		m_fDidHolster = FALSE;
 		m_pActiveItem = NULL;
 	}
 
@@ -827,6 +798,7 @@ void CBasePlayer::RemoveAllItems( BOOL removeSuit )
 		m_rgpPlayerItems[i] = NULL;
 	}
 	m_pActiveItem = NULL;
+	m_iHornetStatus = 0;
 
 	pev->viewmodel		= 0;
 	pev->weaponmodel	= 0;
@@ -879,7 +851,6 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 
 	SetAnimation( PLAYER_DIE );
 		
-	m_iRespawnFrames = 0;
 
 	pev->modelindex = g_ulModelIndexPlayer;    // don't use eyes
 
@@ -931,6 +902,9 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 
 	SetThink(PlayerDeathThink);
 	pev->nextthink = gpGlobals->time + 0.1;
+
+	// POV: reset the sound room
+	m_flSndRoomtype = 0;
 }
 
 
@@ -3189,6 +3163,16 @@ int CBasePlayer::Restore( CRestore &restore )
 
 
 
+// POV: holstering is noted, and the next weapon is deployed only if nothing was holstered
+void CBasePlayer::HolsterItem( void )
+{
+	if (m_pActiveItem)
+	{
+		m_pActiveItem->Holster( );
+		m_fDidHolster = TRUE;
+	}
+}
+
 void CBasePlayer::SelectNextItem( int iItem )
 {
 	CBasePlayerItem *pItem;
@@ -3223,12 +3207,12 @@ void CBasePlayer::SelectNextItem( int iItem )
 	// FIX, this needs to queue them up and delay
 	if (m_pActiveItem)
 	{
-		m_pActiveItem->Holster( );
+		HolsterItem( );
 	}
 	
 	m_pActiveItem = pItem;
 
-	if (m_pActiveItem)
+	if (!m_fDidHolster)
 	{
 		m_pActiveItem->Deploy( );
 		m_pActiveItem->UpdateItemInfo( );
@@ -3271,12 +3255,12 @@ void CBasePlayer::SelectItem(const char *pstr)
 
 	// FIX, this needs to queue them up and delay
 	if (m_pActiveItem)
-		m_pActiveItem->Holster( );
+		HolsterItem( );
 	
 	m_pLastItem = m_pActiveItem;
 	m_pActiveItem = pItem;
 
-	if (m_pActiveItem)
+	if (!m_fDidHolster)
 	{
 		m_pActiveItem->Deploy( );
 		m_pActiveItem->UpdateItemInfo( );
@@ -3300,13 +3284,16 @@ void CBasePlayer::SelectLastItem(void)
 
 	// FIX, this needs to queue them up and delay
 	if (m_pActiveItem)
-		m_pActiveItem->Holster( );
+		HolsterItem( );
 	
 	CBasePlayerItem *pTemp = m_pActiveItem;
 	m_pActiveItem = m_pLastItem;
 	m_pLastItem = pTemp;
-	m_pActiveItem->Deploy( );
-	m_pActiveItem->UpdateItemInfo( );
+	if (!m_fDidHolster)
+	{
+		m_pActiveItem->Deploy( );
+		m_pActiveItem->UpdateItemInfo( );
+	}
 }
 
 //==============================================

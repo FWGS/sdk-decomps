@@ -186,7 +186,7 @@ public:
 	BOOL Deploy( void );
 	BOOL IsUseable( void );
 	
-	void Holster( int skiplocal = 0 );
+	void Holster( void );
 	void WeaponIdle( void );
 	void Throw( void );
 	int m_chargeReady;
@@ -338,7 +338,7 @@ BOOL CSatchel::Deploy( )
 }
 
 
-void CSatchel::Holster( int skiplocal /* = 0 */ )
+void CSatchel::Holster( void )
 {
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
 	
