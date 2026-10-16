@@ -515,11 +515,13 @@ void CBigMomma :: HandleAnimEvent( MonsterEvent_t *pEvent )
 
 		case BIG_AE_STEP1:		// Footstep left
 		case BIG_AE_STEP3:		// Footstep back left
+			UTIL_ScreenShake( pev->origin, 4.0, 3.0, 1.0, 750.0 );	// POV
 			EMIT_SOUND_ARRAY_DYN( CHAN_ITEM, pFootSounds );
 			break;
 
 		case BIG_AE_STEP4:		// Footstep back right
 		case BIG_AE_STEP2:		// Footstep right
+			UTIL_ScreenShake( pev->origin, 4.0, 3.0, 1.0, 750.0 );	// POV
 			EMIT_SOUND_ARRAY_DYN( CHAN_BODY, pFootSounds );
 			break;
 
@@ -585,6 +587,23 @@ int CBigMomma :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, fl
 	// Don't take any acid damage -- BigMomma's mortar is acid
 	if ( bitsDamageType & DMG_ACID )
 		flDamage = 0;
+
+	// POV: answer the player's shots
+	if ( m_MonsterState != MONSTERSTATE_PRONE && !HasMemory( bits_MEMORY_PROVOKED ) )
+	{
+		switch ( UTIL_PlayerProvoke( this, pevAttacker ) )
+		{
+		case 1:
+		case 2:
+			EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, RANDOM_SOUND_ARRAY(pAttackSounds), 1.0, ATTN_NORM, 0, RANDOM_LONG(95,105) );
+			Remember( bits_MEMORY_SUSPICIOUS );
+			break;
+		case 3:
+			EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, RANDOM_SOUND_ARRAY(pAlertSounds), 1.0, ATTN_NORM, 0, RANDOM_LONG(95,105) );
+			Remember( bits_MEMORY_PROVOKED );
+			break;
+		}
+	}
 
 	if ( !HasMemory(bits_MEMORY_PATH_FINISHED) )
 	{
@@ -1090,7 +1109,7 @@ Vector VecCheckSplatToss( entvars_t *pev, const Vector &vecSpot1, Vector vecSpot
 	Vector			vecScale;
 	Vector			vecGrenadeVel;
 	Vector			vecTemp;
-	float			flGravity = g_psv_gravity->value;
+	float			flGravity = CVAR_GET_FLOAT( "sv_gravity" );	// POV
 
 	// calculate the midpoint and apex of the 'triangle'
 	vecMidPoint = vecSpot1 + (vecSpot2 - vecSpot1) * 0.5;
