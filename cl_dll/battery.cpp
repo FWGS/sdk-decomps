@@ -88,26 +88,14 @@ int CHudBattery::Draw(float flTime)
 	if (!(gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT)) ))
 		return 1;
 
-	// Has health changed? Flash the health #
-	if (m_fFade)
-	{
-		if (m_fFade > FADE_TIME)
-			m_fFade = FADE_TIME;
-
-		m_fFade -= (gHUD.m_flTimeDelta * 20);
-		if (m_fFade <= 0)
-		{
-			a = 128;
-			m_fFade = 0;
-		}
-
-		// Fade the health number back to dim
-
-		a = MIN_ALPHA +  (m_fFade/FADE_TIME) * 128;
-
-	}
-	else
+	// a full charge shows red and bright
+	if (m_iBat < 100)
 		a = MIN_ALPHA;
+	else
+	{
+		UnpackRGB(r,g,b, RGB_REDISH);
+		a = 255;
+	}
 
 	ScaleColors(r, g, b, a );
 	
@@ -130,9 +118,6 @@ int CHudBattery::Draw(float flTime)
 		SPR_Set(m_hSprite2, r, g, b );
 		SPR_DrawAdditive( 0, x, y - iOffset + (rc.top - m_prc2->top), &rc);
 	}
-
-	x += (m_prc1->right - m_prc1->left);
-	x = gHUD.DrawHudNumber(x, y, DHN_3DIGITS | DHN_DRAWZERO, m_iBat, r, g, b);
 
 	return 1;
 }

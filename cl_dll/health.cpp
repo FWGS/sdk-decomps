@@ -227,7 +227,7 @@ int CHudHealth::Draw(float flTime)
 
 		int iHeight = gHUD.m_iFontHeight;
 		int iWidth = HealthWidth/10;
-		FillRGBA(x, y, iWidth, iHeight, 255, 160, 0, a);
+		FillRGBA(x, y, iWidth, iHeight, 0, 255, 0, a);
 	}
 
 	DrawDamage(flTime);
@@ -386,9 +386,27 @@ int CHudHealth::DrawDamage(float flTime)
 	{
 		if (m_bitsDamage & giDmgFlags[i])
 		{
-			pdmg = &m_dmg[i];
-			SPR_Set(gHUD.GetSprite(m_HUD_dmg_bio + i), r, g, b );
-			SPR_DrawAdditive(0, pdmg->x, pdmg->y, &gHUD.GetSpriteRect(m_HUD_dmg_bio + i));
+			if ( i == 7 )
+			{
+				// shock: a dim green icon
+				r = 0;
+				g = 32;
+				b = 0;
+				ScaleColors(r, g, b, (int)( fabs(sin(flTime*2)) * 192.0));
+
+				SPR_Set(gHUD.GetSprite(m_HUD_dmg_bio + 7), r, g, b );
+				SPR_DrawAdditive(0, m_dmg[7].x, m_dmg[7].y, &gHUD.GetSpriteRect(m_HUD_dmg_bio + 7));
+
+				UnpackRGB(r,g,b, RGB_YELLOWISH);
+				a = (int)( fabs(sin(flTime*2)) * 256.0);
+				ScaleColors(r, g, b, a);
+			}
+			else
+			{
+				pdmg = &m_dmg[i];
+				SPR_Set(gHUD.GetSprite(m_HUD_dmg_bio + i), r, g, b );
+				SPR_DrawAdditive(0, pdmg->x, pdmg->y, &gHUD.GetSpriteRect(m_HUD_dmg_bio + i));
+			}
 		}
 	}
 
