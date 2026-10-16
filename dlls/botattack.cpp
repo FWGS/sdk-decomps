@@ -1,0 +1,264 @@
+/***
+*
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
+*
+*	This product contains software technology licensed from Id
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc.
+*	All Rights Reserved.
+*
+*   Use, distribution, and modification of this source code and/or resulting
+*   object code is restricted to non-commercial enhancements to products from
+*   Valve LLC.  All other use, distribution, or modification is prohibited
+*   without written permission from Valve LLC.
+*
+****/
+/*
+
+===== botattack.cpp ========================================================
+
+  The Cow-Bots, part 2: the bot's weapon handling (CBotFire, how each
+  weapon is fired) and its memory of the enemy (CBotMemory, positions
+  and velocities over the last frames, for leading shots).
+
+  The file and class names are ours.
+
+*/
+
+#include "extdll.h"
+#include "util.h"
+#include "cbase.h"
+#include "monsters.h"
+#include "weapons.h"
+#include "nodes.h"
+#include "player.h"
+#include "items.h"
+#include "gamerules.h"
+#include "bot.h"
+
+//=========================================================
+// CBotFire - how the bot uses the weapon in its hands
+//=========================================================
+
+CBotFire::CBotFire( CBot *pBot )
+{
+	m_iAimMode = 1;
+	m_fKeepFiring = FALSE;
+	m_fSecondary = FALSE;
+	m_pBot = pBot;
+}
+
+CBotFire::~CBotFire()
+{
+}
+
+//=========================================================
+// Update - pick how to aim and fire the weapon the bot
+// holds: melee weapons and guns roll the aim mode, lobbed
+// weapons (cannon, dynamite, scorpions, bear trap, the bow
+// without its secondary) aim with mode 2.
+//=========================================================
+void CBotFire::Update( CBasePlayerItem *pItem )
+{
+	CBot *pBot = m_pBot;
+
+	m_fKeepFiring = FALSE;
+	m_fSecondary = FALSE;
+
+	if ( !pItem )
+		return;
+
+	strncmp( STRING( pItem->pev->classname ), "weapon_", 7 );	// sic: the result is not used
+
+	if ( FClassnameIs( pItem->pev, "weapon_knife" ) || FClassnameIs( pItem->pev, "weapon_pick" ) )
+	{
+		RollAimMode( 80 );
+		if ( ( pBot->GetEnemy()->pev->origin - pBot->pev->origin ).Length() < 90 )
+			m_fKeepFiring = TRUE;
+	}
+	else if ( FClassnameIs( pItem->pev, "weapon_pistol" ) )
+	{
+		RollAimMode( pBot->m_Profile.AimSkill() );
+	}
+	else if ( FClassnameIs( pItem->pev, "weapon_shotgun" ) )
+	{
+		if ( ( pBot->GetEnemy()->pev->origin - pBot->pev->origin ).Length() > 700 )
+			RollSecondary( 20 );
+		else
+			RollSecondary( 90 );
+		RollAimMode( 40 );
+	}
+	else if ( FClassnameIs( pItem->pev, "weapon_gattlinggun" ) )
+	{
+		RollAimMode( pBot->m_Profile.AimSkill() );
+		m_fKeepFiring = TRUE;
+		if ( gpGlobals->time > ((CBasePlayerWeapon *)pItem)->m_flNextPrimaryAttack + 0.5 )
+			RollSecondary( 50 );
+	}
+	else if ( FClassnameIs( pItem->pev, "weapon_winchester" ) || FClassnameIs( pItem->pev, "weapon_baffalogun" ) || FClassnameIs( pItem->pev, "weapon_colts" ) )
+	{
+		RollAimMode( pBot->m_Profile.AimSkill() );
+	}
+	else if ( FClassnameIs( pItem->pev, "weapon_cannon" ) )
+	{
+		m_iAimMode = 2;
+	}
+	else if ( FClassnameIs( pItem->pev, "weapon_bow" ) )
+	{
+		float flDist = ( m_pBot->GetEnemy()->pev->origin - m_pBot->pev->origin ).Length();
+		if ( flDist > 700 )
+			RollSecondary( 90 );
+		else if ( flDist > 200 )
+			RollSecondary( 60 );
+		else
+			RollSecondary( 20 );
+
+		if ( m_fSecondary )
+			RollAimMode( 60 );
+		else
+			m_iAimMode = 2;
+	}
+	else if ( FClassnameIs( pItem->pev, "weapon_scorpion" ) )
+	{
+		m_iAimMode = 2;
+		m_fKeepFiring = TRUE;
+	}
+	else if ( FClassnameIs( pItem->pev, "weapon_dynamite" ) )
+	{
+		m_iAimMode = 2;
+	}
+	else if ( FClassnameIs( pItem->pev, "weapon_beartrap" ) )
+	{
+		m_iAimMode = 2;
+		m_fKeepFiring = TRUE;
+	}
+	else if ( !FClassnameIs( pItem->pev, "ctc_chicken" ) )
+	{
+		ALERT( at_aiconsole, "Unidentified Weapon!\n" );
+	}
+
+	if ( strncmp( STRING( pItem->pev->classname ), "weapon_", 7 ) )
+		m_iClip = ((CBasePlayerWeapon *)pItem)->m_iClip;
+}
+
+//=========================================================
+// RollAimMode - mode 1 unless a roll of 0-100 under
+// iChance, or a skill-adjusted aim of 99 or more, gives 0
+//=========================================================
+void CBotFire::RollAimMode( int iChance )
+{
+	CBot *pBot = m_pBot;
+
+	if ( RANDOM_LONG( 0, 100 ) >= iChance && pBot->m_Profile.AimSkill() < 99 )
+		m_iAimMode = 1;
+	else
+		m_iAimMode = 0;
+}
+
+//=========================================================
+// RollSecondary - use the secondary attack iChance times in
+// 100
+//=========================================================
+void CBotFire::RollSecondary( int iChance )
+{
+	if ( RANDOM_LONG( 0, 100 ) < iChance )
+		m_fSecondary = TRUE;
+	else
+		m_fSecondary = FALSE;
+}
+
+//=========================================================
+// CBotMemory - the enemy last seen, and the last four
+// frames of the enemy's velocity and the bot's move
+// direction and velocity (for leading shots)
+//=========================================================
+
+CBotMemory::CBotMemory( CBot *pBot ) :
+	m_flTime( gpGlobals->time ),
+	m_fSeen( FALSE ),
+	m_vecEnemyOrigin( Vector( 0, 0, 0 ) ),
+	m_flSeenTime( gpGlobals->time ),
+	m_vecEnemyVelocity( Vector( 0, 0, 0 ) ),
+	m_vecLookDir( Vector( 0, 0, 0 ) ),
+	m_vecVelocity( Vector( 0, 0, 0 ) ),
+	m_vecEnemyVelocity1( Vector( 0, 0, 0 ) ),
+	m_vecLookDir1( Vector( 0, 0, 0 ) ),
+	m_vecVelocity1( Vector( 0, 0, 0 ) ),
+	m_vecEnemyVelocity2( Vector( 0, 0, 0 ) ),
+	m_vecLookDir2( Vector( 0, 0, 0 ) ),
+	m_vecVelocity2( Vector( 0, 0, 0 ) ),
+	m_vecEnemyVelocity3( Vector( 0, 0, 0 ) ),
+	m_vecLookDir3( Vector( 0, 0, 0 ) ),
+	m_vecVelocity3( Vector( 0, 0, 0 ) ),
+	m_vecOrigin( Vector( 0, 0, 0 ) ),
+	m_pBot( pBot )
+{
+}
+
+CBotMemory::~CBotMemory()
+{
+}
+
+void CBotMemory::Forget( void )
+{
+	CBot *pBot = m_pBot;
+
+	m_fSeen = FALSE;
+	m_flSeenTime = 0;
+	if ( pBot->m_iState == 3 )
+		pBot->m_iState = 0;
+}
+
+void CBotMemory::SawEnemy( CBaseEntity *pEnemy )
+{
+	m_fSeen = TRUE;
+	float flTime = gpGlobals->time;
+	m_flSeenTime = flTime;
+	m_vecEnemyOrigin = pEnemy->pev->origin;
+}
+
+void CBotMemory::LostEnemy( void )
+{
+	m_fSeen = FALSE;
+}
+
+//=========================================================
+// SetEnemy - a new enemy: its velocity fills the history
+//=========================================================
+void CBotMemory::SetEnemy( CBaseEntity *pEnemy, int fChickenCarrier )
+{
+	SawEnemy( pEnemy );
+	m_fChickenCarrier = fChickenCarrier;
+	float flTime = gpGlobals->time;
+	m_flTime = flTime;
+	m_vecEnemyVelocity = pEnemy->pev->velocity;
+	m_vecEnemyVelocity1 = Vector( m_vecEnemyVelocity );
+	m_vecEnemyVelocity2 = Vector( m_vecEnemyVelocity1 );
+	m_vecEnemyVelocity3 = Vector( m_vecEnemyVelocity2 );
+}
+
+//=========================================================
+// Update - shift the history by a frame (BotThink, every
+// frame)
+//=========================================================
+void CBotMemory::Update( CBot *pBot )
+{
+	m_vecOrigin = pBot->pev->origin;
+
+	m_vecLookDir3 = Vector( m_vecLookDir2 );
+	m_vecLookDir2 = Vector( m_vecLookDir1 );
+	m_vecLookDir1 = Vector( m_vecLookDir );
+	m_vecLookDir = Vector( pBot->m_vecLookDir );
+
+	m_vecVelocity3 = Vector( m_vecVelocity2 );
+	m_vecVelocity2 = Vector( m_vecVelocity1 );
+	m_vecVelocity1 = Vector( m_vecVelocity );
+	m_vecVelocity = pBot->pev->velocity;
+
+	if ( pBot->HasEnemy() )
+	{
+		m_vecEnemyVelocity3 = Vector( m_vecEnemyVelocity2 );
+		m_vecEnemyVelocity2 = Vector( m_vecEnemyVelocity1 );
+		m_vecEnemyVelocity1 = Vector( m_vecEnemyVelocity );
+		m_vecEnemyVelocity = pBot->GetEnemy()->pev->velocity;
+	}
+}
