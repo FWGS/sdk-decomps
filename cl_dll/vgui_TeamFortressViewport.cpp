@@ -54,6 +54,7 @@
 #include "vgui_ScorePanel.h"
 
 extern int g_iVisibleMouse;
+extern int g_iStoryNavigate;
 class CCommandMenu;
 int g_iPlayerClass;
 int g_iTeamNumber;
@@ -508,7 +509,7 @@ TeamFortressViewport::TeamFortressViewport(int x,int y,int wide,int tall) : Pane
 		// used for orange borders around buttons
 		m_SchemeManager.getBorderColor( hPrimaryScheme, r, g, b, a );
 		// pScheme->setColor(Scheme::sc_secondary1, r, g, b, a );
-		pScheme->setColor(Scheme::sc_secondary1, 255*0.7, 170*0.7, 0, 0);
+		pScheme->setColor(Scheme::sc_secondary1, 0, 255*0.7, 0, 0);
 	}
 
 	// Change the second primary font (used in the scoreboard)
@@ -564,7 +565,7 @@ void TeamFortressViewport::Initialize( void )
 	HideCommandMenu();
 
 	// Clear out some data
-	m_iGotAllMOTD = true;
+	m_iGotAllMOTD = false;
 	m_iRandomPC = false;
 	m_flScoreBoardLastUpdated = 0;
 
@@ -1341,17 +1342,17 @@ CMenuPanel* TeamFortressViewport::CreateTextWindow( int iTextToShow )
 	char sz[256];
 	char *cText;
 	char *pfile = NULL;
-	static const int MAX_TITLE_LENGTH = 32;
+	static const int MAX_TITLE_LENGTH = 50;
 	char cTitle[MAX_TITLE_LENGTH];
 
 	if ( iTextToShow == SHOW_MOTD )
 	{
 		if (!m_szServerName || !m_szServerName[0])
-			strcpy( cTitle, "Half-Life" );
+			strcpy( cTitle, m_szMOTD );
 		else
 			strncpy( cTitle, m_szServerName, MAX_TITLE_LENGTH );
 		cTitle[MAX_TITLE_LENGTH-1] = 0;
-		cText = m_szMOTD;
+		cText = m_szMOTDText;
 	}
 	else if ( iTextToShow == SHOW_MAPBRIEFING )
 	{
@@ -1691,7 +1692,8 @@ void TeamFortressViewport::UpdateCursorState()
 		}
 	}
 
-	IN_ResetMouse();
+	if ( !g_iStoryNavigate )
+		IN_ResetMouse();
 	g_iVisibleMouse = false;
 	App::getInstance()->setCursorOveride( App::getInstance()->getScheme()->getCursor(Scheme::SchemeCursor::scu_none) );
 }
@@ -1846,6 +1848,7 @@ int	TeamFortressViewport::KeyInput( int down, int keynum, const char *pszCurrent
 		{
 			if ( iMenuID == MENU_MAPBRIEFING || iMenuID == MENU_INTRO || iMenuID == MENU_CLASSHELP )
 			{
+				gEngfuncs.pfnClientCmd( "storyclose\n" );
 				HideTopMenu();
 				return 0;
 			}
@@ -1977,17 +1980,42 @@ int TeamFortressViewport::MsgFunc_VGUIMenu(const char *pszName, int iSize, void 
 
 int TeamFortressViewport::MsgFunc_MOTD( const char *pszName, int iSize, void *pbuf )
 {
-	if (m_iGotAllMOTD)
+	// m_iGotAllMOTD counts the parts of a journal entry: the entry's number,
+	// its title (both into m_szMOTD), then its text
+	if ( !m_iGotAllMOTD )
+	{
 		m_szMOTD[0] = 0;
+		m_szMOTDText[0] = 0;
+		m_iGotAllMOTD = 1;
+	}
 
 	BEGIN_READ( pbuf, iSize );
 
-	m_iGotAllMOTD = READ_BYTE();
-	strncat( m_szMOTD, READ_STRING(), sizeof(m_szMOTD) - strlen(m_szMOTD) );
-	m_szMOTD[ sizeof(m_szMOTD)-1 ] = '\0';
+	int iGotAll = READ_BYTE();
 
-	if ( m_iGotAllMOTD )
+	if ( m_iGotAllMOTD == 1 )
 	{
+		strncat( m_szMOTD, READ_STRING(), sizeof(m_szMOTD) - strlen(m_szMOTD) );
+		m_szMOTD[ sizeof(m_szMOTD)-1 ] = '\0';
+		m_iGotAllMOTD = 2;
+	}
+	else if ( m_iGotAllMOTD == 2 )
+	{
+		strcat( m_szMOTD, " - " );
+		strncat( m_szMOTD, READ_STRING(), sizeof(m_szMOTD) - strlen(m_szMOTD) );
+		m_szMOTD[ sizeof(m_szMOTD)-1 ] = '\0';
+		m_iGotAllMOTD = 3;
+	}
+	else
+	{
+		strncat( m_szMOTDText, READ_STRING(), sizeof(m_szMOTDText) - strlen(m_szMOTDText) );
+		m_szMOTDText[ sizeof(m_szMOTDText)-1 ] = '\0';
+		m_iGotAllMOTD = 3;
+	}
+
+	if ( iGotAll )
+	{
+		m_iGotAllMOTD = 0;
 		ShowVGUIMenu( MENU_INTRO );
 	}
 

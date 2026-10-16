@@ -18,6 +18,7 @@
 
 // Set this to 1 to show mouse cursor.  Experimental
 int	g_iVisibleMouse = 0;
+int	g_iStoryNavigate = 0;	// name ours: a journal button was pressed, leave the mouse alone
 
 extern "C" 
 {
@@ -304,7 +305,7 @@ void IN_MouseMove ( float frametime, usercmd_t *cmd)
 
 	//jjb - this disbles normal mouse control if the user is trying to 
 	//      move the camera, or if the mouse cursor is visible or if we're in intermission
-	if ( !iMouseInUse && !g_iVisibleMouse && !gHUD.m_iIntermission )
+	if ( !iMouseInUse && !g_iVisibleMouse && !gHUD.m_iIntermission && !g_iStoryNavigate )
 	{
 		GetCursorPos (&current_pos);
 

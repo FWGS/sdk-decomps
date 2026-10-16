@@ -50,7 +50,7 @@ typedef struct {
 
 #define MAX_PLAYER_NAME_LENGTH		32
 
-#define	MAX_MOTD_LENGTH				1024
+#define	MAX_MOTD_LENGTH				2048
 
 //
 //-----------------------------------------------------

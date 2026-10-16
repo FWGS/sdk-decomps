@@ -282,6 +282,7 @@ private:
 	// MOTD
 	int		m_iGotAllMOTD;
 	char	m_szMOTD[ MAX_MOTD_LENGTH ];
+	char	m_szMOTDText[ MAX_MOTD_LENGTH ];	// name ours: the journal entry's text, m_szMOTD has its title
 
 	//  Command Menu Team buttons
 	CommandButton *m_pTeamButtons[6];
