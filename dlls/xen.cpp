@@ -21,6 +21,7 @@
 
 #define XEN_PLANT_GLOW_SPRITE		"sprites/flare3.spr"
 #define XEN_PLANT_HIDE_TIME			5
+#define SF_XEN_RANDOM_YAW			0x0002	// POV: the plants get a random yaw (name ours)
 
 
 class CActAnimating : public CBaseAnimating
@@ -61,125 +62,6 @@ void CActAnimating :: SetActivity( Activity act )
 
 
 
-class CXenPLight : public CActAnimating
-{
-public:
-	void		Spawn( void );
-	void		Precache( void );
-	void		Touch( CBaseEntity *pOther );
-	void		Think( void );
-
-	void		LightOn( void );
-	void		LightOff( void );
-
-	virtual int	Save( CSave &save );
-	virtual int	Restore( CRestore &restore );
-	static	TYPEDESCRIPTION m_SaveData[];
-
-private:
-	CSprite		*m_pGlow;
-};
-
-LINK_ENTITY_TO_CLASS( xen_plantlight, CXenPLight );
-
-TYPEDESCRIPTION	CXenPLight::m_SaveData[] = 
-{
-	DEFINE_FIELD( CXenPLight, m_pGlow, FIELD_CLASSPTR ),
-};
-
-IMPLEMENT_SAVERESTORE( CXenPLight, CActAnimating );
-
-void CXenPLight :: Spawn( void )
-{
-	Precache();
-
-	SET_MODEL( ENT(pev), "models/light.mdl" );
-	pev->movetype	= MOVETYPE_NONE;
-	pev->solid		= SOLID_TRIGGER;
-
-	UTIL_SetSize( pev, Vector(-80,-80,0), Vector(80,80,32));
-	SetActivity( ACT_IDLE );
-	pev->nextthink = gpGlobals->time + 0.1;
-	pev->frame = RANDOM_FLOAT(0,255);
-
-	m_pGlow = CSprite::SpriteCreate( XEN_PLANT_GLOW_SPRITE, pev->origin + Vector(0,0,(pev->mins.z+pev->maxs.z)*0.5), FALSE );
-	m_pGlow->SetTransparency( kRenderGlow, pev->rendercolor.x, pev->rendercolor.y, pev->rendercolor.z, pev->renderamt, pev->renderfx );
-	m_pGlow->SetAttachment( edict(), 1 );
-}
-
-
-void CXenPLight :: Precache( void )
-{
-	PRECACHE_MODEL( "models/light.mdl" );
-	PRECACHE_MODEL( XEN_PLANT_GLOW_SPRITE );
-}
-
-
-void CXenPLight :: Think( void )
-{
-	StudioFrameAdvance();
-	pev->nextthink = gpGlobals->time + 0.1;
-
-	switch( GetActivity() )
-	{
-	case ACT_CROUCH:
-		if ( m_fSequenceFinished )
-		{
-			SetActivity( ACT_CROUCHIDLE );
-			LightOff();
-		}
-		break;
-
-	case ACT_CROUCHIDLE:
-		if ( gpGlobals->time > pev->dmgtime )
-		{
-			SetActivity( ACT_STAND );
-			LightOn();
-		}
-		break;
-
-	case ACT_STAND:
-		if ( m_fSequenceFinished )
-			SetActivity( ACT_IDLE );
-		break;
-
-	case ACT_IDLE:
-	default:
-		break;
-	}
-}
-
-
-void CXenPLight :: Touch( CBaseEntity *pOther )
-{
-	if ( pOther->IsPlayer() )
-	{
-		pev->dmgtime = gpGlobals->time + XEN_PLANT_HIDE_TIME;
-		if ( GetActivity() == ACT_IDLE || GetActivity() == ACT_STAND )
-		{
-			SetActivity( ACT_CROUCH );
-		}
-	}
-}
-
-
-void CXenPLight :: LightOn( void )
-{
-	SUB_UseTargets( this, USE_ON, 0 );
-	if ( m_pGlow )
-		m_pGlow->pev->effects &= ~EF_NODRAW;
-}
-
-
-void CXenPLight :: LightOff( void )
-{
-	SUB_UseTargets( this, USE_OFF, 0 );
-	if ( m_pGlow )
-		m_pGlow->pev->effects |= EF_NODRAW;
-}
-
-
-
 class CXenHair : public CActAnimating
 {
 public:
@@ -205,6 +87,8 @@ void CXenHair::Spawn( void )
 		pev->framerate = RANDOM_FLOAT( 0.7, 1.4 );
 	}
 	ResetSequenceInfo( );
+	if ( pev->spawnflags & SF_XEN_RANDOM_YAW )
+		pev->angles = Vector( pev->angles.x, RANDOM_LONG( 0, 360 ), pev->angles.z );
 
 	pev->solid = SOLID_NOT;
 	pev->movetype = MOVETYPE_NONE;
@@ -305,6 +189,8 @@ void CXenTree :: Spawn( void )
 	pev->nextthink = gpGlobals->time + 0.1;
 	pev->frame = RANDOM_FLOAT(0,255);
 	pev->framerate = RANDOM_FLOAT( 0.7, 1.4 );
+	if ( pev->spawnflags & SF_XEN_RANDOM_YAW )
+		pev->angles = Vector( pev->angles.x, RANDOM_LONG( 0, 360 ), pev->angles.z );
 
 	Vector triggerPosition;
 	UTIL_MakeVectorsPrivate( pev->angles, triggerPosition, NULL, NULL );
@@ -535,6 +421,8 @@ void CXenSpore :: Spawn( void )
 	pev->movetype	= MOVETYPE_NONE;
 	pev->solid		= SOLID_BBOX;
 	pev->takedamage = DAMAGE_YES;
+	if ( pev->spawnflags & SF_XEN_RANDOM_YAW )
+		pev->angles = Vector( pev->angles.x, RANDOM_LONG( 0, 360 ), pev->angles.z );
 
 //	SetActivity( ACT_IDLE );
 	pev->sequence = 0;
@@ -582,3 +470,159 @@ void CXenSpore :: Think( void )
 }
 
 
+// POV: the plant light moved to the end of the file
+class CXenPLight : public CActAnimating
+{
+public:
+	void		Spawn( void );
+	void		Precache( void );
+	void		Touch( CBaseEntity *pOther );
+	void		Think( void );
+
+	void		LightOn( void );
+	void		LightOff( void );
+
+	virtual int	Save( CSave &save );
+	virtual int	Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
+
+private:
+	CSprite		*m_pGlow;
+	CXenHull	*m_pXPLightHull;	// POV
+};
+
+LINK_ENTITY_TO_CLASS( xen_plantlight, CXenPLight );
+
+TYPEDESCRIPTION	CXenPLight::m_SaveData[] = 
+{
+	DEFINE_FIELD( CXenPLight, m_pGlow, FIELD_CLASSPTR ),
+	DEFINE_FIELD( CXenPLight, m_pXPLightHull, FIELD_CLASSPTR ),
+};
+
+IMPLEMENT_SAVERESTORE( CXenPLight, CActAnimating );
+
+void CXenPLight :: Spawn( void )
+{
+	Precache();
+
+	SET_MODEL( ENT(pev), "models/light.mdl" );
+	pev->movetype	= MOVETYPE_NONE;
+	pev->solid		= SOLID_TRIGGER;
+
+	UTIL_SetSize( pev, Vector(-80,-80,0), Vector(80,80,32));
+	SetActivity( ACT_IDLE );
+	pev->nextthink = gpGlobals->time + 0.1;
+	pev->frame = RANDOM_FLOAT(0,255);
+	if ( pev->spawnflags & SF_XEN_RANDOM_YAW )
+		pev->angles = Vector( pev->angles.x, RANDOM_LONG( 0, 360 ), pev->angles.z );
+
+	m_pGlow = CSprite::SpriteCreate( XEN_PLANT_GLOW_SPRITE, pev->origin + Vector(0,0,(pev->mins.z+pev->maxs.z)*0.5), FALSE );
+	m_pGlow->SetTransparency( kRenderGlow, pev->rendercolor.x, pev->rendercolor.y, pev->rendercolor.z, pev->renderamt, pev->renderfx );
+	m_pGlow->SetAttachment( edict(), 1 );
+
+	// POV: the light it switches must be its own
+	if ( !FStringNull( pev->target ) )
+	{
+		int iCount = 0;
+		edict_t *pentTarget = NULL;
+		while ( 1 )
+		{
+			pentTarget = FIND_ENTITY_BY_TARGETNAME( pentTarget, STRING( pev->target ) );
+			if ( FNullEnt( pentTarget ) )
+				break;
+			if ( UTIL_StrIEq( STRING( pentTarget->v.classname ), "light" ) )
+				iCount++;
+		}
+		if ( iCount > 1 )
+			ALERT( at_console, "XenLight: Warning - Xen light needs a UNIQUE targetname %s! Found %i\n", STRING( pev->target ), iCount );
+	}
+	else
+	{
+		ALERT( at_console, "XenLight: ERROR - Xen lights need a targetname!\n" );
+	}
+
+	m_pXPLightHull = CXenHull :: CreateHull( this, Vector(-8, -8, 0), Vector(8, 8, 32), Vector(0, 0, 0) );
+}
+
+
+void CXenPLight :: Precache( void )
+{
+	PRECACHE_MODEL( "models/light.mdl" );
+	PRECACHE_MODEL( XEN_PLANT_GLOW_SPRITE );
+}
+
+
+void CXenPLight :: Think( void )
+{
+	StudioFrameAdvance();
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	switch( GetActivity() )
+	{
+	case ACT_CROUCH:
+		if ( m_fSequenceFinished )
+		{
+			SetActivity( ACT_CROUCHIDLE );
+			LightOff();
+		}
+		break;
+
+	case ACT_CROUCHIDLE:
+		if ( gpGlobals->time > pev->dmgtime )
+		{
+			// POV: stay down while a human is near
+			CBaseEntity *pList[32];
+			int count = UTIL_EntitiesInBox( pList, 32, pev->absmin, pev->absmax, FL_MONSTER|FL_CLIENT );
+			if ( count )
+			{
+				for ( int i = 0; i < count; i++ )
+				{
+					if ( UTIL_IsHumanClass( pList[i]->Classify() ) && !pList[i]->IsPlayer() && pList[i]->IsAlive() )
+						return;
+				}
+			}
+			SetActivity( ACT_STAND );
+			LightOn();
+		}
+		break;
+
+	case ACT_STAND:
+		if ( m_fSequenceFinished )
+			SetActivity( ACT_IDLE );
+		break;
+
+	case ACT_IDLE:
+	default:
+		break;
+	}
+}
+
+
+void CXenPLight :: Touch( CBaseEntity *pOther )
+{
+	// POV: humans, not the player
+	if ( UTIL_IsHumanClass( pOther->Classify() ) && !pOther->IsPlayer() )
+	{
+		pev->dmgtime = gpGlobals->time + XEN_PLANT_HIDE_TIME;
+		if ( GetActivity() == ACT_IDLE || GetActivity() == ACT_STAND )
+		{
+			SetActivity( ACT_CROUCH );
+		}
+	}
+}
+
+
+void CXenPLight :: LightOn( void )
+{
+	SUB_UseTargets( this, USE_ON, 0 );
+	if ( m_pGlow )
+		m_pGlow->pev->effects &= ~EF_NODRAW;
+}
+
+
+void CXenPLight :: LightOff( void )
+{
+	SUB_UseTargets( this, USE_OFF, 0 );
+	if ( m_pGlow )
+		m_pGlow->pev->effects |= EF_NODRAW;
+}
