@@ -454,6 +454,9 @@ public:
 	int m_cAmmoTypes;// how many ammo types packed into this box (if packed by a level designer)
 };
 
+#ifndef VALVE_DLL
+// POV: the server's glock is a prop (hl_wpn_glock.cpp); only the client's
+// weapon prediction still uses the SDK's
 class CGlock : public CBasePlayerWeapon
 {
 public:
@@ -485,5 +488,6 @@ private:
 	unsigned short m_usFireGlock1;
 	unsigned short m_usFireGlock2;
 };
+#endif // VALVE_DLL
 
 #endif // WEAPONS_H
