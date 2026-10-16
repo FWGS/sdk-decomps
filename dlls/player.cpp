@@ -153,6 +153,9 @@ TYPEDESCRIPTION	CBasePlayer::m_playerSaveData[] =
 
 
 int giPrecacheGrunt = 0;
+int giPrecacheSmallminer = 0;	// names ours; nothing sets these three
+int giPrecacheCowboy = 0;
+int giPrecacheRamone = 0;
 int gmsgShake = 0;
 int gmsgFade = 0;
 int gmsgSelAmmo = 0;
@@ -186,6 +189,7 @@ int gmsgTextMsg = 0;
 int gmsgSetFOV = 0;
 int gmsgShowMenu = 0;
 int gmsgGeigerRange = 0;
+int gmsgVGUIMenu = 0;	// Wanted: the letters (item_telegram); the SDK server doesn't register it
 
 void LinkUserMessages( void )
 {
@@ -226,6 +230,7 @@ void LinkUserMessages( void )
 	gmsgShake = REG_USER_MSG("ScreenShake", sizeof(ScreenShake));
 	gmsgFade = REG_USER_MSG("ScreenFade", sizeof(ScreenFade));
 	gmsgAmmoX = REG_USER_MSG("AmmoX", 2);
+	gmsgVGUIMenu = REG_USER_MSG("VGUIMenu", -1);
 }
 
 LINK_ENTITY_TO_CLASS( player, CBasePlayer );
@@ -782,6 +787,28 @@ void CBasePlayer::PackDeadPlayerItems( void )
 	pWeaponBox->pev->velocity = pev->velocity * 1.2;// weaponbox has player's velocity, then some.
 
 	RemoveAllItems( TRUE );// now strip off everything that wasn't handled by the code above.
+}
+
+// Wanted: player_beartrapstrip takes the bear traps away (name ours)
+void CBasePlayer::RemoveBearTraps( BOOL removeSuit )
+{
+	if ( HasNamedPlayerItem( "weapon_beartrap" ) )
+	{
+		if ( HasNamedPlayerItem( "weapon_dynamite" ) )
+		{
+			m_pActiveItem = NULL;
+			m_rgAmmo[ 5 ] = 0;
+		}
+		RemoveNamedPlayerItem( "weapon_beartrap" );
+	}
+
+	UpdateClientData();
+	// send Selected Weapon Message to our client
+	MESSAGE_BEGIN( MSG_ONE, gmsgCurWeapon, NULL, pev );
+		WRITE_BYTE(0);
+		WRITE_BYTE(0);
+		WRITE_BYTE(0);
+	MESSAGE_END();
 }
 
 void CBasePlayer::RemoveAllItems( BOOL removeSuit )
@@ -2220,7 +2247,7 @@ void CBasePlayer::CheckTimeBasedDamage()
 				bDuration = POISON_DURATION;
 				break;
 			case itbd_Radiation:
-//				TakeDamage(pev, pev, RADIATION_DAMAGE, DMG_GENERIC);
+				TakeDamage(pev, pev, RADIATION_DAMAGE, DMG_GENERIC);
 				bDuration = RADIATION_DURATION;
 				break;
 			case itbd_DrownRecover:
@@ -3451,7 +3478,7 @@ CBaseEntity *FindEntityForward( CBaseEntity *pMe )
 
 BOOL CBasePlayer :: FlashlightIsOn( void )
 {
-	return FBitSet(pev->effects, EF_DIMLIGHT);
+	return FBitSet(pev->effects, EF_BRIGHTLIGHT);
 }
 
 
@@ -3465,7 +3492,7 @@ void CBasePlayer :: FlashlightTurnOn( void )
 	if ( (pev->weapons & (1<<WEAPON_SUIT)) )
 	{
 		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, SOUND_FLASHLIGHT_ON, 1.0, ATTN_NORM, 0, PITCH_NORM );
-		SetBits(pev->effects, EF_DIMLIGHT);
+		SetBits(pev->effects, EF_BRIGHTLIGHT);
 		MESSAGE_BEGIN( MSG_ONE, gmsgFlashlight, NULL, pev );
 		WRITE_BYTE(1);
 		WRITE_BYTE(m_iFlashBattery);
@@ -3480,7 +3507,7 @@ void CBasePlayer :: FlashlightTurnOn( void )
 void CBasePlayer :: FlashlightTurnOff( void )
 {
 	EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, SOUND_FLASHLIGHT_OFF, 1.0, ATTN_NORM, 0, PITCH_NORM );
-    ClearBits(pev->effects, EF_DIMLIGHT);
+    ClearBits(pev->effects, EF_BRIGHTLIGHT);
 	MESSAGE_BEGIN( MSG_ONE, gmsgFlashlight, NULL, pev );
 	WRITE_BYTE(0);
 	WRITE_BYTE(m_iFlashBattery);
@@ -3617,12 +3644,12 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 			if (!giPrecacheGrunt)
 			{
 				giPrecacheGrunt = 1;
-				ALERT(at_console, "You must now restart to use Grunt-o-matic.\n");
+				ALERT(at_console, "You must now restart to use BigMiner-o-matic.\n");
 			}
 			else
 			{
 				UTIL_MakeVectors( Vector( 0, pev->v_angle.y, 0 ) );
-				Create("monster_human_grunt", pev->origin + gpGlobals->v_forward * 128, pev->angles);
+				Create("monster_bigminer", pev->origin + gpGlobals->v_forward * 128, pev->angles);
 			}
 			break;
 		}
@@ -3631,31 +3658,51 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 	case 101:
 		gEvilImpulse101 = TRUE;
 		GiveNamedItem( "item_suit" );
+		ALERT( at_console, "You now have a Suit\n" );
 		GiveNamedItem( "item_battery" );
-		GiveNamedItem( "weapon_crowbar" );
-		GiveNamedItem( "weapon_9mmhandgun" );
-		GiveNamedItem( "ammo_9mmclip" );
+		ALERT( at_console, "You now have a Battery\n" );
+		GiveNamedItem( "weapon_pick" );
+		ALERT( at_console, "You now have the Pick\n" );
+		GiveNamedItem( "weapon_knife" );
+		ALERT( at_console, "You now have the Knife\n" );
+		GiveNamedItem( "weapon_pistol" );
+		ALERT( at_console, "You now have the Pistol\n" );
+		GiveNamedItem( "weapon_gattlinggun" );
+		ALERT( at_console, "You now have the Gattlinggun\n" );
 		GiveNamedItem( "weapon_shotgun" );
+		ALERT( at_console, "You now have the Shotgun\n" );
+		GiveNamedItem( "weapon_dynamite" );
+		ALERT( at_console, "You now have the Dynamite\n" );
+		GiveNamedItem( "weapon_scorpion" );
+		ALERT( at_console, "You now have the Scorpion\n" );
+		GiveNamedItem( "weapon_colts" );
+		ALERT( at_console, "You now have the Colts\n" );
+		GiveNamedItem( "weapon_winchester" );
+		ALERT( at_console, "You now have the Winchester\n" );
+		GiveNamedItem( "weapon_buffalo" );
+		ALERT( at_console, "You now have the Buffalo gun\n" );
+		GiveNamedItem( "weapon_bow" );
+		ALERT( at_console, "You now have the Bow\n" );
+		GiveNamedItem( "weapon_cannon" );
+		ALERT( at_console, "You now have the Hand Cannon\n" );
+		GiveNamedItem( "weapon_beartrap" );
+		ALERT( at_console, "You now have the Bear Trap\n" );
+		GiveNamedItem( "ammo_winchesterclip" );
+		ALERT( at_console, "You now have ammo for the Winchester\n" );
+		GiveNamedItem( "ammo_gattlinggun" );
+		ALERT( at_console, "You now have ammo for the Gattlinggun\n" );
+		GiveNamedItem( "ammo_colts" );
+		ALERT( at_console, "You now have ammo for the Dual Colts\n" );
+		GiveNamedItem( "ammo_pistol" );
+		ALERT( at_console, "You now have ammo for the pistol\n" );
 		GiveNamedItem( "ammo_buckshot" );
-		GiveNamedItem( "weapon_9mmAR" );
-		GiveNamedItem( "ammo_9mmAR" );
-		GiveNamedItem( "ammo_ARgrenades" );
-		GiveNamedItem( "weapon_handgrenade" );
-		GiveNamedItem( "weapon_tripmine" );
-#ifndef OEM_BUILD
-		GiveNamedItem( "weapon_357" );
-		GiveNamedItem( "ammo_357" );
-		GiveNamedItem( "weapon_crossbow" );
-		GiveNamedItem( "ammo_crossbow" );
-		GiveNamedItem( "weapon_egon" );
-		GiveNamedItem( "weapon_gauss" );
-		GiveNamedItem( "ammo_gaussclip" );
-		GiveNamedItem( "weapon_rpg" );
-		GiveNamedItem( "ammo_rpgclip" );
-		GiveNamedItem( "weapon_satchel" );
-		GiveNamedItem( "weapon_snark" );
-		GiveNamedItem( "weapon_hornetgun" );
-#endif
+		ALERT( at_console, "You now have ammo for the Shotgun\n" );
+		GiveNamedItem( "ammo_buffalo" );
+		ALERT( at_console, "You now have ammo for the Buffalo gun\n" );
+		GiveNamedItem( "ammo_bow" );
+		ALERT( at_console, "You now have arrows for the Bow\n" );
+		GiveNamedItem( "ammo_cannon" );
+		ALERT( at_console, "You now have balls for the cannon\n" );
 		gEvilImpulse101 = FALSE;
 		break;
 
@@ -4116,7 +4163,7 @@ void CBasePlayer :: UpdateClientData( void )
 		MESSAGE_END();
 	}
 
-	if (pev->dmg_take || pev->dmg_save || m_bitsHUDDamage != m_bitsDamageType)
+	if ((pev->dmg_take || pev->dmg_save || m_bitsHUDDamage != m_bitsDamageType) && m_bitsDamageType != DMG_RADIATION)	// Wanted: the herbs heal by "radiation"
 	{
 		// Comes from inside me if not set
 		Vector damageOrigin = pev->origin;
@@ -4597,6 +4644,9 @@ void CBasePlayer::DropPlayerItem ( char *pszItemName )
 		pszItemName = NULL;
 	} 
 
+	if ( g_pGameRules->DeadPlayerWeapons( this ) == 9 )	// Wanted: no dropping in High Noon
+		return;
+
 	CBasePlayerItem *pWeapon;
 	int i;
 
@@ -4694,6 +4744,32 @@ BOOL CBasePlayer::HasPlayerItem( CBasePlayerItem *pCheckItem )
 }
 
 //=========================================================
+// RemoveNamedPlayerItem - takes the first item of this name away (name ours)
+//=========================================================
+BOOL CBasePlayer::RemoveNamedPlayerItem( const char *pszItemName )
+{
+	CBasePlayerItem *pItem;
+	int i;
+ 
+	for ( i = 0 ; i < MAX_ITEM_TYPES ; i++ )
+	{
+		pItem = m_rgpPlayerItems[ i ];
+		
+		while (pItem)
+		{
+			if ( !strcmp( pszItemName, STRING( pItem->pev->classname ) ) )
+			{
+				RemovePlayerItem( pItem );
+				return TRUE;
+			}
+			pItem = pItem->m_pNext;
+		}
+	}
+
+	return FALSE;
+}
+
+//=========================================================
 // HasNamedPlayerItem Does the player already have this item?
 //=========================================================
 BOOL CBasePlayer::HasNamedPlayerItem( const char *pszItemName )
@@ -4741,66 +4817,6 @@ BOOL CBasePlayer :: SwitchWeapon( CBasePlayerItem *pWeapon )
 	return TRUE;
 }
 
-//=========================================================
-// Dead HEV suit prop
-//=========================================================
-class CDeadHEV : public CBaseMonster
-{
-public:
-	void Spawn( void );
-	int	Classify ( void ) { return	CLASS_HUMAN_MILITARY; }
-
-	void KeyValue( KeyValueData *pkvd );
-
-	int	m_iPose;// which sequence to display	-- temporary, don't need to save
-	static char *m_szPoses[4];
-};
-
-char *CDeadHEV::m_szPoses[] = { "deadback", "deadsitting", "deadstomach", "deadtable" };
-
-void CDeadHEV::KeyValue( KeyValueData *pkvd )
-{
-	if (FStrEq(pkvd->szKeyName, "pose"))
-	{
-		m_iPose = atoi(pkvd->szValue);
-		pkvd->fHandled = TRUE;
-	}
-	else 
-		CBaseMonster::KeyValue( pkvd );
-}
-
-LINK_ENTITY_TO_CLASS( monster_hevsuit_dead, CDeadHEV );
-
-//=========================================================
-// ********** DeadHEV SPAWN **********
-//=========================================================
-void CDeadHEV :: Spawn( void )
-{
-	PRECACHE_MODEL("models/player.mdl");
-	SET_MODEL(ENT(pev), "models/player.mdl");
-
-	pev->effects		= 0;
-	pev->yaw_speed		= 8;
-	pev->sequence		= 0;
-	pev->body			= 1;
-	m_bloodColor		= BLOOD_COLOR_RED;
-
-	pev->sequence = LookupSequence( m_szPoses[m_iPose] );
-
-	if (pev->sequence == -1)
-	{
-		ALERT ( at_console, "Dead hevsuit with bad pose\n" );
-		pev->sequence = 0;
-		pev->effects = EF_BRIGHTFIELD;
-	}
-
-	// Corpses have less health
-	pev->health			= 8;
-
-	MonsterInitDead();
-}
-
-
 class CStripWeapons : public CPointEntity
 {
 public:
@@ -4826,6 +4842,35 @@ void CStripWeapons :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 
 	if ( pPlayer )
 		pPlayer->RemoveAllItems( FALSE );
+}
+
+
+// Wanted: player_beartrapstrip (class name ours)
+class CStripBearTraps : public CPointEntity
+{
+public:
+	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+
+private:
+};
+
+LINK_ENTITY_TO_CLASS( player_beartrapstrip, CStripBearTraps );
+
+void CStripBearTraps :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	CBasePlayer *pPlayer = NULL;
+
+	if ( pActivator && pActivator->IsPlayer() )
+	{
+		pPlayer = (CBasePlayer *)pActivator;
+	}
+	else if ( !g_pGameRules->IsDeathmatch() )
+	{
+		pPlayer = (CBasePlayer *)CBaseEntity::Instance( g_engfuncs.pfnPEntityOfEntIndex( 1 ) );
+	}
+
+	if ( pPlayer )
+		pPlayer->RemoveBearTraps( FALSE );
 }
 
 

@@ -624,11 +624,11 @@ public:
 #define NERVEGAS_DURATION	2
 #define NERVEGAS_DAMAGE		5.0
 
-#define POISON_DURATION		5
-#define POISON_DAMAGE		2.0
+#define POISON_DURATION		7
+#define POISON_DAMAGE		1.0
 
-#define RADIATION_DURATION	2
-#define RADIATION_DAMAGE	1.0
+#define RADIATION_DURATION	10
+#define RADIATION_DAMAGE	-1.0	// Wanted: heals (the herbs)
 
 #define ACID_DURATION		2
 #define ACID_DAMAGE			5.0
