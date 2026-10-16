@@ -781,7 +781,11 @@ void CToad::WeaponIdle( void )
 // and gives itself to him.
 void CToad::ToadIdle( void )
 {
-	CBasePlayer *pPlayer = (CBasePlayer *)UTIL_PlayerByIndex( 1 );
+	CBaseEntity *pEntity = UTIL_PlayerByIndex( 1 );
+	CBasePlayer *pPlayer = (CBasePlayer *)pEntity;
+	// sic: vecSrc is unused; it and the pEntity copy (dead code, counted
+	// by VC6 all the same) give retail's add order in the first Length()
+	Vector vecSrc = pev->origin;
 
 	if ( !pPlayer )
 	{
@@ -854,7 +858,9 @@ void CToad::ToadIdle( void )
 					if ( CBaseEntity::Instance( tr.pHit )->Classify() )
 						tr.vecPlaneNormal = (EyePosition() - tr.vecEndPos).Normalize();
 
-					UTIL_MakeVectorsPrivate( Vector( 0, UTIL_AngleMod( UTIL_VecToAngles( tr.vecPlaneNormal ).y + 195 ), 0 ), vecFlat, NULL, NULL );
+					// sic: the parentheses around the yaw give retail's code (VC6 keeps
+					// it in st(0) and stores it into the angles after the pushes)
+					UTIL_MakeVectorsPrivate( Vector( 0, ( UTIL_AngleMod( UTIL_VecToAngles( tr.vecPlaneNormal ).y + 195 ) ), 0 ), vecFlat, NULL, NULL );
 					m_vecGoal = pev->origin - vecFlat * 128;
 				}
 
