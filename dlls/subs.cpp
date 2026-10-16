@@ -113,6 +113,7 @@ void CBaseEntity::UpdateOnRemove( void )
 // Convenient way to delay removing oneself
 void CBaseEntity :: SUB_Remove( void )
 {
+	UTIL_CheckAndRemoveGargEye( pev );	// POV
 	UpdateOnRemove();
 	if (pev->health > 0)
 	{

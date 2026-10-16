@@ -326,3 +326,11 @@ BOOL CHalfLifeRules :: FAllowMonsters( void )
 {
 	return TRUE;
 }
+
+//=========================================================
+// POV
+//=========================================================
+BOOL CHalfLifeRules :: FPlayerCanTakeDamage( CBasePlayer *pPlayer, CBaseEntity *pAttacker, int bitsDamageType )
+{
+	return TRUE;
+}
