@@ -50,15 +50,3 @@ BOOL CCaptureTheChicken::CanHavePlayerItem( CBasePlayer *pPlayer, CBasePlayerIte
 void CCaptureTheChicken::PlayerGotWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pWeapon ) {}	// 0x1002eda0
 int CCaptureTheChicken::DeadPlayerWeapons( CBasePlayer *pPlayer ) { return CHalfLifeTeamplay::DeadPlayerWeapons( pPlayer ); }	// 0x1002efb0
 const char *CCaptureTheChicken::SetDefaultPlayerTeam( CBasePlayer *pPlayer ) { return CHalfLifeTeamplay::SetDefaultPlayerTeam( pPlayer ); }	// 0x1002e980
-
-// ---- High Noon: the highnoon file's ----
-
-void CHighNoon::Init( void ) { CWantedMultiplay::Init(); }	// 0x10046790
-void CHighNoon::Think( void ) { CWantedMultiplay::Think(); }	// 0x10046ef0
-BOOL CHighNoon::ClientConnected( edict_t *pEntity, const char *pszName, const char *pszAddress, char szRejectReason[ 128 ] ) { return CWantedMultiplay::ClientConnected( pEntity, pszName, pszAddress, szRejectReason ); }	// 0x10046c30
-void CHighNoon::ClientDisconnected( edict_t *pClient ) { CWantedMultiplay::ClientDisconnected( pClient ); }	// 0x10046c60
-void CHighNoon::PlayerSpawn( CBasePlayer *pPlayer ) { CWantedMultiplay::PlayerSpawn( pPlayer ); }	// 0x100467d0
-BOOL CHighNoon::FPlayerCanRespawn( CBasePlayer *pPlayer ) { return CWantedMultiplay::FPlayerCanRespawn( pPlayer ); }	// 0x10046c10
-edict_t *CHighNoon::GetPlayerSpawnSpot( CBasePlayer *pPlayer ) { return CWantedMultiplay::GetPlayerSpawnSpot( pPlayer ); }	// 0x10047780
-void CHighNoon::PlayerKilled( CBasePlayer *pVictim, entvars_t *pKiller, entvars_t *pInflictor ) { CWantedMultiplay::PlayerKilled( pVictim, pKiller, pInflictor ); }	// 0x10046d00
-float CHighNoon::FlAmmoRespawnTime( CBasePlayerAmmo *pAmmo ) { return CWantedMultiplay::FlAmmoRespawnTime( pAmmo ); }	// 0x10047190

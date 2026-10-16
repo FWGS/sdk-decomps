@@ -41,7 +41,21 @@ public:
 	virtual int DeadPlayerWeapons( CBasePlayer *pPlayer ) { return GR_PLR_DROP_GUN_NO; }
 	virtual int DeadPlayerAmmo( CBasePlayer *pPlayer ) { return GR_PLR_DROP_AMMO_NO; }
 
-	int m_iUnknown14[12];	// +0x14 .. +0x40 (the High Noon file names them)
+	void StartRound( void );
+	void DuelWon( CBasePlayer *pWinner );
+	void FindDuelists( void );
+	void EndMatch( void );
+
+	CBaseEntity *m_pDropEnt[2];	// the duelists' "dropent": they watch it fall until DRAW!
+	float m_flDrawTime;			// DRAW!: 1 to 5 seconds after both dropents have landed
+	float m_flNextRoundTime;		// 5 seconds after a round is won
+	float m_flNextCheckTime;		// looks for duelists every 5 seconds
+	BOOL m_fMatchActive;
+	BOOL m_fRoundActive;			// after DRAW!
+	CBasePlayer *m_pChampion;
+	CBasePlayer *m_pChallenger;
+	int m_iPlayers;				// clients connected
+	int m_iWins[2];				// the champion's and the challenger's this match
 };
 
 #endif // HIGHNOON_H

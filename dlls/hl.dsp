@@ -364,6 +364,10 @@ SOURCE=.\herbs.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\highnoon.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\horse.cpp
 # End Source File
 # Begin Source File
