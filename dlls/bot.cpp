@@ -275,14 +275,24 @@ void CBot::BotThink( void )
 
 					vecSpot = pev->origin + gpGlobals->v_right * 16 + gpGlobals->v_forward * 64;
 					pev->origin = pev->origin + gpGlobals->v_right * 16;
+					// sic: retail's source leaves each flag unset when the side is
+					// visible, and VC6 then reads the stack slot it shares with
+					// the spot just tested (vecSpot.x here, vecSpot.y below): a
+					// visible side counts as blocked unless that coordinate is
+					// +0.0, so the bot nearly always turns 180 degrees. Written
+					// out so that this build does the same.
 					if ( !FVisible( vecSpot ) )
-						fRightBlocked = TRUE;	// sic: left unset when visible
+						fRightBlocked = TRUE;
+					else
+						fRightBlocked = *(int *)&vecSpot.x;
 					pev->origin = vecOrigin;
 
 					vecSpot = pev->origin - gpGlobals->v_right * 16 + gpGlobals->v_forward * 64;
 					pev->origin = pev->origin - gpGlobals->v_right * 16;
 					if ( !FVisible( vecSpot ) )
-						fLeftBlocked = TRUE;	// sic
+						fLeftBlocked = TRUE;
+					else
+						fLeftBlocked = *(int *)&vecSpot.y;	// sic, as above
 					pev->origin = vecOrigin;
 
 					if ( !fRightBlocked )
