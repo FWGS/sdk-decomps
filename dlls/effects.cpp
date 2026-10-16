@@ -176,6 +176,14 @@ void CBeam::Precache( void )
 		SetStartEntity( ENTINDEX( pev->owner ) );
 	if ( pev->aiment )
 		SetEndEntity( ENTINDEX( pev->aiment ) );
+
+	// POV: DoSparks' sounds
+	PRECACHE_SOUND( "buttons/spark1.wav" );
+	PRECACHE_SOUND( "buttons/spark2.wav" );
+	PRECACHE_SOUND( "buttons/spark3.wav" );
+	PRECACHE_SOUND( "buttons/spark4.wav" );
+	PRECACHE_SOUND( "buttons/spark5.wav" );
+	PRECACHE_SOUND( "buttons/spark6.wav" );
 }
 
 void CBeam::SetStartEntity( int entityIndex ) 
@@ -356,14 +364,46 @@ void CBeam::DoSparks( const Vector &start, const Vector &end )
 {
 	if ( pev->spawnflags & (SF_BEAM_SPARKSTART|SF_BEAM_SPARKEND) )
 	{
+		// POV: the sparks make env_spark's sound, from a temporary entity
+		// (code from CMonsterMaker::MakeMonster and DoSpark)
+		edict_t		*pent;
+		entvars_t	*pevCreate;
+
+		pent = CREATE_NAMED_ENTITY( MAKE_STRING( "info_target" ) );
+
+		if ( FNullEnt( pent ) )
+		{
+			ALERT ( at_console, "NULL Ent in MonsterMaker!\n" );
+			return;
+		}
+
+		pevCreate = VARS( pent );
+
 		if ( pev->spawnflags & SF_BEAM_SPARKSTART )
 		{
 			UTIL_Sparks( start );
+			pevCreate->origin = start;
 		}
-		if ( pev->spawnflags & SF_BEAM_SPARKEND )
+		else
 		{
 			UTIL_Sparks( end );
+			pevCreate->origin = end;
 		}
+
+		DispatchSpawn( ENT( pevCreate ) );
+
+		float flVolume = RANDOM_FLOAT ( 0.25 , 0.75 ) * 0.4;//random volume range
+		switch ( (int)(RANDOM_FLOAT(0,1) * 6) )
+		{
+			case 0: EMIT_SOUND(ENT(pevCreate), CHAN_VOICE, "buttons/spark1.wav", flVolume, ATTN_IDLE);	break;
+			case 1: EMIT_SOUND(ENT(pevCreate), CHAN_VOICE, "buttons/spark2.wav", flVolume, ATTN_IDLE);	break;
+			case 2: EMIT_SOUND(ENT(pevCreate), CHAN_VOICE, "buttons/spark3.wav", flVolume, ATTN_IDLE);	break;
+			case 3: EMIT_SOUND(ENT(pevCreate), CHAN_VOICE, "buttons/spark4.wav", flVolume, ATTN_IDLE);	break;
+			case 4: EMIT_SOUND(ENT(pevCreate), CHAN_VOICE, "buttons/spark5.wav", flVolume, ATTN_IDLE);	break;
+			case 5: EMIT_SOUND(ENT(pevCreate), CHAN_VOICE, "buttons/spark6.wav", flVolume, ATTN_IDLE);	break;
+		}
+
+		REMOVE_ENTITY( ENT( pevCreate ) );
 	}
 }
 
@@ -987,6 +1027,14 @@ void CLaser::Precache( void )
 	pev->modelindex = PRECACHE_MODEL( (char *)STRING(pev->model) );
 	if ( m_iszSpriteName )
 		PRECACHE_MODEL( (char *)STRING(m_iszSpriteName) );
+
+	// POV: DoSparks' sounds
+	PRECACHE_SOUND( "buttons/spark1.wav" );
+	PRECACHE_SOUND( "buttons/spark2.wav" );
+	PRECACHE_SOUND( "buttons/spark3.wav" );
+	PRECACHE_SOUND( "buttons/spark4.wav" );
+	PRECACHE_SOUND( "buttons/spark5.wav" );
+	PRECACHE_SOUND( "buttons/spark6.wav" );
 }
 
 
@@ -1575,6 +1623,14 @@ void CEnvShooter :: Precache ( void )
 {
 	m_iGibModelIndex = PRECACHE_MODEL( (char *)STRING(pev->model) );
 	CBreakable::MaterialSoundPrecache( (Materials)m_iGibMaterial );
+
+	// POV: shells make the player's shell sounds
+	if ( UTIL_StrIEq( STRING(pev->model), "shell.mdl" ) )
+	{
+		PRECACHE_SOUND( "player/pl_shell1.wav" );
+		PRECACHE_SOUND( "player/pl_shell2.wav" );
+		PRECACHE_SOUND( "player/pl_shell3.wav" );
+	}
 }
 
 
@@ -1588,6 +1644,10 @@ CGib *CEnvShooter :: CreateGib ( void )
 
 	if ( pev->body > 1 )
 		bodyPart = RANDOM_LONG( 0, pev->body-1 );
+
+	// POV: a random skin, except for "can.mdl"
+	if ( !UTIL_StrIEq( STRING(pev->model), "can.mdl" ) )
+		pev->skin = RANDOM_LONG( 0, 5 );
 
 	pGib->pev->body = bodyPart;
 	pGib->m_bloodColor = DONT_BLEED;
@@ -2084,57 +2144,8 @@ void CMessage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 
 
 
-//=========================================================
-// FunnelEffect
-//=========================================================
-class CEnvFunnel : public CBaseDelay
-{
-public:
-	void	Spawn( void );
-	void	Precache( void );
-	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-
-	int		m_iSprite;	// Don't save, precache
-};
-
-void CEnvFunnel :: Precache ( void )
-{
-	m_iSprite = PRECACHE_MODEL ( "sprites/flare6.spr" );
-}
-
-LINK_ENTITY_TO_CLASS( env_funnel, CEnvFunnel );
-
-void CEnvFunnel::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
-{
-	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
-		WRITE_BYTE( TE_LARGEFUNNEL );
-		WRITE_COORD( pev->origin.x );
-		WRITE_COORD( pev->origin.y );
-		WRITE_COORD( pev->origin.z );
-		WRITE_SHORT( m_iSprite );
-
-		if ( pev->spawnflags & SF_FUNNEL_REVERSE )// funnel flows in reverse?
-		{
-			WRITE_SHORT( 1 );
-		}
-		else
-		{
-			WRITE_SHORT( 0 );
-		}
-
-
-	MESSAGE_END();
-
-	SetThink( SUB_Remove );
-	pev->nextthink = gpGlobals->time;
-}
-
-void CEnvFunnel::Spawn( void )
-{
-	Precache();
-	pev->solid = SOLID_NOT;
-	pev->effects = EF_NODRAW;
-}
+// POV: env_funnel is gone; env_spawnereffect, at the end of the file, is
+// made from it
 
 //=========================================================
 // Beverage Dispenser
@@ -2240,25 +2251,127 @@ void CItemSoda::CanThink ( void )
 
 void CItemSoda::CanTouch ( CBaseEntity *pOther )
 {
-	if ( !pOther->IsPlayer() )
+	// POV: the can can't be taken
+}
+
+//=========================================================
+// POV: env_spawnereffect, the warp-in effect of the
+// monstermakers on its own (from env_funnel)
+//=========================================================
+#define SF_PAWNEFFECT_REPEATABLE	1	// names ours
+#define SF_PAWNEFFECT_SPAWNOUT		2
+
+class CEnvPawnEffect : public CBaseEntity
+{
+public:
+	void	Spawn( void );
+	void	Precache( void );
+	void	KeyValue( KeyValueData *pkvd );
+	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	int		m_iLightRad;
+	int		m_spriteTexture;
+	int		m_iBeamCount;
+	int		m_iSpawnType;
+	float	m_flSpriteScale;
+	float	m_flSpawnSndAtt;
+	float	m_flSpawnVolume;
+};
+
+void CEnvPawnEffect :: Precache ( void )
+{
+	if ( pev->spawnflags & SF_PAWNEFFECT_SPAWNOUT )
+		PRECACHE_SOUND( "ambience/spawnoutsnd.wav" );
+	else
+		PRECACHE_SOUND( "ambience/spawnsnd.wav" );
+
+	PRECACHE_MODEL( "sprites/xflare1.spr" );
+	PRECACHE_MODEL( "sprites/fexplo1.spr" );
+	m_spriteTexture = PRECACHE_MODEL( "sprites/lgtning.spr" );
+}
+
+LINK_ENTITY_TO_CLASS( env_spawnereffect, CEnvPawnEffect );
+
+TYPEDESCRIPTION	CEnvPawnEffect::m_SaveData[] = 
+{
+	DEFINE_FIELD( CEnvPawnEffect, m_iSpawnType, FIELD_INTEGER ),
+	DEFINE_FIELD( CEnvPawnEffect, m_iBeamCount, FIELD_INTEGER ),
+	DEFINE_FIELD( CEnvPawnEffect, m_flSpriteScale, FIELD_FLOAT ),
+	DEFINE_FIELD( CEnvPawnEffect, m_flSpawnSndAtt, FIELD_FLOAT ),
+	DEFINE_FIELD( CEnvPawnEffect, m_flSpawnVolume, FIELD_FLOAT ),
+	DEFINE_FIELD( CEnvPawnEffect, m_iLightRad, FIELD_INTEGER ),
+	DEFINE_FIELD( CEnvPawnEffect, m_spriteTexture, FIELD_INTEGER ),
+};
+
+IMPLEMENT_SAVERESTORE( CEnvPawnEffect, CBaseEntity );
+
+void CEnvPawnEffect :: KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "spawntype"))
 	{
-		return;
+		m_iSpawnType = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
 	}
-
-	// spoit sound here
-
-	pOther->TakeHealth( 1, DMG_GENERIC );// a bit of health.
-
-	if ( !FNullEnt( pev->owner ) )
+	else if (FStrEq(pkvd->szKeyName, "beamcount"))
 	{
-		// tell the machine the can was taken
-		pev->owner->v.frags = 0;
+		m_iBeamCount = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "spritescale"))
+	{
+		m_flSpriteScale = atof(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "spawnsoundrad"))
+	{
+		switch ( atoi(pkvd->szValue) )
+		{
+		case 0: m_flSpawnSndAtt = ATTN_IDLE; break;
+		case 1: m_flSpawnSndAtt = ATTN_STATIC; break;
+		case 3: m_flSpawnSndAtt = ATTN_NONE; break;
+		default: m_flSpawnSndAtt = ATTN_NORM; break;
+		}
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "spawnvol"))
+	{
+		m_flSpawnVolume = atof(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "lightrad"))
+	{
+		m_iLightRad = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CBaseEntity::KeyValue( pkvd );
+}
 
+void CEnvPawnEffect::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	int iSpawnType;
+
+	if ( pev->spawnflags & SF_PAWNEFFECT_SPAWNOUT )
+		iSpawnType = TRUE;
+	else
+		iSpawnType = FALSE;
+
+	UTIL_SpawnerEffect( ENT( pev ), pev->origin, m_flSpawnVolume, m_flSpawnSndAtt, m_iBeamCount, m_spriteTexture, m_flSpriteScale, m_iLightRad, iSpawnType );
+
+	if ( !( pev->spawnflags & SF_PAWNEFFECT_REPEATABLE ) )
+	{
+		SetThink( SUB_Remove );
+		pev->nextthink = gpGlobals->time;
+	}
+}
+
+void CEnvPawnEffect::Spawn( void )
+{
+	Precache();
 	pev->solid = SOLID_NOT;
-	pev->movetype = MOVETYPE_NONE;
 	pev->effects = EF_NODRAW;
-	SetTouch ( NULL );
-	SetThink ( SUB_Remove );
-	pev->nextthink = gpGlobals->time;
 }
