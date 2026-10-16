@@ -99,9 +99,25 @@ public:
 
 	Vector m_velocity;
 	int m_fInCombat;
+
+	// POV
+	void KeyValue( KeyValueData *pkvd );
+	int IRelationship( CBaseEntity *pTarget );
+	int m_iAlsoAttacks;	// 1: alien slaves too, 2: alien slaves and the player
 };
 
 LINK_ENTITY_TO_CLASS( monster_alien_controller, CController );
+
+void CController :: KeyValue( KeyValueData *pkvd )
+{
+	if ( FStrEq( pkvd->szKeyName, "alsoattack" ) )
+	{
+		m_iAlsoAttacks = atoi( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CBaseMonster::KeyValue( pkvd );
+}
 
 TYPEDESCRIPTION	CController::m_SaveData[] = 
 {
@@ -110,6 +126,7 @@ TYPEDESCRIPTION	CController::m_SaveData[] =
 	DEFINE_ARRAY( CController, m_iBallTime, FIELD_TIME, 2 ),
 	DEFINE_ARRAY( CController, m_iBallCurrent, FIELD_INTEGER, 2 ),
 	DEFINE_FIELD( CController, m_vecEstVelocity, FIELD_VECTOR ),
+	DEFINE_FIELD( CController, m_iAlsoAttacks, FIELD_INTEGER ),
 };
 IMPLEMENT_SAVERESTORE( CController, CSquadMonster );
 
@@ -181,8 +198,28 @@ void CController :: SetYawSpeed ( void )
 
 int CController :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
 {
+	BOOL fSpoke = FALSE;
+
+	// POV: answer the player's shots
+	if ( m_MonsterState != MONSTERSTATE_PRONE && !HasMemory( bits_MEMORY_PROVOKED ) )
+	{
+		switch ( UTIL_PlayerProvoke( this, pevAttacker ) )
+		{
+		case 2:
+			AttackSound( );
+			fSpoke = TRUE;
+			Remember( bits_MEMORY_SUSPICIOUS );
+			break;
+		case 3:
+			AlertSound( );
+			fSpoke = TRUE;
+			Remember( bits_MEMORY_PROVOKED );
+			break;
+		}
+	}
+
 	// HACK HACK -- until we fix this.
-	if ( IsAlive() )
+	if ( IsAlive() && !fSpoke )
 		PainSound();
 	return CBaseMonster::TakeDamage( pevInflictor, pevAttacker, flDamage, bitsDamageType );
 }
@@ -211,6 +248,27 @@ void CController::Killed( entvars_t *pevAttacker, int iGib )
 	}
 
 	CSquadMonster::Killed( pevAttacker, iGib );
+}
+
+
+//=========================================================
+// POV: alsoattack
+//=========================================================
+int CController :: IRelationship( CBaseEntity *pTarget )
+{
+	switch ( m_iAlsoAttacks )
+	{
+	case 1:
+		if ( FClassnameIs( pTarget->pev, "monster_alien_slave" ) )
+			return R_DL;
+		break;
+	case 2:
+		if ( FClassnameIs( pTarget->pev, "monster_alien_slave" ) || pTarget->IsPlayer() )
+			return R_DL;
+		break;
+	}
+
+	return CSquadMonster::IRelationship( pTarget );
 }
 
 
