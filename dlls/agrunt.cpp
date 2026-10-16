@@ -271,7 +271,7 @@ void CAGrunt :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecD
 //=========================================================
 int CAGrunt :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
 {
-	if ( m_MonsterState != MONSTERSTATE_PRONE && !HasMemory( bits_MEMORY_PROVOKED ) )
+	if ( m_MonsterState != MONSTERSTATE_PRONE && !(m_afMemory & bits_MEMORY_PROVOKED) )
 	{
 		switch ( UTIL_PlayerProvoke( this, pevAttacker ) )
 		{

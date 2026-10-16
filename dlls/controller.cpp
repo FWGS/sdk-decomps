@@ -201,7 +201,7 @@ int CController :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	BOOL fSpoke = FALSE;
 
 	// POV: answer the player's shots
-	if ( m_MonsterState != MONSTERSTATE_PRONE && !HasMemory( bits_MEMORY_PROVOKED ) )
+	if ( m_MonsterState != MONSTERSTATE_PRONE && !(m_afMemory & bits_MEMORY_PROVOKED) )
 	{
 		switch ( UTIL_PlayerProvoke( this, pevAttacker ) )
 		{
