@@ -2437,7 +2437,7 @@ class CTriggerKillMonster : public CTriggerOnce
 {
 public:
 	void Spawn( void ) { CTriggerOnce::Spawn(); }
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void EXPORT Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 };
 
 LINK_ENTITY_TO_CLASS( trigger_killmonster, CTriggerKillMonster );
@@ -2468,7 +2468,7 @@ class CTriggerShutUp : public CTriggerOnce
 {
 public:
 	void Spawn( void ) { CTriggerOnce::Spawn(); }
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void EXPORT Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 };
 
 LINK_ENTITY_TO_CLASS( trigger_shutup, CTriggerShutUp );

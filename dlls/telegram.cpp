@@ -55,8 +55,9 @@ public:
 	void Touch( CBaseEntity *pOther );
 	int DamageDecal( int bitsDamageType );	// closes the letter (client.cpp's "closetelegram")
 
-	void EXPORT CloseThink( void );
-	void EXPORT UseThink( void );
+	// sic: not EXPORT in retail, so a saved game drops these thinks ("Invalid function pointer")
+	void CloseThink( void );
+	void UseThink( void );
 };
 
 LINK_ENTITY_TO_CLASS( item_telegram, CItemTelegram );

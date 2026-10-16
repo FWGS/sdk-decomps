@@ -82,7 +82,7 @@ public:
 	void PainSound( void );
 	void RunAI( void );
 	void StartTask ( Task_t *pTask );
-	void EXPORT LeapTouch ( CBaseEntity *pOther );
+	void LeapTouch ( CBaseEntity *pOther );	// sic: not EXPORT in retail, so a saved game drops it
 	void RunTask ( Task_t *pTask );
 	Activity GetDeathActivity( void );
 	void SetTurnActivity( void );

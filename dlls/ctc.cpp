@@ -71,7 +71,7 @@ public:
 
 	void SendWeaponAnim( int iAnim, int body );
 	void Detach( void );
-	void EXPORT ChickenThink( void );
+	void ChickenThink( void );	// sic: not EXPORT, as in retail
 	void ReturnHome( void );
 	void GoHome( BOOL fFromCarrier );
 
@@ -439,7 +439,7 @@ public:
 	}
 
 	const char *TeamID( void );
-	void EXPORT CaptureTouch( CBaseEntity *pOther );
+	void CaptureTouch( CBaseEntity *pOther );	// sic: not EXPORT, as in retail
 };
 
 LINK_ENTITY_TO_CLASS( ctc_capturepoint, CCTCCapturePoint );
