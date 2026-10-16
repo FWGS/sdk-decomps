@@ -390,7 +390,10 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 {
 	// Holster weapon immediately, to allow it to cleanup
 	if (m_pActiveItem)
+	{
 		m_pActiveItem->Holster( );
+		m_fDidHolster = FALSE;
+	}
 }
 
 /*
@@ -402,7 +405,10 @@ CBasePlayer::Spawn
 void CBasePlayer::Spawn( void )
 {
 	if (m_pActiveItem)
+	{
+		m_fDidHolster = FALSE;
 		m_pActiveItem->Deploy( );
+	}
 }
 
 /*
