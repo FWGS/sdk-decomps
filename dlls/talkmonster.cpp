@@ -49,7 +49,7 @@ TYPEDESCRIPTION	CTalkMonster::m_SaveData[] =
 
 IMPLEMENT_SAVERESTORE( CTalkMonster, CBaseMonster );
 
-// array of friend names
+// array of friend names (POV: its humans; the 16th stays NULL)
 char *CTalkMonster::m_szFriends[TLK_CFRIENDS] = 
 {
 	"monster_scientist",
