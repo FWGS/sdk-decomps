@@ -106,8 +106,8 @@ public:
 	float	m_flAlertTime;
 	float	m_flFlockNextSoundTime;
 };
-LINK_ENTITY_TO_CLASS( monster_flyer, CFlockingFlyer );
-LINK_ENTITY_TO_CLASS( monster_flyer_flock, CFlockingFlyerFlock );
+LINK_ENTITY_TO_CLASS( monster_eagle, CFlockingFlyer );
+LINK_ENTITY_TO_CLASS( monster_eagle_flock, CFlockingFlyerFlock );
 
 TYPEDESCRIPTION	CFlockingFlyer::m_SaveData[] = 
 {
