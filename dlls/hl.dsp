@@ -156,10 +156,6 @@ SOURCE=.\aflock.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\airtank.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\animating.cpp
 # End Source File
 # Begin Source File
