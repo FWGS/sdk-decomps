@@ -188,6 +188,10 @@ SOURCE=.\beartrap.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\bigminer.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\bloater.cpp
 # End Source File
 # Begin Source File
