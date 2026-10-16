@@ -184,6 +184,10 @@ SOURCE=.\barnacle.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\bear.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\beartrap.cpp
 # End Source File
 # Begin Source File
