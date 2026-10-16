@@ -272,6 +272,10 @@ SOURCE=.\gamerules.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\gattlinggun.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\genericmonster.cpp
 # End Source File
 # Begin Source File
