@@ -64,7 +64,9 @@ LINK_ENTITY_TO_CLASS( func_wall, CFuncWall );
 
 void CFuncWall :: Spawn( void )
 {
-	pev->angles		= g_vecZero;
+	// POV: spawnflag 8 keeps the angles
+	if ( !FBitSet( pev->spawnflags, 8 ) )
+		pev->angles		= g_vecZero;
 	pev->movetype	= MOVETYPE_PUSH;  // so it doesn't get pushed by anything
 	pev->solid		= SOLID_BSP;
 	SET_MODEL( ENT(pev), STRING(pev->model) );
