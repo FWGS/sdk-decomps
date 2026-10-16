@@ -448,6 +448,10 @@ SOURCE=.\pov_sslave.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_zombie.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\python.cpp
 # End Source File
 # Begin Source File

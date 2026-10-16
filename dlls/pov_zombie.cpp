@@ -15,6 +15,8 @@
 //=========================================================
 // Zombie
 //=========================================================
+// POV: the SDK's zombie.cpp, moved into the mod's own files;
+// the class went to zombie.h for the zombie barney.
 
 // UNDONE: Don't flinch every time you get hit
 
@@ -23,6 +25,7 @@
 #include	"cbase.h"
 #include	"monsters.h"
 #include	"schedule.h"
+#include	"zombie.h"	// POV: CZombie's class, for the zombie barney
 
 
 //=========================================================
@@ -33,36 +36,6 @@
 #define	ZOMBIE_AE_ATTACK_BOTH		0x03
 
 #define ZOMBIE_FLINCH_DELAY			2		// at most one flinch every n secs
-
-class CZombie : public CBaseMonster
-{
-public:
-	void Spawn( void );
-	void Precache( void );
-	void SetYawSpeed( void );
-	int  Classify ( void );
-	void HandleAnimEvent( MonsterEvent_t *pEvent );
-	int IgnoreConditions ( void );
-
-	float m_flNextFlinch;
-
-	void PainSound( void );
-	void AlertSound( void );
-	void IdleSound( void );
-	void AttackSound( void );
-
-	static const char *pAttackSounds[];
-	static const char *pIdleSounds[];
-	static const char *pAlertSounds[];
-	static const char *pPainSounds[];
-	static const char *pAttackHitSounds[];
-	static const char *pAttackMissSounds[];
-
-	// No range attacks
-	BOOL CheckRangeAttack1 ( float flDot, float flDist ) { return FALSE; }
-	BOOL CheckRangeAttack2 ( float flDot, float flDist ) { return FALSE; }
-	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
-};
 
 LINK_ENTITY_TO_CLASS( monster_zombie, CZombie );
 
@@ -136,6 +109,8 @@ void CZombie :: SetYawSpeed ( void )
 
 int CZombie :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
 {
+	BOOL fSpoke = FALSE;	// POV, name ours
+
 	// Take 30% damage from bullets
 	if ( bitsDamageType == DMG_BULLET )
 	{
@@ -146,8 +121,26 @@ int CZombie :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, floa
 		flDamage *= 0.3;
 	}
 
+	// POV: answer the player's shots
+	if ( m_MonsterState != MONSTERSTATE_PRONE && !(m_afMemory & bits_MEMORY_PROVOKED) )
+	{
+		switch ( UTIL_PlayerProvoke( this, pevAttacker ) )
+		{
+		case 2:
+			AttackSound( );
+			fSpoke = TRUE;
+			Remember( bits_MEMORY_SUSPICIOUS );
+			break;
+		case 3:
+			AlertSound( );
+			fSpoke = TRUE;
+			Remember( bits_MEMORY_PROVOKED );
+			break;
+		}
+	}
+
 	// HACK HACK -- until we fix this.
-	if ( IsAlive() )
+	if ( IsAlive() && !fSpoke )
 		PainSound();
 	return CBaseMonster::TakeDamage( pevInflictor, pevAttacker, flDamage, bitsDamageType );
 }
@@ -344,3 +337,4 @@ int CZombie::IgnoreConditions ( void )
 	return iIgnore;
 	
 }
+
