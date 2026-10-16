@@ -158,7 +158,7 @@ void CFlockingFlyerFlock :: Spawn( )
 void CFlockingFlyerFlock :: Precache( )
 {
 	//PRECACHE_MODEL("models/aflock.mdl");		
-	PRECACHE_MODEL("models/boid.mdl");		
+	PRECACHE_MODEL("models/eagle.mdl");		
 
 	PrecacheFlockSounds();
 }
@@ -166,11 +166,11 @@ void CFlockingFlyerFlock :: Precache( )
 
 void CFlockingFlyerFlock :: PrecacheFlockSounds( void )
 {
-	PRECACHE_SOUND("boid/boid_alert1.wav" );
-	PRECACHE_SOUND("boid/boid_alert2.wav" );
+	PRECACHE_SOUND("eagle/eagle_alert1.wav" );
+	PRECACHE_SOUND("eagle/eagle_alert2.wav" );
 
-	PRECACHE_SOUND("boid/boid_idle1.wav" );
-	PRECACHE_SOUND("boid/boid_idle2.wav" );
+	PRECACHE_SOUND("eagle/eagle_idle1.wav" );
+	PRECACHE_SOUND("eagle/eagle_idle2.wav" );
 }
 
 //=========================================================
@@ -237,7 +237,7 @@ void CFlockingFlyer :: Spawn( )
 void CFlockingFlyer :: Precache( )
 {
 	//PRECACHE_MODEL("models/aflock.mdl");
-	PRECACHE_MODEL("models/boid.mdl");
+	PRECACHE_MODEL("models/eagle.mdl");
 	CFlockingFlyerFlock::PrecacheFlockSounds();
 }
 
@@ -250,8 +250,8 @@ void CFlockingFlyer :: MakeSound( void )
 		// make agitated sounds
 		switch ( RANDOM_LONG( 0, 1 ) )
 		{
-		case 0:	EMIT_SOUND( ENT(pev), CHAN_WEAPON, "boid/boid_alert1.wav", 1, ATTN_NORM );	break;
-		case 1:	EMIT_SOUND( ENT(pev), CHAN_WEAPON, "boid/boid_alert2.wav", 1, ATTN_NORM );	break;
+		case 0:	EMIT_SOUND( ENT(pev), CHAN_WEAPON, "eagle/eagle_alert1.wav", 1, ATTN_NORM );	break;
+		case 1:	EMIT_SOUND( ENT(pev), CHAN_WEAPON, "eagle/eagle_alert2.wav", 1, ATTN_NORM );	break;
 		}
 
 		return;
@@ -260,8 +260,8 @@ void CFlockingFlyer :: MakeSound( void )
 	// make normal sound
 	switch ( RANDOM_LONG( 0, 1 ) )
 	{
-	case 0:	EMIT_SOUND( ENT(pev), CHAN_WEAPON, "boid/boid_idle1.wav", 1, ATTN_NORM );	break;
-	case 1:	EMIT_SOUND( ENT(pev), CHAN_WEAPON, "boid/boid_idle2.wav", 1, ATTN_NORM );	break;
+	case 0:	EMIT_SOUND( ENT(pev), CHAN_WEAPON, "eagle/eagle_idle1.wav", 1, ATTN_NORM );	break;
+	case 1:	EMIT_SOUND( ENT(pev), CHAN_WEAPON, "eagle/eagle_idle2.wav", 1, ATTN_NORM );	break;
 	}
 }
 
@@ -328,7 +328,7 @@ void CFlockingFlyer :: SpawnCommonCode( )
 	m_flFieldOfView	= 0.2;
 
 	//SET_MODEL(ENT(pev), "models/aflock.mdl");
-	SET_MODEL(ENT(pev), "models/boid.mdl");
+	SET_MODEL(ENT(pev), "models/eagle.mdl");
 
 //	UTIL_SetSize(pev, Vector(0,0,0), Vector(0,0,0));
 	UTIL_SetSize(pev, Vector(-5,-5,0), Vector(5,5,2));

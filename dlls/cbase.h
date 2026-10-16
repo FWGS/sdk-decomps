@@ -552,7 +552,7 @@ public:
 
 
 // people gib if their health is <= this at the time of death
-#define	GIB_HEALTH_VALUE	-30
+#define	GIB_HEALTH_VALUE	-20
 
 #define	ROUTE_SIZE			8 // how many waypoints a monster can store at one time
 #define MAX_OLD_ENEMIES		4 // how many old enemies to remember

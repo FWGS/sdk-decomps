@@ -794,7 +794,7 @@ void CBasePlayer::RemoveBearTraps( BOOL removeSuit )
 {
 	if ( HasNamedPlayerItem( "weapon_beartrap" ) )
 	{
-		if ( HasNamedPlayerItem( "weapon_dynamite" ) )
+		if ( HasNamedPlayerItem( "weapon_dynamite " ) )	// sic: never true
 		{
 			m_pActiveItem = NULL;
 			m_rgAmmo[ 5 ] = 0;

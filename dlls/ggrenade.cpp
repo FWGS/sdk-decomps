@@ -344,11 +344,11 @@ void CGrenade :: TumbleThink( void )
 void CGrenade:: Spawn( void )
 {
 	pev->movetype = MOVETYPE_BOUNCE;
-	pev->classname = MAKE_STRING( "grenade" );
+	pev->classname = MAKE_STRING( "dynamite" );
 	
 	pev->solid = SOLID_BBOX;
 
-	SET_MODEL(ENT(pev), "models/grenade.mdl");
+	SET_MODEL(ENT(pev), "models/dynamite.mdl");
 	UTIL_SetSize(pev, Vector( 0, 0, 0), Vector(0, 0, 0));
 
 	pev->dmg = 100;
@@ -416,7 +416,7 @@ CGrenade * CGrenade:: ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector v
 	pGrenade->pev->gravity = 0.5;
 	pGrenade->pev->friction = 0.8;
 
-	SET_MODEL(ENT(pGrenade->pev), "models/w_grenade.mdl");
+	SET_MODEL(ENT(pGrenade->pev), "models/w_dynamite.mdl");
 	pGrenade->pev->dmg = 100;
 
 	return pGrenade;
