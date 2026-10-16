@@ -41,6 +41,7 @@ extern CBaseEntity				*g_pLastSpawn;
 DLL_GLOBAL edict_t				*g_pBodyQueueHead;
 CGlobalState					gGlobalState;
 extern DLL_GLOBAL	int			gDisplayTitle;
+extern DLL_GLOBAL	BOOL		g_fLoading;	// POV, name ours
 
 extern void W_Precache(void);
 
@@ -102,19 +103,39 @@ BODY QUE
 
 #define SF_DECAL_NOTINDEATHMATCH		2048
 
-class CDecal : public CBaseEntity
+// POV: infodecal remembers whether it was triggered and whether it sticks
+// to an entity, and goes across transitions; the decal is sent to the
+// clients once the level has finished loading
+class POVDECAL : public CBaseEntity
 {
 public:
 	void	Spawn( void );
 	void	KeyValue( KeyValueData *pkvd );
-	void	EXPORT StaticDecal( void );
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+	virtual int		ObjectCaps( void ) { return FCAP_CUSTOMSAVE | FCAP_ACROSS_TRANSITION | FCAP_MUST_SPAWN; }
+	void	EXPORT PlaceDecal( void );
 	void	EXPORT TriggerDecal( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void	CheckStuck( TraceResult *ptr );		// name ours
+
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	BOOL	m_flStuckOnEnt;
+	BOOL	m_flAlreadyTriggered;
+	BOOL	m_flRestoringSpawn;
 };
 
-LINK_ENTITY_TO_CLASS( infodecal, CDecal );
+LINK_ENTITY_TO_CLASS( infodecal, POVDECAL );
+
+TYPEDESCRIPTION	POVDECAL::m_SaveData[] = 
+{
+	DEFINE_FIELD( POVDECAL, m_flStuckOnEnt, FIELD_BOOLEAN ),
+	DEFINE_FIELD( POVDECAL, m_flAlreadyTriggered, FIELD_BOOLEAN ),
+	DEFINE_FIELD( POVDECAL, m_flRestoringSpawn, FIELD_BOOLEAN ),
+};
 
 // UNDONE:  These won't get sent to joining players in multi-player
-void CDecal :: Spawn( void )
+void POVDECAL :: Spawn( void )
 {
 	if ( pev->skin < 0 || (gpGlobals->deathmatch && FBitSet( pev->spawnflags, SF_DECAL_NOTINDEATHMATCH )) )
 	{
@@ -122,28 +143,53 @@ void CDecal :: Spawn( void )
 		return;
 	}
 
-	if ( FStringNull ( pev->targetname ) )
+	if ( m_flRestoringSpawn != TRUE )
 	{
-		SetThink( StaticDecal );
-		// if there's no targetname, the decal will spray itself on as soon as the world is done spawning.
-		pev->nextthink = gpGlobals->time;
+		m_flStuckOnEnt = FALSE;
+		m_flAlreadyTriggered = FALSE;
+		m_flRestoringSpawn = TRUE;
+	}
+
+	if ( !FStringNull ( pev->targetname ) && m_flAlreadyTriggered != TRUE )
+	{
+		// if there IS a targetname, the decal sprays itself on when it is triggered.
+		SetThink( NULL );
+		SetUse( TriggerDecal );
 	}
 	else
 	{
-		// if there IS a targetname, the decal sprays itself on when it is triggered.
-		SetThink ( SUB_DoNothing );
-		SetUse(TriggerDecal);
+		SetThink( PlaceDecal );
+		// if there's no targetname, the decal will spray itself on as soon as the world is done spawning.
+		pev->nextthink = gpGlobals->time;
 	}
 }
 
-void CDecal :: TriggerDecal ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void POVDECAL :: TriggerDecal ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	// this is set up as a USE function for infodecals that have targetnames, so that the
 	// decal doesn't get applied until it is fired. (usually by a scripted sequence)
+	SetUse( NULL );
+	m_flAlreadyTriggered = TRUE;
+	SetThink( PlaceDecal );
+	pev->nextthink = gpGlobals->time;
+}
+
+
+void POVDECAL :: PlaceDecal( void )
+{
 	TraceResult trace;
 	int			entityIndex;
 
+	// wait until the level is loaded
+	if ( g_fLoading == TRUE )
+	{
+		pev->nextthink = gpGlobals->time + 0.1;
+		return;
+	}
+
 	UTIL_TraceLine( pev->origin - Vector(5,5,5), pev->origin + Vector(5,5,5),  ignore_monsters, ENT(pev), &trace );
+
+	CheckStuck( &trace );
 
 	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY);
 		WRITE_BYTE( TE_BSPDECAL );
@@ -157,31 +203,46 @@ void CDecal :: TriggerDecal ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE
 			WRITE_SHORT( (int)VARS(trace.pHit)->modelindex );
 	MESSAGE_END();
 
-	SetThink( SUB_Remove );
-	pev->nextthink = gpGlobals->time + 0.1;
+	SetThink( NULL );
+	pev->nextthink = gpGlobals->time;
 }
 
 
-void CDecal :: StaticDecal( void )
+int POVDECAL::Restore( CRestore &restore )
 {
-	TraceResult trace;
-	int			entityIndex, modelIndex;
+	if ( !CBaseEntity::Restore( restore ) )
+		return 0;
 
-	UTIL_TraceLine( pev->origin - Vector(5,5,5), pev->origin + Vector(5,5,5),  ignore_monsters, ENT(pev), &trace );
-
-	entityIndex = (short)ENTINDEX(trace.pHit);
-	if ( entityIndex )
-		modelIndex = (int)VARS(trace.pHit)->modelindex;
-	else
-		modelIndex = 0;
-
-	g_engfuncs.pfnStaticDecal( pev->origin, (int)pev->skin, entityIndex, modelIndex );
-
-	SUB_Remove();
+	return restore.ReadFields( "POVDECAL", this, m_SaveData, ARRAYSIZE(m_SaveData) );
 }
 
 
-void CDecal :: KeyValue( KeyValueData *pkvd )
+int POVDECAL::Save( CSave &save )
+{
+	if ( !CBaseEntity::Save( save ) )
+		return 0;
+
+	// a decal a client can see is already on the walls
+	if ( !FNullEnt( FIND_CLIENT_IN_PVS( edict() ) ) )
+		return 0;
+
+	return save.WriteFields( "POVDECAL", this, m_SaveData, ARRAYSIZE(m_SaveData) );
+}
+
+
+void POVDECAL :: CheckStuck( TraceResult *ptr )
+{
+	m_flStuckOnEnt = FALSE;
+
+	if ( !FNullEnt( ptr->pHit ) )
+	{
+		if ( CBaseEntity::Instance( ptr->pHit ) )
+			m_flStuckOnEnt = TRUE;
+	}
+}
+
+
+void POVDECAL :: KeyValue( KeyValueData *pkvd )
 {
 	if (FStrEq(pkvd->szKeyName, "texture"))
 	{
@@ -471,6 +532,7 @@ float g_flWeaponCheat;
 
 void CWorld :: Spawn( void )
 {
+	g_fLoading = TRUE;	// POV
 	g_fGameOver = FALSE;
 	Precache( );
 	g_flWeaponCheat = CVAR_GET_FLOAT( "sv_cheats" );  // Is the impulse 101 command allowed?
@@ -641,7 +703,7 @@ void CWorld :: Precache( void )
 		{
 			pEntity->SetThink( SUB_CallUseToggle );
 			pEntity->pev->message = pev->netname;
-			pev->netname = 0;
+			// POV: pev->netname is not cleared
 			pEntity->pev->nextthink = gpGlobals->time + 0.3;
 			pEntity->pev->spawnflags = SF_MESSAGE_ONCE;
 		}
