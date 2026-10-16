@@ -67,6 +67,10 @@ int CHudFlashlight::VidInit(void)
 	m_prcBeam = &gHUD.GetSpriteRect(HUD_flash_beam);
 	m_iWidth = m_prc2->right - m_prc2->left;
 
+	m_hVision = LoadSprite("sprites/povasview.spr");
+	m_iVisionWidth = SPR_Width(m_hVision, 0);
+	m_iVisionHeight = SPR_Height(m_hVision, 0);
+
 	return 1;
 };
 
@@ -96,54 +100,69 @@ int CHudFlashlight:: MsgFunc_Flashlight(const char *pszName,  int iSize, void *p
 
 int CHudFlashlight::Draw(float flTime)
 {
-	if ( gHUD.m_iHideHUDDisplay & ( HIDEHUD_FLASHLIGHT | HIDEHUD_ALL ) )
-		return 1;
-
 	int r, g, b, x, y, a;
 	wrect_t rc;
 
-	if (!(gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT)) ))
-		return 1;
-
-	if (m_fOn)
-		a = 225;
-	else
-		a = MIN_ALPHA;
-
-	if (m_flBat < 0.20)
-		UnpackRGB(r,g,b, RGB_REDISH);
-	else
-		UnpackRGB(r,g,b, RGB_YELLOWISH);
-
-	ScaleColors(r, g, b, a);
-
-	y = (m_prc1->bottom - m_prc2->top)/2;
-	x = ScreenWidth - m_iWidth - m_iWidth/2 ;
-
-	// Draw the flashlight casing
-	SPR_Set(m_hSprite1, r, g, b );
-	SPR_DrawAdditive( 0,  x, y, m_prc1);
-
-	if ( m_fOn )
-	{  // draw the flashlight beam
-		x = ScreenWidth - m_iWidth/2;
-
-		SPR_Set( m_hBeam, r, g, b );
-		SPR_DrawAdditive( 0, x, y, m_prcBeam );
-	}
-
-	// draw the flashlight energy level
-	x = ScreenWidth - m_iWidth - m_iWidth/2 ;
-	int iOffset = m_iWidth * (1.0 - m_flBat);
-	if (iOffset < m_iWidth)
+	if ( !(gHUD.m_iHideHUDDisplay & ( HIDEHUD_FLASHLIGHT | HIDEHUD_ALL )) && (gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT))) )
 	{
-		rc = *m_prc2;
-		rc.left += iOffset;
+		if (m_fOn)
+			a = 225;
+		else
+			a = MIN_ALPHA;
 
-		SPR_Set(m_hSprite2, r, g, b );
-		SPR_DrawAdditive( 0, x + iOffset, y, &rc);
+		if (m_flBat < 0.20)
+			UnpackRGB(r,g,b, RGB_YELLOWISH);
+		else
+			UnpackRGB(r,g,b, RGB_YELLOWISH);
+
+		ScaleColors(r, g, b, a);
+
+		y = (m_prc1->bottom - m_prc2->top)/2;
+		x = ScreenWidth - m_iWidth - m_iWidth/2 ;
+
+		// Draw the flashlight casing
+		SPR_Set(m_hSprite1, r, g, b );
+		SPR_DrawAdditive( 0,  x, y, m_prc1);
+
+		if ( m_fOn )
+		{  // draw the flashlight beam
+			x = ScreenWidth - m_iWidth/2;
+
+			SPR_Set( m_hBeam, r, g, b );
+			SPR_DrawAdditive( 0, x, y, m_prcBeam );
+		}
+
+		// draw the flashlight energy level
+		x = ScreenWidth - m_iWidth - m_iWidth/2 ;
+		int iOffset = m_iWidth * (1.0 - m_flBat);
+		if (iOffset < m_iWidth)
+		{
+			rc = *m_prc2;
+			rc.left += iOffset;
+
+			SPR_Set(m_hSprite2, r, g, b );
+			SPR_DrawAdditive( 0, x + iOffset, y, &rc);
+		}
+
+		// dark vision: tile the screen with the vision sprite from a random offset
+		if ( m_fOn )
+		{
+			r = 64;
+			g = 0;
+			b = 0;
+			ScaleColors(r, g, b, 100);
+			SPR_Set(m_hVision, r, g, b );
+
+			for ( y = -(rand() % m_iVisionHeight); y < ScreenHeight; y += m_iVisionHeight )
+			{
+				for ( x = -(rand() % m_iVisionWidth); x < ScreenWidth; x += m_iVisionWidth )
+				{
+					SPR_DrawAdditive( 0, x, y, NULL );
+				}
+			}
+		}
+
 	}
-
 
 	return 1;
 }

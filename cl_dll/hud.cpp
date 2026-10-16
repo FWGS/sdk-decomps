@@ -287,6 +287,8 @@ void CHud :: Init( void )
 
 	m_SayText.Init();
 	m_Menu.Init();
+	m_BreakIcon.Init();
+	m_StoryIcon.Init();
 	
 	ServersInit();
 
@@ -431,6 +433,8 @@ void CHud :: VidInit( void )
 	m_AmmoSecondary.VidInit();
 	m_TextMessage.VidInit();
 	m_StatusIcons.VidInit();
+	m_BreakIcon.VidInit();
+	m_StoryIcon.VidInit();
 }
 
 int CHud::MsgFunc_Logo(const char *pszName,  int iSize, void *pbuf)

@@ -21,7 +21,7 @@
 //
 
 
-#define RGB_YELLOWISH 0x00FFA000 //255,160,0
+#define RGB_YELLOWISH 0x0000FF00 //0,255,0: POV's HUD is green
 #define RGB_REDISH 0x00FF1010 //255,160,0
 #define RGB_GREENISH 0x0000A000 //0,160,0
 
@@ -400,6 +400,9 @@ private:
 	HSPRITE m_hSprite1;
 	HSPRITE m_hSprite2;
 	HSPRITE m_hBeam;
+	HSPRITE m_hVision;		// name ours: dark vision's screen tile
+	int	  m_iVisionWidth;	// name ours
+	int	  m_iVisionHeight;	// name ours
 	wrect_t *m_prc1;
 	wrect_t *m_prc2;
 	wrect_t *m_prcBeam;
@@ -521,6 +524,47 @@ private:
 //
 //-----------------------------------------------------
 //
+class CHudBreakIcon: public CHudBase	// name ours
+{
+public:
+	int Init( void );
+	int VidInit( void );
+	int Draw(float flTime);
+	int MsgFunc_BreakIcon(const char *pszName,  int iSize, void *pbuf );
+
+private:
+	HSPRITE m_hSprite;
+	int	  m_iWidth;
+	int	  m_iHeight;
+	int	  m_iState;
+};
+
+//
+//-----------------------------------------------------
+//
+class CHudStoryIcon: public CHudBase	// name ours
+{
+public:
+	int Init( void );
+	int VidInit( void );
+	int Draw(float flTime);
+	int MsgFunc_StoryIcon(const char *pszName,  int iSize, void *pbuf );
+
+private:
+	HSPRITE m_hSprite;
+	int	  m_iWidth;
+	int	  m_iHeight;
+	int	  m_iState;
+	int	  m_iAlpha;
+	int	  m_iMinAlpha;
+	int	  m_iMaxAlpha;
+	int	  m_iFadeOut;
+	float m_flNextFade;
+};
+
+//
+//-----------------------------------------------------
+//
 
 typedef struct cvar_s cvar_t;
 
@@ -594,6 +638,8 @@ public:
 	CHudAmmoSecondary	m_AmmoSecondary;
 	CHudTextMessage m_TextMessage;
 	CHudStatusIcons m_StatusIcons;
+	CHudBreakIcon	m_BreakIcon;
+	CHudStoryIcon	m_StoryIcon;
 
 	void Init( void );
 	void VidInit( void );

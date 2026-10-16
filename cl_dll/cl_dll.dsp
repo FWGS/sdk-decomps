@@ -254,6 +254,10 @@ SOURCE=..\pm_shared\pm_shared.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_icons.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\saytext.cpp
 # End Source File
 # Begin Source File
