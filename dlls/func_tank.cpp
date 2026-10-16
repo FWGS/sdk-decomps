@@ -74,6 +74,13 @@ public:
 	// Acquire a target.  pPlayer is a player in the PVS
 	edict_t		*FindTarget( edict_t *pPlayer );
 
+	// POV: target sets (names ours)
+	BOOL		IsHuman( int iClass );
+	BOOL		IsAlien( int iClass );
+	BOOL		IsPlayer( int iClass );
+	BOOL		IsAnyone( int iClass );
+	BOOL		TargetVisible( edict_t *pTarget );
+
 	void		TankTrace( const Vector &vecStart, const Vector &vecForward, const Vector &vecSpread, TraceResult &tr );
 
 	Vector		BarrelPosition( void )
@@ -128,6 +135,11 @@ protected:
 	Vector		m_sightOrigin;	// Last sight of target
 	int			m_spread;		// firing spread
 	int			m_iszMaster;	// Master entity (game_team_master or multisource)
+
+	int			m_iTargetEntities;	// who to shoot at (0 = the player)
+	int			m_iszFollowYaw;		// take yaw from this entity
+	int			m_iszFollowPitch;	// take pitch from this entity
+	int			m_iszFollowFire;	// fire when this entity's iuser4 is set
 };
 
 
@@ -159,6 +171,10 @@ TYPEDESCRIPTION	CFuncTank::m_SaveData[] =
 	DEFINE_FIELD( CFuncTank, m_flNextAttack, FIELD_TIME ),
 	DEFINE_FIELD( CFuncTank, m_iBulletDamage, FIELD_INTEGER ),
 	DEFINE_FIELD( CFuncTank, m_iszMaster, FIELD_STRING ),
+	DEFINE_FIELD( CFuncTank, m_iTargetEntities, FIELD_INTEGER ),
+	DEFINE_FIELD( CFuncTank, m_iszFollowYaw, FIELD_STRING ),
+	DEFINE_FIELD( CFuncTank, m_iszFollowPitch, FIELD_STRING ),
+	DEFINE_FIELD( CFuncTank, m_iszFollowFire, FIELD_STRING ),
 };
 
 IMPLEMENT_SAVERESTORE( CFuncTank, CBaseEntity );
@@ -318,6 +334,33 @@ void CFuncTank :: KeyValue( KeyValueData *pkvd )
 		m_iszMaster = ALLOC_STRING(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "spawnorigin"))
+	{
+		Vector tmp;
+		UTIL_StringToVector( (float *)tmp, pkvd->szValue );
+		if ( tmp != g_vecZero )
+			pev->origin = tmp;
+	}
+	else if (FStrEq(pkvd->szKeyName, "targetentities"))
+	{
+		m_iTargetEntities = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "follow_yaw"))
+	{
+		m_iszFollowYaw = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "follow_pitch"))
+	{
+		m_iszFollowPitch = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "follow_fire"))
+	{
+		m_iszFollowFire = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
 	else
 		CBaseEntity::KeyValue( pkvd );
 }
@@ -453,7 +496,124 @@ void CFuncTank :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE u
 
 edict_t *CFuncTank :: FindTarget( edict_t *pPlayer )
 {
-	return pPlayer;
+	if ( m_iTargetEntities < 0 || m_iTargetEntities > 6 )
+	{
+		ALERT( at_console, "FuncTank: INVALID TARGET SET!! Going after player!\n" );
+		return pPlayer;
+	}
+
+	if ( m_iTargetEntities == 0 )
+		return pPlayer;
+
+	Vector vecRange;
+	if ( m_maxRange == 0 )
+		vecRange = Vector( 2048, 2048, 2048 );
+	else
+		vecRange = Vector( m_maxRange, m_maxRange, m_maxRange );
+
+	CBaseEntity *pList[100];
+	TraceResult tr;
+	Vector barrelEnd, targetPosition;
+	int iBestDist = 9000;
+	CBaseEntity *pBest = NULL;
+	int count = UTIL_EntitiesInBox( pList, 100, pev->origin - vecRange, pev->origin + vecRange, FL_CLIENT|FL_MONSTER );
+
+	for ( int i = 0; i < count; i++ )
+	{
+		CBaseEntity *pEntity = pList[i];
+
+		if ( pEntity == this )
+			continue;
+		if ( pEntity->pev->spawnflags & 16 )	// SF_MONSTER_PRISONER
+			continue;
+		if ( pEntity->pev->health <= 0 )
+			continue;
+		if ( !pEntity->IsAlive() )
+			continue;
+
+		int iClass = pEntity->Classify();
+		BOOL fTarget = FALSE;
+
+		switch ( m_iTargetEntities )
+		{
+		case 1:
+			fTarget = IsHuman( iClass );
+			break;
+		case 2:
+			fTarget = IsAlien( iClass );
+			break;
+		case 3:
+			if ( IsHuman( iClass ) || IsPlayer( iClass ) )
+				fTarget = TRUE;
+			break;
+		case 4:
+			if ( IsAlien( iClass ) || IsPlayer( iClass ) )
+				fTarget = TRUE;
+			break;
+		case 5:
+			if ( IsHuman( iClass ) || IsAlien( iClass ) )
+				fTarget = TRUE;
+			break;
+		case 6:
+			fTarget = IsAnyone( iClass );
+			break;
+		default:
+			ALERT( at_console, "FuncTank: INVALID TARGET SET!! Going after player!\n" );
+			return pPlayer;
+		}
+
+		if ( !fTarget )
+			continue;
+
+		edict_t *pTarget = pEntity->edict();
+		if ( UTIL_FInViewCone( this, pEntity, -1 ) && !(pEntity->pev->flags & FL_NOTARGET) )
+		{
+			barrelEnd = BarrelPosition();
+			targetPosition = pTarget->v.origin + pTarget->v.view_ofs;
+			float range = (targetPosition - barrelEnd).Length();
+
+			if ( InRange( range ) && TargetVisible( pEntity->edict() ) && fTarget )
+			{
+				barrelEnd = BarrelPosition();
+				targetPosition = pTarget->v.origin + pTarget->v.view_ofs;
+				int iDist = (targetPosition - barrelEnd).Length();
+				if ( iDist <= iBestDist )
+				{
+					iBestDist = iDist;
+					pBest = pEntity;
+				}
+			}
+		}
+	}
+
+	if ( pBest )
+		return pBest->edict();
+
+	return NULL;
+}
+
+
+BOOL CFuncTank :: IsHuman( int iClass )
+{
+	return UTIL_IsHumanClass( iClass );
+}
+
+
+BOOL CFuncTank :: IsAlien( int iClass )
+{
+	return UTIL_IsAlienClass( iClass );
+}
+
+
+BOOL CFuncTank :: IsPlayer( int iClass )
+{
+	return UTIL_IsPlayerClass( iClass );
+}
+
+
+BOOL CFuncTank :: IsAnyone( int iClass )
+{
+	return UTIL_IsLivingClass( iClass );
 }
 
 
@@ -480,6 +640,26 @@ void CFuncTank :: Think( void )
 		StopRotSound();
 }
 
+// POV: can the barrel see the target? (name ours)
+BOOL CFuncTank :: TargetVisible( edict_t *pTarget )
+{
+	TraceResult tr;
+	Vector barrelEnd, targetPosition;
+
+	barrelEnd = BarrelPosition();
+	targetPosition = pTarget->v.origin + pTarget->v.view_ofs;
+	float range = (targetPosition - barrelEnd).Length();
+
+	if ( !InRange( range ) )
+		return FALSE;
+
+	UTIL_TraceLine( barrelEnd, targetPosition, dont_ignore_monsters, edict(), &tr );
+	if ( tr.flFraction == 1.0 || tr.pHit == pTarget )
+		return TRUE;
+
+	return FALSE;
+}
+
 void CFuncTank::TrackTarget( void )
 {
 	TraceResult tr;
@@ -498,6 +678,8 @@ void CFuncTank::TrackTarget( void )
 	}
 	else
 	{
+		BOOL fNoAim = FALSE;	// name ours
+
 		if ( IsActive() )
 			pev->nextthink = pev->ltime + 0.1;
 		else
@@ -511,48 +693,78 @@ void CFuncTank::TrackTarget( void )
 		}
 		pTarget = FindTarget( pPlayer );
 		if ( !pTarget )
-			return;
-
-		// Calculate angle needed to aim at target
-		barrelEnd = BarrelPosition();
-		targetPosition = pTarget->v.origin + pTarget->v.view_ofs;
-		float range = (targetPosition - barrelEnd).Length();
-		
-		if ( !InRange( range ) )
-			return;
-
-		UTIL_TraceLine( barrelEnd, targetPosition, dont_ignore_monsters, edict(), &tr );
-		
-		lineOfSight = FALSE;
-		// No line of sight, don't track
-		if ( tr.flFraction == 1.0 || tr.pHit == pTarget )
 		{
-			lineOfSight = TRUE;
-
-			CBaseEntity *pInstance = CBaseEntity::Instance(pTarget);
-			if ( InRange( range ) && pInstance && pInstance->IsAlive() )
+			fNoAim = TRUE;
+		}
+		else
+		{
+			// Calculate angle needed to aim at target
+			barrelEnd = BarrelPosition();
+			targetPosition = pTarget->v.origin + pTarget->v.view_ofs;
+			float range = (targetPosition - barrelEnd).Length();
+			
+			if ( !InRange( range ) )
 			{
-				updateTime = TRUE;
-				m_sightOrigin = UpdateTargetPosition( pInstance );
+				fNoAim = TRUE;
+			}
+			else
+			{
+				UTIL_TraceLine( barrelEnd, targetPosition, dont_ignore_monsters, edict(), &tr );
+				
+				lineOfSight = FALSE;
+				// No line of sight, don't track
+				if ( tr.flFraction == 1.0 || tr.pHit == pTarget )
+				{
+					lineOfSight = TRUE;
+
+					CBaseEntity *pInstance = CBaseEntity::Instance(pTarget);
+					if ( InRange( range ) && pInstance && pInstance->IsAlive() )
+					{
+						updateTime = TRUE;
+						m_sightOrigin = UpdateTargetPosition( pInstance );
+					}
+				}
+
+				// Track sight origin
+
+	// !!! I'm not sure what i changed
+				direction = m_sightOrigin - pev->origin;
+	//			direction = m_sightOrigin - barrelEnd;
+				angles = UTIL_VecToAngles( direction );
+
+				// Calculate the additional rotation to point the end of the barrel at the target (not the gun's center) 
+				AdjustAnglesForBarrel( angles, direction.Length() );
 			}
 		}
 
-		// Track sight origin
+		// POV: follow another entity's yaw and pitch
+		if ( m_iszFollowYaw )
+		{
+			edict_t *pentFollow = FIND_ENTITY_BY_TARGETNAME( NULL, STRING( m_iszFollowYaw ) );
+			if ( pentFollow )
+			{
+				angles.y = pentFollow->v.angles.y;
+				pev->angles.y = pentFollow->v.angles.y;
+				pev->nextthink = pev->ltime + 0.05;
+			}
+		}
 
-// !!! I'm not sure what i changed
-		direction = m_sightOrigin - pev->origin;
-//		direction = m_sightOrigin - barrelEnd;
-		angles = UTIL_VecToAngles( direction );
+		if ( m_iszFollowPitch )
+		{
+			edict_t *pentFollow = FIND_ENTITY_BY_TARGETNAME( NULL, STRING( m_iszFollowPitch ) );
+			if ( pentFollow )
+			{
+				pev->angles.x = pentFollow->v.angles.x;
+				pev->nextthink = pev->ltime + 0.05;
+			}
+		}
 
-		// Calculate the additional rotation to point the end of the barrel at the target (not the gun's center) 
-		AdjustAnglesForBarrel( angles, direction.Length() );
+		if ( fNoAim == TRUE )
+			return;
 	}
-
-	angles.x = -angles.x;
 
 	// Force the angles to be relative to the center position
 	angles.y = m_yawCenter + UTIL_AngleDistance( angles.y, m_yawCenter );
-	angles.x = m_pitchCenter + UTIL_AngleDistance( angles.x, m_pitchCenter );
 
 	// Limit against range in y
 	if ( angles.y > m_yawCenter + m_yawRange )
@@ -577,6 +789,9 @@ void CFuncTank::TrackTarget( void )
 	else if ( pev->avelocity.y < -m_yawRate )
 		pev->avelocity.y = -m_yawRate;
 
+	angles.x = -angles.x;
+	angles.x = m_pitchCenter + UTIL_AngleDistance( angles.x, m_pitchCenter );
+
 	// Limit against range in x
 	if ( angles.x > m_pitchCenter + m_pitchRange )
 		angles.x = m_pitchCenter + m_pitchRange;
@@ -595,31 +810,62 @@ void CFuncTank::TrackTarget( void )
 	if ( m_pController )
 		return;
 
-	if ( CanFire() && ( (fabs(distX) < m_pitchTolerance && fabs(distY) < m_yawTolerance) || (pev->spawnflags & SF_TANK_LINEOFSIGHT) ) )
+	// POV: fire when the followed entity fires (its iuser4 is set)
+	if ( m_iszFollowFire )
 	{
-		BOOL fire = FALSE;
-		Vector forward;
-		UTIL_MakeVectorsPrivate( pev->angles, forward, NULL, NULL );
-
-		if ( pev->spawnflags & SF_TANK_LINEOFSIGHT )
+		edict_t *pentFire = FIND_ENTITY_BY_TARGETNAME( NULL, STRING( m_iszFollowFire ) );
+		if ( pentFire )
 		{
-			float length = direction.Length();
-			UTIL_TraceLine( barrelEnd, barrelEnd + forward * length, dont_ignore_monsters, edict(), &tr );
-			if ( tr.pHit == pTarget )
-				fire = TRUE;
+			pev->iuser4 = pentFire->v.iuser4;
+			if ( pev->iuser4 )
+			{
+				BOOL fire = FALSE;	// sic: unused (the dead store flips VC6's x87 operand order in this function)
+				Vector forward;
+				UTIL_MakeVectorsPrivate( pev->angles, forward, NULL, NULL );
+				Fire( BarrelPosition(), forward, pev );
+				return;
+			}
 		}
 		else
-			fire = TRUE;
-
-		if ( fire )
 		{
-			Fire( BarrelPosition(), forward, pev );
+			ALERT( at_console, "Didn't found 'Follow Fire Turret' %s !\n", STRING( m_iszFollowFire ) );
+			m_fireLast = 0;
+			return;
+		}
+
+		m_fireLast = 0;
+	}
+	else
+	{
+		pev->iuser4 = 0;
+
+		if ( CanFire() && ( (fabs(distX) < m_pitchTolerance && fabs(distY) < m_yawTolerance) || (pev->spawnflags & SF_TANK_LINEOFSIGHT) ) )
+		{
+			BOOL fire = FALSE;
+			Vector forward;
+			UTIL_MakeVectorsPrivate( pev->angles, forward, NULL, NULL );
+
+			if ( pev->spawnflags & SF_TANK_LINEOFSIGHT )
+			{
+				float length = direction.Length();
+				UTIL_TraceLine( barrelEnd, barrelEnd + forward * length, dont_ignore_monsters, edict(), &tr );
+				if ( tr.pHit == pTarget )
+					fire = TRUE;
+			}
+			else
+				fire = TRUE;
+
+			if ( fire )
+			{
+				Fire( BarrelPosition(), forward, pev );
+				pev->iuser4 = 1;
+			}
+			else
+				m_fireLast = 0;
 		}
 		else
 			m_fireLast = 0;
 	}
-	else
-		m_fireLast = 0;
 }
 
 
@@ -730,27 +976,26 @@ void CFuncTankGun::Fire( const Vector &barrelEnd, const Vector &forward, entvars
 		int bulletCount = (gpGlobals->time - m_fireLast) * m_fireRate;
 		if ( bulletCount > 0 )
 		{
-			for ( i = 0; i < bulletCount; i++ )
+			// POV: one shot per think, with a muzzle light
+			switch( m_bulletType )
 			{
-				switch( m_bulletType )
-				{
-				case TANK_BULLET_9MM:
-					FireBullets( 1, barrelEnd, forward, gTankSpread[m_spread], 4096, BULLET_MONSTER_9MM, 1, m_iBulletDamage, pevAttacker );
-					break;
+			case TANK_BULLET_9MM:
+				FireBullets( 1, barrelEnd, forward, gTankSpread[m_spread], 4096, BULLET_MONSTER_9MM, 1, m_iBulletDamage, pevAttacker );
+				break;
 
-				case TANK_BULLET_MP5:
-					FireBullets( 1, barrelEnd, forward, gTankSpread[m_spread], 4096, BULLET_MONSTER_MP5, 1, m_iBulletDamage, pevAttacker );
-					break;
+			case TANK_BULLET_MP5:
+				FireBullets( 1, barrelEnd, forward, gTankSpread[m_spread], 4096, BULLET_MONSTER_MP5, 1, m_iBulletDamage, pevAttacker );
+				break;
 
-				case TANK_BULLET_12MM:
-					FireBullets( 1, barrelEnd, forward, gTankSpread[m_spread], 4096, BULLET_MONSTER_12MM, 1, m_iBulletDamage, pevAttacker );
-					break;
+			case TANK_BULLET_12MM:
+				FireBullets( 1, barrelEnd, forward, gTankSpread[m_spread], 4096, BULLET_MONSTER_12MM, 1, m_iBulletDamage, pevAttacker );
+				break;
 
-				default:
-				case TANK_BULLET_NONE:
-					break;
-				}
+			default:
+			case TANK_BULLET_NONE:
+				break;
 			}
+			UTIL_MuzzleLight( NULL, barrelEnd );
 			CFuncTank::Fire( barrelEnd, forward, pevAttacker );
 		}
 	}
