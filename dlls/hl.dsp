@@ -360,6 +360,10 @@ SOURCE=.\herbs.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\horse.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\hoss.cpp
 # End Source File
 # Begin Source File
@@ -614,10 +618,6 @@ SOURCE=.\wtowna.cpp
 # Begin Source File
 
 SOURCE=.\wtownb.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wanted_pending.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
