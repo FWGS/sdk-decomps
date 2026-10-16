@@ -24,10 +24,12 @@
 #include	"gamerules.h"
 #include	"teamplay_gamerules.h"
 #include	"skill.h"
+#include	"highnoon.h"
 
 extern edict_t *EntSelectSpawnPoint( CBaseEntity *pPlayer );
 
 DLL_GLOBAL CGameRules*	g_pGameRules = NULL;
+int g_iGameType;	// Wanted: info_wanteddetect's gametype (name ours)
 extern DLL_GLOBAL BOOL	g_fGameOver;
 extern int gmsgDeathMsg;	// client dll messages
 extern int gmsgScoreInfo;
@@ -262,31 +264,46 @@ void CGameRules::RefreshSkillData ( void )
 
 CGameRules *InstallGameRules( void )
 {
-	SERVER_COMMAND( "exec game.cfg\n" );
-	SERVER_EXECUTE( );
+	CGameRules *pRules;
+
+	if ( g_fInitialRules )
+	{
+		SERVER_COMMAND( "exec game.cfg\n" );
+		SERVER_EXECUTE( );
+	}
 
 	if ( !gpGlobals->deathmatch )
 	{
 		// generic half-life
 		return new CHalfLifeRules;
 	}
+
+	// Wanted: the map's info_wanteddetect picks the game mode
+	if ( g_iGameType == GAMETYPE_HIGHNOON )
+	{
+		pRules = new CHighNoon;
+		pRules->Init();
+		return pRules;
+	}
+	else if ( g_iGameType == GAMETYPE_CTC )
+	{
+		CVAR_SET_STRING( "mp_teamlist", UTIL_VarArgs( "%s;%s", g_pszTeamNames[0], g_pszTeamNames[1] ) );
+		pRules = new CCaptureTheChicken;
+		pRules->Init();
+		return pRules;
+	}
+	else if ( g_iGameType == GAMETYPE_TEAMPLAY )
+	{
+		// teamplay: the CTC teams, without the chickens (and without Init)
+		CVAR_SET_STRING( "mp_teamlist", UTIL_VarArgs( "%s;%s", g_pszTeamNames[0], g_pszTeamNames[1] ) );
+		return new CHalfLifeTeamplay;
+	}
 	else
 	{
-		if ( CVAR_GET_FLOAT( "mp_teamplay" ) > 0 )
-		{
-			// teamplay
-			return new CHalfLifeTeamplay;
-		}
-		if ((int)gpGlobals->deathmatch == 1)
-		{
-			// vanilla deathmatch
-			return new CHalfLifeMultiplay;
-		}
-		else
-		{
-			// vanilla deathmatch??
-			return new CHalfLifeMultiplay;
-		}
+		// deathmatch with Cow-Bots
+		pRules = new CWantedMultiplay;
+		pRules->Init();
+		return pRules;
 	}
 }
 

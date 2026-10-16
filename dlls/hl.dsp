@@ -627,6 +627,10 @@ SOURCE=.\wtowna.cpp
 
 SOURCE=.\wtownb.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\wanted_pending.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -702,6 +706,10 @@ SOURCE=.\func_break.h
 # Begin Source File
 
 SOURCE=.\gamerules.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\highnoon.h
 # End Source File
 # Begin Source File
 
@@ -806,6 +814,10 @@ SOURCE=.\util.h
 # Begin Source File
 
 SOURCE=.\vector.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\wantedrules.h
 # End Source File
 # Begin Source File
 
