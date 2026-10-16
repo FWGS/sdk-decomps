@@ -444,6 +444,10 @@ SOURCE=.\pov_panther.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_spforce.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_sslave.cpp
 # End Source File
 # Begin Source File
