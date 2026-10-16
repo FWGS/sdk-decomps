@@ -765,6 +765,7 @@ void CGargantua :: Spawn()
 	MonsterInit();
 
 	m_pEyeGlow = CSprite::SpriteCreate( GARG_EYE_SPRITE_NAME, pev->origin, FALSE );
+	m_pEyeGlow->pev->targetname = MAKE_STRING( "gargeye" );	// POV
 	m_pEyeGlow->SetTransparency( kRenderGlow, 255, 255, 255, 0, kRenderFxNoDissipation );
 	m_pEyeGlow->SetAttachment( edict(), 1 );
 	EyeOff();
@@ -866,6 +867,25 @@ void CGargantua::TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vec
 int CGargantua::TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
 {
 	ALERT( at_aiconsole, "CGargantua::TakeDamage\n");
+
+	// POV: answer the player's shots
+	if ( m_MonsterState != MONSTERSTATE_PRONE && !HasMemory( bits_MEMORY_PROVOKED ) )
+	{
+		switch ( UTIL_PlayerProvoke( this, pevAttacker ) )
+		{
+		case 1:
+			EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, pPainSounds[ RANDOM_LONG(0,ARRAYSIZE(pPainSounds)-1) ], 1.0, ATTN_GARG, 0, PITCH_NORM );
+			m_painSoundTime = gpGlobals->time + RANDOM_FLOAT( 2.5, 4 );
+		case 2:
+			EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, pAttackSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackSounds)-1) ], 1.0, ATTN_GARG, 0, PITCH_NORM );
+			Remember( bits_MEMORY_SUSPICIOUS );
+			break;
+		case 3:
+			EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, pAlertSounds[ RANDOM_LONG(0,ARRAYSIZE(pAlertSounds)-1) ], 1.0, ATTN_GARG, 0, PITCH_NORM );
+			Remember( bits_MEMORY_PROVOKED );
+			break;
+		}
+	}
 
 	if ( IsAlive() )
 	{
@@ -982,7 +1002,7 @@ void CGargantua::HandleAnimEvent(MonsterEvent_t *pEvent)
 	case GARG_AE_SLASH_LEFT:
 		{
 			// HACKHACK!!!
-			CBaseEntity *pHurt = GargantuaCheckTraceHullAttack( GARG_ATTACKDIST + 10.0, gSkillData.gargantuaDmgSlash, DMG_SLASH );
+			CBaseEntity *pHurt = GargantuaCheckTraceHullAttack( GARG_ATTACKDIST + 10.0, gSkillData.gargantuaDmgSlash, DMG_SLASH | DMG_ALWAYSGIB );	// POV: always gibs
 			if (pHurt)
 			{
 				if ( pHurt->pev->flags & (FL_MONSTER|FL_CLIENT) )
