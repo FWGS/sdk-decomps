@@ -384,6 +384,10 @@ SOURCE=.\masala.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\mexbandit.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\monstermaker.cpp
 # End Source File
 # Begin Source File
