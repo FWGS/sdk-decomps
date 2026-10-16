@@ -524,6 +524,10 @@ SOURCE=.\pov_worker.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_workerbrave.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_xtbu.cpp
 # End Source File
 # Begin Source File
