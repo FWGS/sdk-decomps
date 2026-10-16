@@ -3959,6 +3959,7 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 			const char *pTextureName = TRACE_TEXTURE( pWorld, start, end );
 			if ( pTextureName )
 				ALERT( at_console, "Texture: %s\n", pTextureName );
+			int x = 0;	// sic: a dead store, which gives retail's add order for origin + view_ofs above
 		}
 		break;
 	case	195:// show shortest paths for entire level to nearest node
