@@ -850,7 +850,7 @@ Schedule_t* CController :: GetScheduleOfType ( int Type )
 //=========================================================
 BOOL CController :: CheckRangeAttack1 ( float flDot, float flDist )
 {
-	if ( flDot > 0.5 && flDist > 256 && flDist <= 2048 )
+	if ( flDot > 0.5 && flDist > 256 && flDist <= 1024 )
 	{
 		return TRUE;
 	}
