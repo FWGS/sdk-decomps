@@ -452,6 +452,10 @@ SOURCE=.\pov_zombie.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_zombiebarney.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\python.cpp
 # End Source File
 # Begin Source File
