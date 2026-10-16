@@ -460,6 +460,10 @@ SOURCE=.\pov_gordon.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_hassault.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_hev_barney.cpp
 # End Source File
 # Begin Source File
