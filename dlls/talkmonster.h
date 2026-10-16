@@ -37,28 +37,25 @@
 #define bit_saidHeard			(1<<6)
 #define bit_saidSmelled			(1<<7)
 
-#define TLK_CFRIENDS		3
+#define TLK_CFRIENDS		16
 
 typedef enum
 {
 	TLK_ANSWER = 0,
 	TLK_QUESTION,
 	TLK_IDLE,
-	TLK_STARE,
-	TLK_USE,
-	TLK_UNUSE,
-	TLK_STOP,
-	TLK_NOSHOOT,
-	TLK_HELLO,
-	TLK_PHELLO,
 	TLK_PIDLE,
 	TLK_PQUESTION,
-	TLK_PLHURT1,
-	TLK_PLHURT2,
-	TLK_PLHURT3,
 	TLK_SMELL,
 	TLK_WOUND,
 	TLK_MORTAL,
+	TLK_ATTACK,		// names from here on ours, after the sentence groups
+	TLK_KILL,
+	TLK_UNUSED1,	// no TalkInit sets these three
+	TLK_UNUSED2,
+	TLK_UNUSED3,
+	TLK_PAIN,
+	TLK_DIE,
 
 	TLK_CGROUPS,					// MUST be last entry
 } TALKGROUPNAMES;
@@ -76,21 +73,14 @@ enum
 
 enum
 {
-	TASK_CANT_FOLLOW = LAST_COMMON_TASK + 1,
-	TASK_MOVE_AWAY_PATH,
+	TASK_MOVE_AWAY_PATH = LAST_COMMON_TASK + 1,
 	TASK_WALK_PATH_FOR_UNITS,
 
 	TASK_TLK_RESPOND,		// say my response
 	TASK_TLK_SPEAK,			// question or remark
-	TASK_TLK_HELLO,			// Try to say hello to player
 	TASK_TLK_HEADRESET,		// reset head position
-	TASK_TLK_STOPSHOOTING,	// tell player to stop shooting friend
-	TASK_TLK_STARE,			// let the player know I know he's staring at me.
-	TASK_TLK_LOOK_AT_CLIENT,// faces player if not moving and not talking and in idle.
-	TASK_TLK_CLIENT_STARE,	// same as look at client, but says something if the player stares.
 	TASK_TLK_EYECONTACT,	// maintain eyecontact with person who I'm talking to
 	TASK_TLK_IDEALYAW,		// set ideal yaw to face who I'm talking to
-	TASK_FACE_PLAYER,		// Face the player
 
 	LAST_TALKMONSTER_TASK,			// MUST be last
 };
@@ -106,7 +96,6 @@ public:
 	// Base Monster functions
 	void			Precache( void );
 	int				TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType);
-	void			Touch(	CBaseEntity *pOther );
 	void			Killed( entvars_t *pevAttacker, int iGib );
 	int				IRelationship ( CBaseEntity *pTarget );
 	virtual int		CanPlaySentence( BOOL fDisregardState );
@@ -127,25 +116,13 @@ public:
 	int				GetVoicePitch( void );
 	void			IdleRespond( void );
 	int				FIdleSpeak( void );
-	int				FIdleStare( void );
-	int				FIdleHello( void );
 	void			IdleHeadTurn( Vector &vecFriend );
 	int				FOkToSpeak( void );
 	void			TrySmellTalk( void );
 	CBaseEntity		*EnumFriends( CBaseEntity *pentPrevious, int listNumber, BOOL bTrace );
-	void			AlertFriends( void );
 	void			ShutUpFriends( void );
 	BOOL			IsTalking( void );
 	void			Talk( float flDuration );	
-	// For following
-	BOOL			CanFollow( void );
-	BOOL			IsFollowing( void ) { return m_hTargetEnt != NULL && m_hTargetEnt->IsPlayer(); }
-	void			StopFollowing( BOOL clearSchedule );
-	void			StartFollowing( CBaseEntity *pLeader );
-	virtual void	DeclineFollowing( void ) {}
-	void			LimitFollowers( CBaseEntity *pPlayer, int maxFollowers );
-
-	void EXPORT		FollowerUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	
 	virtual void	SetAnswerQuestion( CTalkMonster *pSpeaker );
 	virtual int		FriendNumber( int arrayNumber )	{ return arrayNumber; }

@@ -436,6 +436,10 @@ SOURCE=..\pm_shared\pm_shared.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_barn.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\python.cpp
 # End Source File
 # Begin Source File
@@ -557,6 +561,10 @@ SOURCE=.\activitymap.h
 # Begin Source File
 
 SOURCE=.\animation.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\basebarn.h
 # End Source File
 # Begin Source File
 
