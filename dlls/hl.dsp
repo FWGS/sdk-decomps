@@ -224,6 +224,10 @@ SOURCE=.\combat.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\crispen.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\crossbow.cpp
 # End Source File
 # Begin Source File
