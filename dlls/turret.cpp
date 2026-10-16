@@ -34,7 +34,7 @@
 extern Vector VecBModelOrigin( entvars_t* pevBModel );
 
 #define TURRET_SHOTS	2
-#define TURRET_RANGE	(100 * 12)
+#define TURRET_RANGE	2048		// POV: was (100 * 12)
 #define TURRET_SPREAD	Vector( 0, 0, 0 )
 #define TURRET_TURNRATE	30		//angles per 0.1 second
 #define TURRET_MAXWAIT	15		// seconds turret will stay active w/o a target
@@ -69,6 +69,7 @@ public:
 	// Think functions
 
 	void EXPORT ActiveThink(void);
+	BOOL FBoxVisible ( entvars_t *pevLooker, entvars_t *pevTarget, Vector &vecTargetOrigin, float flSize = 0.0 );	// POV
 	void EXPORT SearchThink(void);
 	void EXPORT AutoSearchThink(void);
 	void EXPORT TurretDeath(void);
@@ -348,9 +349,9 @@ void CMiniTurret::Precache()
 {
 	CBaseTurret::Precache( );
 	PRECACHE_MODEL ("models/miniturret.mdl");	
-	PRECACHE_SOUND("weapons/hks1.wav");
-	PRECACHE_SOUND("weapons/hks2.wav");
-	PRECACHE_SOUND("weapons/hks3.wav");
+	PRECACHE_SOUND("turret/sc_fire1.wav");
+	PRECACHE_SOUND("turret/sc_fire2.wav");
+	PRECACHE_SOUND("turret/sc_fire3.wav");
 }
 
 void CBaseTurret::Initialize(void)
@@ -616,11 +617,44 @@ void CBaseTurret::ActiveThink(void)
 }
 
 
+//=========================================================
+// POV: h_ai.cpp's FBoxVisible, except that turrets can't
+// see through glass
+//=========================================================
+BOOL CBaseTurret :: FBoxVisible ( entvars_t *pevLooker, entvars_t *pevTarget, Vector &vecTargetOrigin, float flSize )
+{
+	// don't look through water
+	if ((pevLooker->waterlevel != 3 && pevTarget->waterlevel == 3) 
+		|| (pevLooker->waterlevel == 3 && pevTarget->waterlevel == 0))
+		return FALSE;
+
+	TraceResult tr;
+	Vector	vecLookerOrigin = pevLooker->origin + pevLooker->view_ofs;//look through the monster's 'eyes'
+	for (int i = 0; i < 5; i++)
+	{
+		Vector vecTarget = pevTarget->origin;
+		vecTarget.x += RANDOM_FLOAT( pevTarget->mins.x + flSize, pevTarget->maxs.x - flSize);
+		vecTarget.y += RANDOM_FLOAT( pevTarget->mins.y + flSize, pevTarget->maxs.y - flSize);
+		vecTarget.z += RANDOM_FLOAT( pevTarget->mins.z + flSize, pevTarget->maxs.z - flSize);
+
+		UTIL_TraceLine(vecLookerOrigin, vecTarget, ignore_monsters, dont_ignore_glass, ENT(pevLooker)/*pentIgnore*/, &tr);
+		
+		if (tr.flFraction == 1.0)
+		{
+			vecTargetOrigin = vecTarget;
+			return TRUE;// line of sight is valid.
+		}
+	}
+	return FALSE;// Line of sight is not established
+}
+
+
 void CTurret::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 {
 	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_MONSTER_12MM, 1 );
 	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/tu_fire1.wav", 1, 0.6);
 	pev->effects = pev->effects | EF_MUZZLEFLASH;
+	UTIL_MuzzleLight( this, vecSrc );
 }
 
 
@@ -630,11 +664,12 @@ void CMiniTurret::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 
 	switch(RANDOM_LONG(0,2))
 	{
-	case 0: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks1.wav", 1, ATTN_NORM); break;
-	case 1: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks2.wav", 1, ATTN_NORM); break;
-	case 2: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks3.wav", 1, ATTN_NORM); break;
+	case 0: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/sc_fire1.wav", 1, ATTN_NORM); break;
+	case 1: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/sc_fire2.wav", 1, ATTN_NORM); break;
+	case 2: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/sc_fire3.wav", 1, ATTN_NORM); break;
 	}
 	pev->effects = pev->effects | EF_MUZZLEFLASH;
+	UTIL_MuzzleLight( this, vecSrc );
 }
 
 
@@ -851,8 +886,17 @@ void CBaseTurret::SearchThink(void)
 		m_hEnemy = BestVisibleEnemy();
 	}
 
-	// If we've found a target, spin up the barrel and start to attack
+	// POV: only go for it if it can be seen
+	int fEnemyVisible = FALSE;
 	if (m_hEnemy != NULL)
+	{
+		Vector vecMid = pev->origin + pev->view_ofs;
+		Vector vecMidEnemy = m_hEnemy->BodyTarget( vecMid );
+		fEnemyVisible = FBoxVisible(pev, m_hEnemy->pev, vecMidEnemy );
+	}
+
+	// If we've found a target, spin up the barrel and start to attack
+	if (m_hEnemy != NULL && fEnemyVisible)
 	{
 		m_flLastSight = 0;
 		m_flSpinUpTime = 0;
@@ -909,7 +953,16 @@ void CBaseTurret::AutoSearchThink(void)
 		m_hEnemy = BestVisibleEnemy();
 	}
 
+	// POV: only go for it if it can be seen
+	int fEnemyVisible = FALSE;
 	if (m_hEnemy != NULL)
+	{
+		Vector vecMid = pev->origin + pev->view_ofs;
+		Vector vecMidEnemy = m_hEnemy->BodyTarget( vecMid );
+		fEnemyVisible = FBoxVisible(pev, m_hEnemy->pev, vecMidEnemy );
+	}
+
+	if (m_hEnemy != NULL && fEnemyVisible)
 	{
 		SetThink(Deploy);
 		EMIT_SOUND(ENT(pev), CHAN_BODY, "turret/tu_alert.wav", TURRET_MACHINE_VOLUME, ATTN_NORM);
@@ -1152,15 +1205,33 @@ public:
 	int TakeDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType);
 	void EXPORT SentryTouch( CBaseEntity *pOther );
 	void EXPORT SentryDeath( void );
+	void KeyValue( KeyValueData *pkvd );	// POV
 
+	virtual int		Save( CSave &save );	// POV
+	virtual int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	int m_iDieAngle;	// POV: the yaw it falls to, -1 for the SDK's random one
+	int m_iDieAngleTolerance;	// POV: and how far around it
 };
 
 LINK_ENTITY_TO_CLASS( monster_sentry, CSentry );
+
+TYPEDESCRIPTION	CSentry::m_SaveData[] = 
+{
+	DEFINE_FIELD( CSentry, m_iDieAngle, FIELD_INTEGER ),
+	DEFINE_FIELD( CSentry, m_iDieAngleTolerance, FIELD_INTEGER ),
+};
+
+IMPLEMENT_SAVERESTORE( CSentry, CBaseTurret );
 
 void CSentry::Precache()
 {
 	CBaseTurret::Precache( );
 	PRECACHE_MODEL ("models/sentry.mdl");	
+	PRECACHE_SOUND("turret/sc_fire1.wav");
+	PRECACHE_SOUND("turret/sc_fire2.wav");
+	PRECACHE_SOUND("turret/sc_fire3.wav");
 }
 
 void CSentry::Spawn()
@@ -1184,17 +1255,34 @@ void CSentry::Spawn()
 	pev->nextthink = gpGlobals->time + 0.3; 
 }
 
+void CSentry::KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "dieangle"))
+	{
+		m_iDieAngle = atof(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "dieangletoler"))
+	{
+		m_iDieAngleTolerance = atof(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CBaseMonster::KeyValue( pkvd );
+}
+
 void CSentry::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 {
 	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_MONSTER_MP5, 1 );
 	
 	switch(RANDOM_LONG(0,2))
 	{
-	case 0: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks1.wav", 1, ATTN_NORM); break;
-	case 1: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks2.wav", 1, ATTN_NORM); break;
-	case 2: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/hks3.wav", 1, ATTN_NORM); break;
+	case 0: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/sc_fire1.wav", 1, ATTN_NORM); break;
+	case 1: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/sc_fire2.wav", 1, ATTN_NORM); break;
+	case 2: EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/sc_fire3.wav", 1, ATTN_NORM); break;
 	}
 	pev->effects = pev->effects | EF_MUZZLEFLASH;
+	UTIL_MuzzleLight( this, vecSrc );
 }
 
 int CSentry::TakeDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType)
@@ -1267,7 +1355,10 @@ void CSentry ::	SentryDeath( void )
 		SetTurretAnim(TURRET_ANIM_DIE); 
 
 		pev->solid = SOLID_NOT;
-		pev->angles.y = UTIL_AngleMod( pev->angles.y + RANDOM_LONG( 0, 2 ) * 120 );
+		if (m_iDieAngle == -1)
+			pev->angles.y = UTIL_AngleMod( pev->angles.y + RANDOM_LONG( 0, 2 ) * 120 );
+		else
+			pev->angles.y = UTIL_AngleMod( m_iDieAngle + RANDOM_FLOAT( -(m_iDieAngleTolerance / 2), m_iDieAngleTolerance / 2 ) );
 
 		EyeOn( );
 	}
