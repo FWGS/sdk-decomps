@@ -352,6 +352,10 @@ SOURCE=.\maprules.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\masala.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\monstermaker.cpp
 # End Source File
 # Begin Source File
@@ -369,6 +373,10 @@ SOURCE=.\mortar.cpp
 # Begin Source File
 
 SOURCE=.\multiplay_gamerules.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\nagatow.cpp
 # End Source File
 # Begin Source File
 
