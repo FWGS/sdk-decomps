@@ -448,6 +448,10 @@ SOURCE=.\pov_barniel.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_beretta.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_bodypart.cpp
 # End Source File
 # Begin Source File
