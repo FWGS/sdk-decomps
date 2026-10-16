@@ -27,6 +27,7 @@
 #define	SF_MONSTERMAKER_START_ON	1 // start active ( if has targetname )
 #define	SF_MONSTERMAKER_CYCLIC		4 // drop one monster every time fired.
 #define SF_MONSTERMAKER_MONSTERCLIP	8 // Children are blocked by monsterclip
+#define SF_MONSTERMAKER_WARPIN		16 // POV: children warp in with sound, sprites and beams (name ours)
 
 //=========================================================
 // MonsterMaker - this ent creates monsters during the game.
@@ -58,6 +59,13 @@ public:
 
 	float m_flGround; // z coord of the ground under me, used to make sure no monsters are under the maker when it drops a new child
 
+	// POV: the warp-in effect
+	int		m_spriteTexture;
+	int		m_iBeamCount;
+	float	m_flSpriteScale;
+	float	m_flSpawnSndAtt;
+	float	m_flSpawnVolume;
+
 	BOOL m_fActive;
 	BOOL m_fFadeChildren;// should we make the children fadeout?
 };
@@ -73,6 +81,11 @@ TYPEDESCRIPTION	CMonsterMaker::m_SaveData[] =
 	DEFINE_FIELD( CMonsterMaker, m_iMaxLiveChildren, FIELD_INTEGER ),
 	DEFINE_FIELD( CMonsterMaker, m_fActive, FIELD_BOOLEAN ),
 	DEFINE_FIELD( CMonsterMaker, m_fFadeChildren, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CMonsterMaker, m_iBeamCount, FIELD_INTEGER ),
+	DEFINE_FIELD( CMonsterMaker, m_flSpriteScale, FIELD_FLOAT ),
+	DEFINE_FIELD( CMonsterMaker, m_flSpawnSndAtt, FIELD_FLOAT ),
+	DEFINE_FIELD( CMonsterMaker, m_flSpawnVolume, FIELD_FLOAT ),
+	DEFINE_FIELD( CMonsterMaker, m_spriteTexture, FIELD_INTEGER ),
 };
 
 
@@ -94,6 +107,41 @@ void CMonsterMaker :: KeyValue( KeyValueData *pkvd )
 	else if ( FStrEq(pkvd->szKeyName, "monstertype") )
 	{
 		m_iszMonsterClassname = ALLOC_STRING( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else if ( FStrEq(pkvd->szKeyName, "beamcount") )
+	{
+		m_iBeamCount = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if ( FStrEq(pkvd->szKeyName, "spritescale") )
+	{
+		m_flSpriteScale = atof(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if ( FStrEq(pkvd->szKeyName, "spawnsoundrad") )
+	{
+		// like ambient_generic's radii
+		switch ( atoi(pkvd->szValue) )
+		{
+		case 0:
+			m_flSpawnSndAtt = ATTN_IDLE;
+			break;
+		case 1:
+			m_flSpawnSndAtt = ATTN_STATIC;
+			break;
+		case 3:
+			m_flSpawnSndAtt = ATTN_NONE;
+			break;
+		default:
+			m_flSpawnSndAtt = ATTN_NORM;
+			break;
+		}
+		pkvd->fHandled = TRUE;
+	}
+	else if ( FStrEq(pkvd->szKeyName, "spawnvol") )
+	{
+		m_flSpawnVolume = atof(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
 	else
@@ -152,6 +200,14 @@ void CMonsterMaker :: Precache( void )
 {
 	CBaseMonster::Precache();
 
+	if ( pev->spawnflags & SF_MONSTERMAKER_WARPIN )
+	{
+		PRECACHE_SOUND( "ambience/spawnsnd.wav" );
+		PRECACHE_MODEL( "sprites/xflare1.spr" );
+		PRECACHE_MODEL( "sprites/fexplo1.spr" );
+		m_spriteTexture = PRECACHE_MODEL( "sprites/lgtning.spr" );
+	}
+
 	UTIL_PrecacheOther( STRING( m_iszMonsterClassname ) );
 }
 
@@ -163,8 +219,9 @@ void CMonsterMaker::MakeMonster( void )
 	edict_t	*pent;
 	entvars_t		*pevCreate;
 
-	if ( m_iMaxLiveChildren > 0 && m_cLiveChildren >= m_iMaxLiveChildren )
+	if ( !(pev->spawnflags & SF_MONSTERMAKER_CYCLIC) && m_iMaxLiveChildren > 0 && m_cLiveChildren >= m_iMaxLiveChildren )
 	{// not allowed to make a new one yet. Too many live ones out right now.
+		ALERT ( at_console, "Not allowed to make a new one yet. Too many live ones out right now in MonsterMaker!\n" );
 		return;
 	}
 
@@ -187,6 +244,7 @@ void CMonsterMaker::MakeMonster( void )
 	if ( count )
 	{
 		// don't build a stack of monsters!
+		ALERT ( at_console, "Don't build a stack of monsters in MonsterMaker!\n" );
 		return;
 	}
 
@@ -207,6 +265,12 @@ void CMonsterMaker::MakeMonster( void )
 
 	pevCreate = VARS( pent );
 	pevCreate->origin = pev->origin;
+	if ( pev->spawnflags & SF_MONSTERMAKER_WARPIN )
+		pevCreate->origin.z = pev->origin.z - 16;
+
+	if ( UTIL_StrIEq( STRING( m_iszMonsterClassname ), "monster_toad" ) || UTIL_StrIEq( STRING( m_iszMonsterClassname ), "monster_squeak" ) )
+		SetBits( pevCreate->spawnflags, 1 );
+
 	pevCreate->angles = pev->angles;
 	SetBits( pevCreate->spawnflags, SF_MONSTER_FALL_TO_GROUND );
 
@@ -221,6 +285,24 @@ void CMonsterMaker::MakeMonster( void )
 	{
 		// if I have a netname (overloaded), give the child monster that name as a targetname
 		pevCreate->targetname = pev->netname;
+	}
+
+	if ( pev->spawnflags & SF_MONSTERMAKER_WARPIN )
+	{
+		Vector vecSpot;
+		vecSpot.x = pevCreate->origin.x;
+		vecSpot.y = pevCreate->origin.y;
+		vecSpot.z = pevCreate->origin.z + (int)((pevCreate->absmax.z - pevCreate->absmin.z) / 2);
+
+		int iHeight;
+		if ( FClassnameIs( pevCreate, "monster_alien_slave" ) || FClassnameIs( pevCreate, "monster_exp_alien_slave" ) )
+			iHeight = 24;
+		else if ( FClassnameIs( pevCreate, "monster_alien_grunt" ) )
+			iHeight = 32;
+		else
+			iHeight = pevCreate->size.z / 3;
+
+		UTIL_SpawnerEffect( ENT( pev ), vecSpot, m_flSpawnVolume, m_flSpawnSndAtt, m_iBeamCount, m_spriteTexture, m_flSpriteScale, iHeight, 0 );
 	}
 
 	m_cLiveChildren++;// count this monster
