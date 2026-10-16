@@ -229,8 +229,8 @@ void CHighNoon::PlayerSpawn( CBasePlayer *pPlayer )
 
 	if ( tr.flFraction < 1.0 )
 	{
-		float flSpin = 9000 / ( pDrop->pev->origin - tr.vecEndPos ).Length();
-		flSpin = max( min( flSpin, 359 ), -359 );
+		float flDist = ( pDrop->pev->origin - tr.vecEndPos ).Length();
+		float flSpin = max( min( 9000 / flDist, 359 ), -359 );
 		pDrop->pev->avelocity = Vector( flSpin, 0, 0 );
 	}
 	else
