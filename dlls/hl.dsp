@@ -168,6 +168,14 @@ SOURCE=.\animation.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\bag1.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\bag2.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\barnacle.cpp
 # End Source File
 # Begin Source File
@@ -180,7 +188,15 @@ SOURCE=.\bmodels.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\bottle.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\buttons.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\cactus.cpp
 # End Source File
 # Begin Source File
 
@@ -201,6 +217,10 @@ SOURCE=.\crossbow.cpp
 # Begin Source File
 
 SOURCE=.\defaultai.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\dish.cpp
 # End Source File
 # Begin Source File
 
@@ -241,6 +261,10 @@ SOURCE=.\genericmonster.cpp
 # Begin Source File
 
 SOURCE=.\ggrenade.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\glass.cpp
 # End Source File
 # Begin Source File
 
@@ -372,6 +396,10 @@ SOURCE=.\shotgun.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\shovel.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\singleplay_gamerules.cpp
 # End Source File
 # Begin Source File
@@ -396,6 +424,10 @@ SOURCE=.\squadmonster.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\steer.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\subs.cpp
 # End Source File
 # Begin Source File
@@ -405,6 +437,10 @@ SOURCE=.\talkmonster.cpp
 # Begin Source File
 
 SOURCE=.\teamplay_gamerules.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\telegraphkey.cpp
 # End Source File
 # Begin Source File
 
@@ -434,6 +470,10 @@ SOURCE=.\weapons.cpp
 
 !ENDIF 
 
+# End Source File
+# Begin Source File
+
+SOURCE=.\wheelside.cpp
 # End Source File
 # Begin Source File
 
