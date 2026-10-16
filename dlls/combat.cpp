@@ -35,10 +35,18 @@ extern DLL_GLOBAL int			g_iSkillLevel;
 
 extern Vector VecBModelOrigin( entvars_t* pevBModel );
 extern entvars_t *g_pevLastInflictor;
+extern void ExpandHorseHulls( int fExpand );	// name ours; horses and pumas are traced with big boxes
 
 #define GERMAN_GIB_COUNT		4
 #define	HUMAN_GIB_COUNT			6
 #define ALIEN_GIB_COUNT			4
+
+// gib types (names ours); SpawnRandomGibs' third argument was a "human" flag
+#define GIB_ALIEN		0
+#define GIB_HUMAN		1
+#define GIB_SNAKE		2
+#define GIB_PUMA		3
+#define GIB_BEAR		4
 
 
 // HACKHACK -- The gib velocity equations don't work
@@ -122,7 +130,7 @@ void CGib :: SpawnStickyGibs( entvars_t *pevVictim, Vector vecOrigin, int cGibs 
 	}
 }
 
-void CGib :: SpawnHeadGib( entvars_t *pevVictim )
+void CGib :: SpawnHeadGib( entvars_t *pevVictim, int cGibs, int iGibType )
 {
 	CGib *pGib = GetClassPtr( (CGib *)NULL );
 
@@ -133,8 +141,21 @@ void CGib :: SpawnHeadGib( entvars_t *pevVictim )
 	}
 	else
 	{
-		pGib->Spawn( "models/hgibs.mdl" );// throw one head
-		pGib->pev->body = 0;
+		if ( iGibType == GIB_HUMAN )
+		{
+			pGib->Spawn( "models/hgibs.mdl" );// throw one head
+			pGib->pev->body = 0;
+		}
+		if ( iGibType == GIB_PUMA )
+		{
+			pGib->Spawn( "models/pumagibs.mdl" );
+			pGib->pev->body = 0;
+		}
+		if ( iGibType == GIB_BEAR )
+		{
+			pGib->Spawn( "models/beargibs.mdl" );
+			pGib->pev->body = 0;
+		}
 	}
 
 	if ( pevVictim )
@@ -180,7 +201,7 @@ void CGib :: SpawnHeadGib( entvars_t *pevVictim )
 	pGib->LimitVelocity();
 }
 
-void CGib :: SpawnRandomGibs( entvars_t *pevVictim, int cGibs, int human )
+void CGib :: SpawnRandomGibs( entvars_t *pevVictim, int cGibs, int iGibType )
 {
 	int cSplat;
 
@@ -195,13 +216,28 @@ void CGib :: SpawnRandomGibs( entvars_t *pevVictim, int cGibs, int human )
 		}
 		else
 		{
-			if ( human )
+			if ( iGibType == GIB_HUMAN )
 			{
 				// human pieces
 				pGib->Spawn( "models/hgibs.mdl" );
 				pGib->pev->body = RANDOM_LONG(1,HUMAN_GIB_COUNT-1);// start at one to avoid throwing random amounts of skulls (0th gib)
 			}
-			else
+			if ( iGibType == GIB_SNAKE )
+			{
+				pGib->Spawn( "models/snakegibs.mdl" );
+				pGib->pev->body = RANDOM_LONG(0,2);
+			}
+			if ( iGibType == GIB_PUMA )
+			{
+				pGib->Spawn( "models/pumagibs.mdl" );
+				pGib->pev->body = RANDOM_LONG(2,3);
+			}
+			if ( iGibType == GIB_BEAR )
+			{
+				pGib->Spawn( "models/beargibs.mdl" );
+				pGib->pev->body = RANDOM_LONG(1,3);
+			}
+			if ( iGibType == GIB_ALIEN )
 			{
 				// aliens
 				pGib->Spawn( "models/agibs.mdl" );
@@ -330,16 +366,33 @@ void CBaseMonster :: GibMonster( void )
 	{
 		if ( CVAR_GET_FLOAT("violence_hgibs") != 0 )	// Only the player will ever get here
 		{
-			CGib::SpawnHeadGib( pev );
-			CGib::SpawnRandomGibs( pev, 4, 1 );	// throw some human gibs.
+			CGib::SpawnHeadGib( pev, 1, GIB_HUMAN );
+			CGib::SpawnRandomGibs( pev, 4, GIB_HUMAN );	// throw some human gibs.
 		}
+		gibbed = TRUE;
+	}
+	else if ( HasSnakeGibs() )
+	{
+		CGib::SpawnRandomGibs( pev, 3, GIB_SNAKE );
+		gibbed = TRUE;
+	}
+	else if ( HasPumaGibs() )
+	{
+		CGib::SpawnHeadGib( pev, 1, GIB_PUMA );
+		CGib::SpawnRandomGibs( pev, 3, GIB_PUMA );
+		gibbed = TRUE;
+	}
+	else if ( HasBearGibs() )
+	{
+		CGib::SpawnHeadGib( pev, 1, GIB_BEAR );
+		CGib::SpawnRandomGibs( pev, 3, GIB_BEAR );
 		gibbed = TRUE;
 	}
 	else if ( HasAlienGibs() )
 	{
 		if ( CVAR_GET_FLOAT("violence_agibs") != 0 )	// Should never get here, but someone might call it directly
 		{
-			CGib::SpawnRandomGibs( pev, 4, 0 );	// Throw alien gibs
+			CGib::SpawnRandomGibs( pev, 4, GIB_ALIEN );	// Throw alien gibs
 		}
 		gibbed = TRUE;
 	}
@@ -563,15 +616,25 @@ void CBaseMonster::CallGibMonster( void )
 {
 	BOOL fade = FALSE;
 
+	// Wanted gibs whatever violence_hgibs and violence_agibs say
 	if ( HasHumanGibs() )
 	{
-		if ( CVAR_GET_FLOAT("violence_hgibs") == 0 )
-			fade = TRUE;
+//		if ( CVAR_GET_FLOAT("violence_hgibs") == 0 )
+//			fade = TRUE;
+	}
+	else if ( HasSnakeGibs() )
+	{
+	}
+	else if ( HasPumaGibs() )
+	{
+	}
+	else if ( HasBearGibs() )
+	{
 	}
 	else if ( HasAlienGibs() )
 	{
-		if ( CVAR_GET_FLOAT("violence_agibs") == 0 )
-			fade = TRUE;
+//		if ( CVAR_GET_FLOAT("violence_agibs") == 0 )
+//			fade = TRUE;
 	}
 
 	pev->takedamage = DAMAGE_NO;
@@ -1417,7 +1480,9 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 		Vector vecEnd;
 
 		vecEnd = vecSrc + vecDir * flDistance;
+		ExpandHorseHulls( TRUE );	// horses and pumas get their big boxes for the trace
 		UTIL_TraceLine(vecSrc, vecEnd, dont_ignore_monsters, ENT(pev)/*pentIgnore*/, &tr);
+		ExpandHorseHulls( FALSE );
 
 		tracer = 0;
 		if (iTracerFreq != 0 && (tracerCount++ % iTracerFreq) == 0)
@@ -1437,7 +1502,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 				tracer = 1;
 			switch( iBulletType )
 			{
-			case BULLET_PLAYER_MP5:
+			case BULLET_PLAYER_GATTLINGGUN:
 				break;
 			case BULLET_MONSTER_MP5:
 			case BULLET_MONSTER_9MM:
@@ -1470,21 +1535,40 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 			else switch(iBulletType)
 			{
 			default:
-			case BULLET_PLAYER_9MM:		
-				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg9MM, vecDir, &tr, DMG_BULLET); 
+			case BULLET_PLAYER_GATTLINGGUN:
+				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgGattlingGun, vecDir, &tr, DMG_BULLET); 
+				DecalGunshot( &tr, iBulletType );
 				break;
 
-			case BULLET_PLAYER_MP5:		
-				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgMP5, vecDir, &tr, DMG_BULLET); 
+			case BULLET_PLAYER_BUFFALO:
+				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgBuffalo, vecDir, &tr, DMG_BULLET); 
+				DecalGunshot( &tr, iBulletType );
 				break;
 
 			case BULLET_PLAYER_BUCKSHOT:	
 				 // make distance based!
 				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgBuckshot, vecDir, &tr, DMG_BULLET); 
+				DecalGunshot( &tr, iBulletType );
 				break;
 			
-			case BULLET_PLAYER_357:		
-				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg357, vecDir, &tr, DMG_BULLET); 
+			case BULLET_PLAYER_PISTOL:
+				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgPistol, vecDir, &tr, DMG_BULLET); 
+				DecalGunshot( &tr, iBulletType );
+				break;
+
+			case BULLET_PLAYER_COLTS:
+				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgColts, vecDir, &tr, DMG_BULLET); 
+				DecalGunshot( &tr, iBulletType );
+				break;
+
+			case BULLET_PLAYER_WINCHESTER:
+				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgWinchester, vecDir, &tr, DMG_BULLET); 
+				DecalGunshot( &tr, iBulletType );
+				break;
+
+			case BULLET_MONSTER_WINCHESTER:
+				pEntity->TraceAttack(pevAttacker, gSkillData.monDmgWinchester, vecDir, &tr, DMG_BULLET); 
+				DecalGunshot( &tr, iBulletType );
 				break;
 
 			case BULLET_MONSTER_9MM:

@@ -95,17 +95,17 @@ void CHalfLifeMultiplay::RefreshSkillData( void )
 	// suitcharger
 	gSkillData.suitchargerCapacity = 30;
 
-	// Crowbar whack
-	gSkillData.plrDmgCrowbar = 25;
+	// Knife
+	gSkillData.plrDmgKnife = 25;
 
-	// Glock Round
-	gSkillData.plrDmg9MM = 12;
+	// Pick
+	gSkillData.plrDmgPick = 25;
 
-	// 357 Round
-	gSkillData.plrDmg357 = 40;
+	// Pistol
+	gSkillData.plrDmgPistol = 20;
 
-	// MP5 Round
-	gSkillData.plrDmgMP5 = 12;
+	// Gattling gun
+	gSkillData.plrDmgGattlingGun = 12;
 
 	// M203 grenade
 	gSkillData.plrDmgM203Grenade = 100;
@@ -113,27 +113,20 @@ void CHalfLifeMultiplay::RefreshSkillData( void )
 	// Shotgun buckshot
 	gSkillData.plrDmgBuckshot = 20;// fewer pellets in deathmatch
 
-	// Crossbow
-	gSkillData.plrDmgCrossbowClient = 20;
+	// Buffalo rifle
+	gSkillData.plrDmgBuffalo = 120;
+
+	// Colts
+	gSkillData.plrDmgColts = 30;
+
+	// Bow
+	gSkillData.plrDmgBow = 70;
+
+	// Dynamite
+	gSkillData.plrDmgHandGrenade = 100;
 
 	// RPG
 	gSkillData.plrDmgRPG = 120;
-
-	// Egon
-	gSkillData.plrDmgEgonWide = 20;
-	gSkillData.plrDmgEgonNarrow = 10;
-
-	// Hand Grendade
-	gSkillData.plrDmgHandGrenade = 100;
-
-	// Satchel Charge
-	gSkillData.plrDmgSatchel = 120;
-
-	// Tripmine
-	gSkillData.plrDmgTripmine = 150;
-
-	// hornet
-	gSkillData.plrDmgHornet = 10;
 }
 
 // longest the intermission can last, in seconds

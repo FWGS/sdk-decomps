@@ -22,105 +22,87 @@ struct skilldata_t
 	int iSkillLevel; // game skill level
 
 // Monster Health & Damage
-	float	agruntHealth;
-	float agruntDmgPunch;
-
-	float apacheHealth;
-	
-	float barneyHealth;
-
-	float bigmommaHealthFactor;		// Multiply each node's health by this
-	float bigmommaDmgSlash;			// melee attack damage
-	float bigmommaDmgBlast;			// mortar attack damage
-	float bigmommaRadiusBlast;		// mortar attack radius
-
-	float bullsquidHealth;
-	float bullsquidDmgBite;
-	float bullsquidDmgWhip;
-	float bullsquidDmgSpit;
-
-	float gargantuaHealth;
-	float gargantuaDmgSlash;
-	float gargantuaDmgFire;
-	float gargantuaDmgStomp;
-
-	float hassassinHealth;
-
-	float headcrabHealth;
-	float headcrabDmgBite;
-
-	float hgruntHealth;
-	float hgruntDmgKick;
-	float hgruntShotgunPellets;
-	float hgruntGrenadeSpeed;
-
-	float houndeyeHealth;
-	float houndeyeDmgBlast;
-
-	float slaveHealth;
-	float slaveDmgClaw;
-	float slaveDmgClawrake;
-	float slaveDmgZap;
-
-	float ichthyosaurHealth;
-	float ichthyosaurDmgShake;
-
+	float hossHealth;
+	float annieHealth;
+	float bigminerHealth;
+	float bigminerDmgPunch;
+	float smallminerHealth;
+	float smallminerDmgPick;
+	float cowboyHealth;
+	float cowboyDmgPunch;
+	float cowboyDynamiteSpeed;
+	float kaiewiHealth;
+	float kaiewiDmgPunch;
+	float ramoneHealth;
+	float ramoneDmgPunch;
+	float ramoneDynamiteSpeed;
+	float mexbanditHealth;
+	float mexbanditDmgKick;
+	float mexbanditDynamiteSpeed;
 	float leechHealth;
 	float leechDmgBite;
-
-	float controllerHealth;
-	float controllerDmgZap;
-	float controllerSpeedBall;
-	float controllerDmgBall;
-
-	float nihilanthHealth;
-	float nihilanthZap;
-
-	float scientistHealth;
-
-	float snarkHealth;
-	float snarkDmgBite;
-	float snarkDmgPop;
-
-	float zombieHealth;
-	float zombieDmgOneSlash;
-	float zombieDmgBothSlash;
-
-	float turretHealth;
-	float miniturretHealth;
-	float sentryHealth;
-
+	float colonelHealth;
+	float wtownaHealth;
+	float wtownbHealth;
+	float townmexHealth;
+	float masalaHealth;
+	float nagatowHealth;
+	float crispenHealth;
+	float daveHealth;
+	float scorpionHealth;
+	float scorpionDmgSting;
+	float snakeHealth;
+	float snakeDmgBite;
+	float pumaDmgClaw;
+	float pumaDmgPounce;
+	float pumaHealth;
+	float bearDmgClaw;
+	float bearHealth;
+	float bearDmgPounce;
+	float chickenHealth;
+	float chickenDmgPeck;
+	float horseHealth;
+	float horseDmgKick;
 
 // Player Weapons
-	float plrDmgCrowbar;
-	float plrDmg9MM;
-	float plrDmg357;
-	float plrDmgMP5;
-	float plrDmgM203Grenade;
-	float plrDmgBuckshot;
-	float plrDmgCrossbowClient;
-	float plrDmgCrossbowMonster;
+	float plrDmgPick;
+	float plrDmgKnife;
+	float plrDmg9MM;	// never set (Half-Life's glock)
+	float plrDmgPistol;
+	float plrDmgGattlingGun;
+	float plrDmgM203Grenade;	// never set here; the multiplayer rules set it
+	float plrDmgBuckshot;	// sk_plr_shotgun
+	float plrDmgBuffalo;
+	float plrDmgColts;
+	float plrDmgBow;
+	float plrDmgCannonBall;
+	float plrDmgBearTrap;
 	float plrDmgRPG;
-	float plrDmgGauss;
-	float plrDmgEgonNarrow;
-	float plrDmgEgonWide;
-	float plrDmgHornet;
-	float plrDmgHandGrenade;
-	float plrDmgSatchel;
-	float plrDmgTripmine;
-	
+	float plrDmgHandGrenade;	// sk_plr_dynamite
+	float plrDmgWinchester;
+
 // weapons shared by monsters
-	float monDmg9MM;
-	float monDmgMP5;
-	float monDmg12MM;
-	float monDmgHornet;
+	float monDmg9MM;	// sk_pistol_bullet
+	float monDmgMP5;	// sk_gattlinggun_bullet
+	float monDmg12MM;	// sk_shotgun_bullet
+	float monDmgWinchester;
+	float monDmgBow;
 
 // health/suit charge
 	float suitchargerCapacity;
 	float batteryCapacity;
 	float healthchargerCapacity;
 	float healthkitCapacity;
-	float scientistHeal;
+	float herbsCapacity;
+	float elixerCapacity;
+	float colonelHeal;
+	float wtownaHeal;
+	float wtownbHeal;
+	float townmexHeal;
+	float masalaHeal;
+	float nagatowHeal;
+	float crispenHeal;
+	float daveHeal;	// Dave heals with wtownaHeal
 
 // monster damage adj
 	float monHead;

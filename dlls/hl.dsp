@@ -439,6 +439,10 @@ SOURCE=.\weapons.cpp
 
 SOURCE=.\world.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\wanted_pending.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
