@@ -1276,7 +1276,9 @@ void CStukabat::StukabatIdle( void )
 					if ( CBaseEntity::Instance( tr.pHit )->Classify() )
 						tr.vecPlaneNormal = (EyePosition() - tr.vecEndPos).Normalize();
 
-					UTIL_MakeVectorsPrivate( Vector( 0, UTIL_AngleMod( UTIL_VecToAngles( tr.vecPlaneNormal ).y + 195 ), 0 ), vecFlat, NULL, NULL );
+					// sic: the parentheses around the yaw give retail's code (VC6 keeps
+					// it in st(0) and stores it into the angles after the pushes)
+					UTIL_MakeVectorsPrivate( Vector( 0, ( UTIL_AngleMod( UTIL_VecToAngles( tr.vecPlaneNormal ).y + 195 ) ), 0 ), vecFlat, NULL, NULL );
 					m_vecGoal = pev->origin - vecFlat * 128;
 				}
 
