@@ -170,31 +170,42 @@ void CItem::Materialize( void )
 }
 
 #define SF_SUIT_SHORTLOGON		0x0001
+#define SF_SUIT_BSUIT			0x0001	// POV, name ours: models/w_bsuit.mdl
+#define SF_SUIT_SPFSUIT			0x0002	// POV, name ours: models/w_spfsuit.mdl
+#define SF_SUIT_SPFSCISUIT		0x0004	// POV, name ours: models/w_spfscisuit.mdl
 
 class CItemSuit : public CItem
 {
 	void Spawn( void )
 	{ 
+		pev->solid = SOLID_BBOX;
+		pev->movetype = MOVETYPE_NONE;
 		Precache( );
-		SET_MODEL(ENT(pev), "models/w_suit.mdl");
+		if ( pev->spawnflags & SF_SUIT_BSUIT )
+			SET_MODEL(ENT(pev), "models/w_bsuit.mdl");
+		else if ( pev->spawnflags & SF_SUIT_SPFSUIT )
+			SET_MODEL(ENT(pev), "models/w_spfsuit.mdl");
+		else if ( pev->spawnflags & SF_SUIT_SPFSCISUIT )
+			SET_MODEL(ENT(pev), "models/w_spfscisuit.mdl");
+		else
+			SET_MODEL(ENT(pev), "models/w_suit.mdl");
 		CItem::Spawn( );
 	}
 	void Precache( void )
 	{
-		PRECACHE_MODEL ("models/w_suit.mdl");
+		if ( pev->spawnflags & SF_SUIT_BSUIT )
+			PRECACHE_MODEL ("models/w_bsuit.mdl");
+		else if ( pev->spawnflags & SF_SUIT_SPFSUIT )
+			PRECACHE_MODEL ("models/w_spfsuit.mdl");
+		else if ( pev->spawnflags & SF_SUIT_SPFSCISUIT )
+			PRECACHE_MODEL ("models/w_spfscisuit.mdl");
+		else
+			PRECACHE_MODEL ("models/w_suit.mdl");
 	}
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{
-		if ( pPlayer->pev->weapons & (1<<WEAPON_SUIT) )
-			return FALSE;
-
-		if ( pev->spawnflags & SF_SUIT_SHORTLOGON )
-			EMIT_SOUND_SUIT(pPlayer->edict(), "!HEV_A0");		// short version of suit logon,
-		else
-			EMIT_SOUND_SUIT(pPlayer->edict(), "!HEV_AAx");	// long version of suit logon
-
-		pPlayer->pev->weapons |= (1<<WEAPON_SUIT);
-		return TRUE;
+		// POV: the suit is a prop
+		return FALSE;
 	}
 };
 
@@ -217,40 +228,79 @@ class CItemBattery : public CItem
 	}
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{
-		if ((pPlayer->pev->armorvalue < MAX_NORMAL_BATTERY) &&
-			(pPlayer->pev->weapons & (1<<WEAPON_SUIT)))
-		{
-			int pct;
-			char szcharge[64];
-
-			pPlayer->pev->armorvalue += gSkillData.batteryCapacity;
-			pPlayer->pev->armorvalue = min(pPlayer->pev->armorvalue, MAX_NORMAL_BATTERY);
-
-			EMIT_SOUND( pPlayer->edict(), CHAN_ITEM, "items/gunpickup2.wav", 1, ATTN_NORM );
-
-			MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
-				WRITE_STRING( STRING(pev->classname) );
-			MESSAGE_END();
-
-			
-			// Suit reports new power level
-			// For some reason this wasn't working in release build -- round it.
-			pct = (int)( (float)(pPlayer->pev->armorvalue * 100.0) * (1.0/MAX_NORMAL_BATTERY) + 0.5);
-			pct = (pct / 5);
-			if (pct > 0)
-				pct--;
-		
-			sprintf( szcharge,"!HEV_%1dP", pct );
-			
-			//EMIT_SOUND_SUIT(ENT(pev), szcharge);
-			pPlayer->SetSuitUpdate(szcharge, FALSE, SUIT_NEXT_IN_30SEC);
-			return TRUE;		
-		}
+		// POV: the battery is a prop
 		return FALSE;
 	}
 };
 
 LINK_ENTITY_TO_CLASS(item_battery, CItemBattery);
+
+
+// POV: the XTBS (the alien sphere's) props; class names ours
+class CItemXtbs : public CItem
+{
+	void Spawn( void )
+	{ 
+		Precache( );
+		SET_MODEL(ENT(pev), "models/xtbs.mdl");
+		CItem::Spawn( );
+	}
+	void Precache( void )
+	{
+		PRECACHE_MODEL ("models/xtbs.mdl");
+		PRECACHE_SOUND( "items/gunpickup2.wav" );
+	}
+	BOOL MyTouch( CBasePlayer *pPlayer )
+	{
+		return FALSE;
+	}
+};
+
+LINK_ENTITY_TO_CLASS(item_xtbs, CItemXtbs);
+
+
+class CItemXtbsSilverOnfloor : public CItem
+{
+	void Spawn( void )
+	{ 
+		Precache( );
+		SET_MODEL(ENT(pev), "models/xtbssilverground.mdl");
+		CItem::Spawn( );
+	}
+	void Precache( void )
+	{
+		PRECACHE_MODEL ("models/xtbssilverground.mdl");
+		PRECACHE_SOUND( "items/gunpickup2.wav" );
+	}
+	BOOL MyTouch( CBasePlayer *pPlayer )
+	{
+		return FALSE;
+	}
+};
+
+LINK_ENTITY_TO_CLASS(item_xtbs_silver_onfloor, CItemXtbsSilverOnfloor);
+
+
+class CItemXtbsSilverFloating : public CItem
+{
+	void Spawn( void )
+	{ 
+		Precache( );
+		SET_MODEL(ENT(pev), "models/xtbssilverfloat.mdl");
+		CItem::Spawn( );
+	}
+	void Precache( void )
+	{
+		PRECACHE_MODEL ("models/xtbssilverfloat.mdl");
+		PRECACHE_SOUND( "items/gunpickup2.wav" );
+	}
+	BOOL MyTouch( CBasePlayer *pPlayer )
+	{
+		return FALSE;
+	}
+};
+
+LINK_ENTITY_TO_CLASS(item_xtbs_silver_floating, CItemXtbsSilverFloating);
 
 
 class CItemAntidote : public CItem
@@ -279,18 +329,49 @@ LINK_ENTITY_TO_CLASS(item_antidote, CItemAntidote);
 
 class CItemSecurity : public CItem
 {
+	// POV: pev->health picks the card's colour
 	void Spawn( void )
 	{ 
 		Precache( );
-		SET_MODEL(ENT(pev), "models/w_security.mdl");
+		switch ( (int)pev->health )
+		{
+		case 1:
+			SET_MODEL(ENT(pev), "models/w_securityred.mdl");
+			break;
+		case 2:
+			SET_MODEL(ENT(pev), "models/w_securityyellow.mdl");
+			break;
+		case 3:
+			SET_MODEL(ENT(pev), "models/w_securitygreen.mdl");
+			break;
+		default:
+			SET_MODEL(ENT(pev), "models/w_security.mdl");
+			break;
+		}
 		CItem::Spawn( );
 	}
 	void Precache( void )
 	{
-		PRECACHE_MODEL ("models/w_security.mdl");
+		switch ( (int)pev->health )
+		{
+		case 1:
+			PRECACHE_MODEL ("models/w_securityred.mdl");
+			break;
+		case 2:
+			PRECACHE_MODEL ("models/w_securityyellow.mdl");
+			break;
+		case 3:
+			PRECACHE_MODEL ("models/w_securitygreen.mdl");
+			break;
+		default:
+			PRECACHE_MODEL ("models/w_security.mdl");
+			break;
+		}
 	}
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{
+		UTIL_ShowMessageAll( "POVSECURCARD01" );
+		EMIT_SOUND( ENT(pev), CHAN_VOICE, "!SLV_SECURCARD01", 1, ATTN_NONE );
 		pPlayer->m_rgItems[ITEM_SECURITY] += 1;
 		return TRUE;
 	}
