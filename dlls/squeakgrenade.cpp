@@ -24,6 +24,8 @@
 #include "soundent.h"
 #include "gamerules.h"
 
+extern DLL_GLOBAL BOOL g_fLoading;	// POV
+
 enum w_squeak_e {
 	WSQUEAK_IDLE1 = 0,
 	WSQUEAK_FIDGET,
@@ -40,12 +42,19 @@ enum squeak_e {
 	SQUEAK_THROW
 };
 
+#define SF_SNARK_IDLE		1	// POV, name ours: sits and squeaks until the flag is cleared
+#define SF_SNARK_SILENT		2	// POV, name ours: no idle squeaks
+
 class CSqueakGrenade : public CGrenade
 {
 	void Spawn( void );
 	void Precache( void );
 	int  Classify( void );
+	int  IRelationship( CBaseEntity *pTarget );
+	void StartIdle( void );	// POV, name ours
+	void StartHunt( void );	// POV, name ours
 	void EXPORT SuperBounceTouch( CBaseEntity *pOther );
+	void EXPORT IdleThink( void );
 	void EXPORT HuntThink( void );
 	int  BloodColor( void ) { return BLOOD_COLOR_YELLOW; }
 	void Killed( entvars_t *pevAttacker, int iGib );
@@ -66,6 +75,7 @@ class CSqueakGrenade : public CGrenade
 	Vector m_posPrev;
 	EHANDLE m_hOwner;
 	int  m_iMyClass;
+	float m_flNextIdleSound;	// POV, name ours
 };
 
 float CSqueakGrenade::m_flNextBounceSoundTime = 0;
@@ -98,6 +108,7 @@ int CSqueakGrenade :: Classify ( void )
 			case CLASS_PLAYER:
 			case CLASS_HUMAN_PASSIVE:
 			case CLASS_HUMAN_MILITARY:
+			case 14:	// POV: the special forces' class
 				m_iMyClass = 0;
 				return CLASS_ALIEN_MILITARY; // barney's get mad, grunts get mad at it
 		}
@@ -105,6 +116,15 @@ int CSqueakGrenade :: Classify ( void )
 	}
 
 	return CLASS_ALIEN_BIOWEAPON;
+}
+
+// POV: snarks go for the player
+int CSqueakGrenade::IRelationship( CBaseEntity *pTarget )
+{
+	if ( pTarget->IsPlayer() )
+		return R_DL;
+
+	return CBaseMonster::IRelationship( pTarget );
 }
 
 void CSqueakGrenade :: Spawn( void )
@@ -118,11 +138,6 @@ void CSqueakGrenade :: Spawn( void )
 	UTIL_SetSize(pev, Vector( -4, -4, 0), Vector(4, 4, 8));
 	UTIL_SetOrigin( pev, pev->origin );
 
-	SetTouch( SuperBounceTouch );
-	SetThink( HuntThink );
-	pev->nextthink = gpGlobals->time + 0.1;
-	m_flNextHunt = gpGlobals->time + 1E6;
-
 	pev->flags |= FL_MONSTER;
 	pev->takedamage		= DAMAGE_AIM;
 	pev->health			= gSkillData.snarkHealth;
@@ -131,17 +146,15 @@ void CSqueakGrenade :: Spawn( void )
 
 	pev->dmg = gSkillData.snarkDmgPop;
 
-	m_flDie = gpGlobals->time + SQUEEK_DETONATE_DELAY;
-
 	m_flFieldOfView = 0; // 180 degrees
 
 	if ( pev->owner )
 		m_hOwner = Instance( pev->owner );
 
-	m_flNextBounceSoundTime = gpGlobals->time;// reset each time a snark is spawned.
-
-	pev->sequence = WSQUEAK_RUN;
-	ResetSequenceInfo( );
+	if ( pev->spawnflags & SF_SNARK_IDLE )
+		StartIdle( );
+	else
+		StartHunt( );
 }
 
 void CSqueakGrenade::Precache( void )
@@ -154,6 +167,32 @@ void CSqueakGrenade::Precache( void )
 	PRECACHE_SOUND("squeek/sqk_hunt2.wav");
 	PRECACHE_SOUND("squeek/sqk_hunt3.wav");
 	PRECACHE_SOUND("squeek/sqk_deploy1.wav");
+}
+
+void CSqueakGrenade::StartIdle( void )
+{
+	SetThink( IdleThink );
+	m_flNextIdleSound = 0;
+	SetTouch( NULL );
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	pev->sequence = WSQUEAK_IDLE1;
+	ResetSequenceInfo( );
+}
+
+void CSqueakGrenade::StartHunt( void )
+{
+	SetTouch( SuperBounceTouch );
+	SetThink( HuntThink );
+	pev->nextthink = gpGlobals->time + 0.1;
+	m_flNextHunt = gpGlobals->time;
+
+	m_flDie = gpGlobals->time + SQUEEK_DETONATE_DELAY;
+
+	m_flNextBounceSoundTime = gpGlobals->time;// reset each time a snark is spawned.
+
+	pev->sequence = WSQUEAK_RUN;
+	ResetSequenceInfo( );
 }
 
 
@@ -193,6 +232,34 @@ void CSqueakGrenade :: GibMonster( void )
 	EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "common/bodysplat.wav", 0.75, ATTN_NORM, 0, 200);		
 }
 
+
+
+// POV: an idle snark looks around and squeaks now and then until it's
+// told to hunt
+void CSqueakGrenade::IdleThink( void )
+{
+	Look( 512 );
+
+	if ( !(pev->spawnflags & SF_SNARK_IDLE) )
+	{
+		StartHunt( );
+		return;
+	}
+
+	if ( gpGlobals->time > m_flNextIdleSound && !(pev->spawnflags & SF_SNARK_SILENT) )
+	{
+		switch ( RANDOM_LONG( 0, 2 ) )
+		{
+		case 0:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "squeek/sqk_hunt1.wav", RANDOM_FLOAT( 0.5, 0.85 ), ATTN_NORM );	break;
+		case 1:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "squeek/sqk_hunt2.wav", RANDOM_FLOAT( 0.5, 0.85 ), ATTN_NORM );	break;
+		default: EMIT_SOUND( ENT(pev), CHAN_VOICE, "squeek/sqk_hunt3.wav", RANDOM_FLOAT( 0.5, 0.85 ), ATTN_NORM );	break;
+		}
+		m_flNextIdleSound = gpGlobals->time + RANDOM_FLOAT( 3, 4 );
+	}
+
+	StudioFrameAdvance( );
+	pev->nextthink = gpGlobals->time + 0.1;
+}
 
 
 void CSqueakGrenade::HuntThink( void )
@@ -407,22 +474,45 @@ void CSqueakGrenade::SuperBounceTouch( CBaseEntity *pOther )
 
 
 
+// POV: what the view model's snarks say while they fidget (name ours)
+const char *pVModelSounds[] = 
+{
+	"squeek/sqk_idle1.wav",
+	"squeek/sqk_idle2.wav",
+};
+
 class CSqueak : public CBasePlayerWeapon
 {
 public:
 	void Spawn( void );
 	void Precache( void );
-	int iItemSlot( void ) { return 5; }
+	int iItemSlot( void ) { return 4; }
 	int GetItemInfo(ItemInfo *p);
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
 
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
 	BOOL Deploy( void );
 	void Holster( void );
 	void WeaponIdle( void );
+
+	void StartVModelSound( int iSound );
+	void EXPORT PlayVModelSound( void );
+	void StopVModelSound( void );	// name ours
+
+	int m_iSoundPlayed;
 	int m_fJustThrown;
 };
 LINK_ENTITY_TO_CLASS( weapon_snark, CSqueak );
+
+TYPEDESCRIPTION	CSqueak::m_SaveData[] = 
+{
+	DEFINE_FIELD( CSqueak, m_iSoundPlayed, FIELD_INTEGER ),
+};
+IMPLEMENT_SAVERESTORE( CSqueak, CBasePlayerWeapon );
 
 
 void CSqueak::Spawn( )
@@ -449,6 +539,8 @@ void CSqueak::Precache( void )
 	PRECACHE_SOUND("squeek/sqk_hunt2.wav");
 	PRECACHE_SOUND("squeek/sqk_hunt3.wav");
 	UTIL_PrecacheOther("monster_snark");
+
+	PRECACHE_SOUND_ARRAY( pVModelSounds );
 }
 
 
@@ -460,8 +552,8 @@ int CSqueak::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
-	p->iSlot = 4;
-	p->iPosition = 3;
+	p->iSlot = 3;
+	p->iPosition = 1;
 	p->iId = m_iId = WEAPON_SNARK;
 	p->iWeight = SNARK_WEIGHT;
 	p->iFlags = ITEM_FLAG_LIMITINWORLD | ITEM_FLAG_EXHAUSTIBLE;
@@ -489,8 +581,6 @@ BOOL CSqueak::Deploy( )
 
 void CSqueak::Holster( void )
 {
-	m_pPlayer->m_flNextAttack = gpGlobals->time + 0.5;
-	
 	if (!m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType])
 	{
 		m_pPlayer->pev->weapons &= ~(1<<WEAPON_SNARK);
@@ -499,15 +589,25 @@ void CSqueak::Holster( void )
 		return;
 	}
 	
-	SendWeaponAnim( SQUEAK_DOWN );
+	StopVModelSound( );
+	DefaultHolster( SQUEAK_DOWN, 1.5, 1.5 );
 	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "common/null.wav", 1.0, ATTN_NORM);
 }
 
 
 void CSqueak::PrimaryAttack()
 {
+	if ( m_pPlayer->m_fDidHolster )
+	{
+		// POV: still holstering
+		WeaponIdle( );
+		return;
+	}
+
 	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType])
 	{
+		StopVModelSound( );
+
 		UTIL_MakeVectors( m_pPlayer->pev->v_angle );
 		TraceResult tr;
 		Vector trace_origin;
@@ -552,17 +652,43 @@ void CSqueak::PrimaryAttack()
 			m_flTimeWeaponIdle = gpGlobals->time + 1.0;
 		}
 	}
+	else if ( m_flNextPrimaryAttack < gpGlobals->time )
+	{
+		// POV: click when empty
+		ResetEmptySound( );
+		PlayEmptySound( );
+		m_flNextPrimaryAttack = gpGlobals->time + 0.5;
+	}
 }
 
 
 void CSqueak::SecondaryAttack( void )
 {
-
+	if ( m_pPlayer->m_fDidHolster )
+		WeaponIdle( );
 }
 
 
 void CSqueak::WeaponIdle( void )
 {
+	if ( g_fLoading == TRUE )
+	{
+		StopVModelSound( );
+		return;
+	}
+
+	if ( m_pPlayer->m_fDidHolster )
+	{
+		// POV: the holster animation is over, draw the weapon again
+		if ( m_flTimeWeaponIdle <= gpGlobals->time )
+		{
+			m_pPlayer->m_fDidHolster = FALSE;
+			Deploy( );
+			UpdateItemInfo( );
+		}
+		return;
+	}
+
 	if (m_flTimeWeaponIdle > gpGlobals->time)
 		return;
 
@@ -581,24 +707,71 @@ void CSqueak::WeaponIdle( void )
 		return;
 	}
 
-	int iAnim;
-	float flRand = RANDOM_FLOAT(0, 1);
-	if (flRand <= 0.75)
+	if ( m_pPlayer->m_rgAmmo[PrimaryAmmoIndex()] )
 	{
-		iAnim = SQUEAK_IDLE1;
-		m_flTimeWeaponIdle = gpGlobals->time + 30.0 / 16 * (2);
+		m_iSoundPlayed = -1;
+
+		int iAnim;
+		float flRand = RANDOM_FLOAT(0, 1);
+		if (flRand <= 0.75)
+		{
+			iAnim = SQUEAK_IDLE1;
+			m_flTimeWeaponIdle = gpGlobals->time + 30.0 / 16 * (2);
+		}
+		else if (flRand <= 0.875)
+		{
+			iAnim = SQUEAK_FIDGETFIT;
+			m_flTimeWeaponIdle = gpGlobals->time + 70.0 / 16.0;
+			StartVModelSound( 0 );
+		}
+		else
+		{
+			iAnim = SQUEAK_FIDGETNIP;
+			m_flTimeWeaponIdle = gpGlobals->time + 80.0 / 16.0;
+			StartVModelSound( 1 );
+		}
+		SendWeaponAnim( iAnim );
 	}
-	else if (flRand <= 0.875)
+}
+
+
+// POV: the fidget animations' squeaks, played by think
+void CSqueak::StartVModelSound( int iSound )
+{
+	m_iSoundPlayed = iSound;
+
+	switch ( iSound )
 	{
-		iAnim = SQUEAK_FIDGETFIT;
-		m_flTimeWeaponIdle = gpGlobals->time + 70.0 / 16.0;
+	case 0:
+		pev->nextthink = gpGlobals->time + 0.7;
+		break;
+	case 1:
+		pev->nextthink = gpGlobals->time + 0.8;
+		break;
+	default:
+		ALERT( at_console, "StartVModelSound: no %d sound to play!!\n", iSound );
+		m_iSoundPlayed = -1;
+		break;
 	}
-	else
-	{
-		iAnim = SQUEAK_FIDGETNIP;
-		m_flTimeWeaponIdle = gpGlobals->time + 80.0 / 16.0;
-	}
-	SendWeaponAnim( iAnim );
+
+	if ( m_iSoundPlayed != -1 )
+		SetThink( PlayVModelSound );
+}
+
+void CSqueak::PlayVModelSound( void )
+{
+	EMIT_SOUND_DYN( ENT(m_pPlayer->pev), CHAN_VOICE, pVModelSounds[m_iSoundPlayed], 0.3, ATTN_IDLE, 0, PITCH_NORM );
+	SetThink( NULL );
+	pev->nextthink = gpGlobals->time;
+}
+
+void CSqueak::StopVModelSound( void )
+{
+	SetThink( NULL );
+	pev->nextthink = gpGlobals->time;
+
+	if ( m_iSoundPlayed != -1 )
+		EMIT_SOUND_DYN( ENT(m_pPlayer->pev), CHAN_VOICE, pVModelSounds[m_iSoundPlayed], 0.3, ATTN_IDLE, SND_STOP, PITCH_NORM );
 }
 
 #endif

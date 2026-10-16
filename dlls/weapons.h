@@ -76,7 +76,7 @@ public:
 #define WEAPON_HANDGRENADE		12
 #define WEAPON_TRIPMINE			13
 #define	WEAPON_SATCHEL			14
-#define	WEAPON_SNARK			15
+#define	WEAPON_SNARK			2	// POV (the SDK's glock id; 15 is POV's dual hornet gun's)
 
 #define WEAPON_ALLWEAPONS		(~(1<<WEAPON_SUIT))
 
