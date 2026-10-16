@@ -45,6 +45,9 @@ extern DLL_GLOBAL ULONG		g_ulFrameCount;
 
 extern void CopyToBodyQue(entvars_t* pev);
 extern int giPrecacheGrunt;
+extern int giPrecacheSmallminer;
+extern int giPrecacheCowboy;
+extern int giPrecacheRamone;
 extern int gmsgSayText;
 
 void LinkUserMessages( void );
@@ -369,6 +372,14 @@ void ClientCommand( edict_t *pEntity )
 	{
 		GetClassPtr((CBasePlayer *)pev)->SelectItem((char *)CMD_ARGV(1));
 	}
+	else if ( !gpGlobals->deathmatch && FStrEq(pcmd, "closetelegram" ) )
+	{
+		// the client closed the letter it was showing: item_telegram's
+		// DamageDecal override gives the player back control
+		CBaseEntity *pTelegram = UTIL_FindEntityByClassname( NULL, "item_telegram" );
+		if ( pTelegram && pTelegram->pev->owner == ENT(pev) )
+			pTelegram->DamageDecal( 1 );
+	}
 	else if (((pstr = strstr(pcmd, "weapon_")) != NULL)  && (pstr == pcmd))
 	{
 		GetClassPtr((CBasePlayer *)pev)->SelectItem(pcmd);
@@ -435,6 +446,7 @@ void ServerDeactivate( void )
 
 	// Peform any shutdown operations here...
 	//
+	g_pGameRules->EndMultiplayerGame();
 }
 
 void ServerActivate( edict_t *pEdictList, int edictCount, int clientMax )
@@ -650,7 +662,13 @@ void ClientPrecache( void )
 	PRECACHE_SOUND("player/geiger1.wav");
 
 	if (giPrecacheGrunt)
-		UTIL_PrecacheOther("monster_human_grunt");
+		UTIL_PrecacheOther("monster_bigminer");
+	if (giPrecacheSmallminer)
+		UTIL_PrecacheOther("monster_smallminer");
+	if (giPrecacheCowboy)
+		UTIL_PrecacheOther("monster_cowboy");
+	if (giPrecacheRamone)
+		UTIL_PrecacheOther("monster_ramone");
 }
 
 /*
