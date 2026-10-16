@@ -240,6 +240,10 @@ SOURCE=.\combat.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\cowboy.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\crispen.cpp
 # End Source File
 # Begin Source File
