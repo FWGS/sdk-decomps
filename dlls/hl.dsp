@@ -504,6 +504,10 @@ SOURCE=.\pov_kate.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_object.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_panther.cpp
 # End Source File
 # Begin Source File
