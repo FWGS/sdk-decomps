@@ -516,6 +516,10 @@ SOURCE=.\pov_scientist.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_smoke.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_spforce.cpp
 # End Source File
 # Begin Source File
