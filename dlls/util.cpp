@@ -30,6 +30,11 @@
 #include "player.h"
 #include "weapons.h"
 #include "gamerules.h"
+#include "monsters.h"
+#include "effects.h"
+#include "soundent.h"
+
+extern DLL_GLOBAL float g_flFadeEndTime;	// POV, name ours
 
 /*
 =====================
@@ -142,6 +147,365 @@ float UTIL_SharedRandomFloat( unsigned int seed, float low, float high )
 		offset = (float)tensixrand / 65536.0;
 
 		return (low + offset * range );
+	}
+}
+
+// POV: the warp-in effect of env_spawnereffect and monstermaker: a sound,
+// beams to the walls around, a light and two sprites (name ours)
+void UTIL_SpawnerEffect( edict_t *pent, Vector vecOrigin, float flVolume, float flAttenuation, int iBeamCount, int iBeamSprite, float flSpriteScale, int iLightRadius, int iSpawnType )
+{
+	TraceResult tr;
+
+	if ( iBeamCount < 1 )
+		iBeamCount = 16;
+
+	if ( flSpriteScale <= 0 )
+		flSpriteScale = 1;
+
+	if ( flAttenuation != ATTN_IDLE && flAttenuation != ATTN_STATIC && flAttenuation != ATTN_NORM && flAttenuation != ATTN_NONE )
+		flAttenuation = ATTN_NORM;
+
+	if ( flVolume <= 0 || flVolume > 1 )
+		flVolume = 1;
+
+	if ( iLightRadius <= 0 )
+		iLightRadius = 24;
+
+	if ( iSpawnType == 1 )
+		UTIL_EmitAmbientSound( pent, vecOrigin, "ambience/spawnoutsnd.wav", flVolume, flAttenuation, 0, 100 );
+	else
+		UTIL_EmitAmbientSound( pent, vecOrigin, "ambience/spawnsnd.wav", flVolume, flAttenuation, 0, 100 );
+	CSoundEnt::InsertSound( bits_SOUND_COMBAT, vecOrigin, 384, 1.0 );
+
+	for ( int i = 0; i < iBeamCount; i++ )
+	{
+		Vector vecDir = Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ) );
+		vecDir = vecDir.Normalize();
+
+		UTIL_TraceLine( vecOrigin, vecOrigin + vecDir * 1024, ignore_monsters, pent, &tr );
+
+		if ( ( tr.vecEndPos - vecOrigin ).Length() >= 102.4 && tr.flFraction != 1.0 )
+		{
+			MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
+				WRITE_BYTE( TE_BEAMPOINTS );
+				WRITE_COORD( vecOrigin.x );
+				WRITE_COORD( vecOrigin.y );
+				WRITE_COORD( vecOrigin.z );
+				WRITE_COORD( tr.vecEndPos.x );
+				WRITE_COORD( tr.vecEndPos.y );
+				WRITE_COORD( tr.vecEndPos.z );
+				WRITE_SHORT( iBeamSprite );
+				WRITE_BYTE( RANDOM_LONG( 0, 3 ) );	// frame start
+				WRITE_BYTE( 10 );	// framerate
+				WRITE_BYTE( 8 );	// life
+				WRITE_BYTE( 18 );	// width
+				WRITE_BYTE( 65 );	// noise
+				WRITE_BYTE( 197 );	// r, g, b
+				WRITE_BYTE( 243 );
+				WRITE_BYTE( 169 );
+				WRITE_BYTE( 150 );	// brightness
+				WRITE_BYTE( 35 );	// speed
+			MESSAGE_END();
+		}
+	}
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecOrigin );
+		WRITE_BYTE( TE_DLIGHT );
+		WRITE_COORD( vecOrigin.x );
+		WRITE_COORD( vecOrigin.y );
+		WRITE_COORD( vecOrigin.z );
+		WRITE_BYTE( iLightRadius );	// radius
+		WRITE_BYTE( 77 );	// r, g, b
+		WRITE_BYTE( 210 );
+		WRITE_BYTE( 130 );
+		WRITE_BYTE( 16 );	// life
+		WRITE_BYTE( 0 );	// decay
+	MESSAGE_END();
+
+	CSprite *pSprite = CSprite::SpriteCreate( "sprites/xflare1.spr", vecOrigin, TRUE );
+	pSprite->AnimateAndDie( 10 );
+	pSprite->SetTransparency( kRenderGlow, 184, 250, 214, 255, kRenderFxNoDissipation );
+	pSprite->SetScale( flSpriteScale );
+
+	pSprite = CSprite::SpriteCreate( "sprites/fexplo1.spr", vecOrigin, TRUE );
+	pSprite->AnimateAndDie( 10 );
+	pSprite->SetTransparency( kRenderGlow, 77, 210, 130, 255, kRenderFxNoDissipation );
+	pSprite->SetScale( flSpriteScale );
+}
+
+// POV: the light of a muzzle flash (name ours; pEntity is unused)
+void UTIL_MuzzleLight( CBaseEntity *pEntity, Vector vecSrc )
+{
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecSrc );
+		WRITE_BYTE( TE_DLIGHT );
+		WRITE_COORD( vecSrc.x );
+		WRITE_COORD( vecSrc.y );
+		WRITE_COORD( vecSrc.z );
+		WRITE_BYTE( RANDOM_LONG( 8, 16 ) );	// radius
+		WRITE_BYTE( 255 );	// r, g, b
+		WRITE_BYTE( 255 );
+		WRITE_BYTE( 128 );
+		WRITE_BYTE( 0 );	// life
+		WRITE_BYTE( 0 );	// decay
+	MESSAGE_END();
+}
+
+// POV: env_sound and trigger_sound show the room type by name (name ours)
+char *UTIL_RoomTypeName( float flRoomtype )
+{
+	switch ( (int)flRoomtype )
+	{
+	case 0: return "Normal (off)";
+	case 1: return "Generic";
+	case 2: return "Metal Small";
+	case 3: return "Metal Medium";
+	case 4: return "Metal Large";
+	case 5: return "Tunnel Small";
+	case 6: return "Tunnel Medium";
+	case 7: return "Tunnel Large";
+	case 8: return "Chamber Small";
+	case 9: return "Chamber Medium";
+	case 10: return "Chamber Large";
+	case 11: return "Bright Small";
+	case 12: return "Bright Medium";
+	case 13: return "Bright Large";
+	case 14: return "Water 1";
+	case 15: return "Water 2";
+	case 16: return "Water 3";
+	case 17: return "Concrete Small";
+	case 18: return "Concrete Medium";
+	case 19: return "Concrete Large";
+	case 20: return "Big 1";
+	case 21: return "Big 2";
+	case 22: return "Big 3";
+	case 23: return "Cavern Small";
+	case 24: return "Cavern Medium";
+	case 25: return "Cavern Large";
+	case 26: return "Pipe Medium";
+	case 27: return "Pipe Small";
+	case 28: return "Pipe Big?";
+	default: return "????";
+	}
+}
+
+// POV: light styles by number, 1 = "a" ... 26 = "z", 13 = "m" (normal)
+// (name ours)
+char *UTIL_LightPattern( int iPattern )
+{
+	switch ( iPattern )
+	{
+	case 1: return "a";
+	case 2: return "b";
+	case 3: return "c";
+	case 4: return "d";
+	case 5: return "e";
+	case 6: return "f";
+	case 7: return "g";
+	case 8: return "h";
+	case 9: return "i";
+	case 10: return "j";
+	case 11: return "k";
+	case 12: return "l";
+	case 14: return "n";
+	case 15: return "o";
+	case 16: return "p";
+	case 17: return "q";
+	case 18: return "r";
+	case 19: return "s";
+	case 20: return "t";
+	case 21: return "u";
+	case 22: return "v";
+	case 23: return "w";
+	case 24: return "x";
+	case 25: return "y";
+	case 26: return "z";
+	default: return "m";
+	}
+}
+
+// POV: and back (name ours)
+int UTIL_LightPatternIndex( const char *pszPattern )
+{
+	if ( UTIL_StrIEq( pszPattern, "a" ) ) return 1;
+	if ( UTIL_StrIEq( pszPattern, "b" ) ) return 2;
+	if ( UTIL_StrIEq( pszPattern, "c" ) ) return 3;
+	if ( UTIL_StrIEq( pszPattern, "d" ) ) return 4;
+	if ( UTIL_StrIEq( pszPattern, "e" ) ) return 5;
+	if ( UTIL_StrIEq( pszPattern, "f" ) ) return 6;
+	if ( UTIL_StrIEq( pszPattern, "g" ) ) return 7;
+	if ( UTIL_StrIEq( pszPattern, "h" ) ) return 8;
+	if ( UTIL_StrIEq( pszPattern, "i" ) ) return 9;
+	if ( UTIL_StrIEq( pszPattern, "j" ) ) return 10;
+	if ( UTIL_StrIEq( pszPattern, "k" ) ) return 11;
+	if ( UTIL_StrIEq( pszPattern, "l" ) ) return 12;
+	if ( UTIL_StrIEq( pszPattern, "m" ) ) return 13;
+	if ( UTIL_StrIEq( pszPattern, "n" ) ) return 14;
+	if ( UTIL_StrIEq( pszPattern, "o" ) ) return 15;
+	if ( UTIL_StrIEq( pszPattern, "p" ) ) return 16;
+	if ( UTIL_StrIEq( pszPattern, "q" ) ) return 17;
+	if ( UTIL_StrIEq( pszPattern, "r" ) ) return 18;
+	if ( UTIL_StrIEq( pszPattern, "s" ) ) return 19;
+	if ( UTIL_StrIEq( pszPattern, "t" ) ) return 20;
+	if ( UTIL_StrIEq( pszPattern, "u" ) ) return 21;
+	if ( UTIL_StrIEq( pszPattern, "v" ) ) return 22;
+	if ( UTIL_StrIEq( pszPattern, "w" ) ) return 23;
+	if ( UTIL_StrIEq( pszPattern, "x" ) ) return 24;
+	if ( UTIL_StrIEq( pszPattern, "y" ) ) return 25;
+	if ( UTIL_StrIEq( pszPattern, "z" ) ) return 26;
+	return 13;
+}
+
+// POV: CBarney::TakeDamage's heuristic, for every monster the player hurts
+// (name ours): 0 nothing, 1 complain, 2 be suspicious, 3 get mad
+int UTIL_PlayerProvoke( CBaseMonster *pMonster, entvars_t *pevAttacker )
+{
+	if ( UTIL_StrIEq( STRING( pevAttacker->classname ), "player" ) )
+	{
+		if ( pMonster->m_afMemory & bits_MEMORY_PROVOKED )
+			return 3;
+
+		if ( pMonster->m_MonsterState != MONSTERSTATE_PRONE )
+		{
+			// This is a heurstic to determine if the player intended to harm me
+			// If I have an enemy, we can't establish intent (may just be crossfire)
+			if ( pMonster->m_hEnemy == NULL )
+			{
+				// If the player was facing directly at me, or I'm already suspicious, get mad
+				if ( (pMonster->m_afMemory & bits_MEMORY_SUSPICIOUS) || IsFacing( pevAttacker, pMonster->pev->origin ) )
+					return 3;
+
+				return 2;
+			}
+			else if ( !(pMonster->m_hEnemy->IsPlayer()) && pMonster->pev->deadflag == DEAD_NO )
+			{
+				return 1;
+			}
+		}
+	}
+
+	return 0;
+}
+
+// POV (name ours)
+BOOL UTIL_IsUnderwater( CBaseEntity *pEntity )
+{
+	return pEntity->pev->waterlevel == 3;
+}
+
+BOOL UTIL_CheckAndRemoveGargEye( entvars_t *pev )
+{
+	if ( pev->flags & FL_MONSTER )
+	{
+		if ( FClassnameIs( pev, "monster_gargantua" ) )
+		{
+			edict_t *pentEye = FIND_ENTITY_BY_TARGETNAME( NULL, "gargeye" );
+
+			if ( FNullEnt( pentEye ) )
+			{
+				ALERT( at_console, "UTIL_CheckAndRemoveGargEye: ERROR - couldn't find the garg eye!\n" );
+				return FALSE;
+			}
+
+			CBaseEntity *pEye = CBaseEntity::Instance( pentEye );
+			if ( pEye )
+			{
+				ALERT( at_console, "UTIL_CheckAndRemoveGargEye: removed garg eye...\n" );
+				UTIL_Remove( pEye );
+				return TRUE;
+			}
+
+			ALERT( at_console, "UTIL_CheckAndRemoveGargEye: ERROR - couldn't make instance of garg eye!\n" );
+		}
+	}
+
+	return FALSE;
+}
+
+// POV: classes for func_tank and monster_relationship (names ours)
+BOOL UTIL_IsHumanClass( int iClass )
+{
+	if ( iClass == CLASS_HUMAN_PASSIVE || iClass == CLASS_HUMAN_MILITARY || iClass == CLASS_PLAYER_ALLY )
+		return TRUE;
+
+	return FALSE;
+}
+
+BOOL UTIL_IsAlienClass( int iClass )
+{
+	if ( iClass == CLASS_ALIEN_MILITARY || iClass == CLASS_ALIEN_PASSIVE || iClass == CLASS_ALIEN_MONSTER || iClass == CLASS_ALIEN_PREY || iClass == CLASS_ALIEN_PREDATOR )
+		return TRUE;
+
+	return FALSE;
+}
+
+BOOL UTIL_IsPlayerClass( int iClass )
+{
+	return iClass == CLASS_PLAYER;
+}
+
+BOOL UTIL_IsLivingClass( int iClass )
+{
+	if ( iClass == CLASS_PLAYER || iClass == CLASS_HUMAN_PASSIVE || iClass == CLASS_HUMAN_MILITARY || iClass == CLASS_ALIEN_MILITARY || iClass == CLASS_ALIEN_PASSIVE || iClass == CLASS_ALIEN_MONSTER || iClass == CLASS_ALIEN_PREY || iClass == CLASS_ALIEN_PREDATOR || iClass == CLASS_PLAYER_ALLY )
+		return TRUE;
+
+	return FALSE;
+}
+
+// POV: moved here from barney.cpp
+BOOL IsFacing( entvars_t *pevTest, const Vector &reference )
+{
+	Vector vecDir = (reference - pevTest->origin);
+	vecDir.z = 0;
+	vecDir = vecDir.Normalize();
+	Vector forward, angle;
+	angle = pevTest->v_angle;
+	angle.x = 0;
+	UTIL_MakeVectorsPrivate( angle, forward, NULL, NULL );
+	// He's facing me, he meant it
+	if ( DotProduct( forward, vecDir ) > 0.96 )	// +/- 15 degrees or so
+	{
+		return TRUE;
+	}
+	return FALSE;
+}
+
+// POV: CBaseMonster::FInViewCone for any entity and field of view (name ours)
+BOOL UTIL_FInViewCone( CBaseEntity *pLooker, CBaseEntity *pEntity, float flFieldOfView )
+{
+	Vector2D	vec2LOS;
+	float	flDot;
+
+	UTIL_MakeVectors ( pLooker->pev->angles );
+
+	vec2LOS = ( pEntity->pev->origin - pLooker->pev->origin ).Make2D();
+	vec2LOS = vec2LOS.Normalize();
+
+	flDot = DotProduct (vec2LOS , gpGlobals->v_forward.Make2D() );
+
+	if ( flDot > flFieldOfView )
+	{
+		return TRUE;
+	}
+	else
+	{
+		return FALSE;
+	}
+}
+
+// POV: a dying soldier drops his gun, maybe throwing it (name ours)
+void UTIL_DropGun( CBaseMonster *pMonster, char *pszItemName, BOOL fThrow )
+{
+	Vector	vecGunPos;
+	Vector	vecGunAngles;
+
+	pMonster->GetAttachment( 0, vecGunPos, vecGunAngles );
+
+	CBaseEntity *pGun = pMonster->DropItem( pszItemName, vecGunPos, vecGunAngles );
+	if ( pGun && fThrow )
+	{
+		pGun->pev->movetype = MOVETYPE_TOSS;
+		pGun->pev->velocity = Vector (RANDOM_FLOAT(-100,100), RANDOM_FLOAT(-100,100), RANDOM_FLOAT(200,300));
+		pGun->pev->avelocity = Vector ( 0, RANDOM_FLOAT( 200, 400 ), 0 );
 	}
 }
 
@@ -440,6 +804,16 @@ void UTIL_PauseGame( CBasePlayer *pPlayer, BOOL fPause )
 
 		ALERT( at_console, "UTIL_PauseGame: ERROR - failed to pause the game!\n" );
 	}
+}
+
+// POV: the SDK weapons are props that can't be picked up (name ours)
+BOOL UTIL_MakeProp( CBaseEntity *pEntity )
+{
+	UTIL_SetSize( pEntity->pev, Vector( 0, 0, 0 ), Vector( 0, 0, 0 ) );
+	UTIL_SetOrigin( pEntity->pev, pEntity->pev->origin );
+	pEntity->pev->movetype = MOVETYPE_TOSS;
+	pEntity->pev->solid = SOLID_BBOX;
+	return TRUE;
 }
 
 void UTIL_ParametricRocket( entvars_t *pev, Vector vecOrigin, Vector vecAngles, edict_t *owner )
@@ -1037,6 +1411,7 @@ void UTIL_ScreenFadeBuild( ScreenFade &fade, const Vector &color, float fadeTime
 	fade.b = (int)color.z;
 	fade.a = alpha;
 	fade.fadeFlags = flags;
+	g_flFadeEndTime = fadeTime + gpGlobals->time + fadeHold;	// POV
 }
 
 
@@ -1863,6 +2238,7 @@ void UTIL_Remove( CBaseEntity *pEntity )
 	if ( !pEntity )
 		return;
 
+	UTIL_CheckAndRemoveGargEye( pEntity->pev );	// POV
 	pEntity->UpdateOnRemove();
 	pEntity->pev->flags |= FL_KILLME;
 	pEntity->pev->targetname = 0;

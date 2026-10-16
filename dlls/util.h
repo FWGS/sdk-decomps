@@ -563,3 +563,22 @@ void UTIL_StoryTitleFile( int iStoryID, char *pszFile );
 void UTIL_StoryBodyFile( int iStoryID, char *pszFile );
 int UTIL_StoryGetCodeStoryID( int iszCode );
 void UTIL_PauseGame( CBasePlayer *pPlayer, BOOL fPause );
+
+// POV: the other helpers (names ours unless an error message gives them)
+class CBaseMonster;
+void UTIL_SpawnerEffect( edict_t *pent, Vector vecOrigin, float flVolume, float flAttenuation, int iBeamCount, int iBeamSprite, float flSpriteScale, int iLightRadius, int iSpawnType );
+void UTIL_MuzzleLight( CBaseEntity *pEntity, Vector vecSrc );
+char *UTIL_RoomTypeName( float flRoomtype );
+char *UTIL_LightPattern( int iPattern );
+int UTIL_LightPatternIndex( const char *pszPattern );
+int UTIL_PlayerProvoke( CBaseMonster *pMonster, entvars_t *pevAttacker );
+BOOL UTIL_IsUnderwater( CBaseEntity *pEntity );
+BOOL UTIL_CheckAndRemoveGargEye( entvars_t *pev );
+BOOL UTIL_IsHumanClass( int iClass );
+BOOL UTIL_IsAlienClass( int iClass );
+BOOL UTIL_IsPlayerClass( int iClass );
+BOOL UTIL_IsLivingClass( int iClass );
+BOOL IsFacing( entvars_t *pevTest, const Vector &reference );
+BOOL UTIL_FInViewCone( CBaseEntity *pLooker, CBaseEntity *pEntity, float flFieldOfView );
+void UTIL_DropGun( CBaseMonster *pMonster, char *pszItemName, BOOL fThrow );
+BOOL UTIL_MakeProp( CBaseEntity *pEntity );
