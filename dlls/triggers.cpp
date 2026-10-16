@@ -28,6 +28,7 @@
 #include "trains.h"			// trigger_camera has train functionality
 #include "gamerules.h"
 #include "weapons.h"			// POV: trigger_playerfreeze holsters the weapon
+#include "skill.h"			// POV: area_break is off on hard
 
 #define	SF_TRIGGER_PUSH_START_OFF	2//spawnflag that makes trigger_push spawn turned OFF
 #define SF_TRIGGER_HURT_TARGETONCE	1// Only fire hurt target once
@@ -39,7 +40,6 @@
 extern DLL_GLOBAL BOOL		g_fGameOver;
 extern DLL_GLOBAL BOOL		g_fLoading;		// POV, name ours: a level was just loaded or restored
 extern DLL_GLOBAL BOOL		g_fNoPickupSound;	// POV, name ours
-extern DLL_GLOBAL int		g_iSkillLevel;
 
 extern void SetMovedir(entvars_t* pev);
 extern Vector VecBModelOrigin( entvars_t* pevBModel );
@@ -3201,4 +3201,467 @@ void CTriggerCamera::Move()
 
 	float fraction = 2 * gpGlobals->frametime;
 	pev->velocity = ((pev->movedir * pev->speed) * fraction) + (pev->velocity * (1-fraction));
+}
+
+
+//=====================================
+//
+// POV: area_break - while the player stands in the area and looks at the
+// breakent entity, the HUD shows the break icon (never on hard)
+//
+class CAreaBreak : public CBaseTrigger
+{
+public:
+	void Spawn( void );
+	void KeyValue( KeyValueData *pkvd );
+	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void EXPORT AreaBreakTouch( CBaseEntity *pOther );
+	void EXPORT AreaBreakThink( void );
+	BOOL IsLookingAt( CBasePlayer *pPlayer, CBaseEntity *pEntity );	// name ours
+	void RemoveArea( void );	// name ours
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	int				m_iszBreakEntity;
+	CBasePlayer		*m_pPlayer;
+};
+
+LINK_ENTITY_TO_CLASS( area_break, CAreaBreak );
+
+TYPEDESCRIPTION	CAreaBreak::m_SaveData[] = 
+{
+	DEFINE_FIELD( CAreaBreak, m_iszBreakEntity, FIELD_STRING ),
+	DEFINE_FIELD( CAreaBreak, m_pPlayer, FIELD_CLASSPTR ),
+};
+
+IMPLEMENT_SAVERESTORE(CAreaBreak,CBaseTrigger);
+
+void CAreaBreak :: KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "breakent"))
+	{
+		m_iszBreakEntity = ALLOC_STRING( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CBaseDelay::KeyValue( pkvd );
+}
+
+void CAreaBreak :: Spawn( void )
+{
+	InitTrigger();
+
+	m_pPlayer = NULL;
+	SetTouch( AreaBreakTouch );
+}
+
+void CAreaBreak :: AreaBreakTouch( CBaseEntity *pOther )
+{
+	if ( g_iSkillLevel != SKILL_HARD )
+	{
+		if ( !FBitSet( pOther->pev->flags, FL_CLIENT ) )
+			return;
+
+		int iCount = 0;
+		CBaseEntity *pEntity = UTIL_FindEntityByTargetname( NULL, STRING(m_iszBreakEntity) );
+		if ( pEntity )
+		{
+			while ( pEntity )
+			{
+				iCount++;
+				pEntity = UTIL_FindEntityByTargetname( pEntity, STRING(m_iszBreakEntity) );
+			}
+
+			if ( iCount > 1 )
+			{
+				ALERT( at_console, "AreaBreak: ERROR - there can only be one BreakEntity %s!\n", STRING(m_iszBreakEntity) );
+				RemoveArea();
+				return;
+			}
+
+			m_pPlayer = (CBasePlayer *)CBaseEntity::Instance( pOther->pev );
+
+			SetTouch( NULL );
+			SetThink( AreaBreakThink );
+			pev->nextthink = gpGlobals->time;
+			return;
+		}
+
+		if ( !m_iszBreakEntity )
+			ALERT( at_console, "AreaBreak: ERROR - couldn't find BreakEntity or not set!\n" );
+	}
+
+	RemoveArea();
+}
+
+void CAreaBreak :: AreaBreakThink( void )
+{
+	CBaseEntity *pList[3];
+
+	int count = UTIL_EntitiesInBox( pList, 3, pev->absmin, pev->absmax, FL_CLIENT );
+	if ( count > 1 )
+	{
+		ALERT( at_console, "AreaBreak: ERROR - more then one player found!\n" );
+		return;
+	}
+
+	if ( count == 0 )
+	{
+		// the player left the area
+		m_pPlayer->SetBreakIcon( 0 );
+		SetTouch( AreaBreakTouch );
+		SetThink( NULL );
+		return;
+	}
+
+	CBaseEntity *pEntity = UTIL_FindEntityByTargetname( NULL, STRING(m_iszBreakEntity) );
+	if ( !pEntity )
+	{
+		// it's broken
+		RemoveArea();
+		return;
+	}
+
+	int iState = IsLookingAt( m_pPlayer, pEntity );
+	if ( iState != m_pPlayer->m_iBreakIcon )
+		m_pPlayer->SetBreakIcon( iState );
+
+	pev->nextthink = gpGlobals->time + 0.1;
+}
+
+BOOL CAreaBreak :: IsLookingAt( CBasePlayer *pPlayer, CBaseEntity *pEntity )
+{
+	TraceResult tr;
+
+	UTIL_MakeVectors( pPlayer->pev->v_angle );
+	Vector vecSrc = pPlayer->pev->origin;
+	vecSrc.z += pPlayer->pev->size.z * 0.4;
+	Vector vecEnd = vecSrc + gpGlobals->v_forward * 256;
+
+	UTIL_TraceLine( vecSrc, vecEnd, ignore_monsters, ENT(pev), &tr );
+
+	if ( tr.pHit )
+	{
+		CBaseEntity *pHit = CBaseEntity::Instance( tr.pHit );
+		if ( pHit )
+			return UTIL_StrIEq( STRING(pEntity->pev->targetname), STRING(pHit->pev->targetname) );
+
+		ALERT( at_console, "AreaBreak: ERROR - couldn't Instance entity!\n" );
+	}
+
+	return FALSE;
+}
+
+void CAreaBreak::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	CBaseEntity *pPlayer = UTIL_FindEntityByClassname( NULL, "player" );
+
+	if ( pPlayer )
+		AreaBreakTouch( pPlayer );
+	else
+		ALERT( at_console, "AreaBreak: ERROR - player not found!!\n" );
+}
+
+void CAreaBreak :: RemoveArea( void )
+{
+	if ( m_pPlayer && m_pPlayer->m_iBreakIcon )
+		m_pPlayer->SetBreakIcon( 0 );
+
+	SetTouch( NULL );
+	SetThink( SUB_Remove );
+	pev->nextthink = gpGlobals->time;
+}
+
+
+//=====================================
+//
+// POV: area_story - marks a journal entry (storyid) found. By storystyle:
+// 1 shows it at once, 4 only lights the story icon; 2 and 3 show it, 5
+// and 6 light the icon, when the player looks at storyent (3 and 6: once
+// it's dead)
+//
+#define SF_AREASTORY_USEONLY	0x0001	// name ours
+
+class CAreaStory : public CBaseTrigger
+{
+public:
+	void Spawn( void );
+	void KeyValue( KeyValueData *pkvd );
+	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void EXPORT AreaStoryTouch( CBaseEntity *pOther );
+	void StartStory( void );	// name ours
+	void EXPORT AreaStoryThink( void );
+	int IsStoryFound( CBasePlayer *pPlayer, CBaseEntity *pEntity, BOOL fNeedsDead );	// name ours
+	int IsMonsterFaced( CBasePlayer *pPlayer, CBaseEntity *pEntity, BOOL fNeedsDead );	// name ours
+	int IsEntityLookedAt( CBasePlayer *pPlayer, CBaseEntity *pEntity, BOOL fNeedsDead );	// name ours
+	void RemoveArea( void );	// name ours
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	int				m_iszStoryEntity;
+	int				m_iStyle;
+	int				m_iStoryID;
+	CBasePlayer		*m_pPlayer;
+};
+
+LINK_ENTITY_TO_CLASS( area_story, CAreaStory );
+
+TYPEDESCRIPTION	CAreaStory::m_SaveData[] = 
+{
+	DEFINE_FIELD( CAreaStory, m_iszStoryEntity, FIELD_STRING ),
+	DEFINE_FIELD( CAreaStory, m_iStyle, FIELD_INTEGER ),
+	DEFINE_FIELD( CAreaStory, m_iStoryID, FIELD_INTEGER ),
+	DEFINE_FIELD( CAreaStory, m_pPlayer, FIELD_CLASSPTR ),
+};
+
+IMPLEMENT_SAVERESTORE(CAreaStory,CBaseTrigger);
+
+void CAreaStory :: Spawn( void )
+{
+	InitTrigger();
+
+	if ( pev->spawnflags & SF_AREASTORY_USEONLY )
+		SetTouch( NULL );
+	else
+		SetTouch( AreaStoryTouch );
+
+	SetThink( NULL );
+	m_pPlayer = NULL;
+}
+
+void CAreaStory :: KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "storystyle"))
+	{
+		m_iStyle = atoi( pkvd->szValue );
+		if ( m_iStyle < 1 || m_iStyle > 6 )
+		{
+			ALERT( at_console, "CAreaStory: ERROR - invalid Style!\n" );
+			m_iStyle = 1;
+		}
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "storyent"))
+	{
+		m_iszStoryEntity = ALLOC_STRING( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "storyid"))
+	{
+		m_iStoryID = UTIL_StoryGetCodeStoryID( ALLOC_STRING( pkvd->szValue ) );
+		pkvd->fHandled = TRUE;
+	}
+	else
+		pkvd->fHandled = FALSE;
+}
+
+void CAreaStory::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	if ( !m_pPlayer )
+	{
+		m_pPlayer = (CBasePlayer *)UTIL_FindEntityByClassname( NULL, "player" );
+		if ( !m_pPlayer )
+		{
+			ALERT( at_console, "CAreaStory: ERROR - couldn't find player, removing!\n" );
+			RemoveArea();
+			return;
+		}
+	}
+
+	StartStory();
+}
+
+void CAreaStory :: AreaStoryTouch( CBaseEntity *pOther )
+{
+	if ( !FBitSet( pOther->pev->flags, FL_CLIENT ) )
+		return;
+
+	if ( m_iStyle == 2 || m_iStyle == 3 || m_iStyle == 5 || m_iStyle == 6 )
+	{
+		// these need the story entity
+		int iCount = 0;
+		CBaseEntity *pEntity = UTIL_FindEntityByTargetname( NULL, STRING(m_iszStoryEntity) );
+		if ( pEntity )
+		{
+			while ( pEntity )
+			{
+				iCount++;
+				pEntity = UTIL_FindEntityByTargetname( pEntity, STRING(m_iszStoryEntity) );
+			}
+
+			if ( iCount > 1 )
+			{
+				ALERT( at_console, "AreaStory: ERROR - there can only be one StoryEntity %s!\n", STRING(m_iszStoryEntity) );
+				RemoveArea();
+				return;
+			}
+		}
+		else
+		{
+			if ( !m_iszStoryEntity )
+				ALERT( at_console, "AreaStory: ERROR - couldn't find StoryEntity or not set!\n" );
+			RemoveArea();
+			return;
+		}
+	}
+
+	m_pPlayer = (CBasePlayer *)CBaseEntity::Instance( pOther->pev );
+	if ( !m_pPlayer )
+	{
+		ALERT( at_console, "CAreaStory: ERROR - couldn't instance player, removing!\n" );
+		RemoveArea();
+		return;
+	}
+
+	StartStory();
+}
+
+void CAreaStory :: StartStory( void )
+{
+	switch ( m_iStyle )
+	{
+	case 1:
+		m_pPlayer->m_fStoryNavigate = FALSE;
+		m_pPlayer->ShowStory( m_iStoryID );
+		RemoveArea();
+		break;
+
+	case 4:
+		m_pPlayer->SetStoryIcon( 1, m_iStoryID );
+		RemoveArea();
+		break;
+
+	case 2:
+	case 3:
+	case 5:
+	case 6:
+		SetTouch( NULL );
+		SetThink( AreaStoryThink );
+		pev->nextthink = gpGlobals->time;
+		break;
+	}
+}
+
+void CAreaStory :: AreaStoryThink( void )
+{
+	CBaseEntity *pList[3];
+
+	int count = UTIL_EntitiesInBox( pList, 3, pev->absmin, pev->absmax, FL_CLIENT );
+	if ( count > 1 )
+	{
+		ALERT( at_console, "CAreaStory: ERROR - more then one player found!\n" );
+		return;
+	}
+
+	if ( count == 0 )
+	{
+		// the player left the area
+		UTIL_StoryUpdateIcon( m_pPlayer );
+
+		if ( pev->spawnflags & SF_AREASTORY_USEONLY )
+			SetTouch( NULL );
+		else
+			SetTouch( AreaStoryTouch );
+
+		SetThink( NULL );
+		return;
+	}
+
+	CBaseEntity *pEntity = UTIL_FindEntityByTargetname( NULL, STRING(m_iszStoryEntity) );
+	if ( !pEntity )
+	{
+		RemoveArea();
+		return;
+	}
+
+	if ( m_iStyle == 2 || m_iStyle == 3 )
+	{
+		int iFound;
+		if ( m_iStyle == 2 )
+			iFound = IsStoryFound( m_pPlayer, pEntity, FALSE );
+		else
+			iFound = IsStoryFound( m_pPlayer, pEntity, TRUE );
+
+		if ( iFound == 1 )
+		{
+			m_pPlayer->m_fStoryNavigate = FALSE;
+			m_pPlayer->ShowStory( m_iStoryID );
+			RemoveArea();
+			return;
+		}
+	}
+	else
+	{
+		int iFound;
+		if ( m_iStyle == 5 )
+			iFound = IsStoryFound( m_pPlayer, pEntity, FALSE );
+		else
+			iFound = IsStoryFound( m_pPlayer, pEntity, TRUE );
+
+		if ( iFound == 1 )
+		{
+			m_pPlayer->SetStoryIcon( 1, m_iStoryID );
+			RemoveArea();
+			return;
+		}
+	}
+
+	pev->nextthink = gpGlobals->time + 0.1;
+}
+
+int CAreaStory :: IsStoryFound( CBasePlayer *pPlayer, CBaseEntity *pEntity, BOOL fNeedsDead )
+{
+	if ( FBitSet( pEntity->pev->flags, FL_MONSTER ) )
+		return IsMonsterFaced( pPlayer, pEntity, fNeedsDead );
+
+	return IsEntityLookedAt( pPlayer, pEntity, fNeedsDead );
+}
+
+int CAreaStory :: IsMonsterFaced( CBasePlayer *pPlayer, CBaseEntity *pEntity, BOOL fNeedsDead )
+{
+	int iFound = IsFacing( pPlayer->pev, pEntity->pev->origin );
+	if ( iFound == 1 && fNeedsDead == 1 && pEntity->pev->deadflag != DEAD_DEAD )
+		iFound = 0;
+
+	return iFound;
+}
+
+int CAreaStory :: IsEntityLookedAt( CBasePlayer *pPlayer, CBaseEntity *pEntity, BOOL fNeedsDead )
+{
+	TraceResult tr;
+	int iFound = 0;
+
+	if ( fNeedsDead == 1 )
+		ALERT( at_console, "CAreaStory: WARNING - NeedsToBeDead on entity\n" );
+
+	UTIL_MakeVectors( pPlayer->pev->v_angle );
+	Vector vecSrc = pPlayer->pev->origin;
+	vecSrc.z += pPlayer->pev->size.z * 0.4;
+	Vector vecEnd = vecSrc + gpGlobals->v_forward * 1024;
+
+	UTIL_TraceLine( vecSrc, vecEnd, ignore_monsters, ENT(pev), &tr );
+
+	if ( tr.pHit )
+	{
+		CBaseEntity *pHit = CBaseEntity::Instance( tr.pHit );
+		if ( pHit )
+			iFound = UTIL_StrIEq( STRING(pEntity->pev->targetname), STRING(pHit->pev->targetname) );
+		else
+			ALERT( at_console, "CAreaStory: ERROR - couldn't Instance entity!\n" );
+	}
+
+	return iFound;
+}
+
+void CAreaStory :: RemoveArea( void )
+{
+	SetTouch( NULL );
+	SetThink( SUB_Remove );
+	pev->nextthink = gpGlobals->time;
 }
