@@ -196,7 +196,7 @@ CSchemeManager::CSchemeManager( int xRes, int yRes )
 	}
 
 	// record what has been entered so we can create defaults from the different values
-	bool hasFgColor, hasBgColor, hasArmedFgColor, hasArmedBgColor, hasMouseDownFgColor, hasMouseDownBgColor;
+	bool hasBgColor, hasArmedFgColor, hasArmedBgColor, hasMouseDownFgColor, hasMouseDownBgColor;
 
 	pFile = gEngfuncs.COM_ParseFile( pFile, token );
 	while ( strlen(token) > 0 && (currentScheme < numTmpSchemes) )
@@ -235,10 +235,11 @@ CSchemeManager::CSchemeManager( int xRes, int yRes )
 			if ( pScheme )
 			{
 				// foreground color defaults (normal -> armed -> mouse down)
-				if ( !hasFgColor )
-				{
-					pScheme->fgColor[0] = pScheme->fgColor[1] = pScheme->fgColor[2] = pScheme->fgColor[3] = 255;
-				}
+				// (the text is always green)
+				pScheme->fgColor[0] = 0;
+				pScheme->fgColor[1] = 255;
+				pScheme->fgColor[2] = 0;
+				pScheme->fgColor[3] = 255;
 				if ( !hasArmedFgColor )
 				{
 					memcpy( pScheme->armedFgColor, pScheme->fgColor, sizeof(pScheme->armedFgColor) );
@@ -276,7 +277,7 @@ CSchemeManager::CSchemeManager( int xRes, int yRes )
 			// create the new scheme
 			currentScheme++;
 			pScheme = &tmpSchemes[currentScheme];
-			hasFgColor = hasBgColor = hasArmedFgColor = hasArmedBgColor = hasMouseDownFgColor = hasMouseDownBgColor = false;
+			hasBgColor = hasArmedFgColor = hasArmedBgColor = hasMouseDownFgColor = hasMouseDownBgColor = false;
 
 			strncpy( pScheme->schemeName, paramValue, CScheme::SCHEME_NAME_LENGTH );
 			pScheme->schemeName[CScheme::SCHEME_NAME_LENGTH-1] = '\0'; // ensure null termination of string
@@ -305,7 +306,6 @@ CSchemeManager::CSchemeManager( int xRes, int yRes )
 		else if ( !stricmp(paramName, "FgColor") )
 		{
 			ParseRGBAFromString( pScheme->fgColor, paramValue );
-			hasFgColor = true;
 		}
 		else if ( !stricmp(paramName, "BgColor") )
 		{
@@ -355,7 +355,10 @@ buildDefaultFont:
 		strcpy( tmpSchemes[0].schemeName, "Default Scheme" );
 		strcpy( tmpSchemes[0].fontName, "Arial" );
 		tmpSchemes[0].fontSize = 0;
-		tmpSchemes[0].fgColor[0] = tmpSchemes[0].fgColor[1] = tmpSchemes[0].fgColor[2] = tmpSchemes[0].fgColor[3] = 255;
+		tmpSchemes[0].fgColor[0] = 0;
+		tmpSchemes[0].fgColor[1] = 255;
+		tmpSchemes[0].fgColor[2] = 0;
+		tmpSchemes[0].fgColor[3] = 255;
 		tmpSchemes[0].armedFgColor[0] = tmpSchemes[0].armedFgColor[1] = tmpSchemes[0].armedFgColor[2] = tmpSchemes[0].armedFgColor[3] = 255;
 		tmpSchemes[0].mousedownFgColor[0] = tmpSchemes[0].mousedownFgColor[1] = tmpSchemes[0].mousedownFgColor[2] = tmpSchemes[0].mousedownFgColor[3] = 255;
 	}
