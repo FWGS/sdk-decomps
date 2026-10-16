@@ -52,9 +52,22 @@ IMPLEMENT_SAVERESTORE( CTalkMonster, CBaseMonster );
 // array of friend names
 char *CTalkMonster::m_szFriends[TLK_CFRIENDS] = 
 {
-	"monster_barney",
-	"monster_scientist",
-	"monster_sitting_scientist",
+	"monster_twnwesta",
+	"monster_sitting_twnwesta",
+	"monster_twnwestb",
+	"monster_sitting_twnwestb",
+	"monster_townmex",
+	"monster_sitting_townmex",
+	"monster_masala",
+	"monster_sitting_masala",
+	"monster_nagatow",
+	"monster_sitting_nagatow",
+	"monster_crispen",
+	"monster_sitting_crispen",
+	"monster_dave",
+	"monster_sitting_dave",
+	"monster_hoss",
+	"monster_annie",
 };
 
 
@@ -1431,7 +1444,7 @@ void CTalkMonster :: FollowerUse( CBaseEntity *pActivator, CBaseEntity *pCaller,
 			LimitFollowers( pCaller , 1 );
 
 			if ( m_afMemory & bits_MEMORY_PROVOKED )
-				ALERT( at_console, "I'm not following you, you evil person!\n" );
+				ALERT( at_console, "Oh I get it - so now you wanna be freinds right !?! \n" );
 			else
 			{
 				StartFollowing( pCaller );
