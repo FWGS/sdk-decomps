@@ -280,6 +280,10 @@ SOURCE=.\explode.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\flag.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\flyingmonster.cpp
 # End Source File
 # Begin Source File
