@@ -568,6 +568,10 @@ SOURCE=.\pov_sslave.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\pov_vulcan.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\pov_worker.cpp
 # End Source File
 # Begin Source File
