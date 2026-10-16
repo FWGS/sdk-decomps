@@ -80,6 +80,13 @@ void CBasePlatTrain :: KeyValue( KeyValueData *pkvd )
 		m_vecFinalAngle.x = atof(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "spawnorigin"))
+	{
+		Vector tmp;
+		UTIL_StringToVector( (float *)tmp, pkvd->szValue );
+		if ( tmp != g_vecZero )
+			pev->origin = tmp;
+	}
 	else if (FStrEq(pkvd->szKeyName, "movesnd"))
 	{
 		m_bMoveSnd = atof(pkvd->szValue);
@@ -498,7 +505,7 @@ void CFuncPlat :: Blocked( CBaseEntity *pOther )
 {
 	ALERT( at_aiconsole, "%s Blocked by %s\n", STRING(pev->classname), STRING(pOther->pev->classname) );
 	// Hurt the blocker a little
-	pOther->TakeDamage(pev, pev, 1, DMG_CRUSH);
+	pOther->TakeDamage(pev, pev, pev->dmg, DMG_CRUSH);
 
 	if(pev->noiseMovement)
 		STOP_SOUND(ENT(pev), CHAN_STATIC, (char*)STRING(pev->noiseMovement));
@@ -563,6 +570,13 @@ void CFuncPlatRot :: SetupRotation( void )
 void CFuncPlatRot :: Spawn( void )
 {
 	CFuncPlat :: Spawn();
+
+	// POV: spawnflag 2 makes the platform passable
+	if ( pev->spawnflags & 2 )
+		pev->solid = SOLID_NOT;
+	else
+		pev->solid = SOLID_BSP;
+
 	SetupRotation();
 }
 
@@ -644,9 +658,19 @@ public:
 	virtual int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
 
+	// POV: start, move and stop sounds from files (names ours)
+	void PlayStartSound( void );
+	void PlayMoveSound( BOOL fRestart );
+	void PlayStopSound( BOOL fStopMoving );
+
 	entvars_t	*m_pevCurrentTarget;
 	int			m_sounds;
 	BOOL		m_activated;
+
+	int			m_iszMoveSoundWav;
+	int			m_iszStartSoundWav;
+	int			m_iszStopSoundWav;
+	BOOL		m_bStartSoundPlayed;
 };
 
 LINK_ENTITY_TO_CLASS( func_train, CFuncTrain );
@@ -655,6 +679,10 @@ TYPEDESCRIPTION	CFuncTrain::m_SaveData[] =
 	DEFINE_FIELD( CFuncTrain, m_sounds, FIELD_INTEGER ),
 	DEFINE_FIELD( CFuncTrain, m_pevCurrentTarget, FIELD_EVARS ),
 	DEFINE_FIELD( CFuncTrain, m_activated, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CFuncTrain, m_iszStartSoundWav, FIELD_STRING ),
+	DEFINE_FIELD( CFuncTrain, m_iszMoveSoundWav, FIELD_STRING ),
+	DEFINE_FIELD( CFuncTrain, m_iszStopSoundWav, FIELD_STRING ),
+	DEFINE_FIELD( CFuncTrain, m_bStartSoundPlayed, FIELD_BOOLEAN ),
 };
 
 IMPLEMENT_SAVERESTORE( CFuncTrain, CBasePlatTrain );
@@ -667,8 +695,59 @@ void CFuncTrain :: KeyValue( KeyValueData *pkvd )
 		m_sounds = atoi(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "movesndwav"))
+	{
+		m_iszMoveSoundWav = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "startsndwav"))
+	{
+		m_iszStartSoundWav = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "stopsndwav"))
+	{
+		m_iszStopSoundWav = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
 	else
 		CBasePlatTrain::KeyValue( pkvd );
+}
+
+
+void CFuncTrain :: PlayStartSound( void )
+{
+	if ( !m_bStartSoundPlayed )
+	{
+		if ( pev->noise2 )
+			EMIT_SOUND (ENT(pev), CHAN_VOICE, (char*)STRING(pev->noise2), m_volume, ATTN_NORM);
+		m_bStartSoundPlayed = TRUE;
+	}
+}
+
+
+void CFuncTrain :: PlayMoveSound( BOOL fRestart )
+{
+	if ( fRestart )
+	{
+		if ( pev->noiseMovement )
+			STOP_SOUND( edict(), CHAN_STATIC, (char*)STRING(pev->noiseMovement) );
+		if ( pev->noiseMovement )
+			EMIT_SOUND (ENT(pev), CHAN_STATIC, (char*)STRING(pev->noiseMovement), m_volume, ATTN_NORM);
+	}
+}
+
+
+void CFuncTrain :: PlayStopSound( BOOL fStopMoving )
+{
+	if ( fStopMoving )
+	{
+		if ( pev->noiseMovement )
+			STOP_SOUND( edict(), CHAN_STATIC, (char*)STRING(pev->noiseMovement) );
+	}
+	if ( pev->noiseStopMoving )
+		EMIT_SOUND (ENT(pev), CHAN_VOICE, (char*)STRING(pev->noiseStopMoving), m_volume, ATTN_NORM);
+	m_bStartSoundPlayed = FALSE;
 }
 
 
@@ -700,8 +779,7 @@ void CFuncTrain :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE 
 			pev->target = pev->enemy->v.targetname;
 		pev->nextthink = 0;
 		pev->velocity = g_vecZero;
-		if ( pev->noiseStopMoving )
-			EMIT_SOUND (ENT(pev), CHAN_VOICE, (char*)STRING(pev->noiseStopMoving), m_volume, ATTN_NORM);
+		PlayStopSound( FALSE );
 	}
 }
 
@@ -721,10 +799,7 @@ void CFuncTrain :: Wait( void )
     {
 		pev->spawnflags |= SF_TRAIN_WAIT_RETRIGGER;
         // clear the sound channel.
-		if ( pev->noiseMovement )
-			STOP_SOUND( edict(), CHAN_STATIC, (char*)STRING(pev->noiseMovement) );
-		if ( pev->noiseStopMoving )
-			EMIT_SOUND (ENT(pev), CHAN_VOICE, (char*)STRING(pev->noiseStopMoving), m_volume, ATTN_NORM);
+		PlayStopSound( TRUE );
 		pev->nextthink = 0;
         return;
     }
@@ -734,10 +809,7 @@ void CFuncTrain :: Wait( void )
 	if (m_flWait != 0)
 	{// -1 wait will wait forever!		
 		pev->nextthink = pev->ltime + m_flWait;
-		if ( pev->noiseMovement )
-			STOP_SOUND( edict(), CHAN_STATIC, (char*)STRING(pev->noiseMovement) );
-		if ( pev->noiseStopMoving )
-			EMIT_SOUND (ENT(pev), CHAN_VOICE, (char*)STRING(pev->noiseStopMoving), m_volume, ATTN_NORM);
+		PlayStopSound( TRUE );
 		SetThink( Next );
 	}
 	else
@@ -760,11 +832,8 @@ void CFuncTrain :: Next( void )
 
     if ( !pTarg )
 	{
-		if ( pev->noiseMovement )
-			STOP_SOUND( edict(), CHAN_STATIC, (char*)STRING(pev->noiseMovement) );
 		// Play stop sound
-		if ( pev->noiseStopMoving )
-			EMIT_SOUND (ENT(pev), CHAN_VOICE, (char*)STRING(pev->noiseStopMoving), m_volume, ATTN_NORM);
+		PlayStopSound( TRUE );
 		return;
 	}
 
@@ -797,10 +866,8 @@ void CFuncTrain :: Next( void )
 		// CHANGED this from CHAN_VOICE to CHAN_STATIC around OEM beta time because trains should
 		// use CHAN_STATIC for their movement sounds to prevent sound field problems.
 		// this is not a hack or temporary fix, this is how things should be. (sjb).
-		if ( pev->noiseMovement )
-			STOP_SOUND( edict(), CHAN_STATIC, (char*)STRING(pev->noiseMovement) );
-		if ( pev->noiseMovement )
-			EMIT_SOUND (ENT(pev), CHAN_STATIC, (char*)STRING(pev->noiseMovement), m_volume, ATTN_NORM);
+		PlayStartSound();
+		PlayMoveSound( TRUE );
 		ClearBits(pev->effects, EF_NOINTERP);
 		SetMoveDone( Wait );
 		LinearMove (pTarg->pev->origin - (pev->mins + pev->maxs)* 0.5, pev->speed);
@@ -865,6 +932,7 @@ void CFuncTrain :: Spawn( void )
 	UTIL_SetSize (pev, pev->mins, pev->maxs);
 	UTIL_SetOrigin(pev, pev->origin);
 
+	m_bStartSoundPlayed = FALSE;
 	m_activated = FALSE;
 
 	if ( m_volume == 0 )
@@ -900,6 +968,34 @@ void CFuncTrain::Precache( void )
 		break;
 	}
 #endif
+
+	// POV: sound files instead of the preset sounds
+	pev->noise2 = MAKE_STRING("common/null.wav");
+	if ( m_iszStartSoundWav )
+	{
+		PRECACHE_SOUND( (char *)STRING(m_iszStartSoundWav) );
+		pev->noise2 = m_iszStartSoundWav;
+	}
+
+	if ( m_bMoveSnd == 14 )
+	{
+		pev->noiseMovement = MAKE_STRING("common/null.wav");
+		if ( m_iszMoveSoundWav )
+		{
+			PRECACHE_SOUND( (char *)STRING(m_iszMoveSoundWav) );
+			pev->noiseMovement = m_iszMoveSoundWav;
+		}
+	}
+
+	if ( m_bStopSnd == 9 )
+	{
+		pev->noiseStopMoving = MAKE_STRING("common/null.wav");
+		if ( m_iszStopSoundWav )
+		{
+			PRECACHE_SOUND( (char *)STRING(m_iszStopSoundWav) );
+			pev->noiseStopMoving = m_iszStopSoundWav;
+		}
+	}
 }
 
 
@@ -949,6 +1045,9 @@ TYPEDESCRIPTION	CFuncTrackTrain::m_SaveData[] =
 	DEFINE_FIELD( CFuncTrackTrain, m_flVolume, FIELD_FLOAT ),
 	DEFINE_FIELD( CFuncTrackTrain, m_flBank, FIELD_FLOAT ),
 	DEFINE_FIELD( CFuncTrackTrain, m_oldSpeed, FIELD_FLOAT ),
+	DEFINE_FIELD( CFuncTrackTrain, m_iszStartSound, FIELD_STRING ),
+	DEFINE_FIELD( CFuncTrackTrain, m_iszMoveSound, FIELD_STRING ),
+	DEFINE_FIELD( CFuncTrackTrain, m_iszStopSound, FIELD_STRING ),
 };
 
 IMPLEMENT_SAVERESTORE( CFuncTrackTrain, CBaseEntity );
@@ -974,6 +1073,21 @@ void CFuncTrackTrain :: KeyValue( KeyValueData *pkvd )
 	else if (FStrEq(pkvd->szKeyName, "sounds"))
 	{
 		m_sounds = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "movesnd"))
+	{
+		m_iszMoveSound = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "startsnd"))
+	{
+		m_iszStartSound = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "stopsnd"))
+	{
+		m_iszStopSound = ALLOC_STRING(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
 	else if (FStrEq(pkvd->szKeyName, "volume"))
@@ -1098,18 +1212,15 @@ void CFuncTrackTrain :: StopSound( void )
 	// if sound playing, stop it
 	if (m_soundPlaying && pev->noise)
 	{
-		unsigned short us_encode;
-		unsigned short us_sound  = ( ( unsigned short )( m_sounds ) & 0x0007 ) << 12;
-
-		us_encode = us_sound;
-
-		PLAYBACK_EVENT_FULL( FEV_RELIABLE | FEV_UPDATE, edict(), m_usAdjustPitch, 0.0, 
-			(float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, us_encode, 0, 1, 0 );
-
-		/*
 		STOP_SOUND(ENT(pev), CHAN_STATIC, (char*)STRING(pev->noise));
-		*/
-		EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_brake1.wav", m_flVolume, ATTN_NORM, 0, 100);
+
+		// POV: spawnflag 4 plays the sounds everywhere, 16 has no brake sound
+		float flAttenuation = (pev->spawnflags & 4) ? ATTN_NONE : ATTN_NORM;	// name ours
+
+		if ( m_sounds < 7 && !(pev->spawnflags & 16) )
+			EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_brake1.wav", m_flVolume, flAttenuation, 0, 100);
+		if ( m_sounds == 11 && !(pev->spawnflags & 16) && pev->noise2 )
+			EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, (char*)STRING(pev->noise2), m_flVolume, flAttenuation, 0, 100);
 	}
 
 	m_soundPlaying = 0;
@@ -1122,39 +1233,37 @@ void CFuncTrackTrain :: StopSound( void )
 void CFuncTrackTrain :: UpdateSound( void )
 {
 	float flpitch;
+	float flAttenuation;
 	
 	if (!pev->noise)
 		return;
 
-	flpitch = TRAIN_STARTPITCH + (abs(pev->speed) * (TRAIN_MAXPITCH - TRAIN_STARTPITCH) / TRAIN_MAXSPEED);
+	// POV: the car and jeep sounds and spawnflag 128 keep their pitch
+	if ( m_sounds != 8 && m_sounds != 9 && m_sounds != 10 && !(pev->spawnflags & 128) )
+		flpitch = TRAIN_STARTPITCH + (abs(pev->speed) * (TRAIN_MAXPITCH - TRAIN_STARTPITCH) / TRAIN_MAXSPEED);
+	else
+		flpitch = 100;
 
 	if (!m_soundPlaying)
 	{
+		flAttenuation = (pev->spawnflags & 4) ? ATTN_NONE : ATTN_NORM;
+
 		// play startup sound for train
-		EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_start1.wav", m_flVolume, ATTN_NORM, 0, 100);
-		EMIT_SOUND_DYN(ENT(pev), CHAN_STATIC, (char*)STRING(pev->noise), m_flVolume, ATTN_NORM, 0, (int) flpitch);
+		if ( m_sounds < 7 && !(pev->spawnflags & 16) )
+			EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_start1.wav", m_flVolume, flAttenuation, 0, 100);
+		if ( m_sounds == 11 && !(pev->spawnflags & 16) && pev->noise1 )
+			EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, (char*)STRING(pev->noise1), m_flVolume, flAttenuation, 0, 100);
+		if ( pev->noise )
+			EMIT_SOUND_DYN(ENT(pev), CHAN_STATIC, (char*)STRING(pev->noise), m_flVolume, flAttenuation, 0, (int) flpitch);
 		m_soundPlaying = 1;
 	} 
 	else
 	{
-/*
+		flAttenuation = (pev->spawnflags & 4) ? ATTN_NONE : ATTN_NORM;
+
 		// update pitch
-		EMIT_SOUND_DYN(ENT(pev), CHAN_STATIC, (char*)STRING(pev->noise), m_flVolume, ATTN_NORM, SND_CHANGE_PITCH, (int) flpitch);
-*/
-		// volume 0.0 - 1.0 - 6 bits
-		// m_sounds 3 bits
-		// flpitch = 6 bits
-		// 15 bits total
-
-		unsigned short us_encode;
-		unsigned short us_sound  = ( ( unsigned short )( m_sounds ) & 0x0007 ) << 12;
-		unsigned short us_pitch  = ( ( unsigned short )( flpitch / 10.0 ) & 0x003f ) << 6;
-		unsigned short us_volume = ( ( unsigned short )( m_flVolume * 40.0 ) & 0x003f );
-
-		us_encode = us_sound | us_pitch | us_volume;
-
-		PLAYBACK_EVENT_FULL( FEV_RELIABLE | FEV_UPDATE, edict(), m_usAdjustPitch, 0.0, 
-			(float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, us_encode, 0, 0, 0 );
+		if ( !(pev->spawnflags & 128) )
+			EMIT_SOUND_DYN(ENT(pev), CHAN_STATIC, (char*)STRING(pev->noise), m_flVolume, flAttenuation, SND_CHANGE_PITCH, (int) flpitch);
 	}
 }
 
@@ -1540,6 +1649,31 @@ void CFuncTrackTrain :: Precache( void )
 	case 4: PRECACHE_SOUND("plats/ttrain4.wav"); pev->noise = MAKE_STRING("plats/ttrain4.wav");break;
 	case 5: PRECACHE_SOUND("plats/ttrain6.wav"); pev->noise = MAKE_STRING("plats/ttrain6.wav");break;
 	case 6: PRECACHE_SOUND("plats/ttrain7.wav"); pev->noise = MAKE_STRING("plats/ttrain7.wav");break;
+	case 7: PRECACHE_SOUND("plats/theli1.wav"); pev->noise = MAKE_STRING("plats/theli1.wav");break;
+	case 8: PRECACHE_SOUND("ambience/cardrive2.wav"); pev->noise = MAKE_STRING("ambience/cardrive2.wav");break;
+	case 9: PRECACHE_SOUND("ambience/jeep_start.wav"); pev->noise = MAKE_STRING("ambience/jeep_start.wav");break;
+	case 10: PRECACHE_SOUND("ambience/jeep_drive.wav"); pev->noise = MAKE_STRING("ambience/jeep_drive.wav");break;
+	case 11:
+		// POV: the level designer's own move, start and stop sounds
+		pev->noise = 0;
+		pev->noise1 = 0;
+		pev->noise2 = 0;
+		if ( m_iszMoveSound )
+		{
+			PRECACHE_SOUND( (char *)STRING(m_iszMoveSound) );
+			pev->noise = m_iszMoveSound;
+		}
+		if ( m_iszStartSound )
+		{
+			PRECACHE_SOUND( (char *)STRING(m_iszStartSound) );
+			pev->noise1 = m_iszStartSound;
+		}
+		if ( m_iszStopSound )
+		{
+			PRECACHE_SOUND( (char *)STRING(m_iszStopSound) );
+			pev->noise2 = m_iszStopSound;
+		}
+		break;
 	}
 
 	PRECACHE_SOUND("plats/ttrain_brake1.wav");

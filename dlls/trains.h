@@ -120,6 +120,11 @@ public:
 	float		m_flBank;
 	float		m_oldSpeed;
 
+	// POV: sound files for m_sounds 11
+	int			m_iszMoveSound;
+	int			m_iszStartSound;
+	int			m_iszStopSound;
+
 private:
 	unsigned short m_usAdjustPitch;
 };
