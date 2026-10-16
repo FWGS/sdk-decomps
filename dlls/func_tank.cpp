@@ -565,7 +565,7 @@ edict_t *CFuncTank :: FindTarget( edict_t *pPlayer )
 		if ( !fTarget )
 			continue;
 
-		edict_t *pTarget = pEntity->edict();
+		edict_t *pTarget = ENT( pEntity->pev );
 		if ( UTIL_FInViewCone( this, pEntity, -1 ) && !(pEntity->pev->flags & FL_NOTARGET) )
 		{
 			barrelEnd = BarrelPosition();
