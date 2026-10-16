@@ -2427,3 +2427,56 @@ void CTriggerCamera::Move()
 	float fraction = 2 * gpGlobals->frametime;
 	pev->velocity = ((pev->movedir * pev->speed) * fraction) + (pev->velocity * (1-fraction));
 }
+
+
+//=========================================================
+// Wanted: trigger_killmonster kills the monster its target names,
+// without gibs
+//=========================================================
+class CTriggerKillMonster : public CTriggerOnce
+{
+public:
+	void Spawn( void ) { CTriggerOnce::Spawn(); }
+	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+};
+
+LINK_ENTITY_TO_CLASS( trigger_killmonster, CTriggerKillMonster );
+
+void CTriggerKillMonster::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	CBaseEntity *pEntity = UTIL_FindEntityByTargetname( NULL, STRING( pev->target ) );
+
+	if ( pEntity )
+	{
+		CBaseMonster *pMonster = pEntity->MyMonsterPointer();
+
+		if ( pMonster )
+		{
+			pMonster->pev->scale = 1.0;
+			pMonster->pev->health = 0;
+			pMonster->Killed( pMonster->pev, GIB_NEVER );
+		}
+	}
+}
+
+
+//=========================================================
+// Wanted: trigger_shutup. As retail has it, it clears bit 2 (a monster's
+// SF_MONSTER_GAG) in its own spawnflags, not in its target's.
+//=========================================================
+class CTriggerShutUp : public CTriggerOnce
+{
+public:
+	void Spawn( void ) { CTriggerOnce::Spawn(); }
+	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+};
+
+LINK_ENTITY_TO_CLASS( trigger_shutup, CTriggerShutUp );
+
+void CTriggerShutUp::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	CBaseEntity *pEntity = UTIL_FindEntityByTargetname( NULL, STRING( pev->target ) );
+
+	if ( pEntity )
+		pev->spawnflags &= ~2;	// sic
+}
