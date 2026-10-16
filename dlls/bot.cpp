@@ -227,9 +227,9 @@ void CBot::Say( char *pszText )
 // for every fake client
 //=========================================================
 // Retail's BotThink expands no inline function (not even Vector's
-// operators or GetEnemy: VC6 ran out of inline budget for it, for no reason
-// found in the source); the pragma reproduces that. Ours.
-#pragma inline_depth( 0 )
+// operators or GetEnemy), for no reason found in the source; a
+// #pragma inline_depth( 0 ) around it comes closer, but emits out-of-line
+// copies retail doesn't have, so this stays a near miss.
 void CBot::BotThink( void )
 {
 	int fRightBlocked, fLeftBlocked;
@@ -343,7 +343,6 @@ void CBot::BotThink( void )
 	(*g_engfuncs.pfnRunPlayerMove)( edict(), pev->v_angle, m_flForwardMove, m_flSideMove, m_flUpMove, pev->button, 0, m_flMsec );
 }
 
-#pragma inline_depth()
 //=========================================================
 // LookAround - every 0.3 s picks the nearest player it can
 // see and notice as the enemy (the chicken's carrier
