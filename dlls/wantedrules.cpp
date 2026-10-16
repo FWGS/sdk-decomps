@@ -471,8 +471,8 @@ public:
 	int m_iGameType;
 };
 
-static CBaseEntity *g_pWaitingEntities;		// waiting for the game mode
-static CBaseEntity *g_pLastWaitingEntity;
+CBaseEntity *g_pWaitingEntities = NULL;		// waiting for the game mode
+CBaseEntity *g_pLastWaitingEntity = NULL;
 
 void CWantedDetect::Spawn( void )
 {

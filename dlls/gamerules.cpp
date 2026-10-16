@@ -29,7 +29,7 @@
 extern edict_t *EntSelectSpawnPoint( CBaseEntity *pPlayer );
 
 DLL_GLOBAL CGameRules*	g_pGameRules = NULL;
-int g_iGameType;	// Wanted: info_wanteddetect's gametype (name ours)
+int g_iGameType = 0;	// Wanted: info_wanteddetect's gametype (name ours)
 extern DLL_GLOBAL BOOL	g_fGameOver;
 extern int gmsgDeathMsg;	// client dll messages
 extern int gmsgScoreInfo;
