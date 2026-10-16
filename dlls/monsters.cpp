@@ -2038,8 +2038,8 @@ void CBaseMonster :: MonsterInit ( void )
 
 	m_hEnemy			= NULL;
 
-	m_flDistTooFar		= 1024.0;
-	m_flDistLook		= 2048.0;
+	m_flDistTooFar		= 2048.0;	// POV: was 1024
+	m_flDistLook		= 3072.0;	// POV: was 2048
 
 	// set eye position
 	SetEyePosition();
@@ -2198,23 +2198,39 @@ int CBaseMonster::TaskIsRunning( void )
 //=========================================================
 int CBaseMonster::IRelationship ( CBaseEntity *pTarget )
 {
-	static int iEnemy[14][14] =
-	{			 //   NONE	 MACH	 PLYR	 HPASS	 HMIL	 AMIL	 APASS	 AMONST	APREY	 APRED	 INSECT	PLRALY	PBWPN	ABWPN
-	/*NONE*/		{ R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO,	R_NO,	R_NO	},
-	/*MACHINE*/		{ R_NO	,R_NO	,R_DL	,R_DL	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_DL,	R_DL,	R_DL	},
-	/*PLAYER*/		{ R_NO	,R_DL	,R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO,	R_DL,	R_DL	},
-	/*HUMANPASSIVE*/{ R_NO	,R_NO	,R_AL	,R_AL	,R_HT	,R_FR	,R_NO	,R_HT	,R_DL	,R_FR	,R_NO	,R_AL,	R_NO,	R_NO	},
-	/*HUMANMILITAR*/{ R_NO	,R_NO	,R_HT	,R_DL	,R_NO	,R_HT	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_HT,	R_NO,	R_NO	},
-	/*ALIENMILITAR*/{ R_NO	,R_DL	,R_HT	,R_DL	,R_HT	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_DL,	R_NO,	R_NO	},
-	/*ALIENPASSIVE*/{ R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO,	R_NO,	R_NO	},
-	/*ALIENMONSTER*/{ R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_DL,	R_NO,	R_NO	},
-	/*ALIENPREY   */{ R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_NO	,R_FR	,R_NO	,R_DL,	R_NO,	R_NO	},
-	/*ALIENPREDATO*/{ R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_HT	,R_DL	,R_NO	,R_DL,	R_NO,	R_NO	},
-	/*INSECT*/		{ R_FR	,R_FR	,R_FR	,R_FR	,R_FR	,R_NO	,R_FR	,R_FR	,R_FR	,R_FR	,R_NO	,R_FR,	R_NO,	R_NO	},
-	/*PLAYERALLY*/	{ R_NO	,R_DL	,R_AL	,R_AL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO,	R_NO,	R_NO	},
-	/*PBIOWEAPON*/	{ R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_DL,	R_NO,	R_DL	},
-	/*ABIOWEAPON*/	{ R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_AL	,R_NO	,R_DL	,R_DL	,R_NO	,R_NO	,R_DL,	R_DL,	R_NO	}
+	// POV: a column and a row for the special forces
+	static int iEnemy[15][15] =
+	{			 //   NONE	 MACH	 PLYR	 HPASS	 HMIL	 AMIL	 APASS	 AMONST	APREY	 APRED	 INSECT	PLRALY	PBWPN	ABWPN	SPFORCE
+	/*NONE*/		{ R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO,	R_NO,	R_NO,	R_NO	},
+	/*MACHINE*/		{ R_NO	,R_NO	,R_DL	,R_DL	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_DL,	R_DL,	R_DL,	R_NO	},
+	/*PLAYER*/		{ R_NO	,R_DL	,R_NO	,R_FR	,R_HT	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_DL,	R_DL,	R_DL,	R_HT	},
+	/*HUMANPASSIVE*/{ R_NO	,R_NO	,R_FR	,R_AL	,R_HT	,R_FR	,R_NO	,R_HT	,R_DL	,R_FR	,R_NO	,R_AL,	R_NO,	R_NO,	R_HT	},
+	/*HUMANMILITAR*/{ R_NO	,R_NO	,R_HT	,R_DL	,R_NO	,R_HT	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_HT,	R_NO,	R_NO,	R_HT	},
+	/*ALIENMILITAR*/{ R_NO	,R_DL	,R_NO	,R_DL	,R_HT	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_DL,	R_NO,	R_NO,	R_HT	},
+	/*ALIENPASSIVE*/{ R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO,	R_NO,	R_NO,	R_NO	},
+	/*ALIENMONSTER*/{ R_NO	,R_DL	,R_NO	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_DL,	R_NO,	R_NO,	R_DL	},
+	/*ALIENPREY   */{ R_NO	,R_NO	,R_NO	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_NO	,R_FR	,R_NO	,R_DL,	R_NO,	R_NO,	R_DL	},
+	/*ALIENPREDATO*/{ R_NO	,R_NO	,R_NO	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_HT	,R_DL	,R_NO	,R_DL,	R_NO,	R_NO,	R_DL	},
+	/*INSECT*/		{ R_FR	,R_FR	,R_NO	,R_FR	,R_FR	,R_NO	,R_FR	,R_FR	,R_FR	,R_FR	,R_NO	,R_FR,	R_NO,	R_NO,	R_FR	},
+	/*PLAYERALLY*/{ R_NO	,R_DL	,R_DL	,R_AL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO,	R_NO,	R_NO,	R_DL	},
+	/*PBIOWEAPON*/{ R_NO	,R_NO	,R_NO	,R_DL	,R_DL	,R_AL	,R_NO	,R_DL	,R_DL	,R_NO	,R_NO	,R_DL,	R_NO,	R_DL,	R_DL	},
+	/*ABIOWEAPON*/{ R_NO	,R_NO	,R_NO	,R_DL	,R_DL	,R_AL	,R_NO	,R_DL	,R_DL	,R_NO	,R_NO	,R_DL,	R_DL,	R_NO,	R_DL	},
+	/*SPFORCE*/		{ R_NO	,R_NO	,R_HT	,R_DL	,R_HT	,R_HT	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_HT,	R_NO,	R_NO,	R_NO	}
 	};
+
+	// POV: whoever the table says, the player (an alien slave) and his
+	// bioweapons are disliked or hated once he has provoked the monster,
+	// and on every map from povc05 on except povhz01
+	if ( pTarget->IsPlayer() || Classify() == CLASS_PLAYER_BIOWEAPON )
+	{
+		if ( (m_afMemory & bits_MEMORY_PROVOKED) || ( strcmpi( STRING( gpGlobals->mapname ), "povc05" ) >= 0 && strcmpi( STRING( gpGlobals->mapname ), "povhz01" ) ) )
+		{
+			if ( Classify() == CLASS_PLAYER_BIOWEAPON )
+				return R_DL;
+
+			return RANDOM_LONG( 0, 3 ) ? R_DL : R_HT;
+		}
+	}
 
 	return iEnemy[ Classify() ][ pTarget->Classify() ];
 }
@@ -2261,6 +2277,17 @@ BOOL CBaseMonster :: FindCover ( Vector vecThreat, Vector vecViewOffset, float f
 		ALERT ( at_aiconsole, "Graph not ready for findcover!\n" );
 		return FALSE;
 	}
+
+	// POV: with many nodes in range, search closer
+	int iNodesInRange = 0;
+	for ( i = 0 ; i < WorldGraph.m_cNodes ; i++ )
+	{
+		flDist = ( pev->origin - WorldGraph.m_pNodes[ i ].m_vecOrigin ).Length();
+		if ( flDist >= flMinDist && flDist < flMaxDist )
+			iNodesInRange++;
+	}
+	if ( iNodesInRange > 64 )
+		flMaxDist = 512;
 
 	iMyNode = WorldGraph.FindNearestNode( pev->origin, this );
 	iThreatNode = WorldGraph.FindNearestNode ( vecThreat, this );
@@ -2436,7 +2463,7 @@ CBaseEntity *CBaseMonster :: BestVisibleEnemy ( void )
 	iNearest = 8192;// so first visible entity will become the closest.
 	pNextEnt = m_pLink;
 	pReturn = NULL;
-	iBestRelationship = R_NO;
+	iBestRelationship = R_AL;	// POV: was R_NO
 
 	while ( pNextEnt != NULL )
 	{
@@ -3036,7 +3063,15 @@ BOOL CBaseMonster :: FCheckAITrigger ( void )
 		}
 		break;
 	case AITRIGGER_DEATH:
-		if ( pev->deadflag != DEAD_NO )
+		// POV: these fire as soon as their health is gone
+		if ( FClassnameIs( pev, "monster_apache" ) || FClassnameIs( pev, "monster_loader_armed" ) || FClassnameIs( pev, "monster_alien_sphere" ) )
+		{
+			if ( pev->health <= 0 )
+			{
+				fFireTarget = TRUE;
+			}
+		}
+		else if ( pev->deadflag != DEAD_NO )
 		{
 			fFireTarget = TRUE;
 		}
