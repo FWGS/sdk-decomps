@@ -54,7 +54,6 @@
 #include "vgui_ScorePanel.h"
 
 extern int g_iVisibleMouse;
-extern int g_iStoryNavigate;
 class CCommandMenu;
 int g_iPlayerClass;
 int g_iTeamNumber;

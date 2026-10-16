@@ -80,26 +80,32 @@ CMessageWindowPanel::CMessageWindowPanel( const char *szMOTD, const char *szTitl
 	// Create the window
 	m_pBackgroundPanel = new CTransparentPanel( iShadeFullscreen ? 255 : 100, MOTD_WINDOW_X, MOTD_WINDOW_Y, MOTD_WINDOW_SIZE_X, MOTD_WINDOW_SIZE_Y );
 	m_pBackgroundPanel->setParent( this );
-	m_pBackgroundPanel->setBorder( new LineBorder( Color(255 * 0.7,170 * 0.7,0,0)) );
+	m_pBackgroundPanel->setBorder( new LineBorder( Color(0,255 * 0.7,0,0)) );
 	m_pBackgroundPanel->setVisible( true );
 
 	int iXSize,iYSize,iXPos,iYPos;
 	m_pBackgroundPanel->getPos( iXPos,iYPos );
 	m_pBackgroundPanel->getSize( iXSize,iYSize );
 
+	// Dark green over the whole window
+	Label *pBackground = new Label( "", MOTD_WINDOW_X, MOTD_WINDOW_Y, MOTD_WINDOW_SIZE_X, MOTD_WINDOW_SIZE_Y );
+	pBackground->setParent( this );
+	pBackground->setBgColor( 0, 25, 0, 1 );
+	pBackground->setBorder( new LineBorder( Color(0,255 * 0.7,0,0)) );
+
 	// Create the title
-	Label *pLabel = new Label( "", iXPos + MOTD_TITLE_X, iYPos + MOTD_TITLE_Y );
+	Label *pLabel = new Label( "", iXPos, iYPos, MOTD_WINDOW_SIZE_X, MOTD_TITLE_Y*2 );
 	pLabel->setParent( this );
 	pLabel->setFont( pSchemes->getFont(hTitleScheme) );
 	pLabel->setFont( Scheme::sf_primary1 );
 
 	pSchemes->getFgColor( hTitleScheme, r, g, b, a );
-	pLabel->setFgColor( r, g, b, a );
 	pLabel->setFgColor( Scheme::sc_primary1 );
 	pSchemes->getBgColor( hTitleScheme, r, g, b, a );
 	pLabel->setBgColor( r, g, b, a );
-	pLabel->setContentAlignment( vgui::Label::a_west );
 	pLabel->setText(szTitle);
+	pLabel->setContentAlignment( vgui::Label::a_center );
+	pLabel->setBorder( new LineBorder( Color(0,255 * 0.7,0,0)) );
 
 	// Create the Scroll panel
 	ScrollPanel *pScrollPanel = new CTFScrollPanel( iXPos + XRES(16), iYPos + MOTD_TITLE_Y*2 + YRES(16), iXSize - XRES(32), iYSize - (YRES(48) + BUTTON_SIZE_Y*2) );
@@ -134,14 +140,38 @@ CMessageWindowPanel::CMessageWindowPanel( const char *szMOTD, const char *szTitl
 
 	pScrollPanel->validate();
 
-	CommandButton *pButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Menu_OK" ), iXPos + XRES(16), iYPos + iYSize - YRES(16) - BUTTON_SIZE_Y, CMENU_SIZE_X, BUTTON_SIZE_Y);
-	pButton->addActionSignal(new CMenuHandler_TextWindow(HIDE_TEXTWINDOW));
+	// The bar under the buttons
+	Label *pBar = new Label( "", iXPos, iYPos + iYSize - YRES(16) - BUTTON_SIZE_Y, MOTD_WINDOW_SIZE_X, BUTTON_SIZE_Y + YRES(16) + 1 );
+	pBar->setParent( this );
+	pSchemes->getFgColor( hTitleScheme, r, g, b, a );
+	pBar->setFgColor( r, g, b, a );
+	pSchemes->getBgColor( hTitleScheme, r, g, b, a );
+	pBar->setBgColor( r, g, b, a );
+	pBar->setBorder( new LineBorder( Color(0,255 * 0.7,0,0)) );
+
+	// The journal's buttons: first, previous, close, next, last
+	CommandButton *pButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "<<      " ), iXPos + YRES(8), iYPos + iYSize - YRES(8) - BUTTON_SIZE_Y, YRES(60), BUTTON_SIZE_Y );
+	pButton->setContentAlignment( vgui::Label::a_center );
 	pButton->setParent(this);
+	pButton->addActionSignal(new CMenuHandler_StoryFirst());
 
+	pButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "<      " ), iXPos + YRES(8)*2 + YRES(60), iYPos + iYSize - YRES(8) - BUTTON_SIZE_Y, YRES(60), BUTTON_SIZE_Y );
+	pButton->setContentAlignment( vgui::Label::a_center );
+	pButton->setParent(this);
+	pButton->addActionSignal(new CMenuHandler_StoryPrev());
+
+	pButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "Close     " ), iXPos + (MOTD_WINDOW_SIZE_X/2 - (YRES(60)*2)/2), iYPos + iYSize - YRES(8) - BUTTON_SIZE_Y, YRES(60)*2, BUTTON_SIZE_Y );
+	pButton->setContentAlignment( vgui::Label::a_center );
+	pButton->setParent(this);
+	pButton->addActionSignal(new CMenuHandler_StoryClose());
+
+	pButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( ">     " ), iXPos + MOTD_WINDOW_SIZE_X - YRES(8)*2 - YRES(60)*2, iYPos + iYSize - YRES(8) - BUTTON_SIZE_Y, YRES(60), BUTTON_SIZE_Y );
+	pButton->setContentAlignment( vgui::Label::a_center );
+	pButton->setParent(this);
+	pButton->addActionSignal(new CMenuHandler_StoryNext());
+
+	pButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( ">>     " ), iXPos + MOTD_WINDOW_SIZE_X - YRES(8) - YRES(60), iYPos + iYSize - YRES(8) - BUTTON_SIZE_Y, YRES(60), BUTTON_SIZE_Y );
+	pButton->setContentAlignment( vgui::Label::a_center );
+	pButton->setParent(this);
+	pButton->addActionSignal(new CMenuHandler_StoryLast());
 }
-
-
-
-
-
-

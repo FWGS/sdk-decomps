@@ -571,6 +571,64 @@ public:
 	}
 };
 
+// The journal's buttons (class names ours)
+extern int g_iStoryNavigate;
+
+class CMenuHandler_StoryFirst : public ActionSignal
+{
+public:
+	virtual void actionPerformed(Panel* panel)
+	{
+		g_iStoryNavigate = 1;
+		gEngfuncs.pfnClientCmd( "storyfirst\n" );
+		gViewPort->HideTopMenu();
+	}
+};
+
+class CMenuHandler_StoryPrev : public ActionSignal
+{
+public:
+	virtual void actionPerformed(Panel* panel)
+	{
+		g_iStoryNavigate = 1;
+		gEngfuncs.pfnClientCmd( "storyprev\n" );
+		gViewPort->HideTopMenu();
+	}
+};
+
+class CMenuHandler_StoryClose : public ActionSignal
+{
+public:
+	virtual void actionPerformed(Panel* panel)
+	{
+		g_iStoryNavigate = 0;
+		gEngfuncs.pfnClientCmd( "storyclose\n" );
+		gViewPort->HideTopMenu();
+	}
+};
+
+class CMenuHandler_StoryNext : public ActionSignal
+{
+public:
+	virtual void actionPerformed(Panel* panel)
+	{
+		g_iStoryNavigate = 1;
+		gEngfuncs.pfnClientCmd( "storynext\n" );
+		gViewPort->HideTopMenu();
+	}
+};
+
+class CMenuHandler_StoryLast : public ActionSignal
+{
+public:
+	virtual void actionPerformed(Panel* panel)
+	{
+		g_iStoryNavigate = 1;
+		gEngfuncs.pfnClientCmd( "storylast\n" );
+		gViewPort->HideTopMenu();
+	}
+};
+
 class CDragNDropHandler : public InputSignal
 {
 private:
