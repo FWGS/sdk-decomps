@@ -214,7 +214,7 @@ void CHAssassin :: Shoot ( void )
 
 	Vector	vecShellVelocity = gpGlobals->v_right * RANDOM_FLOAT(40,90) + gpGlobals->v_up * RANDOM_FLOAT(75,200) + gpGlobals->v_forward * RANDOM_FLOAT(-40, 40);
 	EjectBrass ( pev->origin + gpGlobals->v_up * 32 + gpGlobals->v_forward * 12, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL); 
-	FireBullets(1, vecShootOrigin, vecShootDir, Vector( m_flDiviation, m_flDiviation, m_flDiviation ), 2048, BULLET_MONSTER_9MM ); // shoot +-8 degrees
+	FireBullets(1, vecShootOrigin, vecShootDir, Vector( m_flDiviation, m_flDiviation, m_flDiviation ), m_flDistTooFar, BULLET_MONSTER_9MM ); // shoot +-8 degrees
 
 	switch(RANDOM_LONG(0,1))
 	{
@@ -227,6 +227,7 @@ void CHAssassin :: Shoot ( void )
 	}
 
 	pev->effects |= EF_MUZZLEFLASH;
+	UTIL_MuzzleLight( this, vecShootOrigin );	// POV
 
 	Vector angDir = UTIL_VecToAngles( vecShootDir );
 	SetBlending( 0, angDir.x );
@@ -638,7 +639,7 @@ BOOL CHAssassin :: CheckMeleeAttack1 ( float flDot, float flDist )
 			return FALSE;
 		}
 
-		float flGravity = g_psv_gravity->value;
+		float flGravity = CVAR_GET_FLOAT( "sv_gravity" );	// POV
 
 		float time = sqrt( 160 / (0.5 * flGravity));
 		float speed = flGravity * time / 160;
@@ -655,14 +656,14 @@ BOOL CHAssassin :: CheckMeleeAttack1 ( float flDot, float flDist )
 //=========================================================
 BOOL CHAssassin :: CheckRangeAttack1 ( float flDot, float flDist )
 {
-	if ( !HasConditions( bits_COND_ENEMY_OCCLUDED ) && flDist > 64 && flDist <= 2048 /* && flDot >= 0.5 */ /* && NoFriendlyFire() */ )
+	if ( !HasConditions( bits_COND_ENEMY_OCCLUDED ) && flDist > 64 && flDist <= m_flDistTooFar /* && flDot >= 0.5 */ /* && NoFriendlyFire() */ )
 	{
 		TraceResult	tr;
 
 		Vector vecSrc = GetGunPosition();
 
 		// verify that a bullet fired from the gun will hit the enemy before the world.
-		UTIL_TraceLine( vecSrc, m_hEnemy->BodyTarget(vecSrc), dont_ignore_monsters, ENT(pev), &tr);
+		UTIL_TraceLine( vecSrc, m_hEnemy->BodyTarget(vecSrc), dont_ignore_monsters, dont_ignore_glass, ENT(pev), &tr);
 
 		if ( tr.flFraction == 1 || tr.pHit == m_hEnemy->edict() )
 		{
