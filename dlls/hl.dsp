@@ -44,7 +44,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir ".\Releasehl"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /G5 /MT /W3 /Zi /O2 /I "..\dlls" /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\game_shared" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "QUIVER" /D "VOXEL" /D "QUAKE2" /D "VALVE_DLL" /D "CLIENT_WEAPONS" /Fr /YX /FD /c
+# ADD CPP /nologo /G5 /MT /W3 /Zi /O2 /I "..\dlls" /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\game_shared" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "QUIVER" /D "VOXEL" /D "QUAKE2" /D "VALVE_DLL" /Fr /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -54,7 +54,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /dll /machine:I386
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:windows /dll /map /debug /machine:I386 /def:".\hl.def"
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:windows /dll /map /debug /machine:I386 /def:".\hl.def" /incremental:no
 # SUBTRACT LINK32 /profile
 
 !ELSEIF  "$(CFG)" == "hl - Win32 Debug"
@@ -156,10 +156,6 @@ SOURCE=.\aflock.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\agrunt.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\airtank.cpp
 # End Source File
 # Begin Source File
@@ -172,19 +168,7 @@ SOURCE=.\animation.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\apache.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\barnacle.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\barney.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\bigmomma.cpp
 # End Source File
 # Begin Source File
 
@@ -193,10 +177,6 @@ SOURCE=.\bloater.cpp
 # Begin Source File
 
 SOURCE=.\bmodels.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\bullsquid.cpp
 # End Source File
 # Begin Source File
 
@@ -216,15 +196,7 @@ SOURCE=.\combat.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\controller.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\crossbow.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\crowbar.cpp
 # End Source File
 # Begin Source File
 
@@ -237,10 +209,6 @@ SOURCE=.\doors.cpp
 # Begin Source File
 
 SOURCE=.\effects.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\egon.cpp
 # End Source File
 # Begin Source File
 
@@ -268,14 +236,6 @@ SOURCE=.\gamerules.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\gargantua.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\gauss.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\genericmonster.cpp
 # End Source File
 # Begin Source File
@@ -285,10 +245,6 @@ SOURCE=.\ggrenade.cpp
 # Begin Source File
 
 SOURCE=.\globals.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\gman.cpp
 # End Source File
 # Begin Source File
 
@@ -316,43 +272,7 @@ SOURCE=.\handgrenade.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\hassassin.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\headcrab.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\healthkit.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\hgrunt.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\hl_wpn_glock.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\hornet.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\hornetgun.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\houndeye.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\ichthyosaur.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\islave.cpp
 # End Source File
 # Begin Source File
 
@@ -388,15 +308,7 @@ SOURCE=.\mortar.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\mp5.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\multiplay_gamerules.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\nihilanth.cpp
 # End Source File
 # Begin Source File
 
@@ -440,10 +352,6 @@ SOURCE=.\python.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\rat.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\roach.cpp
 # End Source File
 # Begin Source File
@@ -452,15 +360,7 @@ SOURCE=.\rpg.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\satchel.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\schedule.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\scientist.cpp
 # End Source File
 # Begin Source File
 
@@ -496,10 +396,6 @@ SOURCE=.\squadmonster.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\squeakgrenade.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\subs.cpp
 # End Source File
 # Begin Source File
@@ -516,19 +412,7 @@ SOURCE=.\tempmonster.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\tentacle.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\triggers.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\tripmine.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\turret.cpp
 # End Source File
 # Begin Source File
 
@@ -536,23 +420,24 @@ SOURCE=.\util.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\game_shared\voice_gamemgr.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\weapons.cpp
+
+!IF  "$(CFG)" == "hl - Win32 Release"
+
+# ADD CPP /D "CLIENT_WEAPONS"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Germany"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Profile"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=.\world.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\xen.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\zombie.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
