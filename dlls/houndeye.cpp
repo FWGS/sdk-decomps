@@ -90,6 +90,7 @@ public:
 	void StartTask( Task_t *pTask );
 	void RunTask ( Task_t *pTask );
 	void SonicAttack( void );
+	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );	// POV
 	void PrescheduleThink( void );
 	void SetActivity ( Activity NewActivity );
 	void WriteBeamColor ( void );
@@ -287,7 +288,7 @@ void CHoundeye :: HandleAnimEvent( MonsterEvent_t *pEvent )
 
 		case HOUND_AE_HOPBACK:
 			{
-				float flGravity = g_psv_gravity->value;
+				float flGravity = CVAR_GET_FLOAT( "sv_gravity" );	// POV
 
 				pev->flags &= ~FL_ONGROUND;
 
@@ -377,6 +378,7 @@ void CHoundeye :: Precache()
 	PRECACHE_SOUND("houndeye/he_pain5.wav");
 
 	PRECACHE_SOUND("houndeye/he_attack1.wav");
+	PRECACHE_SOUND("houndeye/he_attack2.wav");	// POV
 	PRECACHE_SOUND("houndeye/he_attack3.wav");
 
 	PRECACHE_SOUND("houndeye/he_blast1.wav");
@@ -667,6 +669,31 @@ void CHoundeye :: SonicAttack ( void )
 	}
 }
 		
+//=========================================================
+// TakeDamage - POV: answer the player's shots
+//=========================================================
+int CHoundeye :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
+{
+	if ( m_MonsterState != MONSTERSTATE_PRONE && !HasMemory( bits_MEMORY_PROVOKED ) )
+	{
+		switch ( UTIL_PlayerProvoke( this, pevAttacker ) )
+		{
+		case 1:
+			PainSound( );
+		case 2:
+			EMIT_SOUND( ENT(pev), CHAN_WEAPON, "houndeye/he_attack2.wav", 0.7, ATTN_NORM );
+			Remember( bits_MEMORY_SUSPICIOUS );
+			break;
+		case 3:
+			AlertSound( );
+			Remember( bits_MEMORY_PROVOKED );
+			break;
+		}
+	}
+
+	return CSquadMonster::TakeDamage( pevInflictor, pevAttacker, flDamage, bitsDamageType );
+}
+
 //=========================================================
 // start task
 //=========================================================
