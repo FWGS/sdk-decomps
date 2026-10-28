@@ -192,6 +192,7 @@ void CEndBossKataball::AccelerateThink( void )
 		Vector vecSteer;
 		float flSpeed;
 		float flTurn;
+		Vector vecUnused1, vecUnused2, vecUnused3, vecUnused4;	// sic: never used; their constructors give retail's inlining below
 
 		if ( m_hEnemy != NULL )
 			vecTarget = m_hEnemy->BodyTarget( pev->origin );
@@ -238,9 +239,7 @@ void CEndBossKataball::AccelerateThink( void )
 
 		vecVelocity = pev->velocity.Normalize( ) * 128;
 		vecSteer = vecDir.Normalize( ) * flTurn;
-		Vector vecNew;
-		vecNew = vecSteer + vecVelocity;
-		pev->velocity = vecNew.Normalize( ) * flSpeed;
+		pev->velocity = ( vecSteer + vecVelocity ).Normalize( ) * flSpeed;
 		pev->angles = UTIL_VecToAngles( pev->velocity );
 	}
 	else
