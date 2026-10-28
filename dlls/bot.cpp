@@ -223,14 +223,19 @@ void CBot::Say( char *pszText )
 }
 
 //=========================================================
-// BotThink - the bot's frame, run by the deathmatch rules
-// for every fake client
+// BeginFrame - BotThink's first half (name ours): counts
+// the frame, clears the frame's move goals and buttons,
+// measures how far the bot moved, and when it is stuck
+// drops its goal and turns towards an open side; when it
+// makes no progress towards its goal position for 8 s it
+// gives the position up
 //=========================================================
-// Retail's BotThink expands no inline function (not even Vector's
-// operators or GetEnemy), for no reason found in the source; a
-// #pragma inline_depth( 0 ) around it comes closer, but emits out-of-line
-// copies retail doesn't have, so this stays a near miss.
-void CBot::BotThink( void )
+// An inline step, as the move goals' are: it takes almost all
+// of BotThink's inline budget (BotThink's own size 471, so
+// 1000; BeginFrame 959), so neither its calls nor BotThink's
+// later ones are expanded, as in retail (only the free ones
+// of at most 40, edict() and Vector's float * conversion).
+inline void CBot::BeginFrame( void )
 {
 	int fRightBlocked, fLeftBlocked;
 
@@ -241,7 +246,8 @@ void CBot::BotThink( void )
 	m_iMovePriority = 0;
 	pev->button = 0;
 
-	m_flMoved = ( Vector( m_Memory.m_vecOrigin ) - pev->origin ).Length();
+	float flMoved = ( m_Memory.GetOrigin() - pev->origin ).Length();
+	m_flMoved = flMoved;
 
 	MAKE_VECTORS( pev->angles );
 
@@ -310,8 +316,8 @@ void CBot::BotThink( void )
 		{
 			if ( m_fHasGoalPos && !GetGoalItem() && !GetEnemy() )
 			{
-				if ( ( Vector( m_vecGoalPos ) - pev->origin ).Length2D() < m_flGoalDist )
-					m_flGoalDist = ( Vector( m_vecGoalPos ) - pev->origin ).Length2D();
+				if ( ( GetGoalPos() - pev->origin ).Length2D() < m_flGoalDist )
+					m_flGoalDist = ( GetGoalPos() - pev->origin ).Length2D();
 				else if ( gpGlobals->time - m_flGoalTime > 8.0 )
 				{
 					pev->v_angle.y = -pev->v_angle.y;
@@ -321,6 +327,15 @@ void CBot::BotThink( void )
 			m_flLastMoveTime = gpGlobals->time;
 		}
 	}
+}
+
+//=========================================================
+// BotThink - the bot's frame, run by the deathmatch rules
+// for every fake client
+//=========================================================
+void CBot::BotThink( void )
+{
+	BeginFrame();
 
 	if ( IsAlive() )
 	{
@@ -350,7 +365,7 @@ void CBot::BotThink( void )
 		UTIL_SetOrigin( m_pCamera->pev, m_pCamera->pev->origin );
 	}
 
-	(*g_engfuncs.pfnRunPlayerMove)( edict(), pev->v_angle, m_flForwardMove, m_flSideMove, m_flUpMove, pev->button, 0, m_flMsec );
+	(*g_engfuncs.pfnRunPlayerMove)( edict(), pev->v_angle, GetForwardMove(), GetSideMove(), GetUpMove(), pev->button, 0, m_flMsec );
 }
 
 //=========================================================

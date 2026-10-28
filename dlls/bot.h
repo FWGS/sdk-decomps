@@ -185,6 +185,7 @@ public:
 	void	SetEnemy( CBaseEntity *pEnemy, int fChickenCarrier );
 	void	Update( CBot *pBot );
 	float	SeenTime( void ) { return m_flSeenTime; }
+	Vector	GetOrigin( void ) { return m_vecOrigin; }	// name ours
 
 	float	m_flTime;
 	BOOL	m_fSeen;
@@ -266,6 +267,7 @@ public:
 	BOOL	CheckReload( void );
 	void	Say( char *pszText );
 	void	BotThink( void );
+	void	BeginFrame( void );
 	void	LookAround( int iRange );
 	void	PickGoalItem( void );
 	BOOL	HasGun( void );
@@ -344,6 +346,11 @@ public:
 	void	AimAtEnemy( void );
 	void	AimAt( CBaseEntity *pEntity );
 	Vector	GetMoveVelocity( void ) { return m_vecMoveVelocity; }
+	// BotThink's accessors (names ours)
+	Vector	GetGoalPos( void ) { return m_vecGoalPos; }
+	float	GetForwardMove( void ) { return m_flForwardMove; }
+	float	GetSideMove( void ) { return m_flSideMove; }
+	float	GetUpMove( void ) { return m_flUpMove; }
 	void	SetMoveVelocity( const Vector &vec ) { m_vecMoveVelocity = vec; }
 	int		GetMovePriority( void ) { return m_iMovePriority; }
 	void	SetMovePriority( int iPriority ) { m_iMovePriority = iPriority; }
