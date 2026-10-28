@@ -981,9 +981,10 @@ void CFuncTrain :: Next( void )
 			}
 		}
 
-		if (m_pevCurrentTarget->spawnflags & SF_CORNER_AVELOCITY)
+		Vector vecAvel = m_pevCurrentTarget->avelocity; // name ours
+		if (vecAvel.x != 999 && vecAvel.y != 999 && vecAvel.x != 999) // sic: x twice
 		{
-			UTIL_SetAvelocity(this, pTarg->pev->avelocity);
+			UTIL_SetAvelocity(this, m_pevCurrentTarget->avelocity);
 			//pev->avelocity = pTarg->pev->avelocity; //LRC
 		}
 
@@ -1584,7 +1585,7 @@ void CFuncTrackTrain :: Next( void )
 		if ( !pnext || (delta.x == 0 && delta.y == 0) )
 			angles = pev->angles;
 
-		float vy, vx, vz;
+		float vy, vx, vz = 0;
 		if ( !(pev->spawnflags & SF_TRACKTRAIN_NOPITCH) )
 			vx = UTIL_AngleDistance( angles.x, pev->angles.x );
 		else
