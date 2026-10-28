@@ -4151,6 +4151,15 @@ void CTriggerChangeCVar::Think( void )
 #define SF_CAMERA_PLAYER_POSITION	1
 #define SF_CAMERA_PLAYER_TARGET		2
 #define SF_CAMERA_PLAYER_TAKECONTROL 4
+// T2DEF's flags (names ours)
+#define SF_CAMERA_LETTERBOX			8	// captions bar, player hidden, ends when the target dies
+#define SF_CAMERA_ORBIT				16	// player moved to the nearest monster_fake_gordon; no turning; with 8, circles
+#define SF_CAMERA_SHOWPLAYER		32	// with 8: don't hide the player
+#define SF_CAMERA_LOOKORIGIN		64	// with 8: look at the target, not between it and the player
+
+extern int gmsgLBShow;
+extern int gmsgSetFOV;
+extern int g_iT2DefCameraActive;
 
 class CTriggerCamera : public CBaseDelay
 {
@@ -4160,6 +4169,7 @@ public:
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT FollowTarget( void );
 	void Move(void);
+	void TurnOff( void ); // T2DEF (name ours)
 
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
@@ -4287,6 +4297,10 @@ void CTriggerCamera::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 
 	if (FBitSet (pev->spawnflags, SF_CAMERA_PLAYER_TAKECONTROL ) )
 	{
+		CBasePlayer *pPlayer = (CBasePlayer *)pActivator; // T2DEF
+		pPlayer->EnableControl(FALSE);
+		pPlayer->pev->velocity.x = 0;
+		pPlayer->pev->velocity.y = 0;
 		((CBasePlayer *)pActivator)->EnableControl(FALSE);
 	}
 
@@ -4320,6 +4334,43 @@ void CTriggerCamera::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 	else
 	{
 		pev->velocity = Vector( 0, 0, 0 );
+
+		// T2DEF: put the player where the nearest monster_fake_gordon is
+		if (FBitSet (pev->spawnflags, SF_CAMERA_ORBIT ) )
+		{
+			CBaseEntity *pNearest = NULL;
+			CBaseEntity *pFakeGordon = NULL;
+			float flNearest = 65536;
+
+			while ((pFakeGordon = UTIL_FindEntityByClassname( pFakeGordon, "monster_fake_gordon" )) != NULL)
+			{
+				float flDist = (pFakeGordon->pev->origin - m_hTarget->pev->origin).Length();
+				flDist = flDist * flDist;
+				if (flNearest > flDist)
+				{
+					pNearest = pFakeGordon;
+					flNearest = flDist;
+				}
+			}
+
+			if (pNearest)
+			{
+				m_hPlayer->pev->origin.x = pNearest->pev->origin.x;
+				m_hPlayer->pev->origin.y = pNearest->pev->origin.y;
+				m_hPlayer->pev->angles = pNearest->pev->angles;
+			}
+		}
+
+		// T2DEF: face the target (or the middle of the target and the player) at once
+		Vector vecTargetPos;
+		if (FBitSet (pev->spawnflags, SF_CAMERA_LETTERBOX ) && !FBitSet (pev->spawnflags, SF_CAMERA_LOOKORIGIN ) )
+			vecTargetPos = 0.5 * (m_hTarget->pev->origin + m_hTarget->pev->view_ofs + m_hPlayer->pev->origin + m_hPlayer->pev->view_ofs);
+		else
+			vecTargetPos = m_hTarget->pev->origin;
+
+		Vector vecGoal = UTIL_VecToAngles( vecTargetPos - pev->origin );
+		vecGoal.x = -vecGoal.x;
+		pev->angles = vecGoal;
 	}
 
 	SET_VIEW( pActivator->edict(), edict() );
@@ -4328,10 +4379,31 @@ void CTriggerCamera::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 
 	// follow the player down
 	SetThink( FollowTarget );
+	pev->fuser4 = gpGlobals->time; // T2DEF: start of the orbit
 	SetNextThink( 0 );
 
 	m_moveDistance = 0;
 	Move();
+
+	g_iT2DefCameraActive = 1; // T2DEF
+
+	if (FBitSet (pev->spawnflags, SF_CAMERA_LETTERBOX ) ) // T2DEF
+	{
+		MESSAGE_BEGIN( MSG_ALL, gmsgLBShow );
+			WRITE_BYTE( 1 );
+		MESSAGE_END();
+
+		m_hPlayer->pev->fov = 0;
+		MESSAGE_BEGIN( MSG_ONE, gmsgSetFOV, NULL, m_hPlayer->pev );
+			WRITE_BYTE( 0 );
+		MESSAGE_END();
+
+		if (!FBitSet (pev->spawnflags, SF_CAMERA_SHOWPLAYER ) )
+		{
+			m_hPlayer->pev->renderamt = 0;
+			m_hPlayer->pev->rendermode = kRenderTransTexture;
+		}
+	}
 }
 
 
@@ -4342,19 +4414,38 @@ void CTriggerCamera::FollowTarget( )
 
 	if (m_hTarget == NULL || m_flReturnTime < gpGlobals->time)
 	{
-		if (m_hPlayer->IsAlive( ))
-		{
-			SET_VIEW( m_hPlayer->edict(), m_hPlayer->edict() );
-			((CBasePlayer *)((CBaseEntity *)m_hPlayer))->EnableControl(TRUE);
-		}
-		SUB_UseTargets( this, USE_TOGGLE, 0 );
-		pev->avelocity = Vector( 0, 0, 0 );
-		m_state = 0;
+		TurnOff();
 		return;
 	}
 
-	Vector vecGoal = UTIL_VecToAngles( m_hTarget->pev->origin - pev->origin );
+	// T2DEF: a cutscene ends when its (living) target dies
+	if (m_hTarget != NULL && FBitSet (pev->spawnflags, SF_CAMERA_LETTERBOX ) )
+	{
+		if (!FClassnameIs( m_hTarget->pev, "info_target" ) && !FClassnameIs( m_hTarget->pev, "func_train" ) && !m_hTarget->IsAlive())
+		{
+			TurnOff();
+			return;
+		}
+	}
+
+	Vector vecTargetPos;
+	if (FBitSet (pev->spawnflags, SF_CAMERA_LETTERBOX ) && !FBitSet (pev->spawnflags, SF_CAMERA_LOOKORIGIN ) )
+		vecTargetPos = 0.5 * (m_hTarget->pev->origin + m_hTarget->pev->view_ofs + m_hPlayer->pev->origin + m_hPlayer->pev->view_ofs);
+	else
+		vecTargetPos = m_hTarget->pev->origin;
+
+	Vector vecGoal = UTIL_VecToAngles( vecTargetPos - pev->origin );
 	vecGoal.x = -vecGoal.x;
+
+	if (FBitSet (pev->spawnflags, SF_CAMERA_ORBIT ) ) // T2DEF: no turning, just look
+	{
+		pev->avelocity.x = 0;
+		pev->avelocity.y = 0;
+		pev->angles = vecGoal;
+		SetNextThink( 0 );
+		Move();
+		return;
+	}
 
 	if (pev->angles.y > 360)
 		pev->angles.y -= 360;
@@ -4393,6 +4484,41 @@ void CTriggerCamera::FollowTarget( )
 
 void CTriggerCamera::Move()
 {
+	// T2DEF: letterbox + orbit: circle the middle of the target and the player on an ellipse
+	if (FBitSet (pev->spawnflags, SF_CAMERA_LETTERBOX ) && FBitSet (pev->spawnflags, SF_CAMERA_ORBIT ) )
+	{
+		// names ours, chosen (with this order) for VC6's local-name hash so the frame is retail's
+		float fEllY, fMajor, fRange, fMinor, fTimer, fMiddleY, fX2, fTheta, fOutY, fRotX, fEllipseX, fRotY, fMidX;
+
+		if (!pev->iuser4)
+		{
+			Vector vecTargetPos = 0.5 * (m_hTarget->pev->origin + m_hTarget->pev->view_ofs + m_hPlayer->pev->origin + m_hPlayer->pev->view_ofs);
+			Vector vecGoal = UTIL_VecToAngles( vecTargetPos - pev->origin );
+			vecGoal.x = -vecGoal.x;
+			pev->angles = vecGoal;
+			pev->iuser4 = 1;
+		}
+
+		Vector vecTarget = m_hTarget->pev->origin;
+		Vector vecPlayerOrigin = m_hPlayer->pev->origin;
+
+		fRange = (vecTarget - vecPlayerOrigin).Length2D();
+		fTheta = atan2( vecTarget.y - vecPlayerOrigin.y, vecTarget.x - vecPlayerOrigin.x );
+		fMinor = (fMajor = fRange * 0.5 / 0.6) * sqrt( 1 - 0.6 * 0.6 );
+		fMidX = (vecTarget.x + vecPlayerOrigin.x) * 0.5;
+		fMiddleY = (vecTarget.y + vecPlayerOrigin.y) * 0.5;
+		fRotX = fMidX * cos( fTheta ) + fMiddleY * sin( fTheta );
+		fRotY = -fMidX * sin( fTheta ) + fMiddleY * cos( fTheta );
+		fTimer = gpGlobals->time - pev->fuser4;
+		fEllipseX = fMajor * cos( fTimer * (2 * M_PI) / 42 ) + fRotX;
+		fEllY = fMinor * sin( fTimer * (2 * M_PI) / 42 ) + fRotY;
+		fX2 = fEllipseX * cos( fTheta ) - fEllY * sin( fTheta );
+		fOutY = fEllipseX * sin( fTheta ) + fEllY * cos( fTheta );
+		pev->origin.x = fX2;
+		pev->origin.y = fOutY;
+		return;
+	}
+
 	// Not moving on a path, return
 	if (!m_pentPath)
 		return;
@@ -4437,4 +4563,27 @@ void CTriggerCamera::Move()
 
 	float fraction = 2 * gpGlobals->frametime;
 	pev->velocity = ((pev->movedir * pev->speed) * fraction) + (pev->velocity * (1-fraction));
+}
+
+// T2DEF: the end of FollowTarget's old "return to the player" block, plus
+// the letterbox (name ours)
+void CTriggerCamera::TurnOff( void )
+{
+	SET_VIEW( m_hPlayer->edict(), m_hPlayer->edict() );
+	((CBasePlayer *)((CBaseEntity *)m_hPlayer))->EnableControl(TRUE);
+
+	if (FBitSet (pev->spawnflags, SF_CAMERA_LETTERBOX ) )
+	{
+		MESSAGE_BEGIN( MSG_ALL, gmsgLBShow );
+			WRITE_BYTE( 0 );
+		MESSAGE_END();
+
+		m_hPlayer->pev->renderamt = 255;
+		m_hPlayer->pev->rendermode = kRenderNormal;
+	}
+
+	SUB_UseTargets( this, USE_TOGGLE, 0 );
+	pev->avelocity = Vector( 0, 0, 0 );
+	m_state = 0;
+	g_iT2DefCameraActive = 0;
 }
