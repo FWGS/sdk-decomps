@@ -116,6 +116,14 @@ cvar_t	sk_ourano_d1 = {"sk_ourano_d1","0"};
 cvar_t	sk_ourano_d2 = {"sk_ourano_d2","0"};
 cvar_t	sk_ourano_d3 = {"sk_ourano_d3","0"};
 
+cvar_t	sk_penta_h1 = {"sk_penta_h1","0"};
+cvar_t	sk_penta_h2 = {"sk_penta_h2","0"};
+cvar_t	sk_penta_h3 = {"sk_penta_h3","0"};
+
+cvar_t	sk_penta_bite_d1 = {"sk_penta_bite_d1","0"};
+cvar_t	sk_penta_bite_d2 = {"sk_penta_bite_d2","0"};
+cvar_t	sk_penta_bite_d3 = {"sk_penta_bite_d3","0"};
+
 cvar_t	sk_raptor_h1 = {"sk_raptor_h1","0"};
 cvar_t	sk_raptor_h2 = {"sk_raptor_h2","0"};
 cvar_t	sk_raptor_h3 = {"sk_raptor_h3","0"};
@@ -228,6 +236,14 @@ cvar_t	sk_maggot_h1 = {"sk_maggot_h1","0"};
 cvar_t	sk_maggot_h2 = {"sk_maggot_h2","0"};
 cvar_t	sk_maggot_h3 = {"sk_maggot_h3","0"};
 
+cvar_t	sk_cricket_h1 = {"sk_cricket_h1","0"};
+cvar_t	sk_cricket_h2 = {"sk_cricket_h2","0"};
+cvar_t	sk_cricket_h3 = {"sk_cricket_h3","0"};
+
+cvar_t	sk_cricket_d1 = {"sk_cricket_d1","0"};
+cvar_t	sk_cricket_d2 = {"sk_cricket_d2","0"};
+cvar_t	sk_cricket_d3 = {"sk_cricket_d3","0"};
+
 cvar_t	sk_hatchetfish_h1 = {"sk_hatchetfish_h1","0"};
 cvar_t	sk_hatchetfish_h2 = {"sk_hatchetfish_h2","0"};
 cvar_t	sk_hatchetfish_h3 = {"sk_hatchetfish_h3","0"};
@@ -255,6 +271,10 @@ cvar_t	sk_xenomedart_d3 = {"sk_xenomedart_d3","0"};
 cvar_t	sk_9mmAR_bullet1 = {"sk_9mmAR_bullet1","0"};
 cvar_t	sk_9mmAR_bullet2 = {"sk_9mmAR_bullet2","0"};
 cvar_t	sk_9mmAR_bullet3 = {"sk_9mmAR_bullet3","0"};
+
+cvar_t	sk_MP5_bullet1 = {"sk_MP5_bullet1","0"};
+cvar_t	sk_MP5_bullet2 = {"sk_MP5_bullet2","0"};
+cvar_t	sk_MP5_bullet3 = {"sk_MP5_bullet3","0"};
 
 cvar_t	sk_buckshot1 = {"sk_buckshot1","0"};
 cvar_t	sk_buckshot2 = {"sk_buckshot2","0"};
