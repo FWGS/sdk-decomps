@@ -321,8 +321,8 @@ float UTIL_AngleNormalize( float flAngle )
 //=========================================================
 // vehicle_tank_shell
 //=========================================================
-static short s_sRocketExplosion;	// explosion4.spr
-static short s_sShellExplosion;		// tank1.spr
+static short s_sRocketExplode;	// explosion4.spr (names ours)
+static short s_sShellExplode;		// tank1.spr
 
 LINK_ENTITY_TO_CLASS( vehicle_tank_shell, CVehicleTankShell );
 
@@ -331,7 +331,7 @@ void CVehicleTankShell::Precache( void )
 	PRECACHE_MODEL( "models/artillary.mdl" );
 	m_iSmokeTrail = PRECACHE_MODEL( "sprites/dmlsmoke.spr" );
 	PRECACHE_SOUND( "weapons/rocket1.wav" );
-	s_sShellExplosion = PRECACHE_MODEL( "sprites/tank1.spr" );
+	s_sShellExplode = PRECACHE_MODEL( "sprites/tank1.spr" );
 	PRECACHE_MODEL( "sprites/part2.spr" );
 	m_iRockGibs = PRECACHE_MODEL( "models/rockgibs.mdl" );
 	m_iMetalGibs = PRECACHE_MODEL( "models/metalgibs.mdl" );
@@ -429,7 +429,7 @@ void CVehicleTankShell::ShellTouch( CBaseEntity *pOther )
 			WRITE_COORD( pev->origin.x );
 			WRITE_COORD( pev->origin.y );
 			WRITE_COORD( pev->origin.z );
-			WRITE_SHORT( s_sShellExplosion );
+			WRITE_SHORT( s_sShellExplode );
 			WRITE_BYTE( iScale );	// scale * 10
 			WRITE_BYTE( 20 );	// framerate
 			WRITE_BYTE( TE_EXPLFLAG_NOPARTICLES );
@@ -607,7 +607,7 @@ void CVehicleTankRocket::Precache( void )
 	m_iTrail2 = PRECACHE_MODEL( "sprites/white2.spr" );
 	PRECACHE_SOUND( "ambience/flameburst1.wav" );
 	PRECACHE_SOUND( "weapons/explode4.wav" );
-	s_sRocketExplosion = PRECACHE_MODEL( "sprites/explosion4.spr" );
+	s_sRocketExplode = PRECACHE_MODEL( "sprites/explosion4.spr" );
 	PRECACHE_SOUND( "tank/firering.wav" );
 	PRECACHE_MODEL( "sprites/smokering.spr" );
 	PRECACHE_MODEL( "sprites/flame.spr" );
@@ -751,7 +751,7 @@ void CVehicleTankRocket::RocketTouch( CBaseEntity *pOther )
 				WRITE_COORD( pev->origin.x );
 				WRITE_COORD( pev->origin.y );
 				WRITE_COORD( pev->origin.z );
-				WRITE_SHORT( s_sRocketExplosion );
+				WRITE_SHORT( s_sRocketExplode );
 				WRITE_BYTE( 60 );	// scale * 10
 				WRITE_BYTE( 15 );	// framerate
 				WRITE_BYTE( TE_EXPLFLAG_NOPARTICLES );

@@ -37,6 +37,10 @@ extern int gmsgTank;
 extern int gmsgTankBody;
 extern int gmsgTurretPos;
 
+// sic: retail's vehicletank.obj has 4 bytes of .bss before MoveTank's
+// s_iStuck that nothing reads or writes (name ours)
+static int s_iUnknown;
+
 //=========================================================
 // vehicle_tank
 //=========================================================
