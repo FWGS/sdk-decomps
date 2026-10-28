@@ -25,8 +25,10 @@
 #include "nodes.h"
 #include "defaultai.h"
 #include "soundent.h"
+#include "talkmonster.h"	// T2DEF: CTalkMonster::g_talkWaitTime
 
 extern CGraph WorldGraph;
+extern DLL_GLOBAL int g_iT2DefSpeaker;	// T2DEF
 
 //=========================================================
 // FHaveSchedule - Returns TRUE if monster's m_pSchedule
@@ -390,6 +392,24 @@ void CBaseMonster :: RunTask ( Task_t *pTask )
 	case TASK_WAIT:
 	case TASK_WAIT_RANDOM:
 		{
+			// T2DEF: while a scripted sentence is spoken, turn the head to the speaker
+			if ( gpGlobals->time < CTalkMonster::g_talkWaitTime - 2 && g_iT2DefSpeaker && (m_afCapability & bits_CAP_TURN_HEAD) )
+			{
+				CBaseEntity *pSpeaker = CBaseEntity::Instance( g_engfuncs.pfnPEntityOfEntIndex( g_iT2DefSpeaker ) );
+				if ( pSpeaker )
+				{
+					if ( (pSpeaker->pev->origin - pev->origin).Length() < 256 )
+					{
+						float yaw = VecToYaw( pSpeaker->pev->origin - pev->origin ) - pev->angles.y;
+
+						if (yaw > 180) yaw -= 360;
+						if (yaw < -180) yaw += 360;
+
+						SetBoneController( 0, yaw );
+					}
+				}
+			}
+
 			if ( gpGlobals->time >= m_flWaitFinished )
 			{
 				TaskComplete();
@@ -415,12 +435,12 @@ void CBaseMonster :: RunTask ( Task_t *pTask )
 				TaskFail();
 			else
 			{
-				distance = ( m_vecMoveGoal - pev->origin ).Length2D();
+				distance = ( m_vecMoveGoal - pev->origin ).Length();	// T2DEF: Length, not Length2D
 				// Re-evaluate when you think your finished, or the target has moved too far
 				if ( (distance < pTask->flData) || (m_vecMoveGoal - m_hTargetEnt->pev->origin).Length() > pTask->flData * 0.5 )
 				{
 					m_vecMoveGoal = m_hTargetEnt->pev->origin;
-					distance = ( m_vecMoveGoal - pev->origin ).Length2D();
+					distance = ( m_vecMoveGoal - pev->origin ).Length();	// T2DEF: Length, not Length2D
 					FRefreshRoute();
 				}
 
