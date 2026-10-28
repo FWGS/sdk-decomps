@@ -527,6 +527,10 @@ SOURCE=.\tentacle.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\trigger_music.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\triggers.cpp
 # End Source File
 # Begin Source File
