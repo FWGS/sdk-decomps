@@ -1188,6 +1188,12 @@ public:
 	virtual void SetActiveInfo( int iInput );
 	virtual void Initialize( void );
 
+	virtual void Reset( void )
+	{
+		CMenuPanel::Reset();
+		m_iCurrentInfo = 0;
+	}
+
 	// hide with the HUD
 	virtual void paint( void )
 	{
@@ -1196,12 +1202,6 @@ public:
 			setVisible( false );
 			gHUD.m_Ammo.m_fMenuOpen = false;
 		}
-	}
-
-	virtual void Reset( void )
-	{
-		CMenuPanel::Reset();
-		m_iCurrentInfo = 0;
 	}
 };
 
