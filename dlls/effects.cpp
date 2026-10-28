@@ -23,6 +23,7 @@
 #include "func_break.h"
 #include "shake.h"
 #include "player.h" //LRC - footstep stuff
+#include "movewith.h" //LRC - the DesiredThink system
 
 #define	SF_GIBSHOOTER_REPEATABLE	1 // allows a gibshooter to be refired
 
@@ -72,6 +73,7 @@ IMPLEMENT_SAVERESTORE( CBubbling, CBaseEntity );
 
 
 #define SF_BUBBLES_STARTOFF		0x0001
+#define SF_BUBBLES_STEAM		0x0002 // T2DEF, name ours
 
 void CBubbling::Spawn( void )
 {
@@ -146,17 +148,51 @@ void CBubbling::KeyValue( KeyValueData *pkvd )
 
 void CBubbling::FizzThink( void )
 {
-	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, VecBModelOrigin(pev) );
-		WRITE_BYTE( TE_FIZZ );
-		WRITE_SHORT( (short)ENTINDEX( edict() ) );
-		WRITE_SHORT( (short)m_bubbleModel );
-		WRITE_BYTE( m_density );
-	MESSAGE_END();
+	if ( !(pev->spawnflags & SF_BUBBLES_STEAM) )
+	{
+		MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, VecBModelOrigin(pev) );
+			WRITE_BYTE( TE_FIZZ );
+			WRITE_SHORT( (short)ENTINDEX( edict() ) );
+			WRITE_SHORT( (short)m_bubbleModel );
+			WRITE_BYTE( m_density );
+		MESSAGE_END();
 
-	if ( m_frequency > 19 ) // frequencies above 20 are treated as 20.
-		SetNextThink( 0.5 );
+		if ( m_frequency > 19 ) // frequencies above 20 are treated as 20.
+			SetNextThink( 0.5 );
+		else
+			SetNextThink( 2.5 - (0.1 * m_frequency) );
+	}
 	else
-		SetNextThink( 2.5 - (0.1 * m_frequency) );
+	{
+		// T2DEF: steam, a smoke puff from the brush's centre (local names ours)
+		int iFramerate = m_frequency;
+		if ( iFramerate > 12 )
+			iFramerate = 12;
+		else if ( iFramerate < 1 )
+			iFramerate = 1;
+
+		int iScale = m_density;
+		if ( iScale > 20 )
+			iScale = 20;
+		else if ( iScale < 5 )
+			iScale = 5;
+
+		Vector vecOrigin = VecBModelOrigin(pev);
+		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecOrigin );
+			WRITE_BYTE( TE_SMOKE );
+			WRITE_COORD( vecOrigin.x );
+			WRITE_COORD( vecOrigin.y );
+			WRITE_COORD( vecOrigin.z - 16 );
+			WRITE_SHORT( g_sModelIndexSmoke );
+			WRITE_BYTE( iScale );
+			WRITE_BYTE( iFramerate );
+		MESSAGE_END();
+
+		if ( iFramerate > 6 )
+			SetNextThink( 0.1 );
+		else
+			SetNextThink( 0.2 );
+	}
 }
 
 // --------------------------------------------------
@@ -3355,6 +3391,8 @@ class CEnvFog : public CBaseEntity
 public:
 	void Spawn( void );
 	void Precache( void );
+	void EXPORT ResumeThink( void );
+	void EXPORT Resume2Think( void );
 	void EXPORT TurnOn( void );
 	void EXPORT TurnOff( void );
 	void EXPORT FadeInDone( void );
@@ -3445,57 +3483,48 @@ void CEnvFog :: Spawn ( void )
 		pev->spawnflags |= SF_FOG_ACTIVE;
 
 	if (pev->spawnflags & SF_FOG_ACTIVE)
-		TurnOn();
+	{
+		SetThink( TurnOn );
+		UTIL_DesiredThink( this );
+	}
 
 // Precache is now used only to continue after a game has loaded.
 //	Precache();
 
 	// things get messed up if we try to draw fog with a startdist
-	// or an enddist of 0!
+	// or an enddist of 0, so we don't allow it.
 	if (m_iStartDist == 0) m_iStartDist = 1;
 	if (m_iEndDist == 0) m_iEndDist = 1;
 }
 
 void CEnvFog :: Precache ( void )
 {
-	// lazy approach: if a game is loaded, and a fade is in progress,
-	// just skip to the end of the fade.
-	if (pev->spawnflags & SF_FOG_FADING)
+	if (pev->spawnflags & SF_FOG_ACTIVE)
 	{
-		DontThink();
-		Think();
+		SetThink( ResumeThink );
+		SetNextThink( 0.1 );
 	}
-	else if (pev->spawnflags & SF_FOG_ACTIVE)
-		FadeInDone();
 }
 
 extern int gmsgSetFog;
 
 void CEnvFog :: TurnOn ( void )
 {
-//	ALERT(at_console, "Fog turnon\n");
+//	ALERT(at_console, "Fog turnon %f\n", gpGlobals->time);
 
 	pev->spawnflags |= SF_FOG_ACTIVE;
 
 	if( m_iFadeIn )
 	{
 		pev->spawnflags |= SF_FOG_FADING;
-
-		MESSAGE_BEGIN( MSG_ALL, gmsgSetFog, NULL );
 		SendData( pev->rendercolor, m_iFadeIn, m_iStartDist, m_iEndDist);
-		MESSAGE_END();
-
 		SetNextThink( m_iFadeIn );
 		SetThink( FadeInDone );
 	}
 	else
 	{
 		pev->spawnflags &= ~SF_FOG_FADING;
-
-		MESSAGE_BEGIN( MSG_ALL, gmsgSetFog, NULL );
 		SendData( pev->rendercolor, 0, m_iStartDist, m_iEndDist);
-		MESSAGE_END();
-
 		if (m_fHoldTime)
 		{
 			SetNextThink( m_fHoldTime );
@@ -3513,33 +3542,33 @@ void CEnvFog :: TurnOff ( void )
 	if( m_iFadeOut )
 	{
 		pev->spawnflags |= SF_FOG_FADING;
-
-		MESSAGE_BEGIN( MSG_ALL, gmsgSetFog, NULL );
 		SendData( pev->rendercolor, -m_iFadeOut, m_iStartDist, m_iEndDist);
-		MESSAGE_END();
-
 		SetNextThink( m_iFadeOut );
 		SetThink( FadeOutDone );
 	}
 	else
 	{
 		pev->spawnflags &= ~SF_FOG_FADING;
-
-		MESSAGE_BEGIN( MSG_ALL, gmsgSetFog, NULL );
 		SendData( g_vecZero, 0, 0, 0 );
-		MESSAGE_END();
-
 		DontThink();
 	}
+}
+
+//yes, this intermediate think function is necessary.
+// the engine seems to ignore the nextthink time when starting up.
+// So this function gets called immediately after the precache finishes,
+// regardless of what nextthink time is specified.
+void CEnvFog :: ResumeThink ( void )
+{
+//	ALERT(at_console, "Fog resume %f\n", gpGlobals->time);
+	SetThink(FadeInDone);
+	SetNextThink(0.1);
 }
 
 void CEnvFog :: FadeInDone ( void )
 {
 	pev->spawnflags &= ~SF_FOG_FADING;
-
-	MESSAGE_BEGIN( MSG_ALL, gmsgSetFog, NULL );
 	SendData( pev->rendercolor, 0, m_iStartDist, m_iEndDist);
-	MESSAGE_END();
 
 	if (m_fHoldTime)
 	{
@@ -3551,10 +3580,7 @@ void CEnvFog :: FadeInDone ( void )
 void CEnvFog :: FadeOutDone ( void )
 {
 	pev->spawnflags &= ~SF_FOG_FADING;
-
-	MESSAGE_BEGIN( MSG_ALL, gmsgSetFog, NULL );
 	SendData( g_vecZero, 0, 0, 0);
-	MESSAGE_END();
 }
 
 void CEnvFog :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
@@ -3572,13 +3598,26 @@ void CEnvFog :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE use
 void CEnvFog :: SendData ( Vector col, int iFadeTime, int iStartDist, int iEndDist )
 {
 //	ALERT(at_console, "Fog send (%d %d %d), %d - %d\n", col.x, col.y, col.z, iStartDist, iEndDist);
+	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	{
+		CBasePlayer *pPlayer = (CBasePlayer*)UTIL_PlayerByIndex( i );
+		if ( pPlayer )
+		{
+			MESSAGE_BEGIN( MSG_ONE, gmsgSetFog, NULL, pPlayer->pev );
+				WRITE_BYTE ( col.x );
+				WRITE_BYTE ( col.y );
+				WRITE_BYTE ( col.z );
+				WRITE_SHORT ( iFadeTime );
+				WRITE_SHORT ( iStartDist );
+				WRITE_SHORT ( iEndDist );
+			MESSAGE_END();
 
-	WRITE_BYTE ( col.x );
-	WRITE_BYTE ( col.y );
-	WRITE_BYTE ( col.z );
-	WRITE_SHORT ( iFadeTime );
-	WRITE_SHORT ( iStartDist );
-	WRITE_SHORT ( iEndDist );
+//			pPlayer->m_iFogStartDist = iStartDist;
+//			pPlayer->m_iFogEndDist = iEndDist;
+//			pPlayer->m_vecFogColor = col;
+//			pPlayer->m_bClientFogRefresh = FALSE;
+		}
+	}
 }
 
 LINK_ENTITY_TO_CLASS( env_fog, CEnvFog );
