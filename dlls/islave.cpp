@@ -207,7 +207,7 @@ void CISlave :: AlertSound( void )
 //=========================================================
 void CISlave :: IdleSound( void )
 {
-	if ( FBitSet( pev->spawnflags, SF_MONSTER_GAG ) )
+	if ( pev->spawnflags & SF_MONSTER_GAG )
 		return;
 
 	if (RANDOM_LONG( 0, 2 ) == 0)
