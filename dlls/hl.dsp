@@ -714,6 +714,10 @@ SOURCE=.\world.cpp
 
 SOURCE=.\xen.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\placeholder_object.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
