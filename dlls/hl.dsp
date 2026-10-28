@@ -347,6 +347,10 @@ SOURCE=.\items.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\joe.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\leech.cpp
 # End Source File
 # Begin Source File
