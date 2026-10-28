@@ -60,11 +60,7 @@ void CPathCorner :: KeyValue( KeyValueData *pkvd )
 	}
 	else if (FStrEq(pkvd->szKeyName, "turnspeed")) //LRC
 	{
-		if (pkvd->szValue[0]) // if the field is blank, don't set the spawnflag.
-		{
-			pev->spawnflags |= SF_CORNER_AVELOCITY;
-			UTIL_StringToVector( (float*)pev->avelocity, pkvd->szValue);
-		}
+		UTIL_StringToVector( (float*)pev->avelocity, pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
 	else 
