@@ -61,6 +61,23 @@ void CBaseMonster :: SetState ( MONSTERSTATE State )
 //=========================================================
 void CBaseMonster :: RunAI ( void )
 {
+	CBaseEntity *pEntity = NULL;
+
+	// T2DEF: remove a monster of the same class standing on this one
+	if ( !pev->iuser3 )
+	{
+		while ( ( pEntity = UTIL_FindEntityInSphere( pEntity, pev->origin, 8 ) ) != NULL )
+		{
+			CBaseMonster *pMonster = pEntity->MyMonsterPointer();
+			if ( pMonster && pMonster != this && FStrEq( STRING( pev->classname ), STRING( pMonster->pev->classname ) ) )
+			{
+				ALERT( at_console, "Found duplicate at %f %f %f\n", pev->origin.x, pev->origin.y, pev->origin.z );
+				pEntity->pev->iuser3 = 1;
+				UTIL_Remove( pEntity );
+			}
+		}
+	}
+
 	// to test model's eye height
 	//UTIL_ParticleEffect ( pev->origin + pev->view_ofs, g_vecZero, 255, 10 );
 
