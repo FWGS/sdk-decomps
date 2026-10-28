@@ -19,6 +19,7 @@
 #include "extdll.h"
 #include "util.h"
 #include "cbase.h"
+extern int gmsgLBCaption;	// T2DEF. sic: its place ends the /YX header region after cbase.h, as soundent.obj's inline order needs
 #include "weapons.h"
 #include "player.h"
 #include "talkmonster.h"
@@ -2168,7 +2169,6 @@ typedef struct caption
 	char sztext[512];
 } CAPTION;
 
-extern int gmsgLBCaption;
 extern DLL_GLOBAL int g_iT2DefMusicOn, g_iT2DefTextLanguage;
 
 int fEnglishCaptionsInit = FALSE;
