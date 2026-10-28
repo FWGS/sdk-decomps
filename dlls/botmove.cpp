@@ -1057,17 +1057,19 @@ void CBot::MoveToEntityOffset( CBaseEntity *pEntity, int iPriority, Vector vecOf
 //=========================================================
 void CBot::MoveToItem( CBaseEntity *pItem, int iPriority )
 {
-	if ( iPriority > m_iMovePriority )
+	if ( iPriority > GetMovePriority() )
 	{
 		MoveTowards( pItem->Center() );
-		m_cMoveGoals = 1;
-		m_iMovePriority = iPriority;
+		SetMoveGoals( 1 );
+		SetMovePriority( iPriority );
 	}
-	else if ( iPriority == m_iMovePriority )
+	else if ( iPriority == GetMovePriority() )
 	{
-		Vector vecOld = m_vecMoveVelocity * m_cMoveGoals;
-		m_vecMoveVelocity = ( pItem->Center() - pev->origin ).Normalize() * CVAR_GET_FLOAT( "sv_maxspeed" );
-		m_vecMoveVelocity = ( m_vecMoveVelocity + vecOld ) / ++m_cMoveGoals;
+		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
+		HeadForItem( pItem );
+		Vector vecTotal = GetMoveVelocity() + vecOld;
+		SetMoveGoals( GetMoveGoals() + 1 );
+		SetMoveVelocity( vecTotal / GetMoveGoals() );
 	}
 }
 
@@ -1076,18 +1078,19 @@ void CBot::MoveToItem( CBaseEntity *pItem, int iPriority )
 //=========================================================
 void CBot::MoveToSpot( const Vector &vecSpot, int iPriority )
 {
-	if ( iPriority > m_iMovePriority )
+	if ( iPriority > GetMovePriority() )
 	{
-		m_vecMoveVelocity = ( vecSpot - pev->origin ).Normalize() * CVAR_GET_FLOAT( "sv_maxspeed" );
-		m_iMovePriority = iPriority;
-		m_cMoveGoals = 1;
+		HeadFor( vecSpot );
+		SetMovePriority( iPriority );
+		SetMoveGoals( 1 );
 	}
-	else if ( iPriority == m_iMovePriority )
+	else if ( iPriority == GetMovePriority() )
 	{
-		Vector vecOld = m_vecMoveVelocity * m_cMoveGoals;
-		float flSpeed = CVAR_GET_FLOAT( "sv_maxspeed" );
-		m_vecMoveVelocity = flSpeed * ( vecSpot - pev->origin ).Normalize();
-		m_vecMoveVelocity = ( m_vecMoveVelocity + vecOld ) / ++m_cMoveGoals;
+		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
+		HeadFor( vecSpot );
+		Vector vecTotal = GetMoveVelocity() + vecOld;
+		SetMoveGoals( GetMoveGoals() + 1 );
+		SetMoveVelocity( vecTotal / GetMoveGoals() );
 	}
 }
 

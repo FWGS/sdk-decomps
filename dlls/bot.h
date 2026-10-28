@@ -455,6 +455,8 @@ public:
 	void	UnstickGoal( int iPriority );
 	void	MoveToEntityOffset( CBaseEntity *pEntity, int iPriority, Vector vecOffset );	// 0x10013f30
 	void	MoveToItem( CBaseEntity *pItem, int iPriority );					// 0x100140a0
+	// MoveToItem's step (name ours): head for pItem's centre at full speed
+	void HeadForItem( CBaseEntity *pItem ) { HeadFor( pItem->Center() ); }
 	void	MoveToSpot( const Vector &vecSpot, int iPriority );
 	void	Wobble( float flPercent, int iPriority );
 	void	Roam( int fForce );												// 0x10014720
