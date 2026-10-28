@@ -26,6 +26,7 @@ struct skilldata_t
 	float agruntDmgPunch;
 
 	float apacheHealth;
+	float ka50Health;		// T2DEF (name ours)
 	float m450Health; // T2DEF: sk_m450_health, monster_robo_laser (name ours; retail has sk_ka50_health, sk_friendly_* and sk_rat_health before it, sk_gmanboss_health after it)
 	
 	float barneyHealth;

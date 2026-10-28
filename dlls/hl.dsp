@@ -351,6 +351,10 @@ SOURCE=.\joe.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\ka50.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\leech.cpp
 # End Source File
 # Begin Source File

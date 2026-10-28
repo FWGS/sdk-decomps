@@ -183,6 +183,7 @@ typedef	enum
 	BULLET_MONSTER_9MM,
 	BULLET_MONSTER_MP5,
 	BULLET_MONSTER_12MM,
+	BULLET_MONSTER_KA50,	// T2DEF (name ours): the Ka-50's gun, 12mm damage * 1.5 and sparks
 } Bullet;
 
 
