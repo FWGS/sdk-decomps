@@ -523,6 +523,10 @@ SOURCE=.\tripmine.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\trooper.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\turret.cpp
 # End Source File
 # Begin Source File
