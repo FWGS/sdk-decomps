@@ -53,8 +53,9 @@ extern cvar_t timeleft, fragsleft;
 char *g_pszTeamNames[2] = { "Outlaws", "Rustlers" };
 char *g_pszTeamModels[2] = { "rogan", "twnwest" };
 
-float g_flChickenHushTime;			// the chickens keep quiet until then (the score sound)
+float g_flChickenQuietTime;			// the chickens keep quiet until then (the score sound)
 CBaseEntity *g_pWaitingChickens;	// sic: never set; the chickens pass it to WaitForGameRules
+int g_iChickenUnused;				// sic: retail's .bss has an int here that no code reads or writes (name ours)
 
 //=========================================================
 // ShowPlayerMenu - sends a menu in chunks of 127
@@ -122,7 +123,7 @@ void CCaptureTheChicken::Init( void )
 	PRECACHE_SOUND( "chicken/chick_score.wav" );
 
 	m_fAutoTeam = FALSE;
-	g_flChickenHushTime = 0;
+	g_flChickenQuietTime = 0;
 
 	for ( int i = 0; i < 2; i++ )
 	{
@@ -304,7 +305,7 @@ void CCaptureTheChicken::UpdateTeamScore( CBasePlayer *pPlayer, const char *pszC
 	if ( pszChickenTeam )
 	{
 		UTIL_EmitAmbientSound( ENT( 0 ), VARS( ENT( 0 ) )->origin, "chicken/chick_score.wav", 1, ATTN_NONE, 0, PITCH_NORM );
-		g_flChickenHushTime = gpGlobals->time + 3;
+		g_flChickenQuietTime = gpGlobals->time + 3;
 		UTIL_CenterPrintAll( UTIL_VarArgs( "%s captured the %s chicken!\n", STRING( pPlayer->pev->netname ), pszChickenTeam ) );
 
 		pPlayer->AddPoints( 5, TRUE );

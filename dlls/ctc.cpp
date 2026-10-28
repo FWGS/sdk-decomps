@@ -367,7 +367,7 @@ void CCTCChicken::ChickenThink( void )
 	if ( !IsInWorld() )
 		ReturnHome();
 
-	if ( g_flChickenHushTime > gpGlobals->time && !m_fSilent )
+	if ( g_flChickenQuietTime > gpGlobals->time && !m_fSilent )
 	{
 		EMIT_SOUND( ENT( pev ), CHAN_VOICE, "common/null.wav", 1, ATTN_NORM );
 		if ( m_pPlayer )
