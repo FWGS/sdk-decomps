@@ -255,6 +255,10 @@ SOURCE=.\flyingmonster.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\friendly.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\func_break.cpp
 # End Source File
 # Begin Source File
