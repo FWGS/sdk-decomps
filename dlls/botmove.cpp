@@ -1100,25 +1100,19 @@ void CBot::MoveToSpot( const Vector &vecSpot, int iPriority )
 //=========================================================
 void CBot::Wobble( float flPercent, int iPriority )
 {
-	if ( iPriority > m_iMovePriority )
+	if ( iPriority > GetMovePriority() )
 	{
-		flPercent = flPercent / 100;
-		Vector vecRandom = Vector( RANDOM_FLOAT( -flPercent, flPercent ), RANDOM_FLOAT( -flPercent, flPercent ), RANDOM_FLOAT( -flPercent, flPercent ) );
-		m_vecMoveVelocity = m_vecMoveVelocity.Normalize() + vecRandom;
-		m_vecMoveVelocity = m_vecMoveVelocity.Normalize() * CVAR_GET_FLOAT( "sv_maxspeed" );
-		m_cMoveGoals = 1;
-		m_iMovePriority = iPriority;
+		WobbleVelocity( flPercent );
+		SetMoveGoals( 1 );
+		SetMovePriority( iPriority );
 	}
-	else if ( iPriority == m_iMovePriority )
+	else if ( iPriority == GetMovePriority() )
 	{
-		Vector vecOld = m_vecMoveVelocity * m_cMoveGoals;
-		flPercent = flPercent / 100;
-		Vector vecRandom = Vector( RANDOM_FLOAT( -flPercent, flPercent ), RANDOM_FLOAT( -flPercent, flPercent ), RANDOM_FLOAT( -flPercent, flPercent ) );
-		m_vecMoveVelocity = m_vecMoveVelocity.Normalize() + vecRandom;
-		m_vecMoveVelocity = m_vecMoveVelocity.Normalize() * CVAR_GET_FLOAT( "sv_maxspeed" );
-
-		Vector vecTotal = m_vecMoveVelocity + vecOld;
-		m_vecMoveVelocity = vecTotal / ++m_cMoveGoals;
+		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
+		WobbleVelocity( flPercent );
+		Vector vecTotal = GetMoveVelocity() + vecOld;
+		SetMoveGoals( GetMoveGoals() + 1 );
+		SetMoveVelocity( vecTotal / GetMoveGoals() );
 	}
 }
 

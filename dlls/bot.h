@@ -459,6 +459,15 @@ public:
 	void HeadForItem( CBaseEntity *pItem ) { HeadFor( pItem->Center() ); }
 	void	MoveToSpot( const Vector &vecSpot, int iPriority );
 	void	Wobble( float flPercent, int iPriority );
+	// Wobble's step (name ours): a random push of up to flPercent per cent of
+	// the move direction, at full speed
+	void WobbleVelocity( float flPercent )
+	{
+		flPercent = flPercent / 100;
+		Vector vecRandom = Vector( RANDOM_FLOAT( -flPercent, flPercent ), RANDOM_FLOAT( -flPercent, flPercent ), RANDOM_FLOAT( -flPercent, flPercent ) );
+		SetMoveVelocity( GetMoveVelocity().Normalize() + vecRandom );
+		SetMoveVelocity( GetMoveVelocity().Normalize() * CVAR_GET_FLOAT( "sv_maxspeed" ) );
+	}
 	void	Roam( int fForce );												// 0x10014720
 
 	// Roam's step (emitted after it): get a new goal position from RouteGoal
