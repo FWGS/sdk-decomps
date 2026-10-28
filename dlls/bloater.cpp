@@ -21,6 +21,7 @@
 #include	"cbase.h"
 #include	"monsters.h"
 #include	"schedule.h"
+#include	"flyingmonster.h"
 
 
 //=========================================================
@@ -29,7 +30,7 @@
 #define	BLOATER_AE_ATTACK_MELEE1		0x01
 
 
-class CBloater : public CBaseMonster
+class CBloater : public CFlyingMonster
 {
 public:
 	void Spawn( void );
@@ -57,7 +58,7 @@ LINK_ENTITY_TO_CLASS( monster_bloater, CBloater );
 //=========================================================
 int	CBloater :: Classify ( void )
 {
-	return m_iClass?m_iClass:CLASS_ALIEN_MONSTER;
+	return m_iClass?m_iClass:CLASS_BARNACLE;
 }
 
 //=========================================================
@@ -201,6 +202,10 @@ void CBloater :: Spawn()
 	pev->view_ofs		= VEC_VIEW;// position of the eyes relative to monster's origin.
 	m_flFieldOfView		= 0.5;// indicates the width of this monster's forward view cone ( as a dotproduct result )
 	m_MonsterState		= MONSTERSTATE_NONE;
+
+	SetBits(pev->flags, FL_FLY);
+	SetFlyingSpeed( 100 );
+	SetFlyingMomentum( 2.5 );	// Set momentum constant
 
 	MonsterInit();
 }
