@@ -953,7 +953,7 @@ CBaseEntity *CDml::FindTarget( bool fAutoaim )
 	if ( ( vecForward - vecDir ).Length() > flMaxDeviation )
 		vecDir = vecForward;
 
-	UTIL_MakeVectors( m_pPlayer->pev->punchangle + m_pPlayer->pev->v_angle );
+	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
 
 	TraceResult tr;
