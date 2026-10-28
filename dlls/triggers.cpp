@@ -652,6 +652,8 @@ void CMultiManager :: UseThink ( void )
 // so I changed it to use the standard target fire code, made it a little simpler.
 void CMultiManager :: ManagerThink ( void )
 {
+	float	waittime;	// T2DEF (name ours)
+
 	//LRC- different manager modes
 	if (m_iMode)
 	{
@@ -661,14 +663,14 @@ void CMultiManager :: ManagerThink ( void )
 //			ALERT(at_console,"Manager loops back\n");
 			// if it's a loop, start again!
 			if (m_flMaxWait) //LRC- random time to wait?
-				m_startTime = RANDOM_FLOAT( m_flWait, m_flMaxWait );
+				waittime = RANDOM_FLOAT( m_flWait, m_flMaxWait );
 			else if (m_flWait) //LRC- constant time to wait?
-				m_startTime = m_flWait;
+				waittime = m_flWait;
 			else //LRC- just start immediately.
-				m_startTime = 0;
+				waittime = 0;
 			if (pev->spawnflags & SF_MULTIMAN_DEBUG)
 				ALERT(at_debug, "DEBUG: multi_manager \"%s\": restarting loop.\n", STRING(pev->targetname));
-			SetNextThink( m_startTime );
+			SetNextThink( waittime );
 			m_startTime = m_fNextThink;
 			m_iState = STATE_TURN_ON;
 //			ALERT(at_console, "MM loops, nextthink %f\n", m_fNextThink);
@@ -770,23 +772,23 @@ void CMultiManager :: ManagerThink ( void )
 			m_index = 0;
 			if (m_flMaxWait) //LRC- random time to wait?
 			{
-				m_startTime = RANDOM_FLOAT( m_flWait, m_flMaxWait );
+				waittime = RANDOM_FLOAT( m_flWait, m_flMaxWait );
 				m_iState = STATE_TURN_ON; // while we're waiting, we're in state TURN_ON
 			}
 			else if (m_flWait) //LRC- constant time to wait?
 			{
-				m_startTime = m_flWait;
+				waittime = m_flWait;
 				m_iState = STATE_TURN_ON;
 			}
 			else //LRC- just start immediately.
 			{
-				m_startTime = 0;
+				waittime = 0;
 				m_iState = STATE_ON;
 			}
 			if (pev->spawnflags & SF_MULTIMAN_DEBUG)
 				ALERT(at_debug, "DEBUG: multi_manager \"%s\": restarting loop.\n", STRING(pev->targetname));
-			SetNextThink( m_startTime );
-			m_startTime += gpGlobals->time;
+			SetNextThink( waittime );
+			m_startTime = gpGlobals->time;
 		}
 		else
 		{
@@ -917,27 +919,28 @@ void CMultiManager :: ManagerUse ( CBaseEntity *pActivator, CBaseEntity *pCaller
 
 	m_hActivator = pActivator;
 	m_index = 0;
+	float timeOffset; // T2DEF: as in Spirit 1.0, but see below
 
 	if (m_flMaxWait) //LRC- random time to wait?
 	{
-		m_startTime = RANDOM_FLOAT( m_flWait, m_flMaxWait );
+		timeOffset = RANDOM_FLOAT( m_flWait, m_flMaxWait );
 		m_iState = STATE_TURN_ON; // while we're waiting, we're in state TURN_ON
 	}
 	else if (m_flWait) //LRC- constant time to wait?
 	{
-		m_startTime = m_flWait;
+		timeOffset = m_flWait;
 		m_iState = STATE_TURN_ON;
 	}
 	else //LRC- just start immediately.
 	{
-		m_startTime = 0;
+		timeOffset = 0;
 		m_iState = STATE_ON;
 	}
 
 	if (m_cTargets > 0 && !m_iMode && m_flTargetDelay[0] < 0)
 	{
 		// negative wait on the first target?
-		m_startTime += m_flTargetDelay[0];
+		timeOffset += m_flTargetDelay[0];
 	}
 
 	if (pev->spawnflags & SF_MULTIMAN_SAMETRIG) //LRC
@@ -948,17 +951,17 @@ void CMultiManager :: ManagerUse ( CBaseEntity *pActivator, CBaseEntity *pCaller
 	else
 		SetUse( NULL );// disable use until all targets have fired
 
-	if (m_startTime > 0)
+	if (timeOffset > 0)
 	{
 		if (pev->spawnflags & SF_MULTIMAN_DEBUG)
-			ALERT(at_debug, "DEBUG: multi_manager \"%s\": Begin in %f seconds.\n", STRING(pev->targetname), m_startTime);
+			ALERT(at_debug, "DEBUG: multi_manager \"%s\": Begin in %f seconds.\n", STRING(pev->targetname), timeOffset);
 		SetThink ( ManagerThink );
-		SetNextThink( m_startTime );
-		m_startTime += gpGlobals->time;
+		SetNextThink( timeOffset );
+		m_startTime = gpGlobals->time;
 	}
 	else
 	{
-		m_startTime += gpGlobals->time;
+		m_startTime = gpGlobals->time;
 		SetThink ( ManagerThink );
 		ManagerThink();
 	}
