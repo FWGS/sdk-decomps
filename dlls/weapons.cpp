@@ -162,6 +162,9 @@ void DecalGunshot( TraceResult *pTrace, int iBulletType )
 	if ( !UTIL_IsValidEntity( pTrace->pHit ) )
 		return;
 
+	if ( FClassnameIs( VARS( pTrace->pHit ), "func_shield" ) )
+		return;
+
 	if ( VARS(pTrace->pHit)->solid == SOLID_BSP || VARS(pTrace->pHit)->movetype == MOVETYPE_PUSHSTEP )
 	{
 		CBaseEntity *pEntity = NULL;
@@ -520,7 +523,7 @@ void CBasePlayerItem::Materialize( void )
 	if ( pev->effects & EF_NODRAW )
 	{
 		// changing from invisible state to visible.
-		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "items/suitchargeok1.wav", 1, ATTN_NORM, 0, 150 );
+//		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "items/suitchargeok1.wav", 1, ATTN_NORM, 0, 150 );
 		pev->effects &= ~EF_NODRAW;
 		pev->effects |= EF_MUZZLEFLASH;
 	}
@@ -1367,6 +1370,23 @@ void CWeaponBox::Touch( CBaseEntity *pOther )
 				//ALERT ( at_console, "trying to give %s\n", STRING( m_rgpPlayerItems[ i ]->pev->classname ) );
 
 				pItem = m_rgpPlayerItems[ i ];
+
+				// a box with a hatchet: leave it if the player has one already (names ours)
+				if ( pItem->m_iId == WEAPON_CROWBAR )
+				{
+					for ( int j = 0 ; j < MAX_ITEM_TYPES ; j++ )
+					{
+						CBasePlayerItem *pPlayerItem = pPlayer->m_rgpPlayerItems[ j ];
+
+						while ( pPlayerItem )
+						{
+							if ( pPlayerItem->m_iId == WEAPON_CROWBAR )
+								return;
+							pPlayerItem = pPlayerItem->m_pNext;
+						}
+					}
+				}
+
 				m_rgpPlayerItems[ i ] = m_rgpPlayerItems[ i ]->m_pNext;// unlink this weapon from the box
 
 				if ( pPlayer->AddPlayerItem( pItem ) )
@@ -1427,6 +1447,10 @@ BOOL CWeaponBox::PackWeapon( CBasePlayerItem *pWeapon )
 	pWeapon->SetThink( NULL );// crowbar may be trying to swing again, etc.
 	pWeapon->SetTouch( NULL );
 	pWeapon->m_pPlayer = NULL;
+
+	// a thrown hatchet: show it
+	if ( pWeapon->m_iId == WEAPON_CROWBAR )
+		SET_MODEL( ENT(pev), "models/w_crowbar.mdl" );
 
 	//ALERT ( at_console, "packed %s\n", STRING(pWeapon->pev->classname) );
 
