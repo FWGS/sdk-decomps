@@ -59,12 +59,13 @@ enum gausspistol_e {
 #define GAUSS_FIRE_RAPID	3
 #define GAUSS_FIRE_SNIPER	4
 
-int g_iGaussPoof;
-int g_iGaussFade;
+// sprite indexes and the fire event (names ours)
+int g_iGaussPoofIndex;
+int g_iGaussFadeIndex;
 unsigned short g_usGaussFire;
-int g_iGaussBeam;
-int g_iGaussSpark;
-int g_iGaussBig;
+int g_iGaussBeamIndex;
+int g_iGaussSparks;
+int g_iGaussBigIndex;
 
 
 //=========================================================
@@ -142,7 +143,7 @@ void CNullEnt::LazerThink( void )
 		WRITE_COORD( m_vecEnd.x );
 		WRITE_COORD( m_vecEnd.y );
 		WRITE_COORD( m_vecEnd.z );
-		WRITE_SHORT( g_iGaussBeam );
+		WRITE_SHORT( g_iGaussBeamIndex );
 		WRITE_BYTE( 0 ); // startframe
 		WRITE_BYTE( 0 ); // framerate
 		WRITE_BYTE( 1 ); // life
@@ -373,7 +374,7 @@ void CBoltShot::ThrowSparks( void )
 			WRITE_COORD( pev->origin.x + gpGlobals->v_forward.x );
 			WRITE_COORD( pev->origin.y + gpGlobals->v_forward.y );
 			WRITE_COORD( pev->origin.z + gpGlobals->v_forward.z );
-			WRITE_SHORT( g_iGaussSpark );		// model
+			WRITE_SHORT( g_iGaussSparks );		// model
 			WRITE_BYTE( 3 );				// count
 			WRITE_BYTE( 10 );				// life * 10
 			WRITE_BYTE( RANDOM_LONG( 1, 2 ) );				// size * 10
@@ -694,11 +695,11 @@ void CGaussPistol::Spawn( )
 
 void CGaussPistol::Precache( void )
 {
-	g_iGaussBig = PRECACHE_MODEL( "sprites/gaussbig.spr" );
-	g_iGaussSpark = PRECACHE_MODEL( "sprites/gausspark.spr" );
-	g_iGaussBeam = PRECACHE_MODEL( "sprites/gaussbeam2.spr" );
-	g_iGaussFade = PRECACHE_MODEL( "sprites/gaussfade.spr" );
-	g_iGaussPoof = PRECACHE_MODEL( "sprites/gausspoof.spr" );
+	g_iGaussBigIndex = PRECACHE_MODEL( "sprites/gaussbig.spr" );
+	g_iGaussSparks = PRECACHE_MODEL( "sprites/gausspark.spr" );
+	g_iGaussBeamIndex = PRECACHE_MODEL( "sprites/gaussbeam2.spr" );
+	g_iGaussFadeIndex = PRECACHE_MODEL( "sprites/gaussfade.spr" );
+	g_iGaussPoofIndex = PRECACHE_MODEL( "sprites/gausspoof.spr" );
 	PRECACHE_MODEL( "sprites/gausspuff.spr" );
 	PRECACHE_MODEL( "sprites/gaussbeam2.spr" );
 
