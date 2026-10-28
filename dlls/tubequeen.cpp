@@ -658,7 +658,7 @@ void CTubeQueen::RunTask( Task_t *pTask )
 			UTIL_Remove( this );
 			return;
 		}
-		break;
+		// fall through: the next test fails too
 
 	case TASK_TUBEQUEEN_VIOLENT_FLINCH:
 		if ( m_fSequenceFinished )
@@ -666,10 +666,12 @@ void CTubeQueen::RunTask( Task_t *pTask )
 			TaskComplete( );
 			return;
 		}
+		// fall through
+
+	default:
+		CBaseMonster::RunTask( pTask );
 		break;
 	}
-
-	CBaseMonster::RunTask( pTask );
 }
 
 //=========================================================
