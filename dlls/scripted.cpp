@@ -38,6 +38,9 @@
 #include "defaultai.h"
 #include "movewith.h"
 
+extern DLL_GLOBAL int g_iT2DefSpeaker;			// T2DEF
+extern void CAPTION_Show( const char *pszName );	// T2DEF, sound.cpp (name ours)
+
 
 
 /*
@@ -1262,6 +1265,14 @@ CBaseMonster *CScriptedSentence :: FindEntity( void )
 			}
 		}
 	}
+
+	// T2DEF: the player can be the speaker
+	if ( FStrEq( STRING(m_iszEntity), "player" ) )
+	{
+		CBaseEntity *pPlayer = UTIL_PlayerByIndex( 1 );
+		if ( pPlayer )
+			return (CBaseMonster *)pPlayer;
+	}
 	
 	return NULL;
 }
@@ -1291,9 +1302,17 @@ BOOL CScriptedSentence :: StartSentence( CBaseMonster *pTarget )
 		pListener = UTIL_FindEntityGeneric( STRING( m_iszListener ), pTarget->pev->origin, radius );
 	}
 
+	// T2DEF: spawnflag 16 shows the caption (the sentence name without its '!')
+	if ( pev->spawnflags & 16 )
+	{
+		CAPTION_Show( STRING(m_iszSentence) + 1 );
+		pTarget->StopForCaption( FALSE );
+	}
+
 	pTarget->PlayScriptedSentence( STRING(m_iszSentence), m_flDuration,  m_flVolume, m_flAttenuation, bConcurrent, pListener );
 	ALERT( at_aiconsole, "Playing sentence %s (%.1f)\n", STRING(m_iszSentence), m_flDuration );
 	SUB_UseTargets( NULL, USE_TOGGLE, 0 );
+	g_iT2DefSpeaker = pTarget->entindex();	// T2DEF: listeners turn to it (RunTask)
 	return TRUE;
 }
 
