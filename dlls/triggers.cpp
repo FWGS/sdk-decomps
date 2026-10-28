@@ -1701,6 +1701,7 @@ void CEnvCustomize :: Affect (CBaseEntity *pTarget)
 			if (*(STRING(pTarget->pev->model)) == '*')
 			{
 				pTarget->pev->solid = SOLID_BSP;
+				UTIL_SetOrigin( pTarget, pTarget->pev->origin ); // T2DEF
 				if (pev->spawnflags & SF_CUSTOM_DEBUG)
 					ALERT(at_console, " solid=YES(bsp)");
 			}
