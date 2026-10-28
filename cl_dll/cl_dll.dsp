@@ -493,6 +493,10 @@ SOURCE=.\vgui_HudDeathNotice.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\placeholder_object.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\vgui_HudID.cpp
 # End Source File
 # Begin Source File
