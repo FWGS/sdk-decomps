@@ -207,7 +207,7 @@ enum
 	MEXBANDIT_SENT_THROW,
 	MEXBANDIT_SENT_CHARGE,
 	MEXBANDIT_SENT_TAUNT,
-} MEXBANDIT_SENTENCE_TYPES;
+} HMEXBANDIT_SENTENCE_TYPES;
 
 //=========================================================
 // Speak Sentence - say your cued up sentence.
