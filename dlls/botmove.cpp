@@ -995,18 +995,19 @@ void CBot::FleeEntity( CBaseEntity *pEntity, int iPriority )
 //=========================================================
 void CBot::FleeSpot( const Vector &vecSpot, int iPriority )
 {
-	if ( iPriority > m_iMovePriority )
+	if ( iPriority > GetMovePriority() )
 	{
-		m_vecMoveVelocity = ( vecSpot - pev->origin ).Normalize() * -1 * CVAR_GET_FLOAT( "sv_maxspeed" );
-		m_cMoveGoals = 1;
-		m_iMovePriority = iPriority;
+		RunFrom( vecSpot );
+		SetMoveGoals( 1 );
+		SetMovePriority( iPriority );
 	}
-	else if ( iPriority == m_iMovePriority )
+	else if ( iPriority == GetMovePriority() )
 	{
-		Vector vecOld = m_vecMoveVelocity * m_cMoveGoals;
-		Vector vecAway = ( vecSpot - pev->origin ).Normalize() * -1;
-		m_vecMoveVelocity = vecAway * CVAR_GET_FLOAT( "sv_maxspeed" );
-		m_vecMoveVelocity = ( m_vecMoveVelocity + vecOld ) / ++m_cMoveGoals;
+		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
+		RunAwayFrom( vecSpot );
+		Vector vecTotal = GetMoveVelocity() + vecOld;
+		SetMoveGoals( GetMoveGoals() + 1 );
+		SetMoveVelocity( vecTotal / GetMoveGoals() );
 	}
 }
 
@@ -1125,17 +1126,18 @@ void CBot::Wobble( float flPercent, int iPriority )
 //=========================================================
 void CBot::Roam( int iPriority )
 {
-	if ( iPriority > m_iMovePriority )
+	if ( iPriority > GetMovePriority() )
 	{
 		SeekGoal();
-		m_cMoveGoals = 1;
-		m_iMovePriority = iPriority;
+		SetMoveGoals( 1 );
+		SetMovePriority( iPriority );
 	}
-	else if ( iPriority == m_iMovePriority )
+	else if ( iPriority == GetMovePriority() )
 	{
-		Vector vecOld = m_vecMoveVelocity * m_cMoveGoals;
+		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
 		SeekGoal();
-		Vector vecTotal = m_vecMoveVelocity + vecOld;
-		m_vecMoveVelocity = vecTotal / ++m_cMoveGoals;
+		Vector vecTotal = GetMoveVelocity() + vecOld;
+		SetMoveGoals( GetMoveGoals() + 1 );
+		SetMoveVelocity( vecTotal / GetMoveGoals() );
 	}
 }
