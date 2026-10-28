@@ -422,6 +422,7 @@ void CVehicleTankShell::ShellTouch( CBaseEntity *pOther )
 			pev->origin = tr.vecEndPos + ( tr.vecPlaneNormal * 12 );
 
 		int iContents = UTIL_PointContents( pev->origin );
+		int iScale = 75;
 
 		MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
 			WRITE_BYTE( TE_EXPLOSION );
@@ -429,7 +430,7 @@ void CVehicleTankShell::ShellTouch( CBaseEntity *pOther )
 			WRITE_COORD( pev->origin.y );
 			WRITE_COORD( pev->origin.z );
 			WRITE_SHORT( s_sShellExplosion );
-			WRITE_BYTE( 75 );	// scale * 10
+			WRITE_BYTE( iScale );	// scale * 10
 			WRITE_BYTE( 20 );	// framerate
 			WRITE_BYTE( TE_EXPLFLAG_NOPARTICLES );
 		MESSAGE_END();
