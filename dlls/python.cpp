@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -112,7 +112,7 @@ BOOL CPython::Deploy( )
 		pev->body = 0;
 	}
 
-	return DefaultDeploy( "models/v_357.mdl", "models/p_357.mdl", PYTHON_DRAW, "python" );
+	return DefaultDeploy( "models/v_357.mdl", "models/p_357.mdl", PYTHON_DRAW, "python", UseDecrement(), pev->body );
 }
 
 
@@ -226,7 +226,14 @@ void CPython::Reload( void )
 		m_pPlayer->pev->fov = m_pPlayer->m_iFOV = 0;  // 0 means reset to default fov
 	}
 
-	if (DefaultReload( 6, PYTHON_RELOAD, 2.0 ))
+	int bUseScope = FALSE;
+#ifdef CLIENT_DLL
+	bUseScope = bIsMultiplayer();
+#else
+	bUseScope = g_pGameRules->IsMultiplayer();
+#endif
+
+	if (DefaultReload( 6, PYTHON_RELOAD, 2.0, bUseScope ))
 	{
 		m_flSoundDelay = 1.5;
 	}
@@ -271,7 +278,15 @@ void CPython::WeaponIdle( void )
 		iAnim = PYTHON_FIDGET;
 		m_flTimeWeaponIdle = (170.0/30.0);
 	}
-	SendWeaponAnim( iAnim );
+	
+	int bUseScope = FALSE;
+#ifdef CLIENT_DLL
+	bUseScope = bIsMultiplayer();
+#else
+	bUseScope = g_pGameRules->IsMultiplayer();
+#endif
+	
+	SendWeaponAnim( iAnim, UseDecrement() ? 1 : 0, bUseScope );
 }
 
 

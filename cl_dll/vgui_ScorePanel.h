@@ -1,3 +1,9 @@
+//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//
+// Purpose: 
+//
+// $NoKeywords: $
+//=============================================================================
 
 #ifndef SCOREPANEL_H
 #define SCOREPANEL_H
@@ -257,9 +263,6 @@ private:
 	ScorePanel::HitTestPanel	m_HitTestPanel;
 
 	CLabelHeader*	GetPlayerEntry(int x, int y)	{return &m_PlayerEntries[x][y];}
-
-	vgui::BitmapTGA *m_pTrackerIcon;
-
 
 public:
 	

@@ -1,3 +1,10 @@
+//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//
+// Purpose: 
+//
+// $NoKeywords: $
+//=============================================================================
+
 // Triangle rendering, if any
 
 #include "hud.h"

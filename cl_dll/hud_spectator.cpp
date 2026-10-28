@@ -213,7 +213,11 @@ int CHudSpectator::Draw(float flTime)
 
 	char string[256];
 	float red, green, blue;
-	
+
+	// draw only in spectator mode
+	if ( gEngfuncs.IsSpectateOnly()!=1  )
+		return 1;
+
 	// if user pressed zoom, aplly changes
 	if ( m_zoomDelta != 0.0f && m_iMainMode != MAIN_ROAMING )
 	{
@@ -1039,7 +1043,7 @@ void CHudSpectator::DrawOverviewEntities()
 	if ( m_iInsetMode == INSET_OFF )
 		return;
 
-	if ( m_iInsetMode == INSET_IN_EYE )
+	if ( m_iInsetMode == INSET_IN_EYE || m_iMainMode == MAIN_IN_EYE )
 	{ 
 		V_GetInEyePos(m_iObserverTarget, vecNewViewOrigin, vecNewViewAngles );
 	}

@@ -33,7 +33,9 @@ CPlayerBitVec	g_bWantModEnable;
 
 cvar_t voice_serverdebug = {"voice_serverdebug", "0"};
 
-
+// Set game rules to allow all clients to talk to each other.
+// Muted players still can't talk to each other.
+cvar_t sv_alltalk = {"sv_alltalk", "0"};
 
 // ------------------------------------------------------------------------ //
 // Static helpers.
@@ -105,8 +107,14 @@ bool CVoiceGameMgr::Init(
 
 	m_msgPlayerVoiceMask = REG_USER_MSG( "VoiceMask", VOICE_MAX_PLAYERS_DW*4 * 2 );
 	m_msgRequestState = REG_USER_MSG( "ReqState", 0 );
+	
+	// register voice_serverdebug if it hasn't been registered already
+	if ( !CVAR_GET_POINTER( "voice_serverdebug" ) )
+		CVAR_REGISTER( &voice_serverdebug );
 
-	CVAR_REGISTER( &voice_serverdebug );
+	if( !CVAR_GET_POINTER( "sv_alltalk" ) )
+		CVAR_REGISTER( &sv_alltalk );
+
 	return true;
 }
 
@@ -190,6 +198,8 @@ void CVoiceGameMgr::UpdateMasks()
 {
 	m_UpdateInterval = 0;
 
+	bool bAllTalk = !!g_engfuncs.pfnCVarGetFloat( "sv_alltalk" );
+
 	for(int iClient=0; iClient < m_nMaxPlayers; iClient++)
 	{
 		CBaseEntity *pEnt = UTIL_PlayerByIndex(iClient+1);
@@ -206,13 +216,14 @@ void CVoiceGameMgr::UpdateMasks()
 		CBasePlayer *pPlayer = (CBasePlayer*)pEnt;
 
 		CPlayerBitVec gameRulesMask;
-		if(g_PlayerModEnable[iClient])
+		if( g_PlayerModEnable[iClient] )
 		{
 			// Build a mask of who they can hear based on the game rules.
 			for(int iOtherClient=0; iOtherClient < m_nMaxPlayers; iOtherClient++)
 			{
 				CBaseEntity *pEnt = UTIL_PlayerByIndex(iOtherClient+1);
-				if(pEnt && pEnt->IsPlayer() && m_pHelper->CanPlayerHearPlayer(pPlayer, (CBasePlayer*)pEnt))
+				if(pEnt && pEnt->IsPlayer() && 
+					(bAllTalk || m_pHelper->CanPlayerHearPlayer(pPlayer, (CBasePlayer*)pEnt)) )
 				{
 					gameRulesMask[iOtherClient] = true;
 				}

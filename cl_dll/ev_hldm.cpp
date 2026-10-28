@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -38,6 +38,8 @@ extern "C" char PM_FindTextureType( char *name );
 
 void V_PunchAxis( int axis, float punch );
 void VectorAngles( const float *forward, float *angles );
+
+extern cvar_t *cl_lw;
 
 extern "C"
 {
@@ -577,7 +579,7 @@ void EV_FireShotGunDouble( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-		if ( gEngfuncs.GetMaxClients() > 1 )
+	if ( gEngfuncs.GetMaxClients() > 1 )
 	{
 		EV_HLDM_FireBullets( idx, forward, right, up, 8, vecSrc, vecAiming, 2048, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1], 0.17365, 0.04362 );
 	}
@@ -719,7 +721,7 @@ void EV_FireMP52( event_args_t *args )
 		gEngfuncs.pEventAPI->EV_WeaponAnimation( MP5_LAUNCH, 2 );
 		V_PunchAxis( 0, -10 );
 	}
-
+	
 	switch( gEngfuncs.pfnRandomLong( 0, 1 ) )
 	{
 	case 0:
@@ -973,13 +975,13 @@ void EV_FireGauss( event_args_t *args )
 				VectorMA( vecSrc, 8192.0, forward, vecDest );
 
 				gEngfuncs.pEfxAPI->R_TempSprite( tr.endpos, vec3_origin, 0.2, m_iGlow, kRenderGlow, kRenderFxNoDissipation, flDamage * n / 255.0, flDamage * n * 0.5 * 0.1, FTENT_FADEOUT );
-				
+
 				vec3_t fwd;
 				VectorAdd( tr.endpos, tr.plane.normal, fwd );
 
 				gEngfuncs.pEfxAPI->R_Sprite_Trail( TE_SPRITETRAIL, tr.endpos, fwd, m_iBalls, 3, 0.1, gEngfuncs.pfnRandomFloat( 10, 20 ) / 100.0, 100,
 									255, 100 );
-	
+
 				// lose energy
 				if ( n == 0 )
 				{
@@ -1154,7 +1156,7 @@ void EV_Crowbar( event_args_t *args )
 //======================
 
 //======================
-//	  CROSSBOW END 
+//	  CROSSBOW START
 //======================
 enum crossbow_e {
 	CROSSBOW_IDLE1 = 0,	// full
@@ -1222,7 +1224,7 @@ void EV_FireCrossbow2( event_args_t *args )
 	// Now add in all of the players.
 	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );	
 	gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
-	gEngfuncs.pEventAPI->EV_PlayerTrace( vecSrc, vecEnd, PM_NORMAL, -1, &tr );
+	gEngfuncs.pEventAPI->EV_PlayerTrace( vecSrc, vecEnd, PM_STUDIO_BOX, -1, &tr );
 	
 	//We hit something
 	if ( tr.fraction < 1.0 )
@@ -1380,7 +1382,7 @@ void EV_EgonFire( event_args_t *args )
 	iFireState = args->iparam1;
 	iFireMode = args->iparam2;
 	int iStartup = args->bparam1;
-	
+
 
 	if ( iStartup )
 	{
@@ -1401,7 +1403,7 @@ void EV_EgonFire( event_args_t *args )
 	if ( EV_IsLocal( idx ) )
 		gEngfuncs.pEventAPI->EV_WeaponAnimation ( g_fireAnims1[ gEngfuncs.pfnRandomLong( 0, 3 ) ], 1 );
 
-	if ( iStartup == 1 && EV_IsLocal( idx ) && !pBeam && !pBeam2  )
+	if ( iStartup == 1 && EV_IsLocal( idx ) && !pBeam && !pBeam2 && cl_lw->value ) //Adrian: Added the cl_lw check for those lital people that hate weapon prediction.
 	{
 		vec3_t vecSrc, vecEnd, origin, angles, forward, right, up;
 		pmtrace_t tr;
@@ -1415,21 +1417,21 @@ void EV_EgonFire( event_args_t *args )
 			AngleVectors( angles, forward, right, up );
 
 			EV_GetGunPosition( args, vecSrc, pl->origin );
-	
-	VectorMA( vecSrc, 2048, forward, vecEnd );
 
-	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );	
-		
-	// Store off the old count
-	gEngfuncs.pEventAPI->EV_PushPMStates();
-	
-	// Now add in all of the players.
-	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );	
+			VectorMA( vecSrc, 2048, forward, vecEnd );
 
-	gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
-	gEngfuncs.pEventAPI->EV_PlayerTrace( vecSrc, vecEnd, PM_STUDIO_BOX, -1, &tr );
+			gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );	
+				
+			// Store off the old count
+			gEngfuncs.pEventAPI->EV_PushPMStates();
+			
+			// Now add in all of the players.
+			gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );	
 
-	gEngfuncs.pEventAPI->EV_PopPMStates();
+			gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+			gEngfuncs.pEventAPI->EV_PlayerTrace( vecSrc, vecEnd, PM_STUDIO_BOX, -1, &tr );
+
+			gEngfuncs.pEventAPI->EV_PopPMStates();
 
 			int iBeamModelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( EGON_BEAM_SPRITE );
 		
@@ -1456,7 +1458,7 @@ void EV_EgonStop( event_args_t *args )
 	if ( args->iparam1 )
 		 gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, EGON_SOUND_OFF, 0.98, ATTN_NORM, 0, 100 );
 
-	if ( EV_IsLocal( idx ) )
+	if ( EV_IsLocal( idx ) ) 
 	{
 		if ( pBeam )
 		{

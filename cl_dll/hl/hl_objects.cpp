@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -46,6 +46,8 @@ void UpdateBeams ( void )
 
 	AngleVectors( angles, forward, right, up );
 
+	VectorCopy( origin, vecSrc );
+	
 	VectorMA( vecSrc, 2048, forward, vecEnd );
 
 	gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );	
@@ -62,11 +64,16 @@ void UpdateBeams ( void )
 	gEngfuncs.pEventAPI->EV_PopPMStates();
 
 	if ( pBeam )
+	{
 		pBeam->target = tr.endpos;
+		pBeam->die	  = gEngfuncs.GetClientTime() + 0.1; // We keep it alive just a little bit forward in the future, just in case.
+	}
 		
 	if ( pBeam2 )
+	{
 		pBeam2->target = tr.endpos;
-
+		pBeam2->die	   = gEngfuncs.GetClientTime() + 0.1; // We keep it alive just a little bit forward in the future, just in case.
+	}
 }
 
 /*

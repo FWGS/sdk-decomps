@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -23,10 +23,9 @@
 
 #define MAX_CLIENTS 32
 
-#if !defined( _TFC )
 extern BEAM *pBeam;
 extern BEAM *pBeam2;
-#endif 
+
 /// USER-DEFINED SERVER MESSAGE HANDLERS
 
 int CHud :: MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf )
@@ -63,10 +62,9 @@ void CHud :: MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf )
 			pList->p->InitHUDData();
 		pList = pList->pNext;
 	}
-#if !defined( _TFC )
+
 	//Probably not a good place to put this.
 	pBeam = pBeam2 = NULL;
-#endif
 }
 
 

@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -355,7 +355,7 @@ void CHalfLifeTeamplay::ClientUserInfoChanged( CBasePlayer *pPlayer, char *infob
 
 	ChangePlayerTeam( pPlayer, mdls, TRUE, TRUE );
 	// recound stuff
-	RecountTeams();
+	RecountTeams( TRUE );
 }
 
 extern int gmsgDeathMsg;
@@ -555,7 +555,7 @@ const char *CHalfLifeTeamplay::TeamWithFewestPlayers( void )
 
 //=========================================================
 //=========================================================
-void CHalfLifeTeamplay::RecountTeams( void )
+void CHalfLifeTeamplay::RecountTeams( bool bResendInfo )
 {
 	char	*pName;
 	char	teamlist[TEAMPLAY_TEAMLISTLENGTH];
@@ -613,6 +613,17 @@ void CHalfLifeTeamplay::RecountTeams( void )
 			if ( tm >= 0 )
 			{
 				team_scores[tm] += plr->pev->frags;
+			}
+
+			if ( bResendInfo ) //Someone's info changed, let's send the team info again.
+			{
+				if ( plr && IsValidTeam( plr->TeamID() ) )
+				{
+					MESSAGE_BEGIN( MSG_ALL, gmsgTeamInfo, NULL );
+						WRITE_BYTE( plr->entindex() );
+						WRITE_STRING( plr->TeamID() );
+					MESSAGE_END();
+				}
 			}
 		}
 	}

@@ -1,3 +1,10 @@
+//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//
+// Purpose: 
+//
+// $NoKeywords: $
+//=============================================================================
+
 // engine/launcher interface
 #if !defined( ENGINE_LAUNCHER_APIH )
 #define ENGINE_LAUNCHER_APIH

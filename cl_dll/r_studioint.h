@@ -1,3 +1,10 @@
+//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//
+// Purpose: 
+//
+// $NoKeywords: $
+//=============================================================================
+
 #if !defined( R_STUDIOINT_H )
 #define R_STUDIOINT_H
 #if defined( _WIN32 )

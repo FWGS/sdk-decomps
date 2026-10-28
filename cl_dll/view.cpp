@@ -1,3 +1,10 @@
+//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//
+// Purpose: 
+//
+// $NoKeywords: $
+//=============================================================================
+
 // view/refresh setup functions
 
 #include "hud.h"
@@ -878,7 +885,8 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 	v_origin = pparams->vieworg;
 
 }
-void V_GetInEyePos(int entity, float *origin, float * angles )
+
+void V_GetInEyePos(int entity, float * origin, float * angles )
 {
 	cl_entity_t	 * ent = gEngfuncs.GetEntityByIndex( entity );
 

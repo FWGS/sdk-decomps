@@ -1,4 +1,4 @@
-//=========== (C) Copyright 1999 Valve, L.L.C. All rights reserved. ===========
+//=========== (C) Copyright 1996-2001 Valve, L.L.C. All rights reserved. ===========
 //
 // The copyright to the contents herein is the property of Valve, L.L.C.
 // The contents may be used and/or copied only with the written permission of
@@ -72,7 +72,6 @@ int g_iUser3;
 
 #define SBOARD_INDENT_X_400		0
 #define SBOARD_INDENT_Y_400		20
-
 
 void IN_ResetMouse( void );
 extern CMenuPanel *CMessageWindowPanel_Create( const char *szMOTD, const char *szTitle, int iShadeFullscreen, int iRemoveMe, int x, int y, int wide, int tall );

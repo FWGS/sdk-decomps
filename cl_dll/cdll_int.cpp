@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -32,7 +32,6 @@ extern "C"
 #include "hud_servers.h"
 #include "vgui_int.h"
 #include "interface.h"
-#include "ITrackerUser.h"
 
 #define DLLEXPORT __declspec( dllexport )
 
@@ -40,9 +39,6 @@ extern "C"
 cl_enginefunc_t gEngfuncs;
 CHud gHUD;
 TeamFortressViewport *gViewPort = NULL;
-
-HINTERFACEMODULE g_hTrackerModule = NULL;
-ITrackerUser *g_pTrackerUser = NULL;
 
 void InitInput (void);
 void EV_HookEvents( void );
@@ -153,25 +149,7 @@ int DLLEXPORT Initialize( cl_enginefunc_t *pEnginefuncs, int iVersion )
 	memcpy(&gEngfuncs, pEnginefuncs, sizeof(cl_enginefunc_t));
 
 	EV_HookEvents();
-	// get tracker interface, if any
-	char szDir[512];
-	if (!gEngfuncs.COM_ExpandFilename("Bin/TrackerUI.dll", szDir, sizeof(szDir)))
-	{
-		g_pTrackerUser = NULL;
-		g_hTrackerModule = NULL;
-		return 1;
-	}
 
-	g_hTrackerModule = Sys_LoadModule(szDir);
-	CreateInterfaceFn trackerFactory = Sys_GetFactory(g_hTrackerModule);
-	if (!trackerFactory)
-	{
-		g_pTrackerUser = NULL;
-		g_hTrackerModule = NULL;
-		return 1;
-	}
-
-	g_pTrackerUser = (ITrackerUser *)trackerFactory(TRACKERUSER_INTERFACE_VERSION, NULL);
 	return 1;
 }
 

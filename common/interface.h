@@ -1,3 +1,9 @@
+//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//
+// Purpose: 
+//
+// $NoKeywords: $
+//=============================================================================
 
 // This header defines the interface convention used in the valve engine.
 // To make an interface and expose it:
