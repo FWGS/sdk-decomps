@@ -44,6 +44,10 @@ CGlobalState					gGlobalState;
 extern DLL_GLOBAL	int			gDisplayTitle;
 
 extern void W_Precache(void);
+extern DLL_GLOBAL int g_iT2DefCameraActive, g_iT2DefSpeaker;	// T2DEF
+extern void CAPTION_InitEnglish( void );	// T2DEF, sound.cpp (names ours)
+extern void CAPTION_InitGerman( void );
+extern void CONFIG_Init( void );
 
 //
 // This must match the list in util.h
@@ -499,6 +503,10 @@ void CWorld :: Precache( void )
 
 	CVAR_SET_STRING("room_type", "0");// clear DSP
 
+	// T2DEF: no camera view, no speaker yet
+	g_iT2DefCameraActive = 0;
+	g_iT2DefSpeaker = 0;
+
 	// Set up game rules
 	if (g_pGameRules)
 	{
@@ -529,6 +537,12 @@ void CWorld :: Precache( void )
 // init texture type array from materials.txt
 
 	TEXTURETYPE_Init();
+
+// T2DEF: captions from sound/english.txt and sound/german.txt, settings from t2defconfig.txt
+
+	CAPTION_InitEnglish();
+	CAPTION_InitGerman();
+	CONFIG_Init();
 
 
 // the area based ambient sounds MUST be the first precache_sounds
