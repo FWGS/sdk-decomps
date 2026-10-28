@@ -72,6 +72,7 @@ public:
 	void EXPORT SearchThink(void);
 	void EXPORT AutoSearchThink(void);
 	void EXPORT TurretDeath(void);
+	void EXPORT RemoteTrackThink(void);
 
 	virtual void EXPORT SpinDownCall(void) { m_iSpin = 0; }
 	virtual void EXPORT SpinUpCall(void) { m_iSpin = 1; }
@@ -99,6 +100,7 @@ public:
 	// other functions
 	void SetTurretAnim(TURRET_ANIM anim);
 	int MoveTurret(void);
+	void RemoteTrack( Vector &vecTarget ); // name ours
 	virtual void Shoot(Vector &vecSrc, Vector &vecDirToEnemy) { };
 
 	float m_flMaxSpin;		// Max time to spin the barrel w/o a target
@@ -134,6 +136,9 @@ public:
 
 	float	m_flPingTime;	// Time until the next ping, used when searching
 	float	m_flSpinUpTime;	// Amount of time until the barrel should spin down when searching
+
+	int		m_iPlayerControl;
+	string_t m_sFuncTankName;
 };
 
 
@@ -167,6 +172,8 @@ TYPEDESCRIPTION	CBaseTurret::m_SaveData[] =
 
 	DEFINE_FIELD( CBaseTurret, m_flPingTime, FIELD_TIME ),
 	DEFINE_FIELD( CBaseTurret, m_flSpinUpTime, FIELD_TIME ),
+	DEFINE_FIELD( CBaseTurret, m_iPlayerControl, FIELD_INTEGER ),
+	DEFINE_FIELD( CBaseTurret, m_sFuncTankName, FIELD_STRING ),
 };
 
 IMPLEMENT_SAVERESTORE( CBaseTurret, CBaseMonster );
@@ -243,6 +250,11 @@ void CBaseTurret::KeyValue( KeyValueData *pkvd )
 			 FStrEq(pkvd->szKeyName, "value2") ||
 			 FStrEq(pkvd->szKeyName, "value3"))
 		pkvd->fHandled = TRUE;
+	else if (FStrEq(pkvd->szKeyName, "functank"))
+	{
+		m_sFuncTankName = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
 	else
 		CBaseMonster::KeyValue( pkvd );
 }
@@ -272,6 +284,10 @@ void CBaseTurret::Spawn()
 	SetBoneController( 1, 0 );
 	m_flFieldOfView = VIEW_FIELD_FULL;
 	// m_flSightRange = TURRET_RANGE;
+
+	m_iPlayerControl = FALSE;
+	if ( !FStringNull( m_sFuncTankName ) )
+		m_iPlayerControl = TRUE;
 }
 
 
@@ -382,7 +398,7 @@ void CBaseTurret::Initialize(void)
 
 	m_vecGoalAngles.x = 0;
 
-	if (m_iAutoStart)
+	if (m_iAutoStart || m_iPlayerControl)
 	{
 		m_flLastSight = gpGlobals->time + m_flMaxWait;
 		SetThink(AutoSearchThink);		
@@ -622,7 +638,10 @@ void CBaseTurret::ActiveThink(void)
 
 void CTurret::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 {
-	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_MONSTER_12MM, 1 );
+	if ( m_iPlayerControl )
+		FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, 4096, BULLET_MONSTER_12MM, 1 );
+	else
+		FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_MONSTER_12MM, 1 );
 	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/tu_fire1.wav", 1, 0.6);
 	pev->effects = pev->effects | EF_MUZZLEFLASH;
 }
@@ -630,7 +649,10 @@ void CTurret::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 
 void CMiniTurret::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 {
-	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_MONSTER_9MM, 1 );
+	if ( m_iPlayerControl )
+		FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, 4096, BULLET_MONSTER_9MM, 1 );
+	else
+		FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_MONSTER_9MM, 1 );
 
 	switch(RANDOM_LONG(0,2))
 	{
@@ -674,7 +696,10 @@ void CBaseTurret::Deploy(void)
 
 		SetTurretAnim(TURRET_ANIM_SPIN);
 		pev->framerate = 0;
-		SetThink(SearchThink);
+		if (m_iPlayerControl)
+			SetThink(RemoteTrackThink);
+		else
+			SetThink(SearchThink);
 	}
 
 	m_flLastSight = gpGlobals->time + m_flMaxWait;
@@ -712,7 +737,7 @@ void CBaseTurret::Retire(void)
 			pev->maxs.z = m_iRetractHeight;
 			pev->mins.z = -m_iRetractHeight;
 			UTIL_SetSize(pev, pev->mins, pev->maxs);
-			if (m_iAutoStart)
+			if (m_iAutoStart || m_iPlayerControl)
 			{
 				SetThink(AutoSearchThink);		
 				SetNextThink( 0.1 );
@@ -762,7 +787,10 @@ void CTurret::SpinUpCall(void)
 
 	if (m_iSpin)
 	{
-		SetThink(ActiveThink);
+		if (m_iPlayerControl)
+			SetThink(RemoteTrackThink);
+		else
+			SetThink(ActiveThink);
 	}
 }
 
@@ -887,6 +915,106 @@ void CBaseTurret::SearchThink(void)
 }
 
 
+//=========================================================
+// RemoteTrackThink - the turret follows the aim of the
+// func_tank named by "functank" (T2DEF)
+//=========================================================
+void CBaseTurret::RemoteTrackThink(void)
+{
+	// ensure rethink
+	SetTurretAnim(TURRET_ANIM_SPIN);
+	StudioFrameAdvance( );
+	SetNextThink( 0.1 );
+
+	if (m_flSpinUpTime == 0 && m_flMaxSpin)
+		m_flSpinUpTime = gpGlobals->time + m_flMaxSpin;
+
+	Ping( );
+
+	CBaseEntity *pTank = UTIL_FindEntityGeneric( STRING( m_sFuncTankName ), pev->origin, 4096 ); // name ours
+
+	if ( pTank )
+	{
+		Vector vecTarget = pTank->pev->vuser1 - Vector( 0, 0, 8 ); // name ours
+		RemoteTrack( vecTarget );
+
+		// fire the gun
+		if ( pTank->pev->iuser2 )
+		{
+			m_flLastSight = 0;
+			m_flSpinUpTime = 0;
+			UTIL_MakeAimVectors(m_vecCurAngles);
+			Vector vecSrc, vecAng;
+			GetAttachment( 0, vecSrc, vecAng );
+			SetTurretAnim(TURRET_ANIM_FIRE);
+			Shoot(vecSrc, gpGlobals->v_forward );
+		}
+		else
+		{
+			SetTurretAnim(TURRET_ANIM_SPIN);
+		}
+
+		if ( !pTank->pev->iuser1 )
+		{
+			m_flLastSight = 0;
+			m_flSpinUpTime = 0;
+			SetThink(Retire);
+
+			// should we stop the spin?
+			if ((m_flSpinUpTime) && (gpGlobals->time > m_flSpinUpTime))
+			{
+				SpinDownCall();
+			}
+		}
+	}
+}
+
+
+void CBaseTurret::RemoteTrack( Vector &vecTarget )
+{
+	Vector vecMid = pev->origin + pev->view_ofs;
+	Vector vec = UTIL_VecToAngles(vecTarget - vecMid);
+
+	UTIL_MakeAimVectors(m_vecCurAngles);
+
+	if (vec.y > 360)
+		vec.y -= 360;
+
+	if (vec.y < 0)
+		vec.y += 360;
+
+	if (vec.x < -180)
+		vec.x += 360;
+
+	if (vec.x > 180)
+		vec.x -= 360;
+
+	// now all numbers should be in [1...360]
+	// pin to turret limitations to [-90...15]
+
+	if (m_iOrientation == 0)
+	{
+		if (vec.x > 90)
+			vec.x = 90;
+		else if (vec.x < m_iMinPitch)
+			vec.x = m_iMinPitch;
+	}
+	else
+	{
+		if (vec.x < -90)
+			vec.x = -90;
+		else if (vec.x > -m_iMinPitch)
+			vec.x = -m_iMinPitch;
+	}
+
+	m_vecGoalAngles.y = vec.y;
+	m_vecGoalAngles.x = vec.x;
+
+	SpinUpCall();
+	MoveTurret();
+}
+
+
 // 
 // This think function will deploy the turret when something comes into range. This is for
 // automatically activated turrets.
@@ -896,6 +1024,18 @@ void CBaseTurret::AutoSearchThink(void)
 	// ensure rethink
 	StudioFrameAdvance( );
 	SetNextThink( 0.3 );
+
+	if ( m_iPlayerControl )
+	{
+		CBaseEntity *pTank = UTIL_FindEntityGeneric( STRING( m_sFuncTankName ), pev->origin, 4096 ); // name ours
+
+		if ( pTank && pTank->pev->iuser1 )
+		{
+			SetThink(Deploy);
+			EMIT_SOUND(ENT(pev), CHAN_BODY, "turret/tu_alert.wav", TURRET_MACHINE_VOLUME, ATTN_NORM);
+		}
+		return;
+	}
 
 	// If we have a target and we're still healthy
 
@@ -1192,7 +1332,10 @@ void CSentry::Spawn()
 
 void CSentry::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 {
-	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_MONSTER_MP5, 1 );
+	if ( m_iPlayerControl )
+		FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, 4096, BULLET_MONSTER_MP5, 1 );
+	else
+		FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_MONSTER_MP5, 1 );
 	
 	switch(RANDOM_LONG(0,2))
 	{
