@@ -133,5 +133,6 @@ void CTorch::CreateFlame( void )
 	m_pFlame = CFlame::FlameCreate( pev, vecFlame );
 }
 
-// sic: unused; its empty constructor is all retail has of it
-Vector g_vecTorchUnused;
+// sic: unused; its empty constructor is all retail has of it. Const, so VC6
+// gives it no storage: retail's torch.obj has no .bss
+const Vector g_vecTorchUnused;

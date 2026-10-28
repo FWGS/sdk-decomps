@@ -413,9 +413,10 @@ void CRustFlier :: HuntThink( void )
 }
 
 
-// sic: unused; their empty constructors are all retail has of them
-Vector g_vecFlierUnused1;
-Vector g_vecFlierUnused2;
+// sic: unused; their empty constructors are all retail has of them. Const, so
+// VC6 gives them no storage: retail's rustflier.obj has no .bss
+const Vector g_vecFlierUnused1;
+const Vector g_vecFlierUnused2;
 
 
 // a blow above the target damage: down goes the shield, and
