@@ -827,7 +827,7 @@ void InitSphere( void )
 			g_vecSpherePoints[ iPoint ].z = flZ = cos( flTheta ) * sin( flPhi );
 
 			g_vecSphereTexCoords[ iPoint ].x = 1.0 - ( flX + 1.0 ) * 0.5;
-			g_vecSphereTexCoords[ iPoint ].y = 1.0 - ( flY + 1.0 ) * 0.5;
+			g_vecSphereTexCoords[ iPoint ].y = 1.0 - ( (float)cos( flPhi ) + 1.0 ) * 0.5;
 			g_vecSphereTexCoords[ iPoint ].z = 1.0 - ( flZ + 1.0 ) * 0.5;
 		}
 	}
@@ -866,13 +866,14 @@ void InitSphere( void )
 	}
 
 	// the bottom cap
+	int iIndex = SPHERE_TRIS - SPHERE_SLICES;
 	for ( i = 0; i < SPHERE_SLICES; i++ )
 	{
-		g_iSphereTris[ ( SPHERE_TRIS - SPHERE_SLICES ) * 3 + i * 3 ] = 1;
-		g_iSphereTris[ ( SPHERE_TRIS - SPHERE_SLICES ) * 3 + i * 3 + 1 ] = i + SPHERE_POINTS - SPHERE_SLICES + 1;
-		g_iSphereTris[ ( SPHERE_TRIS - SPHERE_SLICES ) * 3 + i * 3 + 2 ] = i + SPHERE_POINTS - SPHERE_SLICES;
+		g_iSphereTris[ ( iIndex + i ) * 3 ] = 1;
+		g_iSphereTris[ ( iIndex + i ) * 3 + 1 ] = i + SPHERE_POINTS - SPHERE_SLICES + 1;
+		g_iSphereTris[ ( iIndex + i ) * 3 + 2 ] = i + SPHERE_POINTS - SPHERE_SLICES;
 		if ( i == SPHERE_SLICES - 1 )
-			g_iSphereTris[ ( SPHERE_TRIS - SPHERE_SLICES ) * 3 + i * 3 + 1 ] = SPHERE_POINTS - SPHERE_SLICES;
+			g_iSphereTris[ ( iIndex + i ) * 3 + 1 ] = SPHERE_POINTS - SPHERE_SLICES;
 	}
 
 	bInit = true;
