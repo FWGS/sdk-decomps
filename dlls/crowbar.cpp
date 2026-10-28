@@ -65,6 +65,7 @@ void CCrowbar::Precache( void )
 	PRECACHE_SOUND("weapons/cbar_hitbod2.wav");
 	PRECACHE_SOUND("weapons/cbar_hitbod3.wav");
 	PRECACHE_SOUND("weapons/cbar_miss1.wav");
+	UTIL_PrecacheOther( "flying_crowbar" );
 
 	m_usCrowbar = PRECACHE_EVENT ( 1, "events/crowbar.sc" );
 }
@@ -149,6 +150,53 @@ void CCrowbar::PrimaryAttack()
 	{
 		SetThink( SwingAgain );
 		SetNextThink( 0.1 );
+	}
+}
+
+
+void CCrowbar::SecondaryAttack()
+{
+	// Don't throw underwater, and only throw if we were able to detatch
+	// from player.
+	if ( (m_pPlayer->pev->waterlevel != 3) &&
+		 (m_pPlayer->RemovePlayerItem( this )) )
+	{
+		// Get the origin, direction, and fix the angle of the throw.
+		Vector vecSrc = m_pPlayer->GetGunPosition( )
+					  + gpGlobals->v_right * 8
+					  + gpGlobals->v_forward * 16;
+
+		Vector vecDir = gpGlobals->v_forward;
+		Vector vecAng = UTIL_VecToAngles( vecDir );
+		vecAng.z = vecDir.z - 90;
+
+		// Create a flying crowbar.
+		CFlyingCrowbar *pFCBar = (CFlyingCrowbar *)Create( "flying_crowbar",
+				vecSrc, Vector( 0, 0, 0 ), m_pPlayer->edict() );
+
+		// Give the crowbar its velocity, angle, and spin.
+		// Lower the gravity a bit, so it flys.
+		pFCBar->pev->velocity = vecDir * 500;
+		pFCBar->pev->velocity.z += m_pPlayer->pev->velocity.z;
+		pFCBar->pev->angles = vecAng;
+		pFCBar->pev->avelocity.x = -1000;
+		pFCBar->pev->gravity = .5;
+		pFCBar->m_pPlayer = m_pPlayer;
+
+		// Do player weapon anim and sound effect.
+		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
+		EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_WEAPON,
+			"weapons/cbar_miss1.wav", 1, ATTN_NORM, 0,
+			94 + RANDOM_LONG( 0, 0xF ) );
+
+		// Control the speed of the next crowbar toss.
+		m_flNextSecondaryAttack = gpGlobals->time + 0.75;
+
+		// take item off hud
+		m_pPlayer->pev->weapons &= ~(1<<m_iId);
+
+		// Spawn a crowbar and kill this item.
+		DestroyItem();
 	}
 }
 

@@ -513,6 +513,7 @@ public:
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
+	void SecondaryAttack( void );
 	int Swing( int fFirst );
 	BOOL Deploy( void );
 	void Holster( int skiplocal = 0 );
@@ -529,6 +530,22 @@ public:
 	}
 private:
 	unsigned short m_usCrowbar;
+};
+
+class CFlyingCrowbar : public CBaseEntity
+{
+public:
+
+	void Spawn( void );
+	void Precache( void );
+	void EXPORT BubbleThink( void );
+	void EXPORT SpinTouch( CBaseEntity *pOther );
+	CBasePlayer *m_pPlayer;
+
+private:
+
+	EHANDLE m_hOwner;	// Original owner is stored here so we can
+						// allow the crowbar to hit the user.
 };
 
 class CPython : public CBasePlayerWeapon
