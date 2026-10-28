@@ -73,6 +73,7 @@ typedef enum
 		SCHED_BARNACLE_VICTIM_CHOMP,
 		SCHED_AISCRIPT,
 		SCHED_FAIL,
+		SCHED_IDLE_RUN, // T2DEF: "Idle Run" (name ours)
 
 		LAST_COMMON_SCHEDULE			// Leave this at the bottom
 } SCHEDULE_TYPE;
