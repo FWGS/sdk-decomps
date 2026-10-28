@@ -528,6 +528,15 @@ SOURCE=.\squadmonster.cpp
 # Begin Source File
 
 SOURCE=.\squeakgrenade.cpp
+
+!IF  "$(CFG)" == "hl - Win32 Release"
+
+# SUBTRACT CPP /YX
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -576,6 +585,15 @@ SOURCE=.\util.cpp
 # Begin Source File
 
 SOURCE=..\game_shared\voice_gamemgr.cpp
+
+!IF  "$(CFG)" == "hl - Win32 Release"
+
+# SUBTRACT CPP /YX
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
