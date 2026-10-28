@@ -1131,7 +1131,7 @@ public:
 	// other functions
 	void Shoot(Vector &vecSrc, Vector &vecDirToEnemy);
 	int TakeDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType);
-	void IdleSound( void );	// name ours
+	void SentryIdleSound( void );	// name ours
 	void EXPORT SentryTouch( CBaseEntity *pOther );
 	void EXPORT SentryDeath( void );
 
@@ -1219,9 +1219,9 @@ int CSentry::TakeDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float f
 }
 
 //=========================================================
-// IdleSound - nothing calls it (name ours)
+// SentryIdleSound - nothing calls it (name ours)
 //=========================================================
-void CSentry::IdleSound( void )
+void CSentry::SentryIdleSound( void )
 {
 	EMIT_SOUND( ENT(pev), CHAN_ITEM, "sentry/sentry_idle.wav", 1, ATTN_NORM );
 }
