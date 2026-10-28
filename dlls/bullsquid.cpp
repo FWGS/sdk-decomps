@@ -435,6 +435,9 @@ int	CBullsquid :: Classify ( void )
 #define SQUID_ATTN_IDLE	(float)1.5
 void CBullsquid :: IdleSound ( void )
 {
+	if ( pev->spawnflags & SF_MONSTER_GAG )
+		return;
+
 	switch ( RANDOM_LONG(0,4) )
 	{
 	case 0:	
