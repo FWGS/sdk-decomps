@@ -17,7 +17,7 @@
 //=========================================================
 
 //LRC
-#define GAME_NAME "Spirit of Half-Life"
+#define GAME_NAME "Todesangst 2"	// T2DEF
 
 //#include "weapons.h"
 //#include "items.h"
