@@ -805,6 +805,9 @@ void CEndBoss::SetYawSpeed( void )
 //=========================================================
 void CEndBoss::HandleAnimEvent( MonsterEvent_t *pEvent )
 {
+	Vector vecShootDir;
+	float flZ;
+
 	switch ( pEvent->event )
 	{
 	case ENDBOSS_AE_ROCKET:
@@ -847,17 +850,15 @@ void CEndBoss::HandleAnimEvent( MonsterEvent_t *pEvent )
 		GetAttachment( 1, vecBarrel, vecAngles );
 		GetAttachment( 0, vecMuzzle, vecAngles );
 
-		Vector vecShootDir;
 		vecShootDir = vecBarrel - vecMuzzle;
 
 		// aim up or down at the enemy, by a tenth of the barrel at most
-		float flZ = vecShootDir.z;
+		flZ = vecShootDir.z;
 		if ( m_hEnemy != NULL )
 		{
 			flZ = ShootAtEnemy( GetGunPosition( ENDBOSS_GUN_MGUN_HIGH ) ).z;
-			float flDelta = vecShootDir.Length( ) * 0.1;
-			flZ = max( vecShootDir.z - flDelta, flZ );
-			flZ = min( vecShootDir.z + flDelta, flZ );
+			flZ = max( vecShootDir.z - vecShootDir.Length( ) * 0.1, flZ );
+			flZ = min( vecShootDir.z + vecShootDir.Length( ) * 0.1, flZ );
 		}
 		vecShootDir.z = flZ;
 		vecShootDir = vecShootDir.Normalize( );
@@ -867,8 +868,7 @@ void CEndBoss::HandleAnimEvent( MonsterEvent_t *pEvent )
 		vecShootDir = UTIL_VecToAngles( vecShootDir );
 		vecShootDir.x = vecShootDir.x * -1;
 
-		Vector vecSrc = GetGunPosition( ENDBOSS_GUN_MGUN_HIGH ) - pev->origin;
-		PLAYBACK_EVENT_FULL( FEV_RELIABLE, edict( ), m_usTankMGuns, 0.0, (float *)&vecSrc, (float *)&vecShootDir, 1.0, 0.0, 0, 0, 0, 0 );
+		PLAYBACK_EVENT_FULL( FEV_RELIABLE, edict( ), m_usTankMGuns, 0.0, ( GetGunPosition( ENDBOSS_GUN_MGUN_HIGH ) - pev->origin ), vecShootDir, 1.0, 0.0, 0, 0, 0, 0 );
 
 		CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 2048, 0.1 );
 	}
@@ -880,16 +880,14 @@ void CEndBoss::HandleAnimEvent( MonsterEvent_t *pEvent )
 		GetAttachment( 1, vecBarrel, vecAngles );
 		GetAttachment( 0, vecMuzzle, vecAngles );
 
-		Vector vecShootDir;
 		vecShootDir = vecBarrel - vecMuzzle;
 
-		float flZ = vecShootDir.z;
+		flZ = vecShootDir.z;
 		if ( m_hEnemy != NULL )
 		{
 			flZ = ShootAtEnemy( GetGunPosition( ENDBOSS_GUN_MGUN_HIGH ) ).z;
-			float flDelta = vecShootDir.Length( ) * 0.1;
-			flZ = max( vecShootDir.z - flDelta, flZ );
-			flZ = min( vecShootDir.z + flDelta, flZ );
+			flZ = max( vecShootDir.z - vecShootDir.Length( ) * 0.1, flZ );
+			flZ = min( vecShootDir.z + vecShootDir.Length( ) * 0.1, flZ );
 		}
 		vecShootDir.z = flZ;
 		vecShootDir = vecShootDir.Normalize( );
@@ -899,8 +897,7 @@ void CEndBoss::HandleAnimEvent( MonsterEvent_t *pEvent )
 		vecShootDir = UTIL_VecToAngles( vecShootDir );
 		vecShootDir.x = vecShootDir.x * -1;
 
-		Vector vecSrc = GetGunPosition( ENDBOSS_GUN_MGUN_HIGH ) - pev->origin;
-		PLAYBACK_EVENT_FULL( FEV_RELIABLE, edict( ), m_usTankMGuns, 0.0, (float *)&vecSrc, (float *)&vecShootDir, 1.0, 0.0, 0, 0, 0, 0 );
+		PLAYBACK_EVENT_FULL( FEV_RELIABLE, edict( ), m_usTankMGuns, 0.0, ( GetGunPosition( ENDBOSS_GUN_MGUN_HIGH ) - pev->origin ), vecShootDir, 1.0, 0.0, 0, 0, 0, 0 );
 
 		CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 2048, 0.1 );
 	}
