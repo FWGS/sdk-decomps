@@ -710,7 +710,7 @@ void CVehicleTank::Drive( float flInterval )
 	{
 		vecVelocity = m_flSpeed * Vector( vecForward.x, vecForward.y, 0 );
 	}
-	else if ( m_flSpeed != 0 || pev->velocity.Length2D() >= 5 )
+	else if ( m_flSpeed != 0 || pev->velocity.Make2D().Length() >= 5 )
 	{
 		vecVelocity = Vector( vecForward.x, vecForward.y, 0 );
 	}
