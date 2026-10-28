@@ -44,6 +44,10 @@ CEffectList g_Effects;
 vec3_t g_vecUnused1;
 vec3_t g_vecUnused2;
 
+// and an initialised float nothing reads, the first of tri.obj's data
+// (1.0, before the sprite names; name ours)
+float g_flUnused = 1.0;
+
 static float g_flLastTime;
 
 void InitSphere( void );
