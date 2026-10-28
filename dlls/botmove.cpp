@@ -1109,18 +1109,19 @@ void CBot::FleeSpot( const Vector &vecSpot, int iPriority )
 //=========================================================
 void CBot::UnstickGoal( int iPriority )
 {
-	if ( iPriority > m_iMovePriority )
+	if ( iPriority > GetMovePriority() )
 	{
 		Unstick();
-		m_iMovePriority = iPriority;
-		m_cMoveGoals = 1;
+		SetMovePriority( iPriority );
+		SetMoveGoals( 1 );
 	}
-	else if ( iPriority == m_iMovePriority )
+	else if ( iPriority == GetMovePriority() )
 	{
-		Vector vecOld( GetMoveVelocity() * m_cMoveGoals );
+		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
 		Unstick();
-		Vector vecTotal( vecOld + GetMoveVelocity() );
-		SetMoveVelocity( vecTotal / ++m_cMoveGoals );
+		Vector vecTotal = GetMoveVelocity() + vecOld;
+		SetMoveGoals( GetMoveGoals() + 1 );
+		SetMoveVelocity( vecTotal / GetMoveGoals() );
 	}
 }
 
@@ -1129,17 +1130,19 @@ void CBot::UnstickGoal( int iPriority )
 //=========================================================
 void CBot::MoveToEntityOffset( CBaseEntity *pEntity, int iPriority, Vector vecOffset )
 {
-	if ( iPriority > m_iMovePriority )
+	if ( iPriority > GetMovePriority() )
 	{
 		MoveToLead( pEntity, vecOffset );
-		m_cMoveGoals = 1;
-		m_iMovePriority = iPriority;
+		SetMoveGoals( 1 );
+		SetMovePriority( iPriority );
 	}
-	else if ( iPriority == m_iMovePriority )
+	else if ( iPriority == GetMovePriority() )
 	{
-		Vector vecOld = m_vecMoveVelocity * m_cMoveGoals;
+		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
 		MoveToLead( pEntity, vecOffset );
-		m_vecMoveVelocity = ( m_vecMoveVelocity + vecOld ) / ++m_cMoveGoals;
+		Vector vecTotal = GetMoveVelocity() + vecOld;
+		SetMoveGoals( GetMoveGoals() + 1 );
+		SetMoveVelocity( vecTotal / GetMoveGoals() );
 	}
 }
 

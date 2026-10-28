@@ -344,7 +344,11 @@ public:
 	void	AimAtEnemy( void );
 	void	AimAt( CBaseEntity *pEntity );
 	Vector	GetMoveVelocity( void ) { return m_vecMoveVelocity; }
-	void	SetMoveVelocity( Vector vec ) { m_vecMoveVelocity = vec; }
+	void	SetMoveVelocity( const Vector &vec ) { m_vecMoveVelocity = vec; }
+	int		GetMovePriority( void ) { return m_iMovePriority; }
+	void	SetMovePriority( int iPriority ) { m_iMovePriority = iPriority; }
+	int		GetMoveGoals( void ) { return m_cMoveGoals; }
+	void	SetMoveGoals( int cGoals ) { m_cMoveGoals = cGoals; }
 	void	SetLookDir( void );
 	BOOL	CheckAhead( Vector &vecDir, TraceResult *ptr );
 	BOOL	CheckSides( Vector &vecAngles, TraceResult *ptrLeft, TraceResult *ptrRight );
