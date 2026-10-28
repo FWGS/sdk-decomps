@@ -36,7 +36,7 @@ int iDmlRocketPuff;
 //=========================================================
 // RocketDecal - a crater on metal, a scorch mark elsewhere
 //=========================================================
-static void RocketDecal( TraceResult *pTrace, Vector vecSrc, Vector vecEnd )
+void RocketDecal( TraceResult *pTrace, Vector vecSrc, Vector vecEnd )
 {
 	char chTextureType;
 	char szbuffer[64];

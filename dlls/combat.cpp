@@ -47,7 +47,7 @@ extern entvars_t *g_pevLastInflictor;
 // it plays anything: find the material under the bullet.
 // The sounds are gone; nothing uses the result.
 //=========================================================
-static void TEXTURETYPE_Check( TraceResult *ptr, Vector vecSrc, Vector vecEnd, int iBulletType )
+void TEXTURETYPE_Check( TraceResult *ptr, Vector vecSrc, Vector vecEnd, int iBulletType )
 {
 	char chTextureType;
 	char szbuffer[64];
