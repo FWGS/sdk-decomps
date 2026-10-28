@@ -961,7 +961,7 @@ void CBaseTurret::RemoteTrackThink(void)
 			SetThink(Retire);
 
 			// should we stop the spin?
-			if ((m_flSpinUpTime) && (gpGlobals->time > m_flSpinUpTime))
+			if ((m_flSpinUpTime) && (gpGlobals->time > m_flSpinUpTime)) // sic: m_flSpinUpTime was just cleared
 			{
 				SpinDownCall();
 			}

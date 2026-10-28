@@ -702,7 +702,7 @@ void CFlockingFlyer :: FlockLeaderThink( void )
 	{
 		m_hBullseye = UTIL_FindEntityByClassname( NULL, "player" );
 
-		if ( m_hBullseye != NULL && FVisible( m_hBullseye ) && RANDOM_LONG( 0, 10 ) < 0.02 )
+		if ( m_hBullseye != NULL && FVisible( m_hBullseye ) && RANDOM_LONG( 0, 10 ) < 0.02 ) // sic: an integer, so 1 in 11
 		{
 			m_iBerzerk = 1;
 			m_flBerzerkStartTime = gpGlobals->time;
