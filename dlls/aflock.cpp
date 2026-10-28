@@ -19,14 +19,15 @@
 #include	"cbase.h"
 #include	"monsters.h"
 #include	"squadmonster.h"
+#include	"soundent.h"
 
 #define		AFLOCK_MAX_RECRUIT_RADIUS	1024
-#define		AFLOCK_FLY_SPEED			125
-#define		AFLOCK_TURN_RATE			75
+#define		AFLOCK_FLY_SPEED			35
+#define		AFLOCK_TURN_RATE			50
 #define		AFLOCK_ACCELERATE			10
 #define		AFLOCK_CHECK_DIST			192
-#define		AFLOCK_TOO_CLOSE			100
-#define		AFLOCK_TOO_FAR				256
+#define		AFLOCK_TOO_CLOSE			64
+#define		AFLOCK_TOO_FAR				128
 
 //=========================================================
 //=========================================================
@@ -105,6 +106,14 @@ public:
 	float	m_flFakeBlockedTime;
 	float	m_flAlertTime;
 	float	m_flFlockNextSoundTime;
+	int		m_iDetonate;
+	float	m_flDetonateTime;
+	float	m_flStartAltitude;
+	int		m_iBerzerk;
+	Vector	m_vecForward;
+	float	m_flBerzerkStartTime;
+	float	m_flBerzerkEndTime;
+	EHANDLE	m_hBullseye;
 };
 LINK_ENTITY_TO_CLASS( monster_flyer, CFlockingFlyer );
 LINK_ENTITY_TO_CLASS( monster_flyer_flock, CFlockingFlyerFlock );
@@ -123,6 +132,14 @@ TYPEDESCRIPTION	CFlockingFlyer::m_SaveData[] =
 	DEFINE_FIELD( CFlockingFlyer, m_flFakeBlockedTime, FIELD_TIME ),
 	DEFINE_FIELD( CFlockingFlyer, m_flAlertTime, FIELD_TIME ),
 //	DEFINE_FIELD( CFlockingFlyer, m_flFlockNextSoundTime, FIELD_TIME ),	// don't need to save
+	DEFINE_FIELD( CFlockingFlyer, m_iDetonate, FIELD_INTEGER ),
+	DEFINE_FIELD( CFlockingFlyer, m_flDetonateTime, FIELD_TIME ),
+	DEFINE_FIELD( CFlockingFlyer, m_flStartAltitude, FIELD_FLOAT ),
+	DEFINE_FIELD( CFlockingFlyer, m_vecForward, FIELD_VECTOR ),
+	DEFINE_FIELD( CFlockingFlyer, m_iBerzerk, FIELD_INTEGER ),
+	DEFINE_FIELD( CFlockingFlyer, m_flBerzerkEndTime, FIELD_TIME ),
+	DEFINE_FIELD( CFlockingFlyer, m_flBerzerkStartTime, FIELD_TIME ),
+	DEFINE_FIELD( CFlockingFlyer, m_hBullseye, FIELD_EHANDLE ),
 };
 
 IMPLEMENT_SAVERESTORE( CFlockingFlyer, CBaseMonster );
@@ -158,7 +175,7 @@ void CFlockingFlyerFlock :: Spawn( )
 void CFlockingFlyerFlock :: Precache( )
 {
 	//PRECACHE_MODEL("models/aflock.mdl");		
-	PRECACHE_MODEL("models/boid.mdl");		
+	PRECACHE_MODEL("models/floater.mdl");		
 
 	PrecacheFlockSounds();
 }
@@ -171,6 +188,9 @@ void CFlockingFlyerFlock :: PrecacheFlockSounds( void )
 
 	PRECACHE_SOUND("boid/boid_idle1.wav" );
 	PRECACHE_SOUND("boid/boid_idle2.wav" );
+
+	PRECACHE_SOUND("squeek/sqk_blast1.wav" );
+	PRECACHE_SOUND("squeek/sqk_hunt3.wav" );
 }
 
 //=========================================================
@@ -203,11 +223,14 @@ void CFlockingFlyerFlock :: SpawnFlock( void )
 		vecSpot = pev->origin + vecSpot;
 
 		UTIL_SetOrigin(pBoid, vecSpot);
+		pBoid->m_flStartAltitude = pev->origin.z;
 		pBoid->pev->movetype = MOVETYPE_FLY;
 		pBoid->SpawnCommonCode();
 		pBoid->pev->flags &= ~FL_ONGROUND;
 		pBoid->pev->velocity = g_vecZero;
+		pBoid->pev->velocity.z = RANDOM_FLOAT( -15, 15 );
 		pBoid->pev->angles	 = pev->angles;
+		pBoid->m_iBerzerk = 0;
 		
 		pBoid->pev->frame = 0;
 		pBoid->SetNextThink( 0.2 );
@@ -227,8 +250,8 @@ void CFlockingFlyer :: Spawn( )
 	Precache( );
 	SpawnCommonCode();
 	
-	pev->frame = 0;
-	SetNextThink( 0.1 );
+	pev->frame = RANDOM_FLOAT( 0, 255 );
+	SetNextThink( RANDOM_FLOAT( 0.1, 0.3 ) );
 	SetThink( IdleThink );
 }
 
@@ -237,7 +260,7 @@ void CFlockingFlyer :: Spawn( )
 void CFlockingFlyer :: Precache( )
 {
 	//PRECACHE_MODEL("models/aflock.mdl");
-	PRECACHE_MODEL("models/boid.mdl");
+	PRECACHE_MODEL("models/floater.mdl");
 	CFlockingFlyerFlock::PrecacheFlockSounds();
 }
 
@@ -288,12 +311,26 @@ void CFlockingFlyer :: Killed( entvars_t *pevAttacker, int iGib )
 
 	pev->framerate = 0;
 	pev->effects = EF_NOINTERP;
+	pev->movetype = MOVETYPE_TOSS;
+	pev->takedamage = DAMAGE_NO;
+	pev->model = iStringNull;// make invisible
 
 	UTIL_SetSize( pev, Vector(0,0,0), Vector(0,0,0) );
-	pev->movetype = MOVETYPE_TOSS;
 
-	SetThink ( FallHack );
+	SetThink( SUB_Remove );
+	SetTouch( NULL );
 	SetNextThink( 0.1 );
+
+	// play squeek blast
+	EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "squeek/sqk_blast1.wav", 1, 0.5, 0, PITCH_NORM);	
+
+	CSoundEnt::InsertSound ( bits_SOUND_COMBAT, pev->origin, 512, 3.0 );
+
+	UTIL_BloodDrips( pev->origin + Vector( 0, 0, 32 ), Vector( 0, 0, -1 ), BloodColor(), 80 );
+
+	RadiusDamage ( pev, pev, 20, CLASS_NONE, DMG_BLAST );
+
+	CBaseMonster::Killed( pevAttacker, GIB_ALWAYS );
 }
 
 void CFlockingFlyer :: FallHack( void )
@@ -321,37 +358,81 @@ void CFlockingFlyer :: SpawnCommonCode( )
 	pev->classname	= MAKE_STRING("monster_flyer");
 	pev->solid		= SOLID_SLIDEBOX;
 	pev->movetype	= MOVETYPE_FLY;
-	pev->takedamage	= DAMAGE_NO;
-	pev->health		= 1;
+	pev->spawnflags	|= SF_MONSTER_WAIT_TILL_SEEN;
+	m_bloodColor	= BLOOD_COLOR_YELLOW;
+	pev->takedamage	= DAMAGE_AIM;
+	pev->health		= 15;
 
 	m_fPathBlocked	= FALSE;// obstacles will be detected
 	m_flFieldOfView	= 0.2;
+	m_iDetonate		= 0;
+	m_flDetonateTime = 0;
+	m_flBerzerkEndTime = gpGlobals->time;
 
 	//SET_MODEL(ENT(pev), "models/aflock.mdl");
-	SET_MODEL(ENT(pev), "models/boid.mdl");
+	SET_MODEL(ENT(pev), "models/floater.mdl");
 
 //	UTIL_SetSize(pev, Vector(0,0,0), Vector(0,0,0));
-	UTIL_SetSize(pev, Vector(-5,-5,0), Vector(5,5,2));
+	UTIL_SetSize(pev, Vector(-16,-16,0), Vector(16,16,72));
 }
 
 //=========================================================
 //=========================================================
 void CFlockingFlyer :: BoidAdvanceFrame ( )
 {
+	CBaseEntity *pEntity = NULL;
+	TraceResult tr;
+
+	if ( !m_iDetonate )
+	{
+		while ((pEntity = UTIL_FindEntityInSphere( pEntity, pev->origin, 32 )) != NULL)
+		{
+			CBaseMonster *pMonster = pEntity->MyMonsterPointer( );
+
+			if ( pMonster && pMonster != this && pMonster->IsAlive() && !pMonster->m_pCine && !FClassnameIs ( pMonster->pev, "monster_flyer" ) )
+			{
+				pev->renderfx = kRenderFxExplode;
+				StopAnimation();
+				m_iDetonate = 1;
+				EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "squeek/sqk_hunt3.wav", 1, ATTN_NORM, 0, 100 + RANDOM_LONG(0,0x3F));
+				m_flDetonateTime = gpGlobals->time + 0.15;
+			}
+		}
+	}
+	else if ( gpGlobals->time > m_flDetonateTime )
+	{
+		Killed( pev, GIB_NORMAL );
+	}
+	else
+	{
+		return;
+	}
+
 	float flapspeed = (pev->speed - pev->armorvalue) / AFLOCK_ACCELERATE;
 	pev->armorvalue = pev->armorvalue * .8 + pev->speed * .2;
 
-	if (flapspeed < 0) flapspeed = -flapspeed;
-	if (flapspeed < 0.25) flapspeed = 0.25;
-	if (flapspeed > 1.9) flapspeed = 1.9;
+	flapspeed = 4 * pev->speed / AFLOCK_FLY_SPEED;
+	if (flapspeed < 1.0) flapspeed = 1;
+	if (flapspeed > 4.0) flapspeed = 4;
 
 	pev->framerate = flapspeed;
 
-	// lean
-	pev->avelocity.x = - (pev->angles.x + flapspeed * 5);
+	// check and make sure we aren't about to plow into the ground, don't let it happen
+	UTIL_MakeVectors ( pev->angles );
+	UTIL_TraceLine(pev->origin, pev->origin - gpGlobals->v_up * 16, ignore_monsters, ENT(pev), &tr);
+	if (tr.flFraction != 1.0 && pev->velocity.z < 0 )
+		pev->velocity.z = RANDOM_FLOAT( 5, 25 );
 
-	// bank
-	pev->avelocity.z = - (pev->angles.z + pev->avelocity.y);
+	if ( pev->origin.z - m_flStartAltitude > 96 )
+		pev->velocity.z = 0 - RANDOM_FLOAT( 15, 55 );
+
+	// maybe it did, though.
+	if ( FBitSet (pev->flags, FL_ONGROUND) )
+	{
+		ClearBits( pev->flags, FL_ONGROUND );
+		UTIL_SetOrigin (this, pev->origin + Vector ( 0 , 0 , 1 ) );
+		pev->velocity.z = RANDOM_FLOAT( 15, 55 );
+	}
 
 	// pev->framerate		= flapspeed;
 	StudioFrameAdvance( 0.1 );
@@ -459,12 +540,15 @@ void CFlockingFlyer :: SpreadFlock( )
 			vecDir = ( pList->pev->origin - pev->origin );
 			vecDir = vecDir.Normalize();
 
+			float saveZ = pList->pev->velocity.z; // name ours
+
 			// store the magnitude of the other boid's velocity, and normalize it so we
 			// can average in a course that points away from the leader.
 			flSpeed = pList->pev->velocity.Length();
 			pList->pev->velocity = pList->pev->velocity.Normalize();
 			pList->pev->velocity = ( pList->pev->velocity + vecDir ) * 0.5;
 			pList->pev->velocity = pList->pev->velocity * flSpeed;
+			pList->pev->velocity.z = saveZ;
 		}
 
 		pList = pList->m_pSquadNext;
@@ -488,7 +572,9 @@ void CFlockingFlyer :: SpreadFlock2 ( )
 			vecDir = ( pev->origin - pList->pev->origin );
 			vecDir = vecDir.Normalize();
 
+			float saveZ = pev->velocity.z; // name ours
 			pev->velocity = (pev->velocity + vecDir);
+			pev->velocity.z = saveZ;
 		}
 
 		pList = pList->m_pSquadNext;
@@ -567,6 +653,66 @@ void CFlockingFlyer :: FlockLeaderThink( void )
 	
 	UTIL_MakeVectors ( pev->angles );
 
+	if ( m_iBerzerk )
+	{
+		if ( pev->speed <= 250 )
+			pev->speed += 5;
+
+		Vector vecToEnemy; // name ours
+		float flDist = 0; // name ours
+
+		if ( m_hBullseye != NULL && FVisible( m_hBullseye ) )
+		{
+			UTIL_MakeAimVectors ( pev->angles );
+
+			Vector vecEnemy = m_hBullseye->EyePosition() - Vector( 0, 0, 16 ); // name ours
+			vecToEnemy = vecEnemy - pev->origin;
+
+			float flYaw = DotProduct( vecToEnemy, gpGlobals->v_right ); // name ours
+			float flPitch = DotProduct( vecToEnemy, gpGlobals->v_up ); // name ours
+
+			if ( flYaw < -0.05 )
+				pev->angles.y += 15;
+			else if ( flYaw > 0.05 )
+				pev->angles.y -= 15;
+
+			if ( pev->origin.z > vecEnemy.z && pev->velocity.z > -150 )
+				pev->velocity.z -= 15;
+			else
+				pev->velocity.z = 0;
+
+			UTIL_MakeVectors ( pev->angles );
+			pev->velocity.x = gpGlobals->v_forward.x * pev->speed;
+			pev->velocity.y = gpGlobals->v_forward.y * pev->speed;
+
+			flDist = ( pev->origin - m_hBullseye->pev->origin ).Length2D();
+		}
+
+		if ( flDist < 32 || gpGlobals->time > m_flBerzerkStartTime + 6.0 )
+		{
+			m_iBerzerk = 0;
+			m_flBerzerkEndTime = gpGlobals->time;
+		}
+
+		BoidAdvanceFrame( );
+		return;
+	}
+
+	if ( m_flBerzerkEndTime + 10 < gpGlobals->time )
+	{
+		m_hBullseye = UTIL_FindEntityByClassname( NULL, "player" );
+
+		if ( m_hBullseye != NULL && FVisible( m_hBullseye ) && RANDOM_LONG( 0, 10 ) < 0.02 )
+		{
+			m_iBerzerk = 1;
+			m_flBerzerkStartTime = gpGlobals->time;
+			UTIL_MakeAimVectors ( pev->angles );
+			m_vecForward = gpGlobals->v_forward;
+			BoidAdvanceFrame( );
+			return;
+		}
+	}
+
 	// is the way ahead clear?
 	if ( !FPathBlocked () )
 	{
@@ -582,7 +728,11 @@ void CFlockingFlyer :: FlockLeaderThink( void )
 		if (pev->speed <= AFLOCK_FLY_SPEED )
 			pev->speed+= 5;
 
-		pev->velocity = gpGlobals->v_forward * pev->speed;
+		if (pev->speed > AFLOCK_FLY_SPEED )
+			pev->speed-= 5;
+
+		pev->velocity.x = gpGlobals->v_forward.x * pev->speed;
+		pev->velocity.y = gpGlobals->v_forward.y * pev->speed;
 
 		BoidAdvanceFrame( );
 
@@ -632,24 +782,13 @@ void CFlockingFlyer :: FlockLeaderThink( void )
 	}
 	SpreadFlock( );
 
-	pev->velocity = gpGlobals->v_forward * pev->speed;
-	
-	// check and make sure we aren't about to plow into the ground, don't let it happen
-	UTIL_TraceLine(pev->origin, pev->origin - gpGlobals->v_up * 16, ignore_monsters, ENT(pev), &tr);
-	if (tr.flFraction != 1.0 && pev->velocity.z < 0 )
-		pev->velocity.z = 0;
-
-	// maybe it did, though.
-	if ( FBitSet (pev->flags, FL_ONGROUND) )
-	{
-		UTIL_SetOrigin (this, pev->origin + Vector ( 0 , 0 , 1 ) );
-		pev->velocity.z = 0;
-	}
+	pev->velocity.x = gpGlobals->v_forward.x * pev->speed;
+	pev->velocity.y = gpGlobals->v_forward.y * pev->speed;
 
 	if ( m_flFlockNextSoundTime < gpGlobals->time )
 	{
 		MakeSound();
-		m_flFlockNextSoundTime = gpGlobals->time + RANDOM_FLOAT( 1, 3 );
+		m_flFlockNextSoundTime = gpGlobals->time + RANDOM_FLOAT( 3, 6 );
 	}
 
 	BoidAdvanceFrame( );
@@ -709,13 +848,15 @@ void CFlockingFlyer :: FlockFollowerThink( void )
 	SpreadFlock2();
 
 	pev->speed = pev->velocity.Length();
+	float saveZ = pev->velocity.z; // name ours
 	pev->velocity = pev->velocity.Normalize();
 
 	// if we are too far from leader, average a vector towards it into our current velocity
 	if ( flDistToLeader > AFLOCK_TOO_FAR )
 	{
 		vecDirToLeader = vecDirToLeader.Normalize();
-		pev->velocity = (pev->velocity + vecDirToLeader) * 0.5; 	
+		pev->velocity.x = (pev->velocity.x + vecDirToLeader.x) * 0.5; 	
+		pev->velocity.y = (pev->velocity.y + vecDirToLeader.y) * 0.5; 	
 	}
 
 	// clamp speeds and handle acceleration
@@ -733,7 +874,9 @@ void CFlockingFlyer :: FlockFollowerThink( void )
 		pev->speed -= AFLOCK_ACCELERATE;
 	}
 
-	pev->velocity = pev->velocity * pev->speed;
+	pev->velocity.x = pev->velocity.x * pev->speed;
+	pev->velocity.y = pev->velocity.y * pev->speed;
+	pev->velocity.z = saveZ;
 
 	BoidAdvanceFrame( );
 }
