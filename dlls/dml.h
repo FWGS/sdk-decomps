@@ -18,6 +18,21 @@
 #ifndef DML_H
 #define DML_H
 
+// the RPG's laser spot, which only the DML uses in Gunman
+class CLaserSpot : public CBaseEntity
+{
+	void Spawn( void );
+	void Precache( void );
+
+	int	ObjectCaps( void ) { return FCAP_DONT_SAVE; }
+
+public:
+	void Suspend( float flSuspendTime );
+	void EXPORT Revive( void );
+	
+	static CLaserSpot *CreateSpot( void );
+};
+
 class CDml : public CBasePlayerWeapon
 {
 public:

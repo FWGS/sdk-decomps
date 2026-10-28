@@ -30,11 +30,11 @@
 #include "soundent.h"
 #include "dmlrocket.h"
 
+#include "dml.h"
+
 extern int gmsgWeapPickup;
 extern int gmsgSliderX;
 extern int gmsgDmlCross;
-
-#include "dml.h"
 
 enum dml_e {
 	DML_IDLE = 0,

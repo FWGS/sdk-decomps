@@ -384,20 +384,6 @@ public:
 	void Precache( void ) { PRECACHE_MODEL( "models/w_crowbar.mdl" ); }
 };
 
-class CLaserSpot : public CBaseEntity
-{
-	void Spawn( void );
-	void Precache( void );
-
-	int	ObjectCaps( void ) { return FCAP_DONT_SAVE; }
-
-public:
-	void Suspend( float flSuspendTime );
-	void EXPORT Revive( void );
-	
-	static CLaserSpot *CreateSpot( void );
-};
-
 
 class CBasePlayerAmmo : public CBaseEntity
 {
