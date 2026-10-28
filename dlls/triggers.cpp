@@ -36,6 +36,7 @@
 #define	SF_TRIGGER_PUSH_START_OFF	2//spawnflag that makes trigger_push spawn turned OFF
 #define SF_TRIGGER_HURT_TARGETONCE	1// Only fire hurt target once
 #define	SF_TRIGGER_HURT_START_OFF	2//spawnflag that makes trigger_hurt spawn turned OFF
+#define	SF_TRIGGER_HURT_PLAYERTHINK	4// T2DEF: hurt player 1 from a think instead of touches (name ours)
 #define	SF_TRIGGER_HURT_NO_CLIENTS	8// clients may not touch this trigger.
 #define SF_TRIGGER_HURT_CLIENTONLYFIRE	16// trigger hurt will only fire its target if it is hurting a client
 #define SF_TRIGGER_HURT_CLIENTONLYTOUCH 32// only clients may touch this trigger.
@@ -1930,6 +1931,7 @@ class CTriggerHurt : public CBaseTrigger
 public:
 	void Spawn( void );
 	void EXPORT RadiationThink( void );
+	void EXPORT HurtThink( void ); // T2DEF
 };
 
 LINK_ENTITY_TO_CLASS( trigger_hurt, CTriggerHurt );
@@ -2168,7 +2170,6 @@ void CTargetCDAudio::Play( void )
 void CTriggerHurt :: Spawn( void )
 {
 	InitTrigger();
-	SetTouch ( HurtTouch );
 
 	if ( !FStringNull ( pev->targetname ) )
 	{
@@ -2188,7 +2189,33 @@ void CTriggerHurt :: Spawn( void )
 	if ( FBitSet (pev->spawnflags, SF_TRIGGER_HURT_START_OFF) )// if flagged to Start Turned Off, make trigger nonsolid.
 		pev->solid = SOLID_NOT;
 
+	if ( FBitSet (pev->spawnflags, SF_TRIGGER_HURT_PLAYERTHINK) ) // T2DEF
+	{
+		SetThink ( HurtThink );
+		SetNextThink( RANDOM_FLOAT(0.0, 0.5) ); 
+		SetTouch ( NULL );
+	}
+	else
+	{
+		SetTouch ( HurtTouch );
+	}
+
 	UTIL_SetOrigin( this, pev->origin );		// Link into the list
+}
+
+// T2DEF: hurts player 1 while the trigger is on
+void CTriggerHurt :: HurtThink( void )
+{
+	CBaseEntity *pPlayer;
+
+	if ( pev->solid == SOLID_TRIGGER )
+	{
+		pPlayer = CBaseEntity::Instance( g_engfuncs.pfnPEntityOfEntIndex( 1 ) );
+		if ( pPlayer )
+			HurtTouch( pPlayer );
+	}
+
+	SetNextThink( 0.1 );
 }
 
 // trigger hurt that causes radiation will do a radius
