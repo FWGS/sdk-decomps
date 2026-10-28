@@ -35,10 +35,12 @@
 
 int g_fBanditQuestion;				// true if an idle bandit asked a question. Cleared when someone answers.
 
+// gib and gore spray sprites, precached by the species that use them
+int g_iGibHuman;
+int g_iGoreHuman;
+
 extern DLL_GLOBAL int		g_iSkillLevel;
 extern unsigned short g_usGaussFire;
-extern int g_iGibHuman;
-extern int g_iGoreHuman;
 
 //=========================================================
 // monster-specific DEFINE's

@@ -1,6 +1,8 @@
 //=========================================================
-// Data and globals that SDK files use but that retail defines in Gunman's
-// own source files. They move to those files once they are reconstructed.
+// Gunman's gib and species tables. Retail has them in an object of their
+// own with no code, linked right after world.obj: their data and strings
+// sit between world.obj's strings and funcwind.obj's save table. The file
+// name is ours.
 //=========================================================
 
 #include	"extdll.h"
@@ -62,7 +64,3 @@ monstertype_t gMonsterTypes[] =
 	{ 1, 247, 76, 15, 5, 5, 431, 4, VIEW_FIELD_WIDE },	// 25
 	{ 0, 156, 59, 15, 1, 1, 431, 4, VIEW_FIELD_WIDE },	// 26
 };
-
-// gib and gore spray sprites, precached by the species that use them
-int g_iGibHuman;
-int g_iGoreHuman;
