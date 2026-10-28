@@ -271,7 +271,10 @@ void CZombie :: Spawn()
 {
 	Precache( );
 
-	SET_MODEL(ENT(pev), "models/zombie.mdl");
+	if ( FBitSet( pev->spawnflags, 32 ) ) // T2DEF: spawnflag 32 uses con_zombie.mdl
+		SET_MODEL(ENT(pev), "models/con_zombie.mdl");
+	else
+		SET_MODEL(ENT(pev), "models/zombie.mdl");
 	UTIL_SetSize( pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX );
 
 	pev->solid			= SOLID_SLIDEBOX;
@@ -293,7 +296,10 @@ void CZombie :: Precache()
 {
 	int i;
 
-	PRECACHE_MODEL("models/zombie.mdl");
+	if ( FBitSet( pev->spawnflags, 32 ) )
+		PRECACHE_MODEL("models/con_zombie.mdl");
+	else
+		PRECACHE_MODEL("models/zombie.mdl");
 
 	for ( i = 0; i < ARRAYSIZE( pAttackHitSounds ); i++ )
 		PRECACHE_SOUND((char *)pAttackHitSounds[i]);
