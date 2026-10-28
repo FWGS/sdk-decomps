@@ -137,6 +137,15 @@ void CGameRules::RefreshSkillData ( void )
 	// Apache 
 	gSkillData.apacheHealth = GetSkillCvar( "sk_apache_health");
 
+	// T2DEF: Ka-50, friendly, rat, M450, G-Man boss
+	gSkillData.ka50Health = GetSkillCvar( "sk_ka50_health");
+	gSkillData.friendlyHealth = GetSkillCvar( "sk_friendly_health");
+	gSkillData.friendlyDmgOneSlash = GetSkillCvar( "sk_friendly_dmg_one_slash");
+	gSkillData.friendlyDmgBothSlash = GetSkillCvar( "sk_friendly_dmg_both_slash");
+	gSkillData.ratHealth = GetSkillCvar( "sk_rat_health");
+	gSkillData.m450Health = GetSkillCvar( "sk_m450_health");
+	gSkillData.gmanbossHealth = GetSkillCvar( "sk_gmanboss_health");
+
 	// Barney
 	gSkillData.barneyHealth = GetSkillCvar( "sk_barney_health");
 
