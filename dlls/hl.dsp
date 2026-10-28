@@ -299,6 +299,10 @@ SOURCE=.\gman.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\gmanboss.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\h_ai.cpp
 # End Source File
 # Begin Source File
