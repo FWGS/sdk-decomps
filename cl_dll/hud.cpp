@@ -30,6 +30,7 @@
 #include "demo.h"
 #include "demo_api.h"
 #include "vgui_scorepanel.h"
+#include "mp3.h"
 
 
 
@@ -167,6 +168,11 @@ void __CmdFunc_ToggleServerBrowser( void )
 	}
 }
 
+void __CmdFunc_StopMP3( void )
+{
+	gMP3.StopMP3();
+}
+
 // TFFree Command Menu Message Handlers
 int __MsgFunc_ValClass(const char *pszName, int iSize, void *pbuf)
 {
@@ -265,6 +271,21 @@ int __MsgFunc_AllowSpec(const char *pszName, int iSize, void *pbuf)
 		return gViewPort->MsgFunc_AllowSpec( pszName, iSize, pbuf );
 	return 0;
 }
+
+int __MsgFunc_PlayMP3(const char *pszName, int iSize, void *pbuf)
+{
+	return gHUD.MsgFunc_PlayMP3( pszName, iSize, pbuf );
+}
+
+int __MsgFunc_PlayMusic(const char *pszName, int iSize, void *pbuf)
+{
+	return gHUD.MsgFunc_PlayMusic( pszName, iSize, pbuf );
+}
+
+int __MsgFunc_StopMusic(const char *pszName, int iSize, void *pbuf)
+{
+	return gHUD.MsgFunc_StopMusic( pszName, iSize, pbuf );
+}
  
 // This is called every time the DLL is loaded
 void CHud :: Init( void )
@@ -283,6 +304,7 @@ void CHud :: Init( void )
 	HOOK_COMMAND( "ForceCloseCommandMenu", ForceCloseCommandMenu );
 	HOOK_COMMAND( "special", InputPlayerSpecial );
 	HOOK_COMMAND( "togglebrowser", ToggleServerBrowser );
+	HOOK_COMMAND( "stopmp3", StopMP3 );
 
 	HOOK_MESSAGE( ValClass );
 	HOOK_MESSAGE( TeamNames );
@@ -298,6 +320,12 @@ void CHud :: Init( void )
 
 	HOOK_MESSAGE( Spectator );
 	HOOK_MESSAGE( AllowSpec );
+
+	HOOK_MESSAGE( PlayMP3 );
+	HOOK_MESSAGE( PlayMusic );
+	HOOK_MESSAGE( StopMusic );
+
+	gMP3.Initialize();
 
 	// VGUI Menus
 	HOOK_MESSAGE( VGUIMenu );
@@ -377,6 +405,8 @@ CHud :: ~CHud()
 	}
 
 	ServersShutdown();
+
+	gMP3.Shutdown();
 }
 
 // GetSpriteIndex()

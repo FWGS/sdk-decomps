@@ -308,6 +308,10 @@ SOURCE=.\message.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\mp3.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\overview.cpp
 # PROP Exclude_From_Build 1
 # End Source File

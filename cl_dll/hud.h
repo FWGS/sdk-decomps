@@ -629,6 +629,9 @@ public:
 	void _cdecl MsgFunc_SetFog( const char *pszName, int iSize, void *pbuf ); //LRC
 	int _cdecl MsgFunc_SetFOV(const char *pszName,  int iSize, void *pbuf);
 	int  _cdecl MsgFunc_Concuss( const char *pszName, int iSize, void *pbuf );
+	int _cdecl MsgFunc_PlayMP3( const char *pszName, int iSize, void *pbuf );
+	int _cdecl MsgFunc_PlayMusic( const char *pszName, int iSize, void *pbuf );
+	int _cdecl MsgFunc_StopMusic( const char *pszName, int iSize, void *pbuf );
 
 	// Screen information
 	SCREENINFO	m_scrinfo;

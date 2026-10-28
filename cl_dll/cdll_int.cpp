@@ -32,12 +32,14 @@ extern "C"
 #include "hud_servers.h"
 #include "vgui_int.h"
 #include "interface.h"
+#include "mp3.h"
 
 #define DLLEXPORT __declspec( dllexport )
 
 
 cl_enginefunc_t gEngfuncs;
 CHud gHUD;
+CMP3 gMP3;
 TeamFortressViewport *gViewPort = NULL;
 
 void InitInput (void);
