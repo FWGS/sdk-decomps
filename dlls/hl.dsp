@@ -439,6 +439,10 @@ SOURCE=.\roach.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\robolaser.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\rpg.cpp
 # End Source File
 # Begin Source File
