@@ -814,3 +814,14 @@ void _DLLEXPORT HUD_PostRunCmd( struct local_state_s *from, struct local_state_s
 	// All games can use FOV state
 	g_lastFOV = to->client.fov;
 }
+
+// sic: retail's hl_weapons.obj has one more function of at most 16 bytes
+// here, after HUD_PostRunCmd. Nothing calls it (or it folds into another
+// copy), so its name and body are lost, but LINK's /OPT:ICF counts it when
+// it sorts the code COMDATs by size: without it LINK keeps other copies of
+// identical functions than retail in ammo.obj and the VGUI objects, which
+// moves code by up to 112 bytes; with it the client is retail's byte for
+// byte (apart from the link time stamps). Name and body ours.
+void HUD_WeaponsUnknown( void )
+{
+}
