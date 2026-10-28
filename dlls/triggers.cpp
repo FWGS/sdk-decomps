@@ -4504,7 +4504,8 @@ void CTriggerCamera::Move()
 
 		fRange = (vecTarget - vecPlayerOrigin).Length2D();
 		fTheta = atan2( vecTarget.y - vecPlayerOrigin.y, vecTarget.x - vecPlayerOrigin.x );
-		fMinor = (fMajor = fRange * 0.5 / 0.6) * sqrt( 1 - 0.6 * 0.6 );
+		fMajor = fRange * 0.5 / 0.6;
+		fMinor = fMajor * sqrt( 1 - 0.6 * 0.6 );
 		fMidX = (vecTarget.x + vecPlayerOrigin.x) * 0.5;
 		fMiddleY = (vecTarget.y + vecPlayerOrigin.y) * 0.5;
 		fRotX = fMidX * cos( fTheta ) + fMiddleY * sin( fTheta );
