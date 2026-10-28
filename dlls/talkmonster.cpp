@@ -57,6 +57,7 @@ char *CTalkMonster::m_szFriends[TLK_CFRIENDS] =
 	"monster_barney",
 	"monster_scientist",
 	"monster_sitting_scientist",
+	"monster_joe",
 };
 
 
@@ -505,8 +506,7 @@ void CTalkMonster :: RunTask( Task_t *pTask )
 
 		// track head to the client for a while.
 		if ( m_MonsterState == MONSTERSTATE_IDLE		&& 
-			 !IsMoving()								&&
-			 !IsTalking()								)
+			 !IsMoving()								)
 		{
 			// Get edict for one player
 			pPlayer = g_engfuncs.pfnPEntityOfEntIndex( 1 );
@@ -526,7 +526,7 @@ void CTalkMonster :: RunTask( Task_t *pTask )
 		if ( pTask->iTask == TASK_TLK_CLIENT_STARE )
 		{
 			// fail out if the player looks away or moves away.
-			if ( ( pPlayer->v.origin - pev->origin ).Length2D() > TLK_STARE_DIST )
+			if ( ( pPlayer->v.origin - pev->origin ).Length() > TLK_STARE_DIST )
 			{
 				// player moved away.
 				TaskFail();
@@ -584,7 +584,7 @@ void CTalkMonster :: RunTask( Task_t *pTask )
 		{
 			float distance;
 
-			distance = (m_vecLastPosition - pev->origin).Length2D();
+			distance = (m_vecLastPosition - pev->origin).Length();
 
 			// Walk path until far enough away
 			if ( distance > pTask->flData || MovementIsComplete() )
@@ -1329,12 +1329,18 @@ Schedule_t* CTalkMonster :: GetScheduleOfType ( int Type )
 			if ( !IsTalking() && HasConditions ( bits_COND_SEE_CLIENT ) && RANDOM_LONG( 0, 6 ) == 0 )
 			{
 				edict_t *pPlayer = g_engfuncs.pfnPEntityOfEntIndex( 1 );
+				CBaseEntity *pFakeGordon = NULL;	// T2DEF (name ours)
+
+				// T2DEF: don't look at the player while the fake Gordon is visible
+				pFakeGordon = UTIL_FindEntityByClassname( NULL, "monster_fake_gordon" );
+				if ( pFakeGordon && pFakeGordon->pev->rendermode == kRenderNormal )
+					return slIdleStand;
 
 				if ( pPlayer )
 				{
 					// watch the client.
 					UTIL_MakeVectors ( pPlayer->v.angles );
-					if ( ( pPlayer->v.origin - pev->origin ).Length2D() < TLK_STARE_DIST	&& 
+					if ( ( pPlayer->v.origin - pev->origin ).Length() < TLK_STARE_DIST	&& 
 						 UTIL_DotPoints( pPlayer->v.origin, pev->origin, gpGlobals->v_forward ) >= m_flFieldOfView )
 					{
 						// go into the special STARE schedule if the player is close, and looking at me too.
@@ -1554,3 +1560,16 @@ void CTalkMonster::Precache( void )
 		m_szGrp[TLK_DECLINE] = STRING( m_iszDecline );
 }
 
+//=========================================================
+// StopForCaption - T2DEF (name ours): stop and look at the
+// player while a caption is shown
+//=========================================================
+void CTalkMonster::StopForCaption( BOOL fSchedule )
+{
+	m_hTalkTarget = m_hTargetEnt;
+	ClearConditions( bits_COND_CLIENT_PUSH );
+	if ( fSchedule )
+		ChangeSchedule( slTlkIdleWatchClient );
+	else
+		ClearSchedule();
+}

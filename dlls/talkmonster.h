@@ -37,7 +37,7 @@
 #define bit_saidHeard			(1<<6)
 #define bit_saidSmelled			(1<<7)
 
-#define TLK_CFRIENDS		3
+#define TLK_CFRIENDS		4
 
 typedef enum
 {
@@ -144,6 +144,7 @@ public:
 	void			StopFollowing( BOOL clearSchedule );
 	void			StartFollowing( CBaseEntity *pLeader );
 	virtual void	DeclineFollowing( void ) {}
+	void			StopForCaption( BOOL fSchedule );	// T2DEF (name ours)
 	void			LimitFollowers( CBaseEntity *pPlayer, int maxFollowers );
 
 	void EXPORT		FollowerUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
