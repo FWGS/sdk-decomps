@@ -29,6 +29,7 @@
 #include "gamerules.h"
 #include "talkmonster.h"
 #include "weapons.h" //LRC, for trigger_hevcharge
+#include "movewith.h" //LRC
 //#include "hgrunt.h"
 //#include "islave.h"
 
@@ -424,6 +425,8 @@ void CTriggerRotTest::Think( void )
 #define SF_MULTIMAN_THREAD		0x00000001
 #define SF_MULTIMAN_LOOP		0x00000004
 #define SF_MULTIMAN_ONLYONCE	0x00000008
+#define SF_MULTIMAN_SPAWNFIRE	0x00000010
+#define SF_MULTIMAN_DEBUG		0x00000020
 
 #define MM_MODE_CHOOSE			1
 #define MM_MODE_PERCENT			2
@@ -434,6 +437,7 @@ class CMultiManager : public CBaseEntity//Toggle
 public:
 	void KeyValue( KeyValueData *pkvd );
 	void Spawn ( void );
+	void EXPORT UseThink ( void );
 	void EXPORT ManagerThink ( void );
 	void EXPORT ManagerUse   ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
@@ -463,6 +467,8 @@ public:
 	float	m_flMaxWait; //LRC- random, maximum length of time to wait
 	string_t m_sMaster; //LRC- master
 	int		m_iMode; //LRC- 0 = timed, 1 = pick random, 2 = each random
+	int		m_iszThreadName; //LRC
+	int		m_iszLocusThread; //LRC
 
 	EHANDLE m_hActivator;
 private:
@@ -495,6 +501,8 @@ TYPEDESCRIPTION	CMultiManager::m_SaveData[] =
 	DEFINE_FIELD( CMultiManager, m_hActivator, FIELD_EHANDLE ),
 	DEFINE_FIELD( CMultiManager, m_flWait, FIELD_FLOAT ), //LRC
 	DEFINE_FIELD( CMultiManager, m_flMaxWait, FIELD_FLOAT ), //LRC
+	DEFINE_FIELD( CMultiManager, m_iszThreadName, FIELD_STRING ), //LRC
+	DEFINE_FIELD( CMultiManager, m_iszLocusThread, FIELD_STRING ), //LRC
 };
 
 IMPLEMENT_SAVERESTORE(CMultiManager,CBaseEntity);
@@ -523,6 +531,16 @@ void CMultiManager :: KeyValue( KeyValueData *pkvd )
 	else if (FStrEq(pkvd->szKeyName, "master")) //LRC
 	{
 		m_sMaster = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "m_iszThreadName")) //LRC
+	{
+		m_iszThreadName = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "m_iszLocusThread")) //LRC
+	{
+		m_iszLocusThread = ALLOC_STRING(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
 	else if (FStrEq(pkvd->szKeyName, "mode")) //LRC
@@ -556,7 +574,7 @@ void CMultiManager :: KeyValue( KeyValueData *pkvd )
 			m_cTargets++;
 			pkvd->fHandled = TRUE;
 		}
-		else //LRC
+		else //LRC - keep a count of how many targets, for the error message
 		{
 			m_cTargets++;
 		}
@@ -573,10 +591,10 @@ void CMultiManager :: Spawn( void )
 	m_iState = STATE_OFF;
 
 	//LRC
-	if (m_cTargets >= MAX_MULTI_TARGETS)
+	if (m_cTargets > MAX_MULTI_TARGETS)
 	{
-		ALERT(at_console, "WARNING: multi_manager \"%s\" has too many targets (limit is %d, it has %d)\n", STRING(pev->targetname), MAX_MULTI_TARGETS, m_cTargets);
-		m_cTargets = MAX_MULTI_TARGETS - 1;
+		ALERT(at_debug, "WARNING: multi_manager \"%s\" has too many targets (limit is %d, it has %d)\n", STRING(pev->targetname), MAX_MULTI_TARGETS, m_cTargets);
+		m_cTargets = MAX_MULTI_TARGETS;
 	}
 
 	if (!FBitSet(pev->spawnflags,SF_MULTIMAN_TRIGCHOSEN))
@@ -604,6 +622,13 @@ void CMultiManager :: Spawn( void )
 			}
 		}
 	}
+
+	if ( pev->spawnflags & SF_MULTIMAN_SPAWNFIRE)
+	{
+		SetThink ( UseThink );
+		SetUse( NULL );
+		UTIL_DesiredThink( this );
+	}
 }
 
 
@@ -616,6 +641,12 @@ BOOL CMultiManager::HasTarget( string_t targetname )
 	return FALSE;
 }
 
+void CMultiManager :: UseThink ( void )
+{
+	SetThink( ManagerThink );
+	SetUse( ManagerUse );
+	Use( this, this, USE_TOGGLE, 0 );
+}
 
 // Designers were using this to fire targets that may or may not exist -- 
 // so I changed it to use the standard target fire code, made it a little simpler.
@@ -624,6 +655,41 @@ void CMultiManager :: ManagerThink ( void )
 	//LRC- different manager modes
 	if (m_iMode)
 	{
+		// special triggers have no time delay, so we can clean up before firing
+		if (pev->spawnflags & SF_MULTIMAN_LOOP)
+		{
+//			ALERT(at_console,"Manager loops back\n");
+			// if it's a loop, start again!
+			if (m_flMaxWait) //LRC- random time to wait?
+				m_startTime = RANDOM_FLOAT( m_flWait, m_flMaxWait );
+			else if (m_flWait) //LRC- constant time to wait?
+				m_startTime = m_flWait;
+			else //LRC- just start immediately.
+				m_startTime = 0;
+			if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+				ALERT(at_debug, "DEBUG: multi_manager \"%s\": restarting loop.\n", STRING(pev->targetname));
+			SetNextThink( m_startTime );
+			m_startTime = m_fNextThink;
+			m_iState = STATE_TURN_ON;
+//			ALERT(at_console, "MM loops, nextthink %f\n", m_fNextThink);
+		}
+		else if ( IsClone() || pev->spawnflags & SF_MULTIMAN_ONLYONCE )
+		{
+			if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+				ALERT(at_debug, "DEBUG: multi_manager \"%s\": killed.\n", STRING(pev->targetname));
+			SetThink( SUB_Remove );
+			SetNextThink( 0.1 );
+			SetUse( NULL );
+		}
+		else
+		{
+			if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+				ALERT(at_debug, "DEBUG: multi_manager \"%s\": last burst.\n", STRING(pev->targetname));
+			m_iState = STATE_OFF;
+			SetThink( NULL );
+			SetUse ( ManagerUse );// allow manager re-use 
+		}
+
 		int i = 0;
 		if (m_iMode == MM_MODE_CHOOSE) // choose one of the members, and fire it
 		{
@@ -633,7 +699,10 @@ void CMultiManager :: ManagerThink ( void )
 			// no weightings given, so just pick one.
 			if (total == 0)
 			{
-				FireTargets(STRING(m_iTargetName[RANDOM_LONG(0, m_cTargets-1)]),m_hActivator,this,m_triggerType,0);
+				const char *sTarg = STRING(m_iTargetName[RANDOM_LONG(0, m_cTargets-1)]);
+				if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+					ALERT(at_debug, "DEBUG: multi_manager \"%s\": firing \"%s\" (random choice).\n", STRING(pev->targetname), sTarg);
+				FireTargets(sTarg,m_hActivator,this,m_triggerType,0);
 			}
 			else // pick one by weighting
 			{
@@ -644,6 +713,8 @@ void CMultiManager :: ManagerThink ( void )
 					curpos += m_flTargetDelay[i];
 					if (curpos >= chosen)
 					{
+						if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+							ALERT(at_debug, "DEBUG: multi_manager \"%s\": firing \"%s\" (weighted random choice).\n", STRING(pev->targetname), STRING(m_iTargetName[i]));
 						FireTargets(STRING(m_iTargetName[i]),m_hActivator,this,m_triggerType,0);
 						break;
 					}
@@ -655,45 +726,42 @@ void CMultiManager :: ManagerThink ( void )
 			for (i = 0; i < m_cTargets; i++)
 			{
 				if ( RANDOM_LONG( 0, 100 ) <= m_flTargetDelay[i] )
+				{
+					if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+						ALERT(at_debug, "DEBUG: multi_manager \"%s\": firing \"%s\" (%f%% chance).\n", STRING(pev->targetname), STRING(m_iTargetName[i]), m_flTargetDelay[i]);
 					FireTargets(STRING(m_iTargetName[i]),m_hActivator,this,m_triggerType,0);
+				}
 			}
 		}
 		else if (m_iMode == MM_MODE_SIMULTANEOUS)
 		{
 			for (i = 0; i < m_cTargets; i++)
 			{
+				if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+					ALERT(at_debug, "DEBUG: multi_manager \"%s\": firing \"%s\" (simultaneous).\n", STRING(pev->targetname), STRING(m_iTargetName[i]));
 				FireTargets(STRING(m_iTargetName[i]),m_hActivator,this,m_triggerType,0);
 			}
 		}
 
-		// instantaneous trigger has finished, clean up now
-		m_iState = STATE_OFF;
-		SetThink( NULL );
-		if ( IsClone() || pev->spawnflags & SF_MULTIMAN_ONLYONCE )
-		{
-			UTIL_Remove( this );
-			return;
-		}
-		SetUse ( ManagerUse );// allow manager re-use 
 		return;
 	}
 
 // ok, so m_iMode is 0; we're doing normal time-based stuff.
 	
 	float	time;
+	int		finalidx;
+	int		index = m_index; // store the current index
 
 	time = gpGlobals->time - m_startTime;
 
 //	ALERT(at_console,"Manager think for time %f\n",time);
 
-	while ( m_index < m_cTargets && m_flTargetDelay[ m_index ] <= time )
-	{
-//		ALERT(at_console,"Manager sends %d to %s\n",m_triggerType,STRING(m_iTargetName[m_index]));
-		FireTargets( STRING( m_iTargetName[ m_index ] ), m_hActivator, this, m_triggerType, 0 );
-		m_index++;
-	}
+	// find the last index we're going to fire this time
+	finalidx = m_index;
+	while (finalidx < m_cTargets && m_flTargetDelay[ finalidx ] <= time)
+		finalidx++;
 
-	if ( m_index >= m_cTargets )// have we fired all targets?
+	if ( finalidx >= m_cTargets )// will we finish firing targets this time?
 	{
 		if (pev->spawnflags & SF_MULTIMAN_LOOP)
 		{
@@ -715,26 +783,45 @@ void CMultiManager :: ManagerThink ( void )
 				m_startTime = 0;
 				m_iState = STATE_ON;
 			}
+			if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+				ALERT(at_debug, "DEBUG: multi_manager \"%s\": restarting loop.\n", STRING(pev->targetname));
 			SetNextThink( m_startTime );
 			m_startTime += gpGlobals->time;
 		}
 		else
 		{
 			m_iState = STATE_OFF; //LRC- STATE_OFF means "yes, we've finished".
-			SetThink( NULL );
 			if ( IsClone() || pev->spawnflags & SF_MULTIMAN_ONLYONCE )
 			{
-				UTIL_Remove( this );
-				return;
+				SetThink( SUB_Remove );
+				SetNextThink( 0.1 );
+				SetUse( NULL );
+				if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+					ALERT(at_debug, "DEBUG: multi_manager \"%s\": killed.\n", STRING(pev->targetname));
 			}
-			SetUse ( ManagerUse );// allow manager re-use 
+			else
+			{
+				SetThink( NULL );
+				SetUse ( ManagerUse );// allow manager re-use 
+				if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+					ALERT(at_debug, "DEBUG: multi_manager \"%s\": last burst.\n", STRING(pev->targetname));
+			}
 		}
 	}
 	else
 	{
-//		m_index = 0;
-		m_iState = STATE_ON; //LRC- while we're in STATE_ON we're firing targets, but haven't finished yet.
+		m_index = finalidx;
+		m_iState = STATE_ON; //LRC- while we're in STATE_ON we're firing targets, and haven't finished yet.
 		AbsoluteNextThink( m_startTime + m_flTargetDelay[ m_index ] );
+	}
+
+	while ( index < m_cTargets && m_flTargetDelay[ index ] <= time )
+	{
+//		ALERT(at_console,"Manager sends %d to %s\n",m_triggerType,STRING(m_iTargetName[m_index]));
+		if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+			ALERT(at_debug, "DEBUG: multi_manager \"%s\": firing \"%s\".\n", STRING(pev->targetname), STRING( m_iTargetName[ index ] ));
+		FireTargets( STRING( m_iTargetName[ index ] ), m_hActivator, this, m_triggerType, 0 );
+		index++;
 	}
 }
 
@@ -748,8 +835,11 @@ CMultiManager *CMultiManager::Clone( void )
 
 	pMulti->pev->spawnflags |= SF_MULTIMAN_CLONE;
 	pMulti->m_cTargets = m_cTargets;
+	if (m_iszThreadName) pMulti->pev->targetname = m_iszThreadName; //LRC
 	pMulti->m_triggerType = m_triggerType; //LRC
 	pMulti->m_iMode = m_iMode; //LRC
+	pMulti->m_flWait = m_flWait; //LRC
+	pMulti->m_flMaxWait = m_flMaxWait; //LRC
 	memcpy( pMulti->m_iTargetName, m_iTargetName, sizeof( m_iTargetName ) );
 	memcpy( pMulti->m_flTargetDelay, m_flTargetDelay, sizeof( m_flTargetDelay ) );
 
@@ -766,14 +856,36 @@ void CMultiManager :: ManagerUse ( CBaseEntity *pActivator, CBaseEntity *pCaller
 		{
 			if (useType != USE_ON) // ...then turn it off if we're asked to.
 			{
+				if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+					ALERT(at_debug, "DEBUG: multi_manager \"%s\": Loop halted on request.\n", STRING(pev->targetname));
 				m_iState = STATE_OFF;
-				SetThink(NULL);
+				if ( IsClone() || pev->spawnflags & SF_MULTIMAN_ONLYONCE )
+				{
+					SetThink( SUB_Remove );
+					SetNextThink( 0.1 );
+					SetUse( NULL );
+					if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+						ALERT(at_debug, "DEBUG: multi_manager \"%s\": loop halted (removing).\n", STRING(pev->targetname));
+				}
+				else
+				{
+					SetThink( NULL );
+					if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+						ALERT(at_debug, "DEBUG: multi_manager \"%s\": loop halted.\n", STRING(pev->targetname));
+				}
 			}
 			// else we're already on and being told to turn on, so do nothing.
+			else if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+				ALERT(at_debug, "DEBUG: multi_manager \"%s\": Loop already active.\n", STRING(pev->targetname));
 			return;
 		}
 		else if (useType == USE_OFF) // it's already off
+		{
+			if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+				ALERT(at_debug, "DEBUG: multi_manager \"%s\": Loop already inactive.\n", STRING(pev->targetname));
 			return;
+		}
+		// otherwise, start firing targets as normal.
 	}
 //	ALERT(at_console,"Manager used, targetting [");
 //	for (int i = 0; i < m_cTargets; i++)
@@ -784,14 +896,22 @@ void CMultiManager :: ManagerUse ( CBaseEntity *pActivator, CBaseEntity *pCaller
 
 	//LRC- "master" support
 	if (!UTIL_IsMasterTriggered(m_sMaster,pActivator))
+	{
+		if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+			ALERT(at_debug, "DEBUG: multi_manager \"%s\": Can't trigger, locked by master \"%s\".\n", STRING(pev->targetname), STRING(m_sMaster));
 		return;
+	}
 
 	// In multiplayer games, clone the MM and execute in the clone (like a thread)
 	// to allow multiple players to trigger the same multimanager
 	if ( ShouldClone() )
 	{
 		CMultiManager *pClone = Clone();
+		if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+			ALERT(at_debug, "DEBUG: multi_manager \"%s\": Creating clone.\n", STRING(pev->targetname));
 		pClone->ManagerUse( pActivator, pCaller, useType, value );
+		if (m_iszLocusThread)
+			FireTargets( STRING(m_iszLocusThread), pClone, this, USE_TOGGLE, 0 );
 		return;
 	}
 
@@ -823,13 +943,15 @@ void CMultiManager :: ManagerUse ( CBaseEntity *pActivator, CBaseEntity *pCaller
 	if (pev->spawnflags & SF_MULTIMAN_SAMETRIG) //LRC
 		m_triggerType = useType;
 
-	if (!(pev->spawnflags & SF_MULTIMAN_LOOP))
-	{
+	if (pev->spawnflags & SF_MULTIMAN_LOOP)
+		SetUse( ManagerUse ); // clones won't already have this set
+	else
 		SetUse( NULL );// disable use until all targets have fired
-	}
 
 	if (m_startTime > 0)
 	{
+		if (pev->spawnflags & SF_MULTIMAN_DEBUG)
+			ALERT(at_debug, "DEBUG: multi_manager \"%s\": Begin in %f seconds.\n", STRING(pev->targetname), m_startTime);
 		SetThink ( ManagerThink );
 		SetNextThink( m_startTime );
 		m_startTime += gpGlobals->time;
@@ -849,7 +971,7 @@ void CMultiManager :: ManagerReport ( void )
 
 	for ( cIndex = 0 ; cIndex < m_cTargets ; cIndex++ )
 	{
-		ALERT ( at_console, "%s %f\n", STRING(m_iTargetName[cIndex]), m_flTargetDelay[cIndex] );
+		ALERT ( at_debug, "%s %f\n", STRING(m_iTargetName[cIndex]), m_flTargetDelay[cIndex] );
 	}
 }
 #endif
