@@ -339,6 +339,7 @@ public:
 	BOOL CineCleanup( );
 
 	void StartPatrol( CBaseEntity *path );
+	void Ungag( void );	// T2DEF (name ours; nothing calls it)
 
 	CBaseEntity* DropItem ( char *pszItemName, const Vector &vecPos, const Vector &vecAng );// drop an item.
 };

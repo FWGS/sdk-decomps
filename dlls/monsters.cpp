@@ -2020,6 +2020,7 @@ void CBaseMonster :: MonsterInit ( void )
 
 	// Set fields common to all monsters
 	pev->effects		= 0;
+	pev->iuser3			= 0;	// T2DEF
 	pev->takedamage		= DAMAGE_AIM;
 	pev->ideal_yaw		= pev->angles.y;
 	pev->max_health		= pev->health;
@@ -2083,6 +2084,8 @@ void CBaseMonster :: StartPatrol ( CBaseEntity* path )
 			
 		if ( pev->movetype == MOVETYPE_FLY )
 			m_movementActivity = ACT_FLY;
+		else if ( pev->spawnflags & 2048 )	// T2DEF: run the path
+			m_movementActivity = ACT_RUN;
 		else
 			m_movementActivity = ACT_WALK;
 
@@ -2091,7 +2094,10 @@ void CBaseMonster :: StartPatrol ( CBaseEntity* path )
 			ALERT ( at_aiconsole, "Can't Create Route!\n" );
 		}
 		SetState( MONSTERSTATE_IDLE );
-		ChangeSchedule( GetScheduleOfType( SCHED_IDLE_WALK ) );
+		if ( pev->spawnflags & 2048 )	// T2DEF
+			ChangeSchedule( GetScheduleOfType( SCHED_IDLE_RUN ) );
+		else
+			ChangeSchedule( GetScheduleOfType( SCHED_IDLE_WALK ) );
 	}
 }
 
@@ -2661,13 +2667,11 @@ void CBaseMonster :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		break;
 
 	case SCRIPT_EVENT_SOUND:			// Play a named wave file
-		if ( !(pev->spawnflags & SF_MONSTER_GAG) || m_MonsterState != MONSTERSTATE_IDLE)
-			EMIT_SOUND( edict(), CHAN_BODY, pEvent->options, 1.0, ATTN_IDLE );
+		EMIT_SOUND( edict(), CHAN_BODY, pEvent->options, 1.0, ATTN_IDLE );	// T2DEF: no gag test (as the SDK)
 		break;
 
 	case SCRIPT_EVENT_SOUND_VOICE:
-		if ( !(pev->spawnflags & SF_MONSTER_GAG) || m_MonsterState != MONSTERSTATE_IDLE)
-			EMIT_SOUND( edict(), CHAN_VOICE, pEvent->options, 1.0, ATTN_IDLE );
+		EMIT_SOUND( edict(), CHAN_VOICE, pEvent->options, 1.0, ATTN_IDLE );	// T2DEF: no gag test (as the SDK)
 		break;
 
 	case SCRIPT_EVENT_SENTENCE_RND1:		// Play a named sentence group 33% of the time
@@ -3475,4 +3479,11 @@ BOOL CBaseMonster :: ShouldFadeOnDeath( void )
 		return TRUE;
 
 	return FALSE;
+}
+
+// T2DEF: let a gagged monster talk again (name ours; nothing calls it)
+void CBaseMonster :: Ungag( void )
+{
+	if ( pev->spawnflags & SF_MONSTER_GAG )
+		pev->spawnflags &= ~SF_MONSTER_GAG;
 }
