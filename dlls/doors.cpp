@@ -345,13 +345,19 @@ void CBaseDoor :: PostSpawn( void )
 	if ( FBitSet (pev->spawnflags, SF_DOOR_START_OPEN) )
 	{	// swap pos1 and pos2, put door at pos2
 		if (m_pMoveWith)
+		{
 			m_vecSpawnOffset = m_vecSpawnOffset + (m_vecPosition2 + m_pMoveWith->pev->origin) - pev->origin;
+			UTIL_AssignOrigin(this, m_vecPosition2 + m_pMoveWith->pev->origin);
+		}
 		else
+		{
 			m_vecSpawnOffset = m_vecSpawnOffset + m_vecPosition2 - pev->origin;
-		UTIL_AssignOrigin(this, m_vecPosition2);
+			UTIL_AssignOrigin(this, m_vecPosition2);
+		}
 		Vector vecTemp = m_vecPosition2;
 		m_vecPosition2 = m_vecPosition1;
 		m_vecPosition1 = vecTemp;
+//		ALERT(at_console, "func_door postspawn: origin %f %f %f\n", pev->origin.x, pev->origin.y, pev->origin.z);
 	}
 }
 
@@ -868,6 +874,9 @@ void CBaseDoor::Blocked( CBaseEntity *pOther )
 
 	if (m_flWait >= 0)
 	{
+		//LRC - thanks to [insert name here] for this
+		if ( !FBitSet( pev->spawnflags, SF_DOOR_SILENT ) )
+			STOP_SOUND(ENT(pev), CHAN_STATIC, (char*)STRING(pev->noiseMoving) );
 		if (m_toggle_state == TS_GOING_DOWN)
 		{
 			DoorGoUp();
@@ -907,7 +916,7 @@ void CBaseDoor::Blocked( CBaseEntity *pOther )
 						else
 						{// set angles to realign rotating doors
 							pDoor->pev->angles = pev->angles;
-							UTIL_SetVelocity(pDoor, g_vecZero);
+							UTIL_SetAvelocity(pDoor, g_vecZero);
 						}
 					}
 					if ( pDoor->m_toggle_state == TS_GOING_DOWN)
