@@ -979,6 +979,27 @@ Schedule_t	slTakeCoverFromEnemy[] =
 	},
 };
 
+//=========================================================
+// T2DEF: idle run, a path_corner patrol at a run
+// (names ours)
+//=========================================================
+Task_t	tlIdleRun1[] =
+{
+	{ TASK_RUN_PATH,			(float)9999 },
+	{ TASK_WAIT_FOR_MOVEMENT,	(float)0	},
+};
+
+Schedule_t	slIdleRun[] =
+{
+	{ 
+		tlIdleRun1,
+		ARRAYSIZE ( tlIdleRun1 ), 
+		0,
+		0,
+		"Idle Run"
+	},
+};
+
 Schedule_t *CBaseMonster::m_scheduleList[] = 
 {
 	slIdleStand,
@@ -1018,6 +1039,7 @@ Schedule_t *CBaseMonster::m_scheduleList[] =
 	slTakeCoverFromOrigin,
 	slTakeCoverFromBestSound,
 	slTakeCoverFromEnemy,
+	slIdleRun,
 	slFail
 };
 
@@ -1219,6 +1241,10 @@ Schedule_t* CBaseMonster :: GetScheduleOfType ( int Type )
 	case SCHED_FAIL:
 		{
 			return slFail;
+		}
+	case SCHED_IDLE_RUN:	// T2DEF
+		{
+			return &slIdleRun[ 0 ];
 		}
 	default:
 		{
