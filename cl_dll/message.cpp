@@ -506,6 +506,7 @@ int CHudMessage::MsgFunc_GameTitle( const char *pszName,  int iSize, void *pbuf 
 	if ( m_pGameTitle != NULL )
 	{
 		m_gameTitleTime = gHUD.m_flTime;
+		m_pGameTitle->holdtime = 3.0;
 
 		// Turn on drawing
 		if ( !(m_iFlags & HUD_ACTIVE) )
