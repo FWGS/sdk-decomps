@@ -58,6 +58,8 @@ public:
 
 	CUSTOM_SCHEDULES;
 
+	static const char *pAttackHitSounds[];
+
 	float	m_flKickTime;	// > 0: the kick is due then; < 0: minus (the last time the enemy was away + 1)
 	BOOL	m_fKick;		// CheckMeleeAttack1 allowed the kick
 	BOOL	m_fHasBoxes;	// m_pBox[] are spawned and solid
@@ -65,6 +67,15 @@ public:
 };
 
 LINK_ENTITY_TO_CLASS( monster_horse, CHorse );
+
+// sic: never used (the bear's hit sounds; retail keeps the table at the
+// start of this file's data, and no code reads it)
+const char *CHorse::pAttackHitSounds[] =
+{
+	"player/pl_pain4.wav",
+	"player/pl_pain5.wav",
+	"player/pl_pain6.wav",
+};
 
 void SaveHorseHull( edict_t *pent );
 
