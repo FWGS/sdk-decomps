@@ -4587,3 +4587,225 @@ void CTriggerCamera::TurnOff( void )
 	m_state = 0;
 	g_iT2DefCameraActive = 0;
 }
+
+
+//=========================================================
+// T2DEF: info_security_cam - a camera view for func_console;
+// sweeps "range" degrees around its start yaw (names ours,
+// save-table names T2DEF's)
+//=========================================================
+class CSecurityCamera : public CBaseDelay
+{
+public:
+	void Spawn( void );
+	void KeyValue( KeyValueData *pkvd );
+	void Think( void );
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+	virtual int	ObjectCaps( void ) { return CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	float m_flWedge;
+	float m_flStartAngle;
+	int	  m_idirection;
+};
+LINK_ENTITY_TO_CLASS( info_security_cam, CSecurityCamera );
+
+TYPEDESCRIPTION	CSecurityCamera::m_SaveData[] = 
+{
+	DEFINE_FIELD( CSecurityCamera, m_flWedge, FIELD_FLOAT ),
+	DEFINE_FIELD( CSecurityCamera, m_flStartAngle, FIELD_FLOAT ),
+	DEFINE_FIELD( CSecurityCamera, m_idirection, FIELD_INTEGER ),
+};
+
+IMPLEMENT_SAVERESTORE(CSecurityCamera,CBaseDelay);
+
+#define SF_SECURITYCAM_STATIC	1	// name ours: don't sweep
+
+void CSecurityCamera::Spawn( void )
+{
+	pev->movetype = MOVETYPE_NOCLIP;
+	pev->solid = SOLID_NOT;							// Remove model & collisions
+	pev->renderamt = 0;								// The engine won't draw this model if this is set to 0 and blending is on
+	pev->rendermode = kRenderTransTexture;
+
+	m_flWedge = m_flWedge / 2.0;
+	m_flStartAngle = pev->angles.y;
+	m_idirection = 1;
+
+	UTIL_SetOrigin( this, pev->origin );
+	pev->velocity = Vector( 0, 0, 0 );
+	SET_MODEL( ENT(pev), "models/player.mdl" );
+
+	if ( !FBitSet( pev->spawnflags, SF_SECURITYCAM_STATIC ) )
+		SetNextThink( RANDOM_FLOAT( 0, 0.5 ) );
+}
+
+void CSecurityCamera :: KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "range"))
+	{
+		m_flWedge = atof(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CBaseDelay::KeyValue( pkvd );
+}
+
+void CSecurityCamera::Think( void )
+{
+	float flYaw = pev->angles.y;
+
+	if (flYaw > 360)
+		flYaw -= 360;
+
+	if (flYaw < 0)
+		flYaw += 360;
+
+	float flDelta = flYaw - m_flStartAngle;
+
+	if (flDelta > 180)
+		flDelta -= 360;
+
+	if (m_idirection == -1 && -m_flWedge > flDelta)
+	{
+		pev->avelocity.y = 0;
+		SetNextThink( 3 );
+		m_idirection = 1;
+	}
+	else if (m_idirection == 1 && flDelta > m_flWedge)
+	{
+		pev->avelocity.y = 0;
+		SetNextThink( 3 );
+		m_idirection = -1;
+	}
+	else
+	{
+		pev->avelocity.y = m_idirection * 12;
+		SetNextThink( 0.2 );
+	}
+}
+
+
+//=========================================================
+// T2DEF: monster_security_cam - the camera model; turns its
+// bone controllers 0 (yaw, within "range") and 1 ("pitch")
+//=========================================================
+class CSecurityCamModel : public CBaseAnimating
+{
+public:
+	void Spawn( void );
+	void KeyValue( KeyValueData *pkvd );
+	void Think( void );
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+	virtual int	ObjectCaps( void ) { return CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	float m_flWedge;
+	int	  m_idirection;
+	float m_flangy;
+	float m_flPitch;
+};
+LINK_ENTITY_TO_CLASS( monster_security_cam, CSecurityCamModel );
+
+TYPEDESCRIPTION	CSecurityCamModel::m_SaveData[] = 
+{
+	DEFINE_FIELD( CSecurityCamModel, m_flWedge, FIELD_FLOAT ),
+	DEFINE_FIELD( CSecurityCamModel, m_idirection, FIELD_INTEGER ),
+	DEFINE_FIELD( CSecurityCamModel, m_flangy, FIELD_FLOAT ),
+	DEFINE_FIELD( CSecurityCamModel, m_flPitch, FIELD_FLOAT ),
+};
+
+IMPLEMENT_SAVERESTORE(CSecurityCamModel,CBaseAnimating);
+
+void CSecurityCamModel::Spawn( void )
+{
+	PRECACHE_MODEL( "models/securitycamera.mdl" );
+	pev->movetype = MOVETYPE_NONE;
+	pev->solid = SOLID_NOT;
+
+	m_flWedge = m_flWedge / 2.0;
+	if (m_flWedge > 80)
+		m_flWedge = 80;
+	if (m_flWedge < 0)
+		m_flWedge = 0;
+	m_flangy = 0;
+
+	if (m_flPitch < 0)
+		m_flPitch = 0;
+	if (m_flPitch > 30)
+		m_flPitch = 30;
+	m_idirection = 1;
+
+	UTIL_SetOrigin( this, pev->origin );
+	pev->velocity = Vector( 0, 0, 0 );
+	SET_MODEL( ENT(pev), "models/securitycamera.mdl" );
+
+	SetNextThink( RANDOM_FLOAT( 0, 0.5 ) );
+}
+
+void CSecurityCamModel :: KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "range"))
+	{
+		m_flWedge = atof(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "pitch"))
+	{
+		m_flPitch = atof(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CBaseDelay::KeyValue( pkvd );
+}
+
+void CSecurityCamModel::Think( void )
+{
+	if ( FBitSet( pev->spawnflags, SF_SECURITYCAM_STATIC ) )
+	{
+		SetBoneController( 0, m_flangy );
+		SetBoneController( 1, m_flPitch );
+		SetThink( NULL );
+		return;
+	}
+
+	if (m_idirection == -1 && -m_flWedge >= m_flangy)
+	{
+		SetNextThink( 3 );
+		m_idirection = 1;
+	}
+	else if (m_idirection == 1 && m_flangy >= m_flWedge)
+	{
+		SetNextThink( 3 );
+		m_idirection = -1;
+	}
+	else
+	{
+		m_flangy = m_flangy + m_idirection * 12 * 0.05;
+		SetBoneController( 0, m_flangy );
+		SetBoneController( 1, m_flPitch );
+		SetNextThink( 0.05 );
+	}
+}
+
+
+//=========================================================
+// T2DEF: trigger_gametitle - shows the game title (class name ours)
+//=========================================================
+extern DLL_GLOBAL int gDisplayTitle;
+
+class CTriggerGameTitle : public CBaseDelay
+{
+public:
+	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+};
+LINK_ENTITY_TO_CLASS( trigger_gametitle, CTriggerGameTitle );
+
+void CTriggerGameTitle::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	gDisplayTitle = TRUE;
+}
