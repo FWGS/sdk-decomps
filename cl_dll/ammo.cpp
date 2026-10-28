@@ -538,26 +538,16 @@ int CHudAmmo::MsgFunc_HideWeapon( const char *pszName, int iSize, void *pbuf )
 	
 	gHUD.m_iHideHUDDisplay = READ_BYTE();
 
-	//LRCT - experiment to allow a custom crosshair.
-	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_CUSTOMCROSSHAIR )
-	{
-		WEAPON *pWeapon = gWR.GetWeapon(4);
-		if ( pWeapon )
-			SetCrosshair( pWeapon->hCrosshair, pWeapon->rcCrosshair, 255, 255, 255 );
-//		CONPRINT("Selecting custom crosshair");
-	}
-	else if ( (m_pWeapon == NULL) || (gHUD.m_iHideHUDDisplay & ( HIDEHUD_WEAPONS | HIDEHUD_ALL )) )
+	if ( gHUD.m_iHideHUDDisplay & ( HIDEHUD_WEAPONS | HIDEHUD_ALL ) )
 	{
 		static wrect_t nullrc;
 		gpActiveSel = NULL;
 		SetCrosshair( 0, nullrc, 0, 0, 0 );
-//		CONPRINT("Blanking crosshair\n");
 	}
 	else
 	{
-		//if ( m_pWeapon )
-		SetCrosshair( m_pWeapon->hCrosshair, m_pWeapon->rcCrosshair, 255, 255, 255 );
-//		CONPRINT("Selecting weapon crosshair\n");
+		if ( m_pWeapon )
+			SetCrosshair( m_pWeapon->hCrosshair, m_pWeapon->rcCrosshair, 255, 255, 255 );
 	}
 
 	return 1;
@@ -588,7 +578,6 @@ int CHudAmmo::MsgFunc_CurWeapon(const char *pszName, int iSize, void *pbuf )
 	if ( iId < 1 )
 	{
 		SetCrosshair(0, nullrc, 0, 0, 0);
-		m_pWeapon = NULL; //LRC
 		return 0;
 	}
 
@@ -617,13 +606,7 @@ int CHudAmmo::MsgFunc_CurWeapon(const char *pszName, int iSize, void *pbuf )
 
 	m_pWeapon = pWeapon;
 
-	//LRCT - probably not the right way to do this...
-	if ( gHUD.m_iHideHUDDisplay & ( HIDEHUD_CUSTOMCROSSHAIR ))
-	{
-		WEAPON *ccWeapon = gWR.GetWeapon(7);
-		SetCrosshair(ccWeapon->hCrosshair, ccWeapon->rcCrosshair, 255, 255, 255);
-	}
-	else if ( !(gHUD.m_iHideHUDDisplay & ( HIDEHUD_WEAPONS | HIDEHUD_ALL )) )
+	if ( !(gHUD.m_iHideHUDDisplay & ( HIDEHUD_WEAPONS | HIDEHUD_ALL )) )
 	{
 		if ( gHUD.m_iFOV >= 90 )
 		{ // normal crosshairs
