@@ -84,7 +84,7 @@ void CGenericMonster::KeyValue( KeyValueData *pkvd )
 //=========================================================
 int	CGenericMonster :: Classify ( void )
 {
-	return m_iClass?m_iClass:CLASS_PLAYER_ALLY;
+	return m_iClass?m_iClass:CLASS_NONE;
 }
 
 //=========================================================
