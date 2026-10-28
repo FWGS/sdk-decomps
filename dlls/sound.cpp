@@ -2018,7 +2018,7 @@ void CSpeaker :: Spawn( void )
 }
 
 #define ANNOUNCE_MINUTES_MIN	0.25	 
-#define ANNOUNCE_MINUTES_MAX	2.25
+#define ANNOUNCE_MINUTES_MAX	0.3	// T2DEF: 18 seconds, not 2.25 minutes
 
 void CSpeaker :: Precache( void )
 {
@@ -2036,7 +2036,7 @@ void CSpeaker :: SpeakerThink( void )
 
 
 	// Wait for the talkmonster to finish first.
-	if (gpGlobals->time <= CTalkMonster::g_talkWaitTime)
+	if (gpGlobals->time <= CTalkMonster::g_talkWaitTime && !(pev->spawnflags & 2))	// T2DEF: spawnflag 2 doesn't wait
 	{
 		AbsoluteNextThink( CTalkMonster::g_talkWaitTime + RANDOM_FLOAT( 5, 10 ) );
 		return;
@@ -2150,4 +2150,406 @@ void CSpeaker :: KeyValue( KeyValueData *pkvd )
 	}
 	else
 		CBaseEntity::KeyValue( pkvd );
+}
+
+//=========================================================
+// T2DEF: letterbox captions and settings (names ours)
+//
+// sound/english.txt and sound/german.txt have lines
+// "SENTENCENAME>Speaker:>text"; a scripted_sentence with
+// spawnflag 16 shows its sentence's caption (LBCaption).
+// t2defconfig.txt sets sv_music and sv_lang.
+//=========================================================
+
+typedef struct caption
+{
+	char szname[16];
+	char szspeaker[20];
+	char sztext[512];
+} CAPTION;
+
+extern int gmsgLBCaption;
+extern DLL_GLOBAL int g_iT2DefMusicOn, g_iT2DefTextLanguage;
+
+int fEnglishCaptionsInit = FALSE;
+int fGermanCaptionsInit = FALSE;
+int fConfigInit = FALSE;
+int gcEnglishCaptions = 0;
+int gcGermanCaptions = 0;
+
+CAPTION gCaptionEnglish[500];
+CAPTION gCaptionGerman[500];
+
+// open sound/english.txt, read the captions into gCaptionEnglish
+// Should be called from world spawn, only works on the
+// first call and is ignored subsequently.
+
+void CAPTION_InitEnglish()
+{
+	char buffer[512];
+	int i, j;
+
+	if (fEnglishCaptionsInit)
+		return;
+
+	gcEnglishCaptions = 0;
+	memset(gCaptionEnglish, 0, 500 * sizeof(CAPTION));
+	memset(buffer, 0, 512);
+
+	int filePos = 0, fileSize;
+	byte *pMemFile = g_engfuncs.pfnLoadFileForMe( "sound/english.txt", &fileSize );
+	if ( !pMemFile )
+		return;
+
+	// for each line in the file...
+	while ( memfgets(pMemFile, fileSize, filePos, buffer, 511) != NULL )
+	{
+		// skip whitespace
+		i = 0;
+		while(buffer[i] && buffer[i] == ' ')
+			i++;
+		
+		if (!buffer[i])
+			continue;
+
+		if (buffer[i] == '/' || !isalpha(buffer[i]))
+			continue;
+
+		// get caption name
+		j = i;
+		while (buffer[j] && buffer[j] != '>')
+			j++;
+
+		if (!buffer[j])
+			continue;
+
+		if (gcEnglishCaptions > 200)
+		{
+			ALERT (at_error, "Too many English captions in english.txt!\n");
+			break;
+		}
+
+		// null-terminate name and save in captions array
+		buffer[j] = 0;
+		const char *pString = buffer + i;
+
+		if ( strlen( pString ) >= 16 )
+			ALERT( at_warning, "Name %s longer than %d letters\n", pString, 15 );
+
+		strcpy( gCaptionEnglish[gcEnglishCaptions].szname, buffer );	// sic: buffer, not pString
+
+		// get speaker
+		j++;
+		i = j;
+		while (buffer[j] && buffer[j] != '>')
+			j++;
+
+		if (!buffer[j])
+			continue;
+
+		buffer[j] = 0;
+		pString = buffer + i;
+
+		if ( strlen( pString ) >= 20 )
+			ALERT( at_warning, "Speaker %s longer than %d letters\n", pString, 19 );
+
+		strcpy( gCaptionEnglish[gcEnglishCaptions].szspeaker, pString );
+
+		// get text, up to the end of the line
+		j++;
+		i = j;
+		while (buffer[j] && buffer[j] != '\r')
+			j++;
+
+		if (!buffer[j])
+			continue;
+
+		buffer[j] = 0;
+		strcpy( gCaptionEnglish[gcEnglishCaptions].sztext, &(buffer[i]) );
+		gcEnglishCaptions++;
+	}
+
+	g_engfuncs.pfnFreeFile( pMemFile );
+	
+	fEnglishCaptionsInit = TRUE;
+}
+
+// open sound/german.txt, read the captions into gCaptionGerman
+// Should be called from world spawn, only works on the
+// first call and is ignored subsequently.
+
+void CAPTION_InitGerman()
+{
+	char buffer[512];
+	int i, j;
+
+	if (fGermanCaptionsInit)
+		return;
+
+	gcGermanCaptions = 0;
+	memset(gCaptionGerman, 0, 500 * sizeof(CAPTION));
+	memset(buffer, 0, 512);
+
+	int filePos = 0, fileSize;
+	byte *pMemFile = g_engfuncs.pfnLoadFileForMe( "sound/german.txt", &fileSize );
+	if ( !pMemFile )
+		return;
+
+	// for each line in the file...
+	while ( memfgets(pMemFile, fileSize, filePos, buffer, 511) != NULL )
+	{
+		// skip whitespace
+		i = 0;
+		while(buffer[i] && buffer[i] == ' ')
+			i++;
+		
+		if (!buffer[i])
+			continue;
+
+		if (buffer[i] == '/' || !isalpha(buffer[i]))
+			continue;
+
+		// get caption name
+		j = i;
+		while (buffer[j] && buffer[j] != '>')
+			j++;
+
+		if (!buffer[j])
+			continue;
+
+		if (gcEnglishCaptions > 200)	// sic: the English count
+		{
+			ALERT (at_error, "Too many German captions in german.txt!\n");
+			break;
+		}
+
+		// null-terminate name and save in captions array
+		buffer[j] = 0;
+		const char *pString = buffer + i;
+
+		if ( strlen( pString ) >= 16 )
+			ALERT( at_warning, "Name %s longer than %d letters\n", pString, 15 );
+
+		strcpy( gCaptionGerman[gcGermanCaptions].szname, buffer );	// sic: buffer, not pString
+
+		// get speaker
+		j++;
+		i = j;
+		while (buffer[j] && buffer[j] != '>')
+			j++;
+
+		if (!buffer[j])
+			continue;
+
+		buffer[j] = 0;
+		pString = buffer + i;
+
+		if ( strlen( pString ) >= 20 )
+			ALERT( at_warning, "Speaker %s longer than %d letters\n", pString, 19 );
+
+		strcpy( gCaptionGerman[gcGermanCaptions].szspeaker, pString );
+
+		// get text, up to the end of the line
+		j++;
+		i = j;
+		while (buffer[j] && buffer[j] != '\r')
+			j++;
+
+		if (!buffer[j])
+			continue;
+
+		buffer[j] = 0;
+		strcpy( gCaptionGerman[gcGermanCaptions].sztext, &(buffer[i]) );
+		gcGermanCaptions++;
+	}
+
+	g_engfuncs.pfnFreeFile( pMemFile );
+	
+	fGermanCaptionsInit = TRUE;
+}
+
+// send the caption of a sentence (name without '!') to the clients,
+// in the language set by sv_lang / t2defenglish / t2defgerman
+
+void CAPTION_Show( const char *pszName )
+{
+	char szMessage1[256];
+	char szMessage2[256];
+	int i;
+	int len;
+	int found;
+
+	if ( g_iT2DefTextLanguage == 2 )
+		return;
+
+	i = 0;
+	found = 0;
+	memset( szMessage1, 0, 256 );
+	memset( szMessage2, 0, 256 );
+
+	if ( !fEnglishCaptionsInit || !pszName )
+		return;
+
+	while ( gCaptionEnglish[i].szname && i < 500 )
+	{
+		if ( !strcmp( pszName, gCaptionEnglish[i].szname ) )
+		{
+			found = 1;
+			break;
+		}
+		i++;
+	}
+
+	if ( !found )
+	{
+		ALERT( at_console, "No such caption name: %s\n", pszName );
+		return;
+	}
+
+	len = 168;	// characters in one caption line
+
+	if ( g_iT2DefTextLanguage == 0 )
+	{
+		if ( strlen( gCaptionEnglish[i].sztext ) < len )
+		{
+			strcpy( szMessage1, "1" );
+			strcat( szMessage1, gCaptionEnglish[i].szspeaker );
+			strcat( szMessage1, "~" );
+			strcat( szMessage1, gCaptionEnglish[i].sztext );
+			MESSAGE_BEGIN( MSG_ALL, gmsgLBCaption );
+				WRITE_STRING( szMessage1 );
+			MESSAGE_END();
+		}
+		else
+		{
+			// too long for one line: split it in two
+			strcpy( szMessage1, "1" );
+			strcat( szMessage1, gCaptionEnglish[i].szspeaker );
+			strcat( szMessage1, "~" );
+			strncat( szMessage1, gCaptionEnglish[i].sztext, len );
+			strcpy( szMessage2, "2" );
+			strcat( szMessage2, gCaptionEnglish[i].szspeaker );
+			strcat( szMessage2, "~" );
+			strncat( szMessage2, gCaptionEnglish[i].sztext + len, len );
+			MESSAGE_BEGIN( MSG_ALL, gmsgLBCaption );
+				WRITE_STRING( szMessage1 );
+			MESSAGE_END();
+			MESSAGE_BEGIN( MSG_ALL, gmsgLBCaption );
+				WRITE_STRING( szMessage2 );
+			MESSAGE_END();
+		}
+	}
+	else if ( g_iT2DefTextLanguage == 1 )
+	{
+		// sic: the index found in the English captions
+		if ( strlen( gCaptionGerman[i].sztext ) < len )
+		{
+			strcpy( szMessage1, "1" );
+			strcat( szMessage1, gCaptionGerman[i].szspeaker );
+			strcat( szMessage1, "~" );
+			strcat( szMessage1, gCaptionGerman[i].sztext );
+			MESSAGE_BEGIN( MSG_ALL, gmsgLBCaption );
+				WRITE_STRING( szMessage1 );
+			MESSAGE_END();
+		}
+		else
+		{
+			// too long for one line: split it in two
+			strcpy( szMessage1, "1" );
+			strcat( szMessage1, gCaptionGerman[i].szspeaker );
+			strcat( szMessage1, "~" );
+			strncat( szMessage1, gCaptionGerman[i].sztext, len );
+			strcpy( szMessage2, "2" );
+			strcat( szMessage2, gCaptionGerman[i].szspeaker );
+			strcat( szMessage2, "~" );
+			strncat( szMessage2, gCaptionGerman[i].sztext + len, len );
+			MESSAGE_BEGIN( MSG_ALL, gmsgLBCaption );
+				WRITE_STRING( szMessage1 );
+			MESSAGE_END();
+			MESSAGE_BEGIN( MSG_ALL, gmsgLBCaption );
+				WRITE_STRING( szMessage2 );
+			MESSAGE_END();
+		}
+	}
+}
+
+// read t2defconfig.txt: "sv_music 0|1", "sv_lang 0|1|2"
+
+void CONFIG_Init()
+{
+	char buffer[512];
+	int i, j;
+
+	if (fConfigInit)
+		return;
+
+	memset(buffer, 0, 512);
+
+	int filePos = 0, fileSize;
+	byte *pMemFile = g_engfuncs.pfnLoadFileForMe( "t2defconfig.txt", &fileSize );
+	if ( !pMemFile )
+		return;
+
+	// for each line in the file...
+	while ( memfgets(pMemFile, fileSize, filePos, buffer, 511) != NULL )
+	{
+		// skip whitespace
+		i = 0;
+		while(buffer[i] && buffer[i] == ' ')
+			i++;
+		
+		if (!buffer[i])
+			continue;
+
+		if (buffer[i] == '/' || !isalpha(buffer[i]))
+			continue;
+
+		// get variable name
+		j = i;
+		while (buffer[j] && !isspace(buffer[j]))
+			j++;
+
+		if (!buffer[j])
+			continue;
+
+		if (j - i > 12)
+		{
+			ALERT (at_error, "Variable name in t2defconfig.txt longer than 12 chars!\n");
+			break;
+		}
+
+		buffer[j] = 0;
+		const char *pString = buffer + i;
+
+		// get value, up to the end of the line
+		j++;
+		i = j;
+		while (buffer[j] && buffer[j] != '\r')
+			j++;
+
+		if (!buffer[j])
+			continue;
+
+		buffer[j] = 0;
+		int value = atoi( &(buffer[i]) );
+
+		ALERT( at_console, "%s: %d\n", pString, value );
+
+		if ( !strcmp( pString, "sv_music" ) )
+		{
+			// g_iT2DefMusicOn is 1 when the music is off
+			if ( value )
+				g_iT2DefMusicOn = 0;
+			else
+				g_iT2DefMusicOn = 1;
+		}
+		else if ( !strcmp( pString, "sv_lang" ) )
+		{
+			g_iT2DefTextLanguage = value;
+		}
+	}
+
+	g_engfuncs.pfnFreeFile( pMemFile );
+	
+	fConfigInit = TRUE;
 }
