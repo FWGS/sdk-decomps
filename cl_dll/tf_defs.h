@@ -1129,6 +1129,11 @@ float already_chosen_map;
 
 #define MENU_REFRESH_RATE 			25
 
+// T2DEF (names ours)
+#define MENU_CONFIG					30
+#define MENU_LETTERBOX				31
+#define MENU_SECURITYCAM			32
+
 #define MENU_VOICETWEAK				50
 
 //============================

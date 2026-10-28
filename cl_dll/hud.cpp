@@ -272,6 +272,34 @@ int __MsgFunc_AllowSpec(const char *pszName, int iSize, void *pbuf)
 	return 0;
 }
 
+int __MsgFunc_GetSettings(const char *pszName, int iSize, void *pbuf)
+{
+	if (gViewPort)
+		return gViewPort->MsgFunc_GetSettings( pszName, iSize, pbuf );
+	return 0;
+}
+
+int __MsgFunc_LBShow(const char *pszName, int iSize, void *pbuf)
+{
+	if (gViewPort)
+		return gViewPort->MsgFunc_LBShow( pszName, iSize, pbuf );
+	return 0;
+}
+
+int __MsgFunc_LBCaption(const char *pszName, int iSize, void *pbuf)
+{
+	if (gViewPort)
+		return gViewPort->MsgFunc_LBCaption( pszName, iSize, pbuf );
+	return 0;
+}
+
+int __MsgFunc_SCShow(const char *pszName, int iSize, void *pbuf)
+{
+	if (gViewPort)
+		return gViewPort->MsgFunc_SCShow( pszName, iSize, pbuf );
+	return 0;
+}
+
 int __MsgFunc_PlayMP3(const char *pszName, int iSize, void *pbuf)
 {
 	return gHUD.MsgFunc_PlayMP3( pszName, iSize, pbuf );
@@ -321,6 +349,10 @@ void CHud :: Init( void )
 	HOOK_MESSAGE( Spectator );
 	HOOK_MESSAGE( AllowSpec );
 
+	HOOK_MESSAGE( GetSettings );
+	HOOK_MESSAGE( LBShow );
+	HOOK_MESSAGE( LBCaption );
+	HOOK_MESSAGE( SCShow );
 	HOOK_MESSAGE( PlayMP3 );
 	HOOK_MESSAGE( PlayMusic );
 	HOOK_MESSAGE( StopMusic );

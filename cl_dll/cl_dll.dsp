@@ -429,6 +429,10 @@ SOURCE=.\vgui_ServerBrowser.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\vgui_t2def.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\vgui_TeamFortressViewport.cpp
 # End Source File
 # Begin Source File

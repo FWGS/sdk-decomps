@@ -480,6 +480,9 @@ TeamFortressViewport::TeamFortressViewport(int x,int y,int wide,int tall) : Pane
 	m_iInitialized = false;
 	m_pTeamMenu = NULL;
 	m_pClassMenu = NULL;
+	m_pConfigMenu = NULL;
+	m_pLetterboxPanel = NULL;
+	m_pSecurityCamPanel = NULL;
 	m_pScoreBoard = NULL;
 	m_pSpectatorMenu = NULL;
 	m_pCurrentMenu = NULL;
@@ -520,7 +523,7 @@ TeamFortressViewport::TeamFortressViewport(int x,int y,int wide,int tall) : Pane
 		// used for orange borders around buttons
 		m_SchemeManager.getBorderColor( hPrimaryScheme, r, g, b, a );
 		// pScheme->setColor(Scheme::sc_secondary1, r, g, b, a );
-		pScheme->setColor(Scheme::sc_secondary1, 255*0.7, 170*0.7, 0, 0);
+		pScheme->setColor(Scheme::sc_secondary1, 100, 100, 100, 128);
 	}
 
 	// Change the second primary font (used in the scoreboard)
@@ -541,9 +544,12 @@ TeamFortressViewport::TeamFortressViewport(int x,int y,int wide,int tall) : Pane
 	CreateTeamMenu();
 	CreateClassMenu();
 	CreateScoreBoard();
+	CreateConfigMenu();
 	CreateCommandMenu();
 	CreateServerBrowser();
 	CreateSpectatorMenu();
+	CreateLetterboxPanel();
+	CreateSecurityCamPanel();
 }
 
 //-----------------------------------------------------------------------------
@@ -1565,6 +1571,18 @@ void TeamFortressViewport::ShowVGUIMenu( int iMenu )
 		pNewMenu = ShowClassMenu();
 		break;
 
+	case MENU_CONFIG:
+		pNewMenu = ShowConfigMenu();
+		break;
+
+	case MENU_SECURITYCAM:
+		pNewMenu = ShowSecurityCamPanel();
+		break;
+
+	case MENU_LETTERBOX:
+		pNewMenu = ShowLetterboxPanel();
+		break;
+
 	default:
 		break;
 	}
@@ -1600,7 +1618,10 @@ void TeamFortressViewport::ShowVGUIMenu( int iMenu )
 	{
 		m_pCurrentMenu = pNewMenu;
 		m_pCurrentMenu->Open();
-		UpdateCursorState();
+
+		// the letterbox caption panel leaves the cursor alone
+		if ( iMenu != MENU_LETTERBOX )
+			UpdateCursorState();
 	}
 }
 
@@ -1684,6 +1705,77 @@ void TeamFortressViewport::CreateClassMenu()
 	m_pClassMenu = new CClassMenuPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
 	m_pClassMenu->setParent(this);
 	m_pClassMenu->setVisible( false );
+}
+
+//======================================================================================
+// CONFIG MENU (T2DEF)
+//======================================================================================
+// Bring up the Config Menu
+CMenuPanel* TeamFortressViewport::ShowConfigMenu()
+{
+	// Don't open menus in demo playback
+	if ( gEngfuncs.pDemoAPI->IsPlayingback() )
+		return NULL;
+
+	m_pConfigMenu->Reset();
+
+	// ask the server for the current settings (GetSettings)
+	gEngfuncs.pfnClientCmd( "t2defstatus" );
+
+	if ( m_iCameraActive )
+		return NULL;
+
+	return m_pConfigMenu;
+}
+
+void TeamFortressViewport::CreateConfigMenu()
+{
+	// Create the panel
+	m_pConfigMenu = new CConfigMenuPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pConfigMenu->setParent( this );
+	m_pConfigMenu->setVisible( false );
+}
+
+//======================================================================================
+// LETTERBOX CAPTIONS (T2DEF)
+//======================================================================================
+CMenuPanel* TeamFortressViewport::ShowLetterboxPanel()
+{
+	// Don't open menus in demo playback
+	if ( gEngfuncs.pDemoAPI->IsPlayingback() )
+		return NULL;
+
+	m_pLetterboxPanel->Reset();
+	return m_pLetterboxPanel;
+}
+
+void TeamFortressViewport::CreateLetterboxPanel()
+{
+	// Create the panel
+	m_pLetterboxPanel = new CLetterboxPanel(false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pLetterboxPanel->setParent( this );
+	m_pLetterboxPanel->setVisible( false );
+}
+
+//======================================================================================
+// SECURITY CAMERA (T2DEF)
+//======================================================================================
+CMenuPanel* TeamFortressViewport::ShowSecurityCamPanel()
+{
+	// Don't open menus in demo playback
+	if ( gEngfuncs.pDemoAPI->IsPlayingback() )
+		return NULL;
+
+	m_pSecurityCamPanel->Reset();
+	return m_pSecurityCamPanel;
+}
+
+void TeamFortressViewport::CreateSecurityCamPanel()
+{
+	// Create the panel
+	m_pSecurityCamPanel = new CSecurityCamPanel(false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pSecurityCamPanel->setParent( this );
+	m_pSecurityCamPanel->setVisible( false );
 }
 
 //======================================================================================
@@ -2228,6 +2320,88 @@ int TeamFortressViewport::MsgFunc_AllowSpec( const char *pszName, int iSize, voi
 	// If the team menu is up, update it too
 	if (m_pTeamMenu)
 		m_pTeamMenu->Update();
+
+	return 1;
+}
+
+int TeamFortressViewport::MsgFunc_GetSettings( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+
+	m_iMusicOn = READ_BYTE();
+	m_iTextLanguage = READ_BYTE();
+	m_iCameraActive = READ_BYTE();
+
+	m_pConfigMenu->m_pSettings->Update( m_iMusicOn, m_iTextLanguage );
+
+	return 1;
+}
+
+int TeamFortressViewport::MsgFunc_LBShow( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+
+	m_iLetterboxOn = READ_BYTE();
+
+	if ( m_iLetterboxOn == 1 )
+	{
+		ShowVGUIMenu( MENU_LETTERBOX );
+	}
+	else
+	{
+		m_pLetterboxPanel->SetCaption( "1 ", " " );
+		HideVGUIMenu();
+	}
+
+	return 1;
+}
+
+int TeamFortressViewport::MsgFunc_LBCaption( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+
+	// "<speaker>~<text>"
+	char szText[552];
+	int i;
+
+	strcpy( szText, READ_STRING() );
+
+	i = 0;
+	while ( szText[i] && szText[i] != '~' )
+		i++;
+
+	if ( !szText[i] )
+		return 1;
+
+	szText[i] = 0;
+
+	if ( !strcmp( szText + i + 1, "null" ) )
+		m_pLetterboxPanel->SetCaption( "1 ", " " );
+	else
+		m_pLetterboxPanel->SetCaption( szText, szText + i + 1 );
+
+	return 1;
+}
+
+int TeamFortressViewport::MsgFunc_SCShow( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+
+	int iCamera = READ_SHORT();
+	int iState = READ_BYTE();
+
+	if ( iState == 1 && m_pSecurityCamPanel )
+	{
+		if ( !m_pSecurityCamPanel->isVisible() )
+		{
+			ShowVGUIMenu( MENU_SECURITYCAM );
+			m_pSecurityCamPanel->SetCamera( iCamera );
+		}
+	}
+	else
+	{
+		m_pSecurityCamPanel->Exit();
+	}
 
 	return 1;
 }

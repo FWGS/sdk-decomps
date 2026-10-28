@@ -49,6 +49,9 @@ class DragNDropPanel;
 class CTransparentPanel;
 class CClassMenuPanel;
 class CTeamMenuPanel;
+class CConfigMenuPanel;
+class CLetterboxPanel;
+class CSecurityCamPanel;
 
 char* GetVGUITGAName(const char *pszName);
 BitmapTGA *LoadTGAForRes(const char* pImageName);
@@ -273,11 +276,23 @@ private:
 	int			 m_iUser2;
 	int			 m_iUser3;
 
+	// T2DEF settings (GetSettings, LBShow; names ours)
+	int			 m_iMusicOn;
+	int			 m_iTextLanguage;
+	int			 m_iLetterboxOn;
+	int			 m_iCameraActive;
+
 	// VGUI Menus
 	void		 CreateTeamMenu( void );
 	CMenuPanel*	 ShowTeamMenu( void );
 	void		 CreateClassMenu( void );
 	CMenuPanel*	 ShowClassMenu( void );
+	void		 CreateConfigMenu( void );
+	CMenuPanel*	 ShowConfigMenu( void );
+	void		 CreateLetterboxPanel( void );
+	CMenuPanel*	 ShowLetterboxPanel( void );
+	void		 CreateSecurityCamPanel( void );
+	CMenuPanel*	 ShowSecurityCamPanel( void );
 	void		 CreateSpectatorMenu( void );
 	
 	// Scheme handler
@@ -383,6 +398,10 @@ public:
 	int MsgFunc_TeamInfo( const char *pszName, int iSize, void *pbuf );
 	int MsgFunc_Spectator( const char *pszName, int iSize, void *pbuf );
 	int MsgFunc_AllowSpec( const char *pszName, int iSize, void *pbuf );
+	int MsgFunc_GetSettings( const char *pszName, int iSize, void *pbuf );
+	int MsgFunc_LBShow( const char *pszName, int iSize, void *pbuf );
+	int MsgFunc_LBCaption( const char *pszName, int iSize, void *pbuf );
+	int MsgFunc_SCShow( const char *pszName, int iSize, void *pbuf );
 
 	// Input
 	bool SlotInput( int iSlot );
@@ -399,6 +418,9 @@ public:
 	CMenuPanel		*m_pCurrentMenu;
 	CTeamMenuPanel	*m_pTeamMenu;
 	CClassMenuPanel	*m_pClassMenu;
+	CConfigMenuPanel	*m_pConfigMenu;
+	CLetterboxPanel		*m_pLetterboxPanel;
+	CSecurityCamPanel	*m_pSecurityCamPanel;
 	ScorePanel		*m_pScoreBoard;
 	char			m_szServerName[ MAX_SERVERNAME_LENGTH ];
 };
@@ -1182,6 +1204,133 @@ public:
 	{
 		CMenuPanel::Reset();
 		m_iCurrentInfo = 0;
+	}
+};
+
+//============================================================
+// T2DEF's panels (vgui_t2def.cpp): the Config menu with its Settings
+// panel, the letterbox caption panel and the security camera panel.
+// Class, member and parameter names ours.
+class CSettingsPanel : public CMenuPanel
+{
+public:
+	Label				*m_pMusicTitle;
+	CTransparentPanel	*m_pWindow;
+	CommandButton		*m_pButtons[5];
+	Label				*m_pMusicStatus;
+	Label				*m_pLanguageTitle;
+	Label				*m_pLanguageStatus;
+
+public:
+	CSettingsPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall);
+
+	void Update( int iMusicOn, int iTextLanguage );
+};
+
+class CConfigMenuPanel : public CMenuPanel
+{
+public:
+	CommandButton		*m_pCancelButton;
+	CommandButton		*m_pButtons[1];
+	CTransparentPanel	*m_pWindow;
+	Label				*m_pTitle;
+	Panel				*m_pUnused;		// never set or read (type ours)
+	CSettingsPanel		*m_pSettings;
+
+public:
+	CConfigMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall);
+
+	void ShowSection( int iSection );
+};
+
+class CLetterboxPanel : public CMenuPanel
+{
+public:
+	CTransparentPanel	*m_pBottomBar;
+	CTransparentPanel	*m_pTopBar;
+	TextPanel			*m_pSpeaker;
+	TextPanel			*m_pText;
+	char				m_szText[512];
+
+public:
+	CLetterboxPanel(int iRemoveMe, int x,int y,int wide,int tall);
+
+	void SetCaption( const char *pszSpeaker, const char *pszText );
+};
+
+class CSecurityCamPanel : public CMenuPanel
+{
+public:
+	CTransparentPanel	*m_pLeftBar;
+	CTransparentPanel	*m_pTopBar;
+	CTransparentPanel	*m_pRightBar;
+	CTransparentPanel	*m_pBottomBar;
+	CommandButton		*m_pExitButton;
+	CommandButton		*m_pNextButton;
+	CommandButton		*m_pPrevButton;
+
+public:
+	CSecurityCamPanel(int iRemoveMe, int x,int y,int wide,int tall);
+
+	void SetCamera( int iCamera );
+	void Exit( void );
+};
+
+// Sends its command with the current camera's entity index appended
+class CMenuHandler_SecurityCam : public ActionSignal
+{
+protected:
+	char	m_pszCommand[MAX_COMMAND_SIZE];
+	int		m_iCloseVGUIMenu;
+	static int m_iCamera;
+public:
+	CMenuHandler_SecurityCam( char *pszCommand )
+	{
+		strcpy( m_pszCommand, pszCommand );
+		m_iCloseVGUIMenu = false;
+		m_iCamera = -1;
+	}
+
+	CMenuHandler_SecurityCam( char *pszCommand, int iClose )
+	{
+		strcpy( m_pszCommand, pszCommand );
+		m_iCloseVGUIMenu = true;
+		m_iCamera = -1;
+	}
+
+	static void SetCamera( int iCamera )
+	{
+		m_iCamera = iCamera;
+	}
+
+	virtual void actionPerformed(Panel* panel)
+	{
+		char sz[32];
+		char szCamera[16];
+
+		sprintf( szCamera, " %d", m_iCamera );
+		strcpy( sz, m_pszCommand );
+		strcat( sz, szCamera );
+		gEngfuncs.pfnClientCmd( sz );
+
+		if (m_iCloseVGUIMenu)
+			gViewPort->HideTopMenu();
+	}
+};
+
+class CMenuHandler_ConfigSection : public ActionSignal
+{
+private:
+	int	m_iSection;
+public:
+	CMenuHandler_ConfigSection( int iSection )
+	{
+		m_iSection = iSection;
+	}
+
+	virtual void actionPerformed(Panel* panel)
+	{
+		gViewPort->m_pConfigMenu->ShowSection( m_iSection );
 	}
 };
 
