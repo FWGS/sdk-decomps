@@ -37,3 +37,7 @@ DLL_GLOBAL int			gDisplayTitle;
 DLL_GLOBAL BOOL			g_fGameOver;
 DLL_GLOBAL const Vector	g_vecZero = Vector(0,0,0);
 DLL_GLOBAL int			g_Language;
+DLL_GLOBAL int			g_iT2DefMusicOn;		// T2DEF: sv_music (names ours, chosen for the .bss order)
+DLL_GLOBAL int			g_iT2DefTextLanguage;	// T2DEF: sv_lang, 0 english, 1 german, 2 no text
+DLL_GLOBAL int			g_iT2DefCameraActive;	// T2DEF: a camera view is on
+DLL_GLOBAL int			g_iT2DefSpeaker;		// T2DEF: entindex of the last scripted_sentence speaker
