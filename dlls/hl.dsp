@@ -159,6 +159,10 @@ SOURCE=.\apache.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\arcade.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\barnacle.cpp
 # End Source File
 # Begin Source File
