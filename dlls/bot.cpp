@@ -820,7 +820,7 @@ void CBot::CheckGoalItem( void )
 					flDist = 32;
 				m_flItemRadius = flDist;
 				pev->v_angle.y = -pev->v_angle.y;
-				m_iGoalItem = 0;
+				SetGoalItem( NULL );
 				return;
 			}
 
@@ -832,7 +832,7 @@ void CBot::CheckGoalItem( void )
 			return;
 	}
 
-	m_iGoalItem = 0;
+	SetGoalItem( NULL );
 }
 
 //=========================================================
