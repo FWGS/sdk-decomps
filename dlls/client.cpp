@@ -48,6 +48,8 @@ extern DLL_GLOBAL ULONG		g_ulFrameCount;
 extern void CopyToBodyQue(entvars_t* pev);
 extern int giPrecacheGrunt;
 extern int gmsgSayText;
+extern int gmsgGetSettings, gmsgPlayMP3;	// T2DEF
+extern DLL_GLOBAL int g_iT2DefMusicOn, g_iT2DefTextLanguage, g_iT2DefCameraActive;
 
 extern int g_teamplay;
 
@@ -449,6 +451,112 @@ void ClientCommand( edict_t *pEntity )
 	else if ( g_pGameRules->ClientCommand( GetClassPtr((CBasePlayer *)pev), pcmd ) )
 	{
 		// MenuSelect returns true only if the command is properly handled,  so don't print a warning
+	}
+	else if ( FStrEq(pcmd, "vguimenu" ) )	// T2DEF
+	{
+		if ( CMD_ARGC() >= 1 )
+		{
+			GetClassPtr((CBasePlayer *)pev)->ShowVGUIMenu( atoi( CMD_ARGV(1) ) );
+		}
+	}
+	else if ( FStrEq(pcmd, "t2defmusicoff" ) )
+	{
+		g_iT2DefMusicOn = 1;
+		ALERT( at_console, "Music set to %i\n", g_iT2DefMusicOn );
+		MESSAGE_BEGIN( MSG_ALL, gmsgGetSettings );
+			WRITE_BYTE( g_iT2DefMusicOn );
+			WRITE_BYTE( g_iT2DefTextLanguage );
+			WRITE_BYTE( g_iT2DefCameraActive );
+		MESSAGE_END();
+	}
+	else if ( FStrEq(pcmd, "t2defmusicon" ) )
+	{
+		g_iT2DefMusicOn = 0;
+		ALERT( at_console, "Music set to %i\n", g_iT2DefMusicOn );
+		MESSAGE_BEGIN( MSG_ALL, gmsgGetSettings );
+			WRITE_BYTE( g_iT2DefMusicOn );
+			WRITE_BYTE( g_iT2DefTextLanguage );
+			WRITE_BYTE( g_iT2DefCameraActive );
+		MESSAGE_END();
+	}
+	else if ( FStrEq(pcmd, "t2defenglish" ) )
+	{
+		ClientPrint( pev, HUD_PRINTNOTIFY, "english text\n" );
+		g_iT2DefTextLanguage = 0;
+		MESSAGE_BEGIN( MSG_ALL, gmsgGetSettings );
+			WRITE_BYTE( g_iT2DefMusicOn );
+			WRITE_BYTE( g_iT2DefTextLanguage );
+			WRITE_BYTE( g_iT2DefCameraActive );
+		MESSAGE_END();
+	}
+	else if ( FStrEq(pcmd, "t2defgerman" ) )
+	{
+		ClientPrint( pev, HUD_PRINTNOTIFY, "german text\n" );
+		g_iT2DefTextLanguage = 1;
+		MESSAGE_BEGIN( MSG_ALL, gmsgGetSettings );
+			WRITE_BYTE( g_iT2DefMusicOn );
+			WRITE_BYTE( g_iT2DefTextLanguage );
+			WRITE_BYTE( g_iT2DefCameraActive );
+		MESSAGE_END();
+	}
+	else if ( FStrEq(pcmd, "t2defnotext" ) )
+	{
+		ClientPrint( pev, HUD_PRINTNOTIFY, "text off\n" );
+		g_iT2DefTextLanguage = 2;
+		MESSAGE_BEGIN( MSG_ALL, gmsgGetSettings );
+			WRITE_BYTE( g_iT2DefMusicOn );
+			WRITE_BYTE( g_iT2DefTextLanguage );
+			WRITE_BYTE( g_iT2DefCameraActive );
+		MESSAGE_END();
+	}
+	else if ( FStrEq(pcmd, "t2defstatus" ) )
+	{
+		ClientPrint( pev, HUD_PRINTNOTIFY, "status requested\n" );
+		MESSAGE_BEGIN( MSG_ALL, gmsgGetSettings );
+			WRITE_BYTE( g_iT2DefMusicOn );
+			WRITE_BYTE( g_iT2DefTextLanguage );
+			WRITE_BYTE( g_iT2DefCameraActive );
+		MESSAGE_END();
+	}
+	else if ( FStrEq(pcmd, "t2defexitcam" ) )
+	{
+		int iIndex = atoi( CMD_ARGV(1) );
+		if ( iIndex != -1 )
+		{
+			CBaseEntity *pEntity = CBaseEntity::Instance( g_engfuncs.pfnPEntityOfEntIndex( iIndex ) );
+			if ( pEntity )
+				pEntity->SecurityCamCommand( 0 );
+		}
+	}
+	else if ( FStrEq(pcmd, "t2defprevcam" ) )
+	{
+		int iIndex = atoi( CMD_ARGV(1) );
+		if ( iIndex != -1 )
+		{
+			CBaseEntity *pEntity = CBaseEntity::Instance( g_engfuncs.pfnPEntityOfEntIndex( iIndex ) );
+			if ( pEntity )
+				pEntity->SecurityCamCommand( 1 );
+		}
+		else
+			ALERT( at_console, "ignored: %s %d", pcmd, iIndex );
+	}
+	else if ( FStrEq(pcmd, "t2defnextcam" ) )
+	{
+		int iIndex = atoi( CMD_ARGV(1) );
+		if ( iIndex != -1 )
+		{
+			CBaseEntity *pEntity = CBaseEntity::Instance( g_engfuncs.pfnPEntityOfEntIndex( iIndex ) );
+			if ( pEntity )
+				pEntity->SecurityCamCommand( 2 );
+		}
+		else
+			ALERT( at_console, "ignored: %s %d", pcmd, iIndex );
+	}
+	else if ( FStrEq(pcmd, "playmp3" ) )
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgPlayMP3, NULL, ENT(pev) );
+			WRITE_STRING( CMD_ARGV(1) );
+		MESSAGE_END();
 	}
 	else
 	{
