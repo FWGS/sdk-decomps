@@ -379,6 +379,27 @@ public:
 	}
 	void	FlockCohere( int iPriority );
 	void	MoveTowards( const Vector &vecDest );
+	// FlockCohere's step (name ours): head for the centre of the living
+	// players in sight within 128 units
+	void CohereVelocity( void )
+	{
+		int cPlayers = 0;
+		Vector vecSum = Vector( 0, 0, 0 );
+		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+		{
+			CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
+			if ( pPlayer && pPlayer != this && pPlayer->IsAlive() && CanSee( pPlayer ) )
+			{
+				if ( ( pev->origin - pPlayer->pev->origin ).Length() < 128 )
+				{
+					cPlayers++;
+					vecSum = vecSum + pPlayer->pev->origin;
+				}
+			}
+		}
+		Vector vecCentre = vecSum / cPlayers;
+		MoveTowards( vecCentre );
+	}
 	void	ApproachEntity( CBaseEntity *pEntity, int iPriority );
 	void	MoveToLead( CBaseEntity *pEntity, Vector vecOffset );
 	// the move goals' common step (name ours): head for vecPos at full speed
@@ -386,6 +407,29 @@ public:
 	void	Flock( int iPriority );
 	void	FollowEntity( CBaseEntity *pEntity, int iPriority );
 	void	FlockSeparate( int iPriority );
+	// FlockSeparate's step (name ours): keep away from the living players in
+	// sight within 128 units, the nearer the more; the sum of directions is
+	// passed to MoveTowards as a spot (sic)
+	void SeparateVelocity( void )
+	{
+		Vector vecSum = Vector( 0, 0, 0 );
+		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+		{
+			CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
+			if ( pPlayer && pPlayer != this && pPlayer->IsAlive() && CanSee( pPlayer ) )
+			{
+				Vector vecAway;
+				vecAway = pev->origin - pPlayer->pev->origin;
+				float flDist = vecAway.Length();
+				if ( flDist < 128 )
+				{
+					vecAway = vecAway.Normalize();
+					vecSum = vecSum + vecAway / ( flDist * flDist );
+				}
+			}
+		}
+		MoveTowards( vecSum );	// sic
+	}
 	void	MoveToEntity( CBaseEntity *pEntity, int iPriority );					// 0x10013750
 	void	MoveAwayFrom( const Vector &vecSpot );
 	void	FleeEntity( CBaseEntity *pEntity, int iPriority );

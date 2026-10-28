@@ -808,50 +808,19 @@ void CBot::FlockAlign( int iPriority )
 //=========================================================
 void CBot::FlockCohere( int iPriority )
 {
-	if ( iPriority > m_iMovePriority )
+	if ( iPriority > GetMovePriority() )
 	{
-		int cPlayers = 0;
-		Vector vecSum = Vector( 0, 0, 0 );
-		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-		{
-			CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
-			if ( pPlayer && pPlayer != this && pPlayer->IsAlive() && CanSee( pPlayer ) )
-			{
-				if ( ( pev->origin - pPlayer->pev->origin ).Length() < 128 )
-				{
-					cPlayers++;
-					vecSum = vecSum + pPlayer->pev->origin;
-				}
-			}
-		}
-		Vector vecCentre = vecSum / cPlayers;
-		MoveTowards( vecCentre );
-		m_iMovePriority = iPriority;
-		m_cMoveGoals = 1;
+		CohereVelocity();
+		SetMovePriority( iPriority );
+		SetMoveGoals( 1 );
 	}
-	else if ( iPriority == m_iMovePriority )
+	else if ( iPriority == GetMovePriority() )
 	{
-		Vector vecOld = m_vecMoveVelocity * m_cMoveGoals;
-
-		int cPlayers = 0;
-		Vector vecSum = Vector( 0, 0, 0 );
-		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-		{
-			CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
-			if ( pPlayer && pPlayer != this && pPlayer->IsAlive() && CanSee( pPlayer ) )
-			{
-				if ( ( pev->origin - pPlayer->pev->origin ).Length() < 128 )
-				{
-					cPlayers++;
-					vecSum = vecSum + pPlayer->pev->origin;
-				}
-			}
-		}
-		Vector vecCentre = vecSum / cPlayers;
-		MoveTowards( vecCentre );
-
-		Vector vecTotal = vecOld + m_vecMoveVelocity;
-		m_vecMoveVelocity = vecTotal / ++m_cMoveGoals;
+		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
+		CohereVelocity();
+		Vector vecTotal = GetMoveVelocity() + vecOld;
+		SetMoveGoals( GetMoveGoals() + 1 );
+		SetMoveVelocity( vecTotal / GetMoveGoals() );
 	}
 }
 
@@ -955,50 +924,19 @@ void CBot::FollowEntity( CBaseEntity *pEntity, int iPriority )
 //=========================================================
 void CBot::FlockSeparate( int iPriority )
 {
-	if ( iPriority > m_iMovePriority )
+	if ( iPriority > GetMovePriority() )
 	{
-		Vector vecSum = Vector( 0, 0, 0 );
-		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-		{
-			CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
-			if ( pPlayer && pPlayer != this && pPlayer->IsAlive() && CanSee( pPlayer ) )
-			{
-				Vector vecAway = pev->origin - pPlayer->pev->origin;
-				float flDist = vecAway.Length();
-				if ( flDist < 128 )
-				{
-					vecAway = vecAway.Normalize();
-					vecSum = vecSum + vecAway / ( flDist * flDist );
-				}
-			}
-		}
-		MoveTowards( vecSum );	// sic
-		m_cMoveGoals = 1;
-		m_iMovePriority = iPriority;
+		SeparateVelocity();
+		SetMoveGoals( 1 );
+		SetMovePriority( iPriority );
 	}
-	else if ( iPriority == m_iMovePriority )
+	else if ( iPriority == GetMovePriority() )
 	{
-		Vector vecOld = m_vecMoveVelocity * m_cMoveGoals;
-
-		Vector vecSum = Vector( 0, 0, 0 );
-		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-		{
-			CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
-			if ( pPlayer && pPlayer != this && pPlayer->IsAlive() && CanSee( pPlayer ) )
-			{
-				Vector vecAway = pev->origin - pPlayer->pev->origin;
-				float flDist = vecAway.Length();
-				if ( flDist < 128 )
-				{
-					vecAway = vecAway.Normalize();
-					vecSum = vecSum + vecAway / ( flDist * flDist );
-				}
-			}
-		}
-		MoveTowards( vecSum );	// sic
-
-		Vector vecTotal = vecOld + m_vecMoveVelocity;
-		m_vecMoveVelocity = vecTotal / ++m_cMoveGoals;
+		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
+		SeparateVelocity();
+		Vector vecTotal = GetMoveVelocity() + vecOld;
+		SetMoveGoals( GetMoveGoals() + 1 );
+		SetMoveVelocity( vecTotal / GetMoveGoals() );
 	}
 }
 
