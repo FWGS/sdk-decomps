@@ -2524,7 +2524,8 @@ void CTriggerCamera::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 			m_targetSpeed = m_pentPath->pev->speed;
 		
 		m_flStopTime += m_pentPath->GetDelay();
-		m_moveDistance = (m_pentPath->pev->origin - pev->origin).Length();
+		Vector vecDelta = m_pentPath->pev->origin - pev->origin;
+		m_moveDistance = vecDelta.Length();
 	}
 	else
 		m_moveDistance = 0;
@@ -2532,7 +2533,7 @@ void CTriggerCamera::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 	// copy over player information
 	if (FBitSet (pev->spawnflags, SF_CAMERA_PLAYER_POSITION ) )
 	{
-		UTIL_SetOrigin( pev, pActivator->pev->view_ofs + pActivator->pev->origin );
+		UTIL_SetOrigin( pev, pActivator->pev->origin + pActivator->pev->view_ofs );
 		pev->angles.x = -pActivator->pev->angles.x;
 		pev->angles.y = pActivator->pev->angles.y;
 		pev->angles.z = 0;
