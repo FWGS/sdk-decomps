@@ -328,13 +328,9 @@ void CEndBossRocket::Spawn( void )
 		vecTarget = pev->origin + vecForward * 1024;
 
 	// leave toward a random spot 64 units ahead of the boss
-	Vector vecUpOffset;
-	vecUpOffset = ( RANDOM_FLOAT( 0, 64 ) - 32 ) * vecUp;
-	Vector vecRightOffset;
-	vecRightOffset = ( RANDOM_FLOAT( 0, 64 ) - 32 ) * vecRight;
-	Vector vecSpot = pev->origin + 64 * vecForward + vecRightOffset + vecUpOffset;
-	Vector vecDir = vecSpot - pev->origin;
-	pev->velocity = vecDir.Normalize( ) * 500;
+	Vector vecSpot = pev->origin + 64 * vecForward +
+		( RANDOM_FLOAT( 0, 64 ) - 32 ) * vecRight + ( RANDOM_FLOAT( 0, 64 ) - 32 ) * vecUp;
+	pev->velocity = ( vecSpot - pev->origin ).Normalize( ) * 500;
 	pev->angles = UTIL_VecToAngles( pev->velocity );
 
 	pev->dmg = 50;
