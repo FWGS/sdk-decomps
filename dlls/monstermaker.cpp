@@ -29,6 +29,36 @@
 #define SF_MONSTERMAKER_MONSTERCLIP	8 // Children are blocked by monsterclip
 #define SF_MONSTERMAKER_LEAVECORPSE 16 // Don't fade corpses.
 
+// T2DEF: trigger_arcade (arcade.cpp) scores for monsters killed by a turret
+char *g_szArcadeMonsters[] = // name ours
+{
+	"monster_bullchicken",
+	"monster_houndeye",
+	"monster_bigmomma",
+	"monster_zombie",
+	"monster_alien_controller",
+	"monster_alien_grunt",
+};
+
+const int g_iArcadeScores[] = // name ours
+{
+	100,
+	200,
+	800,
+	150,
+	250,
+	300,
+};
+
+int g_iMakerToggle;		// name ours; T2DEF: set, never read
+float g_flMakerTime;		// name ours; T2DEF: set, never read
+
+class CArcade : public CBaseDelay // declared in arcade.cpp
+{
+public:
+	void AddScore( int iScore ); // name ours
+};
+
 //=========================================================
 // MonsterMaker - this ent creates monsters during the game.
 //=========================================================
@@ -51,6 +81,7 @@ public:
 	static	TYPEDESCRIPTION m_SaveData[];
 	
 	string_t m_iszMonsterClassname;// classname of the monster(s) that will be created.
+	string_t m_iszRunToTarget;
 	
 	int	 m_cNumMonsters;// max number of monsters this ent can create
 
@@ -77,6 +108,7 @@ TYPEDESCRIPTION	CMonsterMaker::m_SaveData[] =
 	DEFINE_FIELD( CMonsterMaker, m_fActive, FIELD_BOOLEAN ),
 	DEFINE_FIELD( CMonsterMaker, m_fFadeChildren, FIELD_BOOLEAN ),
 	DEFINE_FIELD( CMonsterMaker, m_fSpawnDelay, FIELD_FLOAT ),
+	DEFINE_FIELD( CMonsterMaker, m_iszRunToTarget, FIELD_STRING ),
 };
 
 
@@ -103,6 +135,11 @@ void CMonsterMaker :: KeyValue( KeyValueData *pkvd )
 	else if ( FStrEq(pkvd->szKeyName, "spawndelay") )
 	{
 		m_fSpawnDelay = atof( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else if ( FStrEq(pkvd->szKeyName, "runtotarget") )
+	{
+		m_iszRunToTarget = ALLOC_STRING( pkvd->szValue );
 		pkvd->fHandled = TRUE;
 	}
 	else
@@ -239,6 +276,7 @@ void CMonsterMaker::MakeMonster( void )
 	pevCreate->origin = pev->origin;
 	pevCreate->angles = pev->angles;
 	SetBits( pevCreate->spawnflags, SF_MONSTER_FALL_TO_GROUND );
+	SetBits( pevCreate->spawnflags, 2048 ); // T2DEF: StartPatrol runs (SCHED_IDLE_RUN)
 
 	// Children hit monsterclip brushes
 	if ( pev->spawnflags & SF_MONSTERMAKER_MONSTERCLIP )
@@ -260,6 +298,11 @@ void CMonsterMaker::MakeMonster( void )
 	{
 		// if I have a netname (overloaded), give the child monster that name as a targetname
 		pevCreate->targetname = pev->netname;
+	}
+
+	if ( !FStringNull( m_iszRunToTarget ) )
+	{
+		pevCreate->target = m_iszRunToTarget;
 	}
 
 	m_cLiveChildren++;// count this monster
@@ -298,11 +341,15 @@ void CMonsterMaker :: ToggleUse ( CBaseEntity *pActivator, CBaseEntity *pCaller,
 
 	if ( m_fActive )
 	{
+		g_flMakerTime = 0;
 		m_fActive = FALSE;
 		SetThink ( NULL );
 	}
 	else
 	{
+		g_iMakerToggle = 0;
+		if ( g_flMakerTime != 0.0 ) // sic
+			g_flMakerTime = gpGlobals->time;
 		m_fActive = TRUE;
 		SetThink ( MakerThink );
 	}
@@ -331,6 +378,27 @@ void CMonsterMaker :: DeathNotice ( entvars_t *pevChild )
 	if ( !m_fFadeChildren )
 	{
 		pevChild->owner = NULL;
+	}
+
+	// killed by a turret: score for the shooting gallery
+	if ( pevChild->iuser2 )
+	{
+		int iScore = 0; // name ours
+		for ( int i = 0; i < 6; i++ )
+		{
+			if ( FStrEq( STRING( pevChild->classname ), g_szArcadeMonsters[i] ) )
+				iScore = g_iArcadeScores[i];
+		}
+
+		if ( iScore )
+		{
+			CBaseEntity *pEntity = UTIL_FindEntityByClassname( NULL, "trigger_arcade" );
+			if ( pEntity )
+			{
+				CArcade *pArcade = (CArcade *)pEntity; // name ours
+				pArcade->AddScore( iScore );
+			}
+		}
 	}
 }
 
