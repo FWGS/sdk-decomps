@@ -172,6 +172,9 @@ public:
 
 	char m_szTeamName[TEAM_NAME_LENGTH];
 
+	int m_iT2DEFMusicOn;
+	int m_iT2DEFTextLanguage;
+
 	virtual void Spawn( void );
 	void Pain( void );
 

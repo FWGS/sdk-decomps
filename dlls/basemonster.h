@@ -328,6 +328,7 @@ public:
 	virtual void PainSound ( void ) { return; };
 	
 	virtual void StopFollowing( BOOL clearSchedule ) {}
+	virtual void StopForCaption( BOOL fSchedule ) {} // T2DEF (name ours)
 
 	inline void	Remember( int iMemory ) { m_afMemory |= iMemory; }
 	inline void	Forget( int iMemory ) { m_afMemory &= ~iMemory; }

@@ -449,6 +449,9 @@ public:
 	virtual	BOOL FVisible ( CBaseEntity *pEntity );
 	virtual	BOOL FVisible ( const Vector &vecOrigin );
 
+	// T2DEF: the security camera console's commands (name ours)
+	virtual void SecurityCamCommand( int iCommand ) {}
+
 	//We use this variables to store each ammo count.
 	int ammo_9mm;
 	int ammo_357;
