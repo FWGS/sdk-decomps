@@ -438,8 +438,19 @@ public:
 		MoveTowards( vecSum );	// sic
 	}
 	void	MoveToEntity( CBaseEntity *pEntity, int iPriority );					// 0x10013750
+	// MoveToEntity's step (name ours): run from where pEntity will be when
+	// the bot gets there
+	void FleeLead( CBaseEntity *pEntity )
+	{
+		float flDist = ( pEntity->pev->origin - pev->origin ).Length();
+		MoveAwayFrom( pEntity->pev->velocity * flDist + pEntity->pev->origin );
+	}
 	void	MoveAwayFrom( const Vector &vecSpot );
 	void	FleeEntity( CBaseEntity *pEntity, int iPriority );
+	// FleeEntity's and FleeSpot's step (names ours): run from vecSpot (or
+	// pEntity) at full speed
+	void RunFrom( const Vector &vecSpot ) { m_vecMoveVelocity = ( vecSpot - pev->origin ).Normalize() * -1 * CVAR_GET_FLOAT( "sv_maxspeed" ); }
+	void FleeFromEntity( CBaseEntity *pEntity ) { RunFrom( pEntity->pev->origin ); }
 	void	FleeSpot( const Vector &vecSpot, int iPriority );
 	void	UnstickGoal( int iPriority );
 	void	MoveToEntityOffset( CBaseEntity *pEntity, int iPriority, Vector vecOffset );	// 0x10013f30
