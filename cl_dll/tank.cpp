@@ -29,15 +29,17 @@
 #include <string.h>
 #include <stdio.h>
 
-static int m_HUD_tank_bodytr;
-static int m_HUD_tank_bodytl;
-static int m_HUD_tank_bodybl;
-static int m_HUD_tank_bodybr;
-static int m_HUD_tank_bodyhittr;
-static int m_HUD_tank_bodyhittl;
-static int m_HUD_tank_bodyhitbl;
-static int m_HUD_tank_bodyhitbr;
-static int m_HUD_tank_turret;
+// retail's tank.obj has the sprites in this order, which no hashing of
+// these names gives: zero-initialised, they keep declaration order
+static int m_HUD_tank_turret = 0;
+static int m_HUD_tank_bodyhittl = 0;
+static int m_HUD_tank_bodyhitbr = 0;
+static int m_HUD_tank_bodyhitbl = 0;
+static int m_HUD_tank_bodybl = 0;
+static int m_HUD_tank_bodybr = 0;
+static int m_HUD_tank_bodytr = 0;
+static int m_HUD_tank_bodyhittr = 0;
+static int m_HUD_tank_bodytl = 0;
 
 DECLARE_MESSAGE(m_Tank, TankBody)
 DECLARE_MESSAGE(m_Tank, TurretPos)

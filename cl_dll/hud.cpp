@@ -34,6 +34,10 @@ extern client_sprite_t *GetSpriteList(client_sprite_t *pList, const char *psz, i
 extern cvar_t *sensitivity;
 cvar_t *cl_lw = NULL;
 
+// sic: retail's hud.obj has 12 bytes of .bss before cl_lw that nothing reads
+// or writes (name ours)
+static int s_iUnknown[3];
+
 void ShutdownInput (void);
 
 //DECLARE_MESSAGE(m_Logo, Logo)
