@@ -131,10 +131,6 @@ SOURCE=.\hl\hl_objects.cpp
 
 SOURCE=.\hl\hl_weapons.cpp
 # End Source File
-# Begin Source File
-
-SOURCE=..\dlls\wpn_shared\hl_wpn_glock.cpp
-# End Source File
 # End Group
 # Begin Source File
 

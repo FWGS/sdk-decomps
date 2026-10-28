@@ -20,15 +20,10 @@
 #include "weapons.h"
 #include "nodes.h"
 #include "player.h"
-#ifdef VALVE_DLL
 #include "items.h"
-#endif
-
-#ifdef VALVE_DLL
 
 // POV: the glock and its clip are props that can't be taken; the clip
-// precaches what the SDK's gun did. The client builds nothing from this
-// file (retail's client has no glock code and no weapon prediction).
+// precaches what the SDK's gun did
 class CGlock : public CItem
 {
 	void Spawn( void )
@@ -79,8 +74,6 @@ class CGlockAmmo : public CItem
 };
 LINK_ENTITY_TO_CLASS( ammo_glockclip, CGlockAmmo );
 LINK_ENTITY_TO_CLASS( ammo_9mmclip, CGlockAmmo );
-
-#endif	// VALVE_DLL
 
 
 
