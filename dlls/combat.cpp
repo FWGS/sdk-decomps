@@ -956,6 +956,11 @@ int CBaseMonster :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker,
 	{
 		g_pevLastInflictor = pevInflictor;
 
+		// T2DEF: remember whether a turret killed it
+		pev->iuser2 = 0;
+		if ( FClassnameIs( pevAttacker, "monster_turret" ) )
+			pev->iuser2 = 1;
+
 		if ( bitsDamageType & DMG_ALWAYSGIB )
 		{
 			Killed( pevAttacker, GIB_ALWAYS );
@@ -1540,6 +1545,16 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 				{
 					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
 					DecalGunshot( &tr, iBulletType );
+				}
+				break;
+
+			case BULLET_MONSTER_KA50:	// T2DEF
+				pEntity->TraceAttack(pevAttacker, gSkillData.monDmg12MM * 1.5, vecDir, &tr, DMG_BULLET); 
+				if ( !tracer )
+				{
+					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
+					DecalGunshot( &tr, iBulletType );
+					UTIL_Sparks( vecEnd );
 				}
 				break;
 			
