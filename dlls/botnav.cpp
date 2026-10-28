@@ -18,7 +18,7 @@
 
   The Cow-Bots, part 4: navigation. info_botnode (keyvalues group,
   grouptrans, randomlinks, action) and info_botlandmark (link0-2) build
-  a node graph (g_BotNav) that bots search for routes; the visit grid is
+  a node graph (g_BotNavigator) that bots search for routes; the visit grid is
   kept in wantedhl/maps/<map>.nav. Also the bot profiles, read from
   wantedhl/bots/<name>.bot (Name:, Model:, Skill:, Topcolor:,
   Bottomcolor:).
@@ -47,12 +47,15 @@ extern cvar_t sv_botskill;
 // is away from its hen-house (ctc_chicken's file; name ours)
 extern float g_flChickenAway[];
 
-// retail: g_flBotQueueTime 0x100f38c4, g_flNavSaveTime 0x100f38c8,
-// g_cPathSearches 0x100f38d0, g_BotNav 0x100f38d8 (the declaration order
-// doesn't change VC6's layout)
-CBotNav		g_BotNav;
-int			g_cPathSearches;	// FindPath calls for the current route (name ours)
+// retail: g_flBotQueueTime 0x100f38c4, g_flNavSaveTime 0x100f38c8, 4
+// unused bytes 0x100f38cc, g_cFindPaths 0x100f38d0, g_BotNavigator
+// 0x100f38d8. VC6 lays out uninitialised globals by a hash of their
+// names, not in declaration order; these names (all ours) give retail's
+// layout.
+CBotNav		g_BotNavigator;
+int			g_cFindPaths;	// FindPath calls for the current route (name ours)
 float		g_flNavSaveTime;	// next time the .nav file is written
+int			g_iNavUnused;	// sic: retail's .bss has an int here that no code reads or writes (name ours)
 
 
 //=========================================================
@@ -62,7 +65,7 @@ LINK_ENTITY_TO_CLASS( info_botnode, CInfoBotnode );
 
 void CInfoBotnode :: Spawn( void )
 {
-	g_BotNav.AddNode( this, 0 );
+	g_BotNavigator.AddNode( this, 0 );
 	REMOVE_ENTITY( ENT( pev ) );
 }
 
@@ -140,7 +143,7 @@ Vector CBot :: RouteGoal( int iMode )
 	int			iTeam = 0;
 	float		flDist;
 
-	if ( !g_BotNav.m_pHead )
+	if ( !g_BotNavigator.m_pHead )
 		return Wander();
 
 	if ( HasEnemy() && m_Memory.m_fSeen && m_iState != 3 )
@@ -210,8 +213,8 @@ Vector CBot :: RouteGoal( int iMode )
 	}
 
 	pszGoal = "ctc_chicken";
-	g_BotNav.m_fRandomLinks = TRUE;
-	g_BotNav.m_fUnused = TRUE;
+	g_BotNavigator.m_fRandomLinks = TRUE;
+	g_BotNavigator.m_fUnused = TRUE;
 
 	if ( HasNamedPlayerItem( "ctc_chicken" ) )
 	{
@@ -234,8 +237,8 @@ Vector CBot :: RouteGoal( int iMode )
 			vars.waterlevel = 0;
 			vars.classname = ALLOC_STRING( "LastEnemyPos" );
 
-			g_BotNav.m_fUnused = FALSE;
-			g_BotNav.m_fRandomLinks = FALSE;
+			g_BotNavigator.m_fUnused = FALSE;
+			g_BotNavigator.m_fRandomLinks = FALSE;
 			pGoal = &tmp;
 			goto found;
 		}
@@ -274,11 +277,11 @@ Vector CBot :: RouteGoal( int iMode )
 
 found:
 	ClearRoute();
-	m_pRoute = m_pRouteStart = g_BotNav.BuildRoute( this, pGoal );
+	m_pRoute = m_pRouteStart = g_BotNavigator.BuildRoute( this, pGoal );
 
 	if ( m_pRoute )
 	{
-		if ( g_BotNav.m_iMaxDepth == 1 && ( m_pRoute->m_vecOrigin - pev->origin ).Length2D() < 32 )
+		if ( g_BotNavigator.m_iMaxDepth == 1 && ( m_pRoute->m_vecOrigin - pev->origin ).Length2D() < 32 )
 		{
 			ClearRoute();
 			m_fRouteDone = TRUE;
@@ -287,8 +290,8 @@ found:
 
 		m_fGoalVisible = FALSE;
 		m_fHasGoalPos = TRUE;
-		m_cRouteLeft = g_BotNav.m_iMaxDepth;
-		m_cRouteSteps = g_BotNav.m_iMaxDepth;
+		m_cRouteLeft = g_BotNavigator.m_iMaxDepth;
+		m_cRouteSteps = g_BotNavigator.m_iMaxDepth;
 		return m_pRoute->m_vecOrigin;
 	}
 
@@ -323,16 +326,16 @@ Vector CBot :: Wander( void )
 	if ( !FVisible( vecAhead ) )
 		return Vector( 0, 0, 0 );
 
-	Vector vecCell = g_BotNav.PosToIndex( pev->origin ) + Vector( 0, 0, 1 );
+	Vector vecCell = g_BotNavigator.PosToIndex( pev->origin ) + Vector( 0, 0, 1 );
 	Vector vecBest = Vector( 0, 0, 0 );
 	float flBest = -60000;
 
 	MAKE_VECTORS( pev->v_angle );
 
 	Vector vecFwd = gpGlobals->v_forward * 64;
-	Vector vecFwdCell = g_BotNav.PosToIndex( pev->origin + vecFwd ) - vecCell;
+	Vector vecFwdCell = g_BotNavigator.PosToIndex( pev->origin + vecFwd ) - vecCell;
 	Vector vecRight = gpGlobals->v_right * 64;
-	Vector vecRightCell = g_BotNav.PosToIndex( pev->origin + vecRight ) - vecCell;
+	Vector vecRightCell = g_BotNavigator.PosToIndex( pev->origin + vecRight ) - vecCell;
 
 	int iDist = 20;
 	do
@@ -347,9 +350,9 @@ Vector CBot :: Wander( void )
 			Vector vecTest = vecCell + vecStep + vecSide;
 			Vector vecTestCell = vecTest;
 
-			if ( g_BotNav.GetVisits( vecTest.x, vecTest.y, vecTest.y ) > flBest )	// sic: y for z
+			if ( g_BotNavigator.GetVisits( vecTest.x, vecTest.y, vecTest.y ) > flBest )	// sic: y for z
 			{
-				Vector vecPos = g_BotNav.IndexToPos( vecTestCell );
+				Vector vecPos = g_BotNavigator.IndexToPos( vecTestCell );
 				Vector vecSpot = vecPos;
 				vecSpot.z = pev->origin.z;
 				Vector vecDir = vecSpot - pev->origin;
@@ -358,7 +361,7 @@ Vector CBot :: Wander( void )
 				if ( FVisible( vecSpot ) )
 				{
 					vecBest = vecPos;
-					flBest = g_BotNav.GetVisits( vecTestCell.x, vecTestCell.y, vecTestCell.y );	// sic
+					flBest = g_BotNavigator.GetVisits( vecTestCell.x, vecTestCell.y, vecTestCell.y );	// sic
 					if ( flBest == 0 )
 						flBest = 0.5;
 					m_fHasGoalPos = TRUE;
@@ -416,7 +419,7 @@ BOOL CBotNav :: Load( const char *pszMap )
 	ALERT( at_console, "Loading cowbot navigation file: " );
 	ALERT( at_console, szFile );
 	ALERT( at_console, "..." );
-	return ReadNavFile( &g_BotNav.m_sGrid[0][0][0], szFile );
+	return ReadNavFile( &g_BotNavigator.m_sGrid[0][0][0], szFile );
 }
 
 // one "x.y.z=visits" line per nonzero cell
@@ -556,9 +559,9 @@ void CBotNav :: Save( void )
 			{
 				for ( int z = 0; z < BOTNAV_GRID; z++ )
 				{
-					if ( g_BotNav.m_sGrid[x][y][z] )
+					if ( g_BotNavigator.m_sGrid[x][y][z] )
 					{
-						sprintf( szLine, "%d.%d.%d=%d\n", x, y, z, g_BotNav.m_sGrid[x][y][z] );
+						sprintf( szLine, "%d.%d.%d=%d\n", x, y, z, g_BotNavigator.m_sGrid[x][y][z] );
 						fprintf( pFile, szLine );
 					}
 				}
@@ -728,7 +731,7 @@ CBotNode *CBotNav :: FindPath( CBaseEntity *pGoal, CBotNode *pNode )
 	if ( !pNode || m_iDepth + 1 >= m_iMaxDepth - 1 )
 		return NULL;
 
-	g_cPathSearches++;
+	g_cFindPaths++;
 
 	if ( !m_pPathHead )
 	{
@@ -741,7 +744,7 @@ CBotNode *CBotNav :: FindPath( CBaseEntity *pGoal, CBotNode *pNode )
 		m_pPathTail = m_pPathTail->m_pNext;
 	}
 
-	if ( g_cPathSearches > 512 )
+	if ( g_cFindPaths > 512 )
 	{
 		m_iDepth--;
 		if ( m_pPathTail == m_pPathHead )
@@ -935,7 +938,7 @@ CBotRoute *CBotNav :: BuildRoute( CBot *pBot, CBaseEntity *pGoal )
 	}
 	pStart->m_cLinks = k + 1;
 
-	g_cPathSearches = 0;
+	g_cFindPaths = 0;
 	m_iDepth = 0;
 	m_iMaxDepth = 48;
 	m_pPathHead = NULL;
@@ -969,11 +972,11 @@ void CInfoBotlandmark :: Activate( void )
 {
 	CBotLandmark *pMark;
 
-	if ( !pev->targetname || !g_BotNav.m_pLandmarks )
+	if ( !pev->targetname || !g_BotNavigator.m_pLandmarks )
 		return;
 
 	// find our own record
-	pMark = g_BotNav.m_pLandmarks;
+	pMark = g_BotNavigator.m_pLandmarks;
 	while ( 1 )
 	{
 		if ( !strcmp( STRING( pMark->m_iszName ), STRING( pev->targetname ) ) )
@@ -986,11 +989,11 @@ void CInfoBotlandmark :: Activate( void )
 	if ( !pMark )
 		return;
 
-	if ( g_BotNav.m_pLandmarks )
+	if ( g_BotNavigator.m_pLandmarks )
 	{
 		CBotLandmark **ppLink = pMark->m_pLinks;
 
-		for ( CBotLandmark *pOther = g_BotNav.m_pLandmarks; pOther; pOther = pOther->m_pNext )
+		for ( CBotLandmark *pOther = g_BotNavigator.m_pLandmarks; pOther; pOther = pOther->m_pNext )
 		{
 			CBotLandmark *pFound = NULL;
 
@@ -1024,15 +1027,15 @@ void CInfoBotlandmark :: Spawn( void )
 {
 	CBotLandmark *pMark;
 
-	if ( !g_BotNav.m_pLandmarks )
+	if ( !g_BotNavigator.m_pLandmarks )
 	{
 		pMark = new CBotLandmark;
-		g_BotNav.m_pLandmarks = pMark;
+		g_BotNavigator.m_pLandmarks = pMark;
 	}
 	else
 	{
 		CBotLandmark *pLast;
-		for ( pLast = g_BotNav.m_pLandmarks; pLast->m_pNext; pLast = pLast->m_pNext )
+		for ( pLast = g_BotNavigator.m_pLandmarks; pLast->m_pNext; pLast = pLast->m_pNext )
 			;
 		pMark = new CBotLandmark;
 		pLast->m_pNext = pMark;
@@ -1060,7 +1063,7 @@ void CInfoBotlandmark :: KeyValue( KeyValueData *pkvd )
 // the landmark nearest vec, by 2D distance
 static CBotLandmark *NearestLandmark( const Vector &vec )
 {
-	CBotLandmark *pBest = g_BotNav.m_pLandmarks;	// sic: the first one is never measured
+	CBotLandmark *pBest = g_BotNavigator.m_pLandmarks;	// sic: the first one is never measured
 
 	if ( !pBest )
 		return NULL;

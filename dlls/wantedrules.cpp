@@ -82,26 +82,26 @@ static int g_iSpectatedBot;				// "specon": the bot looked through
 //=========================================================
 void CWantedMultiplay::Init( void )
 {
-	CBotNode *pNode = g_BotNav.m_pHead;
+	CBotNode *pNode = g_BotNavigator.m_pHead;
 	while ( pNode )
 	{
 		CBotNode *pRemove = pNode;
 		pNode = pNode->m_pNext;
-		g_BotNav.RemoveNode( pRemove );
+		g_BotNavigator.RemoveNode( pRemove );
 	}
-	g_BotNav.m_pTail = NULL;
-	g_BotNav.m_pHead = NULL;
-	g_BotNav.m_pLandmarks = NULL;
-	g_BotNav.ClearGrid();
+	g_BotNavigator.m_pTail = NULL;
+	g_BotNavigator.m_pHead = NULL;
+	g_BotNavigator.m_pLandmarks = NULL;
+	g_BotNavigator.ClearGrid();
 
 	if ( g_fInitialRules )
 	{
-		if ( g_BotNav.Load( STRING( gpGlobals->mapname ) ) )
+		if ( g_BotNavigator.Load( STRING( gpGlobals->mapname ) ) )
 			ALERT( at_console, "Done\n\n" );
 		else
 		{
 			ALERT( at_console, "\nFailed, using new navigation file\n" );
-			g_BotNav.ClearGrid();
+			g_BotNavigator.ClearGrid();
 		}
 	}
 
@@ -209,7 +209,7 @@ BOOL CWantedMultiplay::ClientCommand( CBasePlayer *pPlayer, const char *pcmd )
 	{
 		if ( !m_pDrawNode )
 		{
-			m_pDrawNode = g_BotNav.m_pHead;
+			m_pDrawNode = g_BotNavigator.m_pHead;
 			m_flNextNodeDraw = 0;
 		}
 		else
@@ -273,15 +273,15 @@ void CWantedMultiplay::Think( void )
 			{
 				// count each navigation cell the player enters
 				Vector vecCell;
-				vecCell.x = g_BotNav.GridIndex( pPlayer->pev->origin.x );
-				vecCell.y = g_BotNav.GridIndex( pPlayer->pev->origin.y );
-				vecCell.z = g_BotNav.GridIndex( pPlayer->pev->origin.z );
+				vecCell.x = g_BotNavigator.GridIndex( pPlayer->pev->origin.x );
+				vecCell.y = g_BotNavigator.GridIndex( pPlayer->pev->origin.y );
+				vecCell.z = g_BotNavigator.GridIndex( pPlayer->pev->origin.z );
 
 				CBaseMonster *pMonster = (CBaseMonster *)pPlayer;
 				if ( vecCell != pMonster->m_vecLastPosition )
 				{
-					g_BotNav.AddVisit( pPlayer->pev->origin );
-					pMonster->m_vecLastPosition = Vector( g_BotNav.GridIndex( pPlayer->pev->origin.x ), g_BotNav.GridIndex( pPlayer->pev->origin.y ), g_BotNav.GridIndex( pPlayer->pev->origin.z ) );
+					g_BotNavigator.AddVisit( pPlayer->pev->origin );
+					pMonster->m_vecLastPosition = Vector( g_BotNavigator.GridIndex( pPlayer->pev->origin.x ), g_BotNavigator.GridIndex( pPlayer->pev->origin.y ), g_BotNavigator.GridIndex( pPlayer->pev->origin.z ) );
 				}
 			}
 		}
@@ -328,7 +328,7 @@ void CWantedMultiplay::Think( void )
 	g_BotManager.AdjustSkill();
 
 	if ( gpGlobals->time >= g_flNavSaveTime )
-		g_BotNav.Save();
+		g_BotNavigator.Save();
 
 	// "drawnodes": a beam from one node to each of its links
 	if ( m_pDrawNode && gpGlobals->time > m_flNextNodeDraw )
@@ -361,7 +361,7 @@ void CWantedMultiplay::Think( void )
 
 		pNode = pNode->m_pNext;
 		if ( !pNode )
-			pNode = g_BotNav.m_pHead;
+			pNode = g_BotNavigator.m_pHead;
 		m_pDrawNode = pNode;
 
 		if ( sv_nodedrawfreq.value <= 0 )

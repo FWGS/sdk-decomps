@@ -256,7 +256,7 @@ void CBot::BotThink( void )
 		if ( m_flMoved <= 1.0 && ( pev->flags & FL_ONGROUND ) )
 		{
 			// stuck
-			g_BotNav.AddVisit2( pev->origin );
+			g_BotNavigator.AddVisit2( pev->origin );
 
 			if ( !m_fBlocked && !m_fJump && !m_iLadderDir && m_flNextStuckCheck < gpGlobals->time )
 			{

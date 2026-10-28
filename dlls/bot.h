@@ -91,7 +91,7 @@ public:
 	CBotPathStep *m_pNext;		// +0x10
 };
 
-// info_botnode: a navigation node; it adds itself to g_BotNav and is
+// info_botnode: a navigation node; it adds itself to g_BotNavigator and is
 // removed (0x30 bytes)
 class CInfoBotnode : public CBaseEntity
 {
@@ -110,7 +110,7 @@ public:
 
 // the navigation graph: the node list, the landmark list, and a grid that
 // counts the cells human players walk through (saved as
-// wantedhl/maps/<map>.nav); one global, g_BotNav
+// wantedhl/maps/<map>.nav); one global, g_BotNavigator
 class CBotNav
 {
 public:
@@ -151,7 +151,7 @@ public:
 	CBotRoute *BuildRoute( CBot *pBot, CBaseEntity *pGoal );
 };
 
-extern CBotNav g_BotNav;
+extern CBotNav g_BotNavigator;
 
 // the bot's weapon handling (CBot +0x6d0, 0x14 bytes)
 class CBotFire
