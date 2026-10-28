@@ -243,6 +243,10 @@ SOURCE=.\explode.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\fakegordon.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\flyingmonster.cpp
 # End Source File
 # Begin Source File
