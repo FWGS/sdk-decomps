@@ -840,22 +840,19 @@ void CBot::MoveTowards( const Vector &vecDest )
 //=========================================================
 void CBot::ApproachEntity( CBaseEntity *pEntity, int iPriority )
 {
-	if ( iPriority > m_iMovePriority )
+	if ( iPriority > GetMovePriority() )
 	{
-		Vector vecOffset = ( pev->origin - pEntity->pev->origin ).Normalize() * 80;
-		MoveToLead( pEntity, vecOffset );
-		m_cMoveGoals = 1;
-		m_iMovePriority = iPriority;
+		FollowLead( pEntity );
+		SetMoveGoals( 1 );
+		SetMovePriority( iPriority );
 	}
-	else if ( iPriority == m_iMovePriority )
+	else if ( iPriority == GetMovePriority() )
 	{
-		Vector vecOld = GetMoveVelocity() * m_cMoveGoals;
-		Vector vecOffset;
-		vecOffset = ( pev->origin - pEntity->pev->origin ).Normalize() * 80;
-		MoveToLead( pEntity, vecOffset );
-
-		Vector vecTotal = vecOld + GetMoveVelocity();
-		SetMoveVelocity( vecTotal / ++m_cMoveGoals );
+		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
+		FollowLead( pEntity );
+		Vector vecTotal = GetMoveVelocity() + vecOld;
+		SetMoveGoals( GetMoveGoals() + 1 );
+		SetMoveVelocity( vecTotal / GetMoveGoals() );
 	}
 }
 
@@ -875,21 +872,23 @@ void CBot::MoveToLead( CBaseEntity *pEntity, Vector vecOffset )
 //=========================================================
 void CBot::Flock( int iPriority )
 {
-	if ( iPriority > m_iMovePriority )
+	if ( iPriority > GetMovePriority() )
 	{
 		FlockAlign( 2 );
 		FlockCohere( 2 );
 		FlockSeparate( 2 );
-		m_iMovePriority = iPriority;
-		m_cMoveGoals = 1;
+		SetMovePriority( iPriority );
+		SetMoveGoals( 1 );
 	}
-	else if ( iPriority == m_iMovePriority )
+	else if ( iPriority == GetMovePriority() )
 	{
-		Vector vecOld = m_vecMoveVelocity * m_cMoveGoals;
+		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
 		FlockAlign( 2 );
 		FlockCohere( 2 );
 		FlockSeparate( 2 );
-		m_vecMoveVelocity = ( vecOld + m_vecMoveVelocity ) / ++m_cMoveGoals;
+		Vector vecTotal = GetMoveVelocity() + vecOld;
+		SetMoveGoals( GetMoveGoals() + 1 );
+		SetMoveVelocity( vecTotal / GetMoveGoals() );
 	}
 }
 
@@ -898,22 +897,19 @@ void CBot::Flock( int iPriority )
 //=========================================================
 void CBot::FollowEntity( CBaseEntity *pEntity, int iPriority )
 {
-	if ( iPriority > m_iMovePriority )
+	if ( iPriority > GetMovePriority() )
 	{
-		Vector vecOffset = ( pev->origin - pEntity->pev->origin ).Normalize() * 80;
-		MoveToLead( pEntity, vecOffset );
-		m_cMoveGoals = 1;
-		m_iMovePriority = iPriority;
+		FollowLead( pEntity );
+		SetMoveGoals( 1 );
+		SetMovePriority( iPriority );
 	}
-	else if ( iPriority == m_iMovePriority )
+	else if ( iPriority == GetMovePriority() )
 	{
-		Vector vecOld = m_vecMoveVelocity * m_cMoveGoals;
-		Vector vecOffset;
-		vecOffset = ( pev->origin - pEntity->pev->origin ).Normalize() * 80;
-		MoveToLead( pEntity, vecOffset );
-
-		Vector vecTotal = vecOld + m_vecMoveVelocity;
-		m_vecMoveVelocity = vecTotal / ++m_cMoveGoals;
+		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
+		FollowLead( pEntity );
+		Vector vecTotal = GetMoveVelocity() + vecOld;
+		SetMoveGoals( GetMoveGoals() + 1 );
+		SetMoveVelocity( vecTotal / GetMoveGoals() );
 	}
 }
 

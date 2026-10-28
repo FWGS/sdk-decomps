@@ -406,6 +406,13 @@ public:
 	void	HeadFor( const Vector &vecPos ) { m_vecMoveVelocity = ( vecPos - pev->origin ).Normalize() * CVAR_GET_FLOAT( "sv_maxspeed" ); }
 	void	Flock( int iPriority );
 	void	FollowEntity( CBaseEntity *pEntity, int iPriority );
+	// ApproachEntity's and FollowEntity's step (name ours): head for the
+	// spot 80 units short of where pEntity will be
+	void FollowLead( CBaseEntity *pEntity )
+	{
+		Vector vecOffset = ( pev->origin - pEntity->pev->origin ).Normalize() * 80;
+		MoveToLead( pEntity, vecOffset );
+	}
 	void	FlockSeparate( int iPriority );
 	// FlockSeparate's step (name ours): keep away from the living players in
 	// sight within 128 units, the nearer the more; the sum of directions is
