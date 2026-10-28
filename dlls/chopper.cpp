@@ -1013,8 +1013,7 @@ void CMantaShip :: MantaThink( void )
 	// turn to face the path entity, faster the more it is off
 	if ( m_pGoalEnt )
 	{
-		Vector vecAngles;
-		vecAngles = UTIL_VecToAngles( pev->origin - m_pGoalEnt->pev->origin );
+		Vector vecAngles = UTIL_VecToAngles( pev->origin - m_pGoalEnt->pev->origin );
 		vecAngles.y += 180;
 
 		if ( pev->angles.y < 0 )
@@ -1061,6 +1060,8 @@ void CMantaShip :: MantaThink( void )
 			pev->avelocity = g_vecZero;
 		}
 	}
+
+	vecEst = pev->velocity;	// sic: unused
 }
 
 
