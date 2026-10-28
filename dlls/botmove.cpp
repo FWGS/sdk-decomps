@@ -928,9 +928,7 @@ void CBot::ApproachEntity( CBaseEntity *pEntity, int iPriority )
 void CBot::MoveToLead( CBaseEntity *pEntity, Vector vecOffset )
 {
 	float flDist = ( pEntity->pev->origin - pev->origin ).Length();
-	Vector vecDir = pEntity->pev->origin + pEntity->pev->velocity * flDist + vecOffset - pev->origin;
-	float flSpeed = CVAR_GET_FLOAT( "sv_maxspeed" );
-	m_vecMoveVelocity = vecDir.Normalize() * flSpeed;
+	HeadFor( pEntity->pev->origin + pEntity->pev->velocity * flDist + vecOffset );
 }
 
 //=========================================================

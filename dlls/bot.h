@@ -356,6 +356,8 @@ public:
 	void	MoveTowards( const Vector &vecDest );
 	void	ApproachEntity( CBaseEntity *pEntity, int iPriority );
 	void	MoveToLead( CBaseEntity *pEntity, Vector vecOffset );
+	// the move goals' common step (name ours): head for vecPos at full speed
+	void	HeadFor( const Vector &vecPos ) { m_vecMoveVelocity = ( vecPos - pev->origin ).Normalize() * CVAR_GET_FLOAT( "sv_maxspeed" ); }
 	void	Flock( int iPriority );
 	void	FollowEntity( CBaseEntity *pEntity, int iPriority );
 	void	FlockSeparate( int iPriority );
