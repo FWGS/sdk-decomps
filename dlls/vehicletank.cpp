@@ -422,7 +422,7 @@ int CVehicleTank::TankControls( void )
 	{
 		m_flAccelTime = gpGlobals->time + 0.1;
 
-		float flSpeed = ( m_flSpeed < 0 ? m_flSpeed * -1 : m_flSpeed ) / 250;
+		float flSpeed = ( ( m_flSpeed < 0 ? m_flSpeed * -1 : m_flSpeed ) / 250 );
 
 		if ( m_iGasState )
 			EMIT_SOUND_DYN( ENT( m_pPlayer->pev ), CHAN_VOICE, "tank/engineidle.wav", ( ( flSpeed * 0.3 ) + 0.3 ) * m_fTankSoundAdj, 0.8, SND_CHANGE_VOL, PITCH_NORM );
