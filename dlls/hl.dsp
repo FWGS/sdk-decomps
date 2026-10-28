@@ -235,6 +235,10 @@ SOURCE=.\egon.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\evilscientist.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\explode.cpp
 # End Source File
 # Begin Source File
