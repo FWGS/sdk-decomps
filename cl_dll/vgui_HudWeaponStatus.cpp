@@ -109,7 +109,7 @@ CWeaponStatusPanel::CWeaponStatusPanel( int iTrans, int iRemoveMe, int x, int y,
 }
 
 // The icon of a weapon ID
-static int HistoryIcon( int iId )
+int HistoryIcon( int iId )
 {
 	int iIcon = 0;
 

@@ -108,7 +108,7 @@ CDeathNoticePanel::CDeathNoticePanel( int iTrans, int iRemoveMe, int x, int y, i
 }
 
 // The icon for what killed: the "d_" names of the death messages
-static int DeathNoticeIcon( const char *pszKilledWith )
+int DeathNoticeIcon( const char *pszKilledWith )
 {
 	if ( !strcmp( "d_gausspistol", pszKilledWith ) )
 		return 1;
