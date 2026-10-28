@@ -471,6 +471,10 @@ SOURCE=.\scripted.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\securitycam.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\shotgun.cpp
 # End Source File
 # Begin Source File
