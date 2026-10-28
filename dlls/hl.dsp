@@ -195,6 +195,10 @@ SOURCE=.\cbase.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\chumtoad.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\client.cpp
 # End Source File
 # Begin Source File
