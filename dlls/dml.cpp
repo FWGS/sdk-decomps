@@ -1050,7 +1050,7 @@ Vector CDml::AutoaimDeflection( Vector &vecSrc, float flDist, float flDelta )
 
 	m_pPlayer->m_fOnTarget = FALSE;
 
-	UTIL_TraceLine( vecSrc, vecSrc + bestdir * flDist, dont_ignore_monsters, m_pPlayer->edict(), &tr );
+	UTIL_TraceLine( vecSrc, vecSrc + bestdir * flDist, dont_ignore_monsters, ENT( m_pPlayer->pev ), &tr );
 
 
 	if ( tr.pHit && tr.pHit->v.takedamage != DAMAGE_NO)
@@ -1102,8 +1102,7 @@ Vector CDml::AutoaimDeflection( Vector &vecSrc, float flDist, float flDelta )
 
 		center = pEntity->BodyTarget( vecSrc );
 
-		dir = center - vecSrc;
-		dir = dir.Normalize( );
+		dir = (center - vecSrc).Normalize( );
 
 		// make sure it's in front of the player
 		if (DotProduct (dir, gpGlobals->v_forward ) < 0)
@@ -1118,7 +1117,7 @@ Vector CDml::AutoaimDeflection( Vector &vecSrc, float flDist, float flDelta )
 		if (dot > bestdot)
 			continue;	// to far to turn
 
-		UTIL_TraceLine( vecSrc, center, dont_ignore_monsters, m_pPlayer->edict(), &tr );
+		UTIL_TraceLine( vecSrc, center, dont_ignore_monsters, ENT( m_pPlayer->pev ), &tr );
 		if (tr.flFraction != 1.0 && tr.pHit != pEdict)
 		{
 			continue;
