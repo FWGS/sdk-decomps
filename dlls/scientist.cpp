@@ -28,8 +28,8 @@
 #include	"soundent.h"
 
 
-#define		NUM_SCIENTIST_HEADS		4 // four heads available for scientist model
-enum { HEAD_GLASSES = 0, HEAD_EINSTEIN = 1, HEAD_LUTHER = 2, HEAD_SLICK = 3 };
+#define		NUM_SCIENTIST_HEADS		6 // six heads available for scientist model (T2DEF: was four)
+enum { HEAD_GLASSES = 0, HEAD_EINSTEIN = 1, HEAD_LUTHER = 2, HEAD_SLICK = 3, HEAD_ETHAN = 4, HEAD_LUKAS = 5 };	// T2DEF: Ethan, Lukas (names ours)
 
 enum
 {
@@ -58,6 +58,8 @@ enum
 #define		SCIENTIST_AE_HEAL		( 1 )
 #define		SCIENTIST_AE_NEEDLEON	( 2 )
 #define		SCIENTIST_AE_NEEDLEOFF	( 3 )
+#define		SCIENTIST_AE_SLIPFALL	( 4 )	// T2DEF (name ours; "slipfall")
+#define		SCIENTIST_AE_SLIPFALL2	( 5 )	// T2DEF (name ours; "slipfall2")
 
 //=======================================================
 // Scientist
@@ -429,6 +431,7 @@ void CScientist::DeclineFollowing( void )
 	Talk( 10 );
 	m_hTalkTarget = m_hEnemy;
 	PlaySentence( m_szGrp[TLK_DECLINE], 2, VOL_NORM, ATTN_NORM ); //LRC
+	StopForCaption( TRUE );
 }
 
 
@@ -539,12 +542,12 @@ void CScientist :: RunTask( Task_t *pTask )
 			{
 				float distance;
 
-				distance = ( m_vecMoveGoal - pev->origin ).Length2D();
+				distance = ( m_vecMoveGoal - pev->origin ).Length();
 				// Re-evaluate when you think your finished, or the target has moved too far
 				if ( (distance < pTask->flData) || (m_vecMoveGoal - m_hTargetEnt->pev->origin).Length() > pTask->flData * 0.5 )
 				{
 					m_vecMoveGoal = m_hTargetEnt->pev->origin;
-					distance = ( m_vecMoveGoal - pev->origin ).Length2D();
+					distance = ( m_vecMoveGoal - pev->origin ).Length();
 					FRefreshRoute();
 				}
 
@@ -645,6 +648,12 @@ void CScientist :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		pev->body = (oldBody % NUM_SCIENTIST_HEADS) + NUM_SCIENTIST_HEADS * 0;
 		}
 		break;
+	case SCIENTIST_AE_SLIPFALL:
+		SetNextThink( 30 );
+		break;
+	case SCIENTIST_AE_SLIPFALL2:
+		SetNextThink( 10 );
+		break;
 
 	default:
 		CTalkMonster::HandleAnimEvent( pEvent );
@@ -664,7 +673,7 @@ void CScientist :: Spawn( void )
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
 	m_bloodColor		= BLOOD_COLOR_RED;
-	pev->health			= gSkillData.scientistHealth;
+	pev->health			= 8; // T2DEF: was gSkillData.scientistHealth
 	pev->view_ofs		= Vector ( 0, 0, 50 );// position of the eyes relative to monster's origin.
 	m_flFieldOfView		= VIEW_FIELD_WIDE; // NOTE: we need a wide field of view so scientists will notice player and say hello
 	m_MonsterState		= MONSTERSTATE_NONE;
@@ -700,6 +709,15 @@ void CScientist :: Precache( void )
 	PRECACHE_SOUND("scientist/sci_pain3.wav");
 	PRECACHE_SOUND("scientist/sci_pain4.wav");
 	PRECACHE_SOUND("scientist/sci_pain5.wav");
+	PRECACHE_SOUND("lukas/lukpain1.wav");
+	PRECACHE_SOUND("lukas/lukpain2.wav");
+	PRECACHE_SOUND("lukas/lukpain3.wav");
+	PRECACHE_SOUND("lukas/lukpain4.wav");
+	PRECACHE_SOUND("lukas/lukpain5.wav");
+	PRECACHE_SOUND("lukas/lukpain6.wav");
+	PRECACHE_SOUND("ethan/ethanpain1.wav");
+	PRECACHE_SOUND("ethan/ethanpain2.wav");
+	PRECACHE_SOUND("ethan/ethanpain3.wav");
 
 	// every new scientist must call this, otherwise
 	// when a level is loaded, nobody will talk (time is reset to 0)
@@ -755,16 +773,19 @@ void CScientist :: TalkInit()
 	
 		m_szGrp[TLK_WOUND] =	"SC_WOUND";
 		m_szGrp[TLK_MORTAL] =	"SC_MORTAL";
-	}
 
-	// get voice for head
-	switch (pev->body % 3)
-	{
-	default:
-	case HEAD_GLASSES:	m_voicePitch = 105; break;	//glasses
-	case HEAD_EINSTEIN: m_voicePitch = 100; break;	//einstein
-	case HEAD_LUTHER:	m_voicePitch = 95;  break;	//luther
-	case HEAD_SLICK:	m_voicePitch = 100;  break;//slick
+		// T2DEF: Lukas and Ethan have their own groups
+		int iHead = pev->body;	// name ours
+		if (iHead == HEAD_LUKAS)
+		{
+			m_szGrp[TLK_NOSHOOT] =	"LU_SCARED";
+			m_szGrp[TLK_WOUND] =	"LU_WOUND";
+			m_szGrp[TLK_MORTAL] =	"LU_WOUND";
+		}
+		else if (iHead == HEAD_ETHAN)
+		{
+			m_szGrp[TLK_NOSHOOT] =	"ET_SCARED";
+		}
 	}
 }
 
@@ -805,13 +826,41 @@ void CScientist :: PainSound ( void )
 	
 	m_painTime = gpGlobals->time + RANDOM_FLOAT(0.5, 0.75);
 
-	switch (RANDOM_LONG(0,4))
+	int iHead = pev->body;	// name ours
+	if (iHead == HEAD_LUKAS)
 	{
-	case 0: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "scientist/sci_pain1.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
-	case 1: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "scientist/sci_pain2.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
-	case 2: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "scientist/sci_pain3.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
-	case 3: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "scientist/sci_pain4.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
-	case 4: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "scientist/sci_pain5.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
+		switch (RANDOM_LONG(0,5))
+		{
+		case 0: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "lukas/lukpain1.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
+		case 1: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "lukas/lukpain2.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
+		case 2: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "lukas/lukpain3.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
+		case 3: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "lukas/lukpain4.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
+		case 4: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "lukas/lukpain5.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
+		case 5: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "lukas/lukpain5.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;	// sic: lukpain6 is precached but never played
+		}
+	}
+	else if (iHead == HEAD_ETHAN)
+	{
+		switch (RANDOM_LONG(0,2))
+		{
+		case 0: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "ethan/ethanpain1.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
+		case 1: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "ethan/ethanpain2.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
+		case 2: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "ethan/ethanpain3.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
+		}
+	}
+	else
+	{
+		if (pev->spawnflags & SF_MONSTER_GAG)
+			return;
+
+		switch (RANDOM_LONG(0,4))
+		{
+		case 0: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "scientist/sci_pain1.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
+		case 1: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "scientist/sci_pain2.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
+		case 2: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "scientist/sci_pain3.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
+		case 3: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "scientist/sci_pain4.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
+		case 4: EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, "scientist/sci_pain5.wav", 1, ATTN_NORM, 0, GetVoicePitch()); break;
+		}
 	}
 }
 
@@ -933,26 +982,6 @@ Schedule_t *CScientist :: GetSchedule ( void )
 		{
 			// flinch if hurt
 			return GetScheduleOfType( SCHED_SMALL_FLINCH );
-		}
-
-		// Cower when you hear something scary
-		if ( HasConditions( bits_COND_HEAR_SOUND ) )
-		{
-			CSound *pSound;
-			pSound = PBestSound();
-
-			ASSERT( pSound != NULL );
-			if ( pSound )
-			{
-				if ( pSound->m_iType & (bits_SOUND_DANGER | bits_SOUND_COMBAT) )
-				{
-					if ( gpGlobals->time - m_fearTime > 3 )	// Only cower every 3 seconds or so
-					{
-						m_fearTime = gpGlobals->time;		// Update last fear
-						return GetScheduleOfType( SCHED_STARTLE );	// This will just duck for a second
-					}
-				}
-			}
 		}
 
 		// Behavior for following the player
