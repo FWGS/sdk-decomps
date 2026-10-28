@@ -25,7 +25,7 @@
 #include <string.h>
 #include <stdio.h>
 
-extern int g_HUD_number_10;
+extern int m_HUD_number;
 
 static int m_HUD_armor_graph;
 
@@ -91,8 +91,8 @@ int CHudBattery::Draw(float flTime)
 		if ( m_iBat > 99 )
 		{
 			// a hundred has its own sprite
-			SPR_Set( gHUD.GetSprite( g_HUD_number_10 ), 0, 255, 0 );
-			SPR_DrawAdditive( 0, x - 3, y, &gHUD.GetSpriteRect( g_HUD_number_10 ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_number ), 0, 255, 0 );
+			SPR_DrawAdditive( 0, x - 3, y, &gHUD.GetSpriteRect( m_HUD_number ) );
 		}
 		else
 		{

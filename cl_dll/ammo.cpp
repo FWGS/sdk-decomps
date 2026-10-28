@@ -37,14 +37,15 @@
 WEAPON *gpActiveSel;	// NULL means off, 1 means just the menu bar, otherwise
 						// this points to the active weapon menu item
 WEAPON *gpLastSel;		// the weapon lastinv goes back to
-WEAPON *gpMenuWeapon;	// the weapon held when the menu opened
 
-int giActiveSlot;		// the slot the menu shows
-float g_flSelTime;		// cleared when the selection moves; never read
+// retail has these three zero-initialised: after the other globals, in this order
+int giActiveSlot = 0;		// the slot the menu shows
+WEAPON *gpMenuWeapon = NULL;	// the weapon held when the menu opened
+float g_flSelTime = 0;		// cleared when the selection moves; never read
 int g_fWeaponSelected = 1;	// set when a weapon is picked; the heat gauge reads it
 
-int g_iHeatWeapon;		// TempX: the weapon whose heat the gauge shows
-int g_iHeat;			// and its heat
+int iTempWeapon;		// TempX: the weapon whose heat the gauge shows (name ours)
+int giTempHeat;			// and its heat (name ours)
 
 client_sprite_t *GetSpriteList(client_sprite_t *pList, const char *psz, int iRes, int iCount);
 
@@ -265,30 +266,35 @@ WEAPON* WeaponsResource :: GetNextActivePos( int iSlot, int iSlotPos )
 }
 
 
+// Gunman's HUD sprites (hud.txt), named as the SDK names CHud's (names ours):
+// VC6's name hash then lays them out as retail does. Declared before
+// giABHeight, which shares m_HUD_bracketright's hash bucket and comes first
+int m_HUD_arrow, m_HUD_bar, m_HUD_slider;
+int m_HUD_vial_ec, m_HUD_vial_el, m_HUD_vial_er;	// chemgun vials: empty
+int m_HUD_vial_fc, m_HUD_vial_fl, m_HUD_vial_fr;	// and full
+int m_HUD_chem_slider, m_HUD_chem_bar;
+int m_HUD_beamdials, m_HUD_pointer;
+int m_HUD_fired, m_HUD_locked, m_HUD_guided, m_HUD_homing, m_HUD_spiral;
+int m_HUD_impact, m_HUD_proximity, m_HUD_timed, m_HUD_explosive, m_HUD_cluster;
+int m_HUD_launch, m_HUD_flightpath, m_HUD_detonate, m_HUD_payload, m_HUD_while, m_HUD_on;
+int m_HUD_pulseAct, m_HUD_pulse, m_HUD_chargeAct, m_HUD_charge;	// gauss pistol modes
+int m_HUD_rapidAct, m_HUD_rapid, m_HUD_rapidSnipe, m_HUD_rapidSnipeAct;
+int m_HUD_sniper, m_HUD_sniperAct;
+int m_HUD_tripped, m_HUD_degrees, m_HUD_mechaArrow, m_HUD_shells;
+int m_HUD_glow_beamgun, m_HUD_glow_chemgun, m_HUD_glow_dml, m_HUD_glow_grenade;	// weapon menu
+int m_HUD_glow_pistol, m_HUD_glow_knife, m_HUD_glow_minigun, m_HUD_glow_shotgun;
+int m_HUD_bracketleft, m_HUD_bracketright;
+int m_HUD_number;	// number_10
+int m_HUD_glow_beamgun_no, m_HUD_glow_chemgun_no, m_HUD_glow_dml_no, m_HUD_glow_grenade_no;
+int m_HUD_glow_pistol_no, m_HUD_glow_minigun_no, m_HUD_glow_shotgun_no;
+int m_HUD_selectLeft, m_HUD_selectRight;
+int m_HUD_glow_aicore;	// sic: never loaded; retail has its 4 bytes
+static int iSpriteUnknown;	// sic: retail has 4 bytes here that nothing reads or writes
+
 int giBucketHeight, giBucketWidth, giABHeight, giABWidth; // Ammo Bar width and height
 
 HSPRITE ghsprBuckets;					// Sprite for top row of weapons menu
 
-// Gunman's HUD sprites (hud.txt)
-int g_HUD_g_arrow, g_HUD_g_bar, g_HUD_g_slider;
-int g_HUD_vial_ec, g_HUD_vial_el, g_HUD_vial_er;	// chemgun vials: empty
-int g_HUD_vial_fc, g_HUD_vial_fl, g_HUD_vial_fr;	// and full
-int g_HUD_chem_slider, g_HUD_chem_bar;
-int g_HUD_beamdials, g_HUD_pointer;
-int g_HUD_fired, g_HUD_locked, g_HUD_guided, g_HUD_homing, g_HUD_spiral;
-int g_HUD_impact, g_HUD_proximity, g_HUD_timed, g_HUD_explosive, g_HUD_cluster;
-int g_HUD_launch, g_HUD_flightpath, g_HUD_detonate, g_HUD_payload, g_HUD_while, g_HUD_on;
-int g_HUD_pulseAct, g_HUD_pulse, g_HUD_chargeAct, g_HUD_charge;	// gauss pistol modes
-int g_HUD_rapidAct, g_HUD_rapid, g_HUD_rapidSnipe, g_HUD_rapidSnipeAct;
-int g_HUD_sniper, g_HUD_sniperAct;
-int g_HUD_tripped, g_HUD_degrees, g_HUD_mechaArrow, g_HUD_shells;
-int g_HUD_glow_beamgun, g_HUD_glow_chemgun, g_HUD_glow_dml, g_HUD_glow_grenade;	// weapon menu
-int g_HUD_glow_pistol, g_HUD_glow_knife, g_HUD_glow_minigun, g_HUD_glow_shotgun;
-int g_HUD_glow_bracketleft, g_HUD_glow_bracketright;
-int g_HUD_number_10;
-int g_HUD_glow_beamgun_no, g_HUD_glow_chemgun_no, g_HUD_glow_dml_no, g_HUD_glow_grenade_no;
-int g_HUD_glow_pistol_no, g_HUD_glow_minigun_no, g_HUD_glow_shotgun_no;
-int g_HUD_selectLeft, g_HUD_selectRight;
 
 DECLARE_MESSAGE(m_Ammo, CurWeapon );	// Current weapon and clip
 DECLARE_MESSAGE(m_Ammo, WeaponList);	// new weapon type
@@ -410,69 +416,69 @@ int CHudAmmo::VidInit(void)
 	m_HUD_bucket0 = gHUD.GetSpriteIndex( "bucket1" );
 	m_HUD_selection = gHUD.GetSpriteIndex( "selection" );
 
-	g_HUD_g_arrow = gHUD.GetSpriteIndex( "g_arrow" );
-	g_HUD_g_bar = gHUD.GetSpriteIndex( "g_bar" );
-	g_HUD_g_slider = gHUD.GetSpriteIndex( "g_slider" );
-	g_HUD_vial_ec = gHUD.GetSpriteIndex( "vial_ec" );
-	g_HUD_vial_el = gHUD.GetSpriteIndex( "vial_el" );
-	g_HUD_vial_er = gHUD.GetSpriteIndex( "vial_er" );
-	g_HUD_vial_fc = gHUD.GetSpriteIndex( "vial_fc" );
-	g_HUD_vial_fl = gHUD.GetSpriteIndex( "vial_fl" );
-	g_HUD_vial_fr = gHUD.GetSpriteIndex( "vial_fr" );
-	g_HUD_chem_slider = gHUD.GetSpriteIndex( "chem_slider" );
-	g_HUD_chem_bar = gHUD.GetSpriteIndex( "chem_bar" );
-	g_HUD_beamdials = gHUD.GetSpriteIndex( "beamdials" );
-	g_HUD_pointer = gHUD.GetSpriteIndex( "pointer" );
-	g_HUD_fired = gHUD.GetSpriteIndex( "fired" );
-	g_HUD_locked = gHUD.GetSpriteIndex( "locked" );
-	g_HUD_guided = gHUD.GetSpriteIndex( "guided" );
-	g_HUD_homing = gHUD.GetSpriteIndex( "homing" );
-	g_HUD_spiral = gHUD.GetSpriteIndex( "spiral" );
-	g_HUD_impact = gHUD.GetSpriteIndex( "impact" );
-	g_HUD_proximity = gHUD.GetSpriteIndex( "proximity" );
-	g_HUD_timed = gHUD.GetSpriteIndex( "timed" );
-	g_HUD_explosive = gHUD.GetSpriteIndex( "explosive" );
-	g_HUD_cluster = gHUD.GetSpriteIndex( "cluster" );
-	g_HUD_launch = gHUD.GetSpriteIndex( "launch" );
-	g_HUD_flightpath = gHUD.GetSpriteIndex( "flightpath" );
-	g_HUD_detonate = gHUD.GetSpriteIndex( "detonate" );
-	g_HUD_payload = gHUD.GetSpriteIndex( "payload" );
-	g_HUD_while = gHUD.GetSpriteIndex( "while" );
-	g_HUD_on = gHUD.GetSpriteIndex( "on" );
-	g_HUD_pulseAct = gHUD.GetSpriteIndex( "pulseAct" );
-	g_HUD_pulse = gHUD.GetSpriteIndex( "pulse" );
-	g_HUD_chargeAct = gHUD.GetSpriteIndex( "chargeAct" );
-	g_HUD_charge = gHUD.GetSpriteIndex( "charge" );
-	g_HUD_rapidAct = gHUD.GetSpriteIndex( "rapidAct" );
-	g_HUD_rapid = gHUD.GetSpriteIndex( "rapid" );
-	g_HUD_rapidSnipe = gHUD.GetSpriteIndex( "rapidSnipe" );
-	g_HUD_rapidSnipeAct = gHUD.GetSpriteIndex( "rapidSnipeAct" );
-	g_HUD_sniper = gHUD.GetSpriteIndex( "sniper" );
-	g_HUD_sniperAct = gHUD.GetSpriteIndex( "sniperAct" );
-	g_HUD_tripped = gHUD.GetSpriteIndex( "tripped" );
-	g_HUD_degrees = gHUD.GetSpriteIndex( "degrees" );
-	g_HUD_mechaArrow = gHUD.GetSpriteIndex( "mechaArrow" );
-	g_HUD_shells = gHUD.GetSpriteIndex( "shells" );
-	g_HUD_glow_beamgun = gHUD.GetSpriteIndex( "glow_beamgun" );
-	g_HUD_glow_chemgun = gHUD.GetSpriteIndex( "glow_chemgun" );
-	g_HUD_glow_dml = gHUD.GetSpriteIndex( "glow_dml" );
-	g_HUD_glow_grenade = gHUD.GetSpriteIndex( "glow_grenade" );
-	g_HUD_glow_pistol = gHUD.GetSpriteIndex( "glow_pistol" );
-	g_HUD_glow_knife = gHUD.GetSpriteIndex( "glow_knife" );
-	g_HUD_glow_minigun = gHUD.GetSpriteIndex( "glow_minigun" );
-	g_HUD_glow_shotgun = gHUD.GetSpriteIndex( "glow_shotgun" );
-	g_HUD_glow_bracketleft = gHUD.GetSpriteIndex( "glow_bracketleft" );
-	g_HUD_glow_bracketright = gHUD.GetSpriteIndex( "glow_bracketright" );
-	g_HUD_number_10 = gHUD.GetSpriteIndex( "number_10" );
-	g_HUD_glow_beamgun_no = gHUD.GetSpriteIndex( "glow_beamgun_no" );
-	g_HUD_glow_chemgun_no = gHUD.GetSpriteIndex( "glow_chemgun_no" );
-	g_HUD_glow_dml_no = gHUD.GetSpriteIndex( "glow_dml_no" );
-	g_HUD_glow_grenade_no = gHUD.GetSpriteIndex( "glow_grenade_no" );
-	g_HUD_glow_pistol_no = gHUD.GetSpriteIndex( "glow_pistol_no" );
-	g_HUD_glow_minigun_no = gHUD.GetSpriteIndex( "glow_minigun_no" );
-	g_HUD_glow_shotgun_no = gHUD.GetSpriteIndex( "glow_shotgun_no" );
-	g_HUD_selectLeft = gHUD.GetSpriteIndex( "selectLeft" );
-	g_HUD_selectRight = gHUD.GetSpriteIndex( "selectRight" );
+	m_HUD_arrow = gHUD.GetSpriteIndex( "g_arrow" );
+	m_HUD_bar = gHUD.GetSpriteIndex( "g_bar" );
+	m_HUD_slider = gHUD.GetSpriteIndex( "g_slider" );
+	m_HUD_vial_ec = gHUD.GetSpriteIndex( "vial_ec" );
+	m_HUD_vial_el = gHUD.GetSpriteIndex( "vial_el" );
+	m_HUD_vial_er = gHUD.GetSpriteIndex( "vial_er" );
+	m_HUD_vial_fc = gHUD.GetSpriteIndex( "vial_fc" );
+	m_HUD_vial_fl = gHUD.GetSpriteIndex( "vial_fl" );
+	m_HUD_vial_fr = gHUD.GetSpriteIndex( "vial_fr" );
+	m_HUD_chem_slider = gHUD.GetSpriteIndex( "chem_slider" );
+	m_HUD_chem_bar = gHUD.GetSpriteIndex( "chem_bar" );
+	m_HUD_beamdials = gHUD.GetSpriteIndex( "beamdials" );
+	m_HUD_pointer = gHUD.GetSpriteIndex( "pointer" );
+	m_HUD_fired = gHUD.GetSpriteIndex( "fired" );
+	m_HUD_locked = gHUD.GetSpriteIndex( "locked" );
+	m_HUD_guided = gHUD.GetSpriteIndex( "guided" );
+	m_HUD_homing = gHUD.GetSpriteIndex( "homing" );
+	m_HUD_spiral = gHUD.GetSpriteIndex( "spiral" );
+	m_HUD_impact = gHUD.GetSpriteIndex( "impact" );
+	m_HUD_proximity = gHUD.GetSpriteIndex( "proximity" );
+	m_HUD_timed = gHUD.GetSpriteIndex( "timed" );
+	m_HUD_explosive = gHUD.GetSpriteIndex( "explosive" );
+	m_HUD_cluster = gHUD.GetSpriteIndex( "cluster" );
+	m_HUD_launch = gHUD.GetSpriteIndex( "launch" );
+	m_HUD_flightpath = gHUD.GetSpriteIndex( "flightpath" );
+	m_HUD_detonate = gHUD.GetSpriteIndex( "detonate" );
+	m_HUD_payload = gHUD.GetSpriteIndex( "payload" );
+	m_HUD_while = gHUD.GetSpriteIndex( "while" );
+	m_HUD_on = gHUD.GetSpriteIndex( "on" );
+	m_HUD_pulseAct = gHUD.GetSpriteIndex( "pulseAct" );
+	m_HUD_pulse = gHUD.GetSpriteIndex( "pulse" );
+	m_HUD_chargeAct = gHUD.GetSpriteIndex( "chargeAct" );
+	m_HUD_charge = gHUD.GetSpriteIndex( "charge" );
+	m_HUD_rapidAct = gHUD.GetSpriteIndex( "rapidAct" );
+	m_HUD_rapid = gHUD.GetSpriteIndex( "rapid" );
+	m_HUD_rapidSnipe = gHUD.GetSpriteIndex( "rapidSnipe" );
+	m_HUD_rapidSnipeAct = gHUD.GetSpriteIndex( "rapidSnipeAct" );
+	m_HUD_sniper = gHUD.GetSpriteIndex( "sniper" );
+	m_HUD_sniperAct = gHUD.GetSpriteIndex( "sniperAct" );
+	m_HUD_tripped = gHUD.GetSpriteIndex( "tripped" );
+	m_HUD_degrees = gHUD.GetSpriteIndex( "degrees" );
+	m_HUD_mechaArrow = gHUD.GetSpriteIndex( "mechaArrow" );
+	m_HUD_shells = gHUD.GetSpriteIndex( "shells" );
+	m_HUD_glow_beamgun = gHUD.GetSpriteIndex( "glow_beamgun" );
+	m_HUD_glow_chemgun = gHUD.GetSpriteIndex( "glow_chemgun" );
+	m_HUD_glow_dml = gHUD.GetSpriteIndex( "glow_dml" );
+	m_HUD_glow_grenade = gHUD.GetSpriteIndex( "glow_grenade" );
+	m_HUD_glow_pistol = gHUD.GetSpriteIndex( "glow_pistol" );
+	m_HUD_glow_knife = gHUD.GetSpriteIndex( "glow_knife" );
+	m_HUD_glow_minigun = gHUD.GetSpriteIndex( "glow_minigun" );
+	m_HUD_glow_shotgun = gHUD.GetSpriteIndex( "glow_shotgun" );
+	m_HUD_bracketleft = gHUD.GetSpriteIndex( "glow_bracketleft" );
+	m_HUD_bracketright = gHUD.GetSpriteIndex( "glow_bracketright" );
+	m_HUD_number = gHUD.GetSpriteIndex( "number_10" );
+	m_HUD_glow_beamgun_no = gHUD.GetSpriteIndex( "glow_beamgun_no" );
+	m_HUD_glow_chemgun_no = gHUD.GetSpriteIndex( "glow_chemgun_no" );
+	m_HUD_glow_dml_no = gHUD.GetSpriteIndex( "glow_dml_no" );
+	m_HUD_glow_grenade_no = gHUD.GetSpriteIndex( "glow_grenade_no" );
+	m_HUD_glow_pistol_no = gHUD.GetSpriteIndex( "glow_pistol_no" );
+	m_HUD_glow_minigun_no = gHUD.GetSpriteIndex( "glow_minigun_no" );
+	m_HUD_glow_shotgun_no = gHUD.GetSpriteIndex( "glow_shotgun_no" );
+	m_HUD_selectLeft = gHUD.GetSpriteIndex( "selectLeft" );
+	m_HUD_selectRight = gHUD.GetSpriteIndex( "selectRight" );
 
 	ghsprBuckets = gHUD.GetSprite(m_HUD_bucket0);
 	giBucketWidth = gHUD.GetSpriteRect(m_HUD_bucket0).right - gHUD.GetSpriteRect(m_HUD_bucket0).left;
@@ -815,8 +821,8 @@ int CHudAmmo::MsgFunc_TempX( const char *pszName, int iSize, void *pbuf )
 
 		if ( iId && iHeat && m_pWeapon && iHeat > 0 && m_pWeapon->iId == iId )
 		{
-			g_iHeatWeapon = iId;
-			g_iHeat = iHeat;
+			iTempWeapon = iId;
+			giTempHeat = iHeat;
 		}
 	}
 
@@ -1711,23 +1717,23 @@ int CHudAmmo::DrawWList(float flTime)
 		}
 
 		// the selected slot glows, between brackets
-		SPR_Set( gHUD.GetSprite( g_HUD_glow_knife + iSlot ), 0, 255, 0 );
+		SPR_Set( gHUD.GetSprite( m_HUD_glow_knife + iSlot ), 0, 255, 0 );
 		y = iStep * iSlot;
-		SPR_DrawAdditive( 0, ScreenWidth - iRight, y, &gHUD.GetSpriteRect( g_HUD_glow_knife + gpActiveSel->iSlot ) );
+		SPR_DrawAdditive( 0, ScreenWidth - iRight, y, &gHUD.GetSpriteRect( m_HUD_glow_knife + gpActiveSel->iSlot ) );
 
 		if ( ScreenWidth <= 640 )
 		{
-			SPR_Set( gHUD.GetSprite( g_HUD_glow_bracketleft ), 0, 255, 0 );
-			SPR_DrawAdditive( m_iFrame, ScreenWidth - iRight + 13, y, &gHUD.GetSpriteRect( g_HUD_glow_bracketleft ) );
-			SPR_Set( gHUD.GetSprite( g_HUD_glow_bracketright ), 0, 255, 0 );
-			SPR_DrawAdditive( m_iFrame, ScreenWidth - 25, y, &gHUD.GetSpriteRect( g_HUD_glow_bracketright ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_bracketleft ), 0, 255, 0 );
+			SPR_DrawAdditive( m_iFrame, ScreenWidth - iRight + 13, y, &gHUD.GetSpriteRect( m_HUD_bracketleft ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_bracketright ), 0, 255, 0 );
+			SPR_DrawAdditive( m_iFrame, ScreenWidth - 25, y, &gHUD.GetSpriteRect( m_HUD_bracketright ) );
 		}
 		else
 		{
-			SPR_Set( gHUD.GetSprite( g_HUD_glow_bracketleft ), 0, 255, 0 );
-			SPR_DrawAdditive( m_iFrame, ScreenWidth - iRight + 30, y, &gHUD.GetSpriteRect( g_HUD_glow_bracketleft ) );
-			SPR_Set( gHUD.GetSprite( g_HUD_glow_bracketright ), 0, 255, 0 );
-			SPR_DrawAdditive( m_iFrame, ScreenWidth - 60, y, &gHUD.GetSpriteRect( g_HUD_glow_bracketright ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_bracketleft ), 0, 255, 0 );
+			SPR_DrawAdditive( m_iFrame, ScreenWidth - iRight + 30, y, &gHUD.GetSpriteRect( m_HUD_bracketleft ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_bracketright ), 0, 255, 0 );
+			SPR_DrawAdditive( m_iFrame, ScreenWidth - 60, y, &gHUD.GetSpriteRect( m_HUD_bracketright ) );
 		}
 
 		if ( gEngfuncs.GetClientTime() > m_flNextFrame )
@@ -1746,8 +1752,8 @@ int CHudAmmo::DrawWList(float flTime)
 
 			if ( p && !gWR.HasAmmo( p ) )
 			{
-				SPR_Set( gHUD.GetSprite( g_HUD_glow_pistol_no + i - 1 ), 255, 255, 255 );
-				SPR_DrawAdditive( 0, ScreenWidth - iRight, y, &gHUD.GetSpriteRect( g_HUD_glow_pistol_no + i - 1 ) );
+				SPR_Set( gHUD.GetSprite( m_HUD_glow_pistol_no + i - 1 ), 255, 255, 255 );
+				SPR_DrawAdditive( 0, ScreenWidth - iRight, y, &gHUD.GetSpriteRect( m_HUD_glow_pistol_no + i - 1 ) );
 			}
 		}
 
@@ -1839,16 +1845,16 @@ int CHudAmmo::DrawWList(float flTime)
 							if ( ScreenWidth <= 640 )
 								yArrow = y;
 
-							SPR_Set( gHUD.GetSprite( g_HUD_mechaArrow ), 255, 255, 255 );
-							SPR_DrawAdditive( 0, xArrow, yArrow, &gHUD.GetSpriteRect( g_HUD_mechaArrow ) );
+							SPR_Set( gHUD.GetSprite( m_HUD_mechaArrow ), 255, 255, 255 );
+							SPR_DrawAdditive( 0, xArrow, yArrow, &gHUD.GetSpriteRect( m_HUD_mechaArrow ) );
 						}
 						else
 						{
 							SPR_Set( p->hActive, 0, 255, 255 );
 							SPR_DrawAdditive( 0, x, y, &p->rcActive );
 
-							SPR_Set( gHUD.GetSprite( g_HUD_mechaArrow ), 255, 255, 255 );
-							SPR_DrawAdditive( 0, x - 35, y - 8, &gHUD.GetSpriteRect( g_HUD_mechaArrow ) );
+							SPR_Set( gHUD.GetSprite( m_HUD_mechaArrow ), 255, 255, 255 );
+							SPR_DrawAdditive( 0, x - 35, y - 8, &gHUD.GetSpriteRect( m_HUD_mechaArrow ) );
 						}
 					}
 				}
@@ -1985,12 +1991,12 @@ void CHudAmmo::DrawCustomization(void)
 		int xSlider = ( iSettings * 32 / iSettings ) * gpActiveSel->iCustomSetting + 6;
 		for ( int i = 0; i < gpActiveSel->iCustomSettings; i++ )
 		{
-			SPR_Set( gHUD.GetSprite( g_HUD_chem_bar ), 0, 160, 0 );
-			SPR_DrawAdditive( 0, i * 32 + 38, 180, &gHUD.GetSpriteRect( g_HUD_chem_bar ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_chem_bar ), 0, 160, 0 );
+			SPR_DrawAdditive( 0, i * 32 + 38, 180, &gHUD.GetSpriteRect( m_HUD_chem_bar ) );
 		}
 
-		SPR_Set( gHUD.GetSprite( g_HUD_chem_slider ), 0, 255, 255 );
-		SPR_DrawAdditive( 0, xSlider, 180, &gHUD.GetSpriteRect( g_HUD_chem_slider ) );
+		SPR_Set( gHUD.GetSprite( m_HUD_chem_slider ), 0, 255, 255 );
+		SPR_DrawAdditive( 0, xSlider, 180, &gHUD.GetSpriteRect( m_HUD_chem_slider ) );
 	}
 }
 
@@ -2030,8 +2036,8 @@ void CHudAmmo::DrawChemCustom(void)
 		if ( gpActiveSel->iCustomSetting == 1 )
 		{
 			UnpackRGB( r, g, b, RGB_YELLOWISH );
-			SPR_Set( gHUD.GetSprite( g_HUD_vial_el ), r, g, b );
-			SPR_DrawAdditive( 0, x, y, &gHUD.GetSpriteRect( g_HUD_vial_el ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_vial_el ), r, g, b );
+			SPR_DrawAdditive( 0, x, y, &gHUD.GetSpriteRect( m_HUD_vial_el ) );
 		}
 		else
 		{
@@ -2041,15 +2047,15 @@ void CHudAmmo::DrawChemCustom(void)
 				UnpackRGB( r, g, b, RGB_GREENISH );
 			else if ( i == 25 )
 				UnpackRGB( r, g, b, RGB_BLUEISH );
-			SPR_Set( gHUD.GetSprite( g_HUD_vial_fl ), r, g, b );
-			SPR_DrawAdditive( 0, x, y, &gHUD.GetSpriteRect( g_HUD_vial_fl ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_vial_fl ), r, g, b );
+			SPR_DrawAdditive( 0, x, y, &gHUD.GetSpriteRect( m_HUD_vial_fl ) );
 		}
 
 		if ( gpActiveSel->iCustomSetting <= 2 )
 		{
 			UnpackRGB( r, g, b, RGB_YELLOWISH );
-			SPR_Set( gHUD.GetSprite( g_HUD_vial_ec ), r, g, b );
-			SPR_DrawAdditive( 0, x + gHUD.GetSpriteRect( g_HUD_vial_ec ).right - gHUD.GetSpriteRect( g_HUD_vial_ec ).left, y, &gHUD.GetSpriteRect( g_HUD_vial_ec ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_vial_ec ), r, g, b );
+			SPR_DrawAdditive( 0, x + gHUD.GetSpriteRect( m_HUD_vial_ec ).right - gHUD.GetSpriteRect( m_HUD_vial_ec ).left, y, &gHUD.GetSpriteRect( m_HUD_vial_ec ) );
 		}
 		else
 		{
@@ -2059,15 +2065,15 @@ void CHudAmmo::DrawChemCustom(void)
 				UnpackRGB( r, g, b, RGB_GREENISH );
 			else if ( i == 25 )
 				UnpackRGB( r, g, b, RGB_BLUEISH );
-			SPR_Set( gHUD.GetSprite( g_HUD_vial_fc ), r, g, b );
-			SPR_DrawAdditive( 0, x + gHUD.GetSpriteRect( g_HUD_vial_ec ).right - gHUD.GetSpriteRect( g_HUD_vial_ec ).left, y, &gHUD.GetSpriteRect( g_HUD_vial_fc ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_vial_fc ), r, g, b );
+			SPR_DrawAdditive( 0, x + gHUD.GetSpriteRect( m_HUD_vial_ec ).right - gHUD.GetSpriteRect( m_HUD_vial_ec ).left, y, &gHUD.GetSpriteRect( m_HUD_vial_fc ) );
 		}
 
 		if ( gpActiveSel->iCustomSetting <= 3 )
 		{
 			UnpackRGB( r, g, b, RGB_YELLOWISH );
-			SPR_Set( gHUD.GetSprite( g_HUD_vial_ec ), r, g, b );
-			SPR_DrawAdditive( 0, x + ( gHUD.GetSpriteRect( g_HUD_vial_ec ).right - gHUD.GetSpriteRect( g_HUD_vial_ec ).left ) * 2, y, &gHUD.GetSpriteRect( g_HUD_vial_ec ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_vial_ec ), r, g, b );
+			SPR_DrawAdditive( 0, x + ( gHUD.GetSpriteRect( m_HUD_vial_ec ).right - gHUD.GetSpriteRect( m_HUD_vial_ec ).left ) * 2, y, &gHUD.GetSpriteRect( m_HUD_vial_ec ) );
 		}
 		else
 		{
@@ -2077,8 +2083,8 @@ void CHudAmmo::DrawChemCustom(void)
 				UnpackRGB( r, g, b, RGB_GREENISH );
 			else if ( i == 25 )
 				UnpackRGB( r, g, b, RGB_BLUEISH );
-			SPR_Set( gHUD.GetSprite( g_HUD_vial_fc ), r, g, b );
-			SPR_DrawAdditive( 0, x + ( gHUD.GetSpriteRect( g_HUD_vial_ec ).right - gHUD.GetSpriteRect( g_HUD_vial_ec ).left ) * 2, y, &gHUD.GetSpriteRect( g_HUD_vial_fc ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_vial_fc ), r, g, b );
+			SPR_DrawAdditive( 0, x + ( gHUD.GetSpriteRect( m_HUD_vial_ec ).right - gHUD.GetSpriteRect( m_HUD_vial_ec ).left ) * 2, y, &gHUD.GetSpriteRect( m_HUD_vial_fc ) );
 		}
 
 		if ( gpActiveSel->iCustomSetting == 5 )
@@ -2089,14 +2095,14 @@ void CHudAmmo::DrawChemCustom(void)
 				UnpackRGB( r, g, b, RGB_GREENISH );
 			else if ( i == 25 )
 				UnpackRGB( r, g, b, RGB_BLUEISH );
-			SPR_Set( gHUD.GetSprite( g_HUD_vial_fr ), r, g, b );
-			SPR_DrawAdditive( 0, x + ( gHUD.GetSpriteRect( g_HUD_vial_ec ).right - gHUD.GetSpriteRect( g_HUD_vial_ec ).left ) * 3, y, &gHUD.GetSpriteRect( g_HUD_vial_fr ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_vial_fr ), r, g, b );
+			SPR_DrawAdditive( 0, x + ( gHUD.GetSpriteRect( m_HUD_vial_ec ).right - gHUD.GetSpriteRect( m_HUD_vial_ec ).left ) * 3, y, &gHUD.GetSpriteRect( m_HUD_vial_fr ) );
 		}
 		else
 		{
 			UnpackRGB( r, g, b, RGB_YELLOWISH );
-			SPR_Set( gHUD.GetSprite( g_HUD_vial_er ), r, g, b );
-			SPR_DrawAdditive( 0, x + ( gHUD.GetSpriteRect( g_HUD_vial_ec ).right - gHUD.GetSpriteRect( g_HUD_vial_ec ).left ) * 3, y, &gHUD.GetSpriteRect( g_HUD_vial_er ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_vial_er ), r, g, b );
+			SPR_DrawAdditive( 0, x + ( gHUD.GetSpriteRect( m_HUD_vial_ec ).right - gHUD.GetSpriteRect( m_HUD_vial_ec ).left ) * 3, y, &gHUD.GetSpriteRect( m_HUD_vial_er ) );
 		}
 
 		if ( ScreenWidth >= 640 )
@@ -2120,14 +2126,14 @@ void CHudAmmo::DrawChemCustom(void)
 	int xbar = x;
 	for ( int j = 0; j < 5; j++ )
 	{
-		SPR_Set( gHUD.GetSprite( g_HUD_chem_bar ), 255, 160, 0 );
-		SPR_DrawAdditive( 0, xbar, y, &gHUD.GetSpriteRect( g_HUD_chem_bar ) );
+		SPR_Set( gHUD.GetSprite( m_HUD_chem_bar ), 255, 160, 0 );
+		SPR_DrawAdditive( 0, xbar, y, &gHUD.GetSpriteRect( m_HUD_chem_bar ) );
 		xbar += 32;
 	}
 
 	xbar = ( 160 / gpActiveSel->iCustomSettings ) * ( gpActiveSel->iCustomSetting - 1 ) + x;
-	SPR_Set( gHUD.GetSprite( g_HUD_chem_slider ), 255, 160, 0 );
-	SPR_DrawAdditive( 0, xbar, y, &gHUD.GetSpriteRect( g_HUD_chem_slider ) );
+	SPR_Set( gHUD.GetSprite( m_HUD_chem_slider ), 255, 160, 0 );
+	SPR_DrawAdditive( 0, xbar, y, &gHUD.GetSpriteRect( m_HUD_chem_slider ) );
 
 	gpActiveSel = pSave;
 
@@ -2152,7 +2158,7 @@ void CHudAmmo::DrawBeamCustom(void)
 {
 	WEAPON *pSave = gpActiveSel;
 	int iFrequency, iCurrent, iVoltage, iItem;
-	int x = -( gHUD.GetSpriteRect( g_HUD_beamdials ).right - gHUD.GetSpriteRect( g_HUD_beamdials ).left ) * 3 / 2 + ScreenWidth / 2;
+	int x = -( gHUD.GetSpriteRect( m_HUD_beamdials ).right - gHUD.GetSpriteRect( m_HUD_beamdials ).left ) * 3 / 2 + ScreenWidth / 2;
 
 	for ( int i = 2; i <= 4; i++ )	// WEAPON_CUST_FREQUENCY, _CURRENT, _VOLTAGE
 	{
@@ -2170,7 +2176,7 @@ void CHudAmmo::DrawBeamCustom(void)
 			case 4:	iVoltage = gpActiveSel->iCustomSetting;		break;
 			}
 
-			x += gHUD.GetSpriteRect( g_HUD_beamdials ).right - gHUD.GetSpriteRect( g_HUD_beamdials ).left + 25;
+			x += gHUD.GetSpriteRect( m_HUD_beamdials ).right - gHUD.GetSpriteRect( m_HUD_beamdials ).left + 25;
 		}
 	}
 
@@ -2253,7 +2259,7 @@ void CHudAmmo::DrawGrenadeCustom(void)
 //
 void CHudAmmo::DrawGaussCustom(void)
 {
-	int x = -( gHUD.GetSpriteRect( g_HUD_pulse ).right - gHUD.GetSpriteRect( g_HUD_pulse ).left ) * 3 / 2 + ScreenWidth / 2;
+	int x = -( gHUD.GetSpriteRect( m_HUD_pulse ).right - gHUD.GetSpriteRect( m_HUD_pulse ).left ) * 3 / 2 + ScreenWidth / 2;
 
 	gpActiveSel = gWR.GetWeapon( 31 );	// WEAPON_CUST_FIRETYPE
 
@@ -2261,30 +2267,30 @@ void CHudAmmo::DrawGaussCustom(void)
 	int iOffset;
 
 	if ( gWR.HasAmmo( pScope ) )
-		x -= ( gHUD.GetSpriteRect( g_HUD_sniper ).right - gHUD.GetSpriteRect( g_HUD_sniper ).left ) / 2;
+		x -= ( gHUD.GetSpriteRect( m_HUD_sniper ).right - gHUD.GetSpriteRect( m_HUD_sniper ).left ) / 2;
 
 	if ( gpActiveSel->iCustomSetting == 1 )
 	{
-		SPR_Set( gHUD.GetSprite( g_HUD_pulseAct ), 255, 255, 255 );
-		SPR_DrawAdditive( 0, x, 35, &gHUD.GetSpriteRect( g_HUD_pulseAct ) );
+		SPR_Set( gHUD.GetSprite( m_HUD_pulseAct ), 255, 255, 255 );
+		SPR_DrawAdditive( 0, x, 35, &gHUD.GetSpriteRect( m_HUD_pulseAct ) );
 	}
 	else
 	{
-		SPR_Set( gHUD.GetSprite( g_HUD_pulse ), 255, 255, 255 );
-		SPR_DrawAdditive( 0, x, 35, &gHUD.GetSpriteRect( g_HUD_pulse ) );
+		SPR_Set( gHUD.GetSprite( m_HUD_pulse ), 255, 255, 255 );
+		SPR_DrawAdditive( 0, x, 35, &gHUD.GetSpriteRect( m_HUD_pulse ) );
 	}
 
 	iOffset = ScreenWidth >= 640 ? 64 : 32;
 
 	if ( gpActiveSel->iCustomSetting == 2 )
 	{
-		SPR_Set( gHUD.GetSprite( g_HUD_chargeAct ), 255, 255, 255 );
-		SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_chargeAct ) );
+		SPR_Set( gHUD.GetSprite( m_HUD_chargeAct ), 255, 255, 255 );
+		SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( m_HUD_chargeAct ) );
 	}
 	else
 	{
-		SPR_Set( gHUD.GetSprite( g_HUD_charge ), 255, 255, 255 );
-		SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_charge ) );
+		SPR_Set( gHUD.GetSprite( m_HUD_charge ), 255, 255, 255 );
+		SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( m_HUD_charge ) );
 	}
 
 	iOffset = ScreenWidth >= 640 ? 124 : 62;
@@ -2293,26 +2299,26 @@ void CHudAmmo::DrawGaussCustom(void)
 	{
 		if ( gWR.HasAmmo( pScope ) )
 		{
-			SPR_Set( gHUD.GetSprite( g_HUD_rapidSnipeAct ), 255, 255, 255 );
-			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_rapidSnipeAct ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_rapidSnipeAct ), 255, 255, 255 );
+			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( m_HUD_rapidSnipeAct ) );
 		}
 		else
 		{
-			SPR_Set( gHUD.GetSprite( g_HUD_rapidAct ), 255, 255, 255 );
-			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_rapidAct ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_rapidAct ), 255, 255, 255 );
+			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( m_HUD_rapidAct ) );
 		}
 	}
 	else
 	{
 		if ( gWR.HasAmmo( pScope ) )
 		{
-			SPR_Set( gHUD.GetSprite( g_HUD_rapidSnipe ), 255, 255, 255 );
-			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_rapidSnipe ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_rapidSnipe ), 255, 255, 255 );
+			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( m_HUD_rapidSnipe ) );
 		}
 		else
 		{
-			SPR_Set( gHUD.GetSprite( g_HUD_rapid ), 255, 255, 255 );
-			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_rapid ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_rapid ), 255, 255, 255 );
+			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( m_HUD_rapid ) );
 		}
 	}
 
@@ -2322,8 +2328,8 @@ void CHudAmmo::DrawGaussCustom(void)
 	{
 		if ( gWR.HasAmmo( pScope ) )
 		{
-			SPR_Set( gHUD.GetSprite( g_HUD_sniperAct ), 255, 255, 255 );
-			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_sniperAct ) );
+			SPR_Set( gHUD.GetSprite( m_HUD_sniperAct ), 255, 255, 255 );
+			SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( m_HUD_sniperAct ) );
 		}
 		else
 		{
@@ -2337,8 +2343,8 @@ void CHudAmmo::DrawGaussCustom(void)
 		if ( !gWR.HasAmmo( pScope ) )
 			return;
 
-		SPR_Set( gHUD.GetSprite( g_HUD_sniper ), 255, 255, 255 );
-		SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( g_HUD_sniper ) );
+		SPR_Set( gHUD.GetSprite( m_HUD_sniper ), 255, 255, 255 );
+		SPR_DrawAdditive( 0, x + iOffset, 35, &gHUD.GetSpriteRect( m_HUD_sniper ) );
 	}
 }
 

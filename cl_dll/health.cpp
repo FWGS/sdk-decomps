@@ -40,16 +40,16 @@ DECLARE_MESSAGE(m_Health, Damage )
 int giDmgHeight, giDmgWidth;
 
 // Gunman's sprites from hud.txt; only the heartbeat is drawn
-int g_HUD_logo;
-int g_HUD_temperature;
-int g_HUD_malfunction;
-int g_HUD_warning;
-int g_HUD_danger;
-int g_HUD_health_pulse;
+int m_HUD_logo;
+int m_HUD_temp;
+int m_HUD_malfunction;
+int m_HUD_warning;
+int m_HUD_danger;
+int m_HUD_health_pulse;
 
-extern int g_HUD_number_10;
-extern int g_iHeatWeapon;
-extern int g_iHeat;
+extern int m_HUD_number;
+extern int iTempWeapon;
+extern int giTempHeat;
 extern int g_fWeaponSelected;
 
 static void DrawHeatGauge( float flTime );
@@ -114,12 +114,12 @@ int CHudHealth::VidInit(void)
 
 	m_HUD_dmg_bio = gHUD.GetSpriteIndex( "dmg_bio" ) + 1;
 	m_HUD_cross = gHUD.GetSpriteIndex( "cross" );
-	g_HUD_logo = gHUD.GetSpriteIndex( "logo" );
-	g_HUD_temperature = gHUD.GetSpriteIndex( "temperature" );
-	g_HUD_malfunction = gHUD.GetSpriteIndex( "malfunction" );
-	g_HUD_warning = gHUD.GetSpriteIndex( "warning" );
-	g_HUD_danger = gHUD.GetSpriteIndex( "danger" );
-	g_HUD_health_pulse = gHUD.GetSpriteIndex( "health_pulse" );
+	m_HUD_logo = gHUD.GetSpriteIndex( "logo" );
+	m_HUD_temp = gHUD.GetSpriteIndex( "temperature" );
+	m_HUD_malfunction = gHUD.GetSpriteIndex( "malfunction" );
+	m_HUD_warning = gHUD.GetSpriteIndex( "warning" );
+	m_HUD_danger = gHUD.GetSpriteIndex( "danger" );
+	m_HUD_health_pulse = gHUD.GetSpriteIndex( "health_pulse" );
 
 	giDmgHeight = gHUD.GetSpriteRect(m_HUD_dmg_bio).right - gHUD.GetSpriteRect(m_HUD_dmg_bio).left;
 	giDmgWidth = gHUD.GetSpriteRect(m_HUD_dmg_bio).bottom - gHUD.GetSpriteRect(m_HUD_dmg_bio).top;
@@ -239,8 +239,8 @@ int CHudHealth::Draw(float flTime)
 	if ( m_iHealth > 99 )
 	{
 		// a hundred has its own sprite
-		SPR_Set( gHUD.GetSprite( g_HUD_number_10 ), r, g, b );
-		SPR_DrawAdditive( 0, x - 3, ScreenHeight - 99, &gHUD.GetSpriteRect( g_HUD_number_10 ) );
+		SPR_Set( gHUD.GetSprite( m_HUD_number ), r, g, b );
+		SPR_DrawAdditive( 0, x - 3, ScreenHeight - 99, &gHUD.GetSpriteRect( m_HUD_number ) );
 	}
 	else
 	{
@@ -263,7 +263,7 @@ int CHudHealth::Draw(float flTime)
 
 		// the trace scrolls right by m_iPulse: its end is drawn first, at
 		// the left, and the rest after it
-		wrect_t rcEnd = gHUD.GetSpriteRect( g_HUD_health_pulse );
+		wrect_t rcEnd = gHUD.GetSpriteRect( m_HUD_health_pulse );
 		wrect_t rcStart = rcEnd;
 
 		rcStart.right -= m_iPulse;
@@ -274,10 +274,10 @@ int CHudHealth::Draw(float flTime)
 		if ( rcEnd.left == rcEnd.right )
 			rcEnd.left = rcEnd.right - 1;
 
-		SPR_Set( gHUD.GetSprite( g_HUD_health_pulse ), 255, 255, 255 );
+		SPR_Set( gHUD.GetSprite( m_HUD_health_pulse ), 255, 255, 255 );
 		SPR_DrawAdditive( iFrame, 36, ScreenHeight - 74, &rcEnd );
 
-		SPR_Set( gHUD.GetSprite( g_HUD_health_pulse ), 255, 255, 255 );
+		SPR_Set( gHUD.GetSprite( m_HUD_health_pulse ), 255, 255, 255 );
 		SPR_DrawAdditive( iFrame, m_iPulse + 36, ScreenHeight - 74, &rcStart );
 
 		// fifty pixels a second
@@ -564,7 +564,7 @@ static void DrawHeatGauge( float flTime )
 	if ( !gHUD.m_Ammo.m_pWeapon )
 		return;
 
-	if ( g_iHeatWeapon == gHUD.m_Ammo.m_pWeapon->iId )
+	if ( iTempWeapon == gHUD.m_Ammo.m_pWeapon->iId )
 	{
 		if ( gViewPort && gViewPort->m_pTemperature )
 			gViewPort->m_pTemperature->setVisible( true );
@@ -572,7 +572,7 @@ static void DrawHeatGauge( float flTime )
 		x = ScreenWidth / 2 - 54;
 		y = ScreenHeight - 33;
 
-		if ( g_iHeat <= 50 )
+		if ( giTempHeat <= 50 )
 		{
 			g = 255;
 			b = 0;
@@ -581,7 +581,7 @@ static void DrawHeatGauge( float flTime )
 				gViewPort->m_pTemperature->ShowTexts( false, false, false );
 		}
 
-		if ( g_iHeat > 50 && g_iHeat <= 75 )
+		if ( giTempHeat > 50 && giTempHeat <= 75 )
 		{
 			g = 255;
 			r = 255;
@@ -590,12 +590,12 @@ static void DrawHeatGauge( float flTime )
 				gViewPort->m_pTemperature->ShowTexts( true, false, false );
 		}
 
-		if ( g_iHeat > 75 )
+		if ( giTempHeat > 75 )
 		{
 			r = 255;
 			g = 0;
 			b = 0;
-			if ( g_iHeat >= 99 )
+			if ( giTempHeat >= 99 )
 			{
 				if ( gViewPort && gViewPort->m_pTemperature )
 					gViewPort->m_pTemperature->ShowTexts( false, false, true );
@@ -609,7 +609,7 @@ static void DrawHeatGauge( float flTime )
 
 		// one column per step, ramping up the red over the first 58 and
 		// then down the green; the colours set above are never used
-		int iWidth = g_iHeat * 1.16;
+		int iWidth = giTempHeat * 1.16;
 		for ( int i = 0; i < iWidth; i++ )
 		{
 			b = 0;
@@ -621,7 +621,7 @@ static void DrawHeatGauge( float flTime )
 				g = (58 - i) * 255 / 58 + 240;
 			}
 
-			if ( g_iHeat >= 99 )
+			if ( giTempHeat >= 99 )
 			{
 				r = 255;
 				b = 0;
