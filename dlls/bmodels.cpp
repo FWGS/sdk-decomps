@@ -85,6 +85,126 @@ void CFuncWall :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE u
 }
 
 
+// =================== FUNC_SHIELD ==============================================
+// T2DEF: from sh4D0w c0nSum3s' code example (credited in the manual). A
+// toggled wall like func_wall_toggle that throws back whatever touches it.
+
+#define SF_SHIELD_START_ON		0x0001 // name ours
+
+class CFuncShield : public CBaseEntity
+{
+public:
+	void	Spawn( void );
+	void	Precache( void );
+	void	TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType );
+	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void	TurnOff( void );
+	void	TurnOn( void );
+	void EXPORT ShieldTouch( CBaseEntity *pOther );
+	void EXPORT ShieldThink( void );
+	virtual STATE GetState( void ) { return (pev->solid == SOLID_NOT)?STATE_OFF:STATE_ON; };
+
+	int		m_iShieldState; // name ours: set to 0 in Spawn, never read
+};
+
+LINK_ENTITY_TO_CLASS( func_shield, CFuncShield );
+
+void CFuncShield :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType )
+{
+	pev->renderamt = 200;
+	EMIT_SOUND( ENT(pev), CHAN_STATIC, "debris/zap3.wav", 1, ATTN_NORM );
+}
+
+void CFuncShield :: Precache( void )
+{
+	PRECACHE_SOUND( "doors/aliendoor1.wav" );
+	PRECACHE_SOUND( "debris/zap3.wav" );
+}
+
+void CFuncShield :: Spawn( void )
+{
+	pev->angles		= g_vecZero;
+	pev->movetype	= MOVETYPE_PUSH;  // so it doesn't get pushed by anything
+	pev->flags |= FL_WORLDBRUSH;
+	SET_MODEL( ENT(pev), STRING(pev->model) );
+
+	if ( pev->spawnflags & SF_SHIELD_START_ON )
+		TurnOn();
+	else
+		TurnOff();
+
+	SetTouch( ShieldTouch );
+	SetThink( ShieldThink );
+	SetNextThink( 0.1 );
+
+	m_iShieldState = 0;
+	pev->rendermode = kRenderTransTexture;
+	pev->renderamt = 200;
+	pev->renderfx = kRenderFxFlickerFast;
+
+	Precache();
+}
+
+void CFuncShield :: TurnOff( void )
+{
+	pev->solid = SOLID_NOT;
+	pev->effects |= EF_NODRAW;
+	UTIL_SetOrigin( this, pev->origin );
+}
+
+void CFuncShield :: TurnOn( void )
+{
+	pev->solid = SOLID_BSP;
+	pev->effects &= ~EF_NODRAW;
+	UTIL_SetOrigin( this, pev->origin );
+}
+
+void CFuncShield :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	BOOL status = (GetState() == STATE_ON);
+
+	if ( ShouldToggle( useType, status ) )
+	{
+		if ( status )
+			TurnOff();
+		else
+			TurnOn();
+	}
+}
+
+void CFuncShield :: ShieldTouch( CBaseEntity *pOther )
+{
+	BOOL status = (GetState() == STATE_ON);
+
+	if ( !status )
+		return;
+
+	entvars_t *pevToucher = pOther->pev;
+	Vector vecDir = pevToucher->velocity.Normalize();
+	TraceResult tr;
+
+	UTIL_TraceLine( pevToucher->origin, pev->origin + vecDir * 100, dont_ignore_monsters, ENT(pev), &tr );
+
+	Vector vecPush = pevToucher->velocity.Normalize();
+	vecPush.x = -500 * vecPush.x;
+	vecPush.y = -500 * vecPush.y;
+	vecPush.z = 500;
+	pevToucher->basevelocity = vecPush;
+	pevToucher->flags |= FL_BASEVELOCITY;
+
+	EMIT_SOUND( ENT(pev), CHAN_STATIC, "doors/aliendoor1.wav", 1, ATTN_NORM );
+	pev->renderamt = 200;
+}
+
+void CFuncShield :: ShieldThink( void )
+{
+	if ( pev->renderamt > 40 )
+		pev->renderamt -= 15;
+
+	SetNextThink( 0.1 );
+}
+
+
 #define SF_WALL_START_OFF		0x0001
 
 class CFuncWallToggle : public CFuncWall
