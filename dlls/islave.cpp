@@ -153,6 +153,9 @@ int	CISlave :: Classify ( void )
 
 int CISlave::IRelationship( CBaseEntity *pTarget )
 {
+	if ( FClassnameIs( pTarget->pev, "monster_evil_scientist" ) )
+		return R_NM;
+
 	if ( (pTarget->IsPlayer()) )
 		if ( (pev->spawnflags & SF_MONSTER_WAIT_UNTIL_PROVOKED ) && ! (m_afMemory & bits_MEMORY_PROVOKED ))
 			return R_NO;
@@ -204,6 +207,9 @@ void CISlave :: AlertSound( void )
 //=========================================================
 void CISlave :: IdleSound( void )
 {
+	if ( FBitSet( pev->spawnflags, SF_MONSTER_GAG ) )
+		return;
+
 	if (RANDOM_LONG( 0, 2 ) == 0)
 	{
 		SENTENCEG_PlayRndSz(ENT(pev), "SLV_IDLE", 0.85, ATTN_NORM, 0, m_voicePitch);
@@ -821,6 +827,7 @@ void CISlave :: ZapBeam( int side )
 		return;
 
 	vecSrc = pev->origin + gpGlobals->v_up * 36;
+	UTIL_MakeVectors( pev->angles );
 	vecAim = ShootAtEnemy( vecSrc );
 	float deflection = 0.01;
 	vecAim = vecAim + side * gpGlobals->v_right * RANDOM_FLOAT( 0, deflection ) + gpGlobals->v_up * RANDOM_FLOAT( -deflection, deflection );
