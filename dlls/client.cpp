@@ -48,7 +48,7 @@ extern int giPrecacheGrunt;
 extern int giPrecacheTank;
 extern unsigned short g_usCleanup;
 extern unsigned short g_usSpurtBlood;
-extern int g_iGibHuman;
+extern int g_iGibHumanSpr;
 extern int g_iGoreBot;
 extern int gmsgSayText;
 
@@ -549,8 +549,12 @@ void StartFrame( void )
 }
 
 
-int g_iRicochetSprite;
+int g_iRichoSprite;		// name ours
 int g_iBulletPuffSprite;
+
+// sic: retail's client.obj has 4 bytes of .bss after the two sprites that
+// nothing reads or writes (name ours)
+static int s_iUnknown;
 
 void ClientPrecache( void )
 {
@@ -675,7 +679,7 @@ void ClientPrecache( void )
 	if (giPrecacheGrunt)
 		UTIL_PrecacheOther("monster_human_grunt");
 
-	g_iRicochetSprite = PRECACHE_MODEL("sprites/richo1.spr");
+	g_iRichoSprite = PRECACHE_MODEL("sprites/richo1.spr");
 	g_iBulletPuffSprite = PRECACHE_MODEL("sprites/bulletpuff.spr");
 	PRECACHE_MODEL("models/smallwoodgib.mdl");
 	PRECACHE_MODEL("sprites/wallpuff.spr");
@@ -683,7 +687,7 @@ void ClientPrecache( void )
 	g_usCleanup = PRECACHE_EVENT( 1, "events/cleanup.sc" );
 	g_usSpurtBlood = PRECACHE_EVENT( 1, "events/spurtblood.sc" );
 
-	g_iGibHuman = PRECACHE_MODEL("sprites/gibhuman.spr");
+	g_iGibHumanSpr = PRECACHE_MODEL("sprites/gibhuman.spr");
 	g_iGoreBot = PRECACHE_MODEL("sprites/gorebot.spr");
 
 	UTIL_PrecacheOther("player_armor");

@@ -813,7 +813,7 @@ void CRaptor::SetActivity( Activity NewActivity )
 void CRaptor::Precache( void )
 {
 	g_iGoreHuman = PRECACHE_MODEL( "sprites/gorehuman.spr" );
-	g_iGibHuman = PRECACHE_MODEL( "sprites/gibhuman.spr" );
+	g_iGibHumanSpr = PRECACHE_MODEL( "sprites/gibhuman.spr" );
 	PRECACHE_MODEL( "models/rheptor.mdl" );
 
 	CSquadMonster::Precache();

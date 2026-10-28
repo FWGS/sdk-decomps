@@ -36,8 +36,12 @@
 int g_fBanditQuestion;				// true if an idle bandit asked a question. Cleared when someone answers.
 
 // gib and gore spray sprites, precached by the species that use them
-int g_iGibHuman;
+int g_iGibHumanSpr;	// name ours
 int g_iGoreHuman;
+
+// sic: retail's bandit.obj has 4 bytes of .bss between the two sprites that
+// nothing reads or writes (name ours)
+static int s_iUnknown;
 
 extern DLL_GLOBAL int		g_iSkillLevel;
 extern unsigned short g_usGaussFire;
@@ -862,7 +866,7 @@ void CBaseBandit :: Precache()
 	PRECACHE_MODEL( "sprites/gausspark.spr" );
 
 	g_iGoreHuman = PRECACHE_MODEL( "sprites/gorehuman.spr" );
-	g_iGibHuman = PRECACHE_MODEL( "sprites/gibhuman.spr" );
+	g_iGibHumanSpr = PRECACHE_MODEL( "sprites/gibhuman.spr" );
 
 	PRECACHE_MODEL( "models/humanskull.mdl" );
 	PRECACHE_MODEL( "models/hgibs.mdl" );

@@ -30,7 +30,7 @@
 #include	"bandit.h"
 
 extern DLL_GLOBAL int g_iSkillLevel;
-extern int g_iGibHuman;
+extern int g_iGibHumanSpr;
 extern int g_iGoreHuman;
 
 //=========================================================
@@ -128,7 +128,7 @@ void CHostileScientist::Spawn( void )
 void CHostileScientist::Precache( void )
 {
 	g_iGoreHuman = PRECACHE_MODEL( "sprites/gorehuman.spr" );
-	g_iGibHuman = PRECACHE_MODEL( "sprites/gibhuman.spr" );
+	g_iGibHumanSpr = PRECACHE_MODEL( "sprites/gibhuman.spr" );
 
 	PRECACHE_MODEL( "models/evil_scientist.mdl" );
 

@@ -35,7 +35,7 @@
 #include	"soundent.h"
 
 
-extern int g_iGibHuman;
+extern int g_iGibHumanSpr;
 extern int g_iGoreHuman;
 
 BOOL GetScriptedIdleName( const char *pszSequence, char *pszDest );
@@ -593,7 +593,7 @@ void CScientist::ToggleUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_T
 void CScientist :: Precache( void )
 {
 	g_iGoreHuman = PRECACHE_MODEL( "sprites/gorehuman.spr" );
-	g_iGibHuman = PRECACHE_MODEL( "sprites/gibhuman.spr" );
+	g_iGibHumanSpr = PRECACHE_MODEL( "sprites/gibhuman.spr" );
 
 	PRECACHE_MODEL("models/scientist.mdl");
 

@@ -36,6 +36,10 @@ extern DLL_GLOBAL int g_iSkillLevel;
 
 int g_fRustbotQuestion;				// true if an idle rust bot asked a question. Cleared when someone answers.
 
+// sic: retail has 4 bytes of .bss after g_fRustbotQuestion, before beak.obj's,
+// that nothing reads or writes (name ours)
+static int s_iUnknown;
+
 //=========================================================
 // Monster's Anim Events Go Here
 //=========================================================

@@ -197,13 +197,13 @@ extern gibmodel_t gGibModels[];
 extern monstertype_t gMonsterTypes[];
 
 // gib and gore spray sprites, precached by the species that use them
-extern int g_iGibHuman;
+extern int g_iGibHumanSpr;
 extern int g_iGoreHuman;
 extern int g_iGibBot;
 extern int g_iGoreBot;
 extern int g_iGibBirth;
 extern int g_iGoreBeak;
-extern int g_iGibBeak;
+extern int g_iBirdGib;
 extern int g_iGoreBirth;
 extern int g_iGoreTube;
 extern int g_iGibTube;

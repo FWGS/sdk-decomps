@@ -701,7 +701,7 @@ Schedule_t *COurano::GetScheduleOfType( int Type )
 void COurano::Precache( void )
 {
 	g_iGoreHuman = PRECACHE_MODEL( "sprites/gorehuman.spr" );
-	g_iGibHuman = PRECACHE_MODEL( "sprites/gibhuman.spr" );
+	g_iGibHumanSpr = PRECACHE_MODEL( "sprites/gibhuman.spr" );
 	PRECACHE_MODEL( "models/ourano.mdl" );
 
 	CSquadMonster::Precache();

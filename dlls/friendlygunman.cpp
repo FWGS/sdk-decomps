@@ -29,7 +29,7 @@
 #include	"weapons.h"
 #include	"soundent.h"
 
-extern int g_iGibHuman;
+extern int g_iGibHumanSpr;
 extern int g_iGoreHuman;
 
 //=========================================================
@@ -396,7 +396,7 @@ void CFriendlyGunman :: Precache()
 	m_usShotgun = PRECACHE_EVENT( 1, "events/monstershotgun.sc" );
 
 	g_iGoreHuman = PRECACHE_MODEL( "sprites/gorehuman.spr" );
-	g_iGibHuman = PRECACHE_MODEL( "sprites/gibhuman.spr" );
+	g_iGibHumanSpr = PRECACHE_MODEL( "sprites/gibhuman.spr" );
 
 	// every new barney must call this, otherwise
 	// when a level is loaded, nobody will talk (time is reset to now)

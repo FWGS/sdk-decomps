@@ -526,9 +526,9 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 
 void CBasePlayer :: TraceBleed( float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType, Vector vecPos )
 {
-	int iSprite = g_iGibHuman;
+	int iSprite = g_iGibHumanSpr;
 
-	if ( CVAR_GET_FLOAT( "violence_hblood" ) == 0 && iSprite == g_iGibHuman )
+	if ( CVAR_GET_FLOAT( "violence_hblood" ) == 0 && iSprite == g_iGibHumanSpr )
 		iSprite = 0;
 
 	if ( g_Language == LANGUAGE_GERMAN || CVAR_GET_FLOAT( "violence_germany" ) != 0 )

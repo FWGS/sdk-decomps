@@ -398,7 +398,7 @@ void CBaseMonster :: GibMonster( void )
 			iSprite = g_iGibBot;
 			break;
 		case 2:
-			iSprite = g_iGibBeak;
+			iSprite = g_iBirdGib;
 			break;
 		case 3:
 			iSprite = g_iGibXeno;
@@ -407,7 +407,7 @@ void CBaseMonster :: GibMonster( void )
 			iSprite = g_iGibTube;
 			break;
 		case 5:
-			iSprite = g_iGibHuman;
+			iSprite = g_iGibHumanSpr;
 			break;
 		case 6:
 			iSprite = g_iGibBirth;

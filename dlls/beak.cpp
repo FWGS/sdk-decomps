@@ -35,8 +35,12 @@
 int g_iGibBirth;
 int g_iGoreBeak;
 int g_iGibQueen;	// sic: never precached; the queen's spray uses it
-int g_iGibBeak;
+int g_iBirdGib;	// sprites/gibbeak.spr (name ours)
 int g_iGoreBirth;
+
+// sic: retail's .bss has 4 bytes after g_iGoreBirth, before critter.obj's,
+// that nothing reads or writes (name ours)
+static int s_iUnknown1;
 
 //=========================================================
 // monster-specific schedule types
@@ -931,7 +935,7 @@ void CBeak::Precache( void )
 	PRECACHE_SOUND_ARRAY( pDeathSounds );
 	PRECACHE_SOUND_ARRAY( pMiscSounds );
 
-	g_iGibBeak = PRECACHE_MODEL( "sprites/gibbeak.spr" );
+	g_iBirdGib = PRECACHE_MODEL( "sprites/gibbeak.spr" );
 	g_iGoreBeak = PRECACHE_MODEL( "sprites/gorebeak.spr" );
 
 	CSquadMonster::Precache();
