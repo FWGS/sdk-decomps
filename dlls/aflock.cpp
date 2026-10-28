@@ -655,8 +655,14 @@ void CFlockingFlyer :: FlockLeaderThink( void )
 
 	if ( m_iBerzerk )
 	{
+		// sic: T2DEF's bracing here is unknown. Braces on this test and on the flYaw
+		// tests below (not on the velocity.z one) give retail's order of the header
+		// inlines at the end of aflock.obj: they add IL, which /YX's lazy compiling
+		// of the .pch's inline functions counts. No code changes.
 		if ( pev->speed <= 250 )
+		{
 			pev->speed += 5;
+		}
 
 		Vector vecToEnemy; // name ours
 		float flDist = 0; // name ours
@@ -672,9 +678,13 @@ void CFlockingFlyer :: FlockLeaderThink( void )
 			float flPitch = DotProduct( vecToEnemy, gpGlobals->v_up ); // name ours
 
 			if ( flYaw < -0.05 )
+			{
 				pev->angles.y += 15;
+			}
 			else if ( flYaw > 0.05 )
+			{
 				pev->angles.y -= 15;
+			}
 
 			if ( pev->origin.z > vecEnemy.z && pev->velocity.z > -150 )
 				pev->velocity.z -= 15;
