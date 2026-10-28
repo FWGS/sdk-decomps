@@ -179,7 +179,6 @@ class CAicore : public CBasePlayerWeapon
 public:
 	void Spawn( void );
 	void Precache( void );
-	void SecondaryAttack( void ) {}
 	int iItemSlot( void ) { return 9; }
 	int GetItemInfo(ItemInfo *p);
 	BOOL Deploy( void );
