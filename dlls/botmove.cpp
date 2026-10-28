@@ -265,7 +265,6 @@ BOOL BotFindProfile( void )
 	WIN32_FIND_DATA fd;
 	HANDLE hFind;
 	int i;
-	BOOL fUsed;
 
 	hFind = FindFirstFile( "wantedhl/bots/*.bot", &fd );
 	if ( !hFind )	// sic: it fails with INVALID_HANDLE_VALUE
@@ -277,25 +276,19 @@ BOOL BotFindProfile( void )
 
 	while ( 1 )
 	{
-		fUsed = FALSE;
 		for ( i = 1; i < gpGlobals->maxClients; i++ )	// sic: skips the last slot
 		{
 			CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
 
 			if ( pPlayer && FBitSet( pPlayer->pev->flags, FL_FAKECLIENT ) && !stricmp( STRING( pPlayer->pev->netname ), szName ) )
-			{
-				fUsed = TRUE;
-				break;
-			}
+				goto used;
 		}
 
-		if ( !fUsed )
-		{
-			fFound = TRUE;
-			strcpy( g_BotManager.m_szLastProfile, szName );
-			break;
-		}
+		fFound = TRUE;
+		strcpy( g_BotManager.m_szLastProfile, szName );
+		break;
 
+used:
 		if ( !FindNextFile( hFind, &fd ) )
 			break;
 
@@ -521,17 +514,19 @@ BOOL CBot::CheckAhead( Vector &vecDir, TraceResult *ptr )
 
 	Vector vecSrc = pev->origin;
 	Vector vecEnd;
+	Vector vecSide;
+	Vector vecTemp;
 	vecEnd = vecSrc + vecDir.Normalize() * flDist;
 
-	Vector vecSide = vecDir.Normalize();
-	Vector vecTemp = vecDir.Normalize();
+	vecSide = vecDir.Normalize();
+	vecTemp = vecDir.Normalize();
 	vecSide.x = vecSide.x - 1;
 	vecTemp.y = vecTemp.y - 1;
 	if ( vecTemp.y < -1 )
 		vecTemp.y += 2;
 	if ( vecSide.x < -1 )
 		vecSide.x += 2;
-	vecSide = Vector( vecSide.x * 16, vecTemp.y * 16, 0 );
+	vecSide = Vector( vecSide.x, vecTemp.y, 0 ) * 16;
 	vecSide = vecSide * ( RANDOM_LONG( 0, 1 ) != 0 );
 	vecSrc = vecSrc + vecSide;
 
