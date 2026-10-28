@@ -356,6 +356,27 @@ public:
 	Vector	AvoidWalls( Vector &vecDir );
 	void	Unstick( void );
 	void	FlockAlign( int iPriority );
+	// FlockAlign's step (name ours): the mean velocity of the living players
+	// in sight within 128 units
+	void AlignVelocity( void )
+	{
+		int cPlayers = 0;
+		Vector vecSum = Vector( 0, 0, 0 );
+		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+		{
+			CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
+			if ( pPlayer && pPlayer != this && pPlayer->IsAlive() && CanSee( pPlayer ) )
+			{
+				if ( ( pev->origin - pPlayer->pev->origin ).Length() < 128 )
+				{
+					cPlayers++;
+					vecSum = vecSum + pPlayer->pev->velocity;
+				}
+			}
+		}
+		Vector vecNew = vecSum / cPlayers;
+		m_vecMoveVelocity = vecNew;
+	}
 	void	FlockCohere( int iPriority );
 	void	MoveTowards( const Vector &vecDest );
 	void	ApproachEntity( CBaseEntity *pEntity, int iPriority );

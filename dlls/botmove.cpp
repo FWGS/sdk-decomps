@@ -786,49 +786,19 @@ void CBot::Unstick( void )
 //=========================================================
 void CBot::FlockAlign( int iPriority )
 {
-	if ( iPriority > m_iMovePriority )
+	if ( iPriority > GetMovePriority() )
 	{
-		int cPlayers = 0;
-		Vector vecSum = Vector( 0, 0, 0 );
-		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-		{
-			CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
-			if ( pPlayer && pPlayer != this && pPlayer->IsAlive() && CanSee( pPlayer ) )
-			{
-				if ( ( pev->origin - pPlayer->pev->origin ).Length() < 128 )
-				{
-					cPlayers++;
-					vecSum = vecSum + pPlayer->pev->velocity;
-				}
-			}
-		}
-		Vector vecNew = vecSum / cPlayers;
-		m_iMovePriority = iPriority;
-		m_cMoveGoals = 1;
-		m_vecMoveVelocity = vecNew;
+		AlignVelocity();
+		SetMovePriority( iPriority );
+		SetMoveGoals( 1 );
 	}
-	else if ( iPriority == m_iMovePriority )
+	else if ( iPriority == GetMovePriority() )
 	{
-		Vector vecOld = m_vecMoveVelocity * m_cMoveGoals;
-
-		int cPlayers = 0;
-		Vector vecSum = Vector( 0, 0, 0 );
-		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-		{
-			CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
-			if ( pPlayer && pPlayer != this && pPlayer->IsAlive() && CanSee( pPlayer ) )
-			{
-				if ( ( pev->origin - pPlayer->pev->origin ).Length() < 128 )
-				{
-					cPlayers++;
-					vecSum = vecSum + pPlayer->pev->velocity;
-				}
-			}
-		}
-		m_vecMoveVelocity = vecSum / cPlayers;
-
-		Vector vecTotal = vecOld + m_vecMoveVelocity;
-		m_vecMoveVelocity = vecTotal / ++m_cMoveGoals;
+		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
+		AlignVelocity();
+		Vector vecTotal = GetMoveVelocity() + vecOld;
+		SetMoveGoals( GetMoveGoals() + 1 );
+		SetMoveVelocity( vecTotal / GetMoveGoals() );
 	}
 }
 
