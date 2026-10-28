@@ -544,7 +544,7 @@ void CFlockingFlyer :: SpreadFlock( )
 
 			// store the magnitude of the other boid's velocity, and normalize it so we
 			// can average in a course that points away from the leader.
-			flSpeed = pList->pev->velocity.Length();
+			flSpeed = pList->pev->velocity.Length2D();
 			pList->pev->velocity = pList->pev->velocity.Normalize();
 			pList->pev->velocity = ( pList->pev->velocity + vecDir ) * 0.5;
 			pList->pev->velocity = pList->pev->velocity * flSpeed;
@@ -830,24 +830,24 @@ void CFlockingFlyer :: FlockFollowerThink( void )
 		// if we're too far away, speed up
 		if ( flDistToLeader > AFLOCK_TOO_FAR )
 		{
-			m_flGoalSpeed = m_pSquadLeader->pev->velocity.Length() * 1.5;
+			m_flGoalSpeed = m_pSquadLeader->pev->velocity.Length2D() * 1.5;
 		}
 
 		// if we're too close, slow down
 		else if ( flDistToLeader < AFLOCK_TOO_CLOSE )
 		{
-			m_flGoalSpeed = m_pSquadLeader->pev->velocity.Length() * 0.5;
+			m_flGoalSpeed = m_pSquadLeader->pev->velocity.Length2D() * 0.5;
 		}
 	}
 	else
 	{
 		// wait up! the leader isn't out in front, so we slow down to let him pass
-		m_flGoalSpeed = m_pSquadLeader->pev->velocity.Length() * 0.5;
+		m_flGoalSpeed = m_pSquadLeader->pev->velocity.Length2D() * 0.5;
 	}
 
 	SpreadFlock2();
 
-	pev->speed = pev->velocity.Length();
+	pev->speed = pev->velocity.Length2D();
 	float saveZ = pev->velocity.z; // name ours
 	pev->velocity = pev->velocity.Normalize();
 
