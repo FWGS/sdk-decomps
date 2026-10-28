@@ -2223,7 +2223,7 @@ int CBaseMonster::IRelationship ( CBaseEntity *pTarget )
 	// and on every map from povc05 on except povhz01
 	if ( pTarget->IsPlayer() || Classify() == CLASS_PLAYER_BIOWEAPON )
 	{
-		if ( (m_afMemory & bits_MEMORY_PROVOKED) || ( strcmpi( STRING( gpGlobals->mapname ), "povc05" ) >= 0 && strcmpi( STRING( gpGlobals->mapname ), "povhz01" ) ) )
+		if ( (m_afMemory & bits_MEMORY_PROVOKED) || ( stricmp( STRING( gpGlobals->mapname ), "povc05" ) >= 0 && stricmp( STRING( gpGlobals->mapname ), "povhz01" ) ) )
 		{
 			if ( Classify() == CLASS_PLAYER_BIOWEAPON )
 				return R_DL;
