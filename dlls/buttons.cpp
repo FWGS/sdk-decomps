@@ -954,7 +954,10 @@ void CBaseButton::ButtonActivate( )
 	ASSERT(m_toggle_state == TS_AT_BOTTOM);
 	m_toggle_state = TS_GOING_UP;
 	
-	if (pev->spawnflags & SF_BUTTON_DONTMOVE)
+	//LRC - unhelpfully, SF_BUTTON_DONTMOVE is the same value as
+	// SF_ROTBUTTON_NOTSOLID, so we have to assume that a rotbutton will
+	// never be DONTMOVE.
+	if (pev->spawnflags & SF_BUTTON_DONTMOVE && !m_fRotating)
 	{
 		TriggerAndWait();
 	}
@@ -1021,7 +1024,7 @@ void CBaseButton::ButtonReturn( void )
 
 	pev->frame = 0;			// use normal textures
 
-	if (pev->spawnflags & SF_BUTTON_DONTMOVE)
+	if (pev->spawnflags & SF_BUTTON_DONTMOVE && !m_fRotating)
 	{
 		ButtonBackHome();
 	}
