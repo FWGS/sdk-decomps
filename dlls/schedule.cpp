@@ -1258,6 +1258,12 @@ case TASK_GET_PATH_TO_BESTSCENT:
 			TaskComplete();
 			break;
 		}
+	case TASK_SOUND_DIE:
+		{
+			DeathSound();
+			TaskComplete();
+			break;
+		}
 	case TASK_SOUND_IDLE:
 		{
 			IdleSound();
@@ -1272,7 +1278,6 @@ case TASK_GET_PATH_TO_BESTSCENT:
 			break;
 		}
 	case TASK_SOUND_DEATH:
-	case TASK_SOUND_DIE:
 		{
 			DeathSound();
 			TaskComplete();
