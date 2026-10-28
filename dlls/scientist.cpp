@@ -542,12 +542,12 @@ void CScientist :: RunTask( Task_t *pTask )
 			{
 				float distance;
 
-				distance = ( m_vecMoveGoal - pev->origin ).Length();
+				distance = ( m_vecMoveGoal - pev->origin ).Length2D();
 				// Re-evaluate when you think your finished, or the target has moved too far
 				if ( (distance < pTask->flData) || (m_vecMoveGoal - m_hTargetEnt->pev->origin).Length() > pTask->flData * 0.5 )
 				{
 					m_vecMoveGoal = m_hTargetEnt->pev->origin;
-					distance = ( m_vecMoveGoal - pev->origin ).Length();
+					distance = ( m_vecMoveGoal - pev->origin ).Length2D();
 					FRefreshRoute();
 				}
 

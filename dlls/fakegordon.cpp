@@ -189,7 +189,7 @@ void CFakeGordon :: RunTask( Task_t *pTask )
 
 			if (pSpeaker)
 			{
-				if ((pSpeaker->pev->origin - pev->origin).Length() < 256)
+				if ((pSpeaker->pev->origin - pev->origin).Length2D() < 256)
 				{
 					float yaw = VecToYaw(pSpeaker->pev->origin - pev->origin) - pev->angles.y;
 

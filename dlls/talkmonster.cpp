@@ -526,7 +526,7 @@ void CTalkMonster :: RunTask( Task_t *pTask )
 		if ( pTask->iTask == TASK_TLK_CLIENT_STARE )
 		{
 			// fail out if the player looks away or moves away.
-			if ( ( pPlayer->v.origin - pev->origin ).Length() > TLK_STARE_DIST )
+			if ( ( pPlayer->v.origin - pev->origin ).Length2D() > TLK_STARE_DIST )
 			{
 				// player moved away.
 				TaskFail();
@@ -584,7 +584,7 @@ void CTalkMonster :: RunTask( Task_t *pTask )
 		{
 			float distance;
 
-			distance = (m_vecLastPosition - pev->origin).Length();
+			distance = (m_vecLastPosition - pev->origin).Length2D();
 
 			// Walk path until far enough away
 			if ( distance > pTask->flData || MovementIsComplete() )
@@ -1340,7 +1340,7 @@ Schedule_t* CTalkMonster :: GetScheduleOfType ( int Type )
 				{
 					// watch the client.
 					UTIL_MakeVectors ( pPlayer->v.angles );
-					if ( ( pPlayer->v.origin - pev->origin ).Length() < TLK_STARE_DIST	&& 
+					if ( ( pPlayer->v.origin - pev->origin ).Length2D() < TLK_STARE_DIST	&& 
 						 UTIL_DotPoints( pPlayer->v.origin, pev->origin, gpGlobals->v_forward ) >= m_flFieldOfView )
 					{
 						// go into the special STARE schedule if the player is close, and looking at me too.

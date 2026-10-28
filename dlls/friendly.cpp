@@ -330,7 +330,7 @@ BOOL CFriendly :: CheckRangeAttack1 ( float flDot, float flDist )
 			gravity = 1;
 
 		float h = m_hEnemy->pev->origin.z + m_hEnemy->pev->view_ofs.z - pev->origin.z - 47.0;
-		float enemydist = ( m_hEnemy->pev->origin - pev->origin ).Length();
+		float enemydist = ( m_hEnemy->pev->origin - pev->origin ).Length2D();
 
 		float flMaxRange = powf( 1600, 4 ) / powf( gravity, 2 );
 		flMaxRange = flMaxRange - 2 * powf( 1600, 2 ) * h / gravity;

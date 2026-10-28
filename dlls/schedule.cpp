@@ -398,7 +398,7 @@ void CBaseMonster :: RunTask ( Task_t *pTask )
 				CBaseEntity *pSpeaker = CBaseEntity::Instance( g_engfuncs.pfnPEntityOfEntIndex( g_iT2DefSpeaker ) );
 				if ( pSpeaker )
 				{
-					if ( (pSpeaker->pev->origin - pev->origin).Length() < 256 )
+					if ( (pSpeaker->pev->origin - pev->origin).Length2D() < 256 )
 					{
 						float yaw = VecToYaw( pSpeaker->pev->origin - pev->origin ) - pev->angles.y;
 
@@ -435,12 +435,12 @@ void CBaseMonster :: RunTask ( Task_t *pTask )
 				TaskFail();
 			else
 			{
-				distance = ( m_vecMoveGoal - pev->origin ).Length();	// T2DEF: Length, not Length2D
+				distance = ( m_vecMoveGoal - pev->origin ).Length2D();
 				// Re-evaluate when you think your finished, or the target has moved too far
 				if ( (distance < pTask->flData) || (m_vecMoveGoal - m_hTargetEnt->pev->origin).Length() > pTask->flData * 0.5 )
 				{
 					m_vecMoveGoal = m_hTargetEnt->pev->origin;
-					distance = ( m_vecMoveGoal - pev->origin ).Length();	// T2DEF: Length, not Length2D
+					distance = ( m_vecMoveGoal - pev->origin ).Length2D();
 					FRefreshRoute();
 				}
 

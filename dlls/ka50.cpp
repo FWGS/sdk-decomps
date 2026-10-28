@@ -539,7 +539,7 @@ void Cka50 :: HuntThink( void )
 
 	m_vecTarget = (m_posTarget - pev->origin).Normalize();
 
-	float flLength = (pev->origin - m_posDesired).Length();
+	float flLength = (pev->origin - m_posDesired).Length2D();
 
 	if (m_pGoalEnt)
 	{
@@ -553,7 +553,7 @@ void Cka50 :: HuntThink( void )
 				m_posDesired = m_pGoalEnt->pev->origin;
 				UTIL_MakeAimVectors( m_pGoalEnt->pev->angles );
 				m_vecGoal = gpGlobals->v_forward;
-				flLength = (pev->origin - m_posDesired).Length();
+				flLength = (pev->origin - m_posDesired).Length2D();
 			}
 		}
 	}
