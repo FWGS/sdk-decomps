@@ -661,6 +661,17 @@ void CDmlGrenade::WeaponIdle( void )
 		pev->body = 1;
 		SendWeaponAnim( DMLGRENADE_THROW );
 
+		// sic: never runs. Retail inlines more of the second shell's vector
+		// math than the live code leaves budget for, so there was dead code
+		// in the function; the SDK's choice of throw animation is a guess
+		if ( 0 )
+		{
+			if ( flVel < 500 )
+				SendWeaponAnim( DMLGRENADE_THROW );
+			else if ( flVel < 1000 )
+				SendWeaponAnim( DMLGRENADE_THROW );
+		}
+
 		// player "shoot" animation
 		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
@@ -711,6 +722,12 @@ void CDmlGrenade::WeaponIdle( void )
 			m_bRetired = TRUE;
 			return;
 		}
+
+		// sic: never reached (every branch above returns); the SDK's tail,
+		// part of the dead code noted at the throw
+		m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
+		m_flReleaseThrow = -1;
+		return;
 	}
 	else
 	{
