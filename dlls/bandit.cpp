@@ -614,7 +614,7 @@ void CBaseBandit :: FireGauss ( Vector vecOrigSrc, Vector vecDir, float flDamage
 {
 	Vector vecSrc = vecOrigSrc;
 	Vector vecDest = vecSrc + vecDir * 8192;
-	TraceResult tr;
+	TraceResult tr, beam_tr;	// sic: beam_tr is the SDK gauss's, unused
 
 	UTIL_TraceLine( vecSrc, vecDest, dont_ignore_monsters, ENT( pShooter->pev ), &tr );
 
@@ -628,8 +628,7 @@ void CBaseBandit :: FireGauss ( Vector vecOrigSrc, Vector vecDir, float flDamage
 
 	pShooter->pev->effects |= EF_MUZZLEFLASH;
 
-	Vector vecMuzzle;	// sic: not used
-	vecMuzzle = vecSrc + gpGlobals->v_up * -8 + gpGlobals->v_right * 3;
+	Vector vecMuzzle = vecSrc + gpGlobals->v_up * -8 + gpGlobals->v_right * 3;	// sic: not used
 
 	if ( pEntity->pev->takedamage )
 	{
