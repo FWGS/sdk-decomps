@@ -222,21 +222,32 @@ void CRpgRocket :: IgniteThink( void  )
 }
 
 
+// what a rocket follows: Ka-50 chaff when there is any, else the laser spot (names ours)
+char *g_szRocketTarget[] = { "ka50_chaff", "laser_spot" };
+
 void CRpgRocket :: FollowThink( void  )
 {
 	CBaseEntity *pOther = NULL;
+	CBaseEntity *pChaffEnt = NULL;
 	Vector vecTarget;
 	Vector vecDir;
 	float flDist, flMax, flDot;
 	TraceResult tr;
+	int iTarget;
 
 	UTIL_MakeAimVectors( pev->angles );
 
 	vecTarget = gpGlobals->v_forward;
 	flMax = 4096;
 	
+	pChaffEnt = UTIL_FindEntityByClassname( pOther, "ka50_chaff" );
+	if ( pChaffEnt )
+		iTarget = 0;
+	else
+		iTarget = 1;
+
 	// Examine all entities within a reasonable radius
-	while ((pOther = UTIL_FindEntityByClassname( pOther, "laser_spot" )) != NULL)
+	while ((pOther = UTIL_FindEntityByClassname( pOther, g_szRocketTarget[ iTarget ] )) != NULL)
 	{
 		UTIL_TraceLine ( pev->origin, pOther->pev->origin, dont_ignore_monsters, ENT(pev), &tr );
 		// ALERT( at_console, "%f\n", tr.flFraction );
