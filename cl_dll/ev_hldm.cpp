@@ -889,7 +889,7 @@ void EV_TankMGuns( event_args_t *args )
 
 void EV_TurretBullets( event_args_t *args )
 {
-	static vec3_t vecSpreads[] = { Vector( 0, 0, 0 ), Vector( 0.025, 0.025, 0.025 ), Vector( 0.05, 0.05, 0.05 ), Vector( 0.1, 0.1, 0.1 ), Vector( 0.25, 0.25, 0.25 ) };
+	static vec3_t vecTurretSpreads[] = { Vector( 0, 0, 0 ), Vector( 0.025, 0.025, 0.025 ), Vector( 0.05, 0.05, 0.05 ), Vector( 0.1, 0.1, 0.1 ), Vector( 0.25, 0.25, 0.25 ) };
 
 	int idx;
 	vec3_t origin;
@@ -910,7 +910,7 @@ void EV_TurretBullets( event_args_t *args )
 	forward[2] = forward[2] * -1;
 	vecAiming[2] = vecAiming[2] * -1;
 
-	EV_HLDM_FireBullets( idx, forward, right, up, (int)args->fparam1, vecSrc, vecAiming, vecSpreads[ args->iparam1 ], 4096, args->iparam2, 1, &tracerCount[idx-1] );
+	EV_HLDM_FireBullets( idx, forward, right, up, (int)args->fparam1, vecSrc, vecAiming, vecTurretSpreads[ args->iparam1 ], 4096, args->iparam2, 1, &tracerCount[idx-1] );
 }
 
 void EV_MonsterSentry( event_args_t *args )
@@ -1324,9 +1324,9 @@ void EV_SpinGauss( event_args_t *args )
 }
 
 // FIXME, pass m_fPrimaryFire in as parameter!!!
-// the gauss pistol fired a beam this frame, and who fired it
-int g_iGaussBeamFired;
-int g_iGaussBeamOwner;
+// the gauss pistol fired a beam this frame, and who fired it (entity.cpp)
+extern int g_fGaussBeamFired;
+extern int g_iGaussBeamOwner;
 
 void EV_FireGauss( event_args_t *args )
 {
@@ -1407,7 +1407,7 @@ void EV_FireGauss( event_args_t *args )
 		VectorCopy( origin, vecNormal );
 	}
 
-	g_iGaussBeamFired = 1;
+	g_fGaussBeamFired = 1;
 	g_iGaussBeamOwner = idx;
 	gEngfuncs.pEfxAPI->R_BeamEntPoint( iStartEnt, vecBeam, m_iBeam, 0.1, 0.8, 0, 128, 0, 0, 0, 255, 255, 255 );
 

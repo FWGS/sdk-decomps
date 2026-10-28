@@ -18,6 +18,11 @@ void Game_AddObjects( void );
 
 extern vec3_t v_origin;
 
+// EV_FireGauss's: the gauss pistol fired a beam this frame, and who fired it.
+// Retail's entity.obj holds them, after beams[] (g_fGaussBeamFired: name ours)
+int g_fGaussBeamFired;
+int g_iGaussBeamOwner;
+
 extern "C" 
 {
 	int DLLEXPORT HUD_AddEntity( int type, struct cl_entity_s *ent, const char *modelname );
@@ -419,6 +424,8 @@ void BeamEndModel( void )
 
 void Beams( void )
 {
+	static float lasttime;	// sic: the SDK's, unused; retail has its 4 bytes before beams[]
+
 	// Gunman draws no test beam
 }
 #endif
