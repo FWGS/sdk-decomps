@@ -126,13 +126,13 @@ void CClassMenuPanel::Open( void )
 void CClassMenuPanel::Initialize( void )
 {
 	// clears the effects the events started
-	while ( g_Effects.m_iCount )
+	while ( g_ClientEffects.m_iCount )
 	{
-		if ( g_Effects.m_pHead )
+		if ( g_ClientEffects.m_pHead )
 		{
-			CEffectNode *pNode = g_Effects.m_pHead;
-			g_Effects.m_iCount--;
-			g_Effects.m_pHead = pNode->m_pNext;
+			CEffectNode *pNode = g_ClientEffects.m_pHead;
+			g_ClientEffects.m_iCount--;
+			g_ClientEffects.m_pHead = pNode->m_pNext;
 			delete pNode;
 		}
 	}

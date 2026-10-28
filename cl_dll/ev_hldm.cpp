@@ -273,13 +273,13 @@ bool EV_HLDM_TextureEffect( int idx, pmtrace_t *ptr, float *vecSrc, float *vecEn
 				for ( int i = 0; i < 3; i++ )
 					gEngfuncs.pEfxAPI->R_SparkShower( ptr->endpos );
 
-				g_Effects.Add( CEffect( 6, ptr->endpos, ptr->plane.normal, 0.4, EFFECT_FLAME, 200, 20, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/flambeam.spr" ) ) ) );
+				g_ClientEffects.Add( CEffect( 6, ptr->endpos, ptr->plane.normal, 0.4, EFFECT_FLAME, 200, 20, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/flambeam.spr" ) ) ) );
 				return false;
 			}
 
 			if ( chTextureType == CHAR_TEX_CONCRETE )
 			{
-				g_Effects.Add( CEffect( 3, ptr->endpos, ptr->plane.normal, 0.4, EFFECT_FLAME, 200, 20, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/flambeam.spr" ) ) ) );
+				g_ClientEffects.Add( CEffect( 3, ptr->endpos, ptr->plane.normal, 0.4, EFFECT_FLAME, 200, 20, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/flambeam.spr" ) ) ) );
 				gEngfuncs.pEfxAPI->R_BulletImpactParticles( ptr->endpos );
 				return false;
 			}
@@ -331,7 +331,7 @@ bool EV_HLDM_TextureEffect( int idx, pmtrace_t *ptr, float *vecSrc, float *vecEn
 			// a force field
 			if ( !strcmp( pTextureName + 2, "ff" ) )
 			{
-				g_Effects.Add( CEffect( 20, ptr->endpos, ptr->plane.normal, 1, EFFECT_SPRITE, 0, 10, 20, 10, 0, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/ripple.spr" ) ) ) );
+				g_ClientEffects.Add( CEffect( 20, ptr->endpos, ptr->plane.normal, 1, EFFECT_SPRITE, 0, 10, 20, 10, 0, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/ripple.spr" ) ) ) );
 			}
 
 			gEngfuncs.pfnRandomLong( 0, 0x7fff );
@@ -1421,7 +1421,7 @@ void EV_FireGauss( event_args_t *args )
 			if ( gEngfuncs.GetMaxClients() < 2 )
 				gEngfuncs.pEfxAPI->R_Sprite_Trail( TE_SPRITETRAIL, tr.endpos, vecEnd, m_iGlow, 2, 0, gEngfuncs.pfnRandomFloat( 0, 20 ) / 100, 100, 255, 200 );
 
-			g_Effects.Add( CEffect( 8, vecBeam + vecNormal * 5, vecNormal, 0.5, EFFECT_FLAME2, 255, 20, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/gaussimpact.spr" ) ) ) );
+			g_ClientEffects.Add( CEffect( 8, vecBeam + vecNormal * 5, vecNormal, 0.5, EFFECT_FLAME2, 255, 20, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/gaussimpact.spr" ) ) ) );
 		}
 		else if ( pEntity->takedamage && EV_IsPlayer( pEntity->info ) )
 		{
@@ -1429,7 +1429,7 @@ void EV_FireGauss( event_args_t *args )
 		}
 	}
 
-	g_Effects.Add( CEffect( 30, vecBeam, vecNormal, 3, EFFECT_SHOCK, 255, 32, gEngfuncs.GetClientTime(), NULL ) );
+	g_ClientEffects.Add( CEffect( 30, vecBeam, vecNormal, 3, EFFECT_SHOCK, 255, 32, gEngfuncs.GetClientTime(), NULL ) );
 
 	pEntity = gEngfuncs.pEventAPI->EV_GetPhysent( tr.ent );
 
@@ -1470,7 +1470,7 @@ void EV_BatbotBeam( event_args_t *args )
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 
-	g_Effects.Add( CEffect( 4, origin, Vector( 0, 0, -1 ), 0.1, EFFECT_BEAM, 240, 6, idx, 0, 0, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/hugeball.spr" ) ) ) );
+	g_ClientEffects.Add( CEffect( 4, origin, Vector( 0, 0, -1 ), 0.1, EFFECT_BEAM, 240, 6, idx, 0, 0, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/hugeball.spr" ) ) ) );
 }
 
 void EV_RustbitImpact( event_args_t *args )
@@ -1593,7 +1593,7 @@ void EV_BallLightning( event_args_t *args )
 	if ( !fBurn )
 		iSize = 65;
 
-	g_Effects.Add( CEffect( iSize, tr.endpos, tr.plane.normal, 0, EFFECT_SPRITE, 0, 3, 10, 11, 11, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/ballpop.spr" ) ) ) );
+	g_ClientEffects.Add( CEffect( iSize, tr.endpos, tr.plane.normal, 0, EFFECT_SPRITE, 0, 3, 10, 11, 11, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/ballpop.spr" ) ) ) );
 }
 
 void EV_KataImpact( event_args_t *args )
@@ -1658,7 +1658,7 @@ void EV_KataImpact( event_args_t *args )
 		}
 	}
 
-	g_Effects.Add( CEffect( 130, tr.endpos, tr.plane.normal, 0, EFFECT_SPRITE, 0, 3, 12, 18, 18, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/kataimpact.spr" ) ) ) );
+	g_ClientEffects.Add( CEffect( 130, tr.endpos, tr.plane.normal, 0, EFFECT_SPRITE, 0, 3, 12, 18, 18, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/kataimpact.spr" ) ) ) );
 }
 
 void EV_SniperShot( event_args_t *args )
@@ -1717,11 +1717,11 @@ void EV_SniperShot( event_args_t *args )
 		iSize = 100;
 		for ( int i = 80; i < flLength; i += 80 )
 		{
-			g_Effects.Add( CEffect( 13, vecStart + forward * i, forward, 0.1, EFFECT_RING, 240, 5, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/gaussring.spr" ) ) ) );
+			g_ClientEffects.Add( CEffect( 13, vecStart + forward * i, forward, 0.1, EFFECT_RING, 240, 5, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/gaussring.spr" ) ) ) );
 		}
 	}
 
-	g_Effects.Add( CEffect( iSize, vecEnd, tr.plane.normal, 0, EFFECT_SPRITE, 0, 3, 13, 9, 9, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/gausspoof.spr" ) ) ) );
+	g_ClientEffects.Add( CEffect( iSize, vecEnd, tr.plane.normal, 0, EFFECT_SPRITE, 0, 3, 13, 9, 9, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/gausspoof.spr" ) ) ) );
 
 	dl = gEngfuncs.pEfxAPI->CL_AllocDlight( 0 );
 	VectorCopy( vecEnd, dl->origin );
@@ -1797,7 +1797,7 @@ void EV_ChargedImpact( event_args_t *args )
 	dl->decay = 80;
 	dl->die = gEngfuncs.GetClientTime() + 0.5;
 
-	g_Effects.Add( CEffect( 150, tr.endpos, tr.plane.normal, 4, EFFECT_SHOCK, 255, 8, gEngfuncs.GetClientTime(), NULL ) );
+	g_ClientEffects.Add( CEffect( 150, tr.endpos, tr.plane.normal, 4, EFFECT_SHOCK, 255, 8, gEngfuncs.GetClientTime(), NULL ) );
 
 	if ( pe && pe->takedamage && EV_IsPlayer( pe->info ) )
 		EV_HLDM_PlayerBlood( 50, forward, origin );
@@ -1867,7 +1867,7 @@ void EV_RapidImpact( event_args_t *args )
 	if ( pe && pe->solid == SOLID_BSP )
 		gEngfuncs.pEfxAPI->R_Explosion( vecSpot, gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/gausspuff.spr" ), 0.25, 15, TE_EXPLFLAG_NODLIGHTS | TE_EXPLFLAG_NOSOUND | TE_EXPLFLAG_NOPARTICLES );
 
-	g_Effects.Add( CEffect( 30, tr.endpos, tr.plane.normal, 4, EFFECT_SHOCK, 255, 32, gEngfuncs.GetClientTime(), NULL ) );
+	g_ClientEffects.Add( CEffect( 30, tr.endpos, tr.plane.normal, 4, EFFECT_SHOCK, 255, 32, gEngfuncs.GetClientTime(), NULL ) );
 
 	if ( pe && pe->takedamage && EV_IsPlayer( pe->info ) )
 		EV_HLDM_PlayerBlood( 12, forward, origin );
@@ -1981,7 +1981,7 @@ void EV_ClusterExplosion( event_args_t *args )
 
 	AngleVectors( angles, forward, right, up );
 
-	g_Effects.Add( CEffect( 90, origin, Vector( 0, 0, 0 ), 3, EFFECT_SPHERE, 240, 10, gEngfuncs.GetClientTime(), NULL ) );
+	g_ClientEffects.Add( CEffect( 90, origin, Vector( 0, 0, 0 ), 3, EFFECT_SPHERE, 240, 10, gEngfuncs.GetClientTime(), NULL ) );
 }
 
 void EV_SphereExplode( event_args_t *args )
@@ -1999,7 +1999,7 @@ void EV_SphereExplode( event_args_t *args )
 
 	VectorCopy( args->origin, origin );
 
-	g_Effects.Add( CEffect( flRadius, origin, Vector( 0, 0, 0 ), flSpeed, EFFECT_SPHERE, flBrightness, flFade, gEngfuncs.GetClientTime(), NULL ) );
+	g_ClientEffects.Add( CEffect( flRadius, origin, Vector( 0, 0, 0 ), flSpeed, EFFECT_SPHERE, flBrightness, flFade, gEngfuncs.GetClientTime(), NULL ) );
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2066,7 +2066,7 @@ void EV_RocketSmoke( event_args_t *args )
 
 	AngleVectors( angles, forward, right, up );
 
-	g_Effects.Add( CEffect( 16, origin, forward, 2.4, EFFECT_RING, 255, 15, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/firebeam.spr" ) ) ) );
+	g_ClientEffects.Add( CEffect( 16, origin, forward, 2.4, EFFECT_RING, 255, 15, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/firebeam.spr" ) ) ) );
 }
 
 void EV_Cylinder( event_args_t *args )
@@ -2080,7 +2080,7 @@ void EV_Cylinder( event_args_t *args )
 
 	AngleVectors( angles, forward, right, up );
 
-	g_Effects.Add( CEffect( 10, origin, forward, 0.2, EFFECT_RING, 220, 4, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/smoke.spr" ) ) ) );
+	g_ClientEffects.Add( CEffect( 10, origin, forward, 0.2, EFFECT_RING, 220, 4, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/smoke.spr" ) ) ) );
 }
 
 void EV_VolumeExplosion( event_args_t *args )

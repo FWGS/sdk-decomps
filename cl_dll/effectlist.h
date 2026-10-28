@@ -175,6 +175,6 @@ public:
 	CEffectNode	*m_pHead;
 };
 
-extern CEffectList g_Effects;
+extern CEffectList g_ClientEffects;
 
 #endif // EFFECTLIST_H

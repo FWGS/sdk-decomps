@@ -38,17 +38,24 @@ vec3_t g_vecSpherePoints[ SPHERE_POINTS ];
 int g_iSphereTris[ SPHERE_TRIS * 3 ];
 vec3_t g_vecSphereTexCoords[ SPHERE_POINTS ];
 
-CEffectList g_Effects;
+CEffectList g_ClientEffects;	// name ours
 
 // retail defines two more vectors here that nothing reads (names ours)
-vec3_t g_vecUnused1;
-vec3_t g_vecUnused2;
+vec3_t g_vecUnknownA;
+vec3_t g_vecUnknown0;
 
 // and an initialised float nothing reads, the first of tri.obj's data
 // (1.0, before the sprite names; name ours)
 float g_flUnused = 1.0;
 
-static float g_flLastTime;
+// sic: retail's tri.obj also has a 12-byte and a 16-byte slot that nothing
+// reads or writes and no constructor runs for (names and types ours);
+// g_flLastTime and InitSphere's bInit are zero-initialised, after them, as
+// in retail
+static int s_iUnknown_1[3];
+static int s_iSpare[4];
+
+static float g_flLastTime = 0;
 
 void InitSphere( void );
 
@@ -285,20 +292,20 @@ void DrawShocks( void )
 {
 	float flTime = gEngfuncs.GetClientTime();
 
-	for ( int i = 0; i < g_Effects.m_iCount; i++ )
+	for ( int i = 0; i < g_ClientEffects.m_iCount; i++ )
 	{
-		if ( g_Effects[i].m_iType != EFFECT_SHOCK )
+		if ( g_ClientEffects[i].m_iType != EFFECT_SHOCK )
 			continue;
 
-		float flBrightness = g_Effects[i].m_flBrightness - g_Effects[i].m_flFadeSpeed * ( flTime - g_Effects[i].m_flStartTime ) * 30;
-		float flScale = g_Effects[i].m_flScale + g_Effects[i].m_flScaleSpeed * ( flTime - g_Effects[i].m_flStartTime ) * 30;
+		float flBrightness = g_ClientEffects[i].m_flBrightness - g_ClientEffects[i].m_flFadeSpeed * ( flTime - g_ClientEffects[i].m_flStartTime ) * 30;
+		float flScale = g_ClientEffects[i].m_flScale + g_ClientEffects[i].m_flScaleSpeed * ( flTime - g_ClientEffects[i].m_flStartTime ) * 30;
 
 		if ( flBrightness < 1 )
 			flBrightness = 1;
 
-		if ( g_Effects[i].m_flMaxScale < flScale )
+		if ( g_ClientEffects[i].m_flMaxScale < flScale )
 		{
-			g_Effects.Remove( g_Effects[i].m_iId );
+			g_ClientEffects.Remove( g_ClientEffects[i].m_iId );
 			continue;
 		}
 
@@ -307,8 +314,8 @@ void DrawShocks( void )
 
 		gEngfuncs.pTriAPI->SpriteTexture( (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/gaussshock.spr" ) ), 0 );
 
-		vecOrigin = g_Effects[i].m_vecOrigin;
-		vec3_t vecNormal = g_Effects[i].m_vecAngles;
+		vecOrigin = g_ClientEffects[i].m_vecOrigin;
+		vec3_t vecNormal = g_ClientEffects[i].m_vecAngles;
 		VectorAngles( vecNormal, vecAngles );
 		angles = vecAngles;
 		AngleVectors( angles, forward, right, up );
@@ -418,9 +425,9 @@ void DrawEffect8( void )
 {
 	float flTime = gEngfuncs.GetClientTime();
 
-	for ( int i = 0; i < g_Effects.m_iCount; i++ )
+	for ( int i = 0; i < g_ClientEffects.m_iCount; i++ )
 	{
-		CEffect effect = g_Effects[i];
+		CEffect effect = g_ClientEffects[i];
 
 		if ( effect.m_iType != EFFECT_8 )
 			continue;
@@ -459,9 +466,9 @@ void DrawBeams( void )
 {
 	float flTime = gEngfuncs.GetClientTime();
 
-	for ( int i = 0; i < g_Effects.m_iCount; i++ )
+	for ( int i = 0; i < g_ClientEffects.m_iCount; i++ )
 	{
-		CEffect effect = g_Effects[i];
+		CEffect effect = g_ClientEffects[i];
 
 		if ( effect.m_iType != EFFECT_BEAM )
 			continue;
@@ -473,7 +480,7 @@ void DrawBeams( void )
 
 		if ( !pEntity )
 		{
-			g_Effects.Remove( effect.m_iId );
+			g_ClientEffects.Remove( effect.m_iId );
 			continue;
 		}
 
@@ -484,7 +491,7 @@ void DrawBeams( void )
 
 		if ( flBrightness < 5 )
 		{
-			g_Effects.Remove( effect.m_iId );
+			g_ClientEffects.Remove( effect.m_iId );
 		}
 		else if ( effect.m_pSprite )
 		{
@@ -505,9 +512,9 @@ void DrawRings( void )
 {
 	float flTime = gEngfuncs.GetClientTime();
 
-	for ( int i = 0; i < g_Effects.m_iCount; i++ )
+	for ( int i = 0; i < g_ClientEffects.m_iCount; i++ )
 	{
-		CEffect effect = g_Effects[i];
+		CEffect effect = g_ClientEffects[i];
 
 		if ( effect.m_iType == EFFECT_RING )
 		{
@@ -519,7 +526,7 @@ void DrawRings( void )
 
 			if ( flBrightness < 5 )
 			{
-				g_Effects.Remove( effect.m_iId );
+				g_ClientEffects.Remove( effect.m_iId );
 			}
 			else if ( effect.m_pSprite )
 			{
@@ -543,9 +550,9 @@ void DrawSprites( void )
 {
 	float flTime = gEngfuncs.GetClientTime();
 
-	for ( int i = 0; i < g_Effects.m_iCount; i++ )
+	for ( int i = 0; i < g_ClientEffects.m_iCount; i++ )
 	{
-		CEffect effect = g_Effects[i];
+		CEffect effect = g_ClientEffects[i];
 
 		if ( effect.m_iType != EFFECT_SPRITE )
 			continue;
@@ -571,13 +578,13 @@ void DrawSprites( void )
 		{
 			if ( flFrames > effect.m_iBlue )
 			{
-				g_Effects.Remove( effect.m_iId );
+				g_ClientEffects.Remove( effect.m_iId );
 				continue;
 			}
 		}
 		else if ( flBrightness < 4 )
 		{
-			g_Effects.Remove( effect.m_iId );
+			g_ClientEffects.Remove( effect.m_iId );
 			continue;
 		}
 
@@ -589,8 +596,8 @@ void DrawSprites( void )
 
 		gEngfuncs.pTriAPI->SpriteTexture( effect.m_pSprite, (int)flFrame );
 
-		vecOrigin = g_Effects[i].m_vecOrigin;
-		vec3_t vecNormal = g_Effects[i].m_vecAngles;
+		vecOrigin = g_ClientEffects[i].m_vecOrigin;
+		vec3_t vecNormal = g_ClientEffects[i].m_vecAngles;
 		VectorAngles( vecNormal, vecAngles );
 		angles = vecAngles;
 		AngleVectors( angles, forward, right, up );
@@ -657,9 +664,9 @@ void DrawFlames( void )
 {
 	float flTime = gEngfuncs.GetClientTime();
 
-	for ( int i = 0; i < g_Effects.m_iCount; i++ )
+	for ( int i = 0; i < g_ClientEffects.m_iCount; i++ )
 	{
-		CEffect effect = g_Effects[i];
+		CEffect effect = g_ClientEffects[i];
 
 		if ( effect.m_iType != EFFECT_FLAME && effect.m_iType != EFFECT_FLAME2 && effect.m_iType != EFFECT_FLAME3 )
 			continue;
@@ -675,7 +682,7 @@ void DrawFlames( void )
 
 		if ( flScale > effect.m_flMaxScale )
 		{
-			g_Effects.Remove( effect.m_iId );
+			g_ClientEffects.Remove( effect.m_iId );
 		}
 		else if ( effect.m_pSprite )
 		{
@@ -730,18 +737,18 @@ void DrawSpheres( void )
 {
 	float flTime = gEngfuncs.GetClientTime();
 
-	for ( int i = 0; i < g_Effects.m_iCount; i++ )
+	for ( int i = 0; i < g_ClientEffects.m_iCount; i++ )
 	{
-		CEffect effect = g_Effects[i];
+		CEffect effect = g_ClientEffects[i];
 
 		if ( effect.m_iType == EFFECT_SPHERE )
 		{
-			float flBrightness = g_Effects[i].m_flBrightness - g_Effects[i].m_flFadeSpeed * ( flTime - g_Effects[i].m_flStartTime ) * 30;
-			float flScale = g_Effects[i].m_flScale + g_Effects[i].m_flScaleSpeed * ( flTime - g_Effects[i].m_flStartTime ) * 30;
+			float flBrightness = g_ClientEffects[i].m_flBrightness - g_ClientEffects[i].m_flFadeSpeed * ( flTime - g_ClientEffects[i].m_flStartTime ) * 30;
+			float flScale = g_ClientEffects[i].m_flScale + g_ClientEffects[i].m_flScaleSpeed * ( flTime - g_ClientEffects[i].m_flStartTime ) * 30;
 
 			if ( flScale > effect.m_flMaxScale )
 			{
-				g_Effects.Remove( effect.m_iId );
+				g_ClientEffects.Remove( effect.m_iId );
 			}
 			else
 			{
@@ -806,7 +813,7 @@ Builds the sphere mesh the first time it is needed
 */
 void InitSphere( void )
 {
-	static bool bInit;
+	static bool bInit = false;
 	int i, j;
 
 	if ( bInit )
