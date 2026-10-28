@@ -981,8 +981,7 @@ void CMantaShip :: MantaThink( void )
 				UTIL_MakeAimVectors( m_pGoalEnt->pev->angles );
 				m_vecGoal = gpGlobals->v_forward;
 				flLength = (pev->origin - m_posDesired).Length();
-				Vector vecDir;
-				vecDir = m_pGoalEnt->pev->origin - pev->origin;
+				Vector vecDir = m_pGoalEnt->pev->origin - pev->origin;
 				pev->velocity = vecDir.Normalize() * 300;
 			}
 		}
@@ -1014,7 +1013,8 @@ void CMantaShip :: MantaThink( void )
 	// turn to face the path entity, faster the more it is off
 	if ( m_pGoalEnt )
 	{
-		Vector vecAngles = UTIL_VecToAngles( pev->origin - m_pGoalEnt->pev->origin );
+		Vector vecAngles;
+		vecAngles = UTIL_VecToAngles( pev->origin - m_pGoalEnt->pev->origin );
 		vecAngles.y += 180;
 
 		if ( pev->angles.y < 0 )
