@@ -579,7 +579,7 @@ void CBotNav :: Save( void )
 //=========================================================
 
 // is the floor below vecGoal in plain sight of vecNode?
-static BOOL NodeReachesGoal( const Vector &vecNode, const Vector &vecGoal )	// name ours
+BOOL NodeReachesGoal( const Vector &vecNode, const Vector &vecGoal )	// name ours
 {
 	TraceResult tr;
 	Vector vecDown = Vector( vecGoal.x, vecGoal.y, vecGoal.z - 4096 );
@@ -709,10 +709,10 @@ CBotNode *CBotNav :: FindVisibleNode( CBaseEntity *pLooker, CBotNode *pAfter )
 	return pNode;
 }
 
-static CBotLandmark *NearestLandmark( const Vector &vec );
-static BOOL LandmarkLeadsTo( CBotLandmark *pTarget, CBotLandmark *pAvoid, CBotLandmark *pFrom );
-static CBotLandmark *LandmarkBefore( CBotLandmark *pTarget, CBotLandmark *pFrom );
-static BOOL LandmarkCloser( CBotLandmark *pMark, CBotLandmark *pBest, const Vector &vecGoal );
+CBotLandmark *NearestLandmark( const Vector &vec );
+BOOL LandmarkLeadsTo( CBotLandmark *pTarget, CBotLandmark *pAvoid, CBotLandmark *pFrom );
+CBotLandmark *LandmarkBefore( CBotLandmark *pTarget, CBotLandmark *pFrom );
+BOOL LandmarkCloser( CBotLandmark *pMark, CBotLandmark *pBest, const Vector &vecGoal );
 
 //=========================================================
 // FindPath - depth-first search from pNode for a node whose
@@ -1061,7 +1061,7 @@ void CInfoBotlandmark :: KeyValue( KeyValueData *pkvd )
 }
 
 // the landmark nearest vec, by 2D distance
-static CBotLandmark *NearestLandmark( const Vector &vec )
+CBotLandmark *NearestLandmark( const Vector &vec )
 {
 	CBotLandmark *pBest = g_BotNavigator.m_pLandmarks;	// sic: the first one is never measured
 
@@ -1083,7 +1083,7 @@ static CBotLandmark *NearestLandmark( const Vector &vec )
 }
 
 // does pFrom lead to pTarget without passing pAvoid?
-static BOOL LandmarkLeadsTo( CBotLandmark *pTarget, CBotLandmark *pAvoid, CBotLandmark *pFrom )
+BOOL LandmarkLeadsTo( CBotLandmark *pTarget, CBotLandmark *pAvoid, CBotLandmark *pFrom )
 {
 	if ( pTarget == pFrom )
 		return TRUE;
@@ -1108,7 +1108,7 @@ static BOOL LandmarkLeadsTo( CBotLandmark *pTarget, CBotLandmark *pAvoid, CBotLa
 }
 
 // the landmark next to pTarget on the way from pFrom
-static CBotLandmark *LandmarkBefore( CBotLandmark *pTarget, CBotLandmark *pFrom )
+CBotLandmark *LandmarkBefore( CBotLandmark *pTarget, CBotLandmark *pFrom )
 {
 	int i;
 
@@ -1139,7 +1139,7 @@ static CBotLandmark *LandmarkBefore( CBotLandmark *pTarget, CBotLandmark *pFrom 
 }
 
 // is pMark on the way from pBest towards the landmark nearest vecGoal?
-static BOOL LandmarkCloser( CBotLandmark *pMark, CBotLandmark *pBest, const Vector &vecGoal )
+BOOL LandmarkCloser( CBotLandmark *pMark, CBotLandmark *pBest, const Vector &vecGoal )
 {
 	CBotLandmark *pGoalMark = NearestLandmark( vecGoal );
 
