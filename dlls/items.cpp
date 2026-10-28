@@ -274,7 +274,7 @@ class CItemAntidote : public CItem
 	{
 		pPlayer->SetSuitUpdate("!HEV_DET4", FALSE, SUIT_NEXT_IN_1MIN);
 		
-		pPlayer->m_rgItems[ITEM_ANTIDOTE] += 1;
+		pPlayer->m_rgItems[ITEM_ANTIDOTE] += 4;
 		return TRUE;
 	}
 };
