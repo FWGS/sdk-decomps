@@ -40,23 +40,24 @@ extern int gEvilImpulse101;
 DLL_GLOBAL	short	g_sModelIndexLaser;// holds the index for the laser beam
 DLL_GLOBAL  const char *g_pModelNameLaser = "sprites/laserbeam.spr";
 DLL_GLOBAL	short	g_sModelIndexLaserDot;// holds the index for the laser beam dot
-DLL_GLOBAL	short	g_sModelIndexFireball;// holds the index for the fireball
 DLL_GLOBAL	short	g_sModelIndexSmoke;// holds the index for the smoke cloud
 DLL_GLOBAL	short	g_sModelIndexWExplosion;// holds the index for the underwater explosion
 DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for the initial blood
 DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for splattered blood
-DLL_GLOBAL	short	g_sModelIndexSmokePuff;// smoke trail of burning gibs
-DLL_GLOBAL	short	g_sModelIndexGibSprite;// blood trail of gibs (robot oil in the German version)
-DLL_GLOBAL	short	g_sModelIndexExplosion1;
-DLL_GLOBAL	short	g_sModelIndexExplosion2;
-DLL_GLOBAL	short	g_sModelIndexExplosion3;
-DLL_GLOBAL	short	g_sModelIndexExplosion4;
-DLL_GLOBAL	short	g_sModelIndexSmokerGray;
-DLL_GLOBAL	short	g_sModelIndexCGSplashR;
-DLL_GLOBAL	short	g_sModelIndexCGSplashG;
-DLL_GLOBAL	short	g_sModelIndexCGSplashY;
-DLL_GLOBAL	short	g_sModelIndexCGSplashO;
+DLL_GLOBAL	short	g_sModelIndexGibSmoke;// smoke trail of burning gibs (name ours)
+DLL_GLOBAL	short	g_sModelIndexBloodTrail;// blood trail of gibs, robot oil in the German version (name ours)
+// Gunman's four explosions take the place of the SDK's g_sModelIndexFireball,
+// which retail's .bss has no room for (names ours)
+DLL_GLOBAL	short	g_sModelIndexFireball1;
+DLL_GLOBAL	short	g_sModelIndexFireball2;
+DLL_GLOBAL	short	g_sModelIndexFireball3;
+DLL_GLOBAL	short	g_sModelIndexFireball4;
+DLL_GLOBAL	short	g_sModelIndexSmokeBall;// sprites/smoker_gray.spr (name ours)
+DLL_GLOBAL	short	g_sModelIndexSplashRed;// the chemical gun's splashes (names ours)
+DLL_GLOBAL	short	g_sModelIndexSplashGreen;
+DLL_GLOBAL	short	g_sModelIndexSplashYellow;
+DLL_GLOBAL	short	g_sModelIndexSplashOrange;
 
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
 AmmoInfo CBasePlayerItem::AmmoInfoArray[MAX_AMMO_SLOTS];
@@ -373,15 +374,15 @@ void W_Precache(void)
 	UTIL_PrecacheOther( "item_armor" );
 	UTIL_PrecacheOther( "weaponbox" );// container for dropped deathmatch weapons
 
-	g_sModelIndexCGSplashR = PRECACHE_MODEL ("sprites/cg_splash_r.spr");
-	g_sModelIndexCGSplashG = PRECACHE_MODEL ("sprites/cg_splash_g.spr");
-	g_sModelIndexCGSplashY = PRECACHE_MODEL ("sprites/cg_splash_y.spr");
-	g_sModelIndexCGSplashO = PRECACHE_MODEL ("sprites/cg_splash_o.spr");
-	g_sModelIndexSmokerGray = PRECACHE_MODEL ("sprites/smoker_gray.spr");
-	g_sModelIndexExplosion1 = PRECACHE_MODEL ("sprites/explosion1.spr");
-	g_sModelIndexExplosion2 = PRECACHE_MODEL ("sprites/explosion2.spr");
-	g_sModelIndexExplosion3 = PRECACHE_MODEL ("sprites/explosion3.spr");
-	g_sModelIndexExplosion4 = PRECACHE_MODEL ("sprites/explosion4.spr");
+	g_sModelIndexSplashRed = PRECACHE_MODEL ("sprites/cg_splash_r.spr");
+	g_sModelIndexSplashGreen = PRECACHE_MODEL ("sprites/cg_splash_g.spr");
+	g_sModelIndexSplashYellow = PRECACHE_MODEL ("sprites/cg_splash_y.spr");
+	g_sModelIndexSplashOrange = PRECACHE_MODEL ("sprites/cg_splash_o.spr");
+	g_sModelIndexSmokeBall = PRECACHE_MODEL ("sprites/smoker_gray.spr");
+	g_sModelIndexFireball1 = PRECACHE_MODEL ("sprites/explosion1.spr");
+	g_sModelIndexFireball2 = PRECACHE_MODEL ("sprites/explosion2.spr");
+	g_sModelIndexFireball3 = PRECACHE_MODEL ("sprites/explosion3.spr");
+	g_sModelIndexFireball4 = PRECACHE_MODEL ("sprites/explosion4.spr");
 	g_sModelIndexWExplosion = PRECACHE_MODEL ("sprites/WXplo1.spr");// underwater fireball
 	g_sModelIndexSmoke = PRECACHE_MODEL ("sprites/steam1.spr");// smoke
 	g_sModelIndexBubbles = PRECACHE_MODEL ("sprites/bubble.spr");//bubbles
@@ -391,12 +392,12 @@ void W_Precache(void)
 	g_sModelIndexLaser = PRECACHE_MODEL( (char *)g_pModelNameLaser );
 	g_sModelIndexLaserDot = PRECACHE_MODEL("sprites/laserdot.spr");
 
-	g_sModelIndexSmokePuff = PRECACHE_MODEL ("sprites/smokepuff.spr");
+	g_sModelIndexGibSmoke = PRECACHE_MODEL ("sprites/smokepuff.spr");
 
 	if ( g_Language == LANGUAGE_GERMAN || CVAR_GET_FLOAT( "violence_germany" ) != 0 )
-		g_sModelIndexGibSprite = PRECACHE_MODEL ("sprites/gorebot.spr");
+		g_sModelIndexBloodTrail = PRECACHE_MODEL ("sprites/gorebot.spr");
 	else
-		g_sModelIndexGibSprite = PRECACHE_MODEL ("sprites/gibhuman.spr");
+		g_sModelIndexBloodTrail = PRECACHE_MODEL ("sprites/gibhuman.spr");
 
 	// used by explosions
 	PRECACHE_MODEL ("models/grenade.mdl");

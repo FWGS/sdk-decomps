@@ -295,7 +295,7 @@ void CChemGrenade::ChemicalSmokeThink( void )
 		WRITE_COORD( 0 );
 		WRITE_COORD( 0 );
 		WRITE_COORD( 1 );
-		WRITE_SHORT( g_sModelIndexSmokePuff );
+		WRITE_SHORT( g_sModelIndexGibSmoke );
 		WRITE_BYTE( 3 );			// count
 		WRITE_BYTE( 50 );			// speed
 		WRITE_BYTE( 50 );			// noise

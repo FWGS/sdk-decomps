@@ -417,12 +417,12 @@ extern DLL_GLOBAL	short	g_sModelIndexWExplosion;// holds the index for the under
 extern DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 extern DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for blood drops
 extern DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for blood spray (bigger)
-extern DLL_GLOBAL	short	g_sModelIndexSmokePuff;// smoke trail of burning gibs
-extern DLL_GLOBAL	short	g_sModelIndexGibSprite;// blood trail of gibs (robot oil in the German version)
-extern DLL_GLOBAL	short	g_sModelIndexExplosion1;
-extern DLL_GLOBAL	short	g_sModelIndexExplosion2;
-extern DLL_GLOBAL	short	g_sModelIndexExplosion3;
-extern DLL_GLOBAL	short	g_sModelIndexExplosion4;
+extern DLL_GLOBAL	short	g_sModelIndexGibSmoke;// smoke trail of burning gibs
+extern DLL_GLOBAL	short	g_sModelIndexBloodTrail;// blood trail of gibs (robot oil in the German version)
+extern DLL_GLOBAL	short	g_sModelIndexFireball1;
+extern DLL_GLOBAL	short	g_sModelIndexFireball2;
+extern DLL_GLOBAL	short	g_sModelIndexFireball3;
+extern DLL_GLOBAL	short	g_sModelIndexFireball4;
 
 short RandomExplosionSprite( void );
 

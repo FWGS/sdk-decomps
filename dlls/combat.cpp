@@ -984,7 +984,7 @@ void CGib :: GibSmokeThink ( void )
 		return;
 	}
 
-	if ( m_iSmokeSprite == g_sModelIndexGibSprite && FBitSet( pev->flags, FL_ONGROUND ) )
+	if ( m_iSmokeSprite == g_sModelIndexBloodTrail && FBitSet( pev->flags, FL_ONGROUND ) )
 		return;
 
 	// thins out as the gib's life runs down
@@ -1011,10 +1011,10 @@ void CGib :: StartSmoke ( int iType )
 	switch ( iType )
 	{
 	case 1:
-		m_iSmokeSprite = g_sModelIndexSmokePuff;
+		m_iSmokeSprite = g_sModelIndexGibSmoke;
 		break;
 	case 2:
-		m_iSmokeSprite = g_sModelIndexGibSprite;
+		m_iSmokeSprite = g_sModelIndexBloodTrail;
 		break;
 	}
 
@@ -1360,13 +1360,13 @@ short RandomExplosionSprite( void )
 	switch ( RANDOM_LONG( 0, 3 ) )
 	{
 	case 0:
-		return g_sModelIndexExplosion1;
+		return g_sModelIndexFireball1;
 	case 1:
-		return g_sModelIndexExplosion2;
+		return g_sModelIndexFireball2;
 	case 2:
-		return g_sModelIndexExplosion3;
+		return g_sModelIndexFireball3;
 	default:
-		return g_sModelIndexExplosion4;
+		return g_sModelIndexFireball4;
 	}
 }
 
