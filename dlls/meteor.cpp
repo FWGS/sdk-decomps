@@ -47,8 +47,8 @@ public:
 	void Spawn( void );
 	void Precache( void );
 	void KeyValue( KeyValueData *pkvd );
-	void Think( void );
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void EXPORT Think( void );
+	void EXPORT Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
@@ -107,7 +107,7 @@ class CMeteorChip : public CBaseEntity
 public:
 	void Spawn( void );
 	static CMeteorChip *ChipCreate( Vector vecOrigin, Vector vecVelocity );
-	void Touch( CBaseEntity *pOther );
+	void EXPORT Touch( CBaseEntity *pOther );
 	void EXPORT Animate( void );
 };
 
@@ -117,7 +117,7 @@ public:
 	void Spawn( void );
 	void Precache( void );
 	void KeyValue( KeyValueData *pkvd );
-	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void EXPORT Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );

@@ -49,7 +49,7 @@ public:
 
 private:
 	void EXPORT SplatterTouch( CBaseEntity *pOther );
-	void Splatter( TraceResult *pTrace );
+	void EXPORT Splatter( TraceResult *pTrace );
 	void EXPORT ChemicalSmoke( void );
 	void EXPORT ChemicalSmokeThink( void );
 	void EXPORT StickyChemicalTouch( CBaseEntity *pOther );

@@ -60,6 +60,7 @@ public:
 		pev->absmax = pev->origin + Vector( 600, 600, 32 );
 	}
 
+private:
 	void EXPORT HuntThink( void );
 	void EXPORT FlyTouch( CBaseEntity *pOther );
 	void EXPORT CrashTouch( CBaseEntity *pOther );
