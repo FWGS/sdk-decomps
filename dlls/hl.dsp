@@ -655,6 +655,38 @@ SOURCE=.\wtowna.cpp
 
 SOURCE=.\wtownb.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\untraced1.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\untraced2.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\untraced3.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\untraced4.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\untraced5.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\untraced6.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\untraced7.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\untraced8.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
