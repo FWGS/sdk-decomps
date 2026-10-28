@@ -298,15 +298,22 @@ void CTriggerRelay::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 		return;
 	}
 	if (pev->spawnflags & SF_RELAY_DEBUG)
-		ALERT(at_console,"DEBUG: trigger_relay \"%s\" was activated: ",STRING(pev->targetname));
+		ALERT(at_console,"DEBUG: trigger_relay \"%s\" was sent %s",STRING(pev->targetname), GetStringForUseType(useType));
+
+	if (FStringNull(pev->target))
+	{
+		if (pev->spawnflags & SF_RELAY_DEBUG) ALERT(at_console, ".\n");
+		return;
+	}
+
 	if (m_triggerType == USE_SAME)
 	{
 		if (pev->spawnflags & SF_RELAY_DEBUG)
 		{
 			if (m_flDelay)
-				ALERT(at_console,"will send %s(same) in %f seconds.\n",GetStringForUseType(useType),m_flDelay);
+				ALERT(at_console,": will send %s(same) in %f seconds.\n",GetStringForUseType(useType),m_flDelay);
 			else
-				ALERT(at_console,"sending %s(same) now.\n",GetStringForUseType(useType));
+				ALERT(at_console,": sending %s(same) now.\n",GetStringForUseType(useType));
 		}
 		SUB_UseTargets( this, useType, value );
 	}
@@ -315,9 +322,9 @@ void CTriggerRelay::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 		if (pev->spawnflags & SF_RELAY_DEBUG)
 		{
 			if (m_flDelay)
-				ALERT(at_console,"will send %s in %f seconds.\n",GetStringForUseType(m_triggerType),m_flDelay);
+				ALERT(at_console,": will send %s in %f seconds.\n",GetStringForUseType(m_triggerType),m_flDelay);
 			else
-				ALERT(at_console,"sending %s now.\n",GetStringForUseType(m_triggerType));
+				ALERT(at_console,": sending %s now.\n",GetStringForUseType(m_triggerType));
 		}
 		SUB_UseTargets( this, m_triggerType, 0 );
 	}

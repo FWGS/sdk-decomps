@@ -1,18 +1,15 @@
-9th Jan 2002
+11th Jan 2002
 
-Spirit 0.6 Source Code release
+Spirit 0.6.1 Source Code release
 
-To minimize download time & storage size, this zip file contains only the source
-files which have been changed for Spirit. To use it, you will need a copy of the
-Half-Life Full SDK version 2.2. (NB: version 2.1 of the SDK will NO LONGER WORK!). 
-
-Make a copy of the SDK's Source directory, and unzip this file into it.
+This is a minor update, containing only the files which changed between Spirit 0.6
+and 0.6.1. To use it, unzip these files over your Spirit 0.6 source code.
 
 If you encounter any problems getting this code to compile or run, please let me
 know.
 
-Also available:
-  Spirit 0.6 Source Upgrade, with only the differences between 0.6 and 0.5.
+Permission is hereby granted to use this code for whatever you want, provided you
+credit Spirit of Half-Life somewhere.
 
 --
 Laurie Cheers

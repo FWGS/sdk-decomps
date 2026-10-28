@@ -157,9 +157,7 @@ public:
 	
 	STATE		m_iState;
 	float		m_fTurnOnTime;
-	USE_TYPE	m_iOnMode;
 	float		m_fTurnOffTime;
-	USE_TYPE	m_iOffMode;
 	int			m_sMaster;
 };
 
@@ -176,8 +174,6 @@ TYPEDESCRIPTION CEnvState::m_SaveData[] =
 	DEFINE_FIELD( CEnvState, m_iState, FIELD_INTEGER ),
 	DEFINE_FIELD( CEnvState, m_fTurnOnTime, FIELD_INTEGER ),
 	DEFINE_FIELD( CEnvState, m_fTurnOffTime, FIELD_INTEGER ),
-	DEFINE_FIELD( CEnvState, m_iOnMode, FIELD_INTEGER ),
-	DEFINE_FIELD( CEnvState, m_iOffMode, FIELD_INTEGER ),
 	DEFINE_FIELD( CEnvState, m_sMaster, FIELD_STRING ),
 };
 
@@ -193,30 +189,6 @@ void CEnvState::KeyValue( KeyValueData *pkvd )
 		m_fTurnOnTime = atof( pkvd->szValue );
 	else if ( FStrEq(pkvd->szKeyName, "turnofftime") )
 		m_fTurnOffTime = atof( pkvd->szValue );
-	else if ( FStrEq(pkvd->szKeyName, "onmode") ) //for backwards compatibility only
-	{
-		int tmp = atoi( pkvd->szValue );
-		switch (tmp)
-		{
-		case 0: m_iOnMode = USE_TOGGLE; break;
-		case 1: m_iOnMode = USE_ON; break;
-		case 2: m_iOnMode = USE_OFF; break;
-		case 3: m_iOnMode = USE_KILL; break;
-		case 4: m_iOnMode = USE_NOT; break;
-		}
-	}
-	else if ( FStrEq(pkvd->szKeyName, "offmode") ) //for backwards compatibility only
-	{
-		int tmp = atoi( pkvd->szValue );
-		switch (tmp)
-		{
-		case 0: m_iOffMode = USE_TOGGLE; break;
-		case 1: m_iOffMode = USE_ON; break;
-		case 2: m_iOffMode = USE_OFF; break;
-		case 3: m_iOffMode = USE_KILL; break;
-		case 4: m_iOffMode = USE_NOT; break;
-		}
-	}
 	else if ( FStrEq(pkvd->szKeyName, "master") )
 		m_sMaster = ALLOC_STRING( pkvd->szValue );
 	else
@@ -279,8 +251,8 @@ void CEnvState::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE use
 					ALERT(at_console,": firing \"%s\"",STRING(pev->noise2));
 				ALERT(at_console,".\n");
 			}
-			FireTargets(STRING(pev->target),pActivator,this,m_iOffMode,0);
-			FireTargets(STRING(pev->noise2),pActivator,this,m_iOffMode,0);
+			FireTargets(STRING(pev->target),pActivator,this,USE_OFF,0);
+			FireTargets(STRING(pev->noise2),pActivator,this,USE_TOGGLE,0);
 			DontThink();
 		}
 		break;
@@ -314,11 +286,11 @@ void CEnvState::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE use
 						ALERT(at_console," and \"%s\"",STRING(pev->noise1));
 				}
 				else if (pev->noise1)
-					ALERT(at_console,": sending %s to \"%s\"",GetStringForUseType(m_iOnMode), STRING(pev->noise1));
+					ALERT(at_console,": firing \"%s\"", STRING(pev->noise1));
 				ALERT(at_console,".\n");
 			}
-			FireTargets(STRING(pev->target),pActivator,this,m_iOnMode,0);
-			FireTargets(STRING(pev->noise1),pActivator,this,m_iOnMode,0);
+			FireTargets(STRING(pev->target),pActivator,this,USE_ON,0);
+			FireTargets(STRING(pev->noise1),pActivator,this,USE_TOGGLE,0);
 			DontThink();
 		}
 		break;
@@ -346,8 +318,8 @@ void CEnvState::Think( void )
 				ALERT(at_console,": firing %s",STRING(pev->noise1));
 			ALERT(at_console,".\n");
 		}
-		FireTargets(STRING(pev->target),this,this,m_iOnMode,0);
-		FireTargets(STRING(pev->noise1),this,this,m_iOnMode,0);
+		FireTargets(STRING(pev->target),this,this,USE_ON,0);
+		FireTargets(STRING(pev->noise1),this,this,USE_TOGGLE,0);
 	}
 	else if (m_iState == STATE_TURN_OFF)
 	{
@@ -366,8 +338,8 @@ void CEnvState::Think( void )
 				ALERT(at_console,": firing %s",STRING(pev->noise2));
 			ALERT(at_console,".\n");
 		}
-		FireTargets(STRING(pev->target),this,this,m_iOffMode,0);
-		FireTargets(STRING(pev->noise2),this,this,m_iOffMode,0);
+		FireTargets(STRING(pev->target),this,this,USE_OFF,0);
+		FireTargets(STRING(pev->noise2),this,this,USE_TOGGLE,0);
 	}
 }
 
@@ -1570,7 +1542,7 @@ void CEnvSpark::KeyValue( KeyValueData *pkvd )
 
 void EXPORT CEnvSpark::SparkCyclic(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	if (!m_pfnThink)
+	if (m_pfnThink == NULL)
 	{
 		DoSpark( pev, pev->origin );
 		SetThink( SparkWait );

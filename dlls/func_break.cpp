@@ -860,6 +860,8 @@ void CBreakable::Die( void )
 		pev->targetname = 0;
 
 	pev->solid = SOLID_NOT;
+	pev->effects |= EF_NODRAW;
+	pev->takedamage = DAMAGE_NO;
 	// Fire targets on break
 	SUB_UseTargets( NULL, USE_TOGGLE, 0 );
 
@@ -867,16 +869,12 @@ void CBreakable::Die( void )
 	{
 //		ALERT(at_debug,"Waiting for respawn trigger\n");
 		SetUse( RespawnUse );
-		pev->effects |= EF_NODRAW;
-		pev->takedamage = DAMAGE_NO;
 	}
 	else if (m_iRespawnTime)
 	{
 //		ALERT(at_debug,"Respawning in %d secs\n",m_iRespawnTime);
 		SetThink( RespawnThink );
 		SetNextThink( m_iRespawnTime );
-		pev->effects |= EF_NODRAW;
-		pev->takedamage = DAMAGE_NO;
 	}
 	else
 	{

@@ -3449,6 +3449,11 @@ void CEnvFog :: Spawn ( void )
 
 // Precache is now used only to continue after a game has loaded.
 //	Precache();
+
+	// things get messed up if we try to draw fog with a startdist
+	// or an enddist of 0!
+	if (m_iStartDist == 0) m_iStartDist = 1;
+	if (m_iEndDist == 0) m_iEndDist = 1;
 }
 
 void CEnvFog :: Precache ( void )
@@ -3554,7 +3559,7 @@ void CEnvFog :: FadeOutDone ( void )
 
 void CEnvFog :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-//	ALERT(at_console, "Fog use\n");
+//	ALERT(at_console, "Fog use %s %s\n", GetStringForUseType(useType), GetStringForState(GetState()));
 	if (ShouldToggle(useType))
 	{
 		if (pev->spawnflags & SF_FOG_ACTIVE)

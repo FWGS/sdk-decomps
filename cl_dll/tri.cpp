@@ -99,7 +99,7 @@ void Draw_Triangles( void )
 void RenderFog ( void )
 {
 	//Not in water and we want fog.
-	bool bFog = g_iWaterLevel < 2 && g_fStartDist >= 0 && g_fEndDist >= 0;
+	bool bFog = g_iWaterLevel < 2 && g_fStartDist > 0 && g_fEndDist > 0;
 	gEngfuncs.pTriAPI->Fog ( g_fFogColor, g_fStartDist, g_fEndDist, bFog );
 }
 
