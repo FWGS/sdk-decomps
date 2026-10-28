@@ -736,6 +736,9 @@ void CDemoman::SetYawSpeed( void )
 	case ACT_IDLE:
 		ys = 100;
 		break;
+	case ACT_RUN:
+		ys = 100;
+		break;
 	case ACT_WALK:
 	case ACT_TURN_LEFT:
 	case ACT_TURN_RIGHT:
