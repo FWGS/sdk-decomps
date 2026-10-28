@@ -247,6 +247,10 @@ SOURCE=.\fakegordon.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\flyingcrowbar.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\flyingmonster.cpp
 # End Source File
 # Begin Source File
