@@ -80,6 +80,10 @@ int CHudMenu :: Draw( float flTime )
 	if ( gViewPort && gViewPort->IsScoreBoardVisible() )
 		return 1;
 
+	// nor the Config menu
+	if ( gViewPort && gViewPort->IsConfigMenuVisible() )
+		return 1;
+
 	// draw the menu, along the left-hand side of the screen
 
 	// count the number of newlines

@@ -566,6 +566,19 @@ void TeamFortressViewport::Initialize( void )
 	{
 		m_pClassMenu->Initialize();
 	}
+	if (m_pConfigMenu)
+	{
+		m_pConfigMenu->setVisible( false );
+	}
+	if (m_pLetterboxPanel)
+	{
+		m_pLetterboxPanel->setVisible( false );
+		m_pLetterboxPanel->SetCaption( "1 ", " " );
+	}
+	if (m_pSecurityCamPanel)
+	{
+		m_pSecurityCamPanel->setVisible( false );
+	}
 	if (m_pScoreBoard)
 	{
 		m_pScoreBoard->Initialize();
@@ -1219,6 +1232,11 @@ void TeamFortressViewport::ShowScoreBoard( void )
 			m_pScoreBoard->Open();
 			UpdateCursorState();
 		}
+		// T2DEF: the Config menu instead
+		else if ( m_pConfigMenu && !m_pConfigMenu->isVisible() )
+		{
+			ShowVGUIMenu( MENU_CONFIG );
+		}
 	}
 }
 
@@ -1229,6 +1247,17 @@ bool TeamFortressViewport::IsScoreBoardVisible( void )
 {
 	if (m_pScoreBoard)
 		return m_pScoreBoard->isVisible();
+
+	return false;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Returns true if the Config menu is up
+//-----------------------------------------------------------------------------
+bool TeamFortressViewport::IsConfigMenuVisible( void )
+{
+	if (m_pConfigMenu)
+		return m_pConfigMenu->isVisible();
 
 	return false;
 }
@@ -2020,6 +2049,22 @@ int	TeamFortressViewport::KeyInput( int down, int keynum, const char *pszCurrent
 				}
 			}
 		}
+
+		// Escape closes the Config menu, which takes no other keys
+		if ( iMenuID == MENU_CONFIG )
+		{
+			if ( down && keynum == K_ESCAPE )
+			{
+				HideTopMenu();
+				return 0;
+			}
+
+			return 1;
+		}
+
+		// No quicksave or quickload while a menu is up
+		if ( down && (keynum == K_F6 || keynum == K_F7) )
+			return 0;
 
 		// Grab enter keys to close TextWindows
 		if ( down && (keynum == K_ENTER || keynum == K_KP_ENTER || keynum == K_SPACE || keynum == K_ESCAPE) )

@@ -360,6 +360,7 @@ public:
 	void ShowScoreBoard( void );
 	void HideScoreBoard( void );
 	bool IsScoreBoardVisible( void );
+	bool IsConfigMenuVisible( void );
 
 	bool AllowedToPrintText( void );
 
