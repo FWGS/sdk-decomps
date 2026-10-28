@@ -46,6 +46,7 @@ extern DLL_GLOBAL	BOOL	g_fDrawLines;
 int gEvilImpulse101;
 BOOL g_markFrameBounds = 0; //LRC
 extern DLL_GLOBAL int		g_iSkillLevel, gDisplayTitle;
+extern DLL_GLOBAL int		g_iT2DefMusicOn, g_iT2DefTextLanguage;	// T2DEF
 
 
 BOOL gInitHUD = TRUE;
@@ -119,6 +120,8 @@ TYPEDESCRIPTION	CBasePlayer::m_playerSaveData[] =
 	DEFINE_FIELD( CBasePlayer, m_pTank, FIELD_EHANDLE ), // NB: this points to a CFuncTank*Controls* now. --LRC
 	DEFINE_FIELD( CBasePlayer, m_iHideHUD, FIELD_INTEGER ),
 	DEFINE_FIELD( CBasePlayer, m_iFOV, FIELD_INTEGER ),
+	DEFINE_FIELD( CBasePlayer, m_iT2DEFMusicOn, FIELD_INTEGER ),
+	DEFINE_FIELD( CBasePlayer, m_iT2DEFTextLanguage, FIELD_INTEGER ),
 	
 	//DEFINE_FIELD( CBasePlayer, m_fDeadTime, FIELD_FLOAT ), // only used in multiplayer games
 	//DEFINE_FIELD( CBasePlayer, m_fGameHUDInitialized, FIELD_INTEGER ), // only used in multiplayer games
@@ -187,6 +190,14 @@ int gmsgSetFOV = 0;
 int gmsgShowMenu = 0;
 int gmsgGeigerRange = 0;
 int gmsgTeamNames = 0;
+int gmsgPlayMusic = 0;
+int gmsgStopMusic = 0;
+int gmsgPlayMP3 = 0;
+int gmsgVGUIMenu = 0;
+int gmsgGetSettings = 0;
+int gmsgLBShow = 0;
+int gmsgLBCaption = 0;
+int gmsgSCShow = 0;
 
 void LinkUserMessages( void )
 {
@@ -230,9 +241,25 @@ void LinkUserMessages( void )
 	gmsgFade = REG_USER_MSG("ScreenFade", sizeof(ScreenFade));
 	gmsgAmmoX = REG_USER_MSG("AmmoX", 2);
 	gmsgTeamNames = REG_USER_MSG( "TeamNames", -1 );
+	gmsgPlayMusic = REG_USER_MSG( "PlayMusic", -1 );
+	gmsgStopMusic = REG_USER_MSG( "StopMusic", 1 );
+	gmsgPlayMP3 = REG_USER_MSG( "PlayMP3", -1 );
+	gmsgVGUIMenu = REG_USER_MSG( "VGUIMenu", 1 );
+	gmsgGetSettings = REG_USER_MSG( "GetSettings", 3 );
+	gmsgLBShow = REG_USER_MSG( "LBShow", 1 );
+	gmsgLBCaption = REG_USER_MSG( "LBCaption", -1 );
+	gmsgSCShow = REG_USER_MSG( "SCShow", 3 );
 }
 
 LINK_ENTITY_TO_CLASS( player, CBasePlayer );
+
+// T2DEF: opens a VGUI menu on the client (name ours)
+void CBasePlayer :: ShowVGUIMenu( int iMenu )
+{
+	MESSAGE_BEGIN( MSG_ONE, gmsgVGUIMenu, NULL, pev );
+		WRITE_BYTE( iMenu );
+	MESSAGE_END();
+}
 
 
 
@@ -2091,11 +2118,25 @@ void CBasePlayer::CheckTimeBasedDamage()
 				if (((i == itbd_NerveGas) && (m_rgbTimeBasedDamage[i] < NERVEGAS_DURATION)) ||
 					((i == itbd_Poison)   && (m_rgbTimeBasedDamage[i] < POISON_DURATION)))
 				{
-					if (m_rgItems[ITEM_ANTIDOTE])
+					if (m_rgItems[ITEM_ANTIDOTE] > 0)
 					{
 						m_rgbTimeBasedDamage[i] = 0;
 						m_rgItems[ITEM_ANTIDOTE]--;
-						SetSuitUpdate("!HEV_HEAL4", FALSE, SUIT_REPEAT_OK);
+						// T2DEF: the suit says how many antitoxins are left
+						switch (m_rgItems[ITEM_ANTIDOTE])
+						{
+						case 0:
+							SetSuitUpdate("!HEV_ANTI0", FALSE, SUIT_REPEAT_OK);
+							break;
+						case 1:
+							SetSuitUpdate("!HEV_ANTI1", FALSE, SUIT_REPEAT_OK);
+							break;
+						case 2:
+							SetSuitUpdate("!HEV_ANTI2", FALSE, SUIT_REPEAT_OK);
+							break;
+						default:
+							SetSuitUpdate("!HEV_ANTI3", FALSE, SUIT_REPEAT_OK);
+						}
 					}
 				}
 
@@ -2907,6 +2948,11 @@ void CBasePlayer::Spawn( void )
 	m_lastx = m_lasty = 0;
 
 	g_pGameRules->PlayerSpawn( this );
+
+	// T2DEF: stop any music
+	MESSAGE_BEGIN( MSG_ALL, gmsgStopMusic );
+		WRITE_BYTE( 0 );
+	MESSAGE_END();
 }
 
 
@@ -2956,6 +3002,9 @@ void CBasePlayer :: Precache( void )
 
 int CBasePlayer::Save( CSave &save )
 {
+	m_iT2DEFMusicOn = g_iT2DefMusicOn;
+	m_iT2DEFTextLanguage = g_iT2DefTextLanguage;
+
 	if ( !CBaseMonster::Save(save) )
 		return 0;
 
@@ -3031,6 +3080,9 @@ int CBasePlayer::Restore( CRestore &restore )
 	//			Barring that, we clear it out here instead of using the incorrect restored time value.
 	m_flNextAttack = UTIL_WeaponTimeBase();
 #endif
+
+	g_iT2DefMusicOn = m_iT2DEFMusicOn;
+	g_iT2DefTextLanguage = m_iT2DEFTextLanguage;
 
 	return status;
 }

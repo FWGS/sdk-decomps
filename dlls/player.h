@@ -285,6 +285,7 @@ public:
 	int GetCustomDecalFrames( void );
 
 	void CBasePlayer::TabulateAmmo( void );
+	void ShowVGUIMenu( int iMenu );	// T2DEF (name ours): sends VGUIMenu
 
 	float m_flStartCharge;
 	float m_flAmmoStartCharge;
