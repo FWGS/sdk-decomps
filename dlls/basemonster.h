@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -120,6 +120,11 @@ public:
 	void EXPORT			CorpseUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 // overrideable Monster member functions
+
+	// LRC- to allow level-designers to change monster allegiances
+	int					m_iClass;
+	int					m_iPlayerReact;
+	virtual int			Classify( void ) { return m_iClass?m_iClass:CLASS_NONE; }
 	
 	virtual int	 BloodColor( void ) { return m_bloodColor; }
 
@@ -296,6 +301,7 @@ public:
 	virtual void GibMonster( void );
 	BOOL		 ShouldGibMonster( int iGib );
 	void		 CallGibMonster( void );
+	virtual int		HasCustomGibs( void ) { return FALSE; } //LRC
 	virtual BOOL	HasHumanGibs( void );
 	virtual BOOL	HasAlienGibs( void );
 	virtual void	FadeMonster( void );	// Called instead of GibMonster() when gibs are disabled
@@ -330,6 +336,8 @@ public:
 
 	BOOL ExitScriptedSequence( );
 	BOOL CineCleanup( );
+
+	void StartPatrol( CBaseEntity *path );
 
 	CBaseEntity* DropItem ( char *pszItemName, const Vector &vecPos, const Vector &vecAng );// drop an item.
 };

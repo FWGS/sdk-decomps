@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -798,7 +798,7 @@ Schedule_t	slError[] =
 
 Task_t tlScriptedWalk[] = 
 {
-	{ TASK_WALK_TO_TARGET,		(float)TARGET_MOVE_SCRIPTED },
+	{ TASK_WALK_TO_SCRIPT,		(float)TARGET_MOVE_SCRIPTED },
 	{ TASK_WAIT_FOR_MOVEMENT,	(float)0		},
 	{ TASK_PLANT_ON_SCRIPT,		(float)0		},
 	{ TASK_FACE_SCRIPT,			(float)0		},
@@ -822,7 +822,7 @@ Schedule_t slWalkToScript[] =
 
 Task_t tlScriptedRun[] = 
 {
-	{ TASK_RUN_TO_TARGET,		(float)TARGET_MOVE_SCRIPTED },
+	{ TASK_RUN_TO_SCRIPT,		(float)TARGET_MOVE_SCRIPTED },
 	{ TASK_WAIT_FOR_MOVEMENT,	(float)0		},
 	{ TASK_PLANT_ON_SCRIPT,		(float)0		},
 	{ TASK_FACE_SCRIPT,			(float)0		},
@@ -846,6 +846,7 @@ Schedule_t slRunToScript[] =
 Task_t tlScriptedWait[] = 
 {
 	{ TASK_STOP_MOVING,			0				},
+//	{ TASK_ENABLE_SCRIPT,		(float)0		},
 	{ TASK_WAIT_FOR_SCRIPT,		(float)0		},
 	{ TASK_PLAY_SCRIPT,			(float)0		},
 };
@@ -1059,7 +1060,7 @@ Schedule_t* CBaseMonster :: GetScheduleOfType ( int Type )
 //	ALERT ( at_console, "Sched Type:%d\n", Type );
 	switch	( Type )
 	{
-	// This is the schedule for scripted sequences AND scripted AI
+	// This is the schedule for scripted sequences AND scripted AI. // LRC- And scripted actions, too.
 	case SCHED_AISCRIPT:
 		{
 			ASSERT( m_pCine != NULL );
@@ -1074,15 +1075,15 @@ Schedule_t* CBaseMonster :: GetScheduleOfType ( int Type )
 
 			switch ( m_pCine->m_fMoveTo )
 			{
-				case 0: 
-				case 4: 
-					return slWaitScript;
-				case 1: 
-					return slWalkToScript;
-				case 2: 
-					return slRunToScript;
-				case 5:
-					return slFaceScript;
+			case 0: 
+			case 4: 
+				return slWaitScript;
+			case 1: 
+				return slWalkToScript;
+			case 2: 
+				return slRunToScript;
+			case 5:
+				return slFaceScript;
 			}
 			break;
 		}

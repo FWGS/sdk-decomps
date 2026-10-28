@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -524,11 +524,39 @@ void CBaseMonster :: RunTask ( Task_t *pTask )
 			if ( m_pCine->m_iDelay <= 0 && gpGlobals->time >= m_pCine->m_startTime )
 			{
 				TaskComplete();
-				m_pCine->StartSequence( (CBaseMonster *)this, m_pCine->m_iszPlay, TRUE );
-				if ( m_fSequenceFinished )
-					ClearSchedule();
-				pev->framerate = 1.0;
-				//ALERT( at_aiconsole, "Script %s has begun for %s\n", STRING( m_pCine->m_iszPlay ), STRING(pev->classname) );
+				if (m_pCine->IsAction())
+				{
+					//ALERT(at_console,"PlayScript: setting idealactivity %d\n",m_pCine->m_fAction);
+					switch(m_pCine->m_fAction)
+					{
+					case 0:
+						m_IdealActivity = ACT_RANGE_ATTACK1; break;
+					case 1:
+						m_IdealActivity = ACT_RANGE_ATTACK2; break;
+					case 2:
+						m_IdealActivity = ACT_MELEE_ATTACK1; break;
+					case 3:
+						m_IdealActivity = ACT_MELEE_ATTACK2; break;
+					case 4:
+						m_IdealActivity = ACT_SPECIAL_ATTACK1; break;
+					case 5:
+						m_IdealActivity = ACT_SPECIAL_ATTACK2; break;
+					case 6:
+						m_IdealActivity = ACT_RELOAD; break;
+					case 7:
+						m_IdealActivity = ACT_HOP; break;
+					}
+
+					pev->framerate = 1.0; // shouldn't be needed, but just in case
+				}
+				else
+				{
+					m_pCine->StartSequence( (CBaseMonster *)this, m_pCine->m_iszPlay, TRUE );
+					if ( m_fSequenceFinished )
+						ClearSchedule();
+					pev->framerate = 1.0;
+					//ALERT( at_aiconsole, "Script %s has begun for %s\n", STRING( m_pCine->m_iszPlay ), STRING(pev->classname) );
+				}
 			}
 			break;
 		}
@@ -888,16 +916,16 @@ void CBaseMonster :: StartTask ( Task_t *pTask )
 			}
 			break;
 		}
-	case TASK_RUN_TO_TARGET:
-	case TASK_WALK_TO_TARGET:
+	case TASK_RUN_TO_SCRIPT:
+	case TASK_WALK_TO_SCRIPT:
 		{
 			Activity newActivity;
 
-			if ( (m_hTargetEnt->pev->origin - pev->origin).Length() < 1 )
+			if ( !m_pCine || (m_pCine->pev->origin - pev->origin).Length() < 1 )
 				TaskComplete();
 			else
 			{
-				if ( pTask->iTask == TASK_WALK_TO_TARGET )
+				if ( pTask->iTask == TASK_WALK_TO_SCRIPT )
 					newActivity = ACT_WALK;
 				else
 					newActivity = ACT_RUN;
@@ -906,10 +934,10 @@ void CBaseMonster :: StartTask ( Task_t *pTask )
 					TaskComplete();
 				else 
 				{
-					if ( m_hTargetEnt == NULL || !MoveToTarget( newActivity, 2 ) )
+					if ( m_pCine == NULL || !MoveToLocation( newActivity, 2, m_pCine->pev->origin ) )
 					{
 						TaskFail();
-						ALERT( at_aiconsole, "%s Failed to reach target!!!\n", STRING(pev->classname) );
+						ALERT( at_aiconsole, "%s Failed to reach script!!!\n", STRING(pev->classname) );
 						RouteClear();
 					}
 				}
@@ -1029,7 +1057,7 @@ void CBaseMonster :: StartTask ( Task_t *pTask )
 		break;
 	case TASK_GET_PATH_TO_SPOT:
 		{
-			CBaseEntity *pPlayer = CBaseEntity::Instance( FIND_ENTITY_BY_CLASSNAME( NULL, "player" ) );
+			CBaseEntity *pPlayer = UTIL_FindEntityByClassname( NULL, "player" );
 			if ( BuildRoute ( m_vecMoveGoal, bits_MF_TO_LOCATION, pPlayer ) )
 			{
 				TaskComplete();
@@ -1047,6 +1075,21 @@ void CBaseMonster :: StartTask ( Task_t *pTask )
 		{
 			RouteClear();
 			if ( m_hTargetEnt != NULL && MoveToTarget( m_movementActivity, 1 ) )
+			{
+				TaskComplete();
+			}
+			else
+			{
+				// no way to get there =(
+				ALERT ( at_aiconsole, "GetPathToSpot failed!!\n" );
+				TaskFail();
+			}
+			break;
+		}
+	case TASK_GET_PATH_TO_SCRIPT:
+		{
+			RouteClear();
+			if ( m_pCine != NULL && MoveToLocation( m_movementActivity, 1, m_pCine->pev->origin ) )
 			{
 				TaskComplete();
 			}
@@ -1250,7 +1293,7 @@ case TASK_GET_PATH_TO_BESTSCENT:
 		}
 	case TASK_WAIT_FOR_SCRIPT:
 		{
-			if (m_pCine->m_iszIdle)
+			if (!m_pCine->IsAction() && m_pCine->m_iszIdle)
 			{
 				m_pCine->StartSequence( (CBaseMonster *)this, m_pCine->m_iszIdle, FALSE );
 				if (FStrEq( STRING(m_pCine->m_iszIdle), STRING(m_pCine->m_iszPlay)))
@@ -1265,8 +1308,11 @@ case TASK_GET_PATH_TO_BESTSCENT:
 		}
 	case TASK_PLAY_SCRIPT:
 		{
-			pev->movetype = MOVETYPE_FLY;
-			ClearBits(pev->flags, FL_ONGROUND);
+			if (!m_pCine->IsAction())
+			{
+				pev->movetype = MOVETYPE_FLY;
+				ClearBits(pev->flags, FL_ONGROUND);
+			}
 			m_scriptState = SCRIPT_PLAYING;
 			break;
 		}
@@ -1278,9 +1324,9 @@ case TASK_GET_PATH_TO_BESTSCENT:
 		}
 	case TASK_PLANT_ON_SCRIPT:
 		{
-			if ( m_hTargetEnt != NULL )
+			if ( m_pCine != NULL )
 			{
-				pev->origin = m_hTargetEnt->pev->origin;	// Plant on target
+				pev->origin = m_pCine->pev->origin;	// Plant on script
 			}
 
 			TaskComplete();
@@ -1288,9 +1334,22 @@ case TASK_GET_PATH_TO_BESTSCENT:
 		}
 	case TASK_FACE_SCRIPT:
 		{
-			if ( m_hTargetEnt != NULL )
+			if ( m_pCine != NULL && m_pCine->m_fMoveTo != 0) // movetype "no move" makes us ignore turntype
 			{
-				pev->ideal_yaw = UTIL_AngleMod( m_hTargetEnt->pev->angles.y );
+				switch (m_pCine->m_fTurnType)
+				{
+				case 0:
+					pev->ideal_yaw = UTIL_AngleMod( m_pCine->pev->angles.y );
+					break;
+				case 1:
+					// yes, this is inconsistent- turn to face uses the "target" and turn to angle uses the "cine".
+					if (m_hTargetEnt)
+						MakeIdealYaw ( m_hTargetEnt->pev->origin );
+					else
+						MakeIdealYaw ( m_pCine->pev->origin );
+					break;
+				// default: don't turn
+				}
 			}
 
 			TaskComplete();
@@ -1298,7 +1357,6 @@ case TASK_GET_PATH_TO_BESTSCENT:
 			RouteClear();
 			break;
 		}
-
 	case TASK_SUGGEST_STATE:
 		{
 			m_IdealMonsterState = (MONSTERSTATE)(int)pTask->flData;

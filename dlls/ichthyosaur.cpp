@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -326,7 +326,7 @@ IMPLEMENT_CUSTOM_SCHEDULES(CIchthyosaur, CFlyingMonster);
 //=========================================================
 int	CIchthyosaur :: Classify ( void )
 {
-	return	CLASS_ALIEN_MONSTER;
+	return m_iClass?m_iClass:CLASS_ALIEN_MONSTER;
 }
 
 
@@ -729,7 +729,7 @@ void CIchthyosaur :: RunTask ( Task_t *pTask )
 	case TASK_ICHTHYOSAUR_FLOAT:
 		pev->angles.x = UTIL_ApproachAngle( 0, pev->angles.x, 20 );
 		pev->velocity = pev->velocity * 0.8;
-		if (pev->waterlevel > 1 && pev->velocity.z < 64)
+		if (pev->waterlevel > 1 && pev->watertype != CONTENT_FOG && pev->velocity.z < 64)
 		{
 			pev->velocity.z += 8;
 		}

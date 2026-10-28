@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -75,7 +75,7 @@ int CRoach :: ISoundMask ( void )
 //=========================================================
 int	CRoach :: Classify ( void )
 {
-	return CLASS_INSECT;
+	return m_iClass?m_iClass:CLASS_INSECT;
 }
 
 //=========================================================
@@ -188,9 +188,9 @@ void CRoach :: Killed( entvars_t *pevAttacker, int iGib )
 void CRoach :: MonsterThink( void  )
 {
 	if ( FNullEnt( FIND_CLIENT_IN_PVS( edict() ) ) )
-		pev->nextthink = gpGlobals->time + RANDOM_FLOAT(1,1.5);
+		SetNextThink( RANDOM_FLOAT(1,1.5) );
 	else
-		pev->nextthink = gpGlobals->time + 0.1;// keep monster thinking
+		SetNextThink( 0.1 );// keep monster thinking
 
 	float flInterval = StudioFrameAdvance( ); // animate
 
@@ -198,7 +198,7 @@ void CRoach :: MonsterThink( void  )
 	{
 		// if light value hasn't been collection for the first time yet, 
 		// suspend the creature for a second so the world finishes spawning, then we'll collect the light level.
-		pev->nextthink = gpGlobals->time + 1;
+		SetNextThink( 1 );
 		m_fLightHacked = TRUE;
 		return;
 	}
@@ -445,7 +445,7 @@ void CRoach :: Look ( int iDistance )
 				case	R_NO:
 					break;
 				default:
-					ALERT ( at_console, "%s can't asses %s\n", STRING(pev->classname), STRING(pSightEnt->pev->classname ) );
+					ALERT ( at_console, "%s can't assess %s\n", STRING(pev->classname), STRING(pSightEnt->pev->classname ) );
 					break;
 				}
 			}

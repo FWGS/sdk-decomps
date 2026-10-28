@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -24,7 +24,12 @@
 #define SF_BEAM_DECALS			0x0040
 #define SF_BEAM_SHADEIN			0x0080
 #define SF_BEAM_SHADEOUT		0x0100
+#define SF_BEAM_SOLID			0x0200
 #define SF_BEAM_TEMPORARY		0x8000
+//LRC - tripbeams
+#define SF_BEAM_TRIPPED			0x80000
+//LRC - smoother lasers
+#define SF_LASER_INTERPOLATE	0x0400
 
 #define SF_SPRITE_STARTON		0x0001
 #define SF_SPRITE_ONCE			0x0002
@@ -49,6 +54,8 @@ public:
 	void Animate( float frames );
 	void Expand( float scaleSpeed, float fadeSpeed );
 	void SpriteInit( const char *pSpriteName, const Vector &origin );
+
+	virtual STATE GetState( void ) { return (pev->effects & EF_NODRAW)?STATE_OFF:STATE_ON; };
 
 	inline void SetAttachment( edict_t *pEntity, int attachment )
 	{
@@ -82,7 +89,7 @@ public:
 		SetThink(AnimateUntilDead); 
 		pev->framerate = framerate;
 		pev->dmgtime = gpGlobals->time + (m_maxFrame / framerate); 
-		pev->nextthink = gpGlobals->time; 
+		SetNextThink( 0 );
 	}
 
 	void EXPORT AnimateUntilDead( void );
@@ -152,6 +159,8 @@ public:
 	inline int  GetFrame( void ) { return pev->frame; }
 	inline int  GetScrollRate( void ) { return pev->animtime; }
 
+	CBaseEntity*	GetTripEntity( TraceResult *ptr );	//LRC
+
 	// Call after you change start/end positions
 	void		RelinkBeam( void );
 //	void		SetObjectCollisionBox( void );
@@ -168,7 +177,7 @@ public:
 
 	static CBeam *BeamCreate( const char *pSpriteName, int width );
 
-	inline void LiveForTime( float time ) { SetThink(SUB_Remove); pev->nextthink = gpGlobals->time + time; }
+	inline void LiveForTime( float time ) { SetThink(SUB_Remove); SetNextThink( time ); }
 	inline void	BeamDamageInstant( TraceResult *ptr, float damage ) 
 	{ 
 		pev->dmg = damage; 
@@ -191,7 +200,7 @@ public:
 
 	void	TurnOn( void );
 	void	TurnOff( void );
-	int		IsOn( void );
+	virtual STATE GetState( void ) { return (pev->effects & EF_NODRAW)?STATE_OFF:STATE_ON; };
 
 	void	FireAtPoint( TraceResult &point );
 
@@ -204,6 +213,8 @@ public:
 	CSprite	*m_pSprite;
 	int		m_iszSpriteName;
 	Vector  m_firePosition;
+	int		m_iProjection;
+	int		m_iStoppedBy;
 };
 
 #endif		//EFFECTS_H

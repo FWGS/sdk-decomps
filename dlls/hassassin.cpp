@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -26,6 +26,7 @@
 #include	"squadmonster.h"
 #include	"weapons.h"
 #include	"soundent.h"
+#include	"scripted.h"
 #include	"game.h"
 
 extern DLL_GLOBAL int  g_iSkillLevel;
@@ -159,7 +160,7 @@ int CHAssassin :: ISoundMask ( void)
 //=========================================================
 int	CHAssassin :: Classify ( void )
 {
-	return	CLASS_HUMAN_MILITARY;
+	return m_iClass?m_iClass:CLASS_HUMAN_MILITARY;
 }
 
 //=========================================================
@@ -190,7 +191,7 @@ void CHAssassin :: SetYawSpeed ( void )
 //=========================================================
 void CHAssassin :: Shoot ( void )
 {
-	if (m_hEnemy == NULL)
+	if (m_hEnemy == NULL && !m_pCine) //LRC
 	{
 		return;
 	}
@@ -250,8 +251,28 @@ void CHAssassin :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		break;
 	case ASSASSIN_AE_TOSS1:
 		{
+			Vector vecGunPosition = pev->origin + gpGlobals->v_forward * 34 + Vector (0, 0, 32);
 			UTIL_MakeVectors( pev->angles );
-			CGrenade::ShootTimed( pev, pev->origin + gpGlobals->v_forward * 34 + Vector (0, 0, 32), m_vecTossVelocity, 2.0 );
+			//LRC
+			if (m_pCine && m_pCine->IsAction())
+			{
+				Vector vecToss;
+				if (m_pCine->PreciseAttack() && m_hTargetEnt != NULL)
+				{
+					vecToss = VecCheckToss( pev, vecGunPosition, m_hTargetEnt->pev->origin, 0.5 );
+					//if (vecToss != g_vecZero)
+					//	ALERT(at_console,"Assassin %s throws precise grenade\n",STRING(pev->targetname));
+				}
+				else
+				{
+					//ALERT(at_console,"Assassin %s throws nonprecise grenade\n",STRING(pev->targetname));
+					// what speed would be best to use, here? Borrowing the hgrunt grenade speed seems silly...
+					vecToss = ((gpGlobals->v_forward*0.5)+(gpGlobals->v_up*0.5)).Normalize()*gSkillData.hgruntGrenadeSpeed;
+				}
+				CGrenade::ShootTimed( pev, vecGunPosition, vecToss, 2.0 );
+			}
+			else
+				CGrenade::ShootTimed( pev, vecGunPosition, m_vecTossVelocity, 2.0 );
 
 			m_flNextGrenadeCheck = gpGlobals->time + 6;// wait six seconds before even looking again to see if a grenade can be thrown.
 			m_fThrowGrenade = FALSE;
@@ -264,7 +285,33 @@ void CHAssassin :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			UTIL_MakeAimVectors( pev->angles );
 			pev->movetype = MOVETYPE_TOSS;
 			pev->flags &= ~FL_ONGROUND;
-			pev->velocity = m_vecJumpVelocity;
+			if (m_pCine) //LRC...
+			{
+				pev->velocity = g_vecZero;
+				if (m_pCine->PreciseAttack() && m_hTargetEnt != NULL)
+				{
+					Vector vecTemp = m_hTargetEnt->pev->origin;
+					vecTemp.y = vecTemp.y + 50; // put her feet on the target.
+					pev->velocity = VecCheckToss( pev, pev->origin, vecTemp, 0.5 );
+					//if (pev->velocity != g_vecZero)
+					//	ALERT(at_console,"Precise jump for assassin %s\n",STRING(pev->targetname));
+					//else
+					//	ALERT(at_console,"Precise jump failed. ");
+				}
+				if (pev->velocity == g_vecZero)
+				{ // just jump, it doesn't matter where to.
+					//ALERT(at_console,"Nonprecise jump for assassin %s\n",STRING(pev->targetname));
+					float flGravity = g_psv_gravity->value;
+					float time = sqrt( 160 / (0.5 * flGravity));
+					float speed = flGravity * time / 160;
+					UTIL_MakeVectors(pev->angles);
+					Vector vecDest = pev->origin + (gpGlobals->v_forward * 32);
+					vecDest.z += 160; // don't forget to jump into the air, now...
+					pev->velocity= (vecDest - pev->origin) * speed;
+				}
+			}
+			else
+				pev->velocity = m_vecJumpVelocity;
 			m_flNextJump = gpGlobals->time + 3.0;
 		}
 		return;

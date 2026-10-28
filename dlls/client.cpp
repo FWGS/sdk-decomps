@@ -38,6 +38,7 @@
 #include "weaponinfo.h"
 #include "usercmd.h"
 #include "netadr.h"
+#include "movewith.h"
 
 extern DLL_GLOBAL ULONG		g_ulModelIndexPlayer;
 extern DLL_GLOBAL BOOL		g_fGameOver;
@@ -65,7 +66,8 @@ void set_suicide_frame(entvars_t* pev)
 	pev->solid		= SOLID_NOT;
 	pev->movetype	= MOVETYPE_TOSS;
 	pev->deadflag	= DEAD_DEAD;
-	pev->nextthink	= -1;
+	//LRC - FIXTHINKFIX?
+	pev->nextthink  = 0;
 }
 
 
@@ -121,7 +123,7 @@ void ClientDisconnect( edict_t *pEntity )
 // since the edict doesn't get deleted, fix it so it doesn't interfere.
 	pEntity->v.takedamage = DAMAGE_NO;// don't attract autoaim
 	pEntity->v.solid = SOLID_NOT;// nonsolid
-	UTIL_SetOrigin ( &pEntity->v, pEntity->v.origin );
+	UTIL_SetEdictOrigin ( pEntity, pEntity->v.origin );
 
 	g_pGameRules->ClientDisconnected( pEntity );
 }
@@ -364,7 +366,42 @@ void ClientCommand( edict_t *pEntity )
 
 	entvars_t *pev = &pEntity->v;
 
-	if ( FStrEq(pcmd, "say" ) )
+	if ( FStrEq(pcmd, "VModEnable") ) //LRC
+	{
+		return;
+	}
+	else if ( FStrEq(pcmd, "fire") ) //LRC - trigger entities manually
+	{
+		if (g_flWeaponCheat)
+		{
+			CBaseEntity *pPlayer = CBaseEntity::Instance(pEntity);
+			if (CMD_ARGC() > 1)
+			{
+				FireTargets(CMD_ARGV(1), pPlayer, pPlayer, USE_TOGGLE, 0);
+			}
+			else
+			{
+				TraceResult tr;
+				UTIL_MakeVectors(pev->v_angle);
+				UTIL_TraceLine(
+					pev->origin + pev->view_ofs,
+					pev->origin + pev->view_ofs + gpGlobals->v_forward * 1000,
+					dont_ignore_monsters, pEntity, &tr
+				); 
+
+				if (tr.pHit)
+				{
+					CBaseEntity *pHitEnt = CBaseEntity::Instance(tr.pHit);
+					if (pHitEnt)
+					{
+						pHitEnt->Use(pPlayer, pPlayer, USE_TOGGLE, 0);
+						ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, UTIL_VarArgs( "Fired %s \"%s\"\n", STRING(pHitEnt->pev->classname), STRING(pHitEnt->pev->targetname) ) );
+					}
+				}
+			}
+		}
+	}
+	else if ( FStrEq(pcmd, "say" ) )
 	{
 		Host_Say( pEntity, 0 );
 	}
@@ -594,7 +631,6 @@ void ParmsChangeLevel( void )
 		pSaveData->connectionCount = BuildChangeList( pSaveData->levelList, MAX_LEVEL_CONNECTIONS );
 }
 
-
 //
 // GLOBALS ASSUMED SET:  g_ulFrameCount
 //
@@ -608,6 +644,9 @@ void StartFrame( void )
 
 	gpGlobals->teamplay = teamplay.value;
 	g_ulFrameCount++;
+
+//	CheckDesiredList(); //LRC
+	CheckAssistList(); //LRC
 }
 
 
@@ -738,7 +777,7 @@ const char *GetGameDescription()
 	if ( g_pGameRules ) // this function may be called before the world has spawned, and the game rules initialized
 		return g_pGameRules->GetGameDescription();
 	else
-		return "Half-Life";
+		return GAME_NAME;
 }
 
 /*
@@ -1058,6 +1097,7 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 
 	// HACK:  Somewhat...
 	// Class is overridden for non-players to signify a breakable glass object ( sort of a class? )
+	// LRC- that's 'class' in the sense medic, engineer, etc... !!
 	if ( !player )
 	{
 		state->playerclass  = ent->v.playerclass;

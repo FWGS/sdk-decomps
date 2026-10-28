@@ -19,7 +19,6 @@ CFG=hl - Win32 Release
 !MESSAGE 
 !MESSAGE "hl - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
 !MESSAGE "hl - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
-!MESSAGE "hl - Win32 Germany" (based on "Win32 (x86) Dynamic-Link Library")
 !MESSAGE "hl - Win32 Profile" (based on "Win32 (x86) Dynamic-Link Library")
 !MESSAGE 
 
@@ -84,33 +83,6 @@ LINK32=link.exe
 # ADD LINK32 user32.lib advapi32.lib /nologo /subsystem:windows /dll /debug /machine:I386 /def:".\hl.def" /implib:".\Debug\hl.lib"
 # SUBTRACT LINK32 /profile
 
-!ELSEIF  "$(CFG)" == "hl - Win32 Germany"
-
-# PROP BASE Use_MFC 0
-# PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir ".\hl___Win"
-# PROP BASE Intermediate_Dir ".\hl___Win"
-# PROP BASE Target_Dir ""
-# PROP Use_MFC 0
-# PROP Use_Debug_Libraries 0
-# PROP Output_Dir ".\Germany"
-# PROP Intermediate_Dir ".\Germany"
-# PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /W3 /GX /O2 /I "..\engine" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "QUIVER" /D "VOXEL" /D "QUAKE2" /D "VALVE_DLL" /FR /YX /c
-# ADD CPP /nologo /MT /W3 /O2 /I "..\dlls" /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\game_shared" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "QUIVER" /D "VOXEL" /D "QUAKE2" /D "VALVE_DLL" /D "GERMANY" /FR /YX /FD /c
-# ADD BASE MTL /nologo /D "NDEBUG" /win32
-# ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
-# ADD BASE RSC /l 0x409 /d "NDEBUG"
-# ADD RSC /l 0x409 /d "NDEBUG"
-BSC32=bscmake.exe
-# ADD BASE BSC32 /nologo
-# ADD BSC32 /nologo
-LINK32=link.exe
-# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /dll /machine:I386 /def:".\hl.def"
-# SUBTRACT BASE LINK32 /profile
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /dll /machine:I386 /def:".\hl.def"
-# SUBTRACT LINK32 /profile
-
 !ELSEIF  "$(CFG)" == "hl - Win32 Profile"
 
 # PROP BASE Use_MFC 0
@@ -122,11 +94,11 @@ LINK32=link.exe
 # PROP Use_Debug_Libraries 0
 # PROP Output_Dir ".\Profilehl"
 # PROP Intermediate_Dir ".\Profilehl"
+# PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /G5 /MT /W3 /GX /Zi /O2 /I "..\engine" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "QUIVER" /D "VOXEL" /D "QUAKE2" /D "VALVE_DLL" /YX /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /G5 /MT /W3 /Zi /O2 /I "..\dlls" /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\game_shared" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "QUIVER" /D "VOXEL" /D "QUAKE2" /D "VALVE_DLL" /YX /FD /c
-# SUBTRACT CPP /Fr
+# ADD CPP /nologo /G5 /MT /W3 /Zi /O2 /I "..\dlls" /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\game_shared" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "QUIVER" /D "VOXEL" /D "QUAKE2" /D "VALVE_DLL" /D "CLIENT_WEAPONS" /Fr /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -137,7 +109,15 @@ BSC32=bscmake.exe
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:windows /dll /debug /machine:I386 /def:".\hl.def"
 # SUBTRACT BASE LINK32 /profile
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:windows /dll /profile /debug /machine:I386 /def:".\hl.def"
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:windows /dll /profile /debug /machine:I386 /def:".\hl.def" /out:".\Profilehl/spirit.dll"
+# Begin Custom Build
+InputPath=.\Profilehl\spirit.dll
+SOURCE="$(InputPath)"
+
+"c:\games\sierra\half-life\spirit\dlls\spirit.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy .\Profilehl\spirit.dll c:\games\sierra\half-life\spirit\dlls
+
+# End Custom Build
 
 !ENDIF 
 
@@ -145,7 +125,6 @@ LINK32=link.exe
 
 # Name "hl - Win32 Release"
 # Name "hl - Win32 Debug"
-# Name "hl - Win32 Germany"
 # Name "hl - Win32 Profile"
 # Begin Group "Source Files"
 
@@ -161,6 +140,10 @@ SOURCE=.\agrunt.cpp
 # Begin Source File
 
 SOURCE=.\airtank.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\alias.cpp
 # End Source File
 # Begin Source File
 
@@ -385,6 +368,10 @@ SOURCE=.\monsterstate.cpp
 # Begin Source File
 
 SOURCE=.\mortar.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\movewith.cpp
 # End Source File
 # Begin Source File
 
@@ -645,6 +632,10 @@ SOURCE=.\monsterevent.h
 # Begin Source File
 
 SOURCE=.\monsters.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\movewith.h
 # End Source File
 # Begin Source File
 

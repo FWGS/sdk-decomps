@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -39,6 +39,7 @@ public:
 	virtual int	ObjectCaps( void ) { return (CBaseToggle :: ObjectCaps() | FCAP_CONTINUOUS_USE) & ~FCAP_ACROSS_TRANSITION; }
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
+	virtual STATE GetState( void );
 
 	static	TYPEDESCRIPTION m_SaveData[];
 
@@ -89,7 +90,7 @@ void CRecharge::Spawn()
 	pev->solid		= SOLID_BSP;
 	pev->movetype	= MOVETYPE_PUSH;
 
-	UTIL_SetOrigin(pev, pev->origin);		// set size and link into world
+	UTIL_SetOrigin(this, pev->origin);		// set size and link into world
 	UTIL_SetSize(pev, pev->mins, pev->maxs);
 	SET_MODEL(ENT(pev), STRING(pev->model) );
 	m_iJuice = gSkillData.suitchargerCapacity;
@@ -128,7 +129,7 @@ void CRecharge::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE use
 		return;
 	}
 
-	pev->nextthink = pev->ltime + 0.25;
+	SetNextThink( 0.25 );
 	SetThink(Off);
 
 	// Time to recharge yet?
@@ -192,9 +193,19 @@ void CRecharge::Off(void)
 
 	if ((!m_iJuice) &&  ( ( m_iReactivate = g_pGameRules->FlHEVChargerRechargeTime() ) > 0) )
 	{
-		pev->nextthink = pev->ltime + m_iReactivate;
+		SetNextThink( m_iReactivate );
 		SetThink(Recharge);
 	}
 	else
 		SetThink( SUB_DoNothing );
+}
+
+STATE CRecharge::GetState( void )
+{
+	if (m_iOn == 2)
+		return STATE_IN_USE;
+	else if (m_iJuice)
+		return STATE_ON;
+	else
+		return STATE_OFF;
 }

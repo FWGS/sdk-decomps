@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -33,6 +33,7 @@
 #include "weapons.h"
 #include "gamerules.h"
 #include "teamplay_gamerules.h"
+#include "movewith.h" //LRC
 
 extern CGraph WorldGraph;
 extern CSoundEnt *pSoundEnt;
@@ -126,7 +127,7 @@ void CDecal :: Spawn( void )
 	{
 		SetThink( StaticDecal );
 		// if there's no targetname, the decal will spray itself on as soon as the world is done spawning.
-		pev->nextthink = gpGlobals->time;
+		SetNextThink( 0 );
 	}
 	else
 	{
@@ -158,7 +159,7 @@ void CDecal :: TriggerDecal ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE
 	MESSAGE_END();
 
 	SetThink( SUB_Remove );
-	pev->nextthink = gpGlobals->time + 0.1;
+	SetNextThink( 0.1 );
 }
 
 
@@ -255,7 +256,7 @@ void CopyToBodyQue(entvars_t *pev)
 	pevHead->sequence = pev->sequence;
 	pevHead->animtime = pev->animtime;
 
-	UTIL_SetOrigin(pevHead, pev->origin);
+	UTIL_SetEdictOrigin(g_pBodyQueueHead, pev->origin);
 	UTIL_SetSize(pevHead, pev->mins, pev->maxs);
 	g_pBodyQueueHead = pevHead->owner;
 }
@@ -374,13 +375,13 @@ int CGlobalState::Save( CSave &save )
 	int i;
 	globalentity_t *pEntity;
 
-	if ( !save.WriteFields( "GLOBAL", this, m_SaveData, ARRAYSIZE(m_SaveData) ) )
+	if ( !save.WriteFields( "cGLOBAL", "GLOBAL", this, m_SaveData, ARRAYSIZE(m_SaveData) ) )
 		return 0;
 	
 	pEntity = m_pList;
 	for ( i = 0; i < m_listCount && pEntity; i++ )
 	{
-		if ( !save.WriteFields( "GENT", pEntity, gGlobalEntitySaveData, ARRAYSIZE(gGlobalEntitySaveData) ) )
+		if ( !save.WriteFields( "cGENT", "GENT", pEntity, gGlobalEntitySaveData, ARRAYSIZE(gGlobalEntitySaveData) ) )
 			return 0;
 
 		pEntity = pEntity->pNext;
@@ -394,11 +395,12 @@ int CGlobalState::Restore( CRestore &restore )
 	int i, listCount;
 	globalentity_t tmpEntity;
 
+	g_pAssistList = NULL; //LRC
 
 	ClearStates();
 	if ( !restore.ReadFields( "GLOBAL", this, m_SaveData, ARRAYSIZE(m_SaveData) ) )
 		return 0;
-	
+
 	listCount = m_listCount;	// Get new list count
 	m_listCount = 0;				// Clear loaded data
 
@@ -465,9 +467,12 @@ LINK_ENTITY_TO_CLASS( worldspawn, CWorld );
 #define SF_WORLD_DARK		0x0001		// Fade from black at startup
 #define SF_WORLD_TITLE		0x0002		// Display game title at startup
 #define SF_WORLD_FORCETEAM	0x0004		// Force teams
+//#define SF_WORLD_STARTSUIT	0x0008		// LRC- Start this level with an HEV suit!
 
 extern DLL_GLOBAL BOOL		g_fGameOver;
-float g_flWeaponCheat; 
+float g_flWeaponCheat;
+
+BOOL g_startSuit; //LRC
 
 void CWorld :: Spawn( void )
 {
@@ -479,6 +484,10 @@ void CWorld :: Spawn( void )
 void CWorld :: Precache( void )
 {
 	g_pLastSpawn = NULL;
+
+	//LRC
+	g_pAssistList = this;
+	//ALERT(at_console, "AssistList initialised\n");
 	
 #if 1
 	CVAR_SET_STRING("sv_gravity", "800"); // 67ft/sec
@@ -557,54 +566,20 @@ void CWorld :: Precache( void )
 //
 // Setup light animation tables. 'a' is total darkness, 'z' is maxbright.
 //
+	int i;
 
 	// 0 normal
-	LIGHT_STYLE(0, "m");
-	
-	// 1 FLICKER (first variety)
-	LIGHT_STYLE(1, "mmnmmommommnonmmonqnmmo");
-	
-	// 2 SLOW STRONG PULSE
-	LIGHT_STYLE(2, "abcdefghijklmnopqrstuvwxyzyxwvutsrqponmlkjihgfedcba");
-	
-	// 3 CANDLE (first variety)
-	LIGHT_STYLE(3, "mmmmmaaaaammmmmaaaaaabcdefgabcdefg");
-	
-	// 4 FAST STROBE
-	LIGHT_STYLE(4, "mamamamamama");
-	
-	// 5 GENTLE PULSE 1
-	LIGHT_STYLE(5,"jklmnopqrstuvwxyzyxwvutsrqponmlkj");
-	
-	// 6 FLICKER (second variety)
-	LIGHT_STYLE(6, "nmonqnmomnmomomno");
-	
-	// 7 CANDLE (second variety)
-	LIGHT_STYLE(7, "mmmaaaabcdefgmmmmaaaammmaamm");
-	
-	// 8 CANDLE (third variety)
-	LIGHT_STYLE(8, "mmmaaammmaaammmabcdefaaaammmmabcdefmmmaaaa");
-	
-	// 9 SLOW STROBE (fourth variety)
-	LIGHT_STYLE(9, "aaaaaaaazzzzzzzz");
-	
-	// 10 FLUORESCENT FLICKER
-	LIGHT_STYLE(10, "mmamammmmammamamaaamammma");
+	for (i = 0; i <= 13; i++)
+	{
+		LIGHT_STYLE(i, GetStdLightStyle(i));
+	}
 
-	// 11 SLOW PULSE NOT FADE TO BLACK
-	LIGHT_STYLE(11, "abcdefghijklmnopqrrqponmlkjihgfedcba");
-	
-	// 12 UNDERWATER LIGHT MUTATION
-	// this light only distorts the lightmap - no contribution
-	// is made to the brightness of affected surfaces
-	LIGHT_STYLE(12, "mmnnmmnnnmmnn");
-	
 	// styles 32-62 are assigned by the light program for switchable lights
 
 	// 63 testing
 	LIGHT_STYLE(63, "a");
 
-	for ( int i = 0; i < ARRAYSIZE(gDecals); i++ )
+	for (i = 0; i < ARRAYSIZE(gDecals); i++ )
 		gDecals[i].index = DECAL_INDEX( gDecals[i].name );
 
 // init the WorldGraph.
@@ -642,7 +617,7 @@ void CWorld :: Precache( void )
 			pEntity->SetThink( SUB_CallUseToggle );
 			pEntity->pev->message = pev->netname;
 			pev->netname = 0;
-			pEntity->pev->nextthink = gpGlobals->time + 0.3;
+			pEntity->SetNextThink( 0.3 );
 			pEntity->pev->spawnflags = SF_MESSAGE_ONCE;
 		}
 	}
@@ -737,6 +712,18 @@ void CWorld :: KeyValue( KeyValueData *pkvd )
 		}
 		pkvd->fHandled = TRUE;
 	}
+//LRC- let map designers start the player with his suit already on
+	else if ( FStrEq(pkvd->szKeyName, "startsuit") )
+	{
+		g_startSuit = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if ( FStrEq(pkvd->szKeyName, "allowmonsters") )
+	{
+		CVAR_SET_FLOAT( "mp_allowmonsters", atof(pkvd->szValue) );
+		pkvd->fHandled = TRUE;
+	}
+//LRC- ends
 	else
 		CBaseEntity::KeyValue( pkvd );
 }

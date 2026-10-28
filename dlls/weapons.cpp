@@ -474,13 +474,13 @@ void CBasePlayerItem :: FallInit( void )
 	pev->movetype = MOVETYPE_TOSS;
 	pev->solid = SOLID_BBOX;
 
-	UTIL_SetOrigin( pev, pev->origin );
+	UTIL_SetOrigin( this, pev->origin );
 	UTIL_SetSize(pev, Vector( 0, 0, 0), Vector(0, 0, 0) );//pointsize until it lands on the ground.
 	
 	SetTouch( DefaultTouch );
 	SetThink( FallThink );
 
-	pev->nextthink = gpGlobals->time + 0.1;
+	SetNextThink( 0.1 );
 }
 
 //=========================================================
@@ -492,7 +492,7 @@ void CBasePlayerItem :: FallInit( void )
 //=========================================================
 void CBasePlayerItem::FallThink ( void )
 {
-	pev->nextthink = gpGlobals->time + 0.1;
+	SetNextThink( 0.1 );
 
 	if ( pev->flags & FL_ONGROUND )
 	{
@@ -527,7 +527,7 @@ void CBasePlayerItem::Materialize( void )
 
 	pev->solid = SOLID_TRIGGER;
 
-	UTIL_SetOrigin( pev, pev->origin );// link into world.
+	UTIL_SetOrigin( this, pev->origin );// link into world.
 	SetTouch (DefaultTouch);
 	SetThink (NULL);
 
@@ -547,7 +547,7 @@ void CBasePlayerItem::AttemptToMaterialize( void )
 		return;
 	}
 
-	pev->nextthink = gpGlobals->time + time;
+	SetNextThink( time );
 }
 
 //=========================================================
@@ -587,7 +587,7 @@ CBaseEntity* CBasePlayerItem::Respawn( void )
 
 		// not a typo! We want to know when the weapon the player just picked up should respawn! This new entity we created is the replacement,
 		// but when it should respawn is based on conditions belonging to the weapon that was taken.
-		pNewWeapon->pev->nextthink = g_pGameRules->FlWeaponRespawnTime( this );
+		pNewWeapon->AbsoluteNextThink( g_pGameRules->FlWeaponRespawnTime( this ) );
 	}
 	else
 	{
@@ -740,14 +740,14 @@ void CBasePlayerItem::Drop( void )
 {
 	SetTouch( NULL );
 	SetThink(SUB_Remove);
-	pev->nextthink = gpGlobals->time + .1;
+	SetNextThink( 0.1 );
 }
 
 void CBasePlayerItem::Kill( void )
 {
 	SetTouch( NULL );
 	SetThink(SUB_Remove);
-	pev->nextthink = gpGlobals->time + .1;
+	SetNextThink( 0.1 );
 }
 
 void CBasePlayerItem::Holster( int skiplocal /* = 0 */ )
@@ -765,9 +765,17 @@ void CBasePlayerItem::AttachToPlayer ( CBasePlayer *pPlayer )
 	pev->modelindex = 0;// server won't send down to clients if modelindex == 0
 	pev->model = iStringNull;
 	pev->owner = pPlayer->edict();
-	pev->nextthink = gpGlobals->time + .1;
+	SetNextThink( 0.1 );
 	SetTouch( NULL );
 }
+
+//LRC
+void CBasePlayerWeapon :: SetNextThink( float delay )
+{
+	m_fNextThink = UTIL_WeaponTimeBase() + delay;
+	pev->nextthink = m_fNextThink;
+}
+
 
 // CALLED THROUGH the newly-touched weapon's instance. The existing player weapon is pOriginal
 int CBasePlayerWeapon::AddDuplicate( CBasePlayerItem *pOriginal )
@@ -1063,7 +1071,7 @@ void CBasePlayerAmmo::Spawn( void )
 	pev->movetype = MOVETYPE_TOSS;
 	pev->solid = SOLID_TRIGGER;
 	UTIL_SetSize(pev, Vector(-16, -16, 0), Vector(16, 16, 16));
-	UTIL_SetOrigin( pev, pev->origin );
+	UTIL_SetOrigin( this, pev->origin );
 
 	SetTouch( DefaultTouch );
 }
@@ -1073,10 +1081,10 @@ CBaseEntity* CBasePlayerAmmo::Respawn( void )
 	pev->effects |= EF_NODRAW;
 	SetTouch( NULL );
 
-	UTIL_SetOrigin( pev, g_pGameRules->VecAmmoRespawnSpot( this ) );// move to wherever I'm supposed to repawn.
+	UTIL_SetOrigin( this, g_pGameRules->VecAmmoRespawnSpot( this ) );// move to wherever I'm supposed to repawn.
 
 	SetThink( Materialize );
-	pev->nextthink = g_pGameRules->FlAmmoRespawnTime( this );
+	AbsoluteNextThink( g_pGameRules->FlAmmoRespawnTime( this ) );
 
 	return this;
 }
@@ -1111,7 +1119,7 @@ void CBasePlayerAmmo :: DefaultTouch( CBaseEntity *pOther )
 		{
 			SetTouch( NULL );
 			SetThink(SUB_Remove);
-			pev->nextthink = gpGlobals->time + .1;
+			SetNextThink( 0.1 );
 		}
 	}
 	else if (gEvilImpulse101)
@@ -1119,7 +1127,7 @@ void CBasePlayerAmmo :: DefaultTouch( CBaseEntity *pOther )
 		// evil impulse 101 hack, kill always
 		SetTouch( NULL );
 		SetThink(SUB_Remove);
-		pev->nextthink = gpGlobals->time + .1;
+		SetNextThink( 0.1 );
 	}
 }
 
@@ -1181,6 +1189,43 @@ void CBasePlayerWeapon::RetireWeapon( void )
 	//m_pPlayer->pev->viewmodelindex = NULL;
 
 	g_pGameRules->GetNextBestWeapon( m_pPlayer, this );
+}
+
+//=========================================================
+// LRC - remove the specified ammo from this gun
+//=========================================================
+void CBasePlayerWeapon::DrainClip(CBasePlayer* pPlayer, BOOL keep, int i9mm, int i357, int iBuck, int iBolt, int iARGren, int iRock, int iUranium, int iSatchel, int iSnark, int iTrip, int iGren )
+{
+	int iPAI = PrimaryAmmoIndex();
+	int iAmt;
+	if (iPAI == -1) return;
+	else if (iPAI == pPlayer->GetAmmoIndex("9mm"))			iAmt = i9mm;
+	else if (iPAI == pPlayer->GetAmmoIndex("357"))			iAmt = i357;
+	else if (iPAI == pPlayer->GetAmmoIndex("buckshot"))		iAmt = iBuck;
+	else if (iPAI == pPlayer->GetAmmoIndex("bolts"))		iAmt = iBolt;
+	else if (iPAI == pPlayer->GetAmmoIndex("ARgrenades"))	iAmt = iARGren;
+	else if (iPAI == pPlayer->GetAmmoIndex("uranium"))		iAmt = iUranium;
+	else if (iPAI == pPlayer->GetAmmoIndex("rockets"))		iAmt = iRock;
+	else if (iPAI == pPlayer->GetAmmoIndex("Satchel Charge")) iAmt = iSatchel;
+	else if (iPAI == pPlayer->GetAmmoIndex("Snarks"))		iAmt = iSnark;
+	else if (iPAI == pPlayer->GetAmmoIndex("Trip Mine"))	iAmt = iTrip;
+	else if (iPAI == pPlayer->GetAmmoIndex("Hand Grenade")) iAmt = iGren;
+	else return;
+
+	if (iAmt > 0)
+	{
+		m_iClip -= iAmt;
+		if (m_iClip < 0) m_iClip = 0;
+	}
+	else if (iAmt >= -1)
+	{
+		m_iClip = 0;
+	}
+
+	// if we're not keeping the gun, transfer the remainder of its clip
+	// into the main ammo store
+	if (!keep)
+		pPlayer->m_rgAmmo[iPAI] = m_iClip;
 }
 
 //*********************************************************
@@ -1256,7 +1301,7 @@ void CWeaponBox::Kill( void )
 		while ( pWeapon )
 		{
 			pWeapon->SetThink(SUB_Remove);
-			pWeapon->pev->nextthink = gpGlobals->time + 0.1;
+			pWeapon->SetNextThink( 0.1 );
 			pWeapon = pWeapon->m_pNext;
 		}
 	}

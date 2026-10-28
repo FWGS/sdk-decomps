@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -123,7 +123,7 @@ void CApache :: Spawn( void )
 
 	SET_MODEL(ENT(pev), "models/apache.mdl");
 	UTIL_SetSize( pev, Vector( -32, -32, -64 ), Vector( 32, 32, 0 ) );
-	UTIL_SetOrigin( pev, pev->origin );
+	UTIL_SetOrigin( this, pev->origin );
 
 	pev->flags |= FL_MONSTER;
 	pev->takedamage		= DAMAGE_AIM;
@@ -145,7 +145,7 @@ void CApache :: Spawn( void )
 	{
 		SetThink( HuntThink );
 		SetTouch( FlyTouch );
-		pev->nextthink = gpGlobals->time + 1.0;
+		SetNextThink( 1.0 );
 	}
 
 	m_iRockets = 10;
@@ -180,7 +180,7 @@ void CApache::Precache( void )
 void CApache::NullThink( void )
 {
 	StudioFrameAdvance( );
-	pev->nextthink = gpGlobals->time + 0.5;
+	SetNextThink( 0.5 );
 }
 
 
@@ -188,7 +188,7 @@ void CApache::StartupUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 {
 	SetThink( HuntThink );
 	SetTouch( FlyTouch );
-	pev->nextthink = gpGlobals->time + 0.1;
+	SetNextThink( 0.1 );
 	SetUse( NULL );
 }
 
@@ -202,7 +202,7 @@ void CApache :: Killed( entvars_t *pevAttacker, int iGib )
 	UTIL_SetSize( pev, Vector( -32, -32, -64), Vector( 32, 32, 0) );
 	SetThink( DyingThink );
 	SetTouch( CrashTouch );
-	pev->nextthink = gpGlobals->time + 0.1;
+	SetNextThink( 0.1 );
 	pev->health = 0;
 	pev->takedamage = DAMAGE_NO;
 
@@ -219,7 +219,7 @@ void CApache :: Killed( entvars_t *pevAttacker, int iGib )
 void CApache :: DyingThink( void )
 {
 	StudioFrameAdvance( );
-	pev->nextthink = gpGlobals->time + 0.1;
+	SetNextThink( 0.1 );
 
 	pev->avelocity = pev->avelocity * 1.02;
 
@@ -287,7 +287,7 @@ void CApache :: DyingThink( void )
 
 		// don't stop it we touch a entity
 		pev->flags &= ~FL_ONGROUND;
-		pev->nextthink = gpGlobals->time + 0.2;
+		SetNextThink( 0.2 );
 		return;
 	}
 	else
@@ -403,7 +403,7 @@ void CApache :: DyingThink( void )
 		MESSAGE_END();
 
 		SetThink( SUB_Remove );
-		pev->nextthink = gpGlobals->time + 0.1;
+		SetNextThink( 0.1 );
 	}
 }
 
@@ -428,7 +428,7 @@ void CApache::CrashTouch( CBaseEntity *pOther )
 	{
 		SetTouch( NULL );
 		m_flNextRocket = gpGlobals->time;
-		pev->nextthink = gpGlobals->time;
+		SetNextThink( 0 );
 	}
 }
 
@@ -443,7 +443,7 @@ void CApache :: GibMonster( void )
 void CApache :: HuntThink( void )
 {
 	StudioFrameAdvance( );
-	pev->nextthink = gpGlobals->time + 0.1;
+	SetNextThink( 0.1 );
 
 	ShowDamage( );
 
@@ -970,7 +970,7 @@ void CApacheHVR :: Spawn( void )
 
 	SET_MODEL(ENT(pev), "models/HVR.mdl");
 	UTIL_SetSize(pev, Vector( 0, 0, 0), Vector(0, 0, 0));
-	UTIL_SetOrigin( pev, pev->origin );
+	UTIL_SetOrigin( this, pev->origin );
 
 	SetThink( IgniteThink );
 	SetTouch( ExplodeTouch );
@@ -979,7 +979,7 @@ void CApacheHVR :: Spawn( void )
 	m_vecForward = gpGlobals->v_forward;
 	pev->gravity = 0.5;
 
-	pev->nextthink = gpGlobals->time + 0.1;
+	SetNextThink( 0.1 );
 
 	pev->dmg = 150;
 }
@@ -1020,7 +1020,7 @@ void CApacheHVR :: IgniteThink( void  )
 
 	// set to accelerate
 	SetThink( AccelerateThink );
-	pev->nextthink = gpGlobals->time + 0.1;
+	SetNextThink( 0.1 );
 }
 
 
@@ -1043,7 +1043,7 @@ void CApacheHVR :: AccelerateThink( void  )
 	// re-aim
 	pev->angles = UTIL_VecToAngles( pev->velocity );
 
-	pev->nextthink = gpGlobals->time + 0.1;
+	SetNextThink( 0.1 );
 }
 
 

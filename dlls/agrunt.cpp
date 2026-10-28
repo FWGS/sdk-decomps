@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -25,6 +25,7 @@
 #include	"weapons.h"
 #include	"soundent.h"
 #include	"hornet.h"
+#include	"scripted.h"
 
 //=========================================================
 // monster-specific schedule types
@@ -385,7 +386,7 @@ void CAGrunt :: PainSound ( void )
 //=========================================================
 int	CAGrunt :: Classify ( void )
 {
-	return	CLASS_ALIEN_MILITARY;
+	return m_iClass?m_iClass:CLASS_ALIEN_MILITARY;
 }
 
 //=========================================================
@@ -472,7 +473,10 @@ void CAGrunt :: HandleAnimEvent( MonsterEvent_t *pEvent )
 
 			if ( pHornetMonster )
 			{
-				pHornetMonster->m_hEnemy = m_hEnemy;
+				if (m_pCine && m_pCine->PreciseAttack()) //LRC- are we doing a scripted action?
+					pHornetMonster->m_hEnemy = m_hTargetEnt;
+				else
+					pHornetMonster->m_hEnemy = m_hEnemy;
 			}
 		}
 		break;

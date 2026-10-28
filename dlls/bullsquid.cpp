@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -25,6 +25,7 @@
 #include	"effects.h"
 #include	"decals.h"
 #include	"soundent.h"
+#include	"scripted.h"
 #include	"game.h"
 
 #define		SQUID_SPRINT_DIST	256 // how close the squid has to get before starting to sprint and refusing to swerve
@@ -101,7 +102,7 @@ void CSquidSpit:: Spawn( void )
 
 void CSquidSpit::Animate( void )
 {
-	pev->nextthink = gpGlobals->time + 0.1;
+	SetNextThink( 0.1 );
 
 	if ( pev->frame++ )
 	{
@@ -117,12 +118,12 @@ void CSquidSpit::Shoot( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity
 	CSquidSpit *pSpit = GetClassPtr( (CSquidSpit *)NULL );
 	pSpit->Spawn();
 	
-	UTIL_SetOrigin( pSpit->pev, vecStart );
+	UTIL_SetOrigin( pSpit, vecStart );
 	pSpit->pev->velocity = vecVelocity;
 	pSpit->pev->owner = ENT(pevOwner);
 
 	pSpit->SetThink ( Animate );
-	pSpit->pev->nextthink = gpGlobals->time + 0.1;
+	pSpit->SetNextThink( 0.1 );
 }
 
 void CSquidSpit :: Touch ( CBaseEntity *pOther )
@@ -173,7 +174,7 @@ void CSquidSpit :: Touch ( CBaseEntity *pOther )
 	}
 
 	SetThink ( SUB_Remove );
-	pev->nextthink = gpGlobals->time;
+	SetNextThink( 0 );
 }
 
 //=========================================================
@@ -425,7 +426,7 @@ int CBullsquid :: ISoundMask ( void )
 //=========================================================
 int	CBullsquid :: Classify ( void )
 {
-	return	CLASS_ALIEN_PREDATOR;
+	return m_iClass?m_iClass:CLASS_ALIEN_PREDATOR;
 }
 
 //=========================================================
@@ -539,7 +540,15 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			// we should be able to read the position of bones at runtime for this info.
 			vecSpitOffset = ( gpGlobals->v_right * 8 + gpGlobals->v_forward * 37 + gpGlobals->v_up * 23 );		
 			vecSpitOffset = ( pev->origin + vecSpitOffset );
-			vecSpitDir = ( ( m_hEnemy->pev->origin + m_hEnemy->pev->view_ofs ) - vecSpitOffset ).Normalize();
+			if (m_pCine) // LRC- are we being told to do this by a scripted_action?
+			{
+				if (m_hTargetEnt != NULL && m_pCine->PreciseAttack())
+					vecSpitDir = ( ( m_hTargetEnt->pev->origin ) - vecSpitOffset ).Normalize();
+				else
+					vecSpitDir = gpGlobals->v_forward;
+			}
+			else
+				vecSpitDir = ( ( m_hEnemy->pev->origin + m_hEnemy->pev->view_ofs ) - vecSpitOffset ).Normalize();
 
 			vecSpitDir.x += RANDOM_FLOAT( -0.05, 0.05 );
 			vecSpitDir.y += RANDOM_FLOAT( -0.05, 0.05 );

@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -261,7 +261,7 @@ int CBarney :: ISoundMask ( void)
 //=========================================================
 int	CBarney :: Classify ( void )
 {
-	return	CLASS_PLAYER_ALLY;
+	return m_iClass?m_iClass:CLASS_PLAYER_ALLY;
 }
 
 //=========================================================
@@ -273,7 +273,17 @@ void CBarney :: AlertSound( void )
 	{
 		if ( FOkToSpeak() )
 		{
-			PlaySentence( "BA_ATTACK", RANDOM_FLOAT(2.8, 3.2), VOL_NORM, ATTN_IDLE );
+			if (m_iszSpeakAs)
+			{
+				char szBuf[32];
+				strcpy(szBuf,STRING(m_iszSpeakAs));
+				strcat(szBuf,"_ATTACK");
+				PlaySentence( szBuf, RANDOM_FLOAT(2.8, 3.2), VOL_NORM, ATTN_IDLE );
+			}
+			else
+			{
+				PlaySentence( "BA_ATTACK", RANDOM_FLOAT(2.8, 3.2), VOL_NORM, ATTN_IDLE );
+			}
 		}
 	}
 
@@ -457,54 +467,48 @@ void CBarney :: TalkInit()
 	
 	CTalkMonster::TalkInit();
 
-	// scientists speach group names (group names are in sentences.txt)
+	// barney speech group names (group names are in sentences.txt)
 
-	m_szGrp[TLK_ANSWER]  =	"BA_ANSWER";
-	m_szGrp[TLK_QUESTION] =	"BA_QUESTION";
-	m_szGrp[TLK_IDLE] =		"BA_IDLE";
-	m_szGrp[TLK_STARE] =		"BA_STARE";
-	m_szGrp[TLK_USE] =		"BA_OK";
-	m_szGrp[TLK_UNUSE] =	"BA_WAIT";
-	m_szGrp[TLK_STOP] =		"BA_STOP";
+	if (!m_iszSpeakAs)
+	{
+		m_szGrp[TLK_ANSWER]		=	"BA_ANSWER";
+		m_szGrp[TLK_QUESTION]	=	"BA_QUESTION";
+		m_szGrp[TLK_IDLE]		=	"BA_IDLE";
+		m_szGrp[TLK_STARE]		=	"BA_STARE";
+		if (pev->spawnflags & SF_MONSTER_PREDISASTER) //LRC
+			m_szGrp[TLK_USE]	=	"BA_PFOLLOW";
+		else
+			m_szGrp[TLK_USE] =	"BA_OK";
+		if (pev->spawnflags & SF_MONSTER_PREDISASTER)
+			m_szGrp[TLK_UNUSE] = "BA_PWAIT";
+		else
+			m_szGrp[TLK_UNUSE] = "BA_WAIT";
+		if (pev->spawnflags & SF_MONSTER_PREDISASTER)
+			m_szGrp[TLK_DECLINE] =	"BA_POK";
+		else
+			m_szGrp[TLK_DECLINE] =	"BA_NOTOK";
+		m_szGrp[TLK_STOP] =		"BA_STOP";
 
-	m_szGrp[TLK_NOSHOOT] =	"BA_SCARED";
-	m_szGrp[TLK_HELLO] =	"BA_HELLO";
+		m_szGrp[TLK_NOSHOOT] =	"BA_SCARED";
+		m_szGrp[TLK_HELLO] =	"BA_HELLO";
 
-	m_szGrp[TLK_PLHURT1] =	"!BA_CUREA";
-	m_szGrp[TLK_PLHURT2] =	"!BA_CUREB"; 
-	m_szGrp[TLK_PLHURT3] =	"!BA_CUREC";
+		m_szGrp[TLK_PLHURT1] =	"!BA_CUREA";
+		m_szGrp[TLK_PLHURT2] =	"!BA_CUREB"; 
+		m_szGrp[TLK_PLHURT3] =	"!BA_CUREC";
 
-	m_szGrp[TLK_PHELLO] =	NULL;	//"BA_PHELLO";		// UNDONE
-	m_szGrp[TLK_PIDLE] =	NULL;	//"BA_PIDLE";			// UNDONE
-	m_szGrp[TLK_PQUESTION] = "BA_PQUEST";		// UNDONE
+		m_szGrp[TLK_PHELLO] =	NULL;	//"BA_PHELLO";		// UNDONE
+		m_szGrp[TLK_PIDLE] =	NULL;	//"BA_PIDLE";			// UNDONE
+		m_szGrp[TLK_PQUESTION] = "BA_PQUEST";		// UNDONE
 
-	m_szGrp[TLK_SMELL] =	"BA_SMELL";
+		m_szGrp[TLK_SMELL] =	"BA_SMELL";
 	
-	m_szGrp[TLK_WOUND] =	"BA_WOUND";
-	m_szGrp[TLK_MORTAL] =	"BA_MORTAL";
+		m_szGrp[TLK_WOUND] =	"BA_WOUND";
+		m_szGrp[TLK_MORTAL] =	"BA_MORTAL";
+	}
 
 	// get voice for head - just one barney voice for now
 	m_voicePitch = 100;
 }
-
-
-static BOOL IsFacing( entvars_t *pevTest, const Vector &reference )
-{
-	Vector vecDir = (reference - pevTest->origin);
-	vecDir.z = 0;
-	vecDir = vecDir.Normalize();
-	Vector forward, angle;
-	angle = pevTest->v_angle;
-	angle.x = 0;
-	UTIL_MakeVectorsPrivate( angle, forward, NULL, NULL );
-	// He's facing me, he meant it
-	if ( DotProduct( forward, vecDir ) > 0.96 )	// +/- 15 degrees or so
-	{
-		return TRUE;
-	}
-	return FALSE;
-}
-
 
 int CBarney :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
 {
@@ -522,10 +526,20 @@ int CBarney :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, floa
 		if ( m_hEnemy == NULL )
 		{
 			// If the player was facing directly at me, or I'm already suspicious, get mad
-			if ( (m_afMemory & bits_MEMORY_SUSPICIOUS) || IsFacing( pevAttacker, pev->origin ) )
+			if ( (m_afMemory & bits_MEMORY_SUSPICIOUS) || UTIL_IsFacing( pevAttacker, pev->origin ) )
 			{
 				// Alright, now I'm pissed!
-				PlaySentence( "BA_MAD", 4, VOL_NORM, ATTN_NORM );
+				if (m_iszSpeakAs)
+				{
+					char szBuf[32];
+					strcpy(szBuf,STRING(m_iszSpeakAs));
+					strcat(szBuf,"_MAD");
+					PlaySentence( szBuf, 4, VOL_NORM, ATTN_NORM );
+				}
+				else
+				{
+					PlaySentence( "BA_MAD", 4, VOL_NORM, ATTN_NORM );
+				}
 
 				Remember( bits_MEMORY_PROVOKED );
 				StopFollowing( TRUE );
@@ -533,13 +547,33 @@ int CBarney :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, floa
 			else
 			{
 				// Hey, be careful with that
-				PlaySentence( "BA_SHOT", 4, VOL_NORM, ATTN_NORM );
+				if (m_iszSpeakAs)
+				{
+					char szBuf[32];
+					strcpy(szBuf,STRING(m_iszSpeakAs));
+					strcat(szBuf,"_SHOT");
+					PlaySentence( szBuf, 4, VOL_NORM, ATTN_NORM );
+				}
+				else
+				{
+					PlaySentence( "BA_SHOT", 4, VOL_NORM, ATTN_NORM );
+				}
 				Remember( bits_MEMORY_SUSPICIOUS );
 			}
 		}
 		else if ( !(m_hEnemy->IsPlayer()) && pev->deadflag == DEAD_NO )
 		{
-			PlaySentence( "BA_SHOT", 4, VOL_NORM, ATTN_NORM );
+			if (m_iszSpeakAs)
+			{
+				char szBuf[32];
+				strcpy(szBuf,STRING(m_iszSpeakAs));
+				strcat(szBuf,"_SHOT");
+				PlaySentence( szBuf, 4, VOL_NORM, ATTN_NORM );
+			}
+			else
+			{
+				PlaySentence( "BA_SHOT", 4, VOL_NORM, ATTN_NORM );
+			}
 		}
 	}
 
@@ -611,7 +645,7 @@ void CBarney::TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir
 
 void CBarney::Killed( entvars_t *pevAttacker, int iGib )
 {
-	if ( pev->body < BARNEY_BODY_GUNGONE )
+	if ( pev->body < BARNEY_BODY_GUNGONE && !(pev->spawnflags & SF_MONSTER_NO_WPN_DROP))
 	{// drop the gun!
 		Vector vecGunPos;
 		Vector vecGunAngles;
@@ -695,7 +729,18 @@ Schedule_t *CBarney :: GetSchedule ( void )
 	}
 	if ( HasConditions( bits_COND_ENEMY_DEAD ) && FOkToSpeak() )
 	{
-		PlaySentence( "BA_KILL", 4, VOL_NORM, ATTN_NORM );
+		// Hey, be careful with that
+		if (m_iszSpeakAs)
+		{
+			char szBuf[32];
+			strcpy(szBuf,STRING(m_iszSpeakAs));
+			strcat(szBuf,"_KILL");
+			PlaySentence( szBuf, 4, VOL_NORM, ATTN_NORM );
+		}
+		else
+		{
+			PlaySentence( "BA_KILL", 4, VOL_NORM, ATTN_NORM );
+		}
 	}
 
 	switch( m_MonsterState )
@@ -770,7 +815,7 @@ MONSTERSTATE CBarney :: GetIdealState ( void )
 
 void CBarney::DeclineFollowing( void )
 {
-	PlaySentence( "BA_POK", 2, VOL_NORM, ATTN_NORM );
+	PlaySentence( m_szGrp[TLK_DECLINE], 2, VOL_NORM, ATTN_NORM ); //LRC
 }
 
 

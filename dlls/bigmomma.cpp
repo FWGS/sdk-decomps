@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -25,6 +25,9 @@
 #include	"decals.h"
 #include	"weapons.h"
 #include	"game.h"
+
+//LRC brought in from animation.h
+#define ACTIVITY_NOT_AVAILABLE		-1
 
 #define SF_INFOBM_RUN		0x0001
 #define SF_INFOBM_WAIT		0x0002
@@ -186,6 +189,7 @@ public:
 	Schedule_t	*GetSchedule( void );
 	Schedule_t	*GetScheduleOfType( int Type );
 	void		TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType );
+	void		SetActivity ( Activity NewActivity );
 
 	void NodeStart( int iszNextNode );
 	void NodeReach( void );
@@ -406,7 +410,7 @@ void CBigMomma :: KeyValue( KeyValueData *pkvd )
 //=========================================================
 int	CBigMomma :: Classify ( void )
 {
-	return	CLASS_ALIEN_MONSTER;
+	return m_iClass?m_iClass:CLASS_ALIEN_MONSTER;
 }
 
 //=========================================================
@@ -534,7 +538,7 @@ void CBigMomma :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		case BIG_AE_JUMP_FORWARD:
 			ClearBits( pev->flags, FL_ONGROUND );
 
-			UTIL_SetOrigin (pev, pev->origin + Vector ( 0 , 0 , 1) );// take him off ground so engine doesn't instantly reset onground 
+			UTIL_SetOrigin (this, pev->origin + Vector ( 0 , 0 , 1) );// take her off ground so engine doesn't instantly reset onground 
 			UTIL_MakeVectors ( pev->angles );
 
 			pev->velocity = (gpGlobals->v_forward * 200) + gpGlobals->v_up * 500;
@@ -645,9 +649,26 @@ void CBigMomma::LaunchMortar( void )
 	
 	Vector startPos = pev->origin;
 	startPos.z += 180;
+	Vector vecLaunch = g_vecZero;
+
+	if (m_pCine) // is a scripted_action making me shoot?
+	{
+		if (m_hTargetEnt != NULL) // don't check m_fTurnType- bigmomma can fire in any direction.
+		{
+			vecLaunch = VecCheckSplatToss( pev, startPos, m_hTargetEnt->pev->origin, RANDOM_FLOAT( 150, 500 ) );
+		}
+		if (vecLaunch == g_vecZero)
+		{
+			vecLaunch = pev->movedir;
+		}
+	}
+	else
+	{
+		vecLaunch = pev->movedir;
+	}
 
 	EMIT_SOUND_DYN( edict(), CHAN_WEAPON, RANDOM_SOUND_ARRAY(pSackSounds), 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
-	CBMortar *pBomb = CBMortar::Shoot( edict(), startPos, pev->movedir );
+	CBMortar *pBomb = CBMortar::Shoot( edict(), startPos, vecLaunch );
 	pBomb->pev->gravity = 1.0;
 	MortarSpray( startPos, Vector(0,0,1), gSpitSprite, 24 );
 }
@@ -707,6 +728,8 @@ void CBigMomma::Activate( void )
 {
 	if ( m_hTargetEnt == NULL )
 		Remember( bits_MEMORY_ADVANCE_NODE );	// Start 'er up
+
+	CBaseMonster::Activate();
 }
 
 
@@ -718,10 +741,7 @@ void CBigMomma::NodeStart( int iszNextNode )
 
 	if ( pev->netname )
 	{
-		edict_t *pentTarget = FIND_ENTITY_BY_TARGETNAME ( NULL, STRING(pev->netname) );
-
-		if ( !FNullEnt(pentTarget) )
-			pTarget = Instance( pentTarget );
+		pTarget = UTIL_FindEntityByTargetname( NULL, STRING(pev->netname) );
 	}
 
 
@@ -905,7 +925,46 @@ BOOL CBigMomma::ShouldGoToNode( void )
 	return FALSE;
 }
 
+// Overridden to make BigMomma jump on command; the model doesn't support it otherwise.
+void CBigMomma :: SetActivity ( Activity NewActivity )
+{
+	int	iSequence;
 
+	if (NewActivity == ACT_HOP)
+	{
+		iSequence = LookupSequence( "jump" );
+	}
+	else
+	{
+		iSequence = LookupActivity ( NewActivity );
+	}
+
+	// Set to the desired anim, or default anim if the desired is not present
+	if ( iSequence > ACTIVITY_NOT_AVAILABLE )
+	{
+		if ( pev->sequence != iSequence || !m_fSequenceLoops )
+		{
+			// don't reset frame between walk and run
+			if ( !(m_Activity == ACT_WALK || m_Activity == ACT_RUN) || !(NewActivity == ACT_WALK || NewActivity == ACT_RUN))
+				pev->frame = 0;
+		}
+
+		pev->sequence		= iSequence;	// Set to the reset anim (if it's there)
+		ResetSequenceInfo( );
+		SetYawSpeed();
+	}
+	else
+	{
+		// Not available try to get default anim
+		ALERT ( at_aiconsole, "%s has no sequence for act:%d\n", STRING(pev->classname), NewActivity );
+		pev->sequence		= 0;	// Set to the reset anim (if it's there)
+	}
+
+	m_Activity = NewActivity; // Go ahead and set this so it doesn't keep trying when the anim is not present
+	
+	// In case someone calls this with something other than the ideal activity
+	m_IdealActivity = m_Activity;
+}
 
 Schedule_t *CBigMomma::GetSchedule( void )
 {
@@ -1081,7 +1140,6 @@ void CBigMomma::RunTask( Task_t *pTask )
 }
 
 
-
 Vector VecCheckSplatToss( entvars_t *pev, const Vector &vecSpot1, Vector vecSpot2, float maxHeight )
 {
 	TraceResult		tr;
@@ -1173,7 +1231,7 @@ void CBMortar:: Spawn( void )
 
 void CBMortar::Animate( void )
 {
-	pev->nextthink = gpGlobals->time + 0.1;
+	SetNextThink( 0.1 );
 
 	if ( gpGlobals->time > pev->dmgtime )
 	{
@@ -1194,12 +1252,12 @@ CBMortar *CBMortar::Shoot( edict_t *pOwner, Vector vecStart, Vector vecVelocity 
 	CBMortar *pSpit = GetClassPtr( (CBMortar *)NULL );
 	pSpit->Spawn();
 	
-	UTIL_SetOrigin( pSpit->pev, vecStart );
+	UTIL_SetOrigin( pSpit, vecStart );
 	pSpit->pev->velocity = vecVelocity;
 	pSpit->pev->owner = pOwner;
 	pSpit->pev->scale = 2.5;
 	pSpit->SetThink ( Animate );
-	pSpit->pev->nextthink = gpGlobals->time + 0.1;
+	pSpit->SetNextThink( 0.1 );
 
 	return pSpit;
 }

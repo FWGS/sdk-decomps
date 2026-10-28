@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -22,6 +22,7 @@
 #include	"monsters.h"
 #include	"schedule.h"
 #include	"game.h"
+
 
 //=========================================================
 // Monster's Anim Events Go Here
@@ -156,7 +157,7 @@ const char *CHeadCrab::pBiteSounds[] =
 //=========================================================
 int	CHeadCrab :: Classify ( void )
 {
-	return	CLASS_ALIEN_PREY;
+	return m_iClass?m_iClass:CLASS_ALIEN_PREY;
 }
 
 //=========================================================
@@ -219,7 +220,7 @@ void CHeadCrab :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		{
 			ClearBits( pev->flags, FL_ONGROUND );
 
-			UTIL_SetOrigin (pev, pev->origin + Vector ( 0 , 0 , 1) );// take him off ground so engine doesn't instantly reset onground 
+			UTIL_SetOrigin (this, pev->origin + Vector ( 0 , 0 , 1) );// take him off ground so engine doesn't instantly reset onground 
 			UTIL_MakeVectors ( pev->angles );
 
 			Vector vecJumpDir;

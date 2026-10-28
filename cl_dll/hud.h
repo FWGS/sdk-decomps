@@ -20,6 +20,7 @@
 // CHud handles the message, calculation, and drawing the HUD
 //
 
+#define FOG_LIMIT 30000
 
 #define RGB_YELLOWISH 0x00FFA000 //255,160,0
 #define RGB_REDISH 0x00FF1010 //255,160,0
@@ -625,6 +626,7 @@ public:
 	int _cdecl MsgFunc_Logo(const char *pszName,  int iSize, void *pbuf);
 	int _cdecl MsgFunc_ResetHUD(const char *pszName,  int iSize, void *pbuf);
 	void _cdecl MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf );
+	void _cdecl MsgFunc_SetFog( const char *pszName, int iSize, void *pbuf ); //LRC
 	int _cdecl MsgFunc_SetFOV(const char *pszName,  int iSize, void *pbuf);
 	int  _cdecl MsgFunc_Concuss( const char *pszName, int iSize, void *pbuf );
 

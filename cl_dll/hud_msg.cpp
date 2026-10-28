@@ -21,6 +21,14 @@
 #include "parsemsg.h"
 #include "r_efx.h"
 
+//LRC - the fogging fog
+float g_fFogColor[3];
+float g_fStartDist;
+float g_fEndDist;
+//int g_iFinalStartDist; //for fading
+int g_iFinalEndDist;   //for fading
+float g_fFadeDuration; //negative = fading out
+
 #define MAX_CLIENTS 32
 
 extern BEAM *pBeam;
@@ -53,6 +61,13 @@ int CHud :: MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf )
 
 void CHud :: MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf )
 {
+	//LRC - clear the fog
+	for ( int i = 0; i < 4; i++ )
+		 g_fFogColor[ i ] = 0.0;
+
+	g_fStartDist = 0;
+	g_fEndDist = 0;
+
 	// prepare all hud data
 	HUDLIST *pList = m_pHudList;
 
@@ -65,6 +80,38 @@ void CHud :: MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf )
 
 	//Probably not a good place to put this.
 	pBeam = pBeam2 = NULL;
+}
+
+//LRC
+void CHud :: MsgFunc_SetFog( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+
+	for ( int i = 0; i < 3; i++ )
+		 g_fFogColor[ i ] = READ_BYTE();
+
+	g_fFadeDuration = READ_SHORT();
+	g_fStartDist = READ_SHORT();
+
+	if (g_fFadeDuration > 0)
+	{
+//		// fading in
+//		g_fStartDist = READ_SHORT();
+		g_iFinalEndDist = READ_SHORT();
+//		g_fStartDist = FOG_LIMIT;
+		g_fEndDist = FOG_LIMIT;
+	}
+	else if (g_fFadeDuration < 0)
+	{
+//		// fading out
+//		g_iFinalStartDist = 
+		g_iFinalEndDist = g_fEndDist = READ_SHORT();
+	}
+	else
+	{
+//		g_fStartDist = READ_SHORT();
+		g_fEndDist = READ_SHORT();
+	}
 }
 
 

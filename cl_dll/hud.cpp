@@ -103,6 +103,13 @@ int __MsgFunc_InitHUD(const char *pszName, int iSize, void *pbuf)
 	return 1;
 }
 
+//LRC
+int __MsgFunc_SetFog(const char *pszName, int iSize, void *pbuf)
+{
+	gHUD.MsgFunc_SetFog( pszName, iSize, pbuf );
+	return 1;
+}
+
 int __MsgFunc_SetFOV(const char *pszName, int iSize, void *pbuf)
 {
 	return gHUD.MsgFunc_SetFOV( pszName, iSize, pbuf );
@@ -266,6 +273,7 @@ void CHud :: Init( void )
 	HOOK_MESSAGE( ResetHUD );
 	HOOK_MESSAGE( GameMode );
 	HOOK_MESSAGE( InitHUD );
+	HOOK_MESSAGE( SetFog );
 	HOOK_MESSAGE( SetFOV );
 	HOOK_MESSAGE( Concuss );
 
