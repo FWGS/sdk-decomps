@@ -118,12 +118,14 @@ void CIDPanel::GetIDString( char *pszBuf, int iLen, int iPlayer, int iLocalPlaye
 	if ( !bFriend )
 	{
 		sprintf( pszBuf, "Enemy:  " );
-		gViewPort->m_pIDPanel->m_pText->setFgColor( 255, 0, 0, 1 );
+		CIDPanel *pPanel = gViewPort->m_pIDPanel;
+		pPanel->m_pText->setFgColor( 255, 0, 0, 1 );
 	}
 	else
 	{
 		sprintf( pszBuf, "Friend: " );
-		gViewPort->m_pIDPanel->m_pText->setFgColor( 0, 255, 0, 1 );
+		CIDPanel *pPanel = gViewPort->m_pIDPanel;
+		pPanel->m_pText->setFgColor( 0, 255, 0, 1 );
 	}
 
 	hud_player_info_t *pInfo = &g_PlayerInfoList[iPlayer];
@@ -173,7 +175,8 @@ void CIDPanel::paint( void )
 			szID[sizeof( szID ) - 1] = '\0';
 			GetIDString( szID, 255, pe->info, pLocal->index );
 			gViewPort->m_pIDPanel->SetID( szID, 0, 0 );
-			gViewPort->m_pIDPanel->m_pText->setVisible( true );
+			CIDPanel *pPanel = gViewPort->m_pIDPanel;
+			pPanel->m_pText->setVisible( true );
 
 			int iWide, iTall;
 			m_pText->getTextImage()->getTextSizeWrapped( iWide, iTall );
@@ -183,7 +186,8 @@ void CIDPanel::paint( void )
 		}
 		else if ( gEngfuncs.GetClientTime() > m_flHideTime )
 		{
-			gViewPort->m_pIDPanel->m_pText->setVisible( false );
+			CIDPanel *pPanel = gViewPort->m_pIDPanel;
+			pPanel->m_pText->setVisible( false );
 		}
 
 		gEngfuncs.pEventAPI->EV_PopPMStates();
