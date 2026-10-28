@@ -251,6 +251,7 @@ void CHornet :: TrackTarget ( void )
 	Vector	vecFlightDir;
 	Vector	vecDirToEnemy;
 	float	flDelta;
+	Vector	vecOldVelocity = pev->velocity; // name ours; never used (sic)
 
 	StudioFrameAdvance( );
 
