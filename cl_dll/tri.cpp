@@ -705,16 +705,14 @@ inline bool CEffectList::Remove( int iId )
 	}
 
 	CEffectNode *pPrev = m_pHead->Previous( iId );
-	if ( pPrev )
-	{
-		pNode = pPrev->m_pNext;
-		pPrev->m_pNext = pNode->m_pNext;
-		m_iCount--;
-		delete pNode;
-		return true;
-	}
+	if ( !pPrev )
+		return false;
 
-	return false;
+	pNode = pPrev->m_pNext;
+	pPrev->m_pNext = pNode->m_pNext;
+	m_iCount--;
+	delete pNode;
+	return true;
 }
 
 /*
