@@ -294,12 +294,13 @@ void CDragonfly::FlockLeaderThink( void )
 		if ( flRightSide > flLeftSide )
 		{
 			pev->avelocity.y = -AFLOCK_TURN_RATE;
+			m_fTurning = TRUE;
 		}
 		else
 		{
 			pev->avelocity.y = AFLOCK_TURN_RATE;
+			m_fTurning = TRUE;
 		}
-		m_fTurning = TRUE;
 	}
 
 	// check and make sure we aren't about to plow into the ground, don't let it happen
@@ -310,11 +311,12 @@ void CDragonfly::FlockLeaderThink( void )
 	// maybe it did, though.
 	if ( FBitSet( pev->flags, FL_ONGROUND ) )
 	{
-		UTIL_SetOrigin( pev, Vector( 0, 0, 1 ) + pev->origin );
+		UTIL_SetOrigin( pev, pev->origin + Vector( 0, 0, 1 ) );
 		pev->velocity.z = 0;
 	}
 
 	// hover while turning
+	vecDir = pev->velocity;	// sic: unused
 	pev->velocity = g_vecZero;
 	pev->speed = 0;
 }
