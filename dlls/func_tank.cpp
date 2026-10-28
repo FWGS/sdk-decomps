@@ -309,6 +309,7 @@ void CFuncTank :: Spawn( void )
 		m_spread = 0;
 
 	pev->oldorigin = pev->origin;
+	pev->iuser1 = 0; // T2DEF: 1 while a player controls the tank
 }
 
 
@@ -491,6 +492,7 @@ BOOL CFuncTank :: StartControl( CBasePlayer* pController, CFuncTankControls *pCo
 
 	SetNextThink(0.1);
 //	ALERT(at_debug,"StartControl succeeded\n");
+	pev->iuser1 = 1; // T2DEF
 	return TRUE;
 }
 
@@ -519,6 +521,7 @@ void CFuncTank :: StopControl( CFuncTankControls* pControls)
 	{
 		SetNextThink(1.0);
 	}
+	pev->iuser1 = 0; // T2DEF
 }
 
 void CFuncTank::UpdateSpot( void )
@@ -547,6 +550,7 @@ void CFuncTank::UpdateSpot( void )
 		*/
 
 		UTIL_SetOrigin( m_pSpot, tr.vecEndPos );
+		pev->vuser1 = tr.vecEndPos; // T2DEF
 	}
 }
 
@@ -1044,6 +1048,7 @@ void CFuncTank::TrackTarget( void )
 
 		if ( pController->pev->button & IN_ATTACK )
 		{
+			pev->iuser2 = 1; // T2DEF: the controlling player is firing
 			Vector forward;
 			UTIL_MakeVectorsPrivate( pev->angles, forward, NULL, NULL );
 
@@ -1057,6 +1062,10 @@ void CFuncTank::TrackTarget( void )
 				((CBasePlayer *)pController)->m_iWeaponVolume = LOUD_GUN_VOLUME;
 
 			m_flNextAttack = gpGlobals->time + (1/m_fireRate);
+		}
+		else
+		{
+			pev->iuser2 = 0; // T2DEF
 		}
 	}
 	// firing with automatic guns:
