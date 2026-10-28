@@ -327,7 +327,7 @@ void CDemomanRocket::AccelerateThink( void )
 		// steer toward the players near the rocket
 		while ( ( pOther = UTIL_FindEntityInSphere( pOther, pev->origin, 1024 ) ) != NULL )
 		{
-			if ( pOther->pev->takedamage != DAMAGE_NO && pOther->IsPlayer() && ENT( pOther->pev ) != pev->owner && pOther != this )
+			if ( pOther->pev->takedamage != DAMAGE_NO && pOther->IsPlayer() && ENT( pOther->pev ) != pev->owner && this != pOther )
 			{
 				vecTarget = vecTarget + ( pOther->pev->origin - pev->origin ).Normalize();
 				vecTarget.x *= 0.7;
