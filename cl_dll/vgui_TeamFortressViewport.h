@@ -461,6 +461,48 @@ public:
 	}
 };
 
+// Sends its command with the current camera's entity index appended
+class CMenuHandler_SecurityCam : public ActionSignal
+{
+protected:
+	char	m_pszCommand[MAX_COMMAND_SIZE];
+	int		m_iCloseVGUIMenu;
+	static int m_iCamera;
+public:
+	CMenuHandler_SecurityCam( char *pszCommand )
+	{
+		strcpy( m_pszCommand, pszCommand );
+		m_iCloseVGUIMenu = false;
+		m_iCamera = -1;
+	}
+
+	CMenuHandler_SecurityCam( char *pszCommand, int iClose )
+	{
+		strcpy( m_pszCommand, pszCommand );
+		m_iCloseVGUIMenu = true;
+		m_iCamera = -1;
+	}
+
+	static void SetCamera( int iCamera )
+	{
+		m_iCamera = iCamera;
+	}
+
+	virtual void actionPerformed(Panel* panel)
+	{
+		char sz[32];
+		char szCamera[16];
+
+		sprintf( szCamera, " %d", m_iCamera );
+		strcpy( sz, m_pszCommand );
+		strcat( sz, szCamera );
+		gEngfuncs.pfnClientCmd( sz );
+
+		if (m_iCloseVGUIMenu)
+			gViewPort->HideTopMenu();
+	}
+};
+
 // This works the same as CMenuHandler_StringCommand, except it watches the string command 
 // for specific commands, and modifies client vars based upon them.
 class CMenuHandler_StringCommandWatch : public CMenuHandler_StringCommand
@@ -1275,48 +1317,6 @@ public:
 
 	void SetCamera( int iCamera );
 	void Exit( void );
-};
-
-// Sends its command with the current camera's entity index appended
-class CMenuHandler_SecurityCam : public ActionSignal
-{
-protected:
-	char	m_pszCommand[MAX_COMMAND_SIZE];
-	int		m_iCloseVGUIMenu;
-	static int m_iCamera;
-public:
-	CMenuHandler_SecurityCam( char *pszCommand )
-	{
-		strcpy( m_pszCommand, pszCommand );
-		m_iCloseVGUIMenu = false;
-		m_iCamera = -1;
-	}
-
-	CMenuHandler_SecurityCam( char *pszCommand, int iClose )
-	{
-		strcpy( m_pszCommand, pszCommand );
-		m_iCloseVGUIMenu = true;
-		m_iCamera = -1;
-	}
-
-	static void SetCamera( int iCamera )
-	{
-		m_iCamera = iCamera;
-	}
-
-	virtual void actionPerformed(Panel* panel)
-	{
-		char sz[32];
-		char szCamera[16];
-
-		sprintf( szCamera, " %d", m_iCamera );
-		strcpy( sz, m_pszCommand );
-		strcat( sz, szCamera );
-		gEngfuncs.pfnClientCmd( sz );
-
-		if (m_iCloseVGUIMenu)
-			gViewPort->HideTopMenu();
-	}
 };
 
 class CMenuHandler_ConfigSection : public ActionSignal
