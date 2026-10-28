@@ -969,18 +969,16 @@ public:
 	void Spawn( void );
 	void Precache( void );
 	int  Classify( void );
-	void EXPORT FlopAnim( void );
+	void EXPORT FlopAnim( void )
+	{
+		StudioFrameAdvance();
+
+		if ( m_fSequenceFinished )
+			SetSequenceByName( "bodygib#idle" );
+		else
+			pev->nextthink = gpGlobals->time + 0.1;
+	}
 };
-
-void CBeakBirtherGib::FlopAnim( void )
-{
-	StudioFrameAdvance();
-
-	if ( m_fSequenceFinished )
-		SetSequenceByName( "bodygib#idle" );
-	else
-		pev->nextthink = gpGlobals->time + 0.1;
-}
 
 LINK_ENTITY_TO_CLASS( beakbirther_gib, CBeakBirtherGib );
 

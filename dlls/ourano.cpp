@@ -751,31 +751,27 @@ public:
 	void GibMonster( void );
 
 private:
-	void EXPORT NestTouch( CBaseEntity *pOther );
-	void EXPORT NestUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void EXPORT NestTouch( CBaseEntity *pOther )
+	{
+		CallForHelp( "monster_ourano", 512, m_hEnemy, m_vecEnemyLKP );
+	}
+	void EXPORT NestUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+	{
+		pActivator->TakeHealth( RANDOM_LONG( 40, 60 ), DMG_GENERIC );
+
+		CallForHelp( "monster_ourano", 512, m_hEnemy, m_vecEnemyLKP );
+
+		pev->body = 1;
+		pev->health = -1;
+
+		if ( RANDOM_LONG( 0, 1 ) )
+			EMIT_SOUND_DYN( ENT(pev), CHAN_BODY, "ourano/eggs_crack1.wav", 1, ATTN_NORM, 0, PITCH_NORM );
+		else
+			EMIT_SOUND_DYN( ENT(pev), CHAN_BODY, "ourano/eggs_crack2.wav", 1, ATTN_NORM, 0, PITCH_NORM );
+
+		SetUse( NULL );
+	}
 };
-
-void CNest::NestTouch( CBaseEntity *pOther )
-{
-	CallForHelp( "monster_ourano", 512, m_hEnemy, m_vecEnemyLKP );
-}
-
-void CNest::NestUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
-{
-	pActivator->TakeHealth( RANDOM_LONG( 40, 60 ), DMG_GENERIC );
-
-	CallForHelp( "monster_ourano", 512, m_hEnemy, m_vecEnemyLKP );
-
-	pev->body = 1;
-	pev->health = -1;
-
-	if ( RANDOM_LONG( 0, 1 ) )
-		EMIT_SOUND_DYN( ENT(pev), CHAN_BODY, "ourano/eggs_crack1.wav", 1, ATTN_NORM, 0, PITCH_NORM );
-	else
-		EMIT_SOUND_DYN( ENT(pev), CHAN_BODY, "ourano/eggs_crack2.wav", 1, ATTN_NORM, 0, PITCH_NORM );
-
-	SetUse( NULL );
-}
 
 LINK_ENTITY_TO_CLASS( decore_nest, CNest );
 

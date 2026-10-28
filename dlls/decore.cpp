@@ -650,8 +650,28 @@ public:
 	CBaseEntity *pBeak;
 
 private:
-	void EXPORT SpawnIceBeak( void );
-	void EXPORT Melt( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void EXPORT SpawnIceBeak( void )
+	{
+		if ( m_iBeakInside == 1 )
+		{
+			pev->renderamt = 180;
+			pBeak = GetClassPtr( (CDecoreIcebeak *)NULL );
+			pBeak->Spawn( );
+			pBeak->pev->origin = pev->origin;
+			pBeak->pev->angles = pev->angles;
+		}
+	}
+	void EXPORT Melt( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+	{
+		if ( m_iBeakInside && pBeak )
+			UTIL_Remove( pBeak );
+
+		SpawnGib( "models/ceilinggibs.mdl", 1, 0, 0 );
+		SpawnGib( "models/ceilinggibs.mdl", 1, 0, 0 );
+		SpawnGib( "models/ceilinggibs.mdl", 1, 0, 0 );
+		SpawnGib( "models/ceilinggibs.mdl", 1, 0, 0 );
+		UTIL_Remove( this );
+	}
 };
 
 TYPEDESCRIPTION	CIce::m_SaveData[] =
@@ -659,30 +679,6 @@ TYPEDESCRIPTION	CIce::m_SaveData[] =
 	DEFINE_FIELD( CIce, m_iBeakInside, FIELD_INTEGER ),
 	DEFINE_FIELD( CIce, pBeak, FIELD_CLASSPTR ),
 };
-
-void CIce::SpawnIceBeak( void )
-{
-	if ( m_iBeakInside == 1 )
-	{
-		pev->renderamt = 180;
-		pBeak = GetClassPtr( (CDecoreIcebeak *)NULL );
-		pBeak->Spawn( );
-		pBeak->pev->origin = pev->origin;
-		pBeak->pev->angles = pev->angles;
-	}
-}
-
-void CIce::Melt( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
-{
-	if ( m_iBeakInside && pBeak )
-		UTIL_Remove( pBeak );
-
-	SpawnGib( "models/ceilinggibs.mdl", 1, 0, 0 );
-	SpawnGib( "models/ceilinggibs.mdl", 1, 0, 0 );
-	SpawnGib( "models/ceilinggibs.mdl", 1, 0, 0 );
-	SpawnGib( "models/ceilinggibs.mdl", 1, 0, 0 );
-	UTIL_Remove( this );
-}
 
 LINK_ENTITY_TO_CLASS( decore_ice, CIce );
 
@@ -796,7 +792,11 @@ public:
 	static	TYPEDESCRIPTION m_SaveData[];
 
 private:
-	void EXPORT MonkeyUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void EXPORT MonkeyUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+	{
+		SetSequenceByName( "opening" );
+		SetUse( NULL );
+	}
 };
 
 TYPEDESCRIPTION	CDecoreMonkeySkull::m_SaveData[] =
@@ -804,12 +804,6 @@ TYPEDESCRIPTION	CDecoreMonkeySkull::m_SaveData[] =
 	DEFINE_FIELD( CDecoreMonkeySkull, m_maxFrame, FIELD_INTEGER ),
 	DEFINE_FIELD( CDecoreMonkeySkull, m_iAnimate, FIELD_INTEGER ),
 };
-
-void CDecoreMonkeySkull::MonkeyUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
-{
-	SetSequenceByName( "opening" );
-	SetUse( NULL );
-}
 
 LINK_ENTITY_TO_CLASS( decore_goldskull, CDecoreMonkeySkull );
 
@@ -859,7 +853,14 @@ public:
 	static	TYPEDESCRIPTION m_SaveData[];
 
 private:
-	void EXPORT BigFootUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void EXPORT BigFootUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+	{
+		SetSequenceByName( "footcrush" );
+		SetUse( NULL );
+		pev->effects &= ~EF_NODRAW;
+		SetThink( CheckAnimEnd );
+		pev->nextthink = gpGlobals->time + 0.1;
+	}
 	void EXPORT CheckAnimEnd( void );
 };
 
@@ -868,15 +869,6 @@ TYPEDESCRIPTION	CBigFootCrush::m_SaveData[] =
 	DEFINE_FIELD( CBigFootCrush, m_maxFrame, FIELD_INTEGER ),
 	DEFINE_FIELD( CBigFootCrush, m_iAnimate, FIELD_INTEGER ),
 };
-
-void CBigFootCrush::BigFootUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
-{
-	SetSequenceByName( "footcrush" );
-	SetUse( NULL );
-	pev->effects &= ~EF_NODRAW;
-	SetThink( CheckAnimEnd );
-	pev->nextthink = gpGlobals->time + 0.1;
-}
 
 void CBigFootCrush::CheckAnimEnd( void )
 {
@@ -935,33 +927,29 @@ public:
 	void GibMonster( void );
 
 private:
-	void EXPORT XenomeEmbryoGibUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	void EXPORT IdleSoundThink( void );
-};
-
-void CXenomeEmbryo::XenomeEmbryoGibUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
-{
-	ALERT( at_console, "Using Embryo\n" );
-	Killed( pev, GIB_ALWAYS );
-}
-
-void CXenomeEmbryo::IdleSoundThink( void )
-{
-	switch ( RANDOM_LONG( 0, 2 ) )
+	void EXPORT XenomeEmbryoGibUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 	{
-	case 0:
-		EMIT_SOUND( ENT(pev), CHAN_VOICE, "xenome/xmbryo_idle1.wav", 1, ATTN_NORM );
-		break;
-	case 1:
-		EMIT_SOUND( ENT(pev), CHAN_VOICE, "xenome/xmbryo_idle2.wav", 1, ATTN_NORM );
-		break;
-	case 2:
-		EMIT_SOUND( ENT(pev), CHAN_VOICE, "xenome/xmbryo_idle3.wav", 1, ATTN_NORM );
-		break;
+		ALERT( at_console, "Using Embryo\n" );
+		Killed( pev, GIB_ALWAYS );
 	}
+	void EXPORT IdleSoundThink( void )
+	{
+		switch ( RANDOM_LONG( 0, 2 ) )
+		{
+		case 0:
+			EMIT_SOUND( ENT(pev), CHAN_VOICE, "xenome/xmbryo_idle1.wav", 1, ATTN_NORM );
+			break;
+		case 1:
+			EMIT_SOUND( ENT(pev), CHAN_VOICE, "xenome/xmbryo_idle2.wav", 1, ATTN_NORM );
+			break;
+		case 2:
+			EMIT_SOUND( ENT(pev), CHAN_VOICE, "xenome/xmbryo_idle3.wav", 1, ATTN_NORM );
+			break;
+		}
 
-	pev->nextthink = gpGlobals->time + RANDOM_FLOAT( 1, 25 );
-}
+		pev->nextthink = gpGlobals->time + RANDOM_FLOAT( 1, 25 );
+	}
+};
 
 LINK_ENTITY_TO_CLASS( monster_xenome_embryo, CXenomeEmbryo );
 
@@ -1206,32 +1194,28 @@ public:
 	CBaseMonster *pSack;
 
 private:
-	void EXPORT SpawnSack( void );
-	void EXPORT ShockAnim( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void EXPORT SpawnSack( void )
+	{
+		pSack = GetClassPtr( (CDecoreSack *)NULL );
+		pSack->Spawn( );
+		pSack->pev->origin = pev->origin;
+		pSack->pev->angles = pev->angles;
+		pSack->pev->renderamt = 180;
+		pSack->pev->rendermode = kRenderTransTexture;
+
+		UTIL_SetSize( pev, Vector( -12, -12, -16 ), Vector( 12, 12, 24 ) );
+		MonsterInit( );
+		SetUse( ShockAnim );
+	}
+	void EXPORT ShockAnim( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+	{
+		SetSequenceByName( "shock" );
+		if ( pSack )
+			pSack->SetSequenceByName( "shock" );
+		else
+			ALERT( at_console, "no sack for shocking!\n" );
+	}
 };
-
-void CTubeEmbryo::SpawnSack( void )
-{
-	pSack = GetClassPtr( (CDecoreSack *)NULL );
-	pSack->Spawn( );
-	pSack->pev->origin = pev->origin;
-	pSack->pev->angles = pev->angles;
-	pSack->pev->renderamt = 180;
-	pSack->pev->rendermode = kRenderTransTexture;
-
-	UTIL_SetSize( pev, Vector( -12, -12, -16 ), Vector( 12, 12, 24 ) );
-	MonsterInit( );
-	SetUse( ShockAnim );
-}
-
-void CTubeEmbryo::ShockAnim( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
-{
-	SetSequenceByName( "shock" );
-	if ( pSack )
-		pSack->SetSequenceByName( "shock" );
-	else
-		ALERT( at_console, "no sack for shocking!\n" );
-}
 
 LINK_ENTITY_TO_CLASS( monster_tube_embryo, CTubeEmbryo );
 

@@ -355,27 +355,23 @@ public:
 	float	m_flNextFlinch;
 
 private:
-	void EXPORT UseQueen( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-};
-
-//=========================================================
-// UseQueen - a trigger named after a claw makes her slap
-// with it, when she is idle
-//=========================================================
-void CTubeQueen::UseQueen( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
-{
-	if ( pev->sequence == LookupSequence( "idle1" ) || pev->sequence == LookupSequence( "idle2" ) )
+	// UseQueen - a trigger named after a claw makes her slap
+	// with it, when she is idle
+	void EXPORT UseQueen( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 	{
-		if ( FStrEq( STRING( pCaller->pev->targetname ), "clawcenter" ) )
-			SetSequenceByName( "clawattack" );
-		else if ( FStrEq( STRING( pCaller->pev->targetname ), "clawleft" ) )
-			SetSequenceByName( "clawattackleft" );
-		else if ( FStrEq( STRING( pCaller->pev->targetname ), "clawright" ) )
-			SetSequenceByName( "clawattackright" );
+		if ( pev->sequence == LookupSequence( "idle1" ) || pev->sequence == LookupSequence( "idle2" ) )
+		{
+			if ( FStrEq( STRING( pCaller->pev->targetname ), "clawcenter" ) )
+				SetSequenceByName( "clawattack" );
+			else if ( FStrEq( STRING( pCaller->pev->targetname ), "clawleft" ) )
+				SetSequenceByName( "clawattackleft" );
+			else if ( FStrEq( STRING( pCaller->pev->targetname ), "clawright" ) )
+				SetSequenceByName( "clawattackright" );
 
-		ResetSequenceInfo( );
+			ResetSequenceInfo( );
+		}
 	}
-}
+};
 
 LINK_ENTITY_TO_CLASS( monster_tubequeen, CTubeQueen );
 
