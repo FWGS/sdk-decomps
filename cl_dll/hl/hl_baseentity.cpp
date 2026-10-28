@@ -42,15 +42,17 @@ globalvars_t  *gpGlobals;
 
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
 
-// Gunman's weapons use these
+// Gunman's weapons use these. Retail's .bss has gmsgTempX and gSkillData
+// among the uninitialised globals and the rest, zero-initialised, after
+// gmsgWeapPickup in this order
 skilldata_t gSkillData;
-CGameRules *g_pGameRules;
 int g_iSkillLevel = 1;
-int gEvilImpulse101;
-int gmsgSliderX;
+int gmsgSliderX = 0;
 int gmsgTempX;
-int gmsgZoom;
-int gmsgDmlCross;
+int gmsgZoom = 0;
+int gmsgDmlCross = 0;
+int gEvilImpulse101 = 0;
+CGameRules *g_pGameRules = NULL;
 
 void EMIT_SOUND_DYN(edict_t *entity, int channel, const char *sample, float volume, float attenuation, int flags, int pitch) { }
 

@@ -62,7 +62,7 @@ CFists g_Fists;
 CGaussPistol g_GaussPistol;
 CMinigun g_Minigun;
 CShotgun g_Shotgun;
-CSPChemicalGun g_ChemGun;
+CSPChemicalGun g_Chemgun;	// name ours
 
 /*
 ======================
@@ -572,7 +572,7 @@ void HUD_InitClientWeapons( void )
 	HUD_PrepEntity( &g_GaussPistol, &player );
 	HUD_PrepEntity( &g_Minigun	, &player );
 	HUD_PrepEntity( &g_Shotgun	, &player );
-	HUD_PrepEntity( &g_ChemGun	, &player );
+	HUD_PrepEntity( &g_Chemgun	, &player );
 }
 
 /*
@@ -627,7 +627,7 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 		break;
 
 	case WEAPON_SPCHEMICALGUN:
-		pWeapon = &g_ChemGun;
+		pWeapon = &g_Chemgun;
 		break;
 	}
 
