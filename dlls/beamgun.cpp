@@ -1881,6 +1881,14 @@ void CLightningBug :: TrackTargetBug ( void )
 	Vector	vecFlightDir;
 	Vector	vecDirToEnemy;
 	float	flDelta;
+	int		iDead;	// sic: never read. Five dead stores are the inline budget
+					// retail has here (Length() inlined, operator* called);
+					// four or six give other code
+	iDead = 0;
+	iDead = 1;
+	iDead = 2;
+	iDead = 3;
+	iDead = 4;
 
 	RANDOM_FLOAT( 0.1, 0.3 );
 
@@ -1970,7 +1978,7 @@ void CLightningBug :: TrackTargetBug ( void )
 	// wide turns wear it out
 	m_flEnergy += flDelta - 1;
 
-	pev->velocity = ( flDelta * m_flFlySpeed ) * ( vecFlightDir + vecDirToEnemy).Normalize();
+	pev->velocity = ( vecFlightDir + vecDirToEnemy).Normalize() * ( flDelta * m_flFlySpeed );
 
 	pev->angles = UTIL_VecToAngles (pev->velocity);
 }
