@@ -132,6 +132,30 @@ public:
 		}
 	}
 
+	bool Remove( int iId )
+	{
+		CEffectNode *pNode;
+
+		if ( m_pHead->m_Effect.m_iId == iId )
+		{
+			pNode = m_pHead;
+			m_pHead = m_pHead->m_pNext;
+			m_iCount--;
+			delete pNode;
+			return true;
+		}
+
+		CEffectNode *pPrev = m_pHead->Previous( iId );
+		if ( !pPrev )
+			return false;
+
+		pNode = pPrev->m_pNext;
+		pPrev->m_pNext = pNode->m_pNext;
+		m_iCount--;
+		delete pNode;
+		return true;
+	}
+
 	int Add( CEffect effect )
 	{
 		if ( !m_iCount )
@@ -160,7 +184,6 @@ public:
 		return m_pHead->m_Effect.m_iId;
 	}
 
-	bool Remove( int iId );				// in tri.cpp
 
 	CEffect &operator[]( int i )
 	{
