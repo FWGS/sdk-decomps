@@ -447,7 +447,9 @@ void CBot::AimAtEnemy( void )
 	{
 		CBaseEntity *pEnemy = GetEnemy();	// sic: unused
 		Vector vecTarget = GetEnemy()->pev->origin + GetEnemy()->pev->velocity;
-		Vector vecAim = Vector( vecTarget.x, vecTarget.y, vecTarget.z + pev->mins.z );
+		Vector vecAim;
+		vecAim = vecTarget;
+		vecAim.z += pev->mins.z;
 		LookAlong( vecAim - GetGunPosition() );
 	}
 
