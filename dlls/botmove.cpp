@@ -541,9 +541,7 @@ BOOL CBot::CheckAhead( Vector &vecDir, TraceResult *ptr )
 		vecTemp.y += 2;
 	if ( vecSide.x < -1 )
 		vecSide.x += 2;
-	vecSide = Vector( vecSide.x, vecTemp.y, 0 ) * 16;
-	vecSide = vecSide * ( RANDOM_LONG( 0, 1 ) != 0 );
-	vecSrc = vecSrc + vecSide;
+	vecSrc = vecSrc + Vector( vecSide.x, vecTemp.y, 0 ) * 16 * ( RANDOM_LONG( 0, 1 ) != 0 );
 
 	gpGlobals->trace_flags = FTRACE_SIMPLEBOX;
 	UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, ENT( pev ), ptr );
