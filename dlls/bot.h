@@ -270,6 +270,9 @@ public:
 	void	BotThink( void );
 	void	BeginFrame( void );
 	void	LookAround( int iRange );
+	float	StrafeInterval( void ) { return m_flStrafeInterval; }
+	BOOL	IsValidEnemy( CBasePlayer *pPlayer );
+	float	NextEnemyCheck( void ) { return m_flNextEnemyCheck; }
 	void	PickGoalItem( void );
 	BOOL	HasGun( void );
 	BOOL	CanNotice( CBaseEntity *pEntity );

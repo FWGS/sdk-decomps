@@ -368,6 +368,16 @@ void CBot::BotThink( void )
 	(*g_engfuncs.pfnRunPlayerMove)( edict(), pev->v_angle, GetForwardMove(), GetSideMove(), GetUpMove(), pev->button, 0, m_flMsec );
 }
 
+// IsValidEnemy - whether a player may become the enemy: alive, seen,
+// hurtable, noticed, not a teammate, and only while the bot doesn't carry
+// the chicken (name ours); an inline step of LookAround, which takes its
+// share of LookAround's inline budget
+inline BOOL CBot::IsValidEnemy( CBasePlayer *pPlayer )
+{
+	return pPlayer && pPlayer != this && pPlayer->IsAlive() && CanSee( pPlayer ) && pPlayer->pev->takedamage != DAMAGE_NO
+		&& !HasNamedPlayerItem( "ctc_chicken" ) && g_pGameRules->PlayerRelationship( this, pPlayer ) == GR_NOTTEAMMATE && CanNotice( pPlayer );
+}
+
 //=========================================================
 // LookAround - every 0.3 s picks the nearest player it can
 // see and notice as the enemy (the chicken's carrier
@@ -384,7 +394,7 @@ void CBot::LookAround( int iRange )
 	BOOL fFlag;
 	Vector vecDelta;
 
-	if ( m_flNextEnemyCheck <= gpGlobals->time )
+	if ( gpGlobals->time >= NextEnemyCheck() )
 	{
 		m_flNextEnemyCheck = gpGlobals->time + 0.3;
 
@@ -396,13 +406,11 @@ void CBot::LookAround( int iRange )
 			{
 				CBasePlayer *pPlayer = (CBasePlayer *)UTIL_PlayerByIndex( i );
 
-				if ( pPlayer && pPlayer != this && pPlayer->IsAlive() && CanSee( pPlayer ) && pPlayer->pev->takedamage != DAMAGE_NO
-					&& !HasNamedPlayerItem( "ctc_chicken" ) && g_pGameRules->PlayerRelationship( this, pPlayer ) == GR_NOTTEAMMATE && CanNotice( pPlayer ) )
+				if ( IsValidEnemy( pPlayer ) )
 				{
 					if ( pPlayer != GetEnemy() )
 					{
-						vecDelta = pPlayer->pev->origin - pev->origin;
-						float flDist = vecDelta.Length();
+						float flDist = ( pPlayer->pev->origin - pev->origin ).Length();
 
 						// the chicken's carrier always wins
 						if ( pPlayer->m_pActiveItem && FClassnameIs( pPlayer->m_pActiveItem->pev, "ctc_chicken" ) )
@@ -447,12 +455,10 @@ void CBot::LookAround( int iRange )
 		if ( m_flNextStrafe < gpGlobals->time && !HasNamedPlayerItem( "ctc_chicken" ) )
 		{
 			fFlag = TRUE;
-			m_flNextStrafe = m_flStrafeInterval + gpGlobals->time;
+			m_flNextStrafe = StrafeInterval() + gpGlobals->time;
 		}
 
-		Vector vecMaxs = pev->origin + vecRange;
-		Vector vecMins = pev->origin - vecRange;
-		int count = UTIL_EntitiesInBox( pList, 100, vecMins, vecMaxs, 0 );
+		int count = UTIL_EntitiesInBox( pList, 100, pev->origin - vecRange, pev->origin + vecRange, 0 );
 
 		for ( i = 0; i < count; i++ )
 		{
