@@ -239,7 +239,6 @@ bool EV_HLDM_TextureEffect( int idx, pmtrace_t *ptr, float *vecSrc, float *vecEn
 	char *pTextureName;
 	char texname[ 64 ];
 	char szbuffer[ 64 ];
-	vec3_t vecVelocity, vecOrigin;
 
 	entity = gEngfuncs.pEventAPI->EV_IndexFromTrace( ptr );
 
@@ -305,8 +304,7 @@ bool EV_HLDM_TextureEffect( int idx, pmtrace_t *ptr, float *vecSrc, float *vecEn
 				forward.z = forward.z * -1;
 
 				iModel = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/wallpuff.spr" );
-				vecVelocity = forward * gEngfuncs.pfnRandomFloat( 10, 35 ) + up * gEngfuncs.pfnRandomFloat( -15, 15 ) + right * gEngfuncs.pfnRandomFloat( -15, 15 );
-				pTent = gEngfuncs.pEfxAPI->R_TempSprite( ptr->endpos + ptr->plane.normal * 3, vecVelocity, 0.5, iModel, kRenderTransAdd, kRenderFxNone, 50, 10, FTENT_SPRANIMATE );
+				pTent = gEngfuncs.pEfxAPI->R_TempSprite( ptr->endpos + ptr->plane.normal * 3, forward * gEngfuncs.pfnRandomFloat( 10, 35 ) + up * gEngfuncs.pfnRandomFloat( -15, 15 ) + right * gEngfuncs.pfnRandomFloat( -15, 15 ), 0.5, iModel, kRenderTransAdd, kRenderFxNone, 50, 10, FTENT_SPRANIMATE );
 				if ( pTent )
 				{
 					pTent->entity.curstate.framerate = 20;
@@ -316,10 +314,11 @@ bool EV_HLDM_TextureEffect( int idx, pmtrace_t *ptr, float *vecSrc, float *vecEn
 				// a puff of dust off the floor
 				if ( ptr->plane.normal.z > 0.5 )
 				{
-					vecOrigin = ptr->endpos;
+					vec3_t vecOrigin = ptr->endpos;
 					vecOrigin.z += 10;
+					iModel = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/bulletpuff.spr" );
 
-					pTent = gEngfuncs.pEfxAPI->R_TempSprite( vecOrigin, Vector( 0, 0, 0 ), 0.75, gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/bulletpuff.spr" ), kRenderTransAlpha, kRenderFxNoDissipation, 255, 10, FTENT_SPRANIMATE );
+					pTent = gEngfuncs.pEfxAPI->R_TempSprite( vecOrigin, Vector( 0, 0, 0 ), 0.75, iModel, kRenderTransAlpha, kRenderFxNoDissipation, 255, 10, FTENT_SPRANIMATE );
 					if ( pTent )
 						pTent->entity.curstate.framerate = 40;
 				}
