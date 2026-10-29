@@ -2240,7 +2240,7 @@ Schedule_t* CBaseBandit :: GetScheduleOfType ( int Type )
 			// don't cower from a player in a vehicle, shoot at it
 			if ( m_hEnemy != NULL && FClassnameIs( m_hEnemy->pev, "player" ) )
 			{
-				CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE( ENT( m_hEnemy->pev ) );
+				CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE( m_hEnemy->edict() );
 				if ( pPlayer->m_pVehicle != NULL )
 					return GetScheduleOfType( SCHED_RANGE_ATTACK1 );
 			}
@@ -2254,6 +2254,12 @@ Schedule_t* CBaseBandit :: GetScheduleOfType ( int Type )
 			}
 
 			return GetScheduleOfType ( SCHED_FAIL );
+		}
+		break;
+	case SCHED_BANDIT_ELOF_FAIL:
+		{
+			// human grunt is unable to move to a position that allows him to attack the enemy.
+			return GetScheduleOfType ( SCHED_TAKE_COVER_FROM_ENEMY );
 		}
 		break;
 	case SCHED_BANDIT_ESTABLISH_LINE_OF_FIRE:
@@ -2281,14 +2287,9 @@ Schedule_t* CBaseBandit :: GetScheduleOfType ( int Type )
 				ALERT( at_console, "No firing for this type of weapon\n" );
 				break;
 			}
-		}
-		// sic: falls through
-	case SCHED_BANDIT_ELOF_FAIL:
-		{
-			// human grunt is unable to move to a position that allows him to attack the enemy.
+
 			return GetScheduleOfType ( SCHED_TAKE_COVER_FROM_ENEMY );
 		}
-		break;
 	case SCHED_BANDIT_RANGE_MACHINEGUN:
 		{
 			if ( !m_bStanding )
