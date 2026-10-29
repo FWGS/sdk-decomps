@@ -269,6 +269,7 @@ void CScorpion::HuntThink( void )
 		UTIL_SetSize( pev, Vector( -12, -12, 0 ), Vector( 12, 12, 12 ) );
 		if ( Intersects( m_hEnemy ) )
 		{
+			TraceResult tr;
 			UTIL_TraceModel( m_hEnemy->pev->origin, m_hEnemy->pev->origin, 1, m_hEnemy->edict(), &tr );
 			gpGlobals->trace_ent = m_hEnemy->edict();
 			gpGlobals->trace_endpos = tr.vecEndPos;
