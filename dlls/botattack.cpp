@@ -237,6 +237,22 @@ void CBotMemory::SetEnemy( CBaseEntity *pEnemy, int fChickenCarrier )
 }
 
 //=========================================================
+// Update's look-direction accessors (names ours): retail
+// copies each look direction through the out-of-line copy
+// constructor into a temporary (an accessor's return copy,
+// read back from the temporary), the velocities inline.
+// Update's budget (1000) would expand them all; a depth
+// limit where the accessors are defined does it (VC6 takes
+// a nested call's limit from the callee's definition).
+//=========================================================
+#pragma inline_depth( 1 )	// sic: the accessors' return copies stay out of line
+inline Vector CBotMemory::GetLookDir( void ) { return m_vecLookDir; }
+inline Vector CBotMemory::GetLookDir1( void ) { return m_vecLookDir1; }
+inline Vector CBotMemory::GetLookDir2( void ) { return m_vecLookDir2; }
+inline Vector CBot::GetLookDir( void ) { return m_vecLookDir; }
+#pragma inline_depth()	// sic: back to the default (8)
+
+//=========================================================
 // Update - shift the history by a frame (BotThink, every
 // frame)
 //=========================================================
@@ -244,10 +260,10 @@ void CBotMemory::Update( CBot *pBot )
 {
 	m_vecOrigin = pBot->pev->origin;
 
-	m_vecLookDir3 = Vector( m_vecLookDir2 );
-	m_vecLookDir2 = Vector( m_vecLookDir1 );
-	m_vecLookDir1 = Vector( m_vecLookDir );
-	m_vecLookDir = Vector( pBot->m_vecLookDir );
+	m_vecLookDir3 = GetLookDir2();
+	m_vecLookDir2 = GetLookDir1();
+	m_vecLookDir1 = GetLookDir();
+	m_vecLookDir = pBot->GetLookDir();
 
 	m_vecVelocity3 = Vector( m_vecVelocity2 );
 	m_vecVelocity2 = Vector( m_vecVelocity1 );

@@ -186,6 +186,9 @@ public:
 	void	Update( CBot *pBot );
 	float	SeenTime( void ) { return m_flSeenTime; }
 	Vector	GetOrigin( void ) { return m_vecOrigin; }	// name ours
+	Vector	GetLookDir( void );		// Update's accessors (names ours), botattack.cpp
+	Vector	GetLookDir1( void );
+	Vector	GetLookDir2( void );
 
 	float	m_flTime;
 	BOOL	m_fSeen;
@@ -357,6 +360,7 @@ public:
 	int		GetMoveGoals( void ) { return m_cMoveGoals; }
 	void	SetMoveGoals( int cGoals ) { m_cMoveGoals = cGoals; }
 	void	SetLookDir( void );
+	Vector	GetLookDir( void );		// CBotMemory::Update's (name ours), botattack.cpp
 	BOOL	CheckAhead( Vector &vecDir, TraceResult *ptr );
 	BOOL	CheckSides( Vector &vecAngles, TraceResult *ptrLeft, TraceResult *ptrRight );
 	void	MoveThink( void );
