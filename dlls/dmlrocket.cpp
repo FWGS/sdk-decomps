@@ -756,17 +756,20 @@ void CDmlRocket::BigThink( void )
 		return;
 	}
 
+	Vector vecDir, vecVelocity;
 	CBaseEntity *pEntity = NULL;
 
 	while ( ( pEntity = UTIL_FindEntityInSphere( pEntity, pev->origin, 50 ) ) != NULL )
 	{
 		if ( pEntity->pev->takedamage && pEntity->edict() != pev->owner && this != pEntity && ( pEntity->pev->velocity.y >= 1 || pev->velocity.y <= -1 ) && FClassnameIs( pev, STRING( pEntity->pev->classname ) ) )
 		{
-			Vector vecDir, vecVelocity;
-			vecDir = pEntity->pev->origin - pev->origin;
 			vecVelocity = pev->velocity;
-			vecDir.Normalize( );
-			pev->velocity = vecVelocity + vecDir * m_iSpiralScalar_In;
+			vecDir = pEntity->pev->origin - pev->origin;
+			vecDir.Normalize( );	// sic: the result is thrown away
+			vecDir.x = vecDir.x * m_iSpiralScalar_In;
+			vecDir[1] *= m_iSpiralScalar_In;
+			vecDir[2] *= m_iSpiralScalar_In;
+			pev->velocity = vecDir + vecVelocity;
 		}
 	}
 
@@ -783,11 +786,13 @@ void CDmlRocket::BigThink( void )
 
 				if ( pEntity->edict() != pev->owner && pBrother != pEntity && ( pEntity->pev->velocity.y >= 1 || pev->velocity.y <= -1 ) && FClassnameIs( pev, STRING( pEntity->pev->classname ) ) )
 				{
-					Vector vecDir, vecVelocity;
-					vecDir = pEntity->pev->origin - pBrother->pev->origin;
 					vecVelocity = pBrother->pev->velocity;
-					vecDir.Normalize( );
-					pBrother->pev->velocity = vecVelocity + vecDir * m_iSpiralScalar_In;
+					vecDir = pEntity->pev->origin - pBrother->pev->origin;
+					vecDir.Normalize( );	// sic: the result is thrown away
+					vecDir.x = vecDir.x * m_iSpiralScalar_In;
+					vecDir[1] *= m_iSpiralScalar_In;
+					vecDir[2] *= m_iSpiralScalar_In;
+					pBrother->pev->velocity = vecDir + vecVelocity;
 				}
 			}
 		}
