@@ -1678,6 +1678,7 @@ int CHudAmmo::DrawWList(float flTime)
 	if ( giActiveSlot == 9 )
 		fCustom = TRUE;
 
+	x = 230; //!!!
 
 	// Ensure that there are available choices in the active slot
 	if ( giActiveSlot > 0 )
@@ -1764,22 +1765,23 @@ int CHudAmmo::DrawWList(float flTime)
 	}
 
 	// Draw top line
-	for ( i = 0; i < MAX_WEAPON_SLOTS; i++ )
+	i = 0;
+	if ( 1 )	// sic: a second way into the loop, see DrawWList's commit
+		goto first;
+	do
 	{
 		int a;
 
-		UnpackRGB(r,g,b, RGB_CYANISH);
-	
 		if ( giActiveSlot == i )
 			a = 255;
 		else
 			a = 192;
-
+first:
+		UnpackRGB(r,g,b, RGB_CYANISH);
 		ScaleColors(r, g, b, 255);
 		SPR_Set(gHUD.GetSprite(m_HUD_bucket0 + i), r, g, b );
-	}
+	} while ( ++i < MAX_WEAPON_SLOTS );
 
-	x = 230; //!!!
 	y = 55;
 
 	// the weapons without customization items have nothing to list
@@ -1812,16 +1814,12 @@ int CHudAmmo::DrawWList(float flTime)
 		{
 			WEAPON *p = gWR.GetFirstPos( i );
 
-			int iPos = 0;
-			while ( iPos < MAX_WEAPON_POSITIONS )
+			for ( int iPos = 0; iPos < MAX_WEAPON_POSITIONS; iPos++ )
 			{
 				p = gWR.GetWeaponSlot( i, iPos );
 
 				if ( !p || !p->iId )
-				{
-					iPos++;
 					continue;
-				}
 
 				UnpackRGB( r,g,b, RGB_CYANISH );
 			
@@ -1891,7 +1889,6 @@ int CHudAmmo::DrawWList(float flTime)
 				if ( ScreenWidth > 640 )
 					y += 10;
 				y += p->rcActive.bottom - p->rcActive.top + 9;
-				iPos++;
 			}
 		}
 	}	
