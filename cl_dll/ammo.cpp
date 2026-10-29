@@ -883,10 +883,11 @@ int CHudAmmo::MsgFunc_WeapPickup( const char *pszName, int iSize, void *pbuf )
 
 	if ( m_fMenuOpen && gViewPort && gViewPort->m_pClassMenu && !p->iIsCustomization )
 	{
-		if ( !gViewPort->m_pClassMenu->m_pWeapons[p->iSlot] )
+		int iSlot = p->iSlot;
+		if ( !gViewPort->m_pClassMenu->m_pWeapons[iSlot] )
 			return 1;
 
-		gViewPort->m_pClassMenu->m_pWeapons[p->iSlot]->setVisible( true );
+		gViewPort->m_pClassMenu->m_pWeapons[iSlot]->setVisible( true );
 	}
 
 	if ( !p->iIsCustomization )
