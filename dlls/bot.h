@@ -218,6 +218,7 @@ public:
 	float	SkillAdjust( float flSkill );
 	float	AimSkill( void ) { return SkillAdjust( m_flAim ); }
 	float	NoticeSkill( void ) { return SkillAdjust( m_flNotice ); }
+	float	JumpSkill( void );
 	float	RateWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pItem, float flDist );
 	BOOL	Load( char *pszFile );
 	float	Aggression( void ) { return m_flAggression; }
@@ -269,13 +270,17 @@ public:
 	void	BotThink( void );
 	void	BeginFrame( void );
 	void	LookAround( int iRange );
+	float	StrafeInterval( void ) { return m_flStrafeInterval; }
+	BOOL	IsValidEnemy( CBasePlayer *pPlayer );
+	float	NextEnemyCheck( void ) { return m_flNextEnemyCheck; }
 	void	PickGoalItem( void );
 	BOOL	HasGun( void );
 	BOOL	CanNotice( CBaseEntity *pEntity );
 	BOOL	CanSee( CBaseEntity *pEntity );
+	float NextFrameCount( void ) { return m_flNextFrameCount; }
 	void CountFrames( void )
 	{
-		if ( m_flNextFrameCount <= gpGlobals->time )
+		if ( NextFrameCount() <= gpGlobals->time )
 		{
 			m_flNextFrameCount = gpGlobals->time + 1;
 			if ( m_cFrames > 0 )

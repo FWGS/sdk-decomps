@@ -368,6 +368,16 @@ void CBot::BotThink( void )
 	(*g_engfuncs.pfnRunPlayerMove)( edict(), pev->v_angle, GetForwardMove(), GetSideMove(), GetUpMove(), pev->button, 0, m_flMsec );
 }
 
+// IsValidEnemy - whether a player may become the enemy: alive, seen,
+// hurtable, noticed, not a teammate, and only while the bot doesn't carry
+// the chicken (name ours); an inline step of LookAround, which takes its
+// share of LookAround's inline budget
+inline BOOL CBot::IsValidEnemy( CBasePlayer *pPlayer )
+{
+	return pPlayer && pPlayer != this && pPlayer->IsAlive() && CanSee( pPlayer ) && pPlayer->pev->takedamage != DAMAGE_NO
+		&& !HasNamedPlayerItem( "ctc_chicken" ) && g_pGameRules->PlayerRelationship( this, pPlayer ) == GR_NOTTEAMMATE && CanNotice( pPlayer );
+}
+
 //=========================================================
 // LookAround - every 0.3 s picks the nearest player it can
 // see and notice as the enemy (the chicken's carrier
@@ -384,7 +394,7 @@ void CBot::LookAround( int iRange )
 	BOOL fFlag;
 	Vector vecDelta;
 
-	if ( m_flNextEnemyCheck <= gpGlobals->time )
+	if ( gpGlobals->time >= NextEnemyCheck() )
 	{
 		m_flNextEnemyCheck = gpGlobals->time + 0.3;
 
@@ -396,13 +406,11 @@ void CBot::LookAround( int iRange )
 			{
 				CBasePlayer *pPlayer = (CBasePlayer *)UTIL_PlayerByIndex( i );
 
-				if ( pPlayer && pPlayer != this && pPlayer->IsAlive() && CanSee( pPlayer ) && pPlayer->pev->takedamage != DAMAGE_NO
-					&& !HasNamedPlayerItem( "ctc_chicken" ) && g_pGameRules->PlayerRelationship( this, pPlayer ) == GR_NOTTEAMMATE && CanNotice( pPlayer ) )
+				if ( IsValidEnemy( pPlayer ) )
 				{
 					if ( pPlayer != GetEnemy() )
 					{
-						vecDelta = pPlayer->pev->origin - pev->origin;
-						float flDist = vecDelta.Length();
+						float flDist = ( pPlayer->pev->origin - pev->origin ).Length();
 
 						// the chicken's carrier always wins
 						if ( pPlayer->m_pActiveItem && FClassnameIs( pPlayer->m_pActiveItem->pev, "ctc_chicken" ) )
@@ -447,12 +455,10 @@ void CBot::LookAround( int iRange )
 		if ( m_flNextStrafe < gpGlobals->time && !HasNamedPlayerItem( "ctc_chicken" ) )
 		{
 			fFlag = TRUE;
-			m_flNextStrafe = m_flStrafeInterval + gpGlobals->time;
+			m_flNextStrafe = StrafeInterval() + gpGlobals->time;
 		}
 
-		Vector vecMaxs = pev->origin + vecRange;
-		Vector vecMins = pev->origin - vecRange;
-		int count = UTIL_EntitiesInBox( pList, 100, vecMins, vecMaxs, 0 );
+		int count = UTIL_EntitiesInBox( pList, 100, pev->origin - vecRange, pev->origin + vecRange, 0 );
 
 		for ( i = 0; i < count; i++ )
 		{
@@ -719,6 +725,14 @@ void CBot::CheckMelee( void )
 	m_fMelee = TRUE;
 }
 
+// JumpSkill - the jump skill scaled by the bot list's skill (name ours);
+// an inline CBotProfile member, as AimSkill and NoticeSkill are: retail
+// computes &m_Profile first and reads m_flJump through it
+inline float CBotProfile::JumpSkill( void )
+{
+	return SkillAdjust( ( g_BotManager.m_flSkillScale / 100 ) * m_flJump );
+}
+
 //=========================================================
 // FightThink - with a live enemy: aims and fires when it
 // can see it (and sometimes pauses 1-3 s), and picks the
@@ -776,7 +790,7 @@ void CBot::FightThink( void )
 				Roam( 0 );
 		}
 
-		float flJump = m_Profile.SkillAdjust( ( g_BotManager.m_flSkillScale / 100 ) * m_Profile.m_flJump );
+		float flJump = m_Profile.JumpSkill();
 		if ( RANDOM_FLOAT( 1, flJumpChance ) < flJump * 1.5 )
 			pev->button |= IN_JUMP;
 	}
