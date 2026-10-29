@@ -885,6 +885,22 @@ void EV_TankMGuns( event_args_t *args )
 	EV_HLDM_FireBullets( idx, forward, right, up, 2, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_MP5, 3, &tracerCount[idx-1] );
 }
 
+// sic: placeholder, ours. Retail compiled a handler here that nothing calls
+// (LINK dropped it); its text is unknown. Evidence: the .pch inlines VC6
+// emits lazily in this file need 89 to 578 more IL bytes before
+// EV_TurretBullets' end and 819 to 975 by EV_MonsterSentry's (this body
+// 187, EV_GunmanUnknown2 689); .reloc's VirtualSize counts the absolute
+// fixups of dead functions too and is 160 bytes larger in retail (80
+// fixups: these three placeholders 2 + 5 + 62 and EV_FireShotGunDouble 11).
+// The body only gives LINK's identical-copy sort a (size, relocations) key,
+// (48, 2), chosen with the kept-copy model; nothing runs it.
+void EV_GunmanUnknown1( event_args_t *args )
+{
+	args->iparam1 = 1;
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 0, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 1, 2 );
+}
+
 void EV_TurretBullets( event_args_t *args )
 {
 	static vec3_t vecTurretSpreads[] = { Vector( 0, 0, 0 ), Vector( 0.025, 0.025, 0.025 ), Vector( 0.05, 0.05, 0.05 ), Vector( 0.1, 0.1, 0.1 ), Vector( 0.25, 0.25, 0.25 ) };
@@ -935,6 +951,32 @@ void EV_MonsterSentry( event_args_t *args )
 
 	// sic: shoots along the angles, not forward
 	EV_HLDM_FireBullets( idx, forward, right, up, 1, origin, angles, vecSpread, 2048, BULLET_PLAYER_MP5, 1, &tracerCount[idx-1] );
+}
+
+// sic: placeholder, ours, for a second dead handler (see EV_GunmanUnknown1):
+// 689 IL bytes, key (192, 5), 5 absolute fixups.
+void EV_GunmanUnknown2( event_args_t *args )
+{
+	args->iparam1 = 1;
+	args->iparam2 = 6;
+	args->bparam1 = 11;
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 0, 2 );
+	args->iparam1 = 2;
+	args->iparam2 = 7;
+	args->bparam1 = 12;
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 1, 2 );
+	args->iparam1 = 3;
+	args->iparam2 = 8;
+	args->bparam1 = 13;
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 2, 2 );
+	args->iparam1 = 4;
+	args->iparam2 = 9;
+	args->bparam1 = 14;
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 3, 2 );
+	args->iparam1 = 5;
+	args->iparam2 = 10;
+	args->bparam1 = 15;
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 4, 2 );
 }
 
 void EV_MonsterShotgun( event_args_t *args )
@@ -1183,6 +1225,76 @@ void EV_MinigunHeat( event_args_t *args )
 			}
 		}
 	}
+}
+
+// sic: placeholder, ours, for a dead handler that used the double 3.0:
+// retail's __real@8@4000c000000000000000 is ev_hldm.obj's (it sits among
+// this file's constants, after Font's vtable and before EV_FireGauss's),
+// though only CGaussPistol::ChargeSniper uses it in the image. Key (816, 62)
+// with 62 absolute fixups (see EV_GunmanUnknown1).
+void EV_GunmanUnknown3( event_args_t *args )
+{
+	gEngfuncs.pfnRandomFloat( 0, args->fparam1 * 3.0 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 0, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 1, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 2, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 3, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 4, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 5, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 6, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 7, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 8, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 9, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 10, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 11, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 12, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 13, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 14, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 15, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 16, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 17, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 18, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 19, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 20, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 21, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 22, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 23, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 24, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 25, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 26, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 27, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 28, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 29, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 30, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 31, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 32, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 33, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 34, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 35, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 36, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 37, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 38, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 39, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 40, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 41, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 42, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 43, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 44, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 45, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 46, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 47, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 48, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 49, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 50, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 51, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 52, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 53, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 54, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 55, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 56, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 57, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 58, 2 );
+	gEngfuncs.pEventAPI->EV_WeaponAnimation( 59, 2 );
 }
 
 void EV_FireMP5( event_args_t *args )
