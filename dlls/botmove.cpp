@@ -1113,6 +1113,69 @@ void CBot::Wobble( float flPercent, int iPriority )
 }
 
 //=========================================================
+// SeekGoal - Roam's step (emitted after it): get a new goal
+// position from RouteGoal when there is none (mode 1), it is
+// within 32 units (mode 2) or out of sight (mode 3), then
+// head for it; without one walk the way the bot faces, unless
+// the route is done or the bot is in state 3 (pause 0.1 s).
+// Roam's first branch expands it with too little budget left
+// for anything above 40 nodes: its calls, and the unused
+// TraceResult's constructor, are out of line there.
+//=========================================================
+inline void CBot::SetGoalVisible( BOOL fVisible ) { m_fGoalVisible = fVisible; }
+inline int CBot::GetState( void ) { return m_iState; }
+inline void CBot::SetPauseTime( float flTime ) { m_flPauseTime = flTime; }
+
+inline void CBot::SeekGoal( void )
+{
+	TraceResult tr;	// sic: unused; retail constructs it (Roam's out-of-line TraceResult() at 0x10014a70)
+	Vector vecForward;
+	float flDist = ( GetGoalPos() - pev->origin ).Length2D();
+	int iMode = 0;
+
+	if ( !m_fHasGoalPos )
+		iMode = 1;
+	else if ( flDist < 32 )
+		iMode = 2;
+	else if ( !FVisible( GetGoalPos() ) )
+		iMode = 3;
+
+	if ( iMode )
+	{
+		m_fHasGoalPos = FALSE;
+		SetMoveVelocity( g_vecZero );
+		m_vecGoalPos = RouteGoal( iMode );
+		if ( m_fHasGoalPos )
+			m_flGoalTime = gpGlobals->time;
+	}
+
+	if ( m_fHasGoalPos )
+	{
+		if ( m_fGoalVisible && m_pRoute )
+		{
+			if ( CanSeeSpot( GetGoalPos() ) )
+				SetGoalVisible( FALSE );
+		}
+		SetMoveVelocity( ( GetGoalPos() - pev->origin ).Normalize() * CVAR_GET_FLOAT( "sv_maxspeed" ) );
+	}
+	else if ( GetState() )
+	{
+		if ( GetState() == 3 )
+			SetPauseTime( gpGlobals->time + 0.1 );
+	}
+	else
+	{
+		if ( m_fRouteDone )
+			SetPauseTime( gpGlobals->time + 0.1 );
+		else
+		{
+			UTIL_MakeVectorsPrivate( m_vecMoveAngles, vecForward, NULL, NULL );
+			SetMoveVelocity( vecForward * CVAR_GET_FLOAT( "sv_maxspeed" ) );
+		}
+	}
+}
+
+//=========================================================
 // Roam - head for the goal position. A new one is asked of
 // RouteGoal when there is none (mode 1), when it is within
 // 32 units (mode 2) or when it is out of sight (mode 3);
@@ -1129,7 +1192,8 @@ void CBot::Roam( int iPriority )
 	}
 	else if ( iPriority == GetMovePriority() )
 	{
-		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
+		Vector vecVel = GetMoveVelocity();
+		Vector vecOld = vecVel * GetMoveGoals();
 		SeekGoal();
 		Vector vecTotal = GetMoveVelocity() + vecOld;
 		SetMoveGoals( GetMoveGoals() + 1 );
