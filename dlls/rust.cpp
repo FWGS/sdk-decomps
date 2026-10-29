@@ -377,12 +377,12 @@ void CGunnerRocket :: AccelerateThink( void )
 		if ( pEntity->pev->takedamage && pEntity->IsPlayer( ) && pEntity->edict() != pev->owner && this != pEntity )
 		{
 			Vector vecDir, vecVelocity;
-			vecDir = pEntity->pev->origin - pev->origin;
 			vecVelocity = pev->velocity;
+			vecDir = pEntity->pev->origin - pev->origin;
 			vecDir.Normalize( );	// sic: the result is thrown away
-			vecDir.x = vecDir.x * 0.7;	// sic: not z
-			vecDir.y = vecDir.y * 0.7;
-			pev->velocity = vecVelocity + vecDir;
+			vecDir[0] = vecDir[0] * 0.7;	// sic: not z
+			vecDir[1] = vecDir[1] * 0.7;
+			pev->velocity = vecDir + vecVelocity;
 		}
 	}
 
