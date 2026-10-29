@@ -128,11 +128,10 @@ void CEndBossKataball::KataTouch( CBaseEntity *pOther )
 		return;
 	}
 
-	string_t iszClassname = pOther->pev->classname;
-	if ( FStrEq( STRING( iszClassname ), "vehicle_tank_barrel" )
-		|| FStrEq( STRING( iszClassname ), "vehicle_tank_turret" )
-		|| FStrEq( STRING( iszClassname ), "vehicle_tank" )
-		|| FStrEq( STRING( iszClassname ), "vehicle_tank_body" ) )
+	if ( FClassnameIs( pOther->pev, "vehicle_tank_barrel" )
+		|| FClassnameIs( pOther->pev, "vehicle_tank_turret" )
+		|| FClassnameIs( pOther->pev, "vehicle_tank" )
+		|| FClassnameIs( pOther->pev, "vehicle_tank_body" ) )
 	{
 		// tell the map whether the tank it hit had a driver
 		CBaseEntity *pTank = NULL;
@@ -155,7 +154,11 @@ void CEndBossKataball::KataTouch( CBaseEntity *pOther )
 		return;
 	}
 
-	PLAYBACK_EVENT_FULL( 0, ENT( pev ), m_iKataImpact, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, 0, 0 );
+	// sic: the angles spelled as &g_vecZero[0] (same address): written as
+	// (float *)&g_vecZero twice, VC6 shares the address constant, and that
+	// gives this edi and the class name pointer ebp, the other way round
+	// from retail
+	PLAYBACK_EVENT_FULL( 0, ENT( pev ), m_iKataImpact, 0.0, (float *)&g_vecZero, (float *)&g_vecZero[0], 0.0, 0.0, 0, 0, 0, 0 );
 
 	switch ( RANDOM_LONG( 0, 2 ) )
 	{
