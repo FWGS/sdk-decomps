@@ -1812,12 +1812,16 @@ int CHudAmmo::DrawWList(float flTime)
 		{
 			WEAPON *p = gWR.GetFirstPos( i );
 
-			for ( int iPos = 0; iPos < MAX_WEAPON_POSITIONS; iPos++ )
+			int iPos = 0;
+			while ( iPos < MAX_WEAPON_POSITIONS )
 			{
 				p = gWR.GetWeaponSlot( i, iPos );
 
 				if ( !p || !p->iId )
+				{
+					iPos++;
 					continue;
+				}
 
 				UnpackRGB( r,g,b, RGB_CYANISH );
 			
@@ -1887,6 +1891,7 @@ int CHudAmmo::DrawWList(float flTime)
 				if ( ScreenWidth > 640 )
 					y += 10;
 				y += p->rcActive.bottom - p->rcActive.top + 9;
+				iPos++;
 			}
 		}
 	}	
