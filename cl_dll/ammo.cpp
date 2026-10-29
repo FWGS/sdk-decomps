@@ -1692,7 +1692,9 @@ int CHudAmmo::DrawWList(float flTime)
 
 	if ( !fCustom )
 	{
-		if ( !gpActiveSel || gpActiveSel == (WEAPON *)1 )
+		if ( !gpActiveSel )
+			return 1;
+		if ( gpActiveSel == (WEAPON *)1 )
 			return 1;
 
 		if ( !m_fMenuOpen )
@@ -1766,8 +1768,6 @@ int CHudAmmo::DrawWList(float flTime)
 
 	// Draw top line
 	i = 0;
-	if ( 1 )	// sic: a second way into the loop, see DrawWList's commit
-		goto first;
 	do
 	{
 		int a;
@@ -1776,7 +1776,7 @@ int CHudAmmo::DrawWList(float flTime)
 			a = 255;
 		else
 			a = 192;
-first:
+
 		UnpackRGB(r,g,b, RGB_CYANISH);
 		ScaleColors(r, g, b, 255);
 		SPR_Set(gHUD.GetSprite(m_HUD_bucket0 + i), r, g, b );
@@ -1806,8 +1806,12 @@ first:
 	}
 
 	// Draw all of the buckets
-	for (i = 0; i < MAX_WEAPON_SLOTS; i++)
+	i = 0;
+	if ( 1 )	// sic: a second way into the loop, see DrawWList's commit
+		goto slot;
+	do
 	{
+slot:
 		// If this is the active slot, draw the bigger pictures,
 		// otherwise just draw boxes
 		if ( i == giActiveSlot )
@@ -1891,7 +1895,7 @@ first:
 				y += p->rcActive.bottom - p->rcActive.top + 9;
 			}
 		}
-	}	
+	} while ( ++i < MAX_WEAPON_SLOTS );
 
 	return 1;
 
