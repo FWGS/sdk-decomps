@@ -163,6 +163,8 @@ public:
 	void	Update( CBasePlayerItem *pItem );
 	void	RollAimMode( int iChance );
 	void	RollSecondary( int iChance );
+	void	SetAimMode( int iMode );	// Update's steps (names ours), botattack.cpp
+	void	AimBow( void );
 
 	int		m_iAimMode;		// 0 or 1 by the roll; 2 for lobbed weapons (AimAtEnemy)
 	BOOL	m_fKeepFiring;	// hold the trigger down

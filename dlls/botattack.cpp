@@ -51,6 +51,40 @@ CBotFire::~CBotFire()
 {
 }
 
+inline void CBotFire::SetAimMode( int iMode )
+{
+	m_iAimMode = iMode;
+}
+
+//=========================================================
+// AimBow - Update's bow branch (name ours): the secondary
+// attack by the enemy's distance, then aim mode 2 unless
+// the secondary was chosen
+//=========================================================
+// An inline step: retail reads m_pBot afresh here and keeps
+// it across GetEnemy (Update's own pBot is another register),
+// and the step's share of Update's budget is thin enough
+// that GetEnemy (78) is expanded but the distance's
+// operator- and Length are not (share 78-136; 101 with the
+// SetAimMode sites of the three later branches, 158 without).
+inline void CBotFire::AimBow( void )
+{
+	CBot *pBot = m_pBot;
+
+	float flDist = ( pBot->GetEnemy()->pev->origin - pBot->pev->origin ).Length();
+	if ( flDist > 700 )
+		RollSecondary( 90 );
+	else if ( flDist > 200 )
+		RollSecondary( 60 );
+	else
+		RollSecondary( 20 );
+
+	if ( m_fSecondary )
+		RollAimMode( 60 );
+	else
+		SetAimMode( 2 );
+}
+
 //=========================================================
 // Update - pick how to aim and fire the weapon the bot
 // holds: melee weapons and guns roll the aim mode, lobbed
@@ -100,35 +134,24 @@ void CBotFire::Update( CBasePlayerItem *pItem )
 	}
 	else if ( FClassnameIs( pItem->pev, "weapon_cannon" ) )
 	{
-		m_iAimMode = 2;
+		SetAimMode( 2 );
 	}
 	else if ( FClassnameIs( pItem->pev, "weapon_bow" ) )
 	{
-		float flDist = ( m_pBot->GetEnemy()->pev->origin - m_pBot->pev->origin ).Length();
-		if ( flDist > 700 )
-			RollSecondary( 90 );
-		else if ( flDist > 200 )
-			RollSecondary( 60 );
-		else
-			RollSecondary( 20 );
-
-		if ( m_fSecondary )
-			RollAimMode( 60 );
-		else
-			m_iAimMode = 2;
+		AimBow();
 	}
 	else if ( FClassnameIs( pItem->pev, "weapon_scorpion" ) )
 	{
-		m_iAimMode = 2;
+		SetAimMode( 2 );
 		m_fKeepFiring = TRUE;
 	}
 	else if ( FClassnameIs( pItem->pev, "weapon_dynamite" ) )
 	{
-		m_iAimMode = 2;
+		SetAimMode( 2 );
 	}
 	else if ( FClassnameIs( pItem->pev, "weapon_beartrap" ) )
 	{
-		m_iAimMode = 2;
+		SetAimMode( 2 );
 		m_fKeepFiring = TRUE;
 	}
 	else if ( !FClassnameIs( pItem->pev, "ctc_chicken" ) )
