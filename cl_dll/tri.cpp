@@ -146,22 +146,19 @@ void DrawSphere( int iUnused, Vector &origin, float flRadius, float flUnused, fl
 	gEngfuncs.pTriAPI->Begin( TRI_TRIANGLES );
 	gEngfuncs.pTriAPI->Color4f( color[0] / 255.0, color[1] / 255.0, color[2] / 255.0, flAlpha / 255.0 );
 
-	int *pTris = g_iSphereTris;
+	int iTri = 0;
 
 	for ( int i = 0; i < SPHERE_TRIS; i++ )
 	{
-		int *pTri = pTris;
-		pTris += 3;
-
 		for ( int j = 0; j < 3; j++ )
 		{
-			int iPoint = *pTri;
+			int iPoint = g_iSphereTris[ iTri ];
 			Vector vecPoint;
 			vecPoint = g_vecSphereVertex[ iPoint ];
 
 			gEngfuncs.pTriAPI->TexCoord2f( g_vecSphereTexCoord[ iPoint ].x, g_vecSphereTexCoord[ iPoint ].z );
 			gEngfuncs.pTriAPI->Vertex3fv( vecPoint * flRadius + origin );
-			pTri++;
+			iTri++;
 		}
 	}
 
