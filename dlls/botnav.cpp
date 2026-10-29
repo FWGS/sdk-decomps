@@ -131,168 +131,188 @@ void CBot :: NextRouteNode( void )
 }
 
 //=========================================================
+// RouteGoal's accessors (names ours)
+//=========================================================
+inline BOOL CBotMemory :: Seen( void ) { return m_fSeen; }
+inline BOOL CBotMemory :: ChickenCarrier( void ) { return m_fChickenCarrier; }
+inline int CBot :: GetState( void ) { return m_iState; }
+inline BOOL CBot :: RouteDone( void ) { return m_fRouteDone; }
+
+//=========================================================
 // RouteGoal - where to head for: the next step of the
 // route, or (in Capture the Chicken) a new route to the
 // chicken, the capture point or the enemy's last position;
 // otherwise wander.
 //=========================================================
+// Retail's inline decisions: the step distance's operator- return
+// copies are called out of line (their share 101-102 against the 104
+// a second copy needs), the found route's are not; the free accessor
+// sites after them thin the shares. The chase and the chicken away
+// from home share one if ( pGoal ) test (retail jumps into it), and
+// the goal search checks for no candidate before its loop as well.
 Vector CBot :: RouteGoal( int iMode )
 {
 	char		*pszGoal;
-	CBaseEntity	*pGoal;
-	int			iTeam = 0;
+	CBaseEntity	*pGoal = NULL;
+	int			iTeam;
 	float		flDist;
 
 	if ( !g_BotNavigator.m_pHead )
 		return Wander();
 
-	if ( HasEnemy() && m_Memory.m_fSeen && m_iState != 3 )
+	if ( HasEnemy() && m_Memory.Seen() && GetState() != 3 )
 		return Wander();
 
 	CBaseEntity	tmp;		// the enemy's last position, as an entity to route to
 	entvars_t	vars;
 
-	if ( g_pGameRules->GetGameType() != 2 )
-		return Wander();
-
-	if ( m_pRoute )
+	if ( g_pGameRules->GetGameType() == 2 )
 	{
-		if ( m_pRoute->m_iAction == 3 )
-			flDist = ( m_pRoute->m_vecOrigin - pev->origin ).Length();
-		else
-			flDist = ( m_pRoute->m_vecOrigin - pev->origin ).Length2D();
-
-		if ( flDist < m_pRoute->m_flRadius )
+		if ( m_pRoute )
 		{
-			// reached this step
-			if ( m_pRoute->m_iAction == 1 )
-				m_fJump = TRUE;
-			if ( m_pRoute->m_iAction == 2 )
-				m_fDuck = FALSE;
 			if ( m_pRoute->m_iAction == 3 )
-				m_flNextStuckCheck = gpGlobals->time + 1.5;
+				flDist = ( m_pRoute->m_vecOrigin - pev->origin ).Length();
+			else
+				flDist = ( m_pRoute->m_vecOrigin - pev->origin ).Length2D();
 
-			NextRouteNode();
-
-			if ( !m_fRouteDone )
+			if ( flDist < m_pRoute->m_flRadius )
 			{
-				m_fGoalVisible = FALSE;
-				m_fHasGoalPos = TRUE;
-
+				// reached this step
+				if ( m_pRoute->m_iAction == 1 )
+					m_fJump = TRUE;
 				if ( m_pRoute->m_iAction == 2 )
-					m_fDuck = TRUE;
-
+					m_fDuck = FALSE;
 				if ( m_pRoute->m_iAction == 3 )
-				{
-					if ( m_pRoute->m_vecOrigin.z - pev->origin.z > 0 )
-						m_iLadderDir = 1;
-					else
-						m_iLadderDir = -1;
-				}
-				else
-					m_iLadderDir = 0;
+					m_flNextStuckCheck = gpGlobals->time + 1.5;
 
-				return m_pRoute->m_vecOrigin;
+				NextRouteNode();
+
+				if ( !RouteDone() )
+				{
+					m_fGoalVisible = FALSE;
+					m_fHasGoalPos = TRUE;
+
+					if ( m_pRoute->m_iAction == 2 )
+						m_fDuck = TRUE;
+
+					if ( m_pRoute->m_iAction == 3 )
+					{
+						if ( m_pRoute->m_vecOrigin.z - pev->origin.z > 0 )
+							m_iLadderDir = 1;
+						else
+							m_iLadderDir = -1;
+					}
+					else
+						m_iLadderDir = 0;
+
+					return m_pRoute->m_vecOrigin;
+				}
 			}
-		}
-		else if ( !CanSeeSpot( m_pRoute->m_vecOrigin ) )
-		{
-			if ( FVisible( m_pRoute->m_vecOrigin ) )
+			else if ( !CanSeeSpot( m_pRoute->m_vecOrigin ) )
 			{
-				m_fGoalVisible = TRUE;
+				if ( !FVisible( m_pRoute->m_vecOrigin ) )
+					ClearRoute();
+				else
+				{
+					m_fGoalVisible = TRUE;
+					m_fHasGoalPos = TRUE;
+					return m_pRoute->m_vecOrigin;
+				}
+			}
+			else if ( iMode == 2 && flDist >= m_pRoute->m_flRadius )
+			{
 				m_fHasGoalPos = TRUE;
 				return m_pRoute->m_vecOrigin;
 			}
-			ClearRoute();
 		}
-		else if ( iMode == 2 && flDist >= m_pRoute->m_flRadius )
+
+		pszGoal = "ctc_chicken";
+		iTeam = 0;
+		g_BotNavigator.m_fRandomLinks = TRUE;
+		g_BotNavigator.m_fUnused = TRUE;
+
+		if ( HasNamedPlayerItem( "ctc_chicken" ) )
 		{
-			m_fHasGoalPos = TRUE;
-			return m_pRoute->m_vecOrigin;
+			// carrying the chicken: take it home
+			pszGoal = "ctc_capturepoint";
+			iTeam = 1;
 		}
-	}
-
-	pszGoal = "ctc_chicken";
-	g_BotNavigator.m_fRandomLinks = TRUE;
-	g_BotNavigator.m_fUnused = TRUE;
-
-	if ( HasNamedPlayerItem( "ctc_chicken" ) )
-	{
-		// carrying the chicken: take it home
-		pszGoal = "ctc_capturepoint";
-		iTeam = 1;
-	}
-	else if ( HasEnemy() && m_iState == 3 )
-	{
-		if ( iMode == 1 && ( m_Memory.m_fChickenCarrier || m_Profile.m_flAggression > RANDOM_LONG( 0, 100 ) ) )
+		else if ( HasEnemy() && GetState() == 3 )
 		{
-			// chase the enemy to where it was last seen
-			Vector vecLast = m_Memory.m_vecEnemyOrigin;
+			if ( iMode == 1 && ( m_Memory.ChickenCarrier() || m_Profile.Aggression() > RANDOM_LONG( 0, 100 ) ) )
+			{
+				// chase the enemy to where it was last seen
+				memset( &vars, 0, sizeof( vars ) );
+				tmp.pev = &vars;
+				Vector vecLast = m_Memory.m_vecEnemyOrigin;
+				vars.origin = vars.absmin = vars.absmax = vecLast;
+				vars.view_ofs = g_vecZero;
+				vars.flags = 0;
+				vars.waterlevel = 0;
+				vars.classname = ALLOC_STRING( "LastEnemyPos" );
 
-			memset( &vars, 0, sizeof( vars ) );
-			tmp.pev = &vars;
-			vars.origin = vars.absmin = vars.absmax = vecLast;
-			vars.view_ofs = g_vecZero;
-			vars.flags = 0;
-			vars.waterlevel = 0;
-			vars.classname = ALLOC_STRING( "LastEnemyPos" );
+				g_BotNavigator.m_fUnused = FALSE;
+				g_BotNavigator.m_fRandomLinks = FALSE;
+				pGoal = &tmp;
+			}
+			else if ( !m_Memory.Seen() )
+			{
+				m_Memory.Forget();
+				return pev->origin;
+			}
+		}
+		else
+		{
+			if ( !( pev->flags & FL_ONGROUND ) && pev->waterlevel <= 1 )
+				return Wander();
 
-			g_BotNavigator.m_fUnused = FALSE;
-			g_BotNavigator.m_fRandomLinks = FALSE;
-			pGoal = &tmp;
+			CBaseEntity *pChicken = UTIL_FindEntityByClassname( NULL, "ctc_chicken" );
+			while ( pChicken && !pChicken->IsTriggered( this ) )
+				pChicken = UTIL_FindEntityByClassname( pChicken, "ctc_chicken" );
+
+			if ( g_flChickenAway[g_pGameRules->GetTeamIndex( TeamID() )] != 0 )
+			{
+				iTeam = 1;
+				pGoal = pChicken;
+			}
+		}
+
+		if ( pGoal )
 			goto found;
-		}
 
-		if ( !m_Memory.m_fSeen )
-		{
-			m_Memory.Forget();
-			return pev->origin;
-		}
-	}
-	else
-	{
-		if ( !( pev->flags & FL_ONGROUND ) && pev->waterlevel <= 1 )
+		pGoal = UTIL_FindEntityByClassname( NULL, pszGoal );
+		if ( !pGoal )
 			return Wander();
 
-		pGoal = UTIL_FindEntityByClassname( NULL, "ctc_chicken" );
-		while ( pGoal && !pGoal->IsTriggered( this ) )
-			pGoal = UTIL_FindEntityByClassname( pGoal, "ctc_chicken" );
-
-		if ( g_flChickenAway[g_pGameRules->GetTeamIndex( TeamID() )] != 0 )
+		while ( pGoal )
 		{
-			iTeam = 1;
-			if ( pGoal )
-				goto found;
+			if ( pGoal->IsTriggered( this ) == iTeam )
+				break;
+			pGoal = UTIL_FindEntityByClassname( pGoal, pszGoal );
 		}
-	}
 
-	for ( pGoal = UTIL_FindEntityByClassname( NULL, pszGoal ); pGoal; pGoal = UTIL_FindEntityByClassname( pGoal, pszGoal ) )
-	{
-		if ( pGoal->IsTriggered( this ) == iTeam )
-			break;
-	}
-
-	if ( !pGoal )
-		return Wander();
+		if ( !pGoal )
+			return Wander();
 
 found:
-	ClearRoute();
-	m_pRoute = m_pRouteStart = g_BotNavigator.BuildRoute( this, pGoal );
+		ClearRoute();
+		m_pRoute = m_pRouteStart = g_BotNavigator.BuildRoute( this, pGoal );
 
-	if ( m_pRoute )
-	{
-		if ( g_BotNavigator.m_iMaxDepth == 1 && ( m_pRoute->m_vecOrigin - pev->origin ).Length2D() < 32 )
+		if ( m_pRoute )
 		{
-			ClearRoute();
-			m_fRouteDone = TRUE;
-			return pev->origin;
-		}
+			if ( g_BotNavigator.m_iMaxDepth == 1 && ( m_pRoute->m_vecOrigin - pev->origin ).Length2D() < 32 )
+			{
+				ClearRoute();
+				m_fRouteDone = TRUE;
+				return pev->origin;
+			}
 
-		m_fGoalVisible = FALSE;
-		m_fHasGoalPos = TRUE;
-		m_cRouteLeft = g_BotNavigator.m_iMaxDepth;
-		m_cRouteSteps = g_BotNavigator.m_iMaxDepth;
-		return m_pRoute->m_vecOrigin;
+			m_fGoalVisible = FALSE;
+			m_fHasGoalPos = TRUE;
+			m_cRouteLeft = g_BotNavigator.m_iMaxDepth;
+			m_cRouteSteps = g_BotNavigator.m_iMaxDepth;
+			return m_pRoute->m_vecOrigin;
+		}
 	}
 
 	return Wander();

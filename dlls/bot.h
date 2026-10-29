@@ -191,6 +191,8 @@ public:
 	Vector	GetLookDir( void );		// Update's accessors (names ours), botattack.cpp
 	Vector	GetLookDir1( void );
 	Vector	GetLookDir2( void );
+	BOOL	Seen( void );			// RouteGoal's accessors (names ours), botnav.cpp
+	BOOL	ChickenCarrier( void );
 
 	float	m_flTime;
 	BOOL	m_fSeen;
@@ -363,6 +365,8 @@ public:
 	void	SetMoveGoals( int cGoals ) { m_cMoveGoals = cGoals; }
 	void	SetLookDir( void );
 	Vector	GetLookDir( void );		// CBotMemory::Update's (name ours), botattack.cpp
+	int		GetState( void );		// RouteGoal's accessors (names ours), botnav.cpp
+	BOOL	RouteDone( void );
 	BOOL	CheckAhead( Vector &vecDir, TraceResult *ptr );
 	BOOL	CheckSides( Vector &vecAngles, TraceResult *ptrLeft, TraceResult *ptrRight );
 	void	MoveThink( void );
