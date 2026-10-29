@@ -1208,12 +1208,16 @@ Vector CVehicleTank::Slide( Vector vecVelocity, Vector vecNormal )
 	float flSpeed = vecVelocity.Length();
 
 	vecVelocity = vecVelocity.Normalize() * flSpeed * ( 1 - flDot );
+	// sic: z scaled by 1 here and in vecAlong below, no-ops; the named components
+	// give retail's x87 operand orders in the inlined Normalize, Length and dot products
+	vecVelocity.z = vecVelocity.z * 1;
 
 	Vector vecSide = CrossProduct( Vector( 0, 0, 1 ), vecNormal );
 	vecSide = vecSide.Normalize();
 	float flNormal = DotProduct( vecVelocity, vecNormal );
 	Vector vecProj = flNormal * vecNormal;
 	Vector vecAlong = vecVelocity - vecProj;
+	vecAlong.z = vecAlong.z * 1;	// sic: see above
 	vecVelocity = vecAlong - CrossProduct( vecNormal, vecSide ) * flNormal;
 
 	if ( m_flSpeed > 0 )
