@@ -383,8 +383,6 @@ void CBeamGun::SecondaryAttack( void )
 
 void CBeamGun::PrimaryAttack( void )
 {
-	Vector vecAiming, vecSrc;
-
 	if ( gpGlobals->time > m_flDrawShotgunLightning && m_flDrawShotgunLightning != 0 )
 	{
 		m_fireState = FIRE_OFF;
@@ -417,63 +415,63 @@ void CBeamGun::PrimaryAttack( void )
 		return;
 	}
 
-	if ( m_flStartAttack <= gpGlobals->time )
+	if ( m_flStartAttack > gpGlobals->time )
+		return;
+
+	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+	Vector vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_5DEGREES );
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+
+	switch( m_fireState )
 	{
-		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
-		vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_5DEGREES );
-		vecSrc	 = m_pPlayer->GetGunPosition( );
-
-		switch( m_fireState )
+		case FIRE_OFF:
 		{
-			case FIRE_OFF:
+			if ( !HasAmmo() )
 			{
-				if ( !HasAmmo() )
-				{
-					m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + 0.25;
-					PlayEmptySound( );
-					return;
-				}
-
-				m_flAmmoUseTime = gpGlobals->time;// start using ammo ASAP.
-
-				SendWeaponAnim( BEAMGUN_CHARGE );
-				m_shakeTime = 0;
-
-				m_pPlayer->m_iWeaponVolume = EGON_PRIMARY_VOLUME;
-				m_flTimeWeaponIdle = gpGlobals->time + 0.1;
-				m_shootTime = gpGlobals->time + 1.34;
-
-				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, EGON_SOUND_STARTUP, 0.98, ATTN_NORM, 0, 125 );
-
-				pev->dmgtime = gpGlobals->time + GetPulseInterval();
-				m_fireState = FIRE_CHARGE;
-				m_flNextBeamRing = gpGlobals->time + 0.5;
-				m_flStartAttack = gpGlobals->time + 0.73;
+				m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + 0.25;
+				PlayEmptySound( );
+				return;
 			}
-			break;
 
-			case FIRE_CHARGE:
-			{
-				Discharge( vecSrc, vecAiming );
-				m_pPlayer->m_iWeaponVolume = EGON_PRIMARY_VOLUME;
+			m_flAmmoUseTime = gpGlobals->time;// start using ammo ASAP.
 
-				if ( m_shootTime != 0 && gpGlobals->time > m_shootTime )
-				{
-					if ( gpGlobals->time > m_flDrawShotgunLightning )
-						EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_STATIC, EGON_SOUND_RUN, 0.98, ATTN_NORM, 0, 125 );
+			SendWeaponAnim( BEAMGUN_CHARGE );
+			m_shakeTime = 0;
 
-					m_shootTime = 0;
-				}
-				if ( !HasAmmo() )
-				{
-					EndAttack();
-					m_fireState = FIRE_OFF;
-					m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + 1.0;
-				}
+			m_pPlayer->m_iWeaponVolume = EGON_PRIMARY_VOLUME;
+			m_flTimeWeaponIdle = gpGlobals->time + 0.1;
+			m_shootTime = gpGlobals->time + 1.34;
 
-			}
-			break;
+			EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, EGON_SOUND_STARTUP, 0.98, ATTN_NORM, 0, 125 );
+
+			pev->dmgtime = gpGlobals->time + GetPulseInterval();
+			m_fireState = FIRE_CHARGE;
+			m_flNextBeamRing = gpGlobals->time + 0.5;
+			m_flStartAttack = gpGlobals->time + 0.73;
 		}
+		break;
+
+		case FIRE_CHARGE:
+		{
+			Discharge( vecSrc, vecAiming );
+			m_pPlayer->m_iWeaponVolume = EGON_PRIMARY_VOLUME;
+
+			if ( m_shootTime != 0 && gpGlobals->time > m_shootTime )
+			{
+				if ( gpGlobals->time > m_flDrawShotgunLightning )
+					EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_STATIC, EGON_SOUND_RUN, 0.98, ATTN_NORM, 0, 125 );
+
+				m_shootTime = 0;
+			}
+			if ( !HasAmmo() )
+			{
+				EndAttack();
+				m_fireState = FIRE_OFF;
+				m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + 1.0;
+			}
+
+		}
+		break;
 	}
 }
 
@@ -888,22 +886,21 @@ void CBeamGun::WeaponIdle( void )
 
 		if ( m_flNextIdleAnimTime < gpGlobals->time )
 		{
-			int iAnim;
 			switch ( RANDOM_LONG( 0, 16 ) )
 			{
 			case 0:
-				iAnim = BEAMGUN_IDLEBLADE;
+				SendWeaponAnim( BEAMGUN_IDLEBLADE );
+				m_flTimeWeaponIdle = gpGlobals->time;
 				break;
 			case 1:
-				iAnim = BEAMGUN_IDLEINSPECT;
+				SendWeaponAnim( BEAMGUN_IDLEINSPECT );
+				m_flTimeWeaponIdle = gpGlobals->time;
 				break;
 			default:
-				iAnim = BEAMGUN_IDLESUBDUEL;
+				SendWeaponAnim( BEAMGUN_IDLESUBDUEL );
+				m_flTimeWeaponIdle = gpGlobals->time;
 				break;
 			}
-			SendWeaponAnim( iAnim );
-
-			m_flTimeWeaponIdle = gpGlobals->time;
 			m_flNextIdleAnimTime = gpGlobals->time + 2.5;
 		}
 	}
@@ -983,9 +980,9 @@ void CBeamGun::Customize( char cOption, int iValue )
 //=========================================================
 void CBeamGun::Discharge( const Vector &vecOrigSrc, const Vector &vecDir )
 {
-	Configuration.red = Configuration.voltage * 120 - Configuration.current * 5;
-	Configuration.green = Configuration.current * 114 - Configuration.voltage * 13 - Configuration.frequency;
-	Configuration.blue = Configuration.frequency * 100 - Configuration.current * 10;
+	Configuration.red = ( Configuration.voltage * 120 ) - ( Configuration.current * 5 );
+	Configuration.green = ( Configuration.current * 114 ) - ( Configuration.voltage * 13 ) - Configuration.frequency;
+	Configuration.blue = ( Configuration.frequency * 100 ) - ( Configuration.current * 10 );
 
 	if ( Configuration.red > 255 )
 		Configuration.red = 255;
