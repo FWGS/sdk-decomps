@@ -943,7 +943,9 @@ CBaseEntity *CDml::FindTarget( bool fAutoaim )
 
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle );
 	Vector vecForward = gpGlobals->v_forward;
-	Vector vecDir;
+	Vector vecDir = vecForward;	// sic: both branches below set it; the dead
+								// copy gives retail's operand order in the x
+								// sum of v_angle + punchangle
 
 	if ( fAutoaim )
 		vecDir = GetAutoaimVector( AUTOAIM_10DEGREES );
