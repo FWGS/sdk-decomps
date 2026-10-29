@@ -681,8 +681,8 @@ void DrawFlames( void )
 		if ( effect.m_iType != EFFECT_FLAME && effect.m_iType != EFFECT_FLAME2 && effect.m_iType != EFFECT_FLAME3 )
 			continue;
 
-		float flBrightness = effect.m_flBrightness - ( flTime - effect.m_flStartTime ) * effect.m_flFadeSpeed * 30;
-		float flScale = ( flTime - effect.m_flStartTime ) * effect.m_flScaleSpeed * 30 + effect.m_flScale;
+		float flBrightness = effect.m_flBrightness - ( ( flTime - effect.m_flStartTime ) * effect.m_flFadeSpeed * 30 );
+		float flScale = ( ( flTime - effect.m_flStartTime ) * effect.m_flScaleSpeed * 30 ) + effect.m_flScale;
 
 		// EFFECT_FLAME3 flies off along its direction
 		vec3_t vecOrigin = effect.m_vecOrigin + effect.m_vecAngles * 50 * 30 * ( flTime - effect.m_flStartTime );
