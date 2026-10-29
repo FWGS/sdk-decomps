@@ -34,9 +34,11 @@ void VectorAngles( const float *forward, float *angles );
 #define SPHERE_POINTS		( 2 + SPHERE_SLICES * SPHERE_STACKS )
 #define SPHERE_TRIS			( SPHERE_SLICES * 2 * SPHERE_STACKS )
 
-vec3_t g_vecSpherePoints[ SPHERE_POINTS ];
+// names ours, picked so that VC6's .bss hash puts the points before the
+// triangle indexes and the texture coordinates after them, as retail has them
+vec3_t g_vecSphereVertex[ SPHERE_POINTS ];
 int g_iSphereTris[ SPHERE_TRIS * 3 ];
-vec3_t g_vecSphereTexCoords[ SPHERE_POINTS ];
+vec3_t g_vecSphereTexCoord[ SPHERE_POINTS ];
 
 CEffectList g_ClientEffects;	// name ours
 
@@ -155,9 +157,9 @@ void DrawSphere( int iUnused, Vector &origin, float flRadius, float flUnused, fl
 		{
 			int iPoint = *pTri;
 			Vector vecPoint;
-			vecPoint = g_vecSpherePoints[ iPoint ];
+			vecPoint = g_vecSphereVertex[ iPoint ];
 
-			gEngfuncs.pTriAPI->TexCoord2f( g_vecSphereTexCoords[ iPoint ].x, g_vecSphereTexCoords[ iPoint ].z );
+			gEngfuncs.pTriAPI->TexCoord2f( g_vecSphereTexCoord[ iPoint ].x, g_vecSphereTexCoord[ iPoint ].z );
 			gEngfuncs.pTriAPI->Vertex3fv( vecPoint * flRadius + origin );
 			pTri++;
 		}
@@ -819,8 +821,8 @@ void InitSphere( void )
 	if ( bInit )
 		return;
 
-	g_vecSpherePoints[0] = Vector( 0, 1, 0 );
-	g_vecSpherePoints[1] = Vector( 0, -1, 0 );
+	g_vecSphereVertex[0] = Vector( 0, 1, 0 );
+	g_vecSphereVertex[1] = Vector( 0, -1, 0 );
 
 	for ( i = 0; i < SPHERE_STACKS; i++ )
 	{
@@ -833,13 +835,13 @@ void InitSphere( void )
 			float flTheta = j * ( (float)M_PI / ( SPHERE_SLICES / 2 ) );
 			float flX, flZ;
 
-			g_vecSpherePoints[ iPoint ].y = flY;
-			g_vecSpherePoints[ iPoint ].x = flX = sin( flTheta ) * sin( flPhi );
-			g_vecSpherePoints[ iPoint ].z = flZ = cos( flTheta ) * sin( flPhi );
+			g_vecSphereVertex[ iPoint ].y = flY;
+			g_vecSphereVertex[ iPoint ].x = flX = sin( flTheta ) * sin( flPhi );
+			g_vecSphereVertex[ iPoint ].z = flZ = cos( flTheta ) * sin( flPhi );
 
-			g_vecSphereTexCoords[ iPoint ].x = 1.0 - ( flX + 1.0 ) * 0.5;
-			g_vecSphereTexCoords[ iPoint ].y = 1.0 - ( (float)cos( flPhi ) + 1.0 ) * 0.5;
-			g_vecSphereTexCoords[ iPoint ].z = 1.0 - ( flZ + 1.0 ) * 0.5;
+			g_vecSphereTexCoord[ iPoint ].x = 1.0 - ( flX + 1.0 ) * 0.5;
+			g_vecSphereTexCoord[ iPoint ].y = 1.0 - ( (float)cos( flPhi ) + 1.0 ) * 0.5;
+			g_vecSphereTexCoord[ iPoint ].z = 1.0 - ( flZ + 1.0 ) * 0.5;
 		}
 	}
 
