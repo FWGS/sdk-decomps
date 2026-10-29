@@ -26,14 +26,13 @@
 #include "nodes.h"
 #include "player.h"
 #include "effects.h"
+#include "dmlrocket.h"
+#include "dmlgrenade.h"
 #include "gamerules.h"
 #include "soundent.h"
-#include "dmlrocket.h"
 
 extern int gmsgWeapPickup;
 extern int gmsgSliderX;
-
-#include "dmlgrenade.h"
 
 enum dmlgrenade_e {
 	DMLGRENADE_IDLE = 0,
