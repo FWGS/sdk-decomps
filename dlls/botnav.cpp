@@ -988,53 +988,50 @@ LINK_ENTITY_TO_CLASS( info_botlandmark, CInfoBotlandmark );
 
 void CInfoBotlandmark :: Activate( void )
 {
-	CBotLandmark *pMark;
+	CBotLandmark *pMark, *pLandmark;
 
 	if ( !pev->targetname || !g_BotNavigator.m_pLandmarks )
 		return;
 
 	// find our own record
-	pMark = g_BotNavigator.m_pLandmarks;
-	while ( 1 )
+	pMark = NULL;
+	for ( pLandmark = g_BotNavigator.m_pLandmarks; pLandmark; pLandmark = pLandmark->m_pNext )
 	{
-		if ( !strcmp( STRING( pMark->m_iszName ), STRING( pev->targetname ) ) )
+		if ( !strcmp( STRING( pLandmark->m_iszName ), STRING( pev->targetname ) ) )
+		{
+			pMark = pLandmark;
 			break;
-		pMark = pMark->m_pNext;
-		if ( !pMark )
-			break;
+		}
 	}
 
 	if ( !pMark )
 		return;
 
-	if ( g_BotNavigator.m_pLandmarks )
+	int k = 0;
+
+	for ( pLandmark = g_BotNavigator.m_pLandmarks; pLandmark; pLandmark = pLandmark->m_pNext )
 	{
-		CBotLandmark **ppLink = pMark->m_pLinks;
+		CBotLandmark *pFound = NULL;
 
-		for ( CBotLandmark *pOther = g_BotNavigator.m_pLandmarks; pOther; pOther = pOther->m_pNext )
+		for ( int i = 0; i < MAX_LANDMARK_LINKS; i++ )
 		{
-			CBotLandmark *pFound = NULL;
+			if ( m_iszLink[i] && !strcmp( STRING( m_iszLink[i] ), STRING( pLandmark->m_iszName ) ) )
+				pFound = pLandmark;
+		}
 
-			for ( int i = 0; i < MAX_LANDMARK_LINKS; i++ )
+		if ( pFound )
+		{
+			// link both ways
+			pMark->m_pLinks[k] = pFound;
+			for ( int j = 0; j < MAX_LANDMARK_LINKS; j++ )
 			{
-				if ( m_iszLink[i] && !strcmp( STRING( m_iszLink[i] ), STRING( pOther->m_iszName ) ) )
-					pFound = pOther;
-			}
-
-			if ( pFound )
-			{
-				// link both ways
-				*ppLink = pFound;
-				for ( int j = 0; j < MAX_LANDMARK_LINKS; j++ )
+				if ( !pFound->m_pLinks[j] )
 				{
-					if ( !pFound->m_pLinks[j] )
-					{
-						pFound->m_pLinks[j] = pMark;
-						break;
-					}
+					pFound->m_pLinks[j] = pMark;
+					break;
 				}
-				ppLink++;
 			}
+			k++;
 		}
 	}
 
