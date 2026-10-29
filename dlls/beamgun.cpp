@@ -982,9 +982,9 @@ void CBeamGun::Customize( char cOption, int iValue )
 //=========================================================
 void CBeamGun::Discharge( const Vector &vecOrigSrc, const Vector &vecDir )
 {
-	Configuration.red = Configuration.voltage * 120 - Configuration.current * 5;
-	Configuration.green = Configuration.current * 114 - Configuration.voltage * 13 - Configuration.frequency;
-	Configuration.blue = Configuration.frequency * 100 - Configuration.current * 10;
+	Configuration.red = ( Configuration.voltage * 120 ) - ( Configuration.current * 5 );
+	Configuration.green = ( Configuration.current * 114 ) - ( Configuration.voltage * 13 ) - Configuration.frequency;
+	Configuration.blue = ( Configuration.frequency * 100 ) - ( Configuration.current * 10 );
 
 	if ( Configuration.red > 255 )
 		Configuration.red = 255;
