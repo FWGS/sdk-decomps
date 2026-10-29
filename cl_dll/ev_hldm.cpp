@@ -1710,7 +1710,7 @@ void EV_SniperShot( event_args_t *args )
 	// the rings start at the barrel
 	vecStart = vecSrc + right * 1 + forward * 11 + up * -1;
 	vecDir = vecStart - vecEnd;
-	flLength = vecDir.Length();
+	flLength = ( vecDir.Length() );
 
 	iSize = 60;
 	if ( fRings )
