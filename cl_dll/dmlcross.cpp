@@ -67,26 +67,26 @@ int CHudDmlCross::MsgFunc_DmlCross(const char *pszName,  int iSize, void *pbuf )
 
 	case 1:
 		m_iFlags |= HUD_ACTIVE;
-		m_iMode = 0;
 		m_flRed = 255;
 		m_flGreen = 255;
 		m_flBlue = 255;
+		m_iMode = 0;
 		break;
 
 	case 2:
 		m_iFlags |= HUD_ACTIVE;
-		m_iMode = 2;
 		m_flRed = 255;
 		m_flGreen = 255;
 		m_flBlue = 255;
+		m_iMode = 2;
 		break;
 
 	case 3:
 		m_iFlags |= HUD_ACTIVE;
-		m_iMode = 1;
 		m_flRed = 255;
 		m_flGreen = 255;
 		m_flBlue = 255;
+		m_iMode = 1;
 		break;
 	}
 
