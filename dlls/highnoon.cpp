@@ -448,16 +448,20 @@ void CHighNoon::StartRound( void )
 			pAmmo->pev->effects |= EF_NODRAW;
 
 			if ( !pAmmoList )
+			{
 				pAmmoList = pAmmo;
+				pAmmo->m_pLink = NULL;
+				cAmmo++;
+			}
 			else
 			{
 				CBaseEntity *pLast = pAmmoList;
 				while ( pLast->m_pLink )
 					pLast = pLast->m_pLink;
 				pLast->m_pLink = pAmmo;
+				pAmmo->m_pLink = NULL;
+				cAmmo++;
 			}
-			pAmmo->m_pLink = NULL;
-			cAmmo++;
 		}
 
 		if ( INDEXENT( i ) && FStrEq( STRING( INDEXENT( i )->v.classname ), "tombstone" ) )
@@ -471,12 +475,12 @@ void CHighNoon::StartRound( void )
 
 	for ( int j = 0; j < cMaxAmmo; j++ )
 	{
-		CBaseEntity *pPrev = NULL;
 		if ( !cAmmo )
 			break;
 
 		int iPick = RANDOM_LONG( 0, cAmmo - 1 );
 		CBaseEntity *pAmmo = pAmmoList;
+		CBaseEntity *pPrev = NULL;
 		if ( !pAmmo )
 			break;
 
