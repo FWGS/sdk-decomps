@@ -160,12 +160,9 @@ void CIDPanel::paint( void )
 		angles[YAW] = pLocal->angles[YAW];
 		gEngfuncs.pfnAngleVectors( angles, forward, NULL, NULL );
 
-		Vector vecDir = forward * 2048;
-		Vector vecSrc = pLocal->origin + view_ofs;
-		Vector vecEnd = vecSrc + vecDir;
-
 		pmtrace_t tr;
-		gEngfuncs.pEventAPI->EV_PlayerTrace( pLocal->origin + view_ofs, vecEnd, PM_STUDIO_BOX, -1, &tr );
+		gEngfuncs.pEventAPI->EV_PlayerTrace( pLocal->origin + view_ofs, pLocal->origin + view_ofs + forward * 2048, PM_STUDIO_BOX, -1, &tr );
+		forward[0]; forward[1]; forward[2];	// sic: three inline operator float *() calls, the inline budget that calls the end's two copies out of line
 
 		physent_t *pe = gEngfuncs.pEventAPI->EV_GetPhysent( tr.ent );
 		if ( pe && pe->info >= 1 && pe->info <= gEngfuncs.GetMaxClients() )
