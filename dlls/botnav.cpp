@@ -342,20 +342,21 @@ Vector CBot :: Wander( void )
 
 	m_fGoalVisible = TRUE;
 
-	Vector vecAhead = pev->origin + vecForward * 64;
-	if ( !FVisible( vecAhead ) )
+	if ( !FVisible( pev->origin + vecForward * 64 ) )
 		return Vector( 0, 0, 0 );
 
-	Vector vecCell = g_BotNavigator.PosToIndex( pev->origin ) + Vector( 0, 0, 1 );
-	Vector vecBest = Vector( 0, 0, 0 );
-	float flBest = -60000;
+	Vector vecFwdCell, vecRightCell, vecTest, vecTestCell, vecPos, vecSpot;
+	float flBest;
+
+	Vector vecCell = g_BotNavigator.PosToIndex( pev->origin );
+	vecCell.z += 1;
+	Vector vecBest( 0, 0, 0 );
+	flBest = -60000;
 
 	MAKE_VECTORS( pev->v_angle );
 
-	Vector vecFwd = gpGlobals->v_forward * 64;
-	Vector vecFwdCell = g_BotNavigator.PosToIndex( pev->origin + vecFwd ) - vecCell;
-	Vector vecRight = gpGlobals->v_right * 64;
-	Vector vecRightCell = g_BotNavigator.PosToIndex( pev->origin + vecRight ) - vecCell;
+	vecFwdCell = g_BotNavigator.PosToIndex( pev->origin + gpGlobals->v_forward * 64 ) - vecCell;
+	vecRightCell = g_BotNavigator.PosToIndex( pev->origin + gpGlobals->v_right * 64 ) - vecCell;
 
 	int iDist = 20;
 	do
@@ -364,16 +365,13 @@ Vector CBot :: Wander( void )
 
 		for ( int i = -10; i <= 10; i++ )
 		{
-			Vector vecSideDir = Vector( vecRightCell.x * iSide, vecRightCell.y * iSide, 0 );
-			Vector vecSide = vecSideDir * 10;	// sic: not * i
-			Vector vecStep = Vector( vecFwdCell.x * iDist, vecFwdCell.y * iDist, 0 );
-			Vector vecTest = vecCell + vecStep + vecSide;
-			Vector vecTestCell = vecTest;
+			vecTest = vecCell + Vector( vecFwdCell.x, vecFwdCell.y, 0 ) * iDist + Vector( vecRightCell.x, vecRightCell.y, 0 ) * iSide * 10;	// sic: 10, not i
+			vecTestCell = vecTest;
 
 			if ( g_BotNavigator.GetVisits( vecTest.x, vecTest.y, vecTest.y ) > flBest )	// sic: y for z
 			{
-				Vector vecPos = g_BotNavigator.IndexToPos( vecTestCell );
-				Vector vecSpot = vecPos;
+				vecPos = g_BotNavigator.IndexToPos( vecTestCell );
+				vecSpot = vecPos;
 				vecSpot.z = pev->origin.z;
 				Vector vecDir = vecSpot - pev->origin;
 				vecSpot = vecSpot + vecDir.Normalize() * 64;
