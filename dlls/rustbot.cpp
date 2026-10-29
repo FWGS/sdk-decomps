@@ -1425,13 +1425,17 @@ void CRustbot::AimHead( const Vector &vecTarget )
 		break;
 	}
 
+	// sic: the head turn is read through piHeadTurn and the yaw sum from
+	// the member, so VC6 loads the member twice (mov into a register,
+	// fild from it) as retail does; read the same way twice it reuses one load
+	int *piHeadTurn = &m_iHeadTurn;
+	int iHeadTurn = *piHeadTurn;
 	Vector vecOrigin;
 	vecOrigin = pev->origin;
 
 	Vector vecDir = vecTarget - vecOrigin;
 	float flYaw = m_iHeadTurn + pev->angles.y;
 	float flTarget = UTIL_VecToYaw( vecDir );
-	int iHeadTurn = m_iHeadTurn;
 	float flDelta = UTIL_AngleDiff( flTarget, flYaw );
 
 	if ( flDelta > 180 )
