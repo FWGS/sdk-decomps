@@ -852,9 +852,9 @@ search:
 					}
 
 					Vector vecGoal = pGoal->Center() + Vector( 0, 0, 16 );
+					pRoute->m_vecOrigin = vecGoal;
 					pRoute->m_iAction = 0;
 					pRoute->m_flRadius = 32;
-					pRoute->m_vecOrigin = vecGoal;
 					pFound = pNode->m_pLinks[i];
 				}
 				break;
