@@ -719,6 +719,14 @@ void CBot::CheckMelee( void )
 	m_fMelee = TRUE;
 }
 
+// JumpSkill - the jump skill scaled by the bot list's skill (name ours);
+// an inline CBotProfile member, as AimSkill and NoticeSkill are: retail
+// computes &m_Profile first and reads m_flJump through it
+inline float CBotProfile::JumpSkill( void )
+{
+	return SkillAdjust( ( g_BotManager.m_flSkillScale / 100 ) * m_flJump );
+}
+
 //=========================================================
 // FightThink - with a live enemy: aims and fires when it
 // can see it (and sometimes pauses 1-3 s), and picks the
@@ -776,7 +784,7 @@ void CBot::FightThink( void )
 				Roam( 0 );
 		}
 
-		float flJump = m_Profile.SkillAdjust( ( g_BotManager.m_flSkillScale / 100 ) * m_Profile.m_flJump );
+		float flJump = m_Profile.JumpSkill();
 		if ( RANDOM_FLOAT( 1, flJumpChance ) < flJump * 1.5 )
 			pev->button |= IN_JUMP;
 	}

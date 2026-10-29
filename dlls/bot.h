@@ -218,6 +218,7 @@ public:
 	float	SkillAdjust( float flSkill );
 	float	AimSkill( void ) { return SkillAdjust( m_flAim ); }
 	float	NoticeSkill( void ) { return SkillAdjust( m_flNotice ); }
+	float	JumpSkill( void );
 	float	RateWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pItem, float flDist );
 	BOOL	Load( char *pszFile );
 	float	Aggression( void ) { return m_flAggression; }
