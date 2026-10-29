@@ -611,13 +611,13 @@ void CDmlRocket::RocketThink( void )
 
 		g_engfuncs.pfnAngleVectors( pev->angles, vecForward, NULL, vecUp );
 
-		vecForward.x *= 900;
-		vecForward.y *= 900;
-		vecForward.z *= -900;
-		vecUp.x *= iUp;
-		vecUp.y *= iUp;
-		vecUp.z *= -iUp;
-		pev->velocity = vecUp + vecForward;
+		vecForward[0] *= 900;
+		vecForward[1] *= 900;
+		vecForward[2] *= -900;
+		vecUp[0] *= iUp;
+		vecUp[1] *= iUp;
+		vecUp[2] *= -iUp;
+		pev->velocity = vecForward + vecUp;
 
 		if ( m_iIsBrother == 1 )
 		{
