@@ -65,7 +65,7 @@ public:
 	BOOL CheckMeleeAttack1( float flDot, float flDist );
 	BOOL CheckRangeAttack1( float flDot, float flDist );
 	Vector GetGunPosition( void );
-	void ThrowChemical( Vector vecSrc );
+	CChemGrenade *ThrowChemical( Vector vecSrc );
 	void PainSound( void );
 	void AlertSound( void );
 	void AttackHitSound( CBaseMonster *pVictim );
@@ -215,9 +215,10 @@ Vector CHostileScientist::GetGunPosition( void )
 
 //=========================================================
 // ThrowChemical - one of four mixtures, stronger with the
-// skill level; the source position isn't used
+// skill level; the source position isn't used. Returns the
+// grenade (retail keeps it in eax), which the caller ignores
 //=========================================================
-void CHostileScientist::ThrowChemical( Vector vecSrc )
+CChemGrenade *CHostileScientist::ThrowChemical( Vector vecSrc )
 {
 	chemicalmixture_t mixture;	// sic: only some of it is set
 	float flScale;
@@ -284,6 +285,7 @@ void CHostileScientist::ThrowChemical( Vector vecSrc )
 		pGrenade = CChemGrenade::ShootBouncy( pev, GetGunPosition(), m_vecTossVelocity, mixture );
 
 	pGrenade->pev->gravity = 1.5;
+	return pGrenade;
 }
 
 int CHostileScientist::Classify( void )

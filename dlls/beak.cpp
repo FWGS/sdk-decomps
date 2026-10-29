@@ -690,8 +690,7 @@ void CBeak::StartTask( Task_t *pTask )
 				vecDir = m_hEnemy->BodyTarget( pev->origin ) - pev->origin;
 				Vector vecDist = vecDir;
 				float flLead = vecDist.Length();
-				Vector vecEnemyVelocity;
-				vecEnemyVelocity = m_hEnemy->pev->velocity;
+				Vector vecEnemyVelocity = m_hEnemy->pev->velocity;
 
 				// don't lead a far enemy that isn't running the same way
 				if ( DotProduct( vecEnemyVelocity.Normalize(), vecDir.Normalize() ) < 0.4 && flLead > 100 )
@@ -699,14 +698,16 @@ void CBeak::StartTask( Task_t *pTask )
 
 				// sic: leads the enemy by its velocity times its distance
 				Vector vecLead = m_hEnemy->pev->velocity * flLead;
-				Vector vecJump = vecDir + vecLead;
+				Vector vecJump;
+				vecJump = vecDir + vecLead;
 
 				float flSpeed = vecJump.Length() * 2.5;
 				if ( flSpeed > 500 )
 					flSpeed = 500;
 
 				pev->velocity = vecJump.Normalize() * flSpeed;
-				pev->velocity.z += ( CVAR_GET_FLOAT( "sv_gravity" ) * 0.625 ) * 0.3;
+				float flGravity = CVAR_GET_FLOAT( "sv_gravity" );
+				pev->velocity.z += ( flGravity * 0.625 ) * 0.3;
 			}
 			else
 			{
