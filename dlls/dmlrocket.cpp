@@ -307,7 +307,7 @@ void CDmlRocket :: TrackTarget ( void )
 {
 	Vector	vecFlightDir;
 	Vector	vecDirToEnemy;
-	float	flDelta;
+	float	flDelta = 0;	// sic: never read, see vecVelocity
 
 	if ( m_iDetonate == 2 )
 	{
@@ -392,6 +392,8 @@ void CDmlRocket :: TrackTarget ( void )
 	pev->nextthink = gpGlobals->time + RANDOM_FLOAT( 0.1, 0.3 );
 
 	pev->angles = UTIL_VecToAngles (pev->velocity);
+	Vector vecVelocity( pev->velocity );	// sic: never used; with flDelta's dead
+						// initialisation it gives retail's inlining
 
 	if ( pev->velocity.Length() > 2000 )
 	{
