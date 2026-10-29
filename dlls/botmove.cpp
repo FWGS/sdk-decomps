@@ -998,13 +998,12 @@ void CBot::MoveToEntity( CBaseEntity *pEntity, int iPriority )
 }
 
 //=========================================================
-// MoveAwayFrom - head straight away from vecSpot
+// MoveAwayFrom - head straight away from vecSpot (the
+// RunFrom step, out of line)
 //=========================================================
 void CBot::MoveAwayFrom( const Vector &vecSpot )
 {
-	Vector vecDir = ( vecSpot - pev->origin ).Normalize();
-	vecDir = vecDir * -1;
-	m_vecMoveVelocity = vecDir * CVAR_GET_FLOAT( "sv_maxspeed" );
+	RunFrom( vecSpot );
 }
 
 //=========================================================
