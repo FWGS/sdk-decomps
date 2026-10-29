@@ -196,7 +196,7 @@ SOURCE=..\dlls\gausspistol.cpp
 
 !IF  "$(CFG)" == "cl_dll - Win32 Release"
 
-# ADD CPP /D "CLIENT_DLL"
+# ADD CPP /D "CLIENT_DLL" /Fp".\Release\gausspistol.pch"
 
 !ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
 
@@ -211,7 +211,7 @@ SOURCE=..\dlls\minigun.cpp
 
 !IF  "$(CFG)" == "cl_dll - Win32 Release"
 
-# ADD CPP /D "CLIENT_DLL"
+# ADD CPP /D "CLIENT_DLL" /Fp".\Release\minigun.pch"
 
 !ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
 
@@ -226,7 +226,7 @@ SOURCE=..\dlls\shotgun.cpp
 
 !IF  "$(CFG)" == "cl_dll - Win32 Release"
 
-# ADD CPP /D "CLIENT_DLL"
+# ADD CPP /D "CLIENT_DLL" /Fp".\Release\shotgun.pch"
 
 !ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
 
@@ -241,7 +241,7 @@ SOURCE=..\dlls\spchemicalgun.cpp
 
 !IF  "$(CFG)" == "cl_dll - Win32 Release"
 
-# ADD CPP /D "CLIENT_DLL"
+# ADD CPP /D "CLIENT_DLL" /Fp".\Release\spchemicalgun.pch"
 
 !ELSEIF  "$(CFG)" == "cl_dll - Win32 Debug"
 
