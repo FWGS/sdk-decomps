@@ -193,7 +193,6 @@ void CEndBossKataball::AccelerateThink( void )
 		Vector vecSteer;
 		float flSpeed;
 		float flTurn;
-		Vector vecUnused1, vecUnused2, vecUnused3, vecUnused4;	// sic: never used; their constructors give retail's inlining below
 
 		if ( m_hEnemy != NULL )
 			vecTarget = m_hEnemy->BodyTarget( pev->origin );
@@ -223,10 +222,14 @@ void CEndBossKataball::AccelerateThink( void )
 		vecDir = vecDir.Normalize( );
 
 		// and turn harder at higher skill
+		// sic: x and y are scaled by 1, no-ops; the explicit vecDir.x and vecDir.y
+		// give retail's multiplies in the inlined Normalize() calls on vecDir
 		switch ( g_iSkillLevel )
 		{
 		case SKILL_MEDIUM:
 			flTurn = 12;
+			vecDir.x = vecDir.x * 1;
+			vecDir.y = vecDir.y * 1;
 			vecDir.z = vecDir.z * 1.25;
 			break;
 		case SKILL_HARD:
@@ -234,6 +237,8 @@ void CEndBossKataball::AccelerateThink( void )
 			break;
 		default:
 			flTurn = 8;
+			vecDir.x = vecDir.x * 1;
+			vecDir.y = vecDir.y * 1;
 			vecDir.z = vecDir.z * 1.5;
 			break;
 		}
@@ -387,6 +392,7 @@ void CEndBossRocket::AccelerateThink( void )
 			vecTarget = pev->velocity.Normalize( ) * 1024;	// sic: not added to the origin
 
 		vecDir = vecTarget - pev->origin;
+		vecDir.x = vecDir.x * 1;	// sic: a no-op; an explicit vecDir.x gives retail's multiply in the Normalize below
 		vecDir = vecDir.Normalize( ) * 128;
 		vecVelocity = pev->velocity.Normalize( ) * 128;
 		pev->velocity = ( vecDir - vecVelocity ).Normalize( ) * 16 + vecVelocity;
