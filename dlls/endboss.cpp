@@ -876,6 +876,7 @@ void CEndBoss::HandleAnimEvent( MonsterEvent_t *pEvent )
 	case ENDBOSS_AE_MGUN_RIGHT:
 	{
 		Vector vecBarrel, vecMuzzle, vecAngles;
+		float flZ;
 		GetAttachment( 1, vecBarrel, vecAngles );
 		GetAttachment( 0, vecMuzzle, vecAngles );
 
