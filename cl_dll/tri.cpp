@@ -365,7 +365,7 @@ DrawFlameStrip
 Like DrawFlameFan, for EFFECT_FLAME3
 =================
 */
-void DrawFlameStrip( float *origin, float *dir, float flScale, int iSegments, float flBrightness )
+void DrawFlameStrip( Vector &origin, Vector &dir, float flScale, int iSegments, float flBrightness )
 {
 	vec3_t angles, forward, right, up;
 	vec3_t vecPoint, vecTip, vecLast;
@@ -692,7 +692,7 @@ void DrawFlames( void )
 
 			// sic: the first test is redundant
 			if ( effect.m_iType == EFFECT_FLAME || effect.m_iType != EFFECT_FLAME3 )
-				DrawFlameFan( effect.m_vecOrigin + effect.m_vecAngles * flScale, effect.m_vecAngles, flScale, 16, flBrightness, effect.m_iType );
+				DrawFlameFan( effect.m_vecOrigin + flScale * effect.m_vecAngles, effect.m_vecAngles, flScale, 16, flBrightness, effect.m_iType );
 			else
 				DrawFlameStrip( vecOrigin, effect.m_vecAngles, flScale, 16, flBrightness );
 		}

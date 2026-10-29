@@ -331,22 +331,22 @@ CCustomizationMenu::CCustomizationMenu( int iTrans, int iRemoveMe, int x, int y,
 		iXPos += 25;
 
 	// sic: the first replaces the panel made above
-	for ( i = 0; i < 4; i++ )
+	for ( j = 0; j < 4; j++ )
 	{
-		sprintf( szName, "%s_config", sCustomizationChem[i] );
+		sprintf( szName, "%s_config", sCustomizationChem[j] );
 		pszConfig = GetConfigText( szName, szText );
 		if ( !pszConfig )
 			pszConfig = "No Configuration Available";
-		m_pChem[i] = new TextPanel( pszConfig, iXPos, ( iChemTall + 7 ) * i + 54, 300, 200 );
-		m_pChem[i]->setParent( this );
-		m_pChem[i]->setFont( pSchemes->getFont( hShotgunSelected ) );
+		m_pChem[j] = new TextPanel( pszConfig, iXPos, ( iChemTall + 7 ) * j + 54, 300, 200 );
+		m_pChem[j]->setParent( this );
+		m_pChem[j]->setFont( pSchemes->getFont( hShotgunSelected ) );
 		pSchemes->getFgColor( hShotgunSelected, r, g, b, a );
-		m_pChem[i]->setFgColor( r, g, b, a );
+		m_pChem[j]->setFgColor( r, g, b, a );
 		pSchemes->getBgColor( hShotgunSelected, r, g, b, a );
-		m_pChem[i]->setBgColor( r, g, b, a );
-		m_pChem[i]->getTextImage()->getTextSizeWrapped( iTextWide, iTextTall );
-		m_pChem[i]->setSize( iTextWide, iTextTall );
-		m_pChem[i]->setVisible( false );
+		m_pChem[j]->setBgColor( r, g, b, a );
+		m_pChem[j]->getTextImage()->getTextSizeWrapped( iTextWide, iTextTall );
+		m_pChem[j]->setSize( iTextWide, iTextTall );
+		m_pChem[j]->setVisible( false );
 	}
 
 	//
