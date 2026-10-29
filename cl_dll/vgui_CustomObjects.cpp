@@ -447,3 +447,9 @@ void CMenuHandler_StringCommandClassSelect::actionPerformed(Panel* panel)
 		gEngfuncs.pfnClientCmd("kill");
 }
 
+// Gunman: draw just the image
+void CImageLabel::paint()
+{
+	m_pTGA->doPaint( this );
+}
+

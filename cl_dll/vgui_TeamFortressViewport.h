@@ -136,10 +136,7 @@ public:
 	}
 
 	// Gunman: draw just the image
-	virtual void paint()
-	{
-		m_pTGA->doPaint( this );
-	}
+	virtual void paint();
 };
 
 // Command Label
