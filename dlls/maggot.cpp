@@ -325,57 +325,58 @@ void CMaggot::RunAI( void )
 	if ( gpGlobals->time < m_flNextDodgeTime )
 		return;
 
-	if ( m_hEnemy == NULL )
-		return;
-
-	Vector vecDir;
-	vecDir = m_vecEnemyLKP - pev->origin;
-	UTIL_MakeAimVectors( m_hEnemy->pev->angles );
-	Vector vecForward = gpGlobals->v_forward;
-	vecDir = vecDir.Normalize( );
-	vecForward = vecForward.Normalize( );
-	vecForward = vecForward * -1;
-	float flDot = DotProduct( vecForward, vecDir );
-	Vector vecApex;
-
-	if ( flDot > 0.97 && m_bCanDodge == TRUE )
+	if ( m_hEnemy != NULL )
 	{
-		// jump aside, turning 30 degrees past the enemy
-		Schedule_t *pSchedule = GetScheduleOfType( SCHED_FAIL );
-		m_flNextDodgeTime = gpGlobals->time + RANDOM_LONG( 2, 4 );
+		Vector vecDir;
+		vecDir = m_vecEnemyLKP - pev->origin;
+		UTIL_MakeAimVectors( m_hEnemy->pev->angles );
+		Vector vecForward = gpGlobals->v_forward;
+		vecDir = vecDir.Normalize( );
+		vecDir.x = vecDir.x * 1;	// sic: a no-op; the named vecDir.x gives retail's operand order in the dot product
+		vecForward = vecForward.Normalize( );
+		vecForward = vecForward * -1;
+		float flDot = DotProduct( vecForward, vecDir );
+		Vector vecApex;
 
-		float flYaw = VecToYaw( m_hEnemy->pev->origin - pev->origin ) - pev->angles.y;
-
-		if ( flYaw > 180 )
-			flYaw -= 360;
-		if ( flYaw < -180 )
-			flYaw += 360;
-
-		if ( flYaw < 0 )
+		if ( flDot > 0.97 && m_bCanDodge == TRUE )
 		{
-			flYaw -= 30;
-			if ( flYaw >= 0 )
-				flYaw = 0;
+			// jump aside, turning 30 degrees past the enemy
+			Schedule_t *pSchedule = GetScheduleOfType( SCHED_FAIL );
+			m_flNextDodgeTime = gpGlobals->time + RANDOM_LONG( 2, 4 );
+
+			float flYaw = VecToYaw( m_hEnemy->pev->origin - pev->origin ) - pev->angles.y;
+
+			if ( flYaw > 180 )
+				flYaw -= 360;
+			if ( flYaw < -180 )
+				flYaw += 360;
+
+			if ( flYaw < 0 )
+			{
+				flYaw -= 30;
+				if ( flYaw >= 0 )
+					flYaw = 0;
+			}
+			else
+			{
+				flYaw += 30;
+				if ( flYaw <= 0 )
+					flYaw = 0;
+			}
+
+			pev->ideal_yaw = flYaw + pev->angles.y;
+
+			if ( pSchedule )
+				ChangeSchedule( pSchedule );
 		}
-		else
+		else if ( flDot > 0.9 && m_bCanDodge == TRUE && m_hEnemy != NULL && IsMoving( ) &&
+			m_hEnemy->pev == m_hEnemy->pev &&	// sic: always true
+			( pev->origin - m_hEnemy->pev->origin ).Length2D( ) > 128 )
 		{
-			flYaw += 30;
-			if ( flYaw <= 0 )
-				flYaw = 0;
-		}
-
-		pev->ideal_yaw = flYaw + pev->angles.y;
-
-		if ( pSchedule )
-			ChangeSchedule( pSchedule );
-	}
-	else if ( flDot > 0.9 && m_bCanDodge == TRUE && m_hEnemy != NULL && IsMoving( ) &&
-		m_hEnemy->pev == m_hEnemy->pev &&	// sic: always true
-		( pev->origin - m_hEnemy->pev->origin ).Length2D( ) > 128 )
-	{
-		if ( FTriangulate( pev->origin, m_Route[ m_iRouteIndex ].vecLocation, ( pev->origin - m_Route[ m_iRouteIndex ].vecLocation ).Length2D( ) * 0.5, m_hEnemy, &vecApex ) )
-		{
-			InsertWaypoint( vecApex, bits_MF_TO_DETOUR | bits_MF_DONT_SIMPLIFY );
+			if ( FTriangulate( pev->origin, m_Route[ m_iRouteIndex ].vecLocation, ( pev->origin - m_Route[ m_iRouteIndex ].vecLocation ).Length2D( ) * 0.5, m_hEnemy, &vecApex ) )
+			{
+				InsertWaypoint( vecApex, bits_MF_TO_DETOUR | bits_MF_DONT_SIMPLIFY );
+			}
 		}
 	}
 }
