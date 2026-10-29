@@ -128,10 +128,11 @@ void CEndBossKataball::KataTouch( CBaseEntity *pOther )
 		return;
 	}
 
-	if ( FClassnameIs( pOther->pev, "vehicle_tank_barrel" )
-		|| FClassnameIs( pOther->pev, "vehicle_tank_turret" )
-		|| FClassnameIs( pOther->pev, "vehicle_tank" )
-		|| FClassnameIs( pOther->pev, "vehicle_tank_body" ) )
+	string_t iszClassname = pOther->pev->classname;
+	if ( FStrEq( STRING( iszClassname ), "vehicle_tank_barrel" )
+		|| FStrEq( STRING( iszClassname ), "vehicle_tank_turret" )
+		|| FStrEq( STRING( iszClassname ), "vehicle_tank" )
+		|| FStrEq( STRING( iszClassname ), "vehicle_tank_body" ) )
 	{
 		// tell the map whether the tank it hit had a driver
 		CBaseEntity *pTank = NULL;
