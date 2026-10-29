@@ -330,13 +330,13 @@ void CDemomanRocket::AccelerateThink( void )
 			if ( pOther->pev->takedamage != DAMAGE_NO && pOther->IsPlayer() && ENT( pOther->pev ) != pev->owner && this != pOther )
 			{
 				vecTarget = vecTarget + ( pOther->pev->origin - pev->origin ).Normalize();
-				vecTarget.x *= 0.7;
-				vecTarget.y *= 0.7;
+				vecTarget.x = vecTarget.x * 0.7;
+				vecTarget.y = vecTarget.y * 0.7;
 				vecTarget.Normalize();	// sic: the result is thrown away
 			}
 		}
 
-		m_fPercentSeek *= 0.95;
+		m_fPercentSeek = m_fPercentSeek * 0.95;
 
 		if ( vecTarget != g_vecZero )
 		{
