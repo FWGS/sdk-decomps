@@ -232,6 +232,7 @@ CCustomizationMenu::CCustomizationMenu( int iTrans, int iRemoveMe, int x, int y,
 		for ( k = 1; k <= iChoices; k++ )
 		{
 			sprintf( szName, "%s_config", sCustomizationDml[j][k] );
+			char *pszConfig;
 			pszConfig = GetConfigText( szName, szText );
 			if ( !pszConfig )
 				pszConfig = "No Configuration Available";
@@ -271,6 +272,7 @@ CCustomizationMenu::CCustomizationMenu( int iTrans, int iRemoveMe, int x, int y,
 	{
 		// sic: the first title replaces the panel made above
 		sprintf( szName, "%s_config", sCustomizationGrenade[j][0] );
+		char *pszConfig;
 		pszConfig = GetConfigText( szName, szText );
 		if ( !pszConfig )
 			pszConfig = "No Configuration Available";
