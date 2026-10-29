@@ -1,3 +1,18 @@
+// sic: this comment stands in for text retail's ammo.cpp had above the
+// functions. VC6 compiles the .pch's inline functions lazily in the file
+// that creates the .pch, advancing by the IL of each function it compiles,
+// and a line number of 128 or more costs a byte more of IL. So the number
+// of lines before WeaponsResource::LoadWeaponSprites decides where the VGUI
+// templates and implicit members land among ammo.obj's sections, and with
+// them which identical copy LINK keeps (/OPT:ICF). Fifteen lines here, and
+// the empty statements at the top of CHudAmmo::Draw, give retail's order.
+// See PLAN.md "Image identity (client)".
+//
+//
+//
+//
+//
+//
 /***
 *
 *	Copyright (c) 1999, Valve LLC. All rights reserved.
@@ -832,6 +847,17 @@ void CHudAmmo::UserCmd_PrevWeapon(void)
 
 int CHudAmmo::Draw(float flTime)
 {
+	// sic: ten empty statements, the compiler's budget for the .pch inlines (PLAN.md)
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
 	int a, x, y, r, g, b;
 	int AmmoWidth;
 

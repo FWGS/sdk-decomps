@@ -106,6 +106,13 @@ void CBaseEntity :: Killed( entvars_t *pevAttacker, int iGib )
 	pev->effects |= EF_NODRAW;
 }
 
+// Placeholder (name, body and calling convention ours): retail compiled one more
+// function here that nothing calls, so /OPT:REF dropped it and only LINK's
+// identical-code folding shows it. 33 bytes with three relocations (a COMDAT
+// of size 48, like the Vector stubs that return g_vecZero), between
+// CBaseEntity::Killed and DefaultDeploy. See PLAN.md "Image identity (client)".
+Vector __stdcall __pov_unknown_stub( void ) { return g_vecZero; }
+
 /*
 =====================
 CBasePlayerWeapon :: DefaultReload
