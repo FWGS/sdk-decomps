@@ -15,6 +15,16 @@
 //
 // Misc utility code
 //
+// sic: Wanted's util.h had 8 to 12 more lines than the SDK's above the
+// inline functions below (their text is unknown; this comment stands in for
+// them). With /YX, VC6 compiles the .pch's inline functions lazily: after
+// each function of a source file it walks on through the .pch's inline
+// definitions by the IL bytes that function took, and emits the needed ones
+// it passes. A line record past line 127 takes two more IL bytes, so these
+// lines put the cbase.h inlines 28 IL bytes further on, which gives
+// aflock.obj (the first object) retail's order: AddPlayerItem after
+// SquadCount, the vector constructor iterator before CBaseEntity::Use.
+// No code changes; the other objects' kept code doesn't move.
 #ifndef ACTIVITY_H
 #include "activity.h"
 #endif
