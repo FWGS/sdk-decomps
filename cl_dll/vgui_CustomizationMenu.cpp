@@ -78,12 +78,12 @@ static char *memfgets( byte *pMemFile, int fileSize, int &filePos, char *pBuffer
 CCustomizationMenu::CCustomizationMenu( int iTrans, int iRemoveMe, int x, int y, int wide, int tall ) : CMenuPanel( iTrans, iRemoveMe, x, y, wide, tall )
 {
 	int r, g, b, a;
-	int iXPos;
+	int iXPos = 50;
 	int iWide, iTall;
 	int iTextWide, iTextTall;
 	int iLaunchWide, iLaunchTall;
 	int iChemWide, iChemTall;
-	int i, j, k, iChoices;
+	int j, k, iChoices;
 	char *pszConfig;
 	char szName[256];
 	char szText[256];
@@ -110,7 +110,7 @@ CCustomizationMenu::CCustomizationMenu( int iTrans, int iRemoveMe, int x, int y,
 	//
 	sprintf( szName, "shells_config" );
 	GetConfigText( szName, szText );
-	m_pShotgun[4] = new TextPanel( szText, 50, 50, 200, 200 );
+	m_pShotgun[4] = new TextPanel( szText, iXPos, 50, 200, 200 );
 	m_pShotgun[4]->setParent( this );
 	m_pShotgun[4]->setFont( pSchemes->getFont( hShotgunSelected ) );
 	pSchemes->getFgColor( hShotgunSelected, r, g, b, a );
@@ -160,20 +160,20 @@ CCustomizationMenu::CCustomizationMenu( int iTrans, int iRemoveMe, int x, int y,
 	pSchemes->getBgColor( hDmlChoice, r, g, b, a );
 	m_pShotgun[5]->setBgColor( r, g, b, a );
 
-	for ( i = 1; i <= 3; i++ )
+	for ( j = 1; j <= 3; j++ )
 	{
-		sprintf( szName, "%s_config", sCustomizationShotgun[i] );
+		sprintf( szName, "%s_config", sCustomizationShotgun[j] );
 		GetConfigText( szName, szText );
-		m_pShotgun[i] = new TextPanel( szText, iWide + iXPos + 20, iTall + iTall / 3 + 63, 200, 200 );
-		m_pShotgun[i]->setParent( this );
-		m_pShotgun[i]->setFont( pSchemes->getFont( hShotgunSelected ) );
+		m_pShotgun[j] = new TextPanel( szText, iWide + iXPos + 20, iTall + iTall / 3 + 63, 200, 200 );
+		m_pShotgun[j]->setParent( this );
+		m_pShotgun[j]->setFont( pSchemes->getFont( hShotgunSelected ) );
 		pSchemes->getFgColor( hShotgunSelected, r, g, b, a );
-		m_pShotgun[i]->setFgColor( r, g, b, a );
+		m_pShotgun[j]->setFgColor( r, g, b, a );
 		pSchemes->getBgColor( hShotgunSelected, r, g, b, a );
-		m_pShotgun[i]->setBgColor( r, g, b, a );
-		m_pShotgun[i]->getTextImage()->getTextSizeWrapped( iTextWide, iTextTall );
-		m_pShotgun[i]->setSize( iTextWide, iTextTall );
-		m_pShotgun[i]->setVisible( true );
+		m_pShotgun[j]->setBgColor( r, g, b, a );
+		m_pShotgun[j]->getTextImage()->getTextSizeWrapped( iTextWide, iTextTall );
+		m_pShotgun[j]->setSize( iTextWide, iTextTall );
+		m_pShotgun[j]->setVisible( true );
 	}
 
 	//
