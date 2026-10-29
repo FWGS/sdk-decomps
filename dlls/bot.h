@@ -270,7 +270,7 @@ public:
 	float	StrafeInterval( void ) { return m_flStrafeInterval; }
 	BOOL	IsValidEnemy( CBasePlayer *pPlayer );
 	float	NextEnemyCheck( void ) { return m_flNextEnemyCheck; }
-	float	GiveUpItemTime( void );
+	float	GiveUpItemTime( void ) { return m_flGiveUpItemTime; }	// CheckGoalItem's (name ours)
 	void	PickGoalItem( void );
 	BOOL	HasGun( void );
 	BOOL	CanNotice( CBaseEntity *pEntity );

@@ -864,13 +864,6 @@ void CBot::CheckEnemy( void )
 // the item's distance; a capture point stays the goal only
 // while it carries the chicken
 //=========================================================
-// GiveUpItemTime - when CheckGoalItem gives up on an item it can see
-// (name ours): an inline accessor, as NextEnemyCheck is
-inline float CBot::GiveUpItemTime( void )
-{
-	return m_flGiveUpItemTime;
-}
-
 void CBot::CheckGoalItem( void )
 {
 	if ( !HasGoalItem() )
