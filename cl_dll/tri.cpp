@@ -146,22 +146,19 @@ void DrawSphere( int iUnused, Vector &origin, float flRadius, float flUnused, fl
 	gEngfuncs.pTriAPI->Begin( TRI_TRIANGLES );
 	gEngfuncs.pTriAPI->Color4f( color[0] / 255.0, color[1] / 255.0, color[2] / 255.0, flAlpha / 255.0 );
 
-	int *pTris = g_iSphereTris;
+	int iTri = 0;
 
 	for ( int i = 0; i < SPHERE_TRIS; i++ )
 	{
-		int *pTri = pTris;
-		pTris += 3;
-
 		for ( int j = 0; j < 3; j++ )
 		{
-			int iPoint = *pTri;
+			int iPoint = g_iSphereTris[ iTri ];
 			Vector vecPoint;
 			vecPoint = g_vecSphereVertex[ iPoint ];
 
 			gEngfuncs.pTriAPI->TexCoord2f( g_vecSphereTexCoord[ iPoint ].x, g_vecSphereTexCoord[ iPoint ].z );
 			gEngfuncs.pTriAPI->Vertex3fv( vecPoint * flRadius + origin );
-			pTri++;
+			iTri++;
 		}
 	}
 
@@ -814,22 +811,24 @@ void InitSphere( void )
 
 	for ( i = 0; i < SPHERE_STACKS; i++ )
 	{
-		float flPhi = ( i + 1 ) * ( (float)M_PI / ( SPHERE_STACKS + 1 ) );
-		float flY = cos( flPhi );
+		j = 0;
+		float flY = cos( ( i + 1 ) * ( (float)M_PI / ( SPHERE_STACKS + 1 ) ) );
 
-		for ( j = 0; j < SPHERE_SLICES; j++ )
+		while ( j < SPHERE_SLICES )
 		{
 			int iPoint = 2 + i * SPHERE_SLICES + j;
 			float flTheta = j * ( (float)M_PI / ( SPHERE_SLICES / 2 ) );
 			float flX, flZ;
 
 			g_vecSphereVertex[ iPoint ].y = flY;
-			g_vecSphereVertex[ iPoint ].x = flX = sin( flTheta ) * sin( flPhi );
-			g_vecSphereVertex[ iPoint ].z = flZ = cos( flTheta ) * sin( flPhi );
+			g_vecSphereVertex[ iPoint ].x = flX = sin( flTheta ) * sin( ( i + 1 ) * ( (float)M_PI / ( SPHERE_STACKS + 1 ) ) );
+			g_vecSphereVertex[ iPoint ].z = flZ = cos( flTheta ) * sin( ( i + 1 ) * ( (float)M_PI / ( SPHERE_STACKS + 1 ) ) );
 
 			g_vecSphereTexCoord[ iPoint ].x = 1.0 - ( flX + 1.0 ) * 0.5;
-			g_vecSphereTexCoord[ iPoint ].y = 1.0 - ( (float)cos( flPhi ) + 1.0 ) * 0.5;
+			g_vecSphereTexCoord[ iPoint ].y = 1.0 - ( (float)cos( ( i + 1 ) * ( (float)M_PI / ( SPHERE_STACKS + 1 ) ) ) + 1.0 ) * 0.5;
 			g_vecSphereTexCoord[ iPoint ].z = 1.0 - ( flZ + 1.0 ) * 0.5;
+
+			j++;
 		}
 	}
 
@@ -859,9 +858,9 @@ void InitSphere( void )
 			g_iSphereTris[ iIndex + j * 6 + 4 ] = iRing + j + SPHERE_SLICES + 1;
 			if ( j == SPHERE_SLICES - 1 )
 			{
-				g_iSphereTris[ iIndex + j * 6 + 2 ] = iRing;
-				g_iSphereTris[ iIndex + j * 6 + 5 ] = iRing;
-				g_iSphereTris[ iIndex + j * 6 + 4 ] = iRing + SPHERE_SLICES;
+				g_iSphereTris[ iIndex + j * 6 + 2 ] = iRing + j + 1 - SPHERE_SLICES;
+				g_iSphereTris[ iIndex + j * 6 + 5 ] = iRing + j + 1 - SPHERE_SLICES;
+				g_iSphereTris[ iIndex + j * 6 + 4 ] = iRing + j + 1;
 			}
 		}
 	}
