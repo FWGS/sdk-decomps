@@ -703,6 +703,14 @@ SOURCE=.\endboss.cpp
 
 SOURCE=.\scientist.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\placeholder_object1.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\placeholder_object2.cpp
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
