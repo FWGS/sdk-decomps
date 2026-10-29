@@ -413,62 +413,39 @@ void CChemGrenade::StickyChemicalTouch( CBaseEntity *pOther )
 
 void CChemGrenade::BouncyChemicalTouch( CBaseEntity *pOther )
 {
-	if ( UTIL_PointContents( pev->origin ) != CONTENTS_SKY )
+	if ( UTIL_PointContents( pev->origin ) == CONTENTS_SKY )
 	{
-		// don't hit the guy that launched this grenade
-		if ( pOther->edict() == pev->owner )
-			return;
+		UTIL_Remove( this );
+		return;
+	}
 
-		ChemicalMixture.stability -= pev->velocity.Length() / 15;
+	// don't hit the guy that launched this grenade
+	if ( pOther->edict() == pev->owner )
+		return;
 
-		// only do damage if we're moving fairly fast
-		if (m_flNextAttack < gpGlobals->time && pev->velocity.Length() > 100)
+	ChemicalMixture.stability -= pev->velocity.Length() / 15;
+
+	// only do damage if we're moving fairly fast
+	if (m_flNextAttack < gpGlobals->time && pev->velocity.Length() > 100)
+	{
+		entvars_t *pevOwner = VARS( pev->owner );
+		if (pevOwner)
 		{
-			entvars_t *pevOwner = VARS( pev->owner );
-			if (pevOwner)
-			{
-				TraceResult tr = UTIL_GetGlobalTrace( );
-				ClearMultiDamage( );
-				pOther->TraceAttack(pevOwner, 1, gpGlobals->v_forward, &tr, DMG_CLUB );
-				ApplyMultiDamage( pev, pevOwner);
-			}
-			m_flNextAttack = gpGlobals->time + 1.0; // debounce
+			TraceResult tr = UTIL_GetGlobalTrace( );
+			ClearMultiDamage( );
+			pOther->TraceAttack(pevOwner, 1, gpGlobals->v_forward, &tr, DMG_CLUB );
+			ApplyMultiDamage( pev, pevOwner);
 		}
+		m_flNextAttack = gpGlobals->time + 1.0; // debounce
+	}
 
-		Vector vecTestVelocity;
+	Vector vecTestVelocity;
 
-		vecTestVelocity = pev->velocity;
-		vecTestVelocity.z *= 0.45;
+	vecTestVelocity = pev->velocity;
+	vecTestVelocity.z *= 0.45;
 
-		if ( ChemicalMixture.stability >= 0 && ( m_fRegisteredSound || vecTestVelocity.Length() > 100 ) )
-		{
-			if (pev->flags & FL_ONGROUND)
-			{
-				// add a bit of static friction
-				pev->velocity = pev->velocity * 0.8;
-
-				pev->sequence = RANDOM_LONG( 1, 1 );
-			}
-			else
-			{
-				// the thicker, the less it bounces
-				int iDamp = (30 - ChemicalMixture.viscosity) / 15;
-				if ( iDamp < 1 )
-					iDamp = 1;
-
-				pev->velocity = pev->velocity / iDamp;
-
-				EMIT_SOUND( ENT(pev), CHAN_VOICE, "weapons/cgbounce.wav", 0.55, ATTN_NORM );
-			}
-
-			pev->framerate = pev->velocity.Length() / 200.0;
-			if (pev->framerate > 1.0)
-				pev->framerate = 1;
-			else if (pev->framerate < 0.5)
-				pev->framerate = 0;
-			return;
-		}
-
+	if ( ChemicalMixture.stability < 0 || ( !m_fRegisteredSound && vecTestVelocity.Length() <= 100 ) )
+	{
 		// it has come to rest
 		CSoundEnt::InsertSound ( bits_SOUND_DANGER, pev->origin, 200, 0.3 );
 		m_fRegisteredSound = TRUE;
@@ -487,9 +464,36 @@ void CChemGrenade::BouncyChemicalTouch( CBaseEntity *pOther )
 
 			Splatter( &tr );
 		}
+		UTIL_Remove( this );
+		return;
 	}
 
-	UTIL_Remove( this );
+	if (pev->flags & FL_ONGROUND)
+	{
+		// add a bit of static friction
+		pev->velocity = pev->velocity * 0.8;
+
+		pev->sequence = RANDOM_LONG( 1, 1 );
+	}
+	else
+	{
+		// the thicker, the less it bounces
+		int iDamp = (30 - ChemicalMixture.viscosity) / 15;
+		if ( iDamp < 1 )
+			iDamp = 1;
+
+		// sic: the * 1 folds away, but it leaves retail its extra Vector
+		// temporary (built and copied out of line) before the division
+		pev->velocity = pev->velocity * 1 / iDamp;
+
+		EMIT_SOUND( ENT(pev), CHAN_VOICE, "weapons/cgbounce.wav", 0.55, ATTN_NORM );
+	}
+
+	pev->framerate = pev->velocity.Length() / 200.0;
+	if (pev->framerate > 1.0)
+		pev->framerate = 1;
+	else if (pev->framerate < 0.5)
+		pev->framerate = 0;
 }
 
 void CChemGrenade::TimedChemicalThink( void )
