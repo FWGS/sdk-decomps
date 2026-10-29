@@ -114,21 +114,27 @@ int CBaseTurn::TurnTo( int iController, const Vector &vecTarget )
 	int fDone = FALSE;
 	Vector vecOrigin = pev->origin;
 	Vector vecDir = vecTarget - vecOrigin;
+	int *piAngle;	// sic: see below
 	int iCurrent;
 	float flCurrent;
 	float flAngle;
 	float flDiff;
 
+	// sic: the current angle is read through piAngle and the sum from the
+	// member, so VC6 loads the member twice (fild from it, mov into a
+	// register) as retail does; read the same way twice it reuses one load
 	switch ( iController )
 	{
 	case 0:
-		iCurrent = m_iYaw;
+		piAngle = &m_iYaw;
+		iCurrent = *piAngle;
 		flCurrent = m_iYaw + pev->angles.y;
 		flAngle = UTIL_VecToYaw( vecDir );
 		flDiff = UTIL_AngleDiff( flAngle, flCurrent );
 		break;
 	case 1:
-		iCurrent = m_iPitch;
+		piAngle = &m_iPitch;
+		iCurrent = *piAngle;
 		flCurrent = m_iPitch + pev->angles.x;
 		flAngle = UTIL_VecToPitch( vecDir );
 		flDiff = UTIL_AngleDiff( flAngle, flCurrent );
@@ -147,21 +153,21 @@ int CBaseTurn::TurnTo( int iController, const Vector &vecTarget )
 	else
 		fDone = TRUE;
 
-	int iAngle = iCurrent + (int)flDiff;
-	if ( iAngle >= 360 )
-		iAngle -= 360;
-	if ( iAngle <= -360 )
-		iAngle += 360;
+	iCurrent += (int)flDiff;
+	if ( iCurrent >= 360 )
+		iCurrent -= 360;
+	if ( iCurrent <= -360 )
+		iCurrent += 360;
 
 	switch ( iController )
 	{
 	case 0:
-		m_iYaw = iAngle;
-		SetBoneController( 0, iAngle );
+		m_iYaw = iCurrent;
+		SetBoneController( 0, iCurrent );
 		break;
 	case 1:
-		m_iPitch = iAngle;
-		SetBoneController( 1, -iAngle );
+		m_iPitch = iCurrent;
+		SetBoneController( 1, -iCurrent );
 		break;
 	}
 
