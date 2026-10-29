@@ -1415,7 +1415,11 @@ void EV_FireGauss( event_args_t *args )
 		if ( pEntity->solid == SOLID_BSP )
 		{
 			vec3_t vecEnd;
-			VectorAdd( tr.endpos, tr.plane.normal, vecEnd );
+			// sic: VectorAdd written out, with .x on the first normal: that
+			// operand order is retail's (a sweep of the [i]/.x forms)
+			vecEnd[0] = tr.endpos[0] + tr.plane.normal.x;
+			vecEnd[1] = tr.endpos[1] + tr.plane.normal[1];
+			vecEnd[2] = tr.endpos[2] + tr.plane.normal[2];
 
 			if ( gEngfuncs.GetMaxClients() < 2 )
 				gEngfuncs.pEfxAPI->R_Sprite_Trail( TE_SPRITETRAIL, tr.endpos, vecEnd, m_iGlow, 2, 0, gEngfuncs.pfnRandomFloat( 0, 20 ) / 100, 100, 255, 200 );
