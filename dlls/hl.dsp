@@ -225,6 +225,19 @@ SOURCE=.\genericmonster.cpp
 # Begin Source File
 
 SOURCE=.\ggrenade.cpp
+
+!IF  "$(CFG)" == "hl - Win32 Release"
+
+# ADD CPP /Fp".\Releasehl\ggrenade.pch"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Germany"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Profile"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -449,6 +462,19 @@ SOURCE=.\hatchetfish.cpp
 # Begin Source File
 
 SOURCE=.\microraptor.cpp
+
+!IF  "$(CFG)" == "hl - Win32 Release"
+
+# ADD CPP /Fp".\Releasehl\microraptor.pch" /YX"schedule.h"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Germany"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Profile"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -549,10 +575,36 @@ SOURCE=.\bandit.cpp
 # Begin Source File
 
 SOURCE=.\demoman.cpp
+
+!IF  "$(CFG)" == "hl - Win32 Release"
+
+# ADD CPP /Fp".\Releasehl\demoman.pch"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Germany"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Profile"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE=.\friendlygunman.cpp
+
+!IF  "$(CFG)" == "hl - Win32 Release"
+
+# ADD CPP /Fp".\Releasehl\friendlygunman.pch"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Germany"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Profile"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -561,6 +613,19 @@ SOURCE=.\friendlyunarmed.cpp
 # Begin Source File
 
 SOURCE=.\banditgrunt.cpp
+
+!IF  "$(CFG)" == "hl - Win32 Release"
+
+# ADD CPP /Fp".\Releasehl\banditgrunt.pch"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Germany"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Profile"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
