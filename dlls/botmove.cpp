@@ -584,60 +584,33 @@ BOOL CBot::CheckSides( Vector &vecAngles, TraceResult *ptrLeft, TraceResult *ptr
 }
 
 //=========================================================
-// MoveThink - face the move direction (smoothed over the
-// last four frames unless the goal position is within 128
-// units), steer around walls, and set the move speeds
-// that BotThink hands to RunPlayerMove
+// MoveThink's accessors and step (names ours). The look
+// directions return copies (MoveThink's sum keeps the first
+// three inline and calls the fourth out of line); the free
+// ones (IsPaused, WantsDuck, WaterLevel, SetUpMove) thin the
+// budget shares as retail's do; MoveSpeeds takes the move
+// angles by reference, so their address is kept in edi
+// across the AvoidWalls call as in retail.
 //=========================================================
-void CBot::MoveThink( void )
+inline Vector CBotMemory::GetLookDir( void ) { return m_vecLookDir; }
+inline Vector CBotMemory::GetLookDir1( void ) { return m_vecLookDir1; }
+inline Vector CBotMemory::GetLookDir2( void ) { return m_vecLookDir2; }
+inline Vector CBotMemory::GetLookDir3( void ) { return m_vecLookDir3; }
+inline Vector CBot::GetLookDir( void ) { return m_vecLookDir; }
+
+inline void CBot::SetUpMove( float flMove ) { m_flUpMove = flMove; }
+inline int CBot::WaterLevel( void ) { return pev->waterlevel; }
+
+inline BOOL CBot::IsPaused( void ) { return gpGlobals->time < m_flPauseTime; }
+inline BOOL CBot::WantsDuck( void ) { return m_fDuck; }
+// MoveSpeeds - turn away from walls, then split flSpeed into the
+// forward and side moves for the angle between the view and
+// the move direction
+inline void CBot::MoveSpeeds( Vector &vecMoveAngles, Vector &vecDir, float flSpeed )
 {
-	BOOL fSmooth = TRUE;
-	Vector vecTemp;
-	Vector vecMove;
+	vecMoveAngles = AvoidWalls( vecDir );
 
-	vecTemp = m_vecLookDir;
-	vecMove = vecTemp;
-
-	if ( m_fHasGoalPos && !HasGoalItem() )
-	{
-		Vector vecGoal = m_vecGoalPos;
-		vecTemp = Vector( vecGoal.x - pev->origin.x, vecGoal.y - pev->origin.y, vecGoal.z - pev->origin.z );
-		if ( vecTemp.Length2D() < 128 )
-			fSmooth = FALSE;
-	}
-
-	if ( m_fDuck )
-		pev->button |= IN_DUCK;
-
-	if ( m_fJump && ( pev->flags & FL_ONGROUND ) )
-	{
-		pev->velocity.z = sqrt( 2 * 800 * 56.0 );
-		pev->button |= IN_JUMP;
-		m_fJump = FALSE;
-	}
-
-	if ( fSmooth )
-		vecMove = vecMove + m_Memory.m_vecLookDir + m_Memory.m_vecLookDir1 + m_Memory.m_vecLookDir2 + m_Memory.m_vecLookDir3;
-
-	Vector vecAngles = UTIL_VecToAngles( vecMove );
-	if ( vecAngles != g_vecZero )
-		pev->v_angle = vecAngles;
-
-	if ( pev->v_angle.x > 180 )
-		pev->v_angle.x -= 360;
-	pev->v_angle.x = pev->v_angle.x * -1;
-	pev->angles.x = pev->v_angle.x * -0.5;
-	pev->angles.y = pev->v_angle.y;
-
-	float flSpeed = CVAR_GET_FLOAT( "sv_maxspeed" );
-	if ( gpGlobals->time < m_flPauseTime )
-		flSpeed = 0;
-
-	Vector vecVelocity = m_vecMoveVelocity;
-	MAKE_VECTORS( pev->v_angle );
-	m_vecMoveAngles = AvoidWalls( vecVelocity );
-
-	float flMoveYaw = m_vecMoveAngles.y;
+	float flMoveYaw = vecMoveAngles.y;
 	float flYaw = pev->v_angle.y;
 	while ( flMoveYaw < 0 )
 		flMoveYaw += 360;
@@ -653,18 +626,72 @@ void CBot::MoveThink( void )
 	if ( flAngle > 90 )
 		flAngle = flAngle - ( ( flAngle - 90 ) + ( flAngle - 90 ) );
 
-	float flForward = ( flAngle * -1 + 90 ) / 90 * flSpeed;
+	flAngle = flAngle * -1;
+	float flForward = ( ( flAngle + 90 ) / 90 ) * flSpeed;
 	m_flForwardMove = flForward;
 	if ( 90 < flDelta && flDelta < 270 )
 		m_flForwardMove = flForward * -1;
 
-	flSpeed = flSpeed - m_flForwardMove;
+	flSpeed = flSpeed - GetForwardMove();
 	m_flSideMove = flSpeed;
 	if ( flDelta > 180 )
 		m_flSideMove = flSpeed * -1;
+}
 
-	if ( pev->waterlevel == 3 )
-		m_flUpMove = 2;
+//=========================================================
+// MoveThink - face the move direction (smoothed over the
+// last four frames unless the goal position is within 128
+// units), steer around walls, and set the move speeds
+// that BotThink hands to RunPlayerMove. VC6 gives it a
+// budget of 2 * 591 nodes: retail's inline decisions hold
+// only for 590..592 with the free sites as they stand here
+//=========================================================
+void CBot::MoveThink( void )
+{
+	BOOL fSmooth = TRUE;
+	Vector vecTemp = GetLookDir();
+	Vector vecMove = vecTemp;
+
+	if ( m_fHasGoalPos != FALSE && !HasGoalItem() )
+	{
+		if ( ( GetGoalPos() - pev->origin ).Length2D() < 128 )
+			fSmooth = FALSE;
+	}
+
+	if ( WantsDuck() != FALSE )
+		SetBits( pev->button, IN_DUCK );
+
+	if ( m_fJump != FALSE && FBitSet( pev->flags, FL_ONGROUND ) )
+	{
+		pev->velocity.z = sqrt( 2 * 800 * 56.0 );
+		SetBits( pev->button, IN_JUMP );
+		m_fJump = FALSE;
+	}
+
+	Vector vecVelocity;
+	if ( fSmooth != FALSE )
+		vecMove = vecMove + m_Memory.GetLookDir() + m_Memory.GetLookDir1() + m_Memory.GetLookDir2() + m_Memory.GetLookDir3();
+
+	Vector vecAngles = UTIL_VecToAngles( vecMove );
+	if ( vecAngles != g_vecZero )
+		pev->v_angle = vecAngles;
+
+	if ( pev->v_angle.x > 180 )
+		pev->v_angle.x = pev->v_angle.x - 360;
+	pev->v_angle.x = pev->v_angle.x * -1;
+	pev->angles.x = pev->v_angle.x * -0.5;
+	pev->angles.y = pev->v_angle.y;
+
+	float flSpeed = CVAR_GET_FLOAT( "sv_maxspeed" );
+	if ( IsPaused() )
+		flSpeed = 0;
+
+	vecVelocity = GetMoveVelocity();
+	MAKE_VECTORS( pev->v_angle );
+	MoveSpeeds( m_vecMoveAngles, vecVelocity, flSpeed );
+
+	if ( WaterLevel() == 3 )
+		SetUpMove( 2 );
 }
 
 //=========================================================

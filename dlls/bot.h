@@ -191,6 +191,7 @@ public:
 	Vector	GetLookDir( void );		// Update's accessors (names ours), botattack.cpp
 	Vector	GetLookDir1( void );
 	Vector	GetLookDir2( void );
+	Vector	GetLookDir3( void );	// MoveThink's (name ours), botmove.cpp
 	BOOL	Seen( void );			// RouteGoal's accessors (names ours), botnav.cpp
 	BOOL	ChickenCarrier( void );
 
@@ -366,6 +367,11 @@ public:
 	BOOL	CheckAhead( Vector &vecDir, TraceResult *ptr );
 	BOOL	CheckSides( Vector &vecAngles, TraceResult *ptrLeft, TraceResult *ptrRight );
 	void	MoveThink( void );
+	void	MoveSpeeds( Vector &vecMoveAngles, Vector &vecDir, float flSpeed );	// MoveThink's step and accessors (names ours), botmove.cpp
+	void	SetUpMove( float flMove );
+	int		WaterLevel( void );
+	BOOL	IsPaused( void );
+	BOOL	WantsDuck( void );
 	Vector	AvoidWalls( Vector &vecDir );
 	void	Unstick( void );
 	void	FlockAlign( int iPriority );
