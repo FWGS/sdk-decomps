@@ -842,11 +842,8 @@ int CVehicleTank::UpdatePlayer( float flInterval )
 
 	UTIL_MakeVectors( m_pBarrelBSP->pev->angles );
 
-	Vector vecEnd, vecStart;
-	Vector vecBack = gpGlobals->v_forward * -250;
-	Vector vecUp = gpGlobals->v_up * 140;
-	vecEnd = pev->origin + vecUp + vecBack;
-	vecStart = pev->origin + gpGlobals->v_up * 140;
+	Vector vecEnd = pev->origin + gpGlobals->v_up * 140 + gpGlobals->v_forward * -250;
+	Vector vecStart = pev->origin + gpGlobals->v_up * 140;
 
 	UTIL_TraceLine( vecStart, vecEnd, ignore_monsters, NULL, &tr );
 
