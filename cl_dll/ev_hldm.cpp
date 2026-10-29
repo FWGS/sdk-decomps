@@ -48,6 +48,7 @@ extern "C"
 // HLDM
 void EV_FireGlock1( struct event_args_s *args  );
 void EV_FireGlock2( struct event_args_s *args  );
+void EV_FireShotGunDouble( struct event_args_s *args  );
 void EV_FireShotGunSingle( struct event_args_s *args  );
 void EV_FireMP5( struct event_args_s *args  );
 void EV_FirePython( struct event_args_s *args  );
@@ -1289,6 +1290,78 @@ void EV_FirePython( event_args_t *args )
 	VectorCopy( forward, vecAiming );
 
 	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, VECTOR_CONE_1DEGREES, 8192, BULLET_PLAYER_357, 0, &tracerCount[idx-1] );
+
+	if ( EV_IsLocal( idx ) )
+	{
+		V_PunchAxis( 0, -10.0 );
+	}
+}
+
+// SDK 2.0's EV_FireShotGunDouble. events/shotgun2.sc ships with the game but
+// Game_HookEvents doesn't hook it, so nothing calls this and LINK drops it.
+// It isn't in the SDK's place (before EV_FireShotGunSingle): its IL there
+// would move the .pch inlines VC6 emits after EV_FireShotGunSingle and
+// EV_FireGWShotgun. Where after EV_MinigunHeat it was is not shown: any
+// place from there to EV_TrainPitchAdjust gives the same kept copies.
+void EV_FireShotGunDouble( event_args_t *args )
+{
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t velocity;
+
+	int i, j;
+	vec3_t ShellVelocity;
+	vec3_t ShellOrigin;
+	int shell;
+	vec3_t vecSrc, vecAiming;
+	vec3_t vecSpread;
+	vec3_t up, right, forward;
+	float flSpread = 0.01;
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+	VectorCopy( args->velocity, velocity );
+
+	AngleVectors( angles, forward, right, up );
+
+	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/shotgunshell.mdl");// brass shell
+
+	if ( EV_IsLocal( idx ) )
+	{
+		// Add muzzle flash to current weapon model
+		EV_MuzzleFlash();
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( SHOTGUN_FIRE2, 2 );
+	}
+
+	for ( j = 0; j < 2; j++ )
+	{
+		EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 32, -12, 6 );
+
+		EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHOTSHELL ); 
+	}
+
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/dbarrel1.wav", gEngfuncs.pfnRandomFloat(0.98, 1.0), ATTN_NORM, 0, 85 + gEngfuncs.pfnRandomLong( 0, 0x1f ) );
+
+	EV_GetGunPosition( args, vecSrc, origin );
+	VectorCopy( forward, vecAiming );
+
+	if ( gEngfuncs.GetMaxClients() > 1 )
+	{
+		for ( i = 0; i < 3; i++ )
+		{
+			vecSpread[0] = 0.17365;
+			vecSpread[1] = 0.04362;
+			vecSpread[2] = 0.00;
+		}
+
+		EV_HLDM_FireBullets( idx, forward, right, up, 8, vecSrc, vecAiming, vecSpread, 2048, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1] );
+	}
+	else
+	{
+		EV_HLDM_FireBullets( idx, forward, right, up, 12, vecSrc, vecAiming, VECTOR_CONE_10DEGREES, 2048, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1] );
+	}
 
 	if ( EV_IsLocal( idx ) )
 	{
