@@ -444,7 +444,7 @@ void DrawEffect8( void )
 		AngleVectors( angles, forward, right, up );
 
 		// sic: turns the copy, not the effect in the list
-		vecDir = ( vecDir + right * 17 ).Normalize();
+		vecDir = Vector( vecDir + right * 17 ).Normalize();
 		effect.m_vecAngles = vecDir;
 
 		if ( flBrightness < 1 )
@@ -453,7 +453,11 @@ void DrawEffect8( void )
 		if ( effect.m_pSprite )
 		{
 			gEngfuncs.pTriAPI->SpriteTexture( effect.m_pSprite, 0 );
-			DrawStrip( effect.m_vecOrigin, vecDir, flWidth, 8, 32, flBrightness );
+			// sic: the direction goes through a float * and back, which
+			// generates no code; the one inline operator float *() it costs
+			// is what leaves Normalize's non-zero Vector( float, float, float )
+			// out of line, as in retail
+			DrawStrip( effect.m_vecOrigin, *(Vector *)(float *)vecDir, flWidth, 8, 32, flBrightness );
 		}
 	}
 }
