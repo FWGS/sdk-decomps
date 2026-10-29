@@ -487,7 +487,7 @@ public:
 	// before Roam)
 	void	SeekGoal( void );
 	void	SetGoalVisible( BOOL fVisible );
-	int		GetState( void );
+	// GetState: declared with RouteGoal's accessors (botnav.cpp defines it too)
 	void	SetPauseTime( float flTime );
 
 	// botnav.cpp
