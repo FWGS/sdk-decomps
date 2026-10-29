@@ -706,9 +706,8 @@ void CVehicleTank::Drive( float flInterval )
 {
 	Vector vecForward;
 	Vector vecVelocity;
+	Vector vecSlide;
 	float flDot;
-	Vector vecOldVelocity;	// sic: never used; with iAnim's dead initialiser below it gives retail's inlining
-	vecOldVelocity = pev->velocity;
 
 	UTIL_MakeVectorsPrivate( pev->angles, vecForward, NULL, NULL );
 
@@ -732,12 +731,13 @@ void CVehicleTank::Drive( float flInterval )
 	{
 		if ( m_bCollisionLastFrame )
 		{
+			// sic: dead, overwritten below; it gives retail's inlining and x87 orders
+			flDot = pev->velocity.x * m_vecNormalLastFrame.x + pev->velocity.y * m_vecNormalLastFrame.y + pev->velocity.z * m_vecNormalLastFrame.z;
 			flDot = DotProduct( vecVelocity.Normalize(), m_vecNormalLastFrame );
 
 			if ( pev->avelocity.y != 0 && pev->velocity.Length() < 10 )
 			{
-				Vector vecPush;
-				vecPush = PushAway();
+				Vector vecPush = PushAway();
 				if ( vecPush != g_vecZero )
 				{
 					// turning in place against a wall: push off it
@@ -752,7 +752,6 @@ void CVehicleTank::Drive( float flInterval )
 				if ( DotProduct( vecVelocity.Normalize(), m_vecNormalLastFrame ) < 0 )
 				{
 					// glancing blow: slide along the wall
-					Vector vecSlide;
 					vecSlide = Slide( vecVelocity, m_vecNormalLastFrame );
 					if ( vecSlide.Length() > 50 && ( m_flSpeed > 50 || m_flSpeed < -50 ) )
 					{
@@ -776,7 +775,7 @@ void CVehicleTank::Drive( float flInterval )
 				Vector vecFwd;
 				UTIL_MakeVectorsPrivate( pev->angles, vecFwd, NULL, NULL );
 
-				int iAnim = 0;	// sic: see vecOldVelocity
+				int iAnim = 0;
 				if ( DotProduct( ( m_vecCollision - pev->origin ).Normalize(), vecFwd ) > 0 )
 				{
 					if ( !( pev->avelocity.y > 15 ) )
