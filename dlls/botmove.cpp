@@ -396,15 +396,23 @@ void BotRemove( int iIndex )
 }
 
 //=========================================================
+// LookAlong, GetLadderDir - the look direction's accessors
+// (names ours): free inline calls that thin the budget
+// shares of the Normalize and operator- before them, as
+// retail's AimJitter, AimAtEnemy and SetLookDir need
+//=========================================================
+inline void CBot::LookAlong( const Vector &vecDir ) { m_vecLookDir = vecDir; }
+inline int CBot::GetLadderDir( void ) { return m_iLadderDir; }
+
+//=========================================================
 // AimJitter - normalise the look direction; then, when the
 // view punch is small, a skill roll may kick the view by up
 // to 30 degrees times the aim error
 //=========================================================
 void CBot::AimJitter( void )
 {
-	Vector vecDir;
-	vecDir = m_vecLookDir;
-	m_vecLookDir = vecDir.Normalize();
+	Vector vecDir = m_vecLookDir;
+	LookAlong( vecDir.Normalize() );
 
 	float flError = 1 - m_Profile.AimSkill() / 100;
 	float flRange = ( m_Profile.AimSkill() < RANDOM_FLOAT( 0, 100 ) ) * flError * 30;
@@ -428,19 +436,19 @@ void CBot::AimAtEnemy( void )
 	if ( m_Fire.m_iAimMode == 1 )
 	{
 		CBaseEntity *pEnemy = GetEnemy();
-		m_vecLookDir = pEnemy->pev->origin - GetGunPosition();
+		LookAlong( pEnemy->pev->origin - GetGunPosition() );
 	}
 	else if ( m_Fire.m_iAimMode == 0 )
 	{
 		CBaseEntity *pEnemy = GetEnemy();
-		m_vecLookDir = pEnemy->EyePosition() - GetGunPosition();
+		LookAlong( pEnemy->EyePosition() - GetGunPosition() );
 	}
 	else if ( m_Fire.m_iAimMode == 2 )
 	{
 		CBaseEntity *pEnemy = GetEnemy();	// sic: unused
 		Vector vecTarget = GetEnemy()->pev->origin + GetEnemy()->pev->velocity;
 		Vector vecAim = Vector( vecTarget.x, vecTarget.y, vecTarget.z + pev->mins.z );
-		m_vecLookDir = vecAim - GetGunPosition();
+		LookAlong( vecAim - GetGunPosition() );
 	}
 
 	AimJitter();
@@ -455,7 +463,7 @@ void CBot::AimAt( CBaseEntity *pEntity )
 		return;
 
 	m_fLookDirSet = TRUE;
-	m_vecLookDir = pEntity->pev->origin - GetGunPosition();
+	LookAlong( pEntity->pev->origin - GetGunPosition() );
 	AimJitter();
 	PressFire();
 }
@@ -476,7 +484,7 @@ void CBot::SetLookDir( void )
 		UTIL_MakeVectorsPrivate( pev->v_angle, vecDir, NULL, NULL );
 	vecDir.z = 0;
 
-	if ( m_iLadderDir )
+	if ( GetLadderDir() )
 	{
 		if ( IsOnLadder() )
 		{
@@ -495,11 +503,18 @@ void CBot::SetLookDir( void )
 			}
 		}
 		vecDir = vecDir.Normalize();
-		vecDir.z = m_iLadderDir * 0.6;
+		vecDir.z = GetLadderDir() * 0.6;
 	}
 
-	m_vecLookDir = vecDir;
+	LookAlong( vecDir );
 }
+
+// steering constants (names ours): retail reads them from botmove.obj's own
+// .rdata (20.0, 0.5, 128.0 in this order at 0x100bb844), not from the shared
+// float constants, and compares the int abs() with a float 20 (fild; fcomp)
+const float BOT_MAX_TURN = 20;			// AvoidWalls: degrees off the current yaw
+const float BOT_TURN_JITTER = 0.5;		// AvoidWalls: the turn is scaled by 1 +- this
+const float BOT_SIDE_DIST = 128;		// CheckSides: trace length
 
 //=========================================================
 // CheckAhead - is something in the way? Traces 288 units
@@ -556,11 +571,11 @@ BOOL CBot::CheckSides( Vector &vecAngles, TraceResult *ptrLeft, TraceResult *ptr
 	Vector vecEnd;
 
 	vecAngles.y -= 45;
-	vecEnd = vecSrc + vecAngles.Normalize() * 128;	// sic
+	vecEnd = vecSrc + vecAngles.Normalize() * BOT_SIDE_DIST;	// sic
 	UTIL_TraceLine( vecSrc, vecEnd, ignore_monsters, ENT( pev ), ptrLeft );
 
 	vecAngles.y += 90;
-	vecEnd = vecSrc + vecAngles.Normalize() * 128;	// sic
+	vecEnd = vecSrc + vecAngles.Normalize() * BOT_SIDE_DIST;	// sic
 	UTIL_TraceLine( vecSrc, vecEnd, ignore_monsters, ENT( pev ), ptrRight );
 
 	if ( ptrLeft->flFraction == 1.0 && ptrRight->flFraction == 1.0 )
@@ -716,22 +731,22 @@ Vector CBot::AvoidWalls( Vector &vecDir )
 		float flTurn;
 		if ( m_iDodgeDir == 1 )
 		{
-			flTurn = RANDOM_FLOAT( 1 - 0.5f, 0.5f + 1 ) * flScale * flDiffLeft;
+			flTurn = RANDOM_FLOAT( 1 - BOT_TURN_JITTER, BOT_TURN_JITTER + 1 ) * flScale * flDiffLeft;
 		}
 		else
 		{
 			m_iDodgeDir = 2;
-			flTurn = RANDOM_FLOAT( 1 - 0.5f, 0.5f + 1 ) * flScale * flDiffRight;
+			flTurn = RANDOM_FLOAT( 1 - BOT_TURN_JITTER, BOT_TURN_JITTER + 1 ) * flScale * flDiffRight;
 		}
 
 		vecAngles.y = vecAngles.y - flTurn;
 		float flOff = flYaw - vecAngles.y;
-		if ( abs( (int)flOff ) > 20.0f )
+		if ( abs( (int)flOff ) > BOT_MAX_TURN )
 		{
 			if ( flOff < 0 )
-				vecAngles.y = flYaw - 20;
+				vecAngles.y = flYaw - BOT_MAX_TURN;
 			else
-				vecAngles.y = 20 + flYaw;
+				vecAngles.y = BOT_MAX_TURN + flYaw;
 		}
 
 		while ( vecAngles.y > 180 )
@@ -999,7 +1014,7 @@ void CBot::FleeSpot( const Vector &vecSpot, int iPriority )
 	else if ( iPriority == GetMovePriority() )
 	{
 		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
-		RunAwayFrom( vecSpot );
+		RunFrom( vecSpot );
 		Vector vecTotal = GetMoveVelocity() + vecOld;
 		SetMoveGoals( GetMoveGoals() + 1 );
 		SetMoveVelocity( vecTotal / GetMoveGoals() );
@@ -1113,6 +1128,69 @@ void CBot::Wobble( float flPercent, int iPriority )
 }
 
 //=========================================================
+// SeekGoal - Roam's step (emitted after it): get a new goal
+// position from RouteGoal when there is none (mode 1), it is
+// within 32 units (mode 2) or out of sight (mode 3), then
+// head for it; without one walk the way the bot faces, unless
+// the route is done or the bot is in state 3 (pause 0.1 s).
+// Roam's first branch expands it with too little budget left
+// for anything above 40 nodes: its calls, and the unused
+// TraceResult's constructor, are out of line there.
+//=========================================================
+inline void CBot::SetGoalVisible( BOOL fVisible ) { m_fGoalVisible = fVisible; }
+inline int CBot::GetState( void ) { return m_iState; }
+inline void CBot::SetPauseTime( float flTime ) { m_flPauseTime = flTime; }
+
+inline void CBot::SeekGoal( void )
+{
+	TraceResult tr;	// sic: unused; retail constructs it (Roam's out-of-line TraceResult() at 0x10014a70)
+	Vector vecForward;
+	float flDist = ( GetGoalPos() - pev->origin ).Length2D();
+	int iMode = 0;
+
+	if ( !m_fHasGoalPos )
+		iMode = 1;
+	else if ( flDist < 32 )
+		iMode = 2;
+	else if ( !FVisible( GetGoalPos() ) )
+		iMode = 3;
+
+	if ( iMode )
+	{
+		m_fHasGoalPos = FALSE;
+		SetMoveVelocity( g_vecZero );
+		m_vecGoalPos = RouteGoal( iMode );
+		if ( m_fHasGoalPos )
+			m_flGoalTime = gpGlobals->time;
+	}
+
+	if ( m_fHasGoalPos )
+	{
+		if ( m_fGoalVisible && m_pRoute )
+		{
+			if ( CanSeeSpot( GetGoalPos() ) )
+				SetGoalVisible( FALSE );
+		}
+		SetMoveVelocity( ( GetGoalPos() - pev->origin ).Normalize() * CVAR_GET_FLOAT( "sv_maxspeed" ) );
+	}
+	else if ( GetState() )
+	{
+		if ( GetState() == 3 )
+			SetPauseTime( gpGlobals->time + 0.1 );
+	}
+	else
+	{
+		if ( m_fRouteDone )
+			SetPauseTime( gpGlobals->time + 0.1 );
+		else
+		{
+			UTIL_MakeVectorsPrivate( m_vecMoveAngles, vecForward, NULL, NULL );
+			SetMoveVelocity( vecForward * CVAR_GET_FLOAT( "sv_maxspeed" ) );
+		}
+	}
+}
+
+//=========================================================
 // Roam - head for the goal position. A new one is asked of
 // RouteGoal when there is none (mode 1), when it is within
 // 32 units (mode 2) or when it is out of sight (mode 3);
@@ -1129,7 +1207,8 @@ void CBot::Roam( int iPriority )
 	}
 	else if ( iPriority == GetMovePriority() )
 	{
-		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
+		Vector vecVel = GetMoveVelocity();
+		Vector vecOld = vecVel * GetMoveGoals();
 		SeekGoal();
 		Vector vecTotal = GetMoveVelocity() + vecOld;
 		SetMoveGoals( GetMoveGoals() + 1 );

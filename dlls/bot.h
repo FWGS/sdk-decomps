@@ -346,6 +346,8 @@ public:
 	void	AimJitter( void );
 	void	AimAtEnemy( void );
 	void	AimAt( CBaseEntity *pEntity );
+	void	LookAlong( const Vector &vecDir );	// the look direction's accessors (names ours), botmove.cpp
+	int		GetLadderDir( void );
 	Vector	GetMoveVelocity( void ) { return m_vecMoveVelocity; }
 	// BotThink's accessors (names ours)
 	Vector	GetGoalPos( void ) { return m_vecGoalPos; }
@@ -462,12 +464,6 @@ public:
 	// pEntity) at full speed
 	void RunFrom( const Vector &vecSpot ) { m_vecMoveVelocity = ( vecSpot - pev->origin ).Normalize() * -1 * CVAR_GET_FLOAT( "sv_maxspeed" ); }
 	void FleeFromEntity( CBaseEntity *pEntity ) { RunFrom( pEntity->pev->origin ); }
-	// FleeSpot's other step (name ours): the same in two statements
-	void RunAwayFrom( const Vector &vecSpot )
-	{
-		Vector vecAway = ( vecSpot - pev->origin ).Normalize() * -1;
-		m_vecMoveVelocity = vecAway * CVAR_GET_FLOAT( "sv_maxspeed" );
-	}
 	void	FleeSpot( const Vector &vecSpot, int iPriority );
 	void	UnstickGoal( int iPriority );
 	void	MoveToEntityOffset( CBaseEntity *pEntity, int iPriority, Vector vecOffset );	// 0x10013f30
@@ -487,53 +483,12 @@ public:
 	}
 	void	Roam( int fForce );												// 0x10014720
 
-	// Roam's step (emitted after it): get a new goal position from RouteGoal
-	// when there is none (1), it is near (2) or out of sight (3), then head
-	// for it; with none, walk the way the bot faces
-	void SeekGoal( void )
-	{
-		Vector vecForward;
-		Vector vecDelta = Vector( m_vecGoalPos ) - pev->origin;
-		int iMode = 0;
-
-		if ( !m_fHasGoalPos )
-			iMode = 1;
-		else if ( vecDelta.Length2D() < 32 )
-			iMode = 2;
-		else if ( !FVisible( Vector( m_vecGoalPos ) ) )
-			iMode = 3;
-
-		if ( iMode )
-		{
-			m_fHasGoalPos = FALSE;
-			m_vecMoveVelocity = g_vecZero;
-			m_vecGoalPos = RouteGoal( iMode );
-			if ( m_fHasGoalPos )
-				m_flGoalTime = gpGlobals->time;
-		}
-
-		if ( m_fHasGoalPos )
-		{
-			if ( m_fGoalVisible && m_pRoute )
-			{
-				if ( CanSeeSpot( Vector( m_vecGoalPos ) ) )
-					m_fGoalVisible = FALSE;
-			}
-			m_vecMoveVelocity = ( Vector( m_vecGoalPos ) - pev->origin ).Normalize() * CVAR_GET_FLOAT( "sv_maxspeed" );
-		}
-		else if ( m_iState == 0 )
-		{
-			if ( m_fRouteDone )
-				m_flPauseTime = gpGlobals->time + 0.1;
-			else
-			{
-				UTIL_MakeVectorsPrivate( m_vecMoveAngles, vecForward, NULL, NULL );
-				m_vecMoveVelocity = vecForward * CVAR_GET_FLOAT( "sv_maxspeed" );
-			}
-		}
-		else if ( m_iState == 3 )
-			m_flPauseTime = gpGlobals->time + 0.1;
-	}
+	// Roam's step and its accessors (names ours; defined in botmove.cpp,
+	// before Roam)
+	void	SeekGoal( void );
+	void	SetGoalVisible( BOOL fVisible );
+	int		GetState( void );
+	void	SetPauseTime( float flTime );
 
 	// botnav.cpp
 	void	ClearRoute( void );
