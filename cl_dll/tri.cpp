@@ -814,9 +814,10 @@ void InitSphere( void )
 
 	for ( i = 0; i < SPHERE_STACKS; i++ )
 	{
+		j = 0;
 		float flY = cos( ( i + 1 ) * ( (float)M_PI / ( SPHERE_STACKS + 1 ) ) );
 
-		for ( j = 0; j < SPHERE_SLICES; j++ )
+		while ( j < SPHERE_SLICES )
 		{
 			int iPoint = 2 + i * SPHERE_SLICES + j;
 			float flTheta = j * ( (float)M_PI / ( SPHERE_SLICES / 2 ) );
@@ -829,6 +830,8 @@ void InitSphere( void )
 			g_vecSphereTexCoord[ iPoint ].x = 1.0 - ( flX + 1.0 ) * 0.5;
 			g_vecSphereTexCoord[ iPoint ].y = 1.0 - ( (float)cos( ( i + 1 ) * ( (float)M_PI / ( SPHERE_STACKS + 1 ) ) ) + 1.0 ) * 0.5;
 			g_vecSphereTexCoord[ iPoint ].z = 1.0 - ( flZ + 1.0 ) * 0.5;
+
+			j++;
 		}
 	}
 
