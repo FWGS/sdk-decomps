@@ -226,15 +226,15 @@ void CEndBossKataball::AccelerateThink( void )
 		switch ( g_iSkillLevel )
 		{
 		case SKILL_MEDIUM:
-			vecDir.z = vecDir.z * 1.25;
 			flTurn = 12;
+			vecDir.z = vecDir.z * 1.25;
 			break;
 		case SKILL_HARD:
 			flTurn = 17;
 			break;
 		default:
-			vecDir.z = vecDir.z * 1.5;
 			flTurn = 8;
+			vecDir.z = vecDir.z * 1.5;
 			break;
 		}
 
