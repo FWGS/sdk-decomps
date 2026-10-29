@@ -274,9 +274,10 @@ public:
 	BOOL	HasGun( void );
 	BOOL	CanNotice( CBaseEntity *pEntity );
 	BOOL	CanSee( CBaseEntity *pEntity );
+	float NextFrameCount( void ) { return m_flNextFrameCount; }
 	void CountFrames( void )
 	{
-		if ( m_flNextFrameCount <= gpGlobals->time )
+		if ( NextFrameCount() <= gpGlobals->time )
 		{
 			m_flNextFrameCount = gpGlobals->time + 1;
 			if ( m_cFrames > 0 )
