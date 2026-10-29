@@ -2083,12 +2083,18 @@ Schedule_t *CBaseBandit :: GetSchedule( void )
 						switch ( GetGunsFiring() )
 						{
 						case 1:
-							if ( CheckLocalMove( pev->origin, pev->origin + gpGlobals->v_right * 40, NULL, NULL ) == LOCALMOVE_VALID )
-								return slBanditDodgeRight;
+							{
+								Vector vecDest( pev->origin + gpGlobals->v_right * 40 );
+								if ( CheckLocalMove( pev->origin, vecDest, NULL, NULL ) == LOCALMOVE_VALID )
+									return slBanditDodgeRight;
+							}
 							break;
 						case 2:
-							if ( CheckLocalMove( pev->origin, pev->origin + gpGlobals->v_right * -40, NULL, NULL ) == LOCALMOVE_VALID )
-								return slBanditDodgeLeft;
+							{
+								Vector vecDest( pev->origin + gpGlobals->v_right * -40 );
+								if ( CheckLocalMove( pev->origin, vecDest, NULL, NULL ) == LOCALMOVE_VALID )
+									return slBanditDodgeLeft;
+							}
 							break;
 						}
 					}
