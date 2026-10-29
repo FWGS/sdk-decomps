@@ -707,6 +707,8 @@ void CVehicleTank::Drive( float flInterval )
 	Vector vecForward;
 	Vector vecVelocity;
 	float flDot;
+	Vector vecOldVelocity;	// sic: never used; with iAnim's dead initialiser below it gives retail's inlining
+	vecOldVelocity = pev->velocity;
 
 	UTIL_MakeVectorsPrivate( pev->angles, vecForward, NULL, NULL );
 
@@ -774,23 +776,20 @@ void CVehicleTank::Drive( float flInterval )
 				Vector vecFwd;
 				UTIL_MakeVectorsPrivate( pev->angles, vecFwd, NULL, NULL );
 
-				Vector vecToCollision;
-				vecToCollision = m_vecCollision - pev->origin;
-
-				int iAnim;
-				if ( DotProduct( vecToCollision.Normalize(), vecFwd ) > 0 )
+				int iAnim = 0;	// sic: see vecOldVelocity
+				if ( DotProduct( ( m_vecCollision - pev->origin ).Normalize(), vecFwd ) > 0 )
 				{
-					if ( pev->avelocity.y > 15 )
-						iAnim = TANK_BUMPFRONTLEFT;
-					else
+					if ( !( pev->avelocity.y > 15 ) )
 						iAnim = TANK_BUMPFRONT;
+					else
+						iAnim = TANK_BUMPFRONTLEFT;
 				}
 				else
 				{
-					if ( pev->avelocity.y > 15 )
-						iAnim = TANK_BUMPBACKRIGHT;
-					else
+					if ( !( pev->avelocity.y > 15 ) )
 						iAnim = TANK_BUMPBACKLEFT;
+					else
+						iAnim = TANK_BUMPBACKRIGHT;
 				}
 				SetTankAnim( iAnim );
 
@@ -807,8 +806,7 @@ turned:
 				Vector vecPush = PushAway();
 				if ( vecPush != g_vecZero )
 				{
-					Vector vecAway = ( pev->origin - m_vecCollision ).Normalize();
-					vecVelocity = vecAway * 128;
+					vecVelocity = ( pev->origin - m_vecCollision ).Normalize() * 128;
 					vecVelocity = vecPush + vecVelocity;
 				}
 			}
