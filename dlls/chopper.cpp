@@ -1139,9 +1139,9 @@ void CMantaBomb :: MantaBombTouch( CBaseEntity *pOther )
 	TraceResult tr;
 	Vector		vecSpot;// trace starts here!
 
-	STOP_SOUND( ENT(pev), CHAN_BODY, "manta/bomb_falls1.wav" );
-	STOP_SOUND( ENT(pev), CHAN_BODY, "manta/bomb_falls2.wav" );
-	STOP_SOUND( ENT(pev), CHAN_BODY, "manta/bomb_falls3.wav" );
+	STOP_SOUND( edict(), CHAN_BODY, "manta/bomb_falls1.wav" );
+	STOP_SOUND( edict(), CHAN_BODY, "manta/bomb_falls2.wav" );
+	STOP_SOUND( edict(), CHAN_BODY, "manta/bomb_falls3.wav" );
 
 	pev->enemy = pOther->edict();
 
@@ -1178,11 +1178,7 @@ void CMantaBomb :: MantaBombTouch( CBaseEntity *pOther )
 		UTIL_DecalTrace( &tr, DECAL_SCORCH2 );
 
 	CSoundEnt::InsertSound ( bits_SOUND_COMBAT, pev->origin, BIG_EXPLOSION_VOLUME, 3.0 );
-	entvars_t *pevOwner;
-	if ( pev->owner )
-		pevOwner = VARS( pev->owner );
-	else
-		pevOwner = NULL;
+	entvars_t *pevOwner = pev->owner ? VARS( pev->owner ) : NULL;
 
 	pev->owner = NULL; // can't traceline attack owner if this is set
 
