@@ -501,6 +501,13 @@ void CBot::SetLookDir( void )
 	m_vecLookDir = vecDir;
 }
 
+// steering constants (names ours): retail reads them from botmove.obj's own
+// .rdata (20.0, 0.5, 128.0 in this order at 0x100bb844), not from the shared
+// float constants, and compares the int abs() with a float 20 (fild; fcomp)
+const float BOT_MAX_TURN = 20;			// AvoidWalls: degrees off the current yaw
+const float BOT_TURN_JITTER = 0.5;		// AvoidWalls: the turn is scaled by 1 +- this
+const float BOT_SIDE_DIST = 128;		// CheckSides: trace length
+
 //=========================================================
 // CheckAhead - is something in the way? Traces 288 units
 // (172.8 in water) along vecDir from the origin, shifted
@@ -556,11 +563,11 @@ BOOL CBot::CheckSides( Vector &vecAngles, TraceResult *ptrLeft, TraceResult *ptr
 	Vector vecEnd;
 
 	vecAngles.y -= 45;
-	vecEnd = vecSrc + vecAngles.Normalize() * 128;	// sic
+	vecEnd = vecSrc + vecAngles.Normalize() * BOT_SIDE_DIST;	// sic
 	UTIL_TraceLine( vecSrc, vecEnd, ignore_monsters, ENT( pev ), ptrLeft );
 
 	vecAngles.y += 90;
-	vecEnd = vecSrc + vecAngles.Normalize() * 128;	// sic
+	vecEnd = vecSrc + vecAngles.Normalize() * BOT_SIDE_DIST;	// sic
 	UTIL_TraceLine( vecSrc, vecEnd, ignore_monsters, ENT( pev ), ptrRight );
 
 	if ( ptrLeft->flFraction == 1.0 && ptrRight->flFraction == 1.0 )
@@ -716,22 +723,22 @@ Vector CBot::AvoidWalls( Vector &vecDir )
 		float flTurn;
 		if ( m_iDodgeDir == 1 )
 		{
-			flTurn = RANDOM_FLOAT( 1 - 0.5f, 0.5f + 1 ) * flScale * flDiffLeft;
+			flTurn = RANDOM_FLOAT( 1 - BOT_TURN_JITTER, BOT_TURN_JITTER + 1 ) * flScale * flDiffLeft;
 		}
 		else
 		{
 			m_iDodgeDir = 2;
-			flTurn = RANDOM_FLOAT( 1 - 0.5f, 0.5f + 1 ) * flScale * flDiffRight;
+			flTurn = RANDOM_FLOAT( 1 - BOT_TURN_JITTER, BOT_TURN_JITTER + 1 ) * flScale * flDiffRight;
 		}
 
 		vecAngles.y = vecAngles.y - flTurn;
 		float flOff = flYaw - vecAngles.y;
-		if ( abs( (int)flOff ) > 20.0f )
+		if ( abs( (int)flOff ) > BOT_MAX_TURN )
 		{
 			if ( flOff < 0 )
-				vecAngles.y = flYaw - 20;
+				vecAngles.y = flYaw - BOT_MAX_TURN;
 			else
-				vecAngles.y = 20 + flYaw;
+				vecAngles.y = BOT_MAX_TURN + flYaw;
 		}
 
 		while ( vecAngles.y > 180 )
