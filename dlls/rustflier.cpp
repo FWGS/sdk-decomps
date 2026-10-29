@@ -443,19 +443,17 @@ void CRustFlier :: StartCrash( void )
 	m_pGoalEnt = UTIL_FindEntityByTargetname( NULL, STRING( m_iszDeathPath ) );
 	if ( m_pGoalEnt )
 	{
-		const Vector &vecGoal = m_pGoalEnt->pev->origin;
-		Vector vecDir = vecGoal - pev->origin;
-		float flDist = (vecGoal - pev->origin).Length();
+		Vector vecDir = m_pGoalEnt->pev->origin - pev->origin;
 
-		pev->velocity = vecDir.Normalize() * flDist / m_flTimeTillCrash;
+		pev->velocity = vecDir.Normalize() * (m_pGoalEnt->pev->origin - pev->origin).Length() / m_flTimeTillCrash;
 
 		pev->angles.x = (int)pev->angles.x % 360;
 		pev->angles.y = (int)pev->angles.y % 360;
 		pev->angles.z = (int)pev->angles.z % 360;
 
-		float flPitch = UTIL_AngleDistance( m_vecDeathAngle.x, pev->angles.x ) / m_flTimeTillCrash;
-		float flYaw = UTIL_AngleDistance( m_vecDeathAngle.y, pev->angles.y ) / m_flTimeTillCrash;
-		float flRoll = UTIL_AngleDistance( m_vecDeathAngle.z, pev->angles.z ) / m_flTimeTillCrash;
+		float flPitch = ( UTIL_AngleDistance( m_vecDeathAngle.x, pev->angles.x ) / m_flTimeTillCrash );
+		float flYaw = ( UTIL_AngleDistance( m_vecDeathAngle.y, pev->angles.y ) / m_flTimeTillCrash );
+		float flRoll = ( UTIL_AngleDistance( m_vecDeathAngle.z, pev->angles.z ) / m_flTimeTillCrash );
 
 		pev->avelocity.x = flPitch;
 		pev->avelocity.y = flYaw;
