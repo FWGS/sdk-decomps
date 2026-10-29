@@ -226,7 +226,7 @@ DrawFlameFan
 A cone of flame, flScale long, pointing back along dir
 =================
 */
-void DrawFlameFan( float *origin, float *dir, float flScale, int iSegments, float flBrightness, int iType )
+void DrawFlameFan( Vector &origin, Vector &dir, float flScale, int iSegments, float flBrightness, int iType )
 {
 	vec3_t angles, forward, right, up;
 	vec3_t vecPoint, vecTip, vecLast;
@@ -365,7 +365,7 @@ DrawFlameStrip
 Like DrawFlameFan, for EFFECT_FLAME3
 =================
 */
-void DrawFlameStrip( Vector &origin, Vector &dir, float flScale, int iSegments, float flBrightness )
+void DrawFlameStrip( float *origin, Vector &dir, float flScale, int iSegments, float flBrightness )
 {
 	vec3_t angles, forward, right, up;
 	vec3_t vecPoint, vecTip, vecLast;
@@ -444,7 +444,7 @@ void DrawEffect8( void )
 		AngleVectors( angles, forward, right, up );
 
 		// sic: turns the copy, not the effect in the list
-		vecDir = ( vecDir + right * 17 ).Normalize();
+		vecDir = Vector( vecDir + right * 17 ).Normalize();
 		effect.m_vecAngles = vecDir;
 
 		if ( flBrightness < 1 )
@@ -453,7 +453,11 @@ void DrawEffect8( void )
 		if ( effect.m_pSprite )
 		{
 			gEngfuncs.pTriAPI->SpriteTexture( effect.m_pSprite, 0 );
-			DrawStrip( effect.m_vecOrigin, vecDir, flWidth, 8, 32, flBrightness );
+			// sic: the direction goes through a float * and back, which
+			// generates no code; the one inline operator float *() it costs
+			// is what leaves Normalize's non-zero Vector( float, float, float )
+			// out of line, as in retail
+			DrawStrip( effect.m_vecOrigin, *(Vector *)(float *)vecDir, flWidth, 8, 32, flBrightness );
 		}
 	}
 }
@@ -677,14 +681,20 @@ void DrawFlames( void )
 		float flScale = ( flTime - effect.m_flStartTime ) * effect.m_flScaleSpeed * 30 + effect.m_flScale;
 
 		// EFFECT_FLAME3 flies off along its direction
-		vec3_t vecOrigin = effect.m_vecAngles * 50 * 30 * ( flTime - effect.m_flStartTime ) + effect.m_vecOrigin;
+		vec3_t vecOrigin = effect.m_vecOrigin + effect.m_vecAngles * 50 * 30 * ( flTime - effect.m_flStartTime );
 
 		if ( flBrightness < 1 )
 			flBrightness = 1;
 
 		if ( flScale > effect.m_flMaxScale )
 		{
-			g_ClientEffects.Remove( effect.m_iId );
+			// sic: called through a pointer, which VC6 turns into a plain
+			// call of the out-of-line CEffectList::Remove; retail calls it
+			// here and inlines the Vector operators after it as if the call
+			// were no inline candidate at all, which a direct call is (it
+			// is inlined, or takes the operators' inline budget)
+			bool ( CEffectList::*pfnRemove )( int ) = &CEffectList::Remove;
+			( g_ClientEffects.*pfnRemove )( effect.m_iId );
 		}
 		else if ( effect.m_pSprite )
 		{
@@ -692,7 +702,7 @@ void DrawFlames( void )
 
 			// sic: the first test is redundant
 			if ( effect.m_iType == EFFECT_FLAME || effect.m_iType != EFFECT_FLAME3 )
-				DrawFlameFan( effect.m_vecOrigin + flScale * effect.m_vecAngles, effect.m_vecAngles, flScale, 16, flBrightness, effect.m_iType );
+				DrawFlameFan( effect.m_vecOrigin + effect.m_vecAngles * flScale, effect.m_vecAngles, flScale, 16, flBrightness, effect.m_iType );
 			else
 				DrawFlameStrip( vecOrigin, effect.m_vecAngles, flScale, 16, flBrightness );
 		}
