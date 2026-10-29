@@ -1,18 +1,3 @@
-// sic: this comment stands in for text retail's ammo.cpp had above the
-// functions. VC6 compiles the .pch's inline functions lazily in the file
-// that creates the .pch, advancing by the IL of each function it compiles,
-// and a line number of 128 or more costs a byte more of IL. So the number
-// of lines before WeaponsResource::LoadWeaponSprites decides where the VGUI
-// templates and implicit members land among ammo.obj's sections, and with
-// them which identical copy LINK keeps (/OPT:ICF). Fifteen lines here, and
-// the empty statements at the top of CHudAmmo::Draw, give retail's order.
-// See PLAN.md "Image identity (client)".
-//
-//
-//
-//
-//
-//
 /***
 *
 *	Copyright (c) 1999, Valve LLC. All rights reserved.
@@ -847,8 +832,8 @@ void CHudAmmo::UserCmd_PrevWeapon(void)
 
 int CHudAmmo::Draw(float flTime)
 {
-	// sic: ten empty statements, the compiler's budget for the .pch inlines (PLAN.md)
-	;
+	// sic: nine empty statements stand in for text retail had in this function or the
+	// next ones, the compiler's budget for the .pch inlines (PLAN.md "Image identity")
 	;
 	;
 	;
@@ -955,15 +940,18 @@ int CHudAmmo::Draw(float flTime)
 	{
 		int iIconWidth = m_pWeapon->rcAmmo2.right - m_pWeapon->rcAmmo2.left;
 
-		// shown even when it's empty
-		y -= gHUD.m_iFontHeight + gHUD.m_iFontHeight/4;
-		x = ScreenWidth - 4 * AmmoWidth - iIconWidth;
-		x = gHUD.DrawHudNumber(x, y, iFlags|DHN_3DIGITS, gWR.CountAmmo(pw->iAmmo2Type), r, g, b);
+		// Do we have secondary ammo? (shown even when it's empty)
+		if (pw->iAmmo2Type != 0)
+		{
+			y -= gHUD.m_iFontHeight + gHUD.m_iFontHeight/4;
+			x = ScreenWidth - 4 * AmmoWidth - iIconWidth;
+			x = gHUD.DrawHudNumber(x, y, iFlags|DHN_3DIGITS, gWR.CountAmmo(pw->iAmmo2Type), r, g, b);
 
-		// Draw the ammo Icon
-		SPR_Set(m_pWeapon->hAmmo2, r, g, b);
-		int iOffset = (m_pWeapon->rcAmmo2.bottom - m_pWeapon->rcAmmo2.top)/8;
-		SPR_DrawAdditive(0, x, y - iOffset, &m_pWeapon->rcAmmo2);
+			// Draw the ammo Icon
+			SPR_Set(m_pWeapon->hAmmo2, r, g, b);
+			int iOffset = (m_pWeapon->rcAmmo2.bottom - m_pWeapon->rcAmmo2.top)/8;
+			SPR_DrawAdditive(0, x, y - iOffset, &m_pWeapon->rcAmmo2);
+		}
 	}
 	return 1;
 }
