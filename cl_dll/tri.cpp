@@ -700,9 +700,12 @@ void DrawFlames( void )
 		{
 			gEngfuncs.pTriAPI->SpriteTexture( effect.m_pSprite, 0 );
 
-			// sic: the first test is redundant
+			// sic: the first test is redundant. flScale * 1 folds to
+			// flScale, but as an expression VC6 loads it once and multiplies
+			// each component by it on the x87 stack, as retail does; the
+			// plain variable would be used from memory
 			if ( effect.m_iType == EFFECT_FLAME || effect.m_iType != EFFECT_FLAME3 )
-				DrawFlameFan( effect.m_vecOrigin + effect.m_vecAngles * flScale, effect.m_vecAngles, flScale, 16, flBrightness, effect.m_iType );
+				DrawFlameFan( effect.m_vecOrigin + effect.m_vecAngles * ( flScale * 1 ), effect.m_vecAngles, flScale, 16, flBrightness, effect.m_iType );
 			else
 				DrawFlameStrip( vecOrigin, effect.m_vecAngles, flScale, 16, flBrightness );
 		}
