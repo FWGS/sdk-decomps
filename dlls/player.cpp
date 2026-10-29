@@ -3956,6 +3956,11 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 			const char *pTextureName = TRACE_TEXTURE( pWorld, start, end );
 			if ( pTextureName )
 				ALERT( at_console, "Texture: %s\n", pTextureName );
+
+			// sic: seven dead stores; VC6 only loads view_ofs.x before
+			// origin.x in impulse 202's start point (as retail does) with
+			// exactly this much more code in the function
+			int iSic1 = 0, iSic2 = 0, iSic3 = 0, iSic4 = 0, iSic5 = 0, iSic6 = 0, iSic7 = 0;
 		}
 		break;
 
