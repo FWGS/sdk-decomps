@@ -445,9 +445,8 @@ void CBot::AimAtEnemy( void )
 	else if ( m_Fire.m_iAimMode == 2 )
 	{
 		CBaseEntity *pEnemy = GetEnemy();	// sic: unused
-		Vector vecTarget = GetEnemy()->pev->origin + GetEnemy()->pev->velocity;
 		Vector vecAim;
-		vecAim = vecTarget;
+		vecAim = GetEnemy()->pev->origin + GetEnemy()->pev->velocity;
 		vecAim.z += pev->mins.z;
 		LookAlong( vecAim - GetGunPosition() );
 	}

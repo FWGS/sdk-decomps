@@ -308,14 +308,20 @@ public:
 		edict_t *pent;
 		return m_iEnemy && ( pent = INDEXENT( m_iEnemy ) ) != NULL && pent->serialnumber == m_iEnemySerial && !pent->free && pent->pvPrivateData;
 	}
+	// a stale handle clears pent: the same code as a return from inside
+	// the test wherever the result is used, and retail's kept INDEXENT
+	// store where it isn't (AimAtEnemy's unused first GetEnemy)
 	CBaseEntity *GetEnemy( void )
 	{
+		edict_t *pent = NULL;
 		if ( m_iEnemy )
 		{
-			edict_t *pent = INDEXENT( m_iEnemy );
-			if ( pent && pent->serialnumber == m_iEnemySerial && !pent->free )
-				return (CBaseEntity *)pent->pvPrivateData;
+			pent = INDEXENT( m_iEnemy );
+			if ( pent && ( pent->serialnumber != m_iEnemySerial || pent->free ) )
+				pent = NULL;
 		}
+		if ( pent )
+			return (CBaseEntity *)pent->pvPrivateData;
 		return NULL;
 	}
 	BOOL HasGoalItem( void )
