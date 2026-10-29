@@ -1117,7 +1117,7 @@ int CVehicleTank::CornerBlocked( int iStartForward, int iEndForward, int iStartR
 
 	Vector vecForward, vecRight, vecUp;
 	Vector vecStart, vecEnd;
-	UTIL_MakeVectorsPrivate( m_pBodyBSP->pev->angles + pev->avelocity * 0.1, vecForward, vecRight, vecUp );
+	UTIL_MakeVectorsPrivate( m_pBodyBSP->pev->angles + pev->avelocity / 10, vecForward, vecRight, vecUp );
 
 	vecStart = pev->origin + vecVelocity.Normalize() * vecVelocity.Length() * flInterval + iStartForward * vecForward * ( VehicleLength() + flDist ) + vecRight * iStartRight * ( VehicleWidth() + flDist ) + vecUp * 32;
 	vecEnd = pev->origin + vecVelocity.Normalize() * vecVelocity.Length() * flInterval + iEndForward * vecForward * ( VehicleLength() + flDist ) + vecRight * iEndRight * ( VehicleWidth() + flDist ) + vecUp * 32;
@@ -1171,7 +1171,7 @@ Vector CVehicleTank::PushAway( void )
 {
 	if ( m_vecCollision != g_vecZero )
 	{
-		UTIL_MakeVectors( pev->angles + pev->avelocity * 0.1 );
+		UTIL_MakeVectors( pev->angles + pev->avelocity / 10 );
 
 		Vector vecDir;
 		vecDir = ( m_vecCollision - pev->origin ).Normalize();
