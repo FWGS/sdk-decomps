@@ -121,7 +121,7 @@ DLL_DECALLIST gDecals[] = {
 	{ "{cg_yel", 0 },		// DECAL_CG_YELLOW
 	{ "{cg_orn", 0 },		// DECAL_CG_ORANGE
 	{ "{cg_red", 0 },		// DECAL_CG_RED
-	{ "{balburn", 0 },		// DECAL_BALBURN
+	{ "{balburn", 1 },		// DECAL_BALBURN (sic: retail initialises this index to 1; W_Precache overwrites every index)
 	{ "{egg1", 0 },		// DECAL_EGG1
 	{ "{egg2", 0 },		// DECAL_EGG2
 	{ "{maggot", 0 },		// DECAL_MAGGOT
