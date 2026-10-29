@@ -83,8 +83,13 @@ CCustomizationMenu::CCustomizationMenu( int iTrans, int iRemoveMe, int x, int y,
 	int iTextWide, iTextTall;
 	int iLaunchWide, iLaunchTall;
 	int iChemWide, iChemTall;
-	int j, k, iChoices;
-	char *pszConfig;
+	// sic: the zero initialisations and pImage below are dead; VC6 numbers
+	// locals by first reference, and six more of them numbered before iWide
+	// give retail's frame layout and centring order
+	int j = 0, k = 0, iChoices;
+	int iYPos = 0;
+	int iThird = 0;
+	char *pszConfig = NULL;
 	char szName[256];
 	char szText[256];
 
@@ -117,7 +122,8 @@ CCustomizationMenu::CCustomizationMenu( int iTrans, int iRemoveMe, int x, int y,
 	m_pShotgun[4]->setFgColor( r, g, b, a );
 	pSchemes->getBgColor( hShotgunSelected, r, g, b, a );
 	m_pShotgun[4]->setBgColor( r, g, b, a );
-	m_pShotgun[4]->getTextImage()->getTextSizeWrapped( iWide, iTall );
+	TextImage *pImage = m_pShotgun[4]->getTextImage();	// sic
+	pImage->getTextSizeWrapped( iWide, iTall );
 	m_pShotgun[4]->setSize( iWide, iTall );
 	m_pShotgun[4]->setVisible( true );
 	iXPos = ScreenWidth / 2 - ( iWide / 2 + iWide / 12 );
@@ -232,7 +238,6 @@ CCustomizationMenu::CCustomizationMenu( int iTrans, int iRemoveMe, int x, int y,
 		for ( k = 1; k <= iChoices; k++ )
 		{
 			sprintf( szName, "%s_config", sCustomizationDml[j][k] );
-			char *pszConfig;
 			pszConfig = GetConfigText( szName, szText );
 			if ( !pszConfig )
 				pszConfig = "No Configuration Available";
@@ -272,7 +277,6 @@ CCustomizationMenu::CCustomizationMenu( int iTrans, int iRemoveMe, int x, int y,
 	{
 		// sic: the first title replaces the panel made above
 		sprintf( szName, "%s_config", sCustomizationGrenade[j][0] );
-		char *pszConfig;
 		pszConfig = GetConfigText( szName, szText );
 		if ( !pszConfig )
 			pszConfig = "No Configuration Available";
@@ -378,11 +382,15 @@ CCustomizationMenu::CCustomizationMenu( int iTrans, int iRemoveMe, int x, int y,
 		if ( !pszConfig )
 			pszConfig = "No Configuration Available";
 
-		int iYPos = iLaunchTall * j / 3 + 47;
+		iYPos = iLaunchTall * j / 3 + 47;
 		if ( j == 2 )
 			iYPos = iLaunchTall / 3 + iLaunchTall / 4 + 47;
 		else if ( j == 3 )
-			iYPos = ( iLaunchTall / 3 ) * 2 + iLaunchTall / 4 + 47;
+		{
+			// sic: the third in its own local gives retail's registers
+			iThird = iLaunchTall / 3;
+			iYPos = iThird * 2 + iLaunchTall / 4 + 47;
+		}
 
 		m_pBeam[j][0] = new TextPanel( pszConfig, iXPos, iYPos, 200, 200 );
 		m_pBeam[j][0]->setParent( this );
