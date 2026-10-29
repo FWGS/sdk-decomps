@@ -133,7 +133,7 @@ void CIDPanel::GetIDString( char *pszBuf, int iLen, int iPlayer, int iLocalPlaye
 	{
 		int iLeft = iLen - strlen( pszBuf );
 
-		gEngfuncs.pfnGetPlayerInfo( iPlayer, pInfo );
+		gEngfuncs.pfnGetPlayerInfo( iPlayer, &g_PlayerInfoList[iPlayer] );
 
 		if ( pInfo->name )
 			strncat( pszBuf, pInfo->name, iLeft );

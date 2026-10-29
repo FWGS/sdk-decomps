@@ -255,77 +255,7 @@ bool EV_HLDM_TextureEffect( int idx, pmtrace_t *ptr, float *vecSrc, float *vecEn
 		strcpy( texname, pTextureName );
 		pTextureName = texname;
 
-		if ( *pTextureName != '-' && *pTextureName != '+' )
-		{
-			if ( *pTextureName == '{' || *pTextureName == '!' || *pTextureName == '~' || *pTextureName == ' ' )
-			{
-				pTextureName++;
-			}
-
-			strcpy( szbuffer, pTextureName );
-			szbuffer[ CBTEXTURENAMEMAX - 1 ] = 0;
-
-			chTextureType = PM_FindTextureType( szbuffer );
-
-			if ( chTextureType == CHAR_TEX_METAL )
-			{
-				for ( int i = 0; i < 3; i++ )
-					gEngfuncs.pEfxAPI->R_SparkShower( ptr->endpos );
-
-				g_ClientEffects.Add( CEffect( 6, ptr->endpos, ptr->plane.normal, 0.4, EFFECT_FLAME, 200, 20, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/flambeam.spr" ) ) ) );
-				return false;
-			}
-
-			if ( chTextureType == CHAR_TEX_CONCRETE )
-			{
-				g_ClientEffects.Add( CEffect( 3, ptr->endpos, ptr->plane.normal, 0.4, EFFECT_FLAME, 200, 20, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/flambeam.spr" ) ) ) );
-				gEngfuncs.pEfxAPI->R_BulletImpactParticles( ptr->endpos );
-				return false;
-			}
-
-			if ( chTextureType == CHAR_TEX_GRATE )
-			{
-				vec3_t size;
-				size[2] = 1;
-				size[1] = 1;
-				size[0] = 1;
-				gEngfuncs.pEfxAPI->R_BreakModel( ptr->endpos, size, ptr->plane.normal, 100, 1, 1, gEngfuncs.pEventAPI->EV_FindModelIndex( "models/smallwoodgib.mdl" ), 8 );
-				return false;
-			}
-
-			if ( chTextureType == CHAR_TEX_VENT || chTextureType == CHAR_TEX_TILE )
-			{
-				vec3_t angles, forward, right, up;
-				int iModel;
-				TEMPENTITY *pTent;
-
-				VectorAngles( ptr->plane.normal, angles );
-				AngleVectors( angles, forward, right, up );
-				forward.z = forward.z * -1;
-
-				iModel = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/wallpuff.spr" );
-				pTent = gEngfuncs.pEfxAPI->R_TempSprite( ptr->endpos + ptr->plane.normal * 3, forward * gEngfuncs.pfnRandomFloat( 10, 35 ) + up * gEngfuncs.pfnRandomFloat( -15, 15 ) + right * gEngfuncs.pfnRandomFloat( -15, 15 ), 0.5, iModel, kRenderTransAdd, kRenderFxNone, 50, 10, FTENT_SPRANIMATE );
-				if ( pTent )
-				{
-					pTent->entity.curstate.framerate = 20;
-					pTent->entity.curstate.renderamt = 70;
-				}
-
-				// a puff of dust off the floor
-				if ( ptr->plane.normal.z > 0.5 )
-				{
-					vec3_t vecOrigin = ptr->endpos;
-					vecOrigin.z += 10;
-					iModel = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/bulletpuff.spr" );
-
-					pTent = gEngfuncs.pEfxAPI->R_TempSprite( vecOrigin, Vector( 0, 0, 0 ), 0.75, iModel, kRenderTransAlpha, kRenderFxNoDissipation, 255, 10, FTENT_SPRANIMATE );
-					if ( pTent )
-						pTent->entity.curstate.framerate = 40;
-				}
-			}
-
-		}
-		else
+		if ( *pTextureName == '-' || *pTextureName == '+' )
 		{
 			// a force field
 			if ( !strcmp( pTextureName + 2, "ff" ) )
@@ -337,6 +267,74 @@ bool EV_HLDM_TextureEffect( int idx, pmtrace_t *ptr, float *vecSrc, float *vecEn
 			gEngfuncs.pEventAPI->EV_PlaySound( -1, ptr->endpos, CHAN_AUTO, "weapons/forcefield.wav", 1.0, ATTN_NORM, 0, PITCH_NORM );
 			return true;
 		}
+
+		if ( *pTextureName == '{' || *pTextureName == '!' || *pTextureName == '~' || *pTextureName == ' ' )
+		{
+			pTextureName++;
+		}
+
+		strcpy( szbuffer, pTextureName );
+		szbuffer[ CBTEXTURENAMEMAX - 1 ] = 0;
+
+		chTextureType = PM_FindTextureType( szbuffer );
+
+		if ( chTextureType == CHAR_TEX_METAL )
+		{
+			for ( int i = 0; i < 3; i++ )
+				gEngfuncs.pEfxAPI->R_SparkShower( ptr->endpos );
+
+			g_ClientEffects.Add( CEffect( 6, ptr->endpos, ptr->plane.normal, 0.4, EFFECT_FLAME, 200, 20, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/flambeam.spr" ) ) ) );
+			return false;
+		}
+
+		if ( chTextureType == CHAR_TEX_CONCRETE )
+		{
+			g_ClientEffects.Add( CEffect( 3, ptr->endpos, ptr->plane.normal, 0.4, EFFECT_FLAME, 200, 20, gEngfuncs.GetClientTime(), (struct model_s *)gEngfuncs.GetSpritePointer( SPR_Load( "sprites/flambeam.spr" ) ) ) );
+			gEngfuncs.pEfxAPI->R_BulletImpactParticles( ptr->endpos );
+			return false;
+		}
+
+		if ( chTextureType == CHAR_TEX_GRATE )
+		{
+			vec3_t size;
+			size[2] = 1;
+			size[1] = 1;
+			size[0] = 1;
+			gEngfuncs.pEfxAPI->R_BreakModel( ptr->endpos, size, ptr->plane.normal, 100, 1, 1, gEngfuncs.pEventAPI->EV_FindModelIndex( "models/smallwoodgib.mdl" ), 8 );
+			return false;
+		}
+
+		if ( chTextureType == CHAR_TEX_VENT || chTextureType == CHAR_TEX_TILE )
+		{
+			vec3_t angles, forward, right, up;
+			int iModel;
+			TEMPENTITY *pTent;
+
+			VectorAngles( ptr->plane.normal, angles );
+			AngleVectors( angles, forward, right, up );
+			forward.z = forward.z * -1;
+
+			iModel = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/wallpuff.spr" );
+			pTent = gEngfuncs.pEfxAPI->R_TempSprite( ptr->endpos + ptr->plane.normal * 3, forward * gEngfuncs.pfnRandomFloat( 10, 35 ) + up * gEngfuncs.pfnRandomFloat( -15, 15 ) + right * gEngfuncs.pfnRandomFloat( -15, 15 ), 0.5, iModel, kRenderTransAdd, kRenderFxNone, 50, 10, FTENT_SPRANIMATE );
+			if ( pTent )
+			{
+				pTent->entity.curstate.framerate = 20;
+				pTent->entity.curstate.renderamt = 70;
+			}
+
+			// a puff of dust off the floor
+			if ( ptr->plane.normal.z > 0.5 )
+			{
+				vec3_t vecOrigin = ptr->endpos;
+				vecOrigin.z += 10;
+				iModel = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/bulletpuff.spr" );
+
+				pTent = gEngfuncs.pEfxAPI->R_TempSprite( vecOrigin, Vector( 0, 0, 0 ), 0.75, iModel, kRenderTransAlpha, kRenderFxNoDissipation, 255, 10, FTENT_SPRANIMATE );
+				if ( pTent )
+					pTent->entity.curstate.framerate = 40;
+			}
+		}
+
 	}
 
 	return false;
@@ -1415,7 +1413,11 @@ void EV_FireGauss( event_args_t *args )
 		if ( pEntity->solid == SOLID_BSP )
 		{
 			vec3_t vecEnd;
-			VectorAdd( tr.endpos, tr.plane.normal, vecEnd );
+			// sic: VectorAdd written out, with .x on the first normal: that
+			// operand order is retail's (a sweep of the [i]/.x forms)
+			vecEnd[0] = tr.endpos[0] + tr.plane.normal.x;
+			vecEnd[1] = tr.endpos[1] + tr.plane.normal[1];
+			vecEnd[2] = tr.endpos[2] + tr.plane.normal[2];
 
 			if ( gEngfuncs.GetMaxClients() < 2 )
 				gEngfuncs.pEfxAPI->R_Sprite_Trail( TE_SPRITETRAIL, tr.endpos, vecEnd, m_iGlow, 2, 0, gEngfuncs.pfnRandomFloat( 0, 20 ) / 100, 100, 255, 200 );

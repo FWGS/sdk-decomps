@@ -901,27 +901,25 @@ int CHudAmmo::MsgFunc_WeapPickup( const char *pszName, int iSize, void *pbuf )
 		// Add the weapon to the history
 		if ( gViewPort && gViewPort->m_pWeaponStatus && p->iId != 13 && p->iId != 1 )	// not the grenades or the fists
 			gViewPort->m_pWeaponStatus->AddToHistory( iIndex, 1 );
-
-		return 1;
 	}
-
-	if ( gViewPort && gViewPort->m_pWeaponStatus )
-		gViewPort->m_pWeaponStatus->AddToHistory( iIndex, 1 );
-
-	// the minigun's coolers and the gauss pistol's scope set their weapons up
-	if ( !strcmp( p->szName, "cust_2MinigunCooled" ) )
+	else
 	{
-		ClientCmd( p->szCustomizes );
-		ClientCmd( "cust_20" );
-		return 1;
-	}
+		if ( gViewPort && gViewPort->m_pWeaponStatus )
+			gViewPort->m_pWeaponStatus->AddToHistory( iIndex, 1 );
 
-	if ( !strcmp( p->szName, "cust_2GaussPistolSniper" ) && CVAR_GET_FLOAT( "hud_autoswitch" ) )
-	{
-		ClientCmd( p->szCustomizes );
-		ClientCmd( "cust_14" );
-		gWR.GetWeapon( 31 )->iCustomSetting = 4;	// cust_1GaussPistolFireType: sniper
-		gpLastSel = m_pWeapon;
+		// the minigun's coolers and the gauss pistol's scope set their weapons up
+		if ( !strcmp( p->szName, "cust_2MinigunCooled" ) )
+		{
+			ClientCmd( p->szCustomizes );
+			ClientCmd( "cust_20" );
+		}
+		else if ( !strcmp( p->szName, "cust_2GaussPistolSniper" ) && CVAR_GET_FLOAT( "hud_autoswitch" ) )
+		{
+			ClientCmd( p->szCustomizes );
+			ClientCmd( "cust_14" );
+			gWR.GetWeapon( 31 )->iCustomSetting = 4;	// cust_1GaussPistolFireType: sniper
+			gpLastSel = m_pWeapon;
+		}
 	}
 
 	return 1;
