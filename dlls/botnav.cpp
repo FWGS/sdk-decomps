@@ -1241,17 +1241,17 @@ float CBotProfile :: RateWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pItem, f
 }
 
 //=========================================================
-// Load - read a profile: "Name: ", "Model: ", "Skill: n"
-// (each skill becomes n times 1..20), "Topcolor: ",
-// "Bottomcolor: "; lines starting with / are comments
+// ParseFile - Load's loop (name ours): read the profile's
+// lines: "Name: ", "Model: ", "Skill: n" (each skill becomes
+// n times 1..20), "Topcolor: ", "Bottomcolor: "; lines
+// starting with / are comments
 //=========================================================
-BOOL CBotProfile :: Load( char *pszFile )
+// An inline step: its share of Load's budget leaves getline's
+// unlock out of line, as in retail (whose ios::unlock copy
+// follows Load); in Load itself getline would get it all.
+inline BOOL CBotProfile :: ParseFile( ifstream &file )
 {
-	ifstream file( pszFile );
 	char szLine[100];
-
-	if ( file.bad() )
-		return FALSE;
 
 	while ( 1 )
 	{
@@ -1299,4 +1299,17 @@ BOOL CBotProfile :: Load( char *pszFile )
 				strcpy( m_szBottomColor, szLine + 13 );
 		}
 	}
+}
+
+//=========================================================
+// Load - read a profile from wantedhl/bots/*.bot
+//=========================================================
+BOOL CBotProfile :: Load( char *pszFile )
+{
+	ifstream file( pszFile );
+
+	if ( file.bad() )
+		return FALSE;
+
+	return ParseFile( file );
 }

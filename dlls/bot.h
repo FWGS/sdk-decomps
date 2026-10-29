@@ -227,6 +227,7 @@ public:
 	float	NoticeSkill( void ) { return SkillAdjust( m_flNotice ); }
 	float	RateWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pItem, float flDist );
 	BOOL	Load( char *pszFile );
+	BOOL	ParseFile( class ifstream &file );	// Load's loop (name ours), botnav.cpp
 	float	Aggression( void ) { return m_flAggression; }
 
 	char	m_szName[64];
