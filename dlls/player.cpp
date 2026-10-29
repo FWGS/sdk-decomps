@@ -3773,8 +3773,9 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 			Vector start = pev->origin + pev->view_ofs;
 			Vector end = start + gpGlobals->v_forward * 1024;
 			UTIL_TraceLine( start, end, ignore_monsters, edict(), &tr );
-			if ( tr.pHit )
-				pWorld = tr.pHit;
+			edict_t *pHit = tr.pHit;	// sic: a temporary (VC6 orders impulse 202's origin + view_ofs adds by the function's local count)
+			if ( pHit )
+				pWorld = pHit;
 			const char *pTextureName = TRACE_TEXTURE( pWorld, start, end );
 			if ( pTextureName )
 				ALERT( at_console, "Texture: %s\n", pTextureName );
