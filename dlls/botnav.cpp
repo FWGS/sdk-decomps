@@ -608,7 +608,7 @@ CBotNode *CBotNav :: AddNode( CInfoBotnode *pEntity, int fNoBacklinks )
 	}
 	else
 	{
-		m_pTail->m_pNext = pNode = new CBotNode;
+		pNode = m_pTail->m_pNext = new CBotNode;
 		pNode->m_pPrev = m_pTail;
 	}
 
