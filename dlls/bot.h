@@ -259,9 +259,6 @@ public:
 
 	// bot.cpp
 	void	Spawn( void );
-	int		Classify( void ) { return CLASS_PLAYER; }
-	BOOL	IsPlayer( void ) { return TRUE; }
-	BOOL	IsNetClient( void ) { return FALSE; }
 
 	void	PressFire( void );
 	void	ChooseWeapon( void );
@@ -278,23 +275,7 @@ public:
 	BOOL	CanNotice( CBaseEntity *pEntity );
 	BOOL	CanSee( CBaseEntity *pEntity );
 	float NextFrameCount( void ) { return m_flNextFrameCount; }
-	void CountFrames( void )
-	{
-		if ( NextFrameCount() <= gpGlobals->time )
-		{
-			m_flNextFrameCount = gpGlobals->time + 1;
-			if ( m_cFrames > 0 )
-				m_flMsec = 1000 / m_cFrames;
-			m_cFrames = 0;
-		}
-		else
-			m_cFrames++;
-
-		if ( m_flMsec < 1 )
-			m_flMsec = 1;
-		if ( m_flMsec > 100 )
-			m_flMsec = 100;
-	}
+	void	CountFrames( void );
 	void	DeadThink( void );
 	void	CheckMelee( void );
 	void	FightThink( void );
@@ -342,6 +323,12 @@ public:
 		}
 		return NULL;
 	}
+
+	// the CBaseEntity overrides come after the accessors: retail emits their
+	// out-of-line copies after GetGoalItem's, at the end of bot.obj
+	int		Classify( void ) { return CLASS_PLAYER; }
+	BOOL	IsPlayer( void ) { return TRUE; }
+	BOOL	IsNetClient( void ) { return FALSE; }
 
 	// botmove.cpp
 	BOOL	CanSeeSpot( const Vector &vecSpot );

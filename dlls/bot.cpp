@@ -28,10 +28,11 @@
 #include "extdll.h"
 #include "util.h"
 #include "cbase.h"
+#include "player.h"		// right after cbase.h, as in player.cpp: retail places CBasePlayer's
+						// inline virtuals between FightThink and CanWalkTo (the .pch's lazy inlines)
 #include "monsters.h"
 #include "weapons.h"
 #include "nodes.h"
-#include "player.h"
 #include "items.h"
 #include "gamerules.h"
 #include "bot.h"
@@ -223,113 +224,6 @@ void CBot::Say( char *pszText )
 }
 
 //=========================================================
-// BeginFrame - BotThink's first half (name ours): counts
-// the frame, clears the frame's move goals and buttons,
-// measures how far the bot moved, and when it is stuck
-// drops its goal and turns towards an open side; when it
-// makes no progress towards its goal position for 8 s it
-// gives the position up
-//=========================================================
-// An inline step, as the move goals' are: it takes almost all
-// of BotThink's inline budget (BotThink's own size 471, so
-// 1000; BeginFrame 959), so neither its calls nor BotThink's
-// later ones are expanded, as in retail (only the free ones
-// of at most 40, edict() and Vector's float * conversion).
-inline void CBot::BeginFrame( void )
-{
-	int fRightBlocked, fLeftBlocked;
-
-	CountFrames();
-
-	m_fLookDirSet = FALSE;
-	m_cMoveGoals = 0;
-	m_iMovePriority = 0;
-	pev->button = 0;
-
-	float flMoved = ( m_Memory.GetOrigin() - pev->origin ).Length();
-	m_flMoved = flMoved;
-
-	MAKE_VECTORS( pev->angles );
-
-	if ( gpGlobals->time > 3.0 )
-		m_fBlocked = CanWalkTo( pev->origin + gpGlobals->v_forward * 32 );
-
-	if ( gpGlobals->time > m_flPauseTime + 1.0 )
-	{
-		if ( IsOnLadder() && !m_iLadderDir )
-			pev->button |= IN_JUMP;
-
-		if ( m_flMoved <= 1.0 && ( pev->flags & FL_ONGROUND ) )
-		{
-			// stuck
-			g_BotNavigator.AddVisit2( pev->origin );
-
-			if ( !m_fBlocked && !m_fJump && !m_iLadderDir && m_flNextStuckCheck < gpGlobals->time )
-			{
-				m_flNextStuckCheck = gpGlobals->time + 1.5;
-
-				if ( GetGoalItem() )
-					SetGoalItem( NULL );
-				else
-					m_fHasGoalPos = FALSE;
-
-				if ( gpGlobals->time - m_flLastMoveTime > 3.0 )
-				{
-					// turn towards the open side
-					Vector vecOrigin( pev->origin );
-					Vector vecSpot;
-
-					vecSpot = pev->origin + gpGlobals->v_right * 16 + gpGlobals->v_forward * 64;
-					pev->origin = pev->origin + gpGlobals->v_right * 16;
-					// sic: retail's source leaves each flag unset when the side is
-					// visible, and VC6 then reads the stack slot it shares with
-					// the spot just tested (vecSpot.x here, vecSpot.y below): a
-					// visible side counts as blocked unless that coordinate is
-					// +0.0, so the bot nearly always turns 180 degrees. Written
-					// out so that this build does the same.
-					if ( !FVisible( vecSpot ) )
-						fRightBlocked = TRUE;
-					else
-						fRightBlocked = *(int *)&vecSpot.x;
-					pev->origin = vecOrigin;
-
-					vecSpot = pev->origin - gpGlobals->v_right * 16 + gpGlobals->v_forward * 64;
-					pev->origin = pev->origin - gpGlobals->v_right * 16;
-					if ( !FVisible( vecSpot ) )
-						fLeftBlocked = TRUE;
-					else
-						fLeftBlocked = *(int *)&vecSpot.y;	// sic, as above
-					pev->origin = vecOrigin;
-
-					if ( !fRightBlocked )
-						m_vecMoveAngles.y += 15;
-					else if ( !fLeftBlocked )
-						m_vecMoveAngles.y -= 15;
-					else
-						m_vecMoveAngles.y += 180;
-
-					m_flLastMoveTime = gpGlobals->time;
-				}
-			}
-		}
-		else if ( !m_iState )
-		{
-			if ( m_fHasGoalPos && !GetGoalItem() && !GetEnemy() )
-			{
-				if ( ( GetGoalPos() - pev->origin ).Length2D() < m_flGoalDist )
-					m_flGoalDist = ( GetGoalPos() - pev->origin ).Length2D();
-				else if ( gpGlobals->time - m_flGoalTime > 8.0 )
-				{
-					pev->v_angle.y = -pev->v_angle.y;
-					m_fHasGoalPos = FALSE;
-				}
-			}
-			m_flLastMoveTime = gpGlobals->time;
-		}
-	}
-}
-
-//=========================================================
 // BotThink - the bot's frame, run by the deathmatch rules
 // for every fake client
 //=========================================================
@@ -366,16 +260,6 @@ void CBot::BotThink( void )
 	}
 
 	(*g_engfuncs.pfnRunPlayerMove)( edict(), pev->v_angle, GetForwardMove(), GetSideMove(), GetUpMove(), pev->button, 0, m_flMsec );
-}
-
-// IsValidEnemy - whether a player may become the enemy: alive, seen,
-// hurtable, noticed, not a teammate, and only while the bot doesn't carry
-// the chicken (name ours); an inline step of LookAround, which takes its
-// share of LookAround's inline budget
-inline BOOL CBot::IsValidEnemy( CBasePlayer *pPlayer )
-{
-	return pPlayer && pPlayer != this && pPlayer->IsAlive() && CanSee( pPlayer ) && pPlayer->pev->takedamage != DAMAGE_NO
-		&& !HasNamedPlayerItem( "ctc_chicken" ) && g_pGameRules->PlayerRelationship( this, pPlayer ) == GR_NOTTEAMMATE && CanNotice( pPlayer );
 }
 
 //=========================================================
@@ -603,6 +487,16 @@ next:
 	m_pLink = NULL;
 }
 
+// IsValidEnemy - whether a player may become the enemy: alive, seen,
+// hurtable, noticed, not a teammate, and only while the bot doesn't carry
+// the chicken (name ours); an inline step of LookAround, which takes its
+// share of LookAround's inline budget
+inline BOOL CBot::IsValidEnemy( CBasePlayer *pPlayer )
+{
+	return pPlayer && pPlayer != this && pPlayer->IsAlive() && CanSee( pPlayer ) && pPlayer->pev->takedamage != DAMAGE_NO
+		&& !HasNamedPlayerItem( "ctc_chicken" ) && g_pGameRules->PlayerRelationship( this, pPlayer ) == GR_NOTTEAMMATE && CanNotice( pPlayer );
+}
+
 //=========================================================
 // HasGun - anything in weapon slots 2 or 3
 //=========================================================
@@ -656,6 +550,143 @@ BOOL CBot::CanSee( CBaseEntity *pEntity )
 		return FVisible( pEntity );
 
 	return FALSE;
+}
+
+//=========================================================
+// BeginFrame - BotThink's first half (name ours): counts
+// the frame, clears the frame's move goals and buttons,
+// measures how far the bot moved, and when it is stuck
+// drops its goal and turns towards an open side; when it
+// makes no progress towards its goal position for 8 s it
+// gives the position up
+//=========================================================
+// An inline step, as the move goals' are: it takes almost all
+// of BotThink's inline budget (BotThink's own size 471, so
+// 1000; BeginFrame 959), so neither its calls nor BotThink's
+// later ones are expanded, as in retail (only the free ones
+// of at most 40, edict() and Vector's float * conversion).
+// Defined after its caller (VC6 still expands it there), as are
+// IsValidEnemy and CountFrames: retail's bot.obj has the
+// out-of-line Length and Length2D after PickGoalItem, which
+// leaves no room for these bodies before LookAround in the
+// file (the .pch's inlines are compiled as the file's own
+// code advances; PLAN.md, "Image identity").
+inline void CBot::BeginFrame( void )
+{
+	int fRightBlocked, fLeftBlocked;
+
+	CountFrames();
+
+	m_fLookDirSet = FALSE;
+	m_cMoveGoals = 0;
+	m_iMovePriority = 0;
+	pev->button = 0;
+
+	float flMoved = ( m_Memory.GetOrigin() - pev->origin ).Length();
+	m_flMoved = flMoved;
+
+	MAKE_VECTORS( pev->angles );
+
+	if ( gpGlobals->time > 3.0 )
+		m_fBlocked = CanWalkTo( pev->origin + gpGlobals->v_forward * 32 );
+
+	if ( gpGlobals->time > m_flPauseTime + 1.0 )
+	{
+		if ( IsOnLadder() && !m_iLadderDir )
+			pev->button |= IN_JUMP;
+
+		if ( m_flMoved <= 1.0 && ( pev->flags & FL_ONGROUND ) )
+		{
+			// stuck
+			g_BotNavigator.AddVisit2( pev->origin );
+
+			if ( !m_fBlocked && !m_fJump && !m_iLadderDir && m_flNextStuckCheck < gpGlobals->time )
+			{
+				m_flNextStuckCheck = gpGlobals->time + 1.5;
+
+				if ( GetGoalItem() )
+					SetGoalItem( NULL );
+				else
+					m_fHasGoalPos = FALSE;
+
+				if ( gpGlobals->time - m_flLastMoveTime > 3.0 )
+				{
+					// turn towards the open side
+					Vector vecOrigin( pev->origin );
+					Vector vecSpot;
+
+					vecSpot = pev->origin + gpGlobals->v_right * 16 + gpGlobals->v_forward * 64;
+					pev->origin = pev->origin + gpGlobals->v_right * 16;
+					// sic: retail's source leaves each flag unset when the side is
+					// visible, and VC6 then reads the stack slot it shares with
+					// the spot just tested (vecSpot.x here, vecSpot.y below): a
+					// visible side counts as blocked unless that coordinate is
+					// +0.0, so the bot nearly always turns 180 degrees. Written
+					// out so that this build does the same.
+					if ( !FVisible( vecSpot ) )
+						fRightBlocked = TRUE;
+					else
+						fRightBlocked = *(int *)&vecSpot.x;
+					pev->origin = vecOrigin;
+
+					vecSpot = pev->origin - gpGlobals->v_right * 16 + gpGlobals->v_forward * 64;
+					pev->origin = pev->origin - gpGlobals->v_right * 16;
+					if ( !FVisible( vecSpot ) )
+						fLeftBlocked = TRUE;
+					else
+						fLeftBlocked = *(int *)&vecSpot.y;	// sic, as above
+					pev->origin = vecOrigin;
+
+					if ( !fRightBlocked )
+						m_vecMoveAngles.y += 15;
+					else if ( !fLeftBlocked )
+						m_vecMoveAngles.y -= 15;
+					else
+						m_vecMoveAngles.y += 180;
+
+					m_flLastMoveTime = gpGlobals->time;
+				}
+			}
+		}
+		else if ( !m_iState )
+		{
+			if ( m_fHasGoalPos && !GetGoalItem() && !GetEnemy() )
+			{
+				if ( ( GetGoalPos() - pev->origin ).Length2D() < m_flGoalDist )
+					m_flGoalDist = ( GetGoalPos() - pev->origin ).Length2D();
+				else if ( gpGlobals->time - m_flGoalTime > 8.0 )
+				{
+					pev->v_angle.y = -pev->v_angle.y;
+					m_fHasGoalPos = FALSE;
+				}
+			}
+			m_flLastMoveTime = gpGlobals->time;
+		}
+	}
+}
+
+// CountFrames - counts the frames of each second into the
+// command's msec (1-100); called once per frame by BotThink
+// (out of line there). Defined here, not in bot.h: retail's
+// out-of-line copy follows CanSee, before every player.h
+// inline the file emits, which a bot.h body (after player.h
+// in the .pch) can't do
+inline void CBot::CountFrames( void )
+{
+	if ( NextFrameCount() <= gpGlobals->time )
+	{
+		m_flNextFrameCount = gpGlobals->time + 1;
+		if ( m_cFrames > 0 )
+			m_flMsec = 1000 / m_cFrames;
+		m_cFrames = 0;
+	}
+	else
+		m_cFrames++;
+
+	if ( m_flMsec < 1 )
+		m_flMsec = 1;
+	if ( m_flMsec > 100 )
+		m_flMsec = 100;
 }
 
 //=========================================================
