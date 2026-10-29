@@ -691,6 +691,11 @@ void CBeak::StartTask( Task_t *pTask )
 				Vector vecDist = vecDir;
 				float flLead = vecDist.Length();
 				Vector vecEnemyVelocity = m_hEnemy->pev->velocity;
+				// sic: x and z scaled by 1 here and vecJump.z below, no-ops; the named
+				// components give retail's x87 operand orders in the inlined Length()s,
+				// Normalize()s and the dot product
+				vecEnemyVelocity.x = vecEnemyVelocity.x * 1;
+				vecEnemyVelocity.z = vecEnemyVelocity.z * 1;
 
 				// don't lead a far enemy that isn't running the same way
 				if ( DotProduct( vecEnemyVelocity.Normalize(), vecDir.Normalize() ) < 0.4 && flLead > 100 )
@@ -700,6 +705,7 @@ void CBeak::StartTask( Task_t *pTask )
 				Vector vecLead = m_hEnemy->pev->velocity * flLead;
 				Vector vecJump;
 				vecJump = vecDir + vecLead;
+				vecJump.z = vecJump.z * 1;	// sic: see above
 
 				float flSpeed = vecJump.Length() * 2.5;
 				if ( flSpeed > 500 )
