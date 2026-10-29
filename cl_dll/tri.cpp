@@ -597,17 +597,21 @@ void DrawSprites( void )
 		if ( !effect.m_pSprite )
 			continue;
 
-		vec3_t vecOrigin, vecAngles, angles, forward, right, up;
+		vec3_t vecAngles, angles, forward, right, up;
 		vec3_t vecPoint2, vecPoint3, vecPoint4;
 
 		gEngfuncs.pTriAPI->SpriteTexture( effect.m_pSprite, (int)flFrame );
 
-		vecOrigin = g_ClientEffects[i].m_vecOrigin;
+		vec3_t vecOrigin = g_ClientEffects[i].m_vecOrigin;
 		vec3_t vecNormal = g_ClientEffects[i].m_vecAngles;
 		VectorAngles( vecNormal, vecAngles );
 		angles = vecAngles;
 		AngleVectors( angles, forward, right, up );
 
+		// sic: a discarded subscript (an inline operator float *()) pays
+		// for the copy-initialised origin's extra inline unit, which keeps
+		// retail's inlining of the corners below
+		vecOrigin[0];
 		vecOrigin = vecOrigin + vecNormal * 1;
 		vecOrigin = vecOrigin + right * -flScale * 0.5;
 		vecOrigin.x = up.x * flScale / 2 + vecOrigin.x;
