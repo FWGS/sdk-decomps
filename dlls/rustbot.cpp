@@ -707,7 +707,8 @@ void CRustbot::UpdateBeam( void )
 	MakeIdealYaw( m_vecEnemyLKP );
 
 	vecAim = pev->angles;
-	vecAim.y += m_iHeadTurn;
+	float flHeadTurn = m_iHeadTurn;
+	vecAim.y += flHeadTurn;
 	g_engfuncs.pfnAngleVectors( vecAim, vecAim, NULL, NULL );
 	vecAim.Normalize();		// sic: the result is thrown away
 	Vector vecDir = ShootAtEnemy( vecSrc );
