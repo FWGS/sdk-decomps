@@ -888,22 +888,21 @@ void CBeamGun::WeaponIdle( void )
 
 		if ( m_flNextIdleAnimTime < gpGlobals->time )
 		{
-			int iAnim;
 			switch ( RANDOM_LONG( 0, 16 ) )
 			{
 			case 0:
-				iAnim = BEAMGUN_IDLEBLADE;
+				SendWeaponAnim( BEAMGUN_IDLEBLADE );
+				m_flTimeWeaponIdle = gpGlobals->time;
 				break;
 			case 1:
-				iAnim = BEAMGUN_IDLEINSPECT;
+				SendWeaponAnim( BEAMGUN_IDLEINSPECT );
+				m_flTimeWeaponIdle = gpGlobals->time;
 				break;
 			default:
-				iAnim = BEAMGUN_IDLESUBDUEL;
+				SendWeaponAnim( BEAMGUN_IDLESUBDUEL );
+				m_flTimeWeaponIdle = gpGlobals->time;
 				break;
 			}
-			SendWeaponAnim( iAnim );
-
-			m_flTimeWeaponIdle = gpGlobals->time;
 			m_flNextIdleAnimTime = gpGlobals->time + 2.5;
 		}
 	}
