@@ -280,6 +280,18 @@ void DrawFlameFan( Vector &origin, Vector &dir, float flScale, int iSegments, fl
 	gEngfuncs.pTriAPI->RenderMode( kRenderNormal );
 }
 
+// sic: a file-local helper (name and form ours). Retail calls operator+'s
+// Vector( float, float, float ) for the second shock corner out of line
+// while it inlines the product's: VC6 does that only when operator+ itself
+// sits one inline level down, inside an inline function. Written as a
+// statement in DrawShocks (member or global operator*, any spelling) the
+// sum's constructor always outlasts the product's and every copy
+// constructor of the function.
+inline void ShockCorner( Vector &out, const Vector &origin, const Vector &dir, float flScale )
+{
+	out = origin + dir * flScale;
+}
+
 /*
 =================
 DrawShocks
@@ -319,6 +331,13 @@ void DrawShocks( void )
 		angles = vecAngles;
 		AngleVectors( angles, forward, right, up );
 
+		// sic: two discarded Length()s (inline calls, no code) spend the
+		// inline budget so that, with ShockCorner, every Vector operator
+		// and copy of the function inlines or is called as in retail; any
+		// vector, anywhere before the third offset statement, exactly two
+		vecOrigin.Length();
+		vecOrigin.Length();
+
 		// center the quad on the spot, a little off the surface
 		vecOrigin = vecOrigin + vecNormal * 5;
 		vecOrigin = vecOrigin + right * -flScale * 0.5;
@@ -326,7 +345,7 @@ void DrawShocks( void )
 		vecOrigin.y = up.y * flScale / 2 + vecOrigin.y;
 		vecOrigin[2] = vecOrigin.z - up.z * flScale / 2;
 
-		vecPoint2 = vecOrigin + flScale * right;
+		ShockCorner( vecPoint2, vecOrigin, right, flScale );
 
 		vecPoint3.x = ( right.x - up.x ) * flScale + vecOrigin.x;
 		vecPoint3.y = ( right.y - up.y ) * flScale + vecOrigin.y;
