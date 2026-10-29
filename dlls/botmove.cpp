@@ -411,8 +411,7 @@ inline int CBot::GetLadderDir( void ) { return m_iLadderDir; }
 //=========================================================
 void CBot::AimJitter( void )
 {
-	Vector vecDir = m_vecLookDir;
-	LookAlong( vecDir.Normalize() );
+	LookAlong( GetLookDir().Normalize() );
 
 	float flError = 1 - m_Profile.AimSkill() / 100;
 	float flRange = ( m_Profile.AimSkill() < RANDOM_FLOAT( 0, 100 ) ) * flError * 30;
