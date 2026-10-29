@@ -95,8 +95,8 @@ void CAmmoPanel::UpdateAmmo( int iAmmoType, int iMaxAmmo )
 
 	if ( iAmmoType >= 1 && iAmmoType <= MAX_AMMOPANEL_TYPES )
 	{
+		int iClips = iMaxAmmo / sAmmoPanelTypes[iAmmoType - 1].iPerClip;
 		int iPerClip = sAmmoPanelTypes[iAmmoType - 1].iPerClip;
-		int iClips = iMaxAmmo / iPerClip;
 
 		if ( iClips >= 1 )
 		{
