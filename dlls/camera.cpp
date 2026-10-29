@@ -117,6 +117,7 @@ int CBaseTurn::TurnTo( int iController, const Vector &vecTarget )
 	int iCurrent;
 	float flCurrent;
 	float flAngle;
+	float flDiff;
 
 	switch ( iController )
 	{
@@ -124,17 +125,18 @@ int CBaseTurn::TurnTo( int iController, const Vector &vecTarget )
 		iCurrent = m_iYaw;
 		flCurrent = m_iYaw + pev->angles.y;
 		flAngle = UTIL_VecToYaw( vecDir );
+		flDiff = UTIL_AngleDiff( flAngle, flCurrent );
 		break;
 	case 1:
 		iCurrent = m_iPitch;
 		flCurrent = m_iPitch + pev->angles.x;
 		flAngle = UTIL_VecToPitch( vecDir );
+		flDiff = UTIL_AngleDiff( flAngle, flCurrent );
 		break;
 	default:
 		return FALSE;
 	}
 
-	float flDiff = UTIL_AngleDiff( flAngle, flCurrent );
 	if ( flDiff >= 180 )
 		flDiff -= 360;
 
