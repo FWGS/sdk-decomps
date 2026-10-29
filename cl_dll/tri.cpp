@@ -858,9 +858,9 @@ void InitSphere( void )
 			g_iSphereTris[ iIndex + j * 6 + 4 ] = iRing + j + SPHERE_SLICES + 1;
 			if ( j == SPHERE_SLICES - 1 )
 			{
-				g_iSphereTris[ iIndex + j * 6 + 2 ] = iRing;
-				g_iSphereTris[ iIndex + j * 6 + 5 ] = iRing;
-				g_iSphereTris[ iIndex + j * 6 + 4 ] = iRing + SPHERE_SLICES;
+				g_iSphereTris[ iIndex + j * 6 + 2 ] = iRing + j + 1 - SPHERE_SLICES;
+				g_iSphereTris[ iIndex + j * 6 + 5 ] = iRing + j + 1 - SPHERE_SLICES;
+				g_iSphereTris[ iIndex + j * 6 + 4 ] = iRing + j + 1;
 			}
 		}
 	}
