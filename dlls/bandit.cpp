@@ -2234,7 +2234,7 @@ Schedule_t* CBaseBandit :: GetScheduleOfType ( int Type )
 			// don't cower from a player in a vehicle, shoot at it
 			if ( m_hEnemy != NULL && FClassnameIs( m_hEnemy->pev, "player" ) )
 			{
-				CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE( m_hEnemy->edict() );
+				CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE( ENT( m_hEnemy->pev ) );
 				if ( pPlayer->m_pVehicle != NULL )
 					return GetScheduleOfType( SCHED_RANGE_ATTACK1 );
 			}
@@ -2262,7 +2262,6 @@ Schedule_t* CBaseBandit :: GetScheduleOfType ( int Type )
 			case BANDIT_MACHINEGUN2:
 				return GetScheduleOfType( SCHED_BANDIT_RANGE_MACHINEGUN );
 			case BANDIT_MACHINEGUN:
-			case BANDIT_PISTOLS_CLOSE:
 				return GetScheduleOfType( SCHED_BANDIT_RANGE_MACHINEGUN );
 			case BANDIT_ROCKETLAUNCHER:
 				return GetScheduleOfType( SCHED_BANDIT_RANGE_ROCKET );
@@ -2270,6 +2269,8 @@ Schedule_t* CBaseBandit :: GetScheduleOfType ( int Type )
 				return GetScheduleOfType( SCHED_BANDIT_RANGE_SHOTGUN );
 			case BANDIT_ROCKETLAUNCHER2:
 				return GetScheduleOfType( SCHED_BANDIT_RANGE_ROCKET );
+			case BANDIT_PISTOLS_CLOSE:
+				return GetScheduleOfType( SCHED_BANDIT_RANGE_MACHINEGUN );
 			default:
 				ALERT( at_console, "No firing for this type of weapon\n" );
 				break;
