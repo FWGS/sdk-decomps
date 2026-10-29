@@ -84,23 +84,7 @@ void CBot::Spawn( void )
 	pev->flags |= FL_FAKECLIENT;
 
 	if ( !m_pCamera )
-	{
-		entvars_t *pevMarker = VARS( CREATE_ENTITY() );
-		CBaseEntity *pMarker = (CBaseEntity *)GET_PRIVATE( ENT( pevMarker ) );
-
-		if ( pMarker == NULL )
-		{
-			pMarker = new( pevMarker ) CBaseEntity;
-			pMarker->pev = pevMarker;
-		}
-		m_pCamera = pMarker;
-
-		m_pCamera->pev->modelindex = MODEL_INDEX( "models/dynamite.mdl" );
-		m_pCamera->pev->solid = SOLID_NOT;
-		m_pCamera->pev->movetype = MOVETYPE_FLY;
-		m_pCamera->pev->renderamt = 0;
-		m_pCamera->pev->rendermode = kRenderTransTexture;
-	}
+		MakeCamera();
 
 	m_Memory.Forget();
 	m_iEnemy = 0;
@@ -121,7 +105,7 @@ void CBot::PressFire( void )
 	if ( !m_pActiveItem )
 		return;
 
-	if ( !m_pActiveItem->CanDeploy() || FClassnameIs( m_pActiveItem->pev, "weapon_knife" ) || FClassnameIs( m_pActiveItem->pev, "weapon_pick" ) || pev->waterlevel > 1 )
+	if ( WantsBetterWeapon() )
 		ChooseWeapon();
 
 	CBasePlayerWeapon *pWeapon = (CBasePlayerWeapon *)m_pActiveItem;
@@ -140,7 +124,7 @@ void CBot::PressFire( void )
 
 	if ( m_Fire.m_fSecondary )
 	{
-		if ( !pWeapon->pszAmmo1() || pWeapon->iMaxClip() == WEAPON_NOCLIP || ( pWeapon->m_iSecondaryAmmoType > -1 && m_rgAmmo[ pWeapon->m_iSecondaryAmmoType ] ) || FClassnameIs( pWeapon->pev, "weapon_gattlinggun" ) )
+		if ( CanFireSecondary( pWeapon ) )
 		{
 			pev->button |= IN_ATTACK2;
 			return;
@@ -497,6 +481,47 @@ inline BOOL CBot::IsValidEnemy( CBasePlayer *pPlayer )
 		&& !HasNamedPlayerItem( "ctc_chicken" ) && g_pGameRules->PlayerRelationship( this, pPlayer ) == GR_NOTTEAMMATE && CanNotice( pPlayer );
 }
 
+// sic: MakeCamera, WantsBetterWeapon and CanFireSecondary are Spawn's and
+// PressFire's steps (names ours), inline helpers defined after their callers
+// as BeginFrame and IsValidEnemy are; VC6 expands them to the same code as
+// the statements written in place. They stand in for retail's own
+// decomposition, which no code shows: retail's bot.obj has the out-of-line
+// Length and Length2D after PickGoalItem, so bot.cpp's own C1XX IL up to the
+// end of LookAround was below Length's .pch offset (10980; the release
+// session compiles bot.cpp once, so the .pch inlines' cursor is E - O),
+// at least 745 bytes less than with these statements in Spawn and PressFire
+// (the three move 834).
+// Which statements retail had in helpers is unknowable. See PLAN.md,
+// "Image identity", the placement search.
+inline void CBot::MakeCamera( void )
+{
+	entvars_t *pevMarker = VARS( CREATE_ENTITY() );
+	CBaseEntity *pMarker = (CBaseEntity *)GET_PRIVATE( ENT( pevMarker ) );
+
+	if ( pMarker == NULL )
+	{
+		pMarker = new( pevMarker ) CBaseEntity;
+		pMarker->pev = pevMarker;
+	}
+	m_pCamera = pMarker;
+
+	m_pCamera->pev->modelindex = MODEL_INDEX( "models/dynamite.mdl" );
+	m_pCamera->pev->solid = SOLID_NOT;
+	m_pCamera->pev->movetype = MOVETYPE_FLY;
+	m_pCamera->pev->renderamt = 0;
+	m_pCamera->pev->rendermode = kRenderTransTexture;
+}
+
+inline BOOL CBot::WantsBetterWeapon( void )
+{
+	return !m_pActiveItem->CanDeploy() || FClassnameIs( m_pActiveItem->pev, "weapon_knife" ) || FClassnameIs( m_pActiveItem->pev, "weapon_pick" ) || pev->waterlevel > 1;
+}
+
+inline BOOL CBot::CanFireSecondary( CBasePlayerWeapon *pWeapon )
+{
+	return !pWeapon->pszAmmo1() || pWeapon->iMaxClip() == WEAPON_NOCLIP || ( pWeapon->m_iSecondaryAmmoType > -1 && m_rgAmmo[ pWeapon->m_iSecondaryAmmoType ] ) || FClassnameIs( pWeapon->pev, "weapon_gattlinggun" );
+}
+
 //=========================================================
 // HasGun - anything in weapon slots 2 or 3
 //=========================================================
@@ -687,6 +712,62 @@ inline void CBot::CountFrames( void )
 		m_flMsec = 1;
 	if ( m_flMsec > 100 )
 		m_flMsec = 100;
+}
+
+// sic: a stand-in that nothing calls (name ours). bot.obj's lazy .pch emission
+// puts CBasePlayer's inline virtuals after FightThink, CheckEnemy and
+// CheckGoalItem only if bot.cpp's own C1XX IL from its first function to the
+// end of FightThink is 28355 to 28468 bytes; without this it is about 2960
+// short. Retail's bot.cpp had that much more text between LookAround and
+// FightThink that compiled to no code (an inline or static function nobody
+// called, or dead statements: they leave nothing in the object, so the text
+// is unknowable); this body (42 statements; an inline nobody calls is
+// compiled to IL but not emitted) stands in for it. See PLAN.md, "Image
+// identity", the placement search.
+inline void BotStandIn( float *p )
+{
+	p[0] = p[1] * 2 + p[2];
+	p[1] = p[2] * 3 + p[3];
+	p[2] = p[3] * 4 + p[4];
+	p[3] = p[4] * 5 + p[5];
+	p[4] = p[5] * 6 + p[6];
+	p[5] = p[6] * 7 + p[7];
+	p[6] = p[7] * 8 + p[0];
+	p[7] = p[0] * 9 + p[1];
+	p[0] = p[1] * 10 + p[2];
+	p[1] = p[2] * 11 + p[3];
+	p[2] = p[3] * 12 + p[4];
+	p[3] = p[4] * 13 + p[5];
+	p[4] = p[5] * 14 + p[6];
+	p[5] = p[6] * 15 + p[7];
+	p[6] = p[7] * 16 + p[0];
+	p[7] = p[0] * 17 + p[1];
+	p[0] = p[1] * 18 + p[2];
+	p[1] = p[2] * 19 + p[3];
+	p[2] = p[3] * 20 + p[4];
+	p[3] = p[4] * 21 + p[5];
+	p[4] = p[5] * 22 + p[6];
+	p[5] = p[6] * 23 + p[7];
+	p[6] = p[7] * 24 + p[0];
+	p[7] = p[0] * 25 + p[1];
+	p[0] = p[1] * 26 + p[2];
+	p[1] = p[2] * 27 + p[3];
+	p[2] = p[3] * 28 + p[4];
+	p[3] = p[4] * 29 + p[5];
+	p[4] = p[5] * 30 + p[6];
+	p[5] = p[6] * 31 + p[7];
+	p[6] = p[7] * 32 + p[0];
+	p[7] = p[0] * 33 + p[1];
+	p[0] = p[1] * 34 + p[2];
+	p[1] = p[2] * 35 + p[3];
+	p[2] = p[3] * 36 + p[4];
+	p[3] = p[4] * 37 + p[5];
+	p[4] = p[5] * 38 + p[6];
+	p[5] = p[6] * 39 + p[7];
+	p[6] = p[7] * 40 + p[0];
+	p[7] = p[0] * 41 + p[1];
+	p[0] = p[1] * 42 + p[2];
+	p[1] = p[2] * 43 + p[3];
 }
 
 //=========================================================

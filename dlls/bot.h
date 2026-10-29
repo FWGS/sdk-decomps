@@ -268,8 +268,11 @@ public:
 
 	// bot.cpp
 	void	Spawn( void );
+	void	MakeCamera( void );		// Spawn's step (name ours)
 
 	void	PressFire( void );
+	BOOL	CanFireSecondary( CBasePlayerWeapon *pWeapon );	// PressFire's steps (names ours)
+	BOOL	WantsBetterWeapon( void );
 	void	ChooseWeapon( void );
 	BOOL	CheckReload( void );
 	void	Say( char *pszText );
