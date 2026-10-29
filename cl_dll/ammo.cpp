@@ -845,8 +845,12 @@ int CHudAmmo::MsgFunc_AmmoPickup( const char *pszName, int iSize, void *pbuf )
 	{
 		m_fGrenadesPicked = 1;
 
-		if ( m_fMenuOpen && gViewPort && gViewPort->m_pClassMenu && gViewPort->m_pClassMenu->m_pWeapons[p->iSlot] )
-			gViewPort->m_pClassMenu->m_pWeapons[p->iSlot]->setVisible( true );
+		if ( m_fMenuOpen && gViewPort && gViewPort->m_pClassMenu )
+		{
+			int iSlot = p->iSlot;
+			if ( gViewPort->m_pClassMenu->m_pWeapons[iSlot] )
+				gViewPort->m_pClassMenu->m_pWeapons[iSlot]->setVisible( true );
+		}
 
 		if ( ( CVAR_GET_FLOAT( "hud_autoswitch" ) || !m_pWeapon || !gWR.HasAmmo( m_pWeapon ) ) && !m_fCustomizing )
 		{
@@ -883,10 +887,11 @@ int CHudAmmo::MsgFunc_WeapPickup( const char *pszName, int iSize, void *pbuf )
 
 	if ( m_fMenuOpen && gViewPort && gViewPort->m_pClassMenu && !p->iIsCustomization )
 	{
-		if ( !gViewPort->m_pClassMenu->m_pWeapons[p->iSlot] )
+		int iSlot = p->iSlot;
+		if ( !gViewPort->m_pClassMenu->m_pWeapons[iSlot] )
 			return 1;
 
-		gViewPort->m_pClassMenu->m_pWeapons[p->iSlot]->setVisible( true );
+		gViewPort->m_pClassMenu->m_pWeapons[iSlot]->setVisible( true );
 	}
 
 	if ( !p->iIsCustomization )
