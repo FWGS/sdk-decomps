@@ -396,15 +396,23 @@ void BotRemove( int iIndex )
 }
 
 //=========================================================
+// LookAlong, GetLadderDir - the look direction's accessors
+// (names ours): free inline calls that thin the budget
+// shares of the Normalize and operator- before them, as
+// retail's AimJitter, AimAtEnemy and SetLookDir need
+//=========================================================
+inline void CBot::LookAlong( const Vector &vecDir ) { m_vecLookDir = vecDir; }
+inline int CBot::GetLadderDir( void ) { return m_iLadderDir; }
+
+//=========================================================
 // AimJitter - normalise the look direction; then, when the
 // view punch is small, a skill roll may kick the view by up
 // to 30 degrees times the aim error
 //=========================================================
 void CBot::AimJitter( void )
 {
-	Vector vecDir;
-	vecDir = m_vecLookDir;
-	m_vecLookDir = vecDir.Normalize();
+	Vector vecDir = m_vecLookDir;
+	LookAlong( vecDir.Normalize() );
 
 	float flError = 1 - m_Profile.AimSkill() / 100;
 	float flRange = ( m_Profile.AimSkill() < RANDOM_FLOAT( 0, 100 ) ) * flError * 30;
@@ -428,19 +436,19 @@ void CBot::AimAtEnemy( void )
 	if ( m_Fire.m_iAimMode == 1 )
 	{
 		CBaseEntity *pEnemy = GetEnemy();
-		m_vecLookDir = pEnemy->pev->origin - GetGunPosition();
+		LookAlong( pEnemy->pev->origin - GetGunPosition() );
 	}
 	else if ( m_Fire.m_iAimMode == 0 )
 	{
 		CBaseEntity *pEnemy = GetEnemy();
-		m_vecLookDir = pEnemy->EyePosition() - GetGunPosition();
+		LookAlong( pEnemy->EyePosition() - GetGunPosition() );
 	}
 	else if ( m_Fire.m_iAimMode == 2 )
 	{
 		CBaseEntity *pEnemy = GetEnemy();	// sic: unused
 		Vector vecTarget = GetEnemy()->pev->origin + GetEnemy()->pev->velocity;
 		Vector vecAim = Vector( vecTarget.x, vecTarget.y, vecTarget.z + pev->mins.z );
-		m_vecLookDir = vecAim - GetGunPosition();
+		LookAlong( vecAim - GetGunPosition() );
 	}
 
 	AimJitter();
@@ -455,7 +463,7 @@ void CBot::AimAt( CBaseEntity *pEntity )
 		return;
 
 	m_fLookDirSet = TRUE;
-	m_vecLookDir = pEntity->pev->origin - GetGunPosition();
+	LookAlong( pEntity->pev->origin - GetGunPosition() );
 	AimJitter();
 	PressFire();
 }
@@ -476,7 +484,7 @@ void CBot::SetLookDir( void )
 		UTIL_MakeVectorsPrivate( pev->v_angle, vecDir, NULL, NULL );
 	vecDir.z = 0;
 
-	if ( m_iLadderDir )
+	if ( GetLadderDir() )
 	{
 		if ( IsOnLadder() )
 		{
@@ -495,10 +503,10 @@ void CBot::SetLookDir( void )
 			}
 		}
 		vecDir = vecDir.Normalize();
-		vecDir.z = m_iLadderDir * 0.6;
+		vecDir.z = GetLadderDir() * 0.6;
 	}
 
-	m_vecLookDir = vecDir;
+	LookAlong( vecDir );
 }
 
 // steering constants (names ours): retail reads them from botmove.obj's own

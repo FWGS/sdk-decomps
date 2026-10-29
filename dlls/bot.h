@@ -345,6 +345,8 @@ public:
 	void	AimJitter( void );
 	void	AimAtEnemy( void );
 	void	AimAt( CBaseEntity *pEntity );
+	void	LookAlong( const Vector &vecDir );	// the look direction's accessors (names ours), botmove.cpp
+	int		GetLadderDir( void );
 	Vector	GetMoveVelocity( void ) { return m_vecMoveVelocity; }
 	// BotThink's accessors (names ours)
 	Vector	GetGoalPos( void ) { return m_vecGoalPos; }
