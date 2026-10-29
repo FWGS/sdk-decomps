@@ -215,7 +215,8 @@ BOOL CCaptureTheChicken::ClientCommand( CBasePlayer *pPlayer, const char *pcmd )
 {
 	if ( FStrEq( pcmd, "menuselect" ) || FStrEq( pcmd, "botchooseteam" ) )
 	{
-		int slot = 5;	// bots: auto team
+		int slot;
+		int iTeam;
 
 		if ( FStrEq( pcmd, "menuselect" ) )
 		{
@@ -223,23 +224,28 @@ BOOL CCaptureTheChicken::ClientCommand( CBasePlayer *pPlayer, const char *pcmd )
 				return TRUE;
 			slot = atoi( CMD_ARGV( 1 ) );
 		}
+		else
+			slot = 5;	// bots: auto team
 
 		switch ( (int)pPlayer->pev->speed )
 		{
 		case 1:
 			slot--;
 			if ( slot >= 0 && slot < 2 )
+			{
 				strncpy( pPlayer->m_szTeamName, g_pszTeamNames[slot], TEAM_NAME_LENGTH );
+				iTeam = slot;
+			}
 			else
 			{
 				// auto team
 				m_fAutoTeam = TRUE;
-				slot = GetTeamIndex( SetDefaultPlayerTeam( pPlayer ) );
+				iTeam = GetTeamIndex( SetDefaultPlayerTeam( pPlayer ) );
 			}
 
 			edict_t *pentPlayer = pPlayer->edict();
 			int clientIndex = ENTINDEX( pentPlayer );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( pentPlayer ), "team", g_pszTeamNames[slot] );
+			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( pentPlayer ), "team", g_pszTeamNames[iTeam] );
 
 			// notify everyone's HUD of the team change
 			MESSAGE_BEGIN( MSG_ALL, gmsgTeamInfo );

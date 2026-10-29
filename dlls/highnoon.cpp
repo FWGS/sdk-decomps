@@ -649,7 +649,7 @@ edict_t *CHighNoon::GetPlayerSpawnSpot( CBasePlayer *pPlayer )
 		pent = FIND_ENTITY_BY_CLASSNAME( pent, "info_player_deathmatch" );
 		if ( FNullEnt( pent ) )
 			break;
-		pSpots[cSpots++] = (CBaseEntity *)pent->pvPrivateData;
+		pSpots[cSpots++] = (CBaseEntity *)GET_PRIVATE( pent );
 	}
 
 	if ( cSpots )

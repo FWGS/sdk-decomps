@@ -150,7 +150,7 @@ void CKnifethrow::AirThink( void )
 	Vector vecOrigin = pev->origin;
 
 	// sic: aims along ( p - 2p*p, 2*yaw, 2*roll ), not along the flight
-	UTIL_MakeVectors( pev->angles + Vector( -( ( pev->angles.x + pev->angles.x ) * pev->angles.x ), pev->angles.y, pev->angles.z ) );
+	UTIL_MakeVectors( pev->angles + Vector( -( pev->angles.x * 2 ) * pev->angles.x, pev->angles.y, pev->angles.z ) );
 
 	vecEnd = pev->origin + gpGlobals->v_forward * 36;
 
