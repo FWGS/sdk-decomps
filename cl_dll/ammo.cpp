@@ -712,10 +712,13 @@ void WeaponsResource :: SelectSlot( int iSlot, int fAdvance, int iDirection )
 		p = GetFirstPos( iSlot );
 
 		char *pszSound = NULL;
-		if ( !p )
+		if ( p )
+		{
+			if ( iSlot != 9 )
+				pszSound = "common/wpn_moveselect.wav";
+		}
+		else
 			pszSound = "common/wpn_denyselect.wav";
-		else if ( iSlot != 9 )
-			pszSound = "common/wpn_moveselect.wav";
 		if ( pszSound )
 			PlaySound( pszSound, 1 );
 
