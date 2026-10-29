@@ -999,7 +999,7 @@ void CBot::FleeSpot( const Vector &vecSpot, int iPriority )
 	else if ( iPriority == GetMovePriority() )
 	{
 		Vector vecOld = Vector( m_vecMoveVelocity ) * GetMoveGoals();
-		RunAwayFrom( vecSpot );
+		RunFrom( vecSpot );
 		Vector vecTotal = GetMoveVelocity() + vecOld;
 		SetMoveGoals( GetMoveGoals() + 1 );
 		SetMoveVelocity( vecTotal / GetMoveGoals() );

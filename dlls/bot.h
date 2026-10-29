@@ -458,12 +458,6 @@ public:
 	// pEntity) at full speed
 	void RunFrom( const Vector &vecSpot ) { m_vecMoveVelocity = ( vecSpot - pev->origin ).Normalize() * -1 * CVAR_GET_FLOAT( "sv_maxspeed" ); }
 	void FleeFromEntity( CBaseEntity *pEntity ) { RunFrom( pEntity->pev->origin ); }
-	// FleeSpot's other step (name ours): the same in two statements
-	void RunAwayFrom( const Vector &vecSpot )
-	{
-		Vector vecAway = ( vecSpot - pev->origin ).Normalize() * -1;
-		m_vecMoveVelocity = vecAway * CVAR_GET_FLOAT( "sv_maxspeed" );
-	}
 	void	FleeSpot( const Vector &vecSpot, int iPriority );
 	void	UnstickGoal( int iPriority );
 	void	MoveToEntityOffset( CBaseEntity *pEntity, int iPriority, Vector vecOffset );	// 0x10013f30
