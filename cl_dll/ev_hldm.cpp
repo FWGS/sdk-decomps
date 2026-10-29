@@ -768,10 +768,12 @@ void EV_FireGWShotgun( event_args_t *args )
 	vec3_t vecSpread;
 	vec3_t up, right, forward;
 	int iShells;
+	int cShots;
 
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	iShells = args->iparam2;
+	cShots = iShells * 4;	// four pellets per shell
 	VectorCopy( args->angles, angles );
 	VectorCopy( args->velocity, velocity );
 
@@ -833,7 +835,7 @@ void EV_FireGWShotgun( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	EV_HLDM_FireBullets( idx, forward, right, up, args->iparam2 * 4, vecSrc, vecAiming, vecSpread, 2048, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1] );
+	EV_HLDM_FireBullets( idx, forward, right, up, cShots, vecSrc, vecAiming, vecSpread, 2048, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1] );
 
 	if ( EV_IsLocal( idx ) )
 	{
