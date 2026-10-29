@@ -833,6 +833,13 @@ void CBot::CheckEnemy( void )
 // the item's distance; a capture point stays the goal only
 // while it carries the chicken
 //=========================================================
+// GiveUpItemTime - when CheckGoalItem gives up on an item it can see
+// (name ours): an inline accessor, as NextEnemyCheck is
+inline float CBot::GiveUpItemTime( void )
+{
+	return m_flGiveUpItemTime;
+}
+
 void CBot::CheckGoalItem( void )
 {
 	if ( !HasGoalItem() )
@@ -849,15 +856,14 @@ void CBot::CheckGoalItem( void )
 					flDist = 32;
 				m_flItemRadius = flDist;
 				pev->v_angle.y = -pev->v_angle.y;
-				SetGoalItem( NULL );
+			}
+			else
+			{
+				m_flGiveUpItemTime = GiveUpItemTime() + 5.0;
 				return;
 			}
-
-			m_flGiveUpItemTime += 5.0;
-			return;
 		}
-
-		if ( !FClassnameIs( GetGoalItem()->pev, "ctc_capturepoint" ) || HasNamedPlayerItem( "ctc_chicken" ) )
+		else if ( !FClassnameIs( GetGoalItem()->pev, "ctc_capturepoint" ) || HasNamedPlayerItem( "ctc_chicken" ) )
 			return;
 	}
 
