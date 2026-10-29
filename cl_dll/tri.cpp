@@ -176,7 +176,7 @@ DrawStrip
 A twisting strip along dir, flLength long and flWidth wide
 =================
 */
-void DrawStrip( float *origin, float *dir, float flWidth, float flLength, int iSegments, float flBrightness )
+void DrawStrip( Vector &origin, Vector &dir, float flWidth, float flLength, int iSegments, float flBrightness )
 {
 	vec3_t angles, forward, right, up;
 	vec3_t vecPoint[2];
@@ -436,8 +436,9 @@ void DrawEffect8( void )
 
 		vec3_t angles, forward, right, up;
 		float flBrightness = effect.m_flBrightness;
-		vec3_t vecDir = effect.m_vecAngles;
 		float flWidth = effect.m_flMaxScale;
+		vec3_t vecDir;
+		vecDir = effect.m_vecAngles;
 
 		VectorAngles( vecDir, angles );
 		AngleVectors( angles, forward, right, up );
@@ -475,7 +476,6 @@ void DrawBeams( void )
 		if ( effect.m_iType != EFFECT_BEAM )
 			continue;
 
-		vec3_t vecOrigin;
 		float flBrightness = effect.m_flBrightness - ( flTime - effect.m_flStartTime ) * effect.m_flFadeSpeed * 30;
 		float flWidth = effect.m_flScale + 8;
 		cl_entity_t *pEntity = gEngfuncs.GetEntityByIndex( effect.m_iRed );
@@ -486,7 +486,7 @@ void DrawBeams( void )
 			continue;
 		}
 
-		vecOrigin = effect.m_vecAngles * ( ( flTime - effect.m_flStartTime ) * effect.m_flMaxScale * 30 ) + pEntity->curstate.origin;
+		vec3_t vecOrigin = effect.m_vecAngles * ( ( flTime - effect.m_flStartTime ) * effect.m_flMaxScale * 30 ) + pEntity->curstate.origin;
 
 		if ( flBrightness < 1 )
 			flBrightness = 1;
