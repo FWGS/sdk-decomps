@@ -51,6 +51,40 @@ CBotFire::~CBotFire()
 {
 }
 
+inline void CBotFire::SetAimMode( int iMode )
+{
+	m_iAimMode = iMode;
+}
+
+//=========================================================
+// AimBow - Update's bow branch (name ours): the secondary
+// attack by the enemy's distance, then aim mode 2 unless
+// the secondary was chosen
+//=========================================================
+// An inline step: retail reads m_pBot afresh here and keeps
+// it across GetEnemy (Update's own pBot is another register),
+// and the step's share of Update's budget is thin enough
+// that GetEnemy (78) is expanded but the distance's
+// operator- and Length are not (share 78-136; 101 with the
+// SetAimMode sites of the three later branches, 158 without).
+inline void CBotFire::AimBow( void )
+{
+	CBot *pBot = m_pBot;
+
+	float flDist = ( pBot->GetEnemy()->pev->origin - pBot->pev->origin ).Length();
+	if ( flDist > 700 )
+		RollSecondary( 90 );
+	else if ( flDist > 200 )
+		RollSecondary( 60 );
+	else
+		RollSecondary( 20 );
+
+	if ( m_fSecondary )
+		RollAimMode( 60 );
+	else
+		SetAimMode( 2 );
+}
+
 //=========================================================
 // Update - pick how to aim and fire the weapon the bot
 // holds: melee weapons and guns roll the aim mode, lobbed
@@ -100,35 +134,24 @@ void CBotFire::Update( CBasePlayerItem *pItem )
 	}
 	else if ( FClassnameIs( pItem->pev, "weapon_cannon" ) )
 	{
-		m_iAimMode = 2;
+		SetAimMode( 2 );
 	}
 	else if ( FClassnameIs( pItem->pev, "weapon_bow" ) )
 	{
-		float flDist = ( m_pBot->GetEnemy()->pev->origin - m_pBot->pev->origin ).Length();
-		if ( flDist > 700 )
-			RollSecondary( 90 );
-		else if ( flDist > 200 )
-			RollSecondary( 60 );
-		else
-			RollSecondary( 20 );
-
-		if ( m_fSecondary )
-			RollAimMode( 60 );
-		else
-			m_iAimMode = 2;
+		AimBow();
 	}
 	else if ( FClassnameIs( pItem->pev, "weapon_scorpion" ) )
 	{
-		m_iAimMode = 2;
+		SetAimMode( 2 );
 		m_fKeepFiring = TRUE;
 	}
 	else if ( FClassnameIs( pItem->pev, "weapon_dynamite" ) )
 	{
-		m_iAimMode = 2;
+		SetAimMode( 2 );
 	}
 	else if ( FClassnameIs( pItem->pev, "weapon_beartrap" ) )
 	{
-		m_iAimMode = 2;
+		SetAimMode( 2 );
 		m_fKeepFiring = TRUE;
 	}
 	else if ( !FClassnameIs( pItem->pev, "ctc_chicken" ) )
@@ -237,6 +260,22 @@ void CBotMemory::SetEnemy( CBaseEntity *pEnemy, int fChickenCarrier )
 }
 
 //=========================================================
+// Update's look-direction accessors (names ours): retail
+// copies each look direction through the out-of-line copy
+// constructor into a temporary (an accessor's return copy,
+// read back from the temporary), the velocities inline.
+// Update's budget (1000) would expand them all; a depth
+// limit where the accessors are defined does it (VC6 takes
+// a nested call's limit from the callee's definition).
+//=========================================================
+#pragma inline_depth( 1 )	// sic: the accessors' return copies stay out of line
+inline Vector CBotMemory::GetLookDir( void ) { return m_vecLookDir; }
+inline Vector CBotMemory::GetLookDir1( void ) { return m_vecLookDir1; }
+inline Vector CBotMemory::GetLookDir2( void ) { return m_vecLookDir2; }
+inline Vector CBot::GetLookDir( void ) { return m_vecLookDir; }
+#pragma inline_depth()	// sic: back to the default (8)
+
+//=========================================================
 // Update - shift the history by a frame (BotThink, every
 // frame)
 //=========================================================
@@ -244,10 +283,10 @@ void CBotMemory::Update( CBot *pBot )
 {
 	m_vecOrigin = pBot->pev->origin;
 
-	m_vecLookDir3 = Vector( m_vecLookDir2 );
-	m_vecLookDir2 = Vector( m_vecLookDir1 );
-	m_vecLookDir1 = Vector( m_vecLookDir );
-	m_vecLookDir = Vector( pBot->m_vecLookDir );
+	m_vecLookDir3 = GetLookDir2();
+	m_vecLookDir2 = GetLookDir1();
+	m_vecLookDir1 = GetLookDir();
+	m_vecLookDir = pBot->GetLookDir();
 
 	m_vecVelocity3 = Vector( m_vecVelocity2 );
 	m_vecVelocity2 = Vector( m_vecVelocity1 );

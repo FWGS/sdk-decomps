@@ -163,6 +163,8 @@ public:
 	void	Update( CBasePlayerItem *pItem );
 	void	RollAimMode( int iChance );
 	void	RollSecondary( int iChance );
+	void	SetAimMode( int iMode );	// Update's steps (names ours), botattack.cpp
+	void	AimBow( void );
 
 	int		m_iAimMode;		// 0 or 1 by the roll; 2 for lobbed weapons (AimAtEnemy)
 	BOOL	m_fKeepFiring;	// hold the trigger down
@@ -186,6 +188,11 @@ public:
 	void	Update( CBot *pBot );
 	float	SeenTime( void ) { return m_flSeenTime; }
 	Vector	GetOrigin( void ) { return m_vecOrigin; }	// name ours
+	Vector	GetLookDir( void );		// Update's accessors (names ours), botattack.cpp
+	Vector	GetLookDir1( void );
+	Vector	GetLookDir2( void );
+	BOOL	Seen( void );			// RouteGoal's accessors (names ours), botnav.cpp
+	BOOL	ChickenCarrier( void );
 
 	float	m_flTime;
 	BOOL	m_fSeen;
@@ -221,6 +228,7 @@ public:
 	float	JumpSkill( void );
 	float	RateWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pItem, float flDist );
 	BOOL	Load( char *pszFile );
+	BOOL	ParseFile( class ifstream &file );	// Load's loop (name ours), botnav.cpp
 	float	Aggression( void ) { return m_flAggression; }
 
 	char	m_szName[64];
@@ -350,6 +358,9 @@ public:
 	int		GetMoveGoals( void ) { return m_cMoveGoals; }
 	void	SetMoveGoals( int cGoals ) { m_cMoveGoals = cGoals; }
 	void	SetLookDir( void );
+	Vector	GetLookDir( void );		// CBotMemory::Update's (name ours), botattack.cpp
+	int		GetState( void );		// RouteGoal's accessors (names ours), botnav.cpp
+	BOOL	RouteDone( void );
 	BOOL	CheckAhead( Vector &vecDir, TraceResult *ptr );
 	BOOL	CheckSides( Vector &vecAngles, TraceResult *ptrLeft, TraceResult *ptrRight );
 	void	MoveThink( void );
