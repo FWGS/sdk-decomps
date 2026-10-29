@@ -1708,7 +1708,7 @@ float TEXTURETYPE_PlaySound(TraceResult *ptr,  Vector vecSrc, Vector vecEnd, int
 		rgsz[1] = "player/pl_duct1.wav";
 		cnt = 2;
 		break;
-	case CHAR_TEX_GRATE: fvol = 0.9; fvolbar = 0.5;
+	case CHAR_TEX_WOOD: fvol = 0.9; fvolbar = 0.5;	// sic: grate sounds for wood
 		rgsz[0] = "player/pl_grate1.wav";
 		rgsz[1] = "player/pl_grate4.wav";
 		cnt = 2;
@@ -1727,7 +1727,7 @@ float TEXTURETYPE_PlaySound(TraceResult *ptr,  Vector vecSrc, Vector vecEnd, int
 		rgsz[3] = "player/pl_slosh4.wav";
 		cnt = 4;
 		break;
-	case CHAR_TEX_WOOD: fvol = 0.9; fvolbar = 0.2;
+	case CHAR_TEX_GRATE: fvol = 0.9; fvolbar = 0.2;	// sic: wood sounds for grates
 		rgsz[0] = "debris/wood1.wav";
 		rgsz[1] = "debris/wood2.wav";
 		rgsz[2] = "debris/wood3.wav";
