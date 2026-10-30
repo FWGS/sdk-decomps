@@ -47,9 +47,7 @@ public:
 	int iItemSlot( void ) { return 6; }
 	int GetItemInfo(ItemInfo *p);
 	int AddToPlayer( CBasePlayer *pPlayer );
-#ifndef CLIENT_DLL
 	void UpdateOwner( void );
-#endif
 	void InventoryFrame( void );
 	void Customize( char cOption, int iValue );
 
