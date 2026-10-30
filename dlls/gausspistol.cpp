@@ -805,6 +805,10 @@ void CGaussPistol::UpdateOwner( void )
 		WRITE_BYTE( m_iSlidePos );
 	MESSAGE_END();
 }
+#else
+void CGaussPistol::UpdateOwner( void )
+{
+}
 #endif
 
 BOOL CGaussPistol::Deploy( )

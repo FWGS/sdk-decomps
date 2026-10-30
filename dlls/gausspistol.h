@@ -33,9 +33,7 @@ public:
 	int GetItemInfo(ItemInfo *p);
 	int AddToPlayer( CBasePlayer *pPlayer );
 	void Customize( char cOption, int iValue );
-#ifndef CLIENT_DLL
 	void UpdateOwner( void );
-#endif
 
 	BOOL Deploy( void );
 	void Holster( int skiplocal = 0  );
