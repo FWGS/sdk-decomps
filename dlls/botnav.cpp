@@ -318,6 +318,12 @@ found:
 	return Wander();
 }
 
+// Wander's step back (name ours)
+inline int RandomStep( void )
+{
+	return RANDOM_LONG( 1, 3 );
+}
+
 //=========================================================
 // Wander - with no route: jump out of water, else head for
 // the least visited cell of the visit grid ahead.
@@ -330,7 +336,8 @@ Vector CBot :: Wander( void )
 
 	if ( pev->flags & FL_WATERJUMP )
 	{
-		Vector vecSpot = pev->origin + vecForward * 48 + Vector( 0, 0, 16 );
+		Vector vecSpot;
+		vecSpot = pev->origin + vecForward * 48 + Vector( 0, 0, 16 );
 
 		if ( FVisible( vecSpot ) )
 		{
@@ -345,18 +352,22 @@ Vector CBot :: Wander( void )
 	if ( !FVisible( pev->origin + vecForward * 64 ) )
 		return Vector( 0, 0, 0 );
 
-	Vector vecFwdCell, vecRightCell, vecTest, vecTestCell, vecPos, vecSpot;
+	Vector vecBest, vecTest, vecTestCell, vecPos;
 	float flBest;
 
 	Vector vecCell = g_BotNavigator.PosToIndex( pev->origin );
-	vecCell.z += 1;
-	Vector vecBest( 0, 0, 0 );
+	vecCell[2] += 1;
+	vecBest.x = 0;
+	vecBest.y = 0;
+	vecBest.z = 0;
 	flBest = -60000;
 
 	MAKE_VECTORS( pev->v_angle );
 
-	vecFwdCell = g_BotNavigator.PosToIndex( pev->origin + gpGlobals->v_forward * 64 ) - vecCell;
-	vecRightCell = g_BotNavigator.PosToIndex( pev->origin + gpGlobals->v_right * 64 ) - vecCell;
+	Vector vecFwdCell = g_BotNavigator.PosToIndex( pev->origin + gpGlobals->v_forward * 64 ) - vecCell;
+	Vector vecRightCell = g_BotNavigator.PosToIndex( pev->origin + gpGlobals->v_right * 64 ) - vecCell;
+	vecFwdCell.z = 0;
+	vecRightCell.z = 0;
 
 	int iDist = 20;
 	do
@@ -365,16 +376,15 @@ Vector CBot :: Wander( void )
 
 		for ( int i = -10; i <= 10; i++ )
 		{
-			vecTest = vecCell + Vector( vecFwdCell.x, vecFwdCell.y, 0 ) * iDist + Vector( vecRightCell.x, vecRightCell.y, 0 ) * iSide * 10;	// sic: 10, not i
+			vecTest = vecCell + vecFwdCell * iDist + vecRightCell * iSide * 10;	// sic: 10, not i
 			vecTestCell = vecTest;
 
 			if ( g_BotNavigator.GetVisits( vecTest.x, vecTest.y, vecTest.y ) > flBest )	// sic: y for z
 			{
 				vecPos = g_BotNavigator.IndexToPos( vecTestCell );
-				vecSpot = vecPos;
+				Vector vecSpot = vecPos;
 				vecSpot.z = pev->origin.z;
-				Vector vecDir = vecSpot - pev->origin;
-				vecSpot = vecSpot + vecDir.Normalize() * 64;
+				vecSpot = vecSpot + ( vecSpot - pev->origin ).Normalize() * 64;
 
 				if ( FVisible( vecSpot ) )
 				{
@@ -387,9 +397,9 @@ Vector CBot :: Wander( void )
 			}
 		}
 
-		if ( iDist - RANDOM_LONG( 1, 3 ) <= 1 )
+		if ( iDist - RandomStep() <= 1 )
 			break;
-		iDist -= RANDOM_LONG( 1, 3 );
+		iDist -= RandomStep();
 	} while ( iDist > 3 );
 
 	return vecBest;
