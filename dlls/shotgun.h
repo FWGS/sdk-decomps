@@ -32,9 +32,7 @@ public:
 	int iItemSlot( ) { return 3; }
 	int GetItemInfo(ItemInfo *p);
 	int AddToPlayer( CBasePlayer *pPlayer );
-#ifndef CLIENT_DLL
 	void UpdateOwner( void );
-#endif
 
 	void PrimaryAttack( void );
 	BOOL Deploy( );

@@ -99,6 +99,10 @@ void CShotgun::UpdateOwner( void )
 		WRITE_BYTE( m_iNumShells );
 	MESSAGE_END();
 }
+#else
+void CShotgun::UpdateOwner( void )
+{
+}
 #endif
 
 int CShotgun::AddToPlayer( CBasePlayer *pPlayer )
