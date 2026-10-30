@@ -26,9 +26,7 @@ public:
 	int iItemSlot( void ) { return 7; }
 	int GetItemInfo(ItemInfo *p);
 	int AddToPlayer( CBasePlayer *pPlayer );
-#ifndef CLIENT_DLL
 	void UpdateOwner( void );
-#endif
 	void Customize( char cOption, int iValue );
 
 	void PrimaryAttack( void );

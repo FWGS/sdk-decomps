@@ -933,6 +933,10 @@ void CDmlGrenade::UpdateOwner( void )
 		WRITE_BYTE( m_Config.payload );
 	MESSAGE_END();
 }
+#else
+void CDmlGrenade::UpdateOwner( void )
+{
+}
 #endif
 
 
