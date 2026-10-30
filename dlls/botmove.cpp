@@ -536,21 +536,18 @@ BOOL CBot::CheckAhead( Vector &vecDir, TraceResult *ptr )
 	if ( pev->waterlevel > 1 )
 		flDist = 172.8;
 
-	Vector vecSrc = pev->origin;
-	Vector vecEnd;
+	Vector vecSrc;
 	Vector vecSide;
 	Vector vecTemp;
-	vecEnd = vecSrc + vecDir.Normalize() * flDist;
+	vecSrc = pev->origin;
+	Vector vecEnd = vecSrc + vecDir.Normalize() * flDist;
 
 	vecSide = vecDir.Normalize();
 	vecTemp = vecDir.Normalize();
 	vecSide.x = vecSide.x - 1;
 	vecTemp.y = vecTemp.y - 1;
-	if ( vecTemp.y < -1 )
-		vecTemp.y += 2;
-	if ( vecSide.x < -1 )
-		vecSide.x += 2;
-	vecSrc = vecSrc + Vector( vecSide.x, vecTemp.y, 0 ) * 16 * ( RANDOM_LONG( 0, 1 ) != 0 );
+	vecSrc = vecSrc + Vector( vecSide.x < -1 ? vecSide.x + 2 : vecSide.x,
+		vecTemp.y < -1 ? vecTemp.y + 2 : vecTemp.y, 0 ) * 16 * ( RANDOM_LONG( 0, 1 ) != 0 );
 
 	gpGlobals->trace_flags = FTRACE_SIMPLEBOX;
 	UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, ENT( pev ), ptr );
