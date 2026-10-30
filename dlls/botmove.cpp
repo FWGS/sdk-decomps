@@ -261,6 +261,8 @@ botname_t *BotPickName( void )
 BOOL BotFindProfile( void )
 {
 	BOOL fFound;
+	BOOL fUsed;
+	BOOL fMore = TRUE;
 	char szName[100];
 	WIN32_FIND_DATA fd;
 	HANDLE hFind;
@@ -271,29 +273,36 @@ BOOL BotFindProfile( void )
 		return FALSE;
 
 	strncpy( szName, fd.cFileName, strlen( fd.cFileName ) - 4 );
-	fFound = FALSE;
 	szName[strlen( fd.cFileName ) - 4] = 0;
+	fFound = FALSE;
 
-	while ( 1 )
+	while ( fMore )
 	{
+		fUsed = FALSE;
 		for ( i = 1; i < gpGlobals->maxClients; i++ )	// sic: skips the last slot
 		{
 			CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
 
 			if ( pPlayer && FBitSet( pPlayer->pev->flags, FL_FAKECLIENT ) && !stricmp( STRING( pPlayer->pev->netname ), szName ) )
-				goto used;
+			{
+				fUsed = TRUE;
+				break;
+			}
 		}
 
-		fFound = TRUE;
-		strcpy( g_BotManager.m_szLastProfile, szName );
-		break;
-
-used:
-		if ( !FindNextFile( hFind, &fd ) )
+		if ( !fUsed )
+		{
+			fFound = TRUE;
+			strcpy( g_BotManager.m_szLastProfile, szName );
 			break;
+		}
 
-		strncpy( szName, fd.cFileName, strlen( fd.cFileName ) - 4 );
-		szName[strlen( fd.cFileName ) - 4] = 0;
+		fMore = FindNextFile( hFind, &fd );
+		if ( fMore )
+		{
+			strncpy( szName, fd.cFileName, strlen( fd.cFileName ) - 4 );
+			szName[strlen( fd.cFileName ) - 4] = 0;
+		}
 	}
 
 	FindClose( hFind );
