@@ -711,7 +711,7 @@ Vector CBot::AvoidWalls( Vector &vecDir )
 	}
 	else
 	{
-		float flWallYaw = UTIL_VecToAngles( tr.vecPlaneNormal ).y;
+		Vector vecWall = UTIL_VecToAngles( tr.vecPlaneNormal );
 
 		float flYaw = vecAngles.y;
 		while ( flYaw < 0 )
@@ -719,7 +719,7 @@ Vector CBot::AvoidWalls( Vector &vecDir )
 		while ( flYaw > 360 )
 			flYaw -= 360;
 
-		float flWall = flWallYaw - 180;
+		float flWall = vecWall.y - 180;
 		while ( flWall < 0 )
 			flWall += 360;
 		while ( flWall > 360 )
@@ -753,18 +753,16 @@ Vector CBot::AvoidWalls( Vector &vecDir )
 				m_iDodgeDir = ( m_iDodgeDir == 1 ) ? 2 : 1;
 		}
 
-		float flTurn;
 		if ( m_iDodgeDir == 1 )
 		{
-			flTurn = RANDOM_FLOAT( 1 - BOT_TURN_JITTER, BOT_TURN_JITTER + 1 ) * flScale * flDiffLeft;
+			vecAngles.y -= RANDOM_FLOAT( 1 - BOT_TURN_JITTER, BOT_TURN_JITTER + 1 ) * flScale * flDiffLeft;
 		}
 		else
 		{
 			m_iDodgeDir = 2;
-			flTurn = RANDOM_FLOAT( 1 - BOT_TURN_JITTER, BOT_TURN_JITTER + 1 ) * flScale * flDiffRight;
+			vecAngles.y -= RANDOM_FLOAT( 1 - BOT_TURN_JITTER, BOT_TURN_JITTER + 1 ) * flScale * flDiffRight;
 		}
 
-		vecAngles.y = vecAngles.y - flTurn;
 		float flOff = flYaw - vecAngles.y;
 		if ( abs( (int)flOff ) > BOT_MAX_TURN )
 		{
