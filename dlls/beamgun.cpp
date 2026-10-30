@@ -693,6 +693,10 @@ void CBeamGun::UpdateOwner( void )
 		WRITE_BYTE( Configuration.voltage - 1 );
 	MESSAGE_END();
 }
+#else
+void CBeamGun::UpdateOwner( void )
+{
+}
 #endif
 
 
