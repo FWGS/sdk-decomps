@@ -136,6 +136,10 @@ void CMinigun::UpdateOwner( void )
 		WRITE_BYTE( m_iSlidePos );
 	MESSAGE_END();
 }
+#else
+void CMinigun::UpdateOwner( void )
+{
+}
 #endif
 
 int CMinigun::GetItemInfo(ItemInfo *p)
