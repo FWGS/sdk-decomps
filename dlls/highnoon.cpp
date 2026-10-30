@@ -66,9 +66,9 @@ cvar_t	hn_maxammo = { "hn_maxammo", "3", FCVAR_SERVER };
 BOOL g_fTombstoneFaded = TRUE;		// no dead duelist is fading away: players may respawn
 
 static char s_szWins[2][10];
-static float s_flMatchStartTime;
-static BOOL s_fPlacingAmmo;			// the round's ammo is placed now: it respawns at once
-static CBaseEntity *s_pChampionSpot;
+static float s_flMatchStartTime = 0;
+static BOOL s_fPlacingAmmo = FALSE;	// the round's ammo is placed now: it respawns at once
+static CBaseEntity *s_pChampionSpot = NULL;
 
 // do two entities have the same netname (the spawn points of a duel)?
 BOOL SameNetname( CBaseEntity *pEntity1, CBaseEntity *pEntity2 )

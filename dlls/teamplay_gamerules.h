@@ -59,11 +59,14 @@ private:
 };
 
 //=========================================================
-// CCaptureTheChicken - Capture the Chicken: two teams, Outlaws and
+// CHalfLifeCTC - Capture the Chicken: two teams, Outlaws and
 // Rustlers, carry the other team's chicken to their capture point.
-// Class name ours.
+// Class name ours: not CCaptureTheChicken, whose Think would put the
+// SDK's last_frags before last_time in .bss (VC6 orders a file's
+// uninitialised data by a hash of the decorated names; retail has
+// last_time first, as CHalfLifeTeamplay's own copy has).
 //=========================================================
-class CCaptureTheChicken : public CHalfLifeTeamplay
+class CHalfLifeCTC : public CHalfLifeTeamplay
 {
 public:
 	virtual void Init( void );

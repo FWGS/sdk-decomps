@@ -288,7 +288,7 @@ CGameRules *InstallGameRules( void )
 	else if ( g_iGameType == GAMETYPE_CTC )
 	{
 		CVAR_SET_STRING( "mp_teamlist", UTIL_VarArgs( "%s;%s", g_pszTeamNames[0], g_pszTeamNames[1] ) );
-		pRules = new CCaptureTheChicken;
+		pRules = new CHalfLifeCTC;
 		pRules->Init();
 		return pRules;
 	}

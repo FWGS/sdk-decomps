@@ -69,12 +69,12 @@ cvar_t	sv_nodedrawfreq = { "sv_nodedrawfreq", "0.5", FCVAR_SERVER };
 extern cvar_t sv_defaultbots;
 extern cvar_t sv_botskill;
 
-static const char *g_pszServerCfgCvar;		// servercfgfile or lservercfgfile
-static char g_szServerCfgFile[256];		// its value, while the map's rules run
-static int g_iBotsQueued;					// > 0: bots to add, < 0: bots to remove
-static BOOL g_fHostChosen;					// the listen server's host has bot commands (pev->noise1)
-static BOOL g_fBotCvarsRegistered;
-static int g_iSpectatedBot;				// "specon": the bot looked through
+static const char *g_pszServerCfgCvar = NULL;	// servercfgfile or lservercfgfile
+static char g_szServerCfgFile[256] = "";		// its value, while the map's rules run
+static int g_iBotsQueued = 0;				// > 0: bots to add, < 0: bots to remove
+static BOOL g_fHostChosen = FALSE;			// the listen server's host has bot commands (pev->noise1)
+static BOOL g_fBotCvarsRegistered = FALSE;
+static int g_iSpectatedBot = 0;				// "specon": the bot looked through
 
 //=========================================================
 // Init - the rules are installed: reload the navigation,

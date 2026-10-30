@@ -16,7 +16,7 @@
 
 ===== ctc_gamerules.cpp ========================================================
 
-  Capture the Chicken's rules (CCaptureTheChicken: team deathmatch with
+  Capture the Chicken's rules (CHalfLifeCTC: team deathmatch with
   the bots), and ShowPlayerMenu, the menu helper (its name is retail's,
   from its error message). The chickens and capture points are in
   ctc.cpp.
@@ -113,7 +113,7 @@ int GetModelTeamIndex( const char *pszModel )
 
 //=========================================================
 //=========================================================
-void CCaptureTheChicken::Init( void )
+void CHalfLifeCTC::Init( void )
 {
 	CVAR_SET_STRING( "mp_teamlist", UTIL_VarArgs( "%s;%s", g_pszTeamNames[0], g_pszTeamNames[1] ) );
 
@@ -140,7 +140,7 @@ void CCaptureTheChicken::Init( void )
 // PlayerSpawn - not before the player has picked a team
 // (pev->speed: 0 new, 1 choosing, -1 playing)
 //=========================================================
-void CCaptureTheChicken::PlayerSpawn( CBasePlayer *pPlayer )
+void CHalfLifeCTC::PlayerSpawn( CBasePlayer *pPlayer )
 {
 	if ( pPlayer->pev->speed != 0 )
 	{
@@ -152,7 +152,7 @@ void CCaptureTheChicken::PlayerSpawn( CBasePlayer *pPlayer )
 //=========================================================
 // InitHUD - hold the player and show the team menu
 //=========================================================
-void CCaptureTheChicken::InitHUD( CBasePlayer *pPlayer )
+void CHalfLifeCTC::InitHUD( CBasePlayer *pPlayer )
 {
 	if ( pPlayer->pev->speed == 0 )
 		CHalfLifeMultiplay::InitHUD( pPlayer );
@@ -196,7 +196,7 @@ void CCaptureTheChicken::InitHUD( CBasePlayer *pPlayer )
 // ClientUserInfoChanged - the team's model, whatever the
 // player picks
 //=========================================================
-void CCaptureTheChicken::ClientUserInfoChanged( CBasePlayer *pPlayer, char *infobuffer )
+void CHalfLifeCTC::ClientUserInfoChanged( CBasePlayer *pPlayer, char *infobuffer )
 {
 	char *mdls = g_engfuncs.pfnInfoKeyValue( infobuffer, "model" );
 
@@ -211,7 +211,7 @@ void CCaptureTheChicken::ClientUserInfoChanged( CBasePlayer *pPlayer, char *info
 //=========================================================
 // ClientCommand - the team menu
 //=========================================================
-BOOL CCaptureTheChicken::ClientCommand( CBasePlayer *pPlayer, const char *pcmd )
+BOOL CHalfLifeCTC::ClientCommand( CBasePlayer *pPlayer, const char *pcmd )
 {
 	if ( FStrEq( pcmd, "menuselect" ) || FStrEq( pcmd, "botchooseteam" ) )
 	{
@@ -279,7 +279,7 @@ BOOL CCaptureTheChicken::ClientCommand( CBasePlayer *pPlayer, const char *pcmd )
 // SetDefaultPlayerTeam - the team picked from the menu (or
 // the one with fewer players), with the team's model
 //=========================================================
-const char *CCaptureTheChicken::SetDefaultPlayerTeam( CBasePlayer *pPlayer )
+const char *CHalfLifeCTC::SetDefaultPlayerTeam( CBasePlayer *pPlayer )
 {
 	edict_t *pentPlayer;
 	int clientIndex;
@@ -306,7 +306,7 @@ const char *CCaptureTheChicken::SetDefaultPlayerTeam( CBasePlayer *pPlayer )
 // UpdateTeamScore - a capture (pszChickenTeam: the chicken's
 // team), or just the scoreboard
 //=========================================================
-void CCaptureTheChicken::UpdateTeamScore( CBasePlayer *pPlayer, const char *pszChickenTeam )
+void CHalfLifeCTC::UpdateTeamScore( CBasePlayer *pPlayer, const char *pszChickenTeam )
 {
 	if ( pszChickenTeam )
 	{
@@ -332,7 +332,7 @@ void CCaptureTheChicken::UpdateTeamScore( CBasePlayer *pPlayer, const char *pszC
 // Think - CHalfLifeTeamplay's, over the two team scores,
 // then the bots
 //=========================================================
-void CCaptureTheChicken::Think( void )
+void CHalfLifeCTC::Think( void )
 {
 	///// Check game rules /////
 	static int last_frags;
@@ -401,7 +401,7 @@ void CCaptureTheChicken::Think( void )
 
 //=========================================================
 //=========================================================
-BOOL CCaptureTheChicken::CanHavePlayerItem( CBasePlayer *pPlayer, CBasePlayerItem *pItem )
+BOOL CHalfLifeCTC::CanHavePlayerItem( CBasePlayer *pPlayer, CBasePlayerItem *pItem )
 {
 	if ( pItem && FClassnameIs( pItem->pev, "ctc_chicken" ) )
 		return TRUE;
@@ -409,7 +409,7 @@ BOOL CCaptureTheChicken::CanHavePlayerItem( CBasePlayer *pPlayer, CBasePlayerIte
 	return CHalfLifeTeamplay::CanHavePlayerItem( pPlayer, pItem );
 }
 
-void CCaptureTheChicken::PlayerGotWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pWeapon )
+void CHalfLifeCTC::PlayerGotWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pWeapon )
 {
 	// the carrier keeps the chicken in hand
 	if ( pPlayer->m_pActiveItem && FClassnameIs( pPlayer->m_pActiveItem->pev, "ctc_chicken" ) )
@@ -425,7 +425,7 @@ void CCaptureTheChicken::PlayerGotWeapon( CBasePlayer *pPlayer, CBasePlayerItem 
 //=========================================================
 // FShouldSwitchWeapon - never away from the chicken
 //=========================================================
-BOOL CCaptureTheChicken::FShouldSwitchWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pWeapon )
+BOOL CHalfLifeCTC::FShouldSwitchWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pWeapon )
 {
 	if ( pPlayer->m_pActiveItem && FClassnameIs( pPlayer->m_pActiveItem->pev, "ctc_chicken" ) )
 		return FALSE;
@@ -433,7 +433,7 @@ BOOL CCaptureTheChicken::FShouldSwitchWeapon( CBasePlayer *pPlayer, CBasePlayerI
 	return TRUE;
 }
 
-void CCaptureTheChicken::PlayerKilled( CBasePlayer *pVictim, entvars_t *pKiller, entvars_t *pInflictor )
+void CHalfLifeCTC::PlayerKilled( CBasePlayer *pVictim, entvars_t *pKiller, entvars_t *pInflictor )
 {
 	int iDeaths = pVictim->m_iDeaths;
 
@@ -450,7 +450,7 @@ void CCaptureTheChicken::PlayerKilled( CBasePlayer *pVictim, entvars_t *pKiller,
 // DeadPlayerWeapons - a carrier drops the chicken and
 // nothing else
 //=========================================================
-int CCaptureTheChicken::DeadPlayerWeapons( CBasePlayer *pPlayer )
+int CHalfLifeCTC::DeadPlayerWeapons( CBasePlayer *pPlayer )
 {
 	if ( pPlayer->HasNamedPlayerItem( "ctc_chicken" ) )
 	{

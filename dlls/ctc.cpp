@@ -513,7 +513,7 @@ void CCTCCapturePoint::CaptureTouch( CBaseEntity *pOther )
 	pPlayer->RemovePlayerItem( pChicken );
 
 	if ( g_pGameRules->GetGameType() == GAMETYPE_CTC )
-		((CCaptureTheChicken *)g_pGameRules)->UpdateTeamScore( pPlayer, pChicken->TeamID() );
+		((CHalfLifeCTC *)g_pGameRules)->UpdateTeamScore( pPlayer, pChicken->TeamID() );
 
 	((CCTCChicken *)pChicken)->GoHome( TRUE );
 }
