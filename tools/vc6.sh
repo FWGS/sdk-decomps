@@ -1,0 +1,56 @@
+#!/bin/sh
+# Run a Visual C++ 6.0 tool under Wine, without a display.
+#
+#   vc6.sh CL /nologo /c /O2 foo.cpp        (RTM, Professional, 12.00.8168)
+#   vc6.sh -std CL ...                      (RTM, Standard edition back end, 11.99.8168)
+#   vc6.sh -sp4 CL ...                      (Service Pack 4, Professional, 12.00.8799)
+#   vc6.sh -sp4std CL ...                   (Service Pack 4, Standard edition back end)
+#   vc6.sh LINK /nologo /dll ...
+#
+# The first argument names a program in the tree's VC98/BIN (case-insensitive,
+# .EXE optional). Pass paths outside the current directory as Z:\...
+#
+# Environment:
+#   VC_TOOLCHAINS  the toolchain folder (required; see docs/setup.md). It holds
+#                  the trees vc6, vc6std, vc6sp4, vc6sp4std and the Wine prefix
+#                  wineprefix.
+#   VC_WINEPREFIX  a Wine prefix to use instead of $VC_TOOLCHAINS/wineprefix,
+#                  e.g. a per-build copy with an extra drive letter.
+#   VC6_CRT        native (default): run the copy of the programs in
+#                  <tree>/nativecrt, which loads the MSVCRT.DLL shipped with that
+#                  release instead of Wine's builtin msvcrt (docs/compilers.md);
+#                  wine: run the unpatched VC98/BIN on Wine's builtin msvcrt.
+set -eu
+
+: "${VC_TOOLCHAINS:?vc6.sh: set VC_TOOLCHAINS to the toolchain folder (docs/setup.md)}"
+tc=$(cd "$VC_TOOLCHAINS" && pwd)
+win_tc="Z:$(printf '%s' "$tc" | sed 's|/|\\|g')"
+
+tree=vc6
+case "${1:-}" in -sp4) tree=vc6sp4; shift ;; -sp4std) tree=vc6sp4std; shift ;; -std) tree=vc6std; shift ;; -rtm) shift ;; esac
+
+tool=$(printf '%s' "${1:?usage: vc6.sh [-rtm|-std|-sp4|-sp4std] TOOL [args...]}" | tr '[:lower:]' '[:upper:]')
+shift
+case "$tool" in *.EXE) ;; *) tool="$tool.EXE" ;; esac
+
+[ -d "$tc/$tree/VC98/BIN" ] || { echo "vc6.sh: no $tc/$tree/VC98/BIN (docs/setup.md)" >&2; exit 2; }
+
+export WINEPREFIX="${VC_WINEPREFIX:-$tc/wineprefix}"
+[ -f "$WINEPREFIX/system.reg" ] || { echo "vc6.sh: no Wine prefix at $WINEPREFIX (docs/setup.md)" >&2; exit 2; }
+export WINEDEBUG=-all
+# No windows: a crashing program exits with an error code instead of opening
+# winedbg's crash dialog, which would wait for a click forever.
+unset DISPLAY WAYLAND_DISPLAY
+export WINEDLLOVERRIDES='mscoree=;mshtml=;winemenubuilder.exe=d;winedbg.exe=d'
+export INCLUDE="$win_tc\\$tree\\VC98\\INCLUDE"
+export LIB="$win_tc\\$tree\\VC98\\LIB"
+
+bin="$tc/$tree/VC98/BIN"
+case "${VC6_CRT:-native}" in
+native) bin="$tc/$tree/nativecrt"
+	[ -d "$bin" ] || { echo "vc6.sh: no $bin; run make_vc6_nativecrt.sh (docs/setup.md)" >&2; exit 2; } ;;
+wine) ;;
+*) echo "vc6.sh: VC6_CRT must be native or wine" >&2; exit 2 ;;
+esac
+
+exec wine "$bin/$tool" "$@"
