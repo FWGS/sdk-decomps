@@ -39,9 +39,13 @@ What the evidence pins and what it doesn't:
   versions in those columns are the files of the tree that rebuilds the
   DLL.
 - Build 8168 is VC6 as first released (RTM, "release to manufacturing").
-  Published lists of these build numbers give 8168 for Service Packs 1 and
-  2 as well, so the stamps alone don't exclude those two. They were not
-  tried; the RTM files rebuild the DLLs exactly.
+  Published lists give 8168 for Service Packs 1 and 2 as well, but those
+  two don't change the compiler. SP2, which includes SP1 (archive.org item
+  `msvs-6.0`), ships no `CL.EXE`, `C1.DLL`, `C1XX.DLL`, `C2.DLL` or
+  `LINK.EXE`. SP3's back end writes 8447 (item `msvs6sp3`), which rules
+  out SP3 and later as a whole. SP3's front ends (12.00.8472) with RTM's
+  back end still write 8168. For Gunman Chronicles they build both DLLs
+  byte for byte the same as RTM's front ends do.
 - For the T2DEF client, SP4's back end (8799), linker (8447) and C runtime
   (8797) are pinned, its front ends are not. With SP4's `C1XX.DLL`
   12.00.8867, `cl_dll.dsp`'s `/O2` expands inline functions that retail

@@ -690,7 +690,11 @@ These were tested, with the model and with real builds:
 - other linkers and runtimes: Service Pack 4's LINK 6.00.8447 gives
   152,277 differing bytes. The CD's LINK on SP4's `MSVCRT.DLL` 6.00.8797
   gives the same file as on the CD's runtime. On Wine's builtin
-  `msvcrt.dll` it gives 363,834.
+  `msvcrt.dll` it gives 363,834;
+- other compilers whose back end writes build 8168: Service Packs 1 and 2
+  don't change the compiler, and SP3's front ends (12.00.8472) with RTM's
+  back end give the same file as RTM's
+  ([compilers.md](compilers.md#summary)).
 
 None reaches retail's choices. Retail needs all 52 of those small-key
 groups right. Deleting real dead code gets 48 at best, alternative `.pch`
