@@ -686,7 +686,11 @@ These were tested, with the model and with real builds:
   movement within the object;
 - alternative precompiled-header states for every file, in 1,251 real
   compiles;
-- single dead functions of any size anywhere, and blocks of equal keys.
+- single dead functions of any size anywhere, and blocks of equal keys;
+- other linkers and runtimes: Service Pack 4's LINK 6.00.8447 gives
+  152,277 differing bytes. The CD's LINK on SP4's `MSVCRT.DLL` 6.00.8797
+  gives the same file as on the CD's runtime. On Wine's builtin
+  `msvcrt.dll` it gives 363,834.
 
 None reaches retail's choices. Retail needs all 52 of those small-key
 groups right. Deleting real dead code gets 48 at best, alternative `.pch`
