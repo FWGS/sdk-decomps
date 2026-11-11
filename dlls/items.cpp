@@ -170,6 +170,10 @@ void CItem::Materialize( void )
 }
 
 #define SF_SUIT_SHORTLOGON		0x0001
+#define SF_SUIT_REDMODE			0x0020	// They Hunger, the fgd's "TH_REDMODE": no HEV, red HUD. name ours
+
+// TODO(core): belongs in cdll_dll.h
+#define	HIDEHUD_REDMODE		( 1<<5 )	// set by an item_suit with SF_SUIT_REDMODE. name ours
 
 class CItemSuit : public CItem
 {
@@ -185,13 +189,24 @@ class CItemSuit : public CItem
 	}
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{
-		if ( pPlayer->pev->weapons & (1<<WEAPON_SUIT) )
+		// a red mode player takes a suit again in single player (it may be the real one)
+		if ( ( pPlayer->pev->weapons & (1<<WEAPON_SUIT) ) &&
+			( !( pPlayer->m_iHideHUD & HIDEHUD_REDMODE ) || g_pGameRules->IsMultiplayer() ) )
 			return FALSE;
 
-		if ( pev->spawnflags & SF_SUIT_SHORTLOGON )
-			EMIT_SOUND_SUIT(pPlayer->edict(), "!HEV_A0");		// short version of suit logon,
+		if ( pev->spawnflags & SF_SUIT_REDMODE )
+		{
+			pPlayer->m_iHideHUD |= HIDEHUD_REDMODE;
+		}
 		else
-			EMIT_SOUND_SUIT(pPlayer->edict(), "!HEV_AAx");	// long version of suit logon
+		{
+			pPlayer->m_iHideHUD &= ~HIDEHUD_REDMODE;
+
+			if ( pev->spawnflags & SF_SUIT_SHORTLOGON )
+				EMIT_SOUND_SUIT(pPlayer->edict(), "!HEV_A0");		// short version of suit logon,
+			else
+				EMIT_SOUND_SUIT(pPlayer->edict(), "!HEV_AAx");	// long version of suit logon
+		}
 
 		pPlayer->pev->weapons |= (1<<WEAPON_SUIT);
 		return TRUE;
@@ -218,7 +233,8 @@ class CItemBattery : public CItem
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{
 		if ((pPlayer->pev->armorvalue < MAX_NORMAL_BATTERY) &&
-			(pPlayer->pev->weapons & (1<<WEAPON_SUIT)))
+			(pPlayer->pev->weapons & (1<<WEAPON_SUIT)) &&
+			(!(pPlayer->m_iHideHUD & HIDEHUD_REDMODE) || g_pGameRules->IsMultiplayer()))
 		{
 			int pct;
 			char szcharge[64];
@@ -317,7 +333,8 @@ class CItemLongJump : public CItem
 			return FALSE;
 		}
 
-		if ( ( pPlayer->pev->weapons & (1<<WEAPON_SUIT) ) )
+		if ( ( pPlayer->pev->weapons & (1<<WEAPON_SUIT) ) &&
+			( !( pPlayer->m_iHideHUD & HIDEHUD_REDMODE ) || g_pGameRules->IsMultiplayer() ) )
 		{
 			pPlayer->m_fLongJump = TRUE;// player now has longjump module
 
