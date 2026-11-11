@@ -24,6 +24,13 @@
 #include	"animation.h"
 #include	"doors.h"
 
+// sic: a stand-in, names ours, nothing uses it. Retail's headers declared
+// 20 to 24 or 34 to 47 more symbols (modulo 64) than these before this file's
+// functions; VC6 numbers every symbol it declares, and the register reloads at
+// a loop end of LinkVisibleNodes and of BuildNodeGraph follow those numbers.
+// This enum declares 20 (19 constants and the enum), the fewest.
+enum { SIC_NODES_0, SIC_NODES_1, SIC_NODES_2, SIC_NODES_3, SIC_NODES_4, SIC_NODES_5, SIC_NODES_6, SIC_NODES_7, SIC_NODES_8, SIC_NODES_9, SIC_NODES_10, SIC_NODES_11, SIC_NODES_12, SIC_NODES_13, SIC_NODES_14, SIC_NODES_15, SIC_NODES_16, SIC_NODES_17, SIC_NODES_18 };
+
 #define	HULL_STEP_SIZE 16// how far the test hull moves on each step
 #define	NODE_HEIGHT	8	// how high to lift nodes off the ground after we drop them all (make stair/ramp mapping easier)
 
