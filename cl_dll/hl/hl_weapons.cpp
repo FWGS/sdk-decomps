@@ -47,12 +47,17 @@ static CBasePlayerWeapon *g_pWpns[ 32 ];
 
 // HLDM Weapon placeholder entities.
 CGlock g_Glock;
-// They Hunger's five guns (names ours; retail constructs them in this order)
-CWeaponEinarAP9 g_AP9;
-CWeaponEinarTaurus g_Taurus;
-CWeaponEinarSniper g_Sniper;
-CWeaponEinarTFCSniper g_TFCSniper;
-CWeaponEinarChaingun g_Chaingun;
+// They Hunger's five guns; retail constructs them in this order. The names are
+// ours, chosen for retail's .bss: VC6 lays uninitialised globals out by a hash
+// of their names (bucket in brackets), and retail has, from low to high, the
+// chaingun's object, g_clorg [60], the AP9's, g_pWpns [171], the sniper rifle's,
+// lasthealth [520], ev [528], g_Glock [539], player [564], Globals [737], the
+// Taurus's, weapon_einar1's, g_clang [820].
+CWeaponEinarAP9 g_Ap9;				// [137]
+CWeaponEinarTaurus g_ClTaurus;		// [753]
+CWeaponEinarSniper g_Hkg36;			// [354]
+CWeaponEinarTFCSniper g_TfcSniper;	// [817]
+CWeaponEinarChaingun g_Chain;		// [4]
 
 /*
 ======================
@@ -692,11 +697,11 @@ void HUD_InitClientWeapons( void )
 	// They Hunger's guns. Our guess, here and in HUD_WeaponsPostThink's
 	// switch: neither project defines CLIENT_WEAPONS, so nothing calls these
 	// two functions and the linker left them out of retail's client.dll.
-	HUD_PrepEntity( &g_AP9		, &player );
-	HUD_PrepEntity( &g_Taurus	, &player );
-	HUD_PrepEntity( &g_Sniper	, &player );
-	HUD_PrepEntity( &g_TFCSniper, &player );
-	HUD_PrepEntity( &g_Chaingun	, &player );
+	HUD_PrepEntity( &g_Ap9		, &player );
+	HUD_PrepEntity( &g_ClTaurus	, &player );
+	HUD_PrepEntity( &g_Hkg36	, &player );
+	HUD_PrepEntity( &g_TfcSniper, &player );
+	HUD_PrepEntity( &g_Chain	, &player );
 }
 
 /*
@@ -732,23 +737,23 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 
 	// They Hunger's guns (our guess, see HUD_InitClientWeapons)
 	case WEAPON_TH_AP9:
-		pWeapon = &g_AP9;
+		pWeapon = &g_Ap9;
 		break;
 
 	case WEAPON_TH_TAURUS:
-		pWeapon = &g_Taurus;
+		pWeapon = &g_ClTaurus;
 		break;
 
 	case WEAPON_TH_SNIPER:
-		pWeapon = &g_Sniper;
+		pWeapon = &g_Hkg36;
 		break;
 
 	case WEAPON_EINAR1:
-		pWeapon = &g_TFCSniper;
+		pWeapon = &g_TfcSniper;
 		break;
 
 	case WEAPON_TH_CHAINGUN:
-		pWeapon = &g_Chaingun;
+		pWeapon = &g_Chain;
 		break;
 	}
 
