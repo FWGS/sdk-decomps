@@ -43,7 +43,16 @@ void CGlock::Spawn( )
 	pev->classname = MAKE_STRING("weapon_9mmhandgun"); // hack to allow for old names
 	Precache( );
 	m_iId = WEAPON_GLOCK;
-	SET_MODEL(ENT(pev), "models/w_9mmhandgun.mdl");
+
+	// They Hunger: body 1 is the pistol with the silencer (a map can set it;
+	// multiplayer always has it)
+	if ( TH_IsMultiplayer() )
+		pev->body = 1;
+
+	if ( pev->body == 1 )
+		SET_MODEL(ENT(pev), "models/w_silencer.mdl");
+	else
+		SET_MODEL(ENT(pev), "models/w_9mmhandgun.mdl");
 
 	m_iDefaultAmmo = GLOCK_DEFAULT_GIVE;
 
@@ -56,6 +65,7 @@ void CGlock::Precache( void )
 	PRECACHE_MODEL("models/v_9mmhandgun.mdl");
 	PRECACHE_MODEL("models/w_9mmhandgun.mdl");
 	PRECACHE_MODEL("models/p_9mmhandgun.mdl");
+	PRECACHE_MODEL("models/w_silencer.mdl");
 
 	m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shell
 
@@ -68,6 +78,8 @@ void CGlock::Precache( void )
 
 	m_usFireGlock1 = PRECACHE_EVENT( 1, "events/glock1.sc" );
 	m_usFireGlock2 = PRECACHE_EVENT( 1, "events/glock2.sc" );
+
+	m_flTimeWeaponIdle = UTIL_WeaponTimeBase();
 }
 
 int CGlock::GetItemInfo(ItemInfo *p)
@@ -107,12 +119,42 @@ BOOL CGlock::Deploy( )
 
 void CGlock::SecondaryAttack( void )
 {
-	GlockFire( 0.1, 0.2, FALSE );
+	// They Hunger, single player: the silencer goes off or on. WeaponIdle
+	// changes the body when m_pPlayer->m_flNextAttack has passed
+	// (CBasePlayerWeapon::ItemPostFrame calls it for m_fInReload > 1).
+	if ( !TH_IsMultiplayer() )
+	{
+		if ( pev->body == 1 )
+		{
+			SendWeaponAnim( GLOCK_ADD_SILENCER );
+			m_fInReload = 2;
+			m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 2.75;
+			m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 3.7;
+			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
+		}
+		else
+		{
+			SendWeaponAnim( GLOCK_HOLSTER );
+			m_fInReload = 3;
+			m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.95;
+			m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 1.9;
+			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
+		}
+	}
+	else
+	{
+		GlockFire( 0.1, 0.2, FALSE );
+	}
 }
 
 void CGlock::PrimaryAttack( void )
 {
-	GlockFire( 0.01, 0.3, TRUE );
+	// They Hunger: the slow accurate shot with the silencer (always on in
+	// multiplayer), without it the fast one that was the secondary attack
+	if ( TH_IsMultiplayer() || pev->body == 1 )
+		GlockFire( 0.01, 0.3, TRUE );
+	else
+		GlockFire( 0.1, 0.2, FALSE );
 }
 
 void CGlock::GlockFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
@@ -165,7 +207,7 @@ void CGlock::GlockFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	// silenced
 	if (pev->body == 1)
 	{
-		m_pPlayer->m_iWeaponVolume = QUIET_GUN_VOLUME;
+		m_pPlayer->m_iWeaponVolume = 100;	// They Hunger: half of QUIET_GUN_VOLUME
 		m_pPlayer->m_iWeaponFlash = DIM_GUN_FLASH;
 #if defined ( OLD_WEAPONS )
 		switch(RANDOM_LONG(0,1))
@@ -239,6 +281,20 @@ void CGlock::WeaponIdle( void )
 	ResetEmptySound( );
 
 	m_pPlayer->GetAutoaimVector( AUTOAIM_10DEGREES );
+
+	// They Hunger: the end of SecondaryAttack's silencer animations
+	if ( m_fInReload == 2 )
+	{
+		pev->body = 0;
+		SendWeaponAnim( GLOCK_DRAW );
+		m_fInReload = 0;
+	}
+	if ( m_fInReload == 3 )
+	{
+		pev->body = 1;
+		SendWeaponAnim( GLOCK_DRAW );
+		m_fInReload = 0;
+	}
 
 	if ( m_flTimeWeaponIdle > UTIL_WeaponTimeBase() )
 		return;

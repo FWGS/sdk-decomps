@@ -384,7 +384,12 @@ Handles weapon firing, reloading, etc.
 */
 void CBasePlayerWeapon::ItemPostFrame( void )
 {
-	if ((m_fInReload) && (m_pPlayer->m_flNextAttack <= 0.0))
+	if ((m_fInReload > 1) && (m_pPlayer->m_flNextAttack <= 0.0))
+	{
+		// a weapon that reloads by itself (m_fInReload 2 and up) goes on in WeaponIdle
+		WeaponIdle();
+	}
+	else if ((m_fInReload) && (m_pPlayer->m_flNextAttack <= 0.0))
 	{
 #if 0 // FIXME, need ammo on client to make this work right
 		// complete the reload. 
@@ -1006,4 +1011,22 @@ void _DLLEXPORT HUD_PostRunCmd( struct local_state_s *from, struct local_state_s
 
 	// All games can use FOV state
 	g_lastFOV = to->client.fov;
+}
+
+//=========================================================
+// They Hunger: the client's versions of what the weapons of
+// wpn_shared/hl_wpn_glock.cpp ask their DLL (the game DLL's
+// are at the end of weapons.cpp). Names ours.
+//=========================================================
+BOOL TH_IsMultiplayer( void )
+{
+	return gEngfuncs.GetMaxClients() != 1;
+}
+
+void TH_ScreenFadeIn( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha )
+{
+}
+
+void TH_ScreenFadeOut( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha )
+{
 }
