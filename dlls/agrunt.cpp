@@ -92,7 +92,7 @@ public:
 	void AlertSound( void );
 	void DeathSound ( void );
 	void PainSound ( void );
-	void AttackSound ( void );
+	virtual void AttackSound ( void );
 	void PrescheduleThink ( void );
 	void TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType);
 	int IRelationship( CBaseEntity *pTarget );
@@ -122,9 +122,8 @@ public:
 	float	m_flNextWordTime;
 	int		m_iLastWord;
 };
-LINK_ENTITY_TO_CLASS( monster_alien_grunt, CAGrunt );
 
-TYPEDESCRIPTION	CAGrunt::m_SaveData[] = 
+TYPEDESCRIPTION	CAGrunt::m_SaveData[] =
 {
 	DEFINE_FIELD( CAGrunt, m_fCanHornetAttack, FIELD_BOOLEAN ),
 	DEFINE_FIELD( CAGrunt, m_flNextHornetAttackCheck, FIELD_TIME ),
@@ -385,7 +384,7 @@ void CAGrunt :: PainSound ( void )
 //=========================================================
 int	CAGrunt :: Classify ( void )
 {
-	return	CLASS_ALIEN_MILITARY;
+	return	CLASS_ALIEN_MONSTER;
 }
 
 //=========================================================
@@ -1175,3 +1174,1038 @@ Schedule_t* CAGrunt :: GetScheduleOfType ( int Type )
 	return CSquadMonster :: GetScheduleOfType( Type );
 }
 
+//=========================================================
+// CEinarZork - They Hunger's monster_alien_grunt: a copy of
+// the alien grunt above with red blood, a health keyvalue,
+// its own footsteps and, with a "message" keyvalue, its
+// voice from another sound directory
+//=========================================================
+class CEinarZork : public CSquadMonster
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	void SetYawSpeed ( void );
+	int  Classify ( void );
+	int  ISoundMask ( void );
+	void HandleAnimEvent( MonsterEvent_t *pEvent );
+	void SetObjectCollisionBox( void )
+	{
+		pev->absmin = pev->origin + Vector( -32, -32, 0 );
+		pev->absmax = pev->origin + Vector( 32, 32, 85 );
+	}
+
+	Schedule_t* GetSchedule ( void );
+	Schedule_t* GetScheduleOfType ( int Type );
+	BOOL FCanCheckAttacks ( void );
+	BOOL CheckMeleeAttack1 ( float flDot, float flDist );
+	BOOL CheckRangeAttack1 ( float flDot, float flDist );
+	void StartTask ( Task_t *pTask );
+	void AlertSound( void );
+	void DeathSound ( void );
+	void PainSound ( void );
+	void AttackSound ( void );
+	void TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType);
+	CUSTOM_SCHEDULES;
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	// the sound names of CAGrunt's tables in the directory pev->message names. Not saved. (names ours)
+	int		m_iszAttackSounds[3];
+	int		m_iszDieSounds[3];
+	int		m_iszPainSounds[5];
+	int		m_iszIdleSounds[4];
+	int		m_iszAlertSounds[4];
+
+	BOOL	m_fCanHornetAttack;
+	float	m_flNextHornetAttackCheck;
+
+	float m_flNextPainTime;
+};
+LINK_ENTITY_TO_CLASS( monster_alien_grunt, CEinarZork );
+
+TYPEDESCRIPTION	CEinarZork::m_SaveData[] = 
+{
+	DEFINE_FIELD( CEinarZork, m_fCanHornetAttack, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CEinarZork, m_flNextHornetAttackCheck, FIELD_TIME ),
+	DEFINE_FIELD( CEinarZork, m_flNextPainTime, FIELD_TIME ),
+};
+
+IMPLEMENT_SAVERESTORE( CEinarZork, CSquadMonster );
+
+//=========================================================
+// ISoundMask 
+//=========================================================
+int CEinarZork :: ISoundMask ( void )
+{
+	return	bits_SOUND_WORLD	|
+			bits_SOUND_COMBAT	|
+			bits_SOUND_PLAYER	|
+			bits_SOUND_DANGER;
+}
+
+//=========================================================
+// TraceAttack
+//=========================================================
+void CEinarZork :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType)
+{
+	if ( ptr->iHitgroup == 10 && (bitsDamageType & (DMG_BULLET | DMG_SLASH | DMG_CLUB)))
+	{
+		// hit armor
+		if ( pev->dmgtime != gpGlobals->time || (RANDOM_LONG(0,10) < 1) )
+		{
+			UTIL_Ricochet( ptr->vecEndPos, RANDOM_FLOAT( 1, 2) );
+			pev->dmgtime = gpGlobals->time;
+		}
+
+		if ( RANDOM_LONG( 0, 1 ) == 0 )
+		{
+			Vector vecTracerDir = vecDir;
+
+			vecTracerDir.x += RANDOM_FLOAT( -0.3, 0.3 );
+			vecTracerDir.y += RANDOM_FLOAT( -0.3, 0.3 );
+			vecTracerDir.z += RANDOM_FLOAT( -0.3, 0.3 );
+
+			vecTracerDir = vecTracerDir * -512;
+
+			MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, ptr->vecEndPos );
+			WRITE_BYTE( TE_TRACER );
+				WRITE_COORD( ptr->vecEndPos.x );
+				WRITE_COORD( ptr->vecEndPos.y );
+				WRITE_COORD( ptr->vecEndPos.z );
+
+				WRITE_COORD( vecTracerDir.x );
+				WRITE_COORD( vecTracerDir.y );
+				WRITE_COORD( vecTracerDir.z );
+			MESSAGE_END();
+		}
+
+		flDamage -= 20;
+		if (flDamage <= 0)
+			flDamage = 0.1;// don't hurt the monster much, but allow bits_COND_LIGHT_DAMAGE to be generated
+	}
+	else
+	{
+		SpawnBlood(ptr->vecEndPos, BloodColor(), flDamage);// a little surface blood.
+		TraceBleed( flDamage, vecDir, ptr, bitsDamageType );
+	}
+
+	AddMultiDamage( pevAttacker, this, flDamage, bitsDamageType );
+}
+
+//=========================================================
+// DieSound
+//=========================================================
+void CEinarZork :: DeathSound ( void )
+{
+	if ( pev->message )
+		EMIT_SOUND ( ENT(pev), CHAN_VOICE, STRING( m_iszDieSounds[RANDOM_LONG(0,ARRAYSIZE(CAGrunt::pDieSounds)-1)] ), 1.0, ATTN_NORM );
+	else
+		EMIT_SOUND ( ENT(pev), CHAN_VOICE, CAGrunt::pDieSounds[RANDOM_LONG(0,ARRAYSIZE(CAGrunt::pDieSounds)-1)], 1.0, ATTN_NORM );
+}
+
+//=========================================================
+// AlertSound
+//=========================================================
+void CEinarZork :: AlertSound ( void )
+{
+	if ( pev->message )
+		EMIT_SOUND ( ENT(pev), CHAN_VOICE, STRING( m_iszAlertSounds[RANDOM_LONG(0,ARRAYSIZE(CAGrunt::pAlertSounds)-1)] ), 1.0, ATTN_NORM );
+	else
+		EMIT_SOUND ( ENT(pev), CHAN_VOICE, CAGrunt::pAlertSounds[RANDOM_LONG(0,ARRAYSIZE(CAGrunt::pAlertSounds)-1)], 1.0, ATTN_NORM );
+}
+
+//=========================================================
+// AttackSound
+//=========================================================
+void CEinarZork :: AttackSound ( void )
+{
+	if ( pev->message )
+		EMIT_SOUND ( ENT(pev), CHAN_VOICE, STRING( m_iszAttackSounds[RANDOM_LONG(0,ARRAYSIZE(CAGrunt::pAttackSounds)-1)] ), 1.0, ATTN_NORM );
+	else
+		EMIT_SOUND ( ENT(pev), CHAN_VOICE, CAGrunt::pAttackSounds[RANDOM_LONG(0,ARRAYSIZE(CAGrunt::pAttackSounds)-1)], 1.0, ATTN_NORM );
+}
+
+//=========================================================
+// PainSound
+//=========================================================
+void CEinarZork :: PainSound ( void )
+{
+	if ( m_flNextPainTime > gpGlobals->time )
+	{
+		return;
+	}
+
+	m_flNextPainTime = gpGlobals->time + 0.6;
+
+	if ( pev->message )
+		EMIT_SOUND ( ENT(pev), CHAN_VOICE, STRING( m_iszPainSounds[RANDOM_LONG(0,ARRAYSIZE(CAGrunt::pPainSounds)-1)] ), 1.0, ATTN_NORM );
+	else
+		EMIT_SOUND ( ENT(pev), CHAN_VOICE, CAGrunt::pPainSounds[RANDOM_LONG(0,ARRAYSIZE(CAGrunt::pPainSounds)-1)], 1.0, ATTN_NORM );
+}
+
+//=========================================================
+// Classify - indicates this monster's place in the 
+// relationship table.
+//=========================================================
+int	CEinarZork :: Classify ( void )
+{
+	return	CLASS_ALIEN_MONSTER;
+}
+
+//=========================================================
+// SetYawSpeed - allows each sequence to have a different
+// turn rate associated with it.
+//=========================================================
+void CEinarZork :: SetYawSpeed ( void )
+{
+	int ys;
+
+	switch ( m_Activity )
+	{
+	case ACT_TURN_LEFT:
+	case ACT_TURN_RIGHT:
+		ys = 110;
+		break;
+	default:			ys = 100;
+	}
+
+	pev->yaw_speed = ys;
+}
+
+//=========================================================
+// HandleAnimEvent - catches the monster-specific messages
+// that occur when tagged animation frames are played.
+//
+// Returns number of events handled, 0 if none.
+//=========================================================
+void CEinarZork :: HandleAnimEvent( MonsterEvent_t *pEvent )
+{
+	switch( pEvent->event )
+	{
+	case AGRUNT_AE_HORNET1:
+	case AGRUNT_AE_HORNET2:
+	case AGRUNT_AE_HORNET3:
+	case AGRUNT_AE_HORNET4:
+	case AGRUNT_AE_HORNET5:
+		{
+			// m_vecEnemyLKP should be center of enemy body
+			Vector vecArmPos, vecArmDir;
+			Vector vecDirToEnemy;
+			Vector angDir;
+
+			if (HasConditions( bits_COND_SEE_ENEMY))
+			{
+				vecDirToEnemy = ( ( m_vecEnemyLKP ) - pev->origin );
+				angDir = UTIL_VecToAngles( vecDirToEnemy );
+				vecDirToEnemy = vecDirToEnemy.Normalize();
+			}
+			else
+			{
+				angDir = pev->angles;
+				UTIL_MakeAimVectors( angDir );
+				vecDirToEnemy = gpGlobals->v_forward;
+			}
+
+			pev->effects = EF_MUZZLEFLASH;
+
+			// make angles +-180
+			if (angDir.x > 180)
+			{
+				angDir.x = angDir.x - 360;
+			}
+
+			SetBlending( 0, angDir.x );
+			GetAttachment( 0, vecArmPos, vecArmDir );
+
+			vecArmPos = vecArmPos + vecDirToEnemy * 32;
+			MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecArmPos );
+				WRITE_BYTE( TE_SPRITE );
+				WRITE_COORD( vecArmPos.x );	// pos
+				WRITE_COORD( vecArmPos.y );	
+				WRITE_COORD( vecArmPos.z );	
+				WRITE_SHORT( iAgruntMuzzleFlash );		// model
+				WRITE_BYTE( 6 );				// size * 10
+				WRITE_BYTE( 128 );			// brightness
+			MESSAGE_END();
+
+			CBaseEntity *pHornet = CBaseEntity::Create( "hornet", vecArmPos, UTIL_VecToAngles( vecDirToEnemy ), edict() );
+			UTIL_MakeVectors ( pHornet->pev->angles );
+			pHornet->pev->velocity = gpGlobals->v_forward * 300;
+
+			CBaseMonster *pHornetMonster = pHornet->MyMonsterPointer();
+
+			if ( pHornetMonster )
+			{
+				pHornetMonster->m_hEnemy = m_hEnemy;
+			}
+		}
+		break;
+
+	case AGRUNT_AE_LEFT_FOOT:
+		switch (RANDOM_LONG(0,1))
+		{
+		// left foot
+		case 0:	EMIT_SOUND_DYN ( ENT(pev), CHAN_BODY, "zork/leftfoot2.wav", 1, ATTN_NORM, 0, 70 );	break;
+		case 1:	EMIT_SOUND_DYN ( ENT(pev), CHAN_BODY, "zork/leftfoot4.wav", 1, ATTN_NORM, 0, 70 );	break;
+		}
+		break;
+	case AGRUNT_AE_RIGHT_FOOT:
+		// right foot
+		switch (RANDOM_LONG(0,1))
+		{
+		case 0:	EMIT_SOUND_DYN ( ENT(pev), CHAN_BODY, "zork/rightfoot1.wav", 1, ATTN_NORM, 0, 70 );	break;
+		case 1:	EMIT_SOUND_DYN ( ENT(pev), CHAN_BODY, "zork/rightfoot3.wav", 1, ATTN_NORM, 0 ,70);	break;
+		}
+		break;
+
+	case AGRUNT_AE_LEFT_PUNCH:
+		{
+			CBaseEntity *pHurt = CheckTraceHullAttack( AGRUNT_MELEE_DIST, gSkillData.agruntDmgPunch, DMG_CLUB );
+			
+			if ( pHurt )
+			{
+				pHurt->pev->punchangle.y = -25;
+				pHurt->pev->punchangle.x = 8;
+
+				// OK to use gpGlobals without calling MakeVectors, cause CheckTraceHullAttack called it above.
+				if ( pHurt->IsPlayer() )
+				{
+					// this is a player. Knock him around.
+					pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_right * 250;
+				}
+
+				EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, CAGrunt::pAttackHitSounds[ RANDOM_LONG(0,ARRAYSIZE(CAGrunt::pAttackHitSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+
+				Vector vecArmPos, vecArmAng;
+				GetAttachment( 0, vecArmPos, vecArmAng );
+				SpawnBlood(vecArmPos, pHurt->BloodColor(), 25);// a little surface blood.
+			}
+			else
+			{
+				// Play a random attack miss sound
+				EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, CAGrunt::pAttackMissSounds[ RANDOM_LONG(0,ARRAYSIZE(CAGrunt::pAttackMissSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+			}
+		}
+		break;
+
+	case AGRUNT_AE_RIGHT_PUNCH:
+		{
+			CBaseEntity *pHurt = CheckTraceHullAttack( AGRUNT_MELEE_DIST, gSkillData.agruntDmgPunch, DMG_CLUB );
+
+			if ( pHurt )
+			{
+				pHurt->pev->punchangle.y = 25;
+				pHurt->pev->punchangle.x = 8;
+
+				// OK to use gpGlobals without calling MakeVectors, cause CheckTraceHullAttack called it above.
+				if ( pHurt->IsPlayer() )
+				{
+					// this is a player. Knock him around.
+					pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_right * -250;
+				}
+
+				EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, CAGrunt::pAttackHitSounds[ RANDOM_LONG(0,ARRAYSIZE(CAGrunt::pAttackHitSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+
+				Vector vecArmPos, vecArmAng;
+				GetAttachment( 0, vecArmPos, vecArmAng );
+				SpawnBlood(vecArmPos, pHurt->BloodColor(), 25);// a little surface blood.
+			}
+			else
+			{
+				// Play a random attack miss sound
+				EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, CAGrunt::pAttackMissSounds[ RANDOM_LONG(0,ARRAYSIZE(CAGrunt::pAttackMissSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+			}
+		}
+		break;
+
+	default:
+		CSquadMonster::HandleAnimEvent( pEvent );
+		break;
+	}
+}
+
+//=========================================================
+// Spawn
+//=========================================================
+void CEinarZork :: Spawn()
+{
+	Precache( );
+
+	SET_MODEL(ENT(pev), "models/agrunt.mdl");
+	UTIL_SetSize(pev, Vector(-32, -32, 0), Vector(32, 32, 64));
+
+	pev->solid			= SOLID_SLIDEBOX;
+	pev->movetype		= MOVETYPE_STEP;
+	m_bloodColor		= BLOOD_COLOR_RED;
+	pev->effects		= 0;
+	if ( pev->health == 0 )
+		pev->health			= gSkillData.agruntHealth;
+	m_flFieldOfView		= -1.0;// sees all around
+	m_MonsterState		= MONSTERSTATE_NONE;
+	m_afCapability		= 0;
+	m_afCapability		|= bits_CAP_SQUAD;
+
+	m_HackedGunPos		= Vector( 24, 64, 48 );
+
+	MonsterInit();
+}
+
+//=========================================================
+// Precache - precaches all resources this monster needs
+//=========================================================
+void CEinarZork :: Precache()
+{
+	int i;
+
+	PRECACHE_MODEL("models/agrunt.mdl");
+
+	for ( i = 0; i < ARRAYSIZE( CAGrunt::pAttackHitSounds ); i++ )
+		PRECACHE_SOUND((char *)CAGrunt::pAttackHitSounds[i]);
+
+	for ( i = 0; i < ARRAYSIZE( CAGrunt::pAttackMissSounds ); i++ )
+		PRECACHE_SOUND((char *)CAGrunt::pAttackMissSounds[i]);
+
+	// "agrunt/ag_idle1.wav" with message "zork" becomes "zork/ag_idle1.wav"
+	char *pszSlash = strchr( CAGrunt::pIdleSounds[0], '/' );
+
+	if ( !pszSlash )
+		pev->message = 0;
+
+	if ( pev->message )
+	{
+		char szSound[50];
+		int iSlash = pszSlash - CAGrunt::pIdleSounds[0];
+
+		strcpy( szSound, STRING( pev->message ) );
+		char *pszEnd = szSound + strlen( szSound );
+
+		for ( i = 0; i < ARRAYSIZE( CAGrunt::pIdleSounds ); i++ )
+		{
+			strcpy( pszEnd, CAGrunt::pIdleSounds[i] + iSlash );
+			m_iszIdleSounds[i] = ALLOC_STRING( szSound );
+			PRECACHE_SOUND((char *)STRING( m_iszIdleSounds[i] ));
+		}
+
+		for ( i = 0; i < ARRAYSIZE( CAGrunt::pDieSounds ); i++ )
+		{
+			strcpy( pszEnd, CAGrunt::pDieSounds[i] + iSlash );
+			m_iszDieSounds[i] = ALLOC_STRING( szSound );
+			PRECACHE_SOUND((char *)STRING( m_iszDieSounds[i] ));
+		}
+
+		for ( i = 0; i < ARRAYSIZE( CAGrunt::pPainSounds ); i++ )
+		{
+			strcpy( pszEnd, CAGrunt::pPainSounds[i] + iSlash );
+			m_iszPainSounds[i] = ALLOC_STRING( szSound );
+			PRECACHE_SOUND((char *)STRING( m_iszPainSounds[i] ));
+		}
+
+		for ( i = 0; i < ARRAYSIZE( CAGrunt::pAttackSounds ); i++ )
+		{
+			strcpy( pszEnd, CAGrunt::pAttackSounds[i] + iSlash );
+			m_iszAttackSounds[i] = ALLOC_STRING( szSound );
+			PRECACHE_SOUND((char *)STRING( m_iszAttackSounds[i] ));
+		}
+
+		for ( i = 0; i < ARRAYSIZE( CAGrunt::pAlertSounds ); i++ )
+		{
+			strcpy( pszEnd, CAGrunt::pAlertSounds[i] + iSlash );
+			m_iszAlertSounds[i] = ALLOC_STRING( szSound );
+			PRECACHE_SOUND((char *)STRING( m_iszAlertSounds[i] ));
+		}
+	}
+	else
+	{
+		for ( i = 0; i < ARRAYSIZE( CAGrunt::pIdleSounds ); i++ )
+			PRECACHE_SOUND((char *)CAGrunt::pIdleSounds[i]);
+
+		for ( i = 0; i < ARRAYSIZE( CAGrunt::pDieSounds ); i++ )
+			PRECACHE_SOUND((char *)CAGrunt::pDieSounds[i]);
+
+		for ( i = 0; i < ARRAYSIZE( CAGrunt::pPainSounds ); i++ )
+			PRECACHE_SOUND((char *)CAGrunt::pPainSounds[i]);
+
+		for ( i = 0; i < ARRAYSIZE( CAGrunt::pAttackSounds ); i++ )
+			PRECACHE_SOUND((char *)CAGrunt::pAttackSounds[i]);
+
+		for ( i = 0; i < ARRAYSIZE( CAGrunt::pAlertSounds ); i++ )
+			PRECACHE_SOUND((char *)CAGrunt::pAlertSounds[i]);
+	}
+
+
+	PRECACHE_SOUND( "hassault/hw_shoot1.wav" );
+
+	PRECACHE_SOUND( "zork/rightfoot1.wav" );
+	PRECACHE_SOUND( "zork/leftfoot2.wav" );
+	PRECACHE_SOUND( "zork/rightfoot3.wav" );
+	PRECACHE_SOUND( "zork/leftfoot4.wav" );
+
+	iAgruntMuzzleFlash = PRECACHE_MODEL( "sprites/muz4.spr" );
+
+	UTIL_PrecacheOther( "hornet" );
+}	
+
+// the schedules are the alien grunt's
+DEFINE_CUSTOM_SCHEDULES( CEinarZork )
+{
+	slAGruntFail,
+	slAGruntCombatFail,
+	slAGruntStandoff,
+	slAGruntSuppress,
+	slAGruntRangeAttack1,
+	slAGruntHiddenRangeAttack,
+	slAGruntTakeCoverFromEnemy,
+	slAGruntVictoryDance,
+	slAGruntThreatDisplay,
+};
+
+IMPLEMENT_CUSTOM_SCHEDULES( CEinarZork, CSquadMonster );
+
+//=========================================================
+// FCanCheckAttacks - this is overridden for alien grunts
+// because they can use their smart weapons against unseen
+// enemies. Base class doesn't attack anyone it can't see.
+//=========================================================
+BOOL CEinarZork :: FCanCheckAttacks ( void )
+{
+	if ( !HasConditions( bits_COND_ENEMY_TOOFAR ) )
+	{
+		return TRUE;
+	}
+	else
+	{
+		return FALSE;
+	}
+}
+
+//=========================================================
+// CheckMeleeAttack1 - alien grunts zap the crap out of 
+// any enemy that gets too close. 
+//=========================================================
+BOOL CEinarZork :: CheckMeleeAttack1 ( float flDot, float flDist )
+{
+	if ( HasConditions ( bits_COND_SEE_ENEMY ) && flDist <= AGRUNT_MELEE_DIST && flDot >= 0.6 && m_hEnemy != NULL )
+	{
+		return TRUE;
+	}
+	return FALSE;
+}
+
+//=========================================================
+// CheckRangeAttack1 
+//
+// !!!LATER - we may want to load balance this. Several
+// tracelines are done, so we may not want to do this every
+// server frame. Definitely not while firing. 
+//=========================================================
+BOOL CEinarZork :: CheckRangeAttack1 ( float flDot, float flDist )
+{
+	if ( gpGlobals->time < m_flNextHornetAttackCheck )
+	{
+		return m_fCanHornetAttack;
+	}
+
+	if ( !FBitSet( pev->spawnflags, SF_MONSTER_NOZAP ) && HasConditions( bits_COND_SEE_ENEMY ) && flDist >= AGRUNT_MELEE_DIST && flDist <= 1024 && flDot >= 0.5 && NoFriendlyFire() )
+	{
+		TraceResult	tr;
+		Vector	vecArmPos, vecArmDir;
+
+		// verify that a shot fired from the gun will hit the enemy before the world.
+		// !!!LATER - we may wish to do something different for projectile weapons as opposed to instant-hit
+		UTIL_MakeVectors( pev->angles );
+		GetAttachment( 0, vecArmPos, vecArmDir );
+//		UTIL_TraceLine( vecArmPos, vecArmPos + gpGlobals->v_forward * 256, ignore_monsters, ENT(pev), &tr);
+		UTIL_TraceLine( vecArmPos, m_hEnemy->BodyTarget(vecArmPos), dont_ignore_monsters, ENT(pev), &tr);
+
+		if ( tr.flFraction == 1.0 || tr.pHit == m_hEnemy->edict() )
+		{
+			m_flNextHornetAttackCheck = gpGlobals->time + RANDOM_FLOAT( 2, 5 );
+			m_fCanHornetAttack = TRUE;
+			return m_fCanHornetAttack;
+		}
+	}
+	
+	m_flNextHornetAttackCheck = gpGlobals->time + 0.2;// don't check for half second if this check wasn't successful
+	m_fCanHornetAttack = FALSE;
+	return m_fCanHornetAttack;
+}
+
+//=========================================================
+// StartTask
+//=========================================================
+void CEinarZork :: StartTask ( Task_t *pTask )
+{
+	switch ( pTask->iTask )
+	{
+	case TASK_AGRUNT_GET_PATH_TO_ENEMY_CORPSE:
+		{
+			UTIL_MakeVectors( pev->angles );
+			if ( BuildRoute ( m_vecEnemyLKP - gpGlobals->v_forward * 50, bits_MF_TO_LOCATION, NULL ) )
+			{
+				TaskComplete();
+			}
+			else
+			{
+				ALERT ( at_aiconsole, "AGruntGetPathToEnemyCorpse failed!!\n" );
+				TaskFail();
+			}
+		}
+		break;
+
+	case TASK_AGRUNT_SETUP_HIDE_ATTACK:
+		// alien grunt shoots hornets back out into the open from a concealed location. 
+		// try to find a spot to throw that gives the smart weapon a good chance of finding the enemy.
+		// ideally, this spot is along a line that is perpendicular to a line drawn from the agrunt to the enemy.
+
+		CBaseMonster	*pEnemyMonsterPtr;
+
+		pEnemyMonsterPtr = m_hEnemy->MyMonsterPointer();
+
+		if ( pEnemyMonsterPtr )
+		{
+			Vector		vecCenter;
+			TraceResult	tr;
+			BOOL		fSkip;
+
+			fSkip = FALSE;
+			vecCenter = Center();
+
+			UTIL_VecToAngles( m_vecEnemyLKP - pev->origin );
+
+			UTIL_TraceLine( Center() + gpGlobals->v_forward * 128, m_vecEnemyLKP, ignore_monsters, ENT(pev), &tr);
+			if ( tr.flFraction == 1.0 )
+			{
+				MakeIdealYaw ( pev->origin + gpGlobals->v_right * 128 );
+				fSkip = TRUE;
+				TaskComplete();
+			}
+			
+			if ( !fSkip )
+			{
+				UTIL_TraceLine( Center() - gpGlobals->v_forward * 128, m_vecEnemyLKP, ignore_monsters, ENT(pev), &tr);
+				if ( tr.flFraction == 1.0 )
+				{
+					MakeIdealYaw ( pev->origin - gpGlobals->v_right * 128 );
+					fSkip = TRUE;
+					TaskComplete();
+				}
+			}
+			
+			if ( !fSkip )
+			{
+				UTIL_TraceLine( Center() + gpGlobals->v_forward * 256, m_vecEnemyLKP, ignore_monsters, ENT(pev), &tr);
+				if ( tr.flFraction == 1.0 )
+				{
+					MakeIdealYaw ( pev->origin + gpGlobals->v_right * 256 );
+					fSkip = TRUE;
+					TaskComplete();
+				}
+			}
+			
+			if ( !fSkip )
+			{
+				UTIL_TraceLine( Center() - gpGlobals->v_forward * 256, m_vecEnemyLKP, ignore_monsters, ENT(pev), &tr);
+				if ( tr.flFraction == 1.0 )
+				{
+					MakeIdealYaw ( pev->origin - gpGlobals->v_right * 256 );
+					fSkip = TRUE;
+					TaskComplete();
+				}
+			}
+			
+			if ( !fSkip )
+			{
+				TaskFail();
+			}
+		}
+		else
+		{
+			ALERT ( at_aiconsole, "AGRunt - no enemy monster ptr!!!\n" );
+			TaskFail();
+		}
+		break;
+
+	default:
+		CSquadMonster :: StartTask ( pTask );
+		break;
+	}
+}
+
+//=========================================================
+// GetSchedule - Decides which type of schedule best suits
+// the monster's current state and conditions. Then calls
+// monster's member function to get a pointer to a schedule
+// of the proper type.
+//=========================================================
+Schedule_t *CEinarZork :: GetSchedule ( void )
+{
+	if ( HasConditions(bits_COND_HEAR_SOUND) )
+	{
+		CSound *pSound;
+		pSound = PBestSound();
+
+		ASSERT( pSound != NULL );
+		if ( pSound && (pSound->m_iType & bits_SOUND_DANGER) )
+		{
+			// dangerous sound nearby!
+			return GetScheduleOfType( SCHED_TAKE_COVER_FROM_BEST_SOUND );
+		}
+	}
+
+	switch	( m_MonsterState )
+	{
+	case MONSTERSTATE_COMBAT:
+		{
+// dead enemy
+			if ( HasConditions( bits_COND_ENEMY_DEAD ) )
+			{
+				// call base class, all code to handle dead enemies is centralized there.
+				return CBaseMonster :: GetSchedule();
+			}
+
+			if ( HasConditions(bits_COND_NEW_ENEMY) )
+			{
+				return GetScheduleOfType( SCHED_WAKE_ANGRY );
+			}
+
+	// zap player!
+			if ( HasConditions ( bits_COND_CAN_MELEE_ATTACK1 ) )
+			{
+				AttackSound();// this is a total hack. Should be parto f the schedule
+				return GetScheduleOfType ( SCHED_MELEE_ATTACK1 );
+			}
+
+			if ( HasConditions ( bits_COND_HEAVY_DAMAGE ) )
+			{
+				return GetScheduleOfType( SCHED_SMALL_FLINCH );
+			}
+
+	// can attack
+			if ( HasConditions ( bits_COND_CAN_RANGE_ATTACK1 ) && OccupySlot ( bits_SLOTS_AGRUNT_HORNET ) )
+			{
+				return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
+			}
+
+			if ( OccupySlot ( bits_SLOT_AGRUNT_CHASE ) )
+			{
+				return GetScheduleOfType ( SCHED_CHASE_ENEMY );
+			}
+
+			return GetScheduleOfType ( SCHED_STANDOFF );
+		}
+	}
+
+	return CSquadMonster :: GetSchedule();
+}
+
+//=========================================================
+//=========================================================
+Schedule_t* CEinarZork :: GetScheduleOfType ( int Type ) 
+{
+	switch	( Type )
+	{
+	case SCHED_TAKE_COVER_FROM_ENEMY:
+		return &slAGruntTakeCoverFromEnemy[ 0 ];
+		break;
+	
+	case SCHED_RANGE_ATTACK1:
+		if ( HasConditions( bits_COND_SEE_ENEMY ) )
+		{
+			//normal attack
+			return &slAGruntRangeAttack1[ 0 ];
+		}
+		else
+		{
+			// attack an unseen enemy
+			// return &slAGruntHiddenRangeAttack[ 0 ];
+			return &slAGruntRangeAttack1[ 0 ];
+		}
+		break;
+
+	case SCHED_AGRUNT_THREAT_DISPLAY:
+		return &slAGruntThreatDisplay[ 0 ];
+		break;
+
+	case SCHED_AGRUNT_SUPPRESS:
+		return &slAGruntSuppress[ 0 ];
+		break;
+
+	case SCHED_STANDOFF:
+		return &slAGruntStandoff[ 0 ];
+		break;
+
+	case SCHED_VICTORY_DANCE:
+		return &slAGruntVictoryDance[ 0 ];
+		break;
+
+	case SCHED_FAIL:
+		// no fail schedule specified, so pick a good generic one.
+		{
+			if ( m_hEnemy != NULL )
+			{
+				// I have an enemy
+				// !!!LATER - what if this enemy is really far away and i'm chasing him?
+				// this schedule will make me stop, face his last known position for 2 
+				// seconds, and then try to move again
+				return &slAGruntCombatFail[ 0 ];
+			}
+
+			return &slAGruntFail[ 0 ];
+		}
+		break;
+
+	}
+
+	return CSquadMonster :: GetScheduleOfType( Type );
+}
+
+//=========================================================
+// monster_th_cyberfranklin - an alien grunt with Franklin's
+// model and voice, six times the health and one melee swing
+// (class name ours; it saves as CAGrunt)
+//=========================================================
+class CEinarCyberFranklin : public CAGrunt
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	void HandleAnimEvent( MonsterEvent_t *pEvent );
+	void AlertSound( void );
+	void DeathSound ( void );
+	void PainSound ( void );
+	void AttackSound ( void );
+	void PrescheduleThink ( void ) {}// no idle speech
+	int IRelationship( CBaseEntity *pTarget ) { return CSquadMonster :: IRelationship( pTarget ); }// human grunts are no nemesis
+
+	static const char *pDieSounds[];
+	static const char *pPainSounds[];
+};
+LINK_ENTITY_TO_CLASS( monster_th_cyberfranklin, CEinarCyberFranklin );
+
+const char *CEinarCyberFranklin::pDieSounds[] =
+{
+	"franklin/death1.wav",
+	"franklin/death2.wav",
+	"franklin/death3.wav",
+};
+
+const char *CEinarCyberFranklin::pPainSounds[] =
+{
+	"franklin/pain1.wav",
+	"franklin/pain2.wav",
+};
+
+//=========================================================
+// DieSound
+//=========================================================
+void CEinarCyberFranklin :: DeathSound ( void )
+{
+	StopTalking();
+
+	EMIT_SOUND ( ENT(pev), CHAN_VOICE, pDieSounds[RANDOM_LONG(0,ARRAYSIZE(pDieSounds)-1)], 1.0, ATTN_NORM );
+}
+
+//=========================================================
+// AlertSound
+//=========================================================
+void CEinarCyberFranklin :: AlertSound ( void )
+{
+	StopTalking();
+
+	EMIT_SOUND ( ENT(pev), CHAN_VOICE, "franklin/alert1.wav", 1.0, ATTN_NORM );
+}
+
+//=========================================================
+// AttackSound
+//=========================================================
+void CEinarCyberFranklin :: AttackSound ( void )
+{
+	StopTalking();
+
+	EMIT_SOUND ( ENT(pev), CHAN_VOICE, "franklin/attack1.wav", 1.0, ATTN_NORM );
+}
+
+//=========================================================
+// PainSound
+//=========================================================
+void CEinarCyberFranklin :: PainSound ( void )
+{
+	if ( m_flNextPainTime > gpGlobals->time )
+	{
+		return;
+	}
+
+	m_flNextPainTime = gpGlobals->time + 2;
+
+	StopTalking();
+
+	EMIT_SOUND ( ENT(pev), CHAN_VOICE, pPainSounds[RANDOM_LONG(0,ARRAYSIZE(pPainSounds)-1)], 1.0, ATTN_NORM );
+}
+
+//=========================================================
+// HandleAnimEvent - catches the monster-specific messages
+// that occur when tagged animation frames are played.
+//
+// Returns number of events handled, 0 if none.
+//=========================================================
+void CEinarCyberFranklin :: HandleAnimEvent( MonsterEvent_t *pEvent )
+{
+	switch( pEvent->event )
+	{
+	case 4:
+	case 5:
+	case 6:
+		{
+			// m_vecEnemyLKP should be center of enemy body
+			Vector vecArmPos, vecArmDir;
+			Vector vecDirToEnemy;
+			Vector angDir;
+
+			if (HasConditions( bits_COND_SEE_ENEMY))
+			{
+				vecDirToEnemy = ( ( m_vecEnemyLKP ) - pev->origin );
+				angDir = UTIL_VecToAngles( vecDirToEnemy );
+				vecDirToEnemy = vecDirToEnemy.Normalize();
+			}
+			else
+			{
+				angDir = pev->angles;
+				UTIL_MakeAimVectors( angDir );
+				vecDirToEnemy = gpGlobals->v_forward;
+			}
+
+			pev->effects = EF_MUZZLEFLASH;
+
+			// make angles +-180
+			if (angDir.x > 180)
+			{
+				angDir.x = angDir.x - 360;
+			}
+
+			SetBlending( 0, angDir.x );
+			GetAttachment( 0, vecArmPos, vecArmDir );
+
+			vecArmPos = vecArmPos + vecDirToEnemy * 32;
+			MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecArmPos );
+				WRITE_BYTE( TE_SPRITE );
+				WRITE_COORD( vecArmPos.x );	// pos
+				WRITE_COORD( vecArmPos.y );	
+				WRITE_COORD( vecArmPos.z );	
+				WRITE_SHORT( iAgruntMuzzleFlash );		// model
+				WRITE_BYTE( 6 );				// size * 10
+				WRITE_BYTE( 128 );			// brightness
+			MESSAGE_END();
+
+			CBaseEntity *pHornet = CBaseEntity::Create( "hornet", vecArmPos, UTIL_VecToAngles( vecDirToEnemy ), edict() );
+			UTIL_MakeVectors ( pHornet->pev->angles );
+			pHornet->pev->velocity = gpGlobals->v_forward * 300;
+
+			CBaseMonster *pHornetMonster = pHornet->MyMonsterPointer();
+
+			if ( pHornetMonster )
+			{
+				pHornetMonster->m_hEnemy = m_hEnemy;
+			}
+		}
+		break;
+
+	case 3:
+		{
+			CBaseEntity *pHurt = CheckTraceHullAttack( AGRUNT_MELEE_DIST, gSkillData.agruntDmgPunch, DMG_CLUB );
+			
+			if ( pHurt )
+			{
+				pHurt->pev->punchangle.y = RANDOM_LONG(-5,5);
+				pHurt->pev->punchangle.x = 8;
+
+				// OK to use gpGlobals without calling MakeVectors, cause CheckTraceHullAttack called it above.
+				if ( pHurt->IsPlayer() )
+				{
+					// this is a player. Knock him around.
+					pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_forward * 100 + gpGlobals->v_right * RANDOM_LONG(-50,50);
+				}
+
+				EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pAttackHitSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackHitSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+
+				Vector vecArmPos, vecArmAng;
+				GetAttachment( 0, vecArmPos, vecArmAng );
+				SpawnBlood(vecArmPos, pHurt->BloodColor(), 25);// a little surface blood.
+			}
+			else
+			{
+				// Play a random attack miss sound
+				EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pAttackMissSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackMissSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+			}
+		}
+		break;
+
+	default:
+		CSquadMonster::HandleAnimEvent( pEvent );
+		break;
+	}
+}
+
+//=========================================================
+// Spawn
+//=========================================================
+void CEinarCyberFranklin :: Spawn()
+{
+	Precache( );
+
+	SET_MODEL(ENT(pev), "models/franklin2.mdl");
+	UTIL_SetSize(pev, Vector(-32, -32, 0), Vector(32, 32, 64));
+
+	pev->solid			= SOLID_SLIDEBOX;
+	pev->movetype		= MOVETYPE_STEP;
+	m_bloodColor		= BLOOD_COLOR_RED;
+	pev->effects		= 0;
+	pev->health			= gSkillData.agruntHealth * 6;
+	m_flFieldOfView		= 0.2;// indicates the width of this monster's forward view cone ( as a dotproduct result )
+	m_MonsterState		= MONSTERSTATE_NONE;
+	m_afCapability		= 0;
+	m_afCapability		|= bits_CAP_SQUAD | bits_CAP_TURN_HEAD;
+
+	m_HackedGunPos		= Vector( 0, 0, 48 );
+
+	m_flNextSpeakTime	= m_flNextWordTime = gpGlobals->time + 10 + RANDOM_LONG(0, 10);
+
+
+	MonsterInit();
+}
+
+//=========================================================
+// Precache - precaches all resources this monster needs
+//=========================================================
+void CEinarCyberFranklin :: Precache()
+{
+	int i;
+
+	PRECACHE_MODEL("models/franklin2.mdl");
+
+	for ( i = 0; i < ARRAYSIZE( pAttackHitSounds ); i++ )
+		PRECACHE_SOUND((char *)pAttackHitSounds[i]);
+
+	for ( i = 0; i < ARRAYSIZE( pAttackMissSounds ); i++ )
+		PRECACHE_SOUND((char *)pAttackMissSounds[i]);
+
+	for ( i = 0; i < ARRAYSIZE( pDieSounds ); i++ )
+		PRECACHE_SOUND((char *)pDieSounds[i]);
+
+	for ( i = 0; i < ARRAYSIZE( pPainSounds ); i++ )
+		PRECACHE_SOUND((char *)pPainSounds[i]);
+
+	PRECACHE_SOUND( "franklin/attack1.wav" );
+	PRECACHE_SOUND( "franklin/alert1.wav" );
+
+	PRECACHE_SOUND( "hassault/hw_shoot1.wav" );
+
+	PRECACHE_SOUND( "franklin/franklin_step.wav" );
+	PRECACHE_SOUND( "player/pl_tile1.wav" );
+
+	iAgruntMuzzleFlash = PRECACHE_MODEL( "sprites/muz4.spr" );
+
+	UTIL_PrecacheOther( "hornet" );
+}	
