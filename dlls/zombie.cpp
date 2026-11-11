@@ -43,8 +43,17 @@ public:
 	int  Classify ( void );
 	void HandleAnimEvent( MonsterEvent_t *pEvent );
 	int IgnoreConditions ( void );
+	void RunAI( void );
 
 	float m_flNextFlinch;
+
+	// They Hunger: the voice sounds of a zombie with a "message" (a sound directory
+	// that replaces "zombie"), allocated by Precache. Not saved: Precache runs again
+	// after a restore. Names ours.
+	int m_iszAttackSounds[2];
+	int m_iszIdleSounds[4];
+	int m_iszAlertSounds[3];
+	int m_iszPainSounds[2];
 
 	void PainSound( void );
 	void AlertSound( void );
@@ -157,14 +166,22 @@ void CZombie :: PainSound( void )
 	int pitch = 95 + RANDOM_LONG(0,9);
 
 	if (RANDOM_LONG(0,5) < 2)
-		EMIT_SOUND_DYN ( ENT(pev), CHAN_VOICE, pPainSounds[ RANDOM_LONG(0,ARRAYSIZE(pPainSounds)-1) ], 1.0, ATTN_NORM, 0, pitch );
+	{
+		if ( pev->message )
+			EMIT_SOUND_DYN ( ENT(pev), CHAN_VOICE, STRING( m_iszPainSounds[ RANDOM_LONG(0,ARRAYSIZE(pPainSounds)-1) ] ), 1.0, ATTN_NORM, 0, pitch );
+		else
+			EMIT_SOUND_DYN ( ENT(pev), CHAN_VOICE, pPainSounds[ RANDOM_LONG(0,ARRAYSIZE(pPainSounds)-1) ], 1.0, ATTN_NORM, 0, pitch );
+	}
 }
 
 void CZombie :: AlertSound( void )
 {
 	int pitch = 95 + RANDOM_LONG(0,9);
 
-	EMIT_SOUND_DYN ( ENT(pev), CHAN_VOICE, pAlertSounds[ RANDOM_LONG(0,ARRAYSIZE(pAlertSounds)-1) ], 1.0, ATTN_NORM, 0, pitch );
+	if ( pev->message )
+		EMIT_SOUND_DYN ( ENT(pev), CHAN_VOICE, STRING( m_iszAlertSounds[ RANDOM_LONG(0,ARRAYSIZE(pAlertSounds)-1) ] ), 1.0, ATTN_NORM, 0, pitch );
+	else
+		EMIT_SOUND_DYN ( ENT(pev), CHAN_VOICE, pAlertSounds[ RANDOM_LONG(0,ARRAYSIZE(pAlertSounds)-1) ], 1.0, ATTN_NORM, 0, pitch );
 }
 
 void CZombie :: IdleSound( void )
@@ -172,13 +189,19 @@ void CZombie :: IdleSound( void )
 	int pitch = 95 + RANDOM_LONG(0,9);
 
 	// Play a random idle sound
-	EMIT_SOUND_DYN ( ENT(pev), CHAN_VOICE, pIdleSounds[ RANDOM_LONG(0,ARRAYSIZE(pIdleSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+	if ( pev->message )
+		EMIT_SOUND_DYN ( ENT(pev), CHAN_VOICE, STRING( m_iszIdleSounds[ RANDOM_LONG(0,ARRAYSIZE(pIdleSounds)-1) ] ), 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+	else
+		EMIT_SOUND_DYN ( ENT(pev), CHAN_VOICE, pIdleSounds[ RANDOM_LONG(0,ARRAYSIZE(pIdleSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
 }
 
 void CZombie :: AttackSound( void )
 {
 	// Play a random attack sound
-	EMIT_SOUND_DYN ( ENT(pev), CHAN_VOICE, pAttackSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+	if ( pev->message )
+		EMIT_SOUND_DYN ( ENT(pev), CHAN_VOICE, STRING( m_iszAttackSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackSounds)-1) ] ), 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+	else
+		EMIT_SOUND_DYN ( ENT(pev), CHAN_VOICE, pAttackSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
 }
 
 
@@ -271,13 +294,18 @@ void CZombie :: Spawn()
 {
 	Precache( );
 
-	SET_MODEL(ENT(pev), "models/zombie.mdl");
+	// They Hunger: the map may give its own model and health; zombies bleed red
+	if ( pev->model )
+		SET_MODEL(ENT(pev), STRING(pev->model));
+	else
+		SET_MODEL(ENT(pev), "models/zombie.mdl");
 	UTIL_SetSize( pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX );
 
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
-	m_bloodColor		= BLOOD_COLOR_GREEN;
-	pev->health			= gSkillData.zombieHealth;
+	m_bloodColor		= BLOOD_COLOR_RED;
+	if ( pev->health == 0 )
+		pev->health			= gSkillData.zombieHealth;
 	pev->view_ofs		= VEC_VIEW;// position of the eyes relative to monster's origin.
 	m_flFieldOfView		= 0.5;// indicates the width of this monster's forward view cone ( as a dotproduct result )
 	m_MonsterState		= MONSTERSTATE_NONE;
@@ -293,25 +321,75 @@ void CZombie :: Precache()
 {
 	int i;
 
-	PRECACHE_MODEL("models/zombie.mdl");
+	if ( pev->model )
+		PRECACHE_MODEL((char *)STRING(pev->model));
+	else
+		PRECACHE_MODEL("models/zombie.mdl");
 
-	for ( i = 0; i < ARRAYSIZE( pAttackHitSounds ); i++ )
-		PRECACHE_SOUND((char *)pAttackHitSounds[i]);
+	// They Hunger: "message" names a sound directory that takes the place of "zombie"
+	// in the four voice sound lists ("zombie2" gives "zombie2/zo_idle1.wav")
+	char *pszSlash = strchr( pIdleSounds[0], '/' );
+	if ( !pszSlash )
+		pev->message = 0;
 
-	for ( i = 0; i < ARRAYSIZE( pAttackMissSounds ); i++ )
-		PRECACHE_SOUND((char *)pAttackMissSounds[i]);
+	if ( pev->message )
+	{
+		char szSound[52];	// retail's frame has room for 52 bytes (49 to 52 compile the same)
+		int iDir = pszSlash - pIdleSounds[0];
 
-	for ( i = 0; i < ARRAYSIZE( pAttackSounds ); i++ )
-		PRECACHE_SOUND((char *)pAttackSounds[i]);
+		strcpy( szSound, STRING( pev->message ) );
+		char *pszEnd = szSound + strlen( szSound );
 
-	for ( i = 0; i < ARRAYSIZE( pIdleSounds ); i++ )
-		PRECACHE_SOUND((char *)pIdleSounds[i]);
+		// sic: the claw hit and miss sounds are not precached on this path
 
-	for ( i = 0; i < ARRAYSIZE( pAlertSounds ); i++ )
-		PRECACHE_SOUND((char *)pAlertSounds[i]);
+		for ( i = 0; i < ARRAYSIZE( pAttackSounds ); i++ )
+		{
+			strcpy( pszEnd, pAttackSounds[i] + iDir );
+			m_iszAttackSounds[i] = ALLOC_STRING( szSound );
+			PRECACHE_SOUND((char *)STRING( m_iszAttackSounds[i] ));
+		}
 
-	for ( i = 0; i < ARRAYSIZE( pPainSounds ); i++ )
-		PRECACHE_SOUND((char *)pPainSounds[i]);
+		for ( i = 0; i < ARRAYSIZE( pIdleSounds ); i++ )
+		{
+			strcpy( pszEnd, pIdleSounds[i] + iDir );
+			m_iszIdleSounds[i] = ALLOC_STRING( szSound );
+			PRECACHE_SOUND((char *)STRING( m_iszIdleSounds[i] ));
+		}
+
+		for ( i = 0; i < ARRAYSIZE( pAlertSounds ); i++ )
+		{
+			strcpy( pszEnd, pAlertSounds[i] + iDir );
+			m_iszAlertSounds[i] = ALLOC_STRING( szSound );
+			PRECACHE_SOUND((char *)STRING( m_iszAlertSounds[i] ));
+		}
+
+		for ( i = 0; i < ARRAYSIZE( pPainSounds ); i++ )
+		{
+			strcpy( pszEnd, pPainSounds[i] + iDir );
+			m_iszPainSounds[i] = ALLOC_STRING( szSound );
+			PRECACHE_SOUND((char *)STRING( m_iszPainSounds[i] ));
+		}
+	}
+	else
+	{
+		for ( i = 0; i < ARRAYSIZE( pAttackHitSounds ); i++ )
+			PRECACHE_SOUND((char *)pAttackHitSounds[i]);
+
+		for ( i = 0; i < ARRAYSIZE( pAttackMissSounds ); i++ )
+			PRECACHE_SOUND((char *)pAttackMissSounds[i]);
+
+		for ( i = 0; i < ARRAYSIZE( pAttackSounds ); i++ )
+			PRECACHE_SOUND((char *)pAttackSounds[i]);
+
+		for ( i = 0; i < ARRAYSIZE( pIdleSounds ); i++ )
+			PRECACHE_SOUND((char *)pIdleSounds[i]);
+
+		for ( i = 0; i < ARRAYSIZE( pAlertSounds ); i++ )
+			PRECACHE_SOUND((char *)pAlertSounds[i]);
+
+		for ( i = 0; i < ARRAYSIZE( pPainSounds ); i++ )
+			PRECACHE_SOUND((char *)pPainSounds[i]);
+	}
 }	
 
 //=========================================================
@@ -343,4 +421,16 @@ int CZombie::IgnoreConditions ( void )
 
 	return iIgnore;
 	
+}
+
+//=========================================================
+// RunAI - They Hunger: a fast zombie walks towards its
+// enemy at one and a half times the animation's speed
+//=========================================================
+void CZombie :: RunAI( void )
+{
+	CBaseMonster::RunAI();
+
+	if ( ( pev->spawnflags & SF_MONSTER_FASTMODEZOMBIE ) && m_hEnemy != NULL && m_Activity == ACT_WALK )
+		pev->framerate = 1.5;
 }
