@@ -55,6 +55,7 @@ void EV_TrainPitchAdjust( struct event_args_s *args );
 // They Hunger (names ours)
 void EV_FireAP9( struct event_args_s *args  );
 void EV_FireTaurus( struct event_args_s *args  );
+void EV_FireSniper( struct event_args_s *args  );
 }
 
 #define VECTOR_CONE_1DEGREES Vector( 0.00873, 0.00873, 0.00873 )
@@ -1270,6 +1271,61 @@ void EV_FireTaurus( event_args_t *args )
 	if ( EV_IsLocal( idx ) )
 	{
 		V_PunchAxis( 0, -3.0 );
+	}
+}
+
+// events/sniper.sc (weapon_th_sniper); bparam1: zoomed
+void EV_FireSniper( event_args_t *args )
+{
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	int multiplayer = ( gEngfuncs.GetMaxClients() != 1 );
+	int zoomed = args->bparam1;
+
+	int i;
+	vec3_t vecSrc, vecAiming;
+	vec3_t vecSpread;
+	vec3_t up, right, forward;
+	float flSpread = zoomed ? ( multiplayer ? 0.002 : 0.004 ) : ( multiplayer ? 0.07846 : 0.08716 );
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+
+	AngleVectors( angles, forward, right, up );
+
+	if ( EV_IsLocal( idx ) )
+	{
+		// Add muzzle flash to current weapon model
+		EV_MuzzleFlash();
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( SNIPER_SHOOT1, 0 );
+	}
+
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/sniper.wav", 1, ATTN_NORM, 0, PITCH_NORM );
+
+	EV_GetGunPosition( args, vecSrc, origin );
+	
+	VectorCopy( forward, vecAiming );
+
+	for ( i = 0; i < 3; i++ )
+	{
+		vecSpread[ i ] = flSpread;
+	}
+
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_357, 0, &tracerCount[idx-1] );
+
+	if ( EV_IsLocal( idx ) )
+	{
+		if ( zoomed )
+		{
+			V_PunchAxis( 0, -2.0 );
+		}
+		else
+		{
+			V_PunchAxis( 0, gEngfuncs.pfnRandomFloat( -2.0, -4.0 ) );	// sic
+			V_PunchAxis( 1, gEngfuncs.pfnRandomFloat( -1.0, 1.0 ) );
+		}
 	}
 }
 

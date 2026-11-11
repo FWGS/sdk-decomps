@@ -104,6 +104,13 @@ enum taurus_e {
 	TAURUS_DRAW2
 };
 
+enum sniper_e {
+	SNIPER_IDLE = 0,
+	SNIPER_RELOAD,
+	SNIPER_DRAW,
+	SNIPER_SHOOT1
+};
+
 void EV_HLDM_GunshotDecalTrace( pmtrace_t *pTrace, char *decalName );
 void EV_HLDM_DecalGunshot( pmtrace_t *pTrace, int iBulletType );
 int EV_HLDM_CheckTracer( int idx, float *vecSrc, float *end, float *forward, float *right, int iBulletType, int iTracerFreq, int *tracerCount );

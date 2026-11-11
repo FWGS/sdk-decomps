@@ -803,6 +803,240 @@ class CAmmoEinarTaurus : public CBasePlayerAmmo	// name ours
 LINK_ENTITY_TO_CLASS( ammo_th_taurus, CAmmoEinarTaurus );
 
 
+//=========================================================
+// They Hunger: the sniper rifle (weapon_th_sniper, an HK G36),
+// made from the crossbow: secondary attack zooms.
+//=========================================================
+enum sniper_e {
+	SNIPER_IDLE = 0,
+	SNIPER_RELOAD,
+	SNIPER_DRAW,
+	SNIPER_SHOOT1
+};
+
+LINK_ENTITY_TO_CLASS( weapon_th_sniper, CWeaponEinarSniper );
+
+void CWeaponEinarSniper::Spawn( )
+{
+	Precache( );
+	m_iId = WEAPON_TH_SNIPER;
+	SET_MODEL(ENT(pev), "models/w_hkg36.mdl");
+
+	m_iDefaultAmmo = SNIPER_DEFAULT_GIVE;
+
+	FallInit();// get ready to fall down.
+}
+
+void CWeaponEinarSniper::Precache( void )
+{
+	PRECACHE_MODEL("models/w_hkg36.mdl");
+	PRECACHE_SOUND("weapons/sniper.wav");
+	PRECACHE_MODEL("models/v_hkg36.mdl");
+	PRECACHE_MODEL("models/p_hkg36.mdl");
+
+	PRECACHE_SOUND ("weapons/ap9_clipout.wav");
+	PRECACHE_SOUND ("weapons/ap9_clipin.wav");
+	PRECACHE_SOUND ("weapons/ap9_bolt.wav");
+	PRECACHE_SOUND ("items/cliprelease1.wav");
+
+	m_usFireSniper = PRECACHE_EVENT( 1, "events/sniper.sc" );
+}
+
+
+int CWeaponEinarSniper::GetItemInfo(ItemInfo *p)
+{
+	p->pszName = STRING(pev->classname);
+	p->pszAmmo1 = "bullets";
+	p->iMaxAmmo1 = SNIPER_MAX_CARRY;
+	p->pszAmmo2 = NULL;
+	p->iMaxAmmo2 = -1;
+	p->iMaxClip = SNIPER_MAX_CLIP;
+	p->iSlot = 2;
+	p->iPosition = 3;
+	p->iFlags = 0;
+	p->iId = m_iId = WEAPON_TH_SNIPER;
+	p->iWeight = SNIPER_WEIGHT;
+	return 1;
+}
+
+int CWeaponEinarSniper::AddToPlayer( CBasePlayer *pPlayer )
+{
+	if ( CBasePlayerWeapon::AddToPlayer( pPlayer ) )
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgWeapPickup, NULL, pPlayer->pev );
+			WRITE_BYTE( m_iId );
+		MESSAGE_END();
+		return TRUE;
+	}
+	return FALSE;
+}
+
+BOOL CWeaponEinarSniper::Deploy( )
+{
+	return DefaultDeploy( "models/v_hkg36.mdl", "models/p_hkg36.mdl", SNIPER_DRAW, "bow" );
+}
+
+void CWeaponEinarSniper::Holster( int skiplocal /* = 0 */ )
+{
+	m_fInReload = FALSE;// cancel any reload in progress.
+
+	if ( m_fInZoom )
+	{
+		SecondaryAttack( );
+	}
+
+	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
+	m_pPlayer->pev->viewmodel = 0;
+	m_pPlayer->pev->weaponmodel = 0;
+}
+
+void CWeaponEinarSniper::PrimaryAttack( void )
+{
+	BOOL fMultiplayer = TH_IsMultiplayer();
+
+	if ( m_pPlayer->pev->waterlevel != 3 && m_iClip > 0 )
+	{
+		m_iClip--;
+
+		m_pPlayer->pev->effects = (int)(m_pPlayer->pev->effects) | EF_MUZZLEFLASH;
+
+		int flags;
+
+#if defined( CLIENT_WEAPONS )
+		flags = FEV_NOTHOST;
+#else
+		flags = 0;
+#endif
+
+		// bparam1: zoomed
+		PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usFireSniper, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, m_fInZoom ? 1 : 0, 0 );
+
+		// player "shoot" animation
+		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
+
+		m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
+		m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
+
+		Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+		Vector vecAiming = gpGlobals->v_forward;
+
+		// multiplayer gives the damage itself: FireBullets then does plain
+		// DMG_BULLET without the 357's texture sound and decal
+		if ( m_fInZoom )
+		{
+			if ( fMultiplayer )
+				m_pPlayer->FireBullets( 1, vecSrc, vecAiming, Vector( 0.002, 0.002, 0.002 ), 8192, BULLET_PLAYER_357, 0, 80 );
+			else
+				m_pPlayer->FireBullets( 1, vecSrc, vecAiming, Vector( 0.004, 0.004, 0.004 ), 8192, BULLET_PLAYER_357, 0 );
+		}
+		else
+		{
+			if ( fMultiplayer )
+				m_pPlayer->FireBullets( 1, vecSrc, vecAiming, VECTOR_CONE_9DEGREES, 8192, BULLET_PLAYER_357, 0, 40 );
+			else
+				m_pPlayer->FireBullets( 1, vecSrc, vecAiming, VECTOR_CONE_10DEGREES, 8192, BULLET_PLAYER_357, 0 );
+		}
+
+		if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
+			// HEV suit - indicate out of ammo condition
+			m_pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0);
+
+		if ( m_fInZoom )
+		{
+			m_flTimeWeaponIdle = m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.75;
+		}
+		else
+		{
+			m_flTimeWeaponIdle = m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.11;
+
+			m_pPlayer->pev->punchangle.x -= RANDOM_FLOAT( 0, 4 ) + 4;
+			m_pPlayer->pev->punchangle.y -= 1 - RANDOM_FLOAT( 0, 2 );
+		}
+	}
+	else
+	{
+		if ( m_fFireOnEmpty )
+		{
+			PlayEmptySound( );
+			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.25;
+		}
+
+		if ( m_flTimeWeaponIdle < UTIL_WeaponTimeBase() )
+		{
+			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 15, 20 );
+		}
+	}
+}
+
+
+void CWeaponEinarSniper::SecondaryAttack()
+{
+	if ( m_fInZoom )
+	{
+		m_pPlayer->m_iFOV = 0; // 0 means reset to default fov
+		m_fInZoom = 0;
+		TH_ScreenFadeIn( m_pPlayer, Vector( 0, 255, 0 ), 0, 0, 70 );
+	}
+	else
+	{
+		m_pPlayer->m_iFOV = 20;
+		m_fInZoom = 1;
+		TH_ScreenFadeOut( m_pPlayer, Vector( 0, 255, 0 ), 0, 0, 70 );
+	}
+	
+	pev->nextthink = UTIL_WeaponTimeBase() + 0.11;
+	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.75;
+}
+
+
+void CWeaponEinarSniper::Reload( void )
+{
+	if ( m_fInZoom )
+	{
+		SecondaryAttack();
+	}
+
+	DefaultReload( SNIPER_MAX_CLIP, SNIPER_RELOAD, 3.3 );
+}
+
+
+void CWeaponEinarSniper::WeaponIdle( void )
+{
+	ResetEmptySound( );
+
+	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 20;
+}
+
+
+// ammo_th_sniper and ammo_einar1
+class CAmmoEinarSniper : public CBasePlayerAmmo	// name ours
+{
+	void Spawn( void )
+	{ 
+		pev->classname = MAKE_STRING("ammo_th_sniper");
+		Precache( );
+		SET_MODEL(ENT(pev), "models/w_antidote.mdl");
+		CBasePlayerAmmo::Spawn( );
+	}
+	void Precache( void )
+	{
+		PRECACHE_MODEL ("models/w_antidote.mdl");
+		PRECACHE_SOUND("items/9mmclip1.wav");
+	}
+	BOOL AddAmmo( CBaseEntity *pOther ) 
+	{ 
+		if (pOther->GiveAmmo( AMMO_SNIPERCLIP_GIVE, "bullets", SNIPER_MAX_CARRY ) != -1)
+		{
+			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
+			return TRUE;
+		}
+		return FALSE;
+	}
+};
+LINK_ENTITY_TO_CLASS( ammo_th_sniper, CAmmoEinarSniper );
+LINK_ENTITY_TO_CLASS( ammo_einar1, CAmmoEinarSniper );
+
+
 
 
 
