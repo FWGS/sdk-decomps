@@ -35,7 +35,13 @@ public:
 	void Spawn( void );
 	void Precache( void );
 	int  Classify( void ) { return CLASS_ALIEN_MILITARY; };
-	int  BloodColor( void ) { return BLOOD_COLOR_YELLOW; }
+	// They Hunger: red blood on request
+	int  BloodColor( void )
+	{
+		if ( pev->spawnflags & SF_MONSTER_REDBLOOD )
+			return BLOOD_COLOR_RED;
+		return BLOOD_COLOR_YELLOW;
+	}
 	void Killed( entvars_t *pevAttacker, int iGib );
 	void GibMonster( void );
 

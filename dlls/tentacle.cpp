@@ -263,7 +263,11 @@ void CTentacle :: Spawn( )
 	pev->takedamage		= DAMAGE_AIM;
 	pev->flags			|= FL_MONSTER;
 	
-	m_bloodColor		= BLOOD_COLOR_GREEN;
+	// They Hunger: red blood on request
+	if ( pev->spawnflags & SF_MONSTER_REDBLOOD )
+		m_bloodColor		= BLOOD_COLOR_RED;
+	else
+		m_bloodColor		= BLOOD_COLOR_GREEN;
 
 	SetThink( Start );
 	SetTouch( HitTouch );

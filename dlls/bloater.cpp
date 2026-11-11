@@ -196,7 +196,11 @@ void CBloater :: Spawn()
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_FLY;
 	pev->spawnflags		|= FL_FLY;
-	m_bloodColor		= BLOOD_COLOR_GREEN;
+	// They Hunger: red blood on request
+	if ( pev->spawnflags & SF_MONSTER_REDBLOOD )
+		m_bloodColor		= BLOOD_COLOR_RED;
+	else
+		m_bloodColor		= BLOOD_COLOR_GREEN;
 	pev->health			= 40;
 	pev->view_ofs		= VEC_VIEW;// position of the eyes relative to monster's origin.
 	m_flFieldOfView		= 0.5;// indicates the width of this monster's forward view cone ( as a dotproduct result )
