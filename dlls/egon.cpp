@@ -771,4 +771,207 @@ class CEgonAmmo : public CBasePlayerAmmo
 };
 LINK_ENTITY_TO_CLASS( ammo_egonclip, CEgonAmmo );
 
+
+//=========================================================
+// They Hunger: the medkit (class and member names ours)
+//=========================================================
+enum medkit_e {	// names ours: the sequences of Team Fortress Classic's medkit
+	MEDKIT_IDLE = 0,
+	MEDKIT_LONGIDLE,
+	MEDKIT_USE,
+	MEDKIT_LONGUSE,
+	MEDKIT_HOLSTER,
+	MEDKIT_DRAW
+};
+
+class CWeaponEinarMedkit : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 5; }
+	int GetItemInfo(ItemInfo *p);
+	int AddToPlayer( CBasePlayer *pPlayer );
+
+	BOOL Deploy( void );
+	void Holster( int skiplocal = 0 );
+
+	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void StartHeal( void );
+	void Heal( void );
+	void Reload( void );
+	void WeaponIdle( void );
+	BOOL PlayEmptySound( void );
+	BOOL ShouldWeaponIdle( void ) { return TRUE; };
+
+	virtual BOOL UseDecrement( void )
+	{ 
+#if defined( CLIENT_WEAPONS )
+		return TRUE;
+#else
+		return FALSE;
+#endif
+	}
+
+	int m_fHealing;	// the use animation is playing; the health is given when it ends
+};
+LINK_ENTITY_TO_CLASS( weapon_th_medkit, CWeaponEinarMedkit );
+
+
+void CWeaponEinarMedkit::Spawn( )
+{
+	Precache( );
+	m_iId = WEAPON_TH_MEDKIT;
+	SET_MODEL(ENT(pev), "models/w_tfc_medkit.mdl");
+
+	m_iDefaultAmmo = 8;
+
+	FallInit();// get ready to fall down.
+}
+
+
+void CWeaponEinarMedkit::Precache( void )
+{
+	PRECACHE_MODEL("models/v_tfc_medkit.mdl");
+	PRECACHE_MODEL("models/w_tfc_medkit.mdl");
+	PRECACHE_MODEL("models/p_tfc_medkit.mdl");
+
+	PRECACHE_SOUND("items/9mmclip1.wav");
+
+	PRECACHE_SOUND("items/medshot4.wav");
+	PRECACHE_SOUND("items/medshotno1.wav");
+}
+
+int CWeaponEinarMedkit::GetItemInfo(ItemInfo *p)
+{
+	p->pszName = STRING(pev->classname);
+	p->pszAmmo1 = "health";
+	p->iMaxAmmo1 = 12;
+	p->pszAmmo2 = NULL;
+	p->iMaxAmmo2 = -1;
+	p->iMaxClip = WEAPON_NOCLIP;
+	p->iSlot = 4;
+	p->iPosition = 4;
+	p->iFlags = 0;
+	p->iId = m_iId = WEAPON_TH_MEDKIT;
+	p->iWeight = 15;
+
+	return 1;
+}
+
+int CWeaponEinarMedkit::AddToPlayer( CBasePlayer *pPlayer )
+{
+	if ( CBasePlayerWeapon::AddToPlayer( pPlayer ) )
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgWeapPickup, NULL, pPlayer->pev );
+			WRITE_BYTE( m_iId );
+		MESSAGE_END();
+		return TRUE;
+	}
+	return FALSE;
+}
+
+BOOL CWeaponEinarMedkit::Deploy( )
+{
+	return DefaultDeploy( "models/v_tfc_medkit.mdl", "models/p_tfc_medkit.mdl", MEDKIT_DRAW, "trip" );
+}
+
+void CWeaponEinarMedkit::Holster( int skiplocal /* = 0 */ )
+{
+	m_fInReload = FALSE;// cancel any reload in progress.
+	m_fHealing = FALSE;
+
+	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
+	SendWeaponAnim( MEDKIT_HOLSTER );
+}
+
+void CWeaponEinarMedkit::PrimaryAttack( void )
+{
+	if ( m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] > 0 && m_pPlayer->pev->health < m_pPlayer->pev->max_health )
+	{
+		if ( !m_fHealing )
+		{
+			StartHeal();
+		}
+		else if ( m_flNextSecondaryAttack < gpGlobals->time )
+		{
+			Heal();
+		}
+	}
+	else if ( m_fFireOnEmpty )
+	{
+		PlayEmptySound( );
+		m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + 1;
+	}
+}
+
+void CWeaponEinarMedkit::SecondaryAttack( void )
+{
+	if ( m_fHealing )
+		Heal();
+}
+
+void CWeaponEinarMedkit::StartHeal( void )
+{
+	SendWeaponAnim( MEDKIT_USE );
+	m_fHealing = TRUE;
+
+	m_flTimeWeaponIdle = m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + 1.2;
+}
+
+void CWeaponEinarMedkit::Heal( void )
+{
+	m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]--;
+
+	m_pPlayer->TakeHealth( 25, DMG_GENERIC );
+
+	m_pPlayer->m_iWeaponVolume = 600;
+
+	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "items/medshot4.wav", 1, ATTN_NORM);
+
+	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
+		// HEV suit - indicate out of ammo condition
+		m_pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0);
+
+	m_fHealing = FALSE;
+
+	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + 1.2;
+	m_flTimeWeaponIdle = gpGlobals->time + 1.2;
+}
+
+void CWeaponEinarMedkit::Reload( void )
+{
+	if ( m_fHealing )
+		Heal();
+}
+
+void CWeaponEinarMedkit::WeaponIdle( void )
+{
+	ResetEmptySound( );
+
+	if ( m_flTimeWeaponIdle > gpGlobals->time )
+		return;
+
+	if ( m_fHealing )
+	{
+		Heal();
+		return;
+	}
+
+	SendWeaponAnim( MEDKIT_IDLE );
+	m_flTimeWeaponIdle = gpGlobals->time + 20;
+}
+
+BOOL CWeaponEinarMedkit::PlayEmptySound( void )
+{
+	if (m_iPlayEmptySound)
+	{
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "items/medshotno1.wav", 0.8, ATTN_NORM);
+		m_iPlayEmptySound = 0;
+		return 0;
+	}
+	return 0;
+}
+
 #endif
