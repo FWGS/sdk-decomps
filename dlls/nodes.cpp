@@ -24,58 +24,6 @@
 #include	"animation.h"
 #include	"doors.h"
 
-// sic: a stand-in, used by nothing. VC6 numbers every declaration it has seen, and the
-// numbers (mod 64) decide the order of two register reloads at a loop end of
-// CGraph::LinkVisibleNodes (0x10064380). With the headers as we have them the reloads
-// come out in another order than retail's. Measured with an enum of 0 to 66 constants
-// here: with 19 to 23 or 33 to 46 constants LinkVisibleNodes is retail's and
-// CTestHull::BuildNodeGraph, which reacts to the same count, stays retail's. So retail's
-// headers declared things ours don't; what they were is unknown. 40 is the middle of
-// the wider range.
-enum
-{
-	TH_STANDIN_0,
-	TH_STANDIN_1,
-	TH_STANDIN_2,
-	TH_STANDIN_3,
-	TH_STANDIN_4,
-	TH_STANDIN_5,
-	TH_STANDIN_6,
-	TH_STANDIN_7,
-	TH_STANDIN_8,
-	TH_STANDIN_9,
-	TH_STANDIN_10,
-	TH_STANDIN_11,
-	TH_STANDIN_12,
-	TH_STANDIN_13,
-	TH_STANDIN_14,
-	TH_STANDIN_15,
-	TH_STANDIN_16,
-	TH_STANDIN_17,
-	TH_STANDIN_18,
-	TH_STANDIN_19,
-	TH_STANDIN_20,
-	TH_STANDIN_21,
-	TH_STANDIN_22,
-	TH_STANDIN_23,
-	TH_STANDIN_24,
-	TH_STANDIN_25,
-	TH_STANDIN_26,
-	TH_STANDIN_27,
-	TH_STANDIN_28,
-	TH_STANDIN_29,
-	TH_STANDIN_30,
-	TH_STANDIN_31,
-	TH_STANDIN_32,
-	TH_STANDIN_33,
-	TH_STANDIN_34,
-	TH_STANDIN_35,
-	TH_STANDIN_36,
-	TH_STANDIN_37,
-	TH_STANDIN_38,
-	TH_STANDIN_39,
-};
-
 #define	HULL_STEP_SIZE 16// how far the test hull moves on each step
 #define	NODE_HEIGHT	8	// how high to lift nodes off the ground after we drop them all (make stair/ramp mapping easier)
 
