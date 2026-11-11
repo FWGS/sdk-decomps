@@ -651,6 +651,68 @@ void CBasePlayerWeapon::PrintState( void )
 	COM_Log( "c:\\hl.log", "%i ", m_iClip );
 }
 
+// sic: a stand-in that nothing calls (name and body ours). Retail's hl_weapons.obj
+// has CBaseEntity's inline virtuals up to Blocked before the initialiser of
+// g_clorg, and Center and EyePosition after HUD_PostRunCmd. hl_weapons.cpp
+// builds the precompiled header itself, so VC6 emits those inlines lazily, as
+// far as the intermediate code (IL) of the file's own text has advanced: that
+// order needs 3,095 to 3,290 bytes more IL than the SDK's text and our guess
+// for the five guns give, between the includes and g_rseq. Retail's .reloc
+// size says that text had no absolute address in it, and the copies of
+// identical functions the linker kept say it added no function to the object:
+// an inline or static function nobody called, or statements after a return.
+// They leave nothing in the image, so the text is unknowable; these 44
+// statements (an inline function nobody calls is compiled to IL and not
+// emitted) are 3,149 bytes of IL. The measurements are in the message of the
+// commit that added this.
+inline void TH_ClientStandIn( float *p )
+{
+	p[0] = p[1] * 2 + p[2];
+	p[1] = p[2] * 3 + p[3];
+	p[2] = p[3] * 4 + p[4];
+	p[3] = p[4] * 5 + p[5];
+	p[4] = p[5] * 6 + p[6];
+	p[5] = p[6] * 7 + p[7];
+	p[6] = p[7] * 8 + p[0];
+	p[7] = p[0] * 9 + p[1];
+	p[0] = p[1] * 10 + p[2];
+	p[1] = p[2] * 11 + p[3];
+	p[2] = p[3] * 12 + p[4];
+	p[3] = p[4] * 13 + p[5];
+	p[4] = p[5] * 14 + p[6];
+	p[5] = p[6] * 15 + p[7];
+	p[6] = p[7] * 16 + p[0];
+	p[7] = p[0] * 17 + p[1];
+	p[0] = p[1] * 18 + p[2];
+	p[1] = p[2] * 19 + p[3];
+	p[2] = p[3] * 20 + p[4];
+	p[3] = p[4] * 21 + p[5];
+	p[4] = p[5] * 22 + p[6];
+	p[5] = p[6] * 23 + p[7];
+	p[6] = p[7] * 24 + p[0];
+	p[7] = p[0] * 25 + p[1];
+	p[0] = p[1] * 26 + p[2];
+	p[1] = p[2] * 27 + p[3];
+	p[2] = p[3] * 28 + p[4];
+	p[3] = p[4] * 29 + p[5];
+	p[4] = p[5] * 30 + p[6];
+	p[5] = p[6] * 31 + p[7];
+	p[6] = p[7] * 32 + p[0];
+	p[7] = p[0] * 33 + p[1];
+	p[0] = p[1] * 34 + p[2];
+	p[1] = p[2] * 35 + p[3];
+	p[2] = p[3] * 36 + p[4];
+	p[3] = p[4] * 37 + p[5];
+	p[4] = p[5] * 38 + p[6];
+	p[5] = p[6] * 39 + p[7];
+	p[6] = p[7] * 40 + p[0];
+	p[7] = p[0] * 41 + p[1];
+	p[0] = p[1] * 42 + p[2];
+	p[1] = p[2] * 43 + p[3];
+	p[2] = p[3] * 44 + p[4];
+	p[3] = p[4] * 45 + p[5];
+}
+
 /*
 =====================
 HUD_InitClientWeapons
