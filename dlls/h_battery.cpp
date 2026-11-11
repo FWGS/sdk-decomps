@@ -26,6 +26,11 @@
 #include "saverestore.h"
 #include "skill.h"
 #include "gamerules.h"
+#include "player.h"
+
+// They Hunger: the HUD flag an item_suit with spawnflag 32 sets (see items.cpp). name ours
+// TODO(core): belongs in cdll_dll.h
+#define	HIDEHUD_REDMODE		( 1<<5 )
 
 class CRecharge : public CBaseToggle
 {
@@ -118,7 +123,8 @@ void CRecharge::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE use
 	}
 
 	// if the player doesn't have the suit, or there is no juice left, make the deny noise
-	if ((m_iJuice <= 0) || (!(pActivator->pev->weapons & (1<<WEAPON_SUIT))))
+	if ((m_iJuice <= 0) || (!(pActivator->pev->weapons & (1<<WEAPON_SUIT))) ||
+		((((CBasePlayer *)pActivator)->m_iHideHUD & HIDEHUD_REDMODE) && !g_pGameRules->IsMultiplayer()))
 	{
 		if (m_flSoundTime <= gpGlobals->time)
 		{
