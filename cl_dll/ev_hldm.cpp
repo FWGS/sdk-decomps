@@ -57,6 +57,8 @@ void EV_FireAP9( struct event_args_s *args  );
 void EV_FireTaurus( struct event_args_s *args  );
 void EV_FireSniper( struct event_args_s *args  );
 void EV_FireSniper2( struct event_args_s *args  );
+void EV_ChaingunSpin( struct event_args_s *args  );
+void EV_FireChaingun( struct event_args_s *args  );
 }
 
 #define VECTOR_CONE_1DEGREES Vector( 0.00873, 0.00873, 0.00873 )
@@ -1382,6 +1384,102 @@ void EV_FireSniper2( event_args_t *args )
 			V_PunchAxis( 0, gEngfuncs.pfnRandomFloat( -2.0, -4.0 ) );	// sic
 			V_PunchAxis( 1, gEngfuncs.pfnRandomFloat( -1.0, 1.0 ) );
 		}
+	}
+}
+
+// events/chaingun1.sc; bparam1: the barrels start to spin (they stop otherwise)
+void EV_ChaingunSpin( event_args_t *args )
+{
+	int idx;
+	vec3_t origin;
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+
+	if ( args->bparam1 )
+	{
+		if ( EV_IsLocal( idx ) )
+		{
+			gEngfuncs.pEventAPI->EV_WeaponAnimation( CHAINGUN_SPINUP, 0 );
+		}
+
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/asscan1.wav", 1, ATTN_NORM, 0, PITCH_NORM );
+	}
+	else
+	{
+		gEngfuncs.pEventAPI->EV_KillEvents( idx, "events/chaingun2.sc" );
+		gEngfuncs.pEventAPI->EV_StopSound( idx, CHAN_WEAPON, "weapons/asscan2.wav" );
+
+		if ( EV_IsLocal( idx ) )
+		{
+			gEngfuncs.pEventAPI->EV_WeaponAnimation( CHAINGUN_SPINDOWN, 0 );
+		}
+
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/asscan3.wav", 1, ATTN_NORM, 0, PITCH_NORM );
+	}
+}
+
+// events/chaingun2.sc; bparam1: two rounds (four bullets; two bullets otherwise).
+// Every second shot throws a shell
+void EV_FireChaingun( event_args_t *args )
+{
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t velocity;
+	int tworounds;
+
+	int i;
+	vec3_t ShellVelocity;
+	vec3_t ShellOrigin;
+	int shell;
+	vec3_t vecSrc, vecAiming;
+	vec3_t vecSpread;
+	vec3_t up, right, forward;
+	float flSpread = ( gEngfuncs.GetMaxClients() != 1 ) ? 0.15 : 0.1;
+	static int shots;
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+	VectorCopy( args->velocity, velocity );
+
+	tworounds = args->bparam1;
+	AngleVectors( angles, forward, right, up );
+
+	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/shell.mdl");// brass shell
+	
+	if ( EV_IsLocal( idx ) )
+	{
+		// Add muzzle flash to current weapon model
+		EV_MuzzleFlash();
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( CHAINGUN_FIRE, 0 );
+	}
+
+	shots++;
+	if ( ( shots % 2 ) == 0 )
+	{
+		EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -10, 5 );
+
+		EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL ); 
+	}
+
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/asscan2.wav", 1, ATTN_NORM, 0, PITCH_NORM );
+
+	EV_GetGunPosition( args, vecSrc, origin );
+	VectorCopy( forward, vecAiming );
+
+	for ( i = 0; i < 3; i++ )
+	{
+		vecSpread[ i ] = flSpread;
+	}
+
+	EV_HLDM_FireBullets( idx, forward, right, up, tworounds ? 4 : 2, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_MP5, 0, &tracerCount[idx-1] );
+
+	if ( EV_IsLocal( idx ) )
+	{
+		V_PunchAxis( 0, gEngfuncs.pfnRandomFloat( -0.5, 0.5 ) );
+		V_PunchAxis( 1, gEngfuncs.pfnRandomFloat( -0.5, 0.5 ) );
 	}
 }
 

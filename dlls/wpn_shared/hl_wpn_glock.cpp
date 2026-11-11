@@ -1271,6 +1271,277 @@ void CWeaponEinarTFCSniper::WeaponIdle( void )
 }
 
 
+//=========================================================
+// They Hunger: the chaingun (weapon_th_chaingun, Team Fortress
+// Classic's assault cannon). The barrels have to spin before it
+// fires, and the player walks slowly while they do.
+//=========================================================
+enum chaingun_e {
+	CHAINGUN_IDLE = 0,
+	CHAINGUN_IDLE2,
+	CHAINGUN_SPINUP,
+	CHAINGUN_SPINDOWN,
+	CHAINGUN_FIRE,
+	CHAINGUN_DRAW,
+	CHAINGUN_HOLSTER
+};
+
+LINK_ENTITY_TO_CLASS( weapon_th_chaingun, CWeaponEinarChaingun );
+
+void CWeaponEinarChaingun::Spawn( )
+{
+	Precache( );
+	m_iId = WEAPON_TH_CHAINGUN;
+	SET_MODEL(ENT(pev), "models/w_tfac.mdl");
+
+	m_iDefaultAmmo = TH_CHAINGUN_DEFAULT_GIVE;
+
+	FallInit();// get ready to fall down.
+}
+
+
+void CWeaponEinarChaingun::Precache( void )
+{
+	PRECACHE_MODEL("models/v_tfac.mdl");
+	PRECACHE_MODEL("models/w_tfac.mdl");
+	PRECACHE_MODEL("models/p_tfac.mdl");
+
+	m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shell
+
+	PRECACHE_SOUND("items/9mmclip1.wav");
+
+	PRECACHE_SOUND ("weapons/asscan1.wav");
+	PRECACHE_SOUND ("weapons/asscan2.wav");
+	PRECACHE_SOUND ("weapons/asscan3.wav");
+	PRECACHE_SOUND ("weapons/asscan4.wav");
+	PRECACHE_SOUND ("weapons/reload3.wav");
+
+	m_usChaingunSpin = PRECACHE_EVENT( 1, "events/chaingun1.sc" );
+	m_usChaingunFire = PRECACHE_EVENT( 1, "events/chaingun2.sc" );
+}
+
+int CWeaponEinarChaingun::GetItemInfo(ItemInfo *p)
+{
+	p->pszName = STRING(pev->classname);
+	p->pszAmmo1 = "9mm";
+	p->iMaxAmmo1 = _9MM_MAX_CARRY;
+	p->pszAmmo2 = NULL;
+	p->iMaxAmmo2 = -1;
+	p->iMaxClip = TH_CHAINGUN_MAX_CLIP;
+	p->iSlot = 3;
+	p->iPosition = 4;
+	p->iFlags = 0;
+	p->iId = m_iId = WEAPON_TH_CHAINGUN;
+	p->iWeight = TH_CHAINGUN_WEIGHT;
+
+	return 1;
+}
+
+int CWeaponEinarChaingun::AddToPlayer( CBasePlayer *pPlayer )
+{
+	if ( CBasePlayerWeapon::AddToPlayer( pPlayer ) )
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgWeapPickup, NULL, pPlayer->pev );
+			WRITE_BYTE( m_iId );
+		MESSAGE_END();
+		return TRUE;
+	}
+	return FALSE;
+}
+
+BOOL CWeaponEinarChaingun::Deploy( )
+{
+	return DefaultDeploy( "models/v_tfac.mdl", "models/p_tfac.mdl", CHAINGUN_DRAW, "egon", /*UseDecrement() ? 1 : 0*/ 0 );
+}
+
+void CWeaponEinarChaingun::Holster( int skiplocal /* = 0 */ )
+{
+	m_fInReload = FALSE;// cancel any reload in progress.
+
+	if ( m_fSpinning )
+	{
+		SpinDown( );
+	}
+	else
+	{
+		SendWeaponAnim( CHAINGUN_HOLSTER );
+	}
+
+	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
+}
+
+void CWeaponEinarChaingun::SecondaryAttack( void )
+{
+	if ( m_fSpinning )
+	{
+		SpinDown( );
+	}
+}
+
+void CWeaponEinarChaingun::PrimaryAttack( void )
+{
+	if ( m_pPlayer->pev->waterlevel != 3 && m_iClip > 0 )
+	{
+		if ( !m_fSpinning )
+		{
+			SpinUp( );
+		}
+		else if ( m_flNextSecondaryAttack < UTIL_WeaponTimeBase() )
+		{
+			ChaingunFire( TH_IsMultiplayer() ? 0.15 : 0.1 );
+		}
+	}
+	else
+	{
+		if ( m_fSpinning )
+		{
+			SpinDown( );
+		}
+		else
+		{
+			PlayEmptySound( );
+			m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.2;
+		}
+	}
+}
+
+void CWeaponEinarChaingun::SpinUp( void )
+{
+	m_pPlayer->m_iWeaponVolume = LOUD_GUN_VOLUME;
+
+	g_engfuncs.pfnSetClientMaxspeed( ENT( m_pPlayer->pev ), 80 );
+
+	// bparam1: spinning up
+	PLAYBACK_EVENT_FULL( 0, m_pPlayer->edict(), m_usChaingunSpin, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, 1, 0 );
+
+	m_fSpinning = 1;
+
+	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.4;
+	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.5;
+}
+
+// Takes two rounds if the clip has them and fires four bullets, two for the
+// last round. m_flNextSecondaryAttack times the shots (see PrimaryAttack).
+void CWeaponEinarChaingun::ChaingunFire( float flSpread )
+{
+	BOOL fTwoRounds = FALSE;
+
+	m_iClip--;
+	if ( m_iClip > 0 )
+	{
+		m_iClip--;
+		fTwoRounds = TRUE;
+	}
+
+	m_pPlayer->pev->effects = (int)(m_pPlayer->pev->effects) | EF_MUZZLEFLASH;
+
+	int flags;
+
+#if defined( CLIENT_WEAPONS )
+	flags = FEV_NOTHOST;
+#else
+	flags = 0;
+#endif
+
+	PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usChaingunFire, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, fTwoRounds, 0 );
+
+	// player "shoot" animation
+	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
+
+	m_pPlayer->m_iWeaponVolume = LOUD_GUN_VOLUME;
+	m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
+
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+	Vector vecAiming = gpGlobals->v_forward;
+
+	m_pPlayer->FireBullets( fTwoRounds ? 4 : 2, vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, BULLET_PLAYER_MP5, 0 );
+
+	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
+		// HEV suit - indicate out of ammo condition
+		m_pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0);
+
+	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.1;
+	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.1;
+}
+
+void CWeaponEinarChaingun::SpinDown( void )
+{
+	g_engfuncs.pfnSetClientMaxspeed( ENT( m_pPlayer->pev ), 400 );
+
+	PLAYBACK_EVENT_FULL( 0, m_pPlayer->edict(), m_usChaingunSpin, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, 0, 0 );
+
+	m_fSpinning = 0;
+
+	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2.0;
+	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 1.2;
+	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 1.2;
+}
+
+
+// The reload in three steps, as weapon_einar1's
+void CWeaponEinarChaingun::Reload( void )
+{
+	if ( m_fSpinning )
+	{
+		SpinDown( );
+		return;
+	}
+
+	if ( DefaultReload( TH_CHAINGUN_MAX_CLIP, CHAINGUN_HOLSTER, 0.5 ) )
+	{
+		m_fInReload = 2;
+		m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 2;
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 5, 10 );
+	}
+}
+
+
+void CWeaponEinarChaingun::WeaponIdle( void )
+{
+	ResetEmptySound( );
+
+	m_pPlayer->GetAutoaimVector( 0.001 );
+
+	if ( m_pPlayer->m_flNextAttack <= UTIL_WeaponTimeBase() )
+	{
+		if ( m_fInReload == 3 )
+		{
+			SendWeaponAnim( CHAINGUN_DRAW );
+			m_fInReload = 1;
+		}
+		if ( m_fInReload == 2 )
+		{
+			EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/reload3.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 93 + RANDOM_LONG(0,0xF));
+			m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 1;
+			m_fInReload = 3;
+		}
+	}
+
+	if ( m_flTimeWeaponIdle < UTIL_WeaponTimeBase() )
+	{
+		if ( m_fSpinning )
+		{
+			SpinDown( );
+			return;
+		}
+
+		int iAnim;
+		float flRand = UTIL_SharedRandomFloat( m_pPlayer->random_seed, 0.0, 1.0 );
+
+		if (flRand <= 0.6)
+		{
+			iAnim = CHAINGUN_IDLE;
+		}
+		else
+		{
+			iAnim = CHAINGUN_IDLE2;
+		}
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
+		SendWeaponAnim( iAnim, 1 );
+	}
+}
+
+
 
 
 

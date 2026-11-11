@@ -680,7 +680,7 @@ public:
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
 	void SpinUp( void );
-	void ChaingunFire( float flCycleTime );
+	void ChaingunFire( float flSpread );
 	void SpinDown( void );
 	BOOL Deploy( void );
 	void Holster( int skiplocal = 0 );

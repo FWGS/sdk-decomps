@@ -52,6 +52,7 @@ CWeaponEinarAP9 g_AP9;
 CWeaponEinarTaurus g_Taurus;
 CWeaponEinarSniper g_Sniper;
 CWeaponEinarTFCSniper g_TFCSniper;
+CWeaponEinarChaingun g_Chaingun;
 
 /*
 ======================
@@ -695,6 +696,7 @@ void HUD_InitClientWeapons( void )
 	HUD_PrepEntity( &g_Taurus	, &player );
 	HUD_PrepEntity( &g_Sniper	, &player );
 	HUD_PrepEntity( &g_TFCSniper, &player );
+	HUD_PrepEntity( &g_Chaingun	, &player );
 }
 
 /*
@@ -743,6 +745,10 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 
 	case WEAPON_EINAR1:
 		pWeapon = &g_TFCSniper;
+		break;
+
+	case WEAPON_TH_CHAINGUN:
+		pWeapon = &g_Chaingun;
 		break;
 	}
 

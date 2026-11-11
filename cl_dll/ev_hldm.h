@@ -123,6 +123,16 @@ enum tfcsniper_e {
 	TFCSNIPER_AUTOHOLSTER
 };
 
+enum chaingun_e {
+	CHAINGUN_IDLE = 0,
+	CHAINGUN_IDLE2,
+	CHAINGUN_SPINUP,
+	CHAINGUN_SPINDOWN,
+	CHAINGUN_FIRE,
+	CHAINGUN_DRAW,
+	CHAINGUN_HOLSTER
+};
+
 void EV_HLDM_GunshotDecalTrace( pmtrace_t *pTrace, char *decalName );
 void EV_HLDM_DecalGunshot( pmtrace_t *pTrace, int iBulletType );
 int EV_HLDM_CheckTracer( int idx, float *vecSrc, float *end, float *forward, float *right, int iBulletType, int iTracerFreq, int *tracerCount );
