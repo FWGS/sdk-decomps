@@ -121,7 +121,7 @@ void CRoach :: Spawn()
 	Precache( );
 
 	SET_MODEL(ENT(pev), "models/roach.mdl");
-	UTIL_SetSize( pev, Vector( -1, -1, 0 ), Vector( 1, 1, 2 ) );
+	UTIL_SetSize( pev, Vector( -1, -1, 0 ), Vector( 1, 1, 1 ) );	// They Hunger: 1 unit high, not 2
 
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
