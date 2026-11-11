@@ -358,6 +358,34 @@ void W_Precache(void)
 	UTIL_PrecacheOther( "ammo_crossbow" );
 #endif
 
+	// sniper rifle
+	UTIL_PrecacheOtherWeapon( "weapon_th_sniper" );
+	UTIL_PrecacheOther( "ammo_th_sniper" );
+
+	// the first sniper rifle (TFC's)
+	UTIL_PrecacheOtherWeapon( "weapon_einar1" );
+	UTIL_PrecacheOther( "ammo_einar1" );
+
+	// spanner
+	UTIL_PrecacheOtherWeapon( "weapon_th_spanner" );
+
+	// shovel
+	UTIL_PrecacheOtherWeapon( "weapon_th_shovel" );
+
+	// ap9
+	UTIL_PrecacheOtherWeapon( "weapon_th_ap9" );
+	UTIL_PrecacheOther( "ammo_th_ap9" );
+
+	// taurus
+	UTIL_PrecacheOtherWeapon( "weapon_th_taurus" );
+	UTIL_PrecacheOther( "ammo_th_taurus" );
+
+	// chaingun
+	UTIL_PrecacheOtherWeapon( "weapon_th_chaingun" );
+
+	// medkit
+	UTIL_PrecacheOtherWeapon( "weapon_th_medkit" );
+
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 	// egon
 	UTIL_PrecacheOtherWeapon( "weapon_egon" );
@@ -377,11 +405,6 @@ void W_Precache(void)
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 	// squeak grenade
 	UTIL_PrecacheOtherWeapon( "weapon_snark" );
-#endif
-
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// hornetgun
-	UTIL_PrecacheOtherWeapon( "weapon_hornetgun" );
 #endif
 
 
@@ -417,6 +440,9 @@ void W_Precache(void)
 
 	PRECACHE_SOUND ("weapons/bullet_hit1.wav");	// hit by bullet
 	PRECACHE_SOUND ("weapons/bullet_hit2.wav");	// hit by bullet
+
+	PRECACHE_SOUND ("kelly/bullet_kelly1.wav");	// monster_alien_slave hit by bullet
+	PRECACHE_SOUND ("kelly/bullet_kelly2.wav");
 	
 	PRECACHE_SOUND ("items/weapondrop1.wav");// weapon falls to the ground
 
@@ -636,7 +662,12 @@ BOOL CanAttack( float attack_time, float curtime, BOOL isPredicted )
 
 void CBasePlayerWeapon::ItemPostFrame( void )
 {
-	if ((m_fInReload) && ( m_pPlayer->m_flNextAttack <= UTIL_WeaponTimeBase() ) )
+	if ((m_fInReload > 1) && ( m_pPlayer->m_flNextAttack <= UTIL_WeaponTimeBase() ) )
+	{
+		// a weapon that reloads by itself (m_fInReload 2 and up) goes on in WeaponIdle
+		WeaponIdle();
+	}
+	else if ((m_fInReload) && ( m_pPlayer->m_flNextAttack <= UTIL_WeaponTimeBase() ) )
 	{
 		// complete the reload. 
 		int j = min( iMaxClip() - m_iClip, m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]);	
@@ -1164,7 +1195,59 @@ void CBasePlayerWeapon::RetireWeapon( void )
 	m_pPlayer->pev->weaponmodel = iStringNull;
 	//m_pPlayer->pev->viewmodelindex = NULL;
 
-	g_pGameRules->GetNextBestWeapon( m_pPlayer, this );
+	if ( !g_pGameRules->IsMultiplayer() )
+	{
+		// single player: back to the last weapon if there is one, else to the heaviest
+		// (the loop is CHalfLifeMultiplay::GetNextBestWeapon's without the same-weight branch)
+		CBasePlayerItem *pCheck;
+		CBasePlayerItem *pBest;
+		int iBestWeight;
+		int i;
+
+		if ( !m_pPlayer->m_pActiveItem || !m_pPlayer->m_pActiveItem->CanHolster() )
+		{
+			return;
+		}
+
+		if ( m_pPlayer->m_pLastItem && m_pPlayer->m_pLastItem->CanDeploy() && m_pPlayer->m_pLastItem != m_pPlayer->m_pActiveItem )
+		{
+			m_pPlayer->SelectLastItem();
+			return;
+		}
+
+		iBestWeight = -1;
+		pBest = NULL;
+
+		for ( i = 0 ; i < MAX_ITEM_TYPES ; i++ )
+		{
+			pCheck = m_pPlayer->m_rgpPlayerItems[ i ];
+
+			while ( pCheck )
+			{
+				if ( pCheck->iWeight() > iBestWeight && pCheck != this )
+				{
+					if ( pCheck->CanDeploy() )
+					{
+						iBestWeight = pCheck->iWeight();
+						pBest = pCheck;
+					}
+				}
+
+				pCheck = pCheck->m_pNext;
+			}
+		}
+
+		if ( !pBest )
+		{
+			return;
+		}
+
+		m_pPlayer->SwitchWeapon( pBest );
+	}
+	else
+	{
+		g_pGameRules->GetNextBestWeapon( m_pPlayer, this );
+	}
 }
 
 //*********************************************************
@@ -1493,4 +1576,26 @@ void CWeaponBox::SetObjectCollisionBox( void )
 
 void CBasePlayerWeapon::PrintState( void )
 {
+}
+
+//=========================================================
+// They Hunger: what the weapons of wpn_shared/hl_wpn_glock.cpp
+// (compiled into the client too) ask the game DLL. The client
+// has its own versions of the three. Names ours.
+//=========================================================
+BOOL TH_IsMultiplayer( void )
+{
+	return g_pGameRules->IsMultiplayer();
+}
+
+// takes the tint off (the sniper rifles' scope)
+void TH_ScreenFadeIn( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha )
+{
+	UTIL_ScreenFade( pEntity, color, fadeTime, fadeHold, alpha, 0 );	// FFADE_IN (shake.h)
+}
+
+// tints the screen and leaves it so
+void TH_ScreenFadeOut( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha )
+{
+	UTIL_ScreenFade( pEntity, color, fadeTime, fadeHold, alpha, 1 | 4 );	// FFADE_OUT | FFADE_STAYOUT (shake.h)
 }
