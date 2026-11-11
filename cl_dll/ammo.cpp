@@ -547,12 +547,10 @@ int CHudAmmo::MsgFunc_HideWeapon( const char *pszName, int iSize, void *pbuf )
 	else
 	{
 		if ( m_pWeapon )
-		{
 			if ( gHUD.m_iHideHUDDisplay & HIDEHUD_REDMODE )
 				SetCrosshair( m_pWeapon->hCrosshair, m_pWeapon->rcCrosshair, 255, 16, 16 );
 			else
 				SetCrosshair( m_pWeapon->hCrosshair, m_pWeapon->rcCrosshair, 255, 255, 255 );
-		}
 	}
 
 	return 1;
@@ -616,36 +614,28 @@ int CHudAmmo::MsgFunc_CurWeapon(const char *pszName, int iSize, void *pbuf )
 		if ( gHUD.m_iFOV >= 90 )
 		{ // normal crosshairs
 			if (fOnTarget && m_pWeapon->hAutoaim)
-			{
 				if ( gHUD.m_iHideHUDDisplay & HIDEHUD_REDMODE )
 					SetCrosshair(m_pWeapon->hAutoaim, m_pWeapon->rcAutoaim, 255, 16, 16);
 				else
 					SetCrosshair(m_pWeapon->hAutoaim, m_pWeapon->rcAutoaim, 255, 255, 255);
-			}
 			else
-			{
 				if ( gHUD.m_iHideHUDDisplay & HIDEHUD_REDMODE )
 					SetCrosshair(m_pWeapon->hCrosshair, m_pWeapon->rcCrosshair, 255, 16, 16);
 				else
 					SetCrosshair(m_pWeapon->hCrosshair, m_pWeapon->rcCrosshair, 255, 255, 255);
-			}
 		}
 		else
 		{ // zoomed crosshairs
 			if (fOnTarget && m_pWeapon->hZoomedAutoaim)
-			{
 				if ( gHUD.m_iHideHUDDisplay & HIDEHUD_REDMODE )
 					SetCrosshair(m_pWeapon->hZoomedAutoaim, m_pWeapon->rcZoomedAutoaim, 255, 16, 16);
 				else
 					SetCrosshair(m_pWeapon->hZoomedAutoaim, m_pWeapon->rcZoomedAutoaim, 255, 255, 255);
-			}
 			else
-			{
 				if ( gHUD.m_iHideHUDDisplay & HIDEHUD_REDMODE )
 					SetCrosshair(m_pWeapon->hZoomedCrosshair, m_pWeapon->rcZoomedCrosshair, 255, 16, 16);
 				else
 					SetCrosshair(m_pWeapon->hZoomedCrosshair, m_pWeapon->rcZoomedCrosshair, 255, 255, 255);
-			}
 		}
 	}
 
@@ -892,13 +882,9 @@ int CHudAmmo::Draw(float flTime)
 		m_fFade -= (gHUD.m_flTimeDelta * 20);
 
 	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_REDMODE )
-	{
 		UnpackRGB(r,g,b, RGB_REDISH);
-	}
 	else
-	{
 		UnpackRGB(r,g,b, RGB_YELLOWISH);
-	}
 
 	ScaleColors(r, g, b, a );
 
@@ -928,13 +914,9 @@ int CHudAmmo::Draw(float flTime)
 			x += AmmoWidth/2;
 
 			if ( gHUD.m_iHideHUDDisplay & HIDEHUD_REDMODE )
-			{
 				UnpackRGB(r,g,b, RGB_REDISH);
-			}
 			else
-			{
 				UnpackRGB(r,g,b, RGB_YELLOWISH);
-			}
 
 			// draw the | bar
 			FillRGBA(x, y, iBarWidth, gHUD.m_iFontHeight, r, g, b, a);
@@ -1008,13 +990,9 @@ int DrawBar(int x, int y, int width, int height, float f)
 	}
 
 	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_REDMODE )
-	{
 		UnpackRGB(r, g, b, RGB_REDISH);
-	}
 	else
-	{
 		UnpackRGB(r, g, b, RGB_YELLOWISH);
-	}
 
 	FillRGBA(x, y, width, height, r, g, b, 128);
 
