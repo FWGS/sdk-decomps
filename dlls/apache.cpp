@@ -29,6 +29,8 @@ extern DLL_GLOBAL int		g_iSkillLevel;
 
 class CApache : public CBaseMonster
 {
+	friend class CEinarBoss;	// ours: the boss calls Spawn and Precache and aims the gun, and retail's exported think functions are still private
+
 	int		Save( CSave &save );
 	int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
@@ -56,7 +58,7 @@ class CApache : public CBaseMonster
 	void ShowDamage( void );
 	void Flight( void );
 	void FireRocket( void );
-	BOOL FireGun( void );
+	virtual BOOL FireGun( void );
 	
 	int  TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType );
 	void TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType);
@@ -121,13 +123,17 @@ void CApache :: Spawn( void )
 	pev->movetype = MOVETYPE_FLY;
 	pev->solid = SOLID_BBOX;
 
-	SET_MODEL(ENT(pev), "models/apache.mdl");
+	if (pev->model)
+		SET_MODEL(ENT(pev), STRING(pev->model));
+	else
+		SET_MODEL(ENT(pev), "models/apache.mdl");
 	UTIL_SetSize( pev, Vector( -32, -32, -64 ), Vector( 32, 32, 0 ) );
 	UTIL_SetOrigin( pev, pev->origin );
 
 	pev->flags |= FL_MONSTER;
 	pev->takedamage		= DAMAGE_AIM;
-	pev->health			= gSkillData.apacheHealth;
+	if (pev->health == 0)
+		pev->health			= gSkillData.apacheHealth;
 
 	m_flFieldOfView = -0.707; // 270 degrees
 
@@ -154,7 +160,10 @@ void CApache :: Spawn( void )
 
 void CApache::Precache( void )
 {
-	PRECACHE_MODEL("models/apache.mdl");
+	if (pev->model)
+		PRECACHE_MODEL((char *)STRING(pev->model));
+	else
+		PRECACHE_MODEL("models/apache.mdl");
 
 	PRECACHE_SOUND("apache/ap_rotor1.wav");
 	PRECACHE_SOUND("apache/ap_rotor2.wav");
@@ -401,6 +410,14 @@ void CApache :: DyingThink( void )
 
 			WRITE_BYTE( BREAK_METAL );
 		MESSAGE_END();
+
+		// the death trigger of FCheckAITrigger, which a monster that never runs its AI would not fire
+		if ( m_iTriggerCondition == AITRIGGER_DEATH )
+		{
+			ALERT ( at_aiconsole, "AI Trigger Fire Target\n" );
+			FireTargets( STRING( m_iszTriggerTarget ), this, this, USE_TOGGLE, 0 );
+			m_iTriggerCondition = AITRIGGER_NONE;
+		}
 
 		SetThink( SUB_Remove );
 		pev->nextthink = gpGlobals->time + 0.1;
@@ -748,6 +765,14 @@ void CApache :: FireRocket( void )
 	static float side = 1.0;
 	static int count;
 
+	// They Hunger's helicopters fire no rockets: retail's function only counts one off.
+	// The rest is still compiled and thrown away as unreachable (sic): both statics are
+	// in retail's data, and with Valve's text left below CGrenade::BloodColor lands
+	// behind the hvr_rocket factory as in retail (without it, three functions later).
+	// Where exactly the return stood is ours.
+	m_iRockets--;
+	return;
+
 	if (m_iRockets <= 0)
 		return;
 
@@ -827,7 +852,10 @@ BOOL CApache :: FireGun( )
 	GetAttachment( 0, posBarrel, angBarrel );
 	Vector vecGun = (posBarrel - posGun).Normalize( );
 
-	if (DotProduct( vecGun, vecTarget ) > 0.98)
+	static int cnt;	// name ours, chosen so that VC6 puts it after FireRocket's unused count in .bss, as in retail
+
+	// fires on every second call
+	if (DotProduct( vecGun, vecTarget ) > 0.98 && (cnt++ % 2) == 0)
 	{
 #if 1
 		FireBullets( 1, posGun, vecGun, VECTOR_CONE_4DEGREES, 8192, BULLET_MONSTER_12MM, 1 );
@@ -861,6 +889,9 @@ BOOL CApache :: FireGun( )
 			UTIL_Remove( m_pBeam );
 			m_pBeam = NULL;
 		}
+
+		if (cnt % 2)
+			cnt++;
 	}
 	return FALSE;
 }
@@ -922,13 +953,13 @@ void CApache::TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir
 	if (flDamage > 50 || ptr->iHitgroup == 1 || ptr->iHitgroup == 2)
 	{
 		// ALERT( at_console, "%.0f\n", flDamage );
-		AddMultiDamage( pevAttacker, this, flDamage, bitsDamageType );
-		m_iDoSmokePuff = 3 + (flDamage / 5.0);
+		AddMultiDamage( pevAttacker, this, flDamage / 4.0, bitsDamageType );
+		m_iDoSmokePuff = 3 + (flDamage / 20.0);
 	}
 	else
 	{
-		// do half damage in the body
-		// AddMultiDamage( pevAttacker, this, flDamage / 2.0, bitsDamageType );
+		// do a tenth of the damage in the body
+		AddMultiDamage( pevAttacker, this, flDamage / 10.0, bitsDamageType );
 		UTIL_Ricochet( ptr->vecEndPos, 2.0 );
 	}
 }
@@ -1044,6 +1075,112 @@ void CApacheHVR :: AccelerateThink( void  )
 	pev->angles = UTIL_VecToAngles( pev->velocity );
 
 	pev->nextthink = gpGlobals->time + 0.1;
+}
+
+//=========================================================
+// monster_th_boss - the sheriff's helicopter: an apache with
+// models/boss.mdl, twice the health and a slower, lighter gun
+// (class name ours)
+//=========================================================
+class CEinarBoss : public CApache
+{
+	void Spawn( void );
+	void Precache( void );
+	BOOL FireGun( void );
+};
+LINK_ENTITY_TO_CLASS( monster_th_boss, CEinarBoss );
+
+void CEinarBoss :: Spawn( void )
+{
+	if (!pev->model)
+		pev->model = MAKE_STRING("models/boss.mdl");
+
+	if (pev->health == 0)
+		pev->health = gSkillData.apacheHealth * 2;
+
+	CApache::Spawn( );
+}
+
+
+void CEinarBoss::Precache( void )
+{
+	if (!pev->model)
+		pev->model = MAKE_STRING("models/boss.mdl");
+
+	CApache::Precache( );
+}
+
+
+BOOL CEinarBoss :: FireGun( )
+{
+	UTIL_MakeAimVectors( pev->angles );
+		
+	Vector posGun, angGun;
+	GetAttachment( 1, posGun, angGun );
+
+	Vector vecTarget = (m_posTarget - posGun).Normalize( );
+
+	Vector vecOut;
+
+	vecOut.x = DotProduct( gpGlobals->v_forward, vecTarget );
+	vecOut.y = -DotProduct( gpGlobals->v_right, vecTarget );
+	vecOut.z = DotProduct( gpGlobals->v_up, vecTarget );
+
+	Vector angles = UTIL_VecToAngles (vecOut);
+
+	angles.x = -angles.x;
+	if (angles.y > 180)
+		angles.y = angles.y - 360;
+	if (angles.y < -180)
+		angles.y = angles.y + 360;
+	if (angles.x > 180)
+		angles.x = angles.x - 360;
+	if (angles.x < -180)
+		angles.x = angles.x + 360;
+
+	// the model's gun controller is a quarter turn off
+	m_angGun.y += 90;
+	if (m_angGun.y > 180)
+		m_angGun.y -= 360;
+
+	if (angles.x > m_angGun.x)
+		m_angGun.x = min( angles.x, m_angGun.x + 12 );
+	if (angles.x < m_angGun.x)
+		m_angGun.x = max( angles.x, m_angGun.x - 12 );
+	if (angles.y > m_angGun.y)
+		m_angGun.y = min( angles.y, m_angGun.y + 12 );
+	if (angles.y < m_angGun.y)
+		m_angGun.y = max( angles.y, m_angGun.y - 12 );
+
+	m_angGun.y -= 90;
+	if (m_angGun.y < -180)
+		m_angGun.y += 360;
+
+	m_angGun.y = SetBoneController( 0, m_angGun.y );
+	m_angGun.x = SetBoneController( 1, m_angGun.x );
+
+	Vector posBarrel, angBarrel;
+	GetAttachment( 0, posBarrel, angBarrel );
+	Vector vecGun = (posBarrel - posGun).Normalize( );
+
+	static int cnt;	// name ours; follows the apache's in .bss
+
+	// fires on every third call
+	if (DotProduct( vecGun, vecTarget ) > 0.98 && (cnt++ % 3) == 0)
+	{
+		pev->sequence = 1;
+		FireBullets( 1, posGun, vecGun, VECTOR_CONE_4DEGREES, 8192, BULLET_MONSTER_9MM, 1 );
+		EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/tu_fire1.wav", 1, 0.3);
+		return TRUE;
+	}
+	else
+	{
+		if (cnt % 3)
+			cnt++;
+		else
+			pev->sequence = 0;
+	}
+	return FALSE;
 }
 
 
