@@ -359,9 +359,14 @@ void CRpgRocket :: FollowThink( void  )
 			STOP_SOUND( ENT(pev), CHAN_VOICE, "weapons/rocket1.wav" );
 		}
 		pev->velocity = pev->velocity * 0.2 + vecTarget * flSpeed * 0.798;
-		if (pev->waterlevel == 0 && pev->velocity.Length() < 1500)
+		if ((pev->waterlevel == 0 && pev->velocity.Length() < 1500) || (pev->waterlevel != 0 && pev->velocity.Length() < 10))
 		{
 			Detonate( );
+			if ( m_pLauncher )
+			{
+				// my launcher is still around, tell it I'm dead.
+				m_pLauncher->m_cActiveRockets--;
+			}
 		}
 	}
 	// ALERT( at_console, "%.0f\n", flSpeed );
@@ -564,6 +569,7 @@ void CRpg::PrimaryAttack()
 	else
 	{
 		PlayEmptySound( );
+		m_flNextPrimaryAttack = gpGlobals->time + 0.25;
 	}
 	UpdateSpot( );
 }
