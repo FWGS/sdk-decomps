@@ -111,6 +111,18 @@ enum sniper_e {
 	SNIPER_SHOOT1
 };
 
+enum tfcsniper_e {
+	TFCSNIPER_IDLE = 0,
+	TFCSNIPER_AIM,
+	TFCSNIPER_FIRE,
+	TFCSNIPER_DRAW,
+	TFCSNIPER_HOLSTER,
+	TFCSNIPER_AUTOIDLE,
+	TFCSNIPER_AUTOFIRE,
+	TFCSNIPER_AUTODRAW,
+	TFCSNIPER_AUTOHOLSTER
+};
+
 void EV_HLDM_GunshotDecalTrace( pmtrace_t *pTrace, char *decalName );
 void EV_HLDM_DecalGunshot( pmtrace_t *pTrace, int iBulletType );
 int EV_HLDM_CheckTracer( int idx, float *vecSrc, float *end, float *forward, float *right, int iBulletType, int iTracerFreq, int *tracerCount );

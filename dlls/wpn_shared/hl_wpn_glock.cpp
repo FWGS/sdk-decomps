@@ -1037,6 +1037,240 @@ LINK_ENTITY_TO_CLASS( ammo_th_sniper, CAmmoEinarSniper );
 LINK_ENTITY_TO_CLASS( ammo_einar1, CAmmoEinarSniper );
 
 
+//=========================================================
+// They Hunger: weapon_einar1, the first sniper rifle (Team
+// Fortress Classic's model). The same weapon as weapon_th_sniper
+// with its own models, animations and a reload in three steps.
+//=========================================================
+enum tfcsniper_e {
+	TFCSNIPER_IDLE = 0,
+	TFCSNIPER_AIM,
+	TFCSNIPER_FIRE,
+	TFCSNIPER_DRAW,
+	TFCSNIPER_HOLSTER,
+	TFCSNIPER_AUTOIDLE,
+	TFCSNIPER_AUTOFIRE,
+	TFCSNIPER_AUTODRAW,
+	TFCSNIPER_AUTOHOLSTER
+};
+
+LINK_ENTITY_TO_CLASS( weapon_einar1, CWeaponEinarTFCSniper );
+
+void CWeaponEinarTFCSniper::Spawn( )
+{
+	Precache( );
+	m_iId = WEAPON_EINAR1;
+	SET_MODEL(ENT(pev), "models/w_isotopebox.mdl");
+
+	m_iDefaultAmmo = SNIPER_DEFAULT_GIVE;
+
+	FallInit();// get ready to fall down.
+}
+
+void CWeaponEinarTFCSniper::Precache( void )
+{
+	PRECACHE_MODEL("models/w_isotopebox.mdl");
+	PRECACHE_SOUND("weapons/sniper.wav");
+	PRECACHE_MODEL("models/v_tfc_sniper.mdl");
+	PRECACHE_MODEL("models/p_sniper.mdl");
+
+	PRECACHE_SOUND("weapons/reload3.wav");
+
+	m_usFireSniper = PRECACHE_EVENT( 1, "events/sniper2.sc" );
+}
+
+
+int CWeaponEinarTFCSniper::GetItemInfo(ItemInfo *p)
+{
+	p->pszName = STRING(pev->classname);
+	p->pszAmmo1 = "bullets";
+	p->iMaxAmmo1 = SNIPER_MAX_CARRY;
+	p->pszAmmo2 = NULL;
+	p->iMaxAmmo2 = -1;
+	p->iMaxClip = SNIPER_MAX_CLIP;
+	p->iSlot = 2;
+	p->iPosition = 4;
+	p->iFlags = 0;
+	p->iId = m_iId = WEAPON_EINAR1;
+	p->iWeight = SNIPER_WEIGHT;
+	return 1;
+}
+
+int CWeaponEinarTFCSniper::AddToPlayer( CBasePlayer *pPlayer )
+{
+	if ( CBasePlayerWeapon::AddToPlayer( pPlayer ) )
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgWeapPickup, NULL, pPlayer->pev );
+			WRITE_BYTE( m_iId );
+		MESSAGE_END();
+		return TRUE;
+	}
+	return FALSE;
+}
+
+BOOL CWeaponEinarTFCSniper::Deploy( )
+{
+	return DefaultDeploy( "models/v_tfc_sniper.mdl", "models/p_sniper.mdl", TFCSNIPER_AUTODRAW, "bow" );
+}
+
+void CWeaponEinarTFCSniper::Holster( int skiplocal /* = 0 */ )
+{
+	m_fInReload = FALSE;// cancel any reload in progress.
+
+	if ( m_fInZoom )
+	{
+		SecondaryAttack( );
+	}
+
+	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
+	SendWeaponAnim( TFCSNIPER_AUTOHOLSTER );
+}
+
+void CWeaponEinarTFCSniper::PrimaryAttack( void )
+{
+	BOOL fMultiplayer = TH_IsMultiplayer();
+
+	if ( m_pPlayer->pev->waterlevel != 3 && m_iClip > 0 )
+	{
+		m_iClip--;
+
+		m_pPlayer->pev->effects = (int)(m_pPlayer->pev->effects) | EF_MUZZLEFLASH;
+
+		int flags;
+
+#if defined( CLIENT_WEAPONS )
+		flags = FEV_NOTHOST;
+#else
+		flags = 0;
+#endif
+
+		// bparam1: zoomed
+		PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usFireSniper, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, m_fInZoom ? 1 : 0, 0 );
+
+		// player "shoot" animation
+		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
+
+		m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
+		m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
+
+		Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+		Vector vecAiming = gpGlobals->v_forward;
+
+		if ( m_fInZoom )
+		{
+			if ( fMultiplayer )
+				m_pPlayer->FireBullets( 1, vecSrc, vecAiming, Vector( 0.002, 0.002, 0.002 ), 8192, BULLET_PLAYER_357, 0, 80 );
+			else
+				m_pPlayer->FireBullets( 1, vecSrc, vecAiming, Vector( 0.004, 0.004, 0.004 ), 8192, BULLET_PLAYER_357, 0 );
+		}
+		else
+		{
+			if ( fMultiplayer )
+				m_pPlayer->FireBullets( 1, vecSrc, vecAiming, VECTOR_CONE_9DEGREES, 8192, BULLET_PLAYER_357, 0, 40 );
+			else
+				m_pPlayer->FireBullets( 1, vecSrc, vecAiming, VECTOR_CONE_10DEGREES, 8192, BULLET_PLAYER_357, 0 );
+		}
+
+		if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
+			// HEV suit - indicate out of ammo condition
+			m_pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0);
+
+		if ( m_fInZoom )
+		{
+			m_flTimeWeaponIdle = m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.75;
+		}
+		else
+		{
+			m_flTimeWeaponIdle = m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.11;
+
+			m_pPlayer->pev->punchangle.x -= RANDOM_FLOAT( 0, 4 ) + 4;
+			m_pPlayer->pev->punchangle.y -= 1 - RANDOM_FLOAT( 0, 2 );
+		}
+	}
+	else
+	{
+		if ( m_fFireOnEmpty )
+		{
+			PlayEmptySound( );
+			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.25;
+		}
+
+		if ( m_flTimeWeaponIdle < UTIL_WeaponTimeBase() )
+		{
+			SendWeaponAnim( TFCSNIPER_AUTOIDLE );
+			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 15, 20 );
+		}
+	}
+}
+
+
+void CWeaponEinarTFCSniper::SecondaryAttack()
+{
+	if ( m_fInZoom )
+	{
+		m_pPlayer->m_iFOV = 0; // 0 means reset to default fov
+		m_fInZoom = 0;
+		TH_ScreenFadeIn( m_pPlayer, Vector( 0, 255, 0 ), 0, 0, 70 );
+	}
+	else
+	{
+		m_pPlayer->m_iFOV = 20;
+		m_fInZoom = 1;
+		TH_ScreenFadeOut( m_pPlayer, Vector( 0, 255, 0 ), 0, 0, 70 );
+	}
+	
+	pev->nextthink = UTIL_WeaponTimeBase() + 0.11;
+	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.75;
+}
+
+
+// The reload in three steps: the rifle goes down (DefaultReload, 0.5 s),
+// then WeaponIdle, which CBasePlayerWeapon::ItemPostFrame calls for
+// m_fInReload > 1, plays the sound (m_fInReload 2, 1 s) and draws the rifle
+// (m_fInReload 3), and with m_fInReload 1 ItemPostFrame fills the clip.
+void CWeaponEinarTFCSniper::Reload( void )
+{
+	if ( m_fInZoom )
+	{
+		SecondaryAttack();
+	}
+
+	if ( DefaultReload( SNIPER_MAX_CLIP, TFCSNIPER_AUTOHOLSTER, 0.5 ) )
+	{
+		m_fInReload = 2;
+		m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 2;
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 5, 10 );
+	}
+}
+
+
+void CWeaponEinarTFCSniper::WeaponIdle( void )
+{
+	ResetEmptySound( );
+
+	if ( m_pPlayer->m_flNextAttack <= UTIL_WeaponTimeBase() )
+	{
+		if ( m_fInReload == 3 )
+		{
+			SendWeaponAnim( TFCSNIPER_AUTODRAW );
+			m_fInReload = 1;
+		}
+		if ( m_fInReload == 2 )
+		{
+			EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/reload3.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 93 + RANDOM_LONG(0,0xF));
+			m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 1;
+			m_fInReload = 3;
+		}
+	}
+
+	if ( m_flTimeWeaponIdle < UTIL_WeaponTimeBase() )
+	{
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 15, 20 );
+		SendWeaponAnim( TFCSNIPER_AUTOIDLE, 1 );
+	}
+}
+
+
 
 
 
