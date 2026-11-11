@@ -448,10 +448,28 @@ void CEgon::Attack( void )
 
 void CEgon::PrimaryAttack( void )
 {
+	// sic: this function is retail's only with every line marked sic. Retail reads
+	// the ammo count through one address, taken first, and keeps the count in a
+	// register from the test to the decrement: VC6 does that only for a pointer or
+	// reference variable, never for HasAmmo() and UseAmmo( 1 ), whose two loads it
+	// keeps apart. Without those two inline calls the inliner has budget left to
+	// expand Vector( x, y, z ) in the last two sums of the muzzle position, which
+	// retail calls; the unused locals and the HasAmmo() below use it up again (102
+	// to 177 units before the sums are needed). They are lines of CCrossbow::FireBolt
+	// and CEgon::Attack, where this function's sound and UTIL_MakeVectors lines are
+	// from; which lines retail had can't be known: other sets give the same code.
+	TraceResult tr;	// sic
+
+	int &iAmmo = m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType];	// sic
+
 	// don't fire underwater
-	if ( HasAmmo() && m_pPlayer->pev->waterlevel != 3 )
+	if ( iAmmo > 0 && m_pPlayer->pev->waterlevel != 3 )
 	{
-		UseAmmo( 1 );
+		// UseAmmo( 1 )
+		if ( iAmmo >= 1 )
+			iAmmo -= 1;
+		else
+			iAmmo = 0;
 
 		m_pPlayer->m_iWeaponVolume = 200;
 
@@ -463,11 +481,14 @@ void CEgon::PrimaryAttack( void )
 		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
 		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+		Vector vecAiming = gpGlobals->v_forward;	// sic: unused
 		Vector vecSrc = m_pPlayer->GetGunPosition( ) + gpGlobals->v_forward * 20 + gpGlobals->v_right * 5 + gpGlobals->v_up * 3;
+		Vector vecDir = gpGlobals->v_forward;	// sic: unused
+		Vector vecAngles = m_pPlayer->pev->v_angle;	// sic: unused
 		
 		CEinarFlameRocket *pRocket = CEinarFlameRocket::CreateFlameRocket( vecSrc, m_pPlayer->pev->v_angle, m_pPlayer );
 
-		if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
+		if ( !HasAmmo() )	// sic
 			// HEV suit - indicate out of ammo condition
 			m_pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0);
 
