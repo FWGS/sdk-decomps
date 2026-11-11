@@ -69,6 +69,7 @@ public:
 	float		m_angle;
 	int			m_iszGibModel;
 	int			m_iszSpawnObject;
+	int			einar_sMaster;	// They Hunger: "master" (multisource); retail's name, from the save table
 };
 
 #endif	// FUNC_BREAK_H

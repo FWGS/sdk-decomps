@@ -58,6 +58,18 @@ const char *CBreakable::pSpawnObjects[] =
 	"weapon_satchel",	// 19
 	"weapon_snark",		// 20
 	"weapon_hornetgun",	// 21
+	"weapon_einar1",	// 22
+	"ammo_einar1",		// 23
+	"weapon_th_spanner",// 24
+	"weapon_th_ap9",	// 25
+	"ammo_th_ap9",		// 26
+	"weapon_th_shovel",	// 27
+	"weapon_th_taurus",	// 28
+	"ammo_th_taurus",	// 29
+	"weapon_th_chaingun",// 30
+	"weapon_th_medkit",	// 31
+	"weapon_th_sniper",	// 32
+	"ammo_th_sniper",	// 33
 };
 
 void CBreakable::KeyValue( KeyValueData* pkvd )
@@ -115,6 +127,11 @@ void CBreakable::KeyValue( KeyValueData* pkvd )
 	}
 	else if (FStrEq(pkvd->szKeyName, "lip") )
 		pkvd->fHandled = TRUE;
+	else if (FStrEq(pkvd->szKeyName, "master") )
+	{
+		einar_sMaster = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
 	else
 		CBaseDelay::KeyValue( pkvd );
 }
@@ -135,6 +152,7 @@ TYPEDESCRIPTION CBreakable::m_SaveData[] =
 	DEFINE_FIELD( CBreakable, m_angle, FIELD_FLOAT ),
 	DEFINE_FIELD( CBreakable, m_iszGibModel, FIELD_STRING ),
 	DEFINE_FIELD( CBreakable, m_iszSpawnObject, FIELD_STRING ),
+	DEFINE_FIELD( CBreakable, einar_sMaster, FIELD_STRING ),
 
 	// Explosion magnitude is stored in pev->impulse
 };
@@ -434,7 +452,7 @@ void CBreakable::BreakTouch( CBaseEntity *pOther )
 	entvars_t*	pevToucher = pOther->pev;
 	
 	// only players can break these right now
-	if ( !pOther->IsPlayer() || !IsBreakable() )
+	if ( !pOther->IsPlayer() || !IsBreakable() || !UTIL_IsMasterTriggered( einar_sMaster, pOther ) )
 	{
         return;
 	}
@@ -481,7 +499,7 @@ void CBreakable::BreakTouch( CBaseEntity *pOther )
 // Break when triggered
 void CBreakable::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	if ( IsBreakable() )
+	if ( UTIL_IsMasterTriggered( einar_sMaster, pActivator ) && IsBreakable() )
 	{
 		pev->angles.y = m_angle;
 		UTIL_MakeVectors(pev->angles);
@@ -548,6 +566,10 @@ int CBreakable :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, f
 	}
 	
 	if (!IsBreakable())
+		return 0;
+
+	// sic: the breakable itself is the activator
+	if ( !UTIL_IsMasterTriggered( einar_sMaster, this ) )
 		return 0;
 
 	// Breakables take double damage from the crowbar
