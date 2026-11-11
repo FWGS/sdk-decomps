@@ -419,7 +419,7 @@ int CHudMessage::Draw( float fTime )
 
 void CHudMessage::MessageAdd( const char *pName, float time )
 {
-	int i,j;
+	int i;
 	client_textmessage_t *tempMessage;
 
 	for ( i = 0; i < maxHUDMessages; i++ )
@@ -431,47 +431,9 @@ void CHudMessage::MessageAdd( const char *pName, float time )
 				tempMessage = TextMessageGet( pName+1 );
 			else
 				tempMessage = TextMessageGet( pName );
-			// If we couldnt find it in the titles.txt, just create it
-			if ( !tempMessage )
-			{
-				g_pCustomMessage.effect = 2;
-				g_pCustomMessage.r1 = g_pCustomMessage.g1 = g_pCustomMessage.b1 = g_pCustomMessage.a1 = 100;
-				g_pCustomMessage.r2 = 240;
-				g_pCustomMessage.g2 = 110;
-				g_pCustomMessage.b2 = 0;
-				g_pCustomMessage.a2 = 0;
-				g_pCustomMessage.x = -1;		// Centered
-				g_pCustomMessage.y = 0.7;
-				g_pCustomMessage.fadein = 0.01;
-				g_pCustomMessage.fadeout = 1.5;
-				g_pCustomMessage.fxtime = 0.25;
-				g_pCustomMessage.holdtime = 5;
-				g_pCustomMessage.pName = g_pCustomName;
-				strcpy( g_pCustomText, pName );
-				g_pCustomMessage.pMessage = g_pCustomText;
-
-				tempMessage = &g_pCustomMessage;
-			}
-
-			for ( j = 0; j < maxHUDMessages; j++ )
-			{
-				if ( m_pMessages[j] )
-				{
-					// is this message already in the list
-					if ( !strcmp( tempMessage->pMessage, m_pMessages[j]->pMessage ) )
-					{
-						return;
-					}
-					// get rid of any other messages in same location (only one displays at a time)
-					else if ( abs( tempMessage->y - m_pMessages[j]->y ) < 1 )
-					{
-						if ( abs( tempMessage->x - m_pMessages[j]->x ) < 1 )
-						{
-							m_pMessages[j] = NULL;
-						}
-					}
-				}
-			}
+			// They Hunger: 2.1's custom message for a name titles.txt lacks and its
+			// removal of the messages already shown are not here (g_pCustomMessage,
+			// g_pCustomName and g_pCustomText above are in retail's data, unused)
 
 			m_pMessages[i] = tempMessage;
 			m_startTime[i] = time;

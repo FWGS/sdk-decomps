@@ -25,6 +25,9 @@
 #include <string.h>
 #include <stdio.h>
 
+// TODO(core): belongs in cdll_dll.h
+#define HIDEHUD_REDMODE ( 1<<5 )
+
 
 
 DECLARE_MESSAGE(m_Flash, FlashBat)
@@ -105,15 +108,27 @@ int CHudFlashlight::Draw(float flTime)
 	if (!(gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT)) ))
 		return 1;
 
-	if (m_fOn)
-		a = 225;
-	else
-		a = MIN_ALPHA;
-
-	if (m_flBat < 0.20)
+	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_REDMODE )
+	{
 		UnpackRGB(r,g,b, RGB_REDISH);
+
+		if ( m_fOn && m_flBat >= 0.20 )
+			a = 225;
+		else
+			a = MIN_ALPHA;
+	}
 	else
-		UnpackRGB(r,g,b, RGB_YELLOWISH);
+	{
+		if (m_fOn)
+			a = 225;
+		else
+			a = MIN_ALPHA;
+
+		if (m_flBat < 0.20)
+			UnpackRGB(r,g,b, RGB_REDISH);
+		else
+			UnpackRGB(r,g,b, RGB_YELLOWISH);
+	}
 
 	ScaleColors(r, g, b, a);
 

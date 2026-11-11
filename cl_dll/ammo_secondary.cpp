@@ -24,6 +24,9 @@
 #include <stdio.h>
 #include "parsemsg.h"
 
+// TODO(core): belongs in cdll_dll.h
+#define HIDEHUD_REDMODE ( 1<<5 )
+
 DECLARE_MESSAGE( m_AmmoSecondary, SecAmmoVal );
 DECLARE_MESSAGE( m_AmmoSecondary, SecAmmoIcon );
 
@@ -60,7 +63,14 @@ int CHudAmmoSecondary :: Draw(float flTime)
 
 	// draw secondary ammo icons above normal ammo readout
 	int a, x, y, r, g, b, AmmoWidth;
-	UnpackRGB( r, g, b, RGB_YELLOWISH );
+	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_REDMODE )
+	{
+		UnpackRGB( r, g, b, RGB_REDISH );
+	}
+	else
+	{
+		UnpackRGB( r, g, b, RGB_YELLOWISH );
+	}
 	a = (int) max( MIN_ALPHA, m_fFade );
 	if (m_fFade > 0)
 		m_fFade -= (gHUD.m_flTimeDelta * 20);  // slowly lower alpha to fade out icons
