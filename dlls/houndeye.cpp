@@ -26,6 +26,7 @@
 #include	"squadmonster.h"
 #include	"soundent.h"
 #include	"game.h"
+#include	"weapons.h"
 
 extern CGraph WorldGraph;
 
@@ -193,9 +194,20 @@ BOOL CHoundeye :: FCanActiveIdle ( void )
 //=========================================================
 BOOL CHoundeye :: CheckRangeAttack1 ( float flDot, float flDist )
 {
-	if ( flDist <= ( HOUNDEYE_MAX_ATTACK_RADIUS * 0.5 ) && flDot >= 0.3 )
+	// They Hunger: a houndeye that doesn't zap bites, so it has to come close
+	if ( pev->spawnflags & SF_MONSTER_NOZAP )
 	{
-		return TRUE;
+		if ( flDist <= 64 && flDot >= 0.3 )
+		{
+			return TRUE;
+		}
+	}
+	else
+	{
+		if ( flDist <= ( HOUNDEYE_MAX_ATTACK_RADIUS * 0.5 ) && flDot >= 0.3 )
+		{
+			return TRUE;
+		}
 	}
 	return FALSE;
 }
@@ -287,7 +299,7 @@ void CHoundeye :: HandleAnimEvent( MonsterEvent_t *pEvent )
 
 		case HOUND_AE_HOPBACK:
 			{
-				float flGravity = g_psv_gravity->value;
+				float flGravity = CVAR_GET_FLOAT( "sv_gravity" );
 
 				pev->flags &= ~FL_ONGROUND;
 
@@ -335,7 +347,7 @@ void CHoundeye :: Spawn()
 
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
-	m_bloodColor		= BLOOD_COLOR_YELLOW;
+	m_bloodColor		= BLOOD_COLOR_RED;
 	pev->effects		= 0;
 	pev->health			= gSkillData.houndeyeHealth;
 	pev->yaw_speed		= 5;//!!! should we put this in the monster's changeanim function since turn rates may vary with state/anim?
@@ -354,6 +366,10 @@ void CHoundeye :: Spawn()
 void CHoundeye :: Precache()
 {
 	PRECACHE_MODEL("models/houndeye.mdl");
+
+	PRECACHE_SOUND("houndeye/rex_bite1.wav");
+	PRECACHE_SOUND("houndeye/rex_bite2.wav");
+	PRECACHE_SOUND("houndeye/rex_bite3.wav");
 
 	PRECACHE_SOUND("houndeye/he_alert1.wav");
 	PRECACHE_SOUND("houndeye/he_alert2.wav");
@@ -379,11 +395,14 @@ void CHoundeye :: Precache()
 	PRECACHE_SOUND("houndeye/he_attack1.wav");
 	PRECACHE_SOUND("houndeye/he_attack3.wav");
 
-	PRECACHE_SOUND("houndeye/he_blast1.wav");
-	PRECACHE_SOUND("houndeye/he_blast2.wav");
-	PRECACHE_SOUND("houndeye/he_blast3.wav");
+	if ( !( pev->spawnflags & SF_MONSTER_NOZAP ) )
+	{
+		PRECACHE_SOUND("houndeye/he_blast1.wav");
+		PRECACHE_SOUND("houndeye/he_blast2.wav");
+		PRECACHE_SOUND("houndeye/he_blast3.wav");
 
-	m_iSpriteTexture = PRECACHE_MODEL( "sprites/shockwave.spr" );
+		m_iSpriteTexture = PRECACHE_MODEL( "sprites/shockwave.spr" );
+	}
 }	
 
 //=========================================================
@@ -410,6 +429,62 @@ void CHoundeye :: IdleSound ( void )
 //=========================================================
 void CHoundeye :: WarmUpSound ( void )
 {
+	// They Hunger: the attack animation's start event is the bite of a
+	// houndeye that doesn't zap. Only a bite that hits nothing makes the
+	// warm up sound.
+	if ( pev->spawnflags & SF_MONSTER_NOZAP )
+	{
+		CBaseEntity *pHurt = NULL;
+
+		// a player within 40 units is bitten wherever he stands
+		while ( ( pHurt = UTIL_FindEntityInSphere( pHurt, pev->origin, 40 ) ) != NULL )
+		{
+			if ( pHurt->IsPlayer() )
+			{
+				pHurt->TakeDamage( pev, pev, gSkillData.bullsquidDmgBite * 0.4, DMG_SLASH );
+				break;
+			}
+		}
+
+		if ( !pHurt )
+		{
+			pHurt = CheckTraceHullAttack( 80, gSkillData.bullsquidDmgBite * 0.4, DMG_SLASH );
+		}
+
+		if ( pHurt )
+		{
+			if ( pHurt->pev->flags & (FL_MONSTER|FL_CLIENT) )
+			{
+				pHurt->pev->punchangle.x = 8;
+				pHurt->pev->punchangle.y = RANDOM_FLOAT( -8, 8 );
+				pHurt->pev->punchangle.z = RANDOM_FLOAT( -8, 8 );
+			}
+
+			if ( pHurt->IsPlayer() )
+			{
+				pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_forward * 100 + gpGlobals->v_up * 50;
+			}
+
+			switch ( RANDOM_LONG(0,2) )
+			{
+			case 0:
+				EMIT_SOUND( ENT(pev), CHAN_WEAPON, "houndeye/rex_bite1.wav", 1, ATTN_NORM );	
+				break;
+			case 1:
+				EMIT_SOUND( ENT(pev), CHAN_WEAPON, "houndeye/rex_bite2.wav", 1, ATTN_NORM );	
+				break;
+			case 2:
+				EMIT_SOUND( ENT(pev), CHAN_WEAPON, "houndeye/rex_bite3.wav", 1, ATTN_NORM );	
+				break;
+			}
+
+			Vector vecArmPos, vecArmAng;
+			GetAttachment( 0, vecArmPos, vecArmAng );
+			SpawnBlood(vecArmPos, pHurt->BloodColor(), 25);// a little surface blood.
+			return;
+		}
+	}
+
 	switch ( RANDOM_LONG(0,1) )
 	{
 	case 0:
@@ -560,6 +635,18 @@ void CHoundeye :: SonicAttack ( void )
 {
 	float		flAdjustedDamage;
 	float		flDist;
+
+	// They Hunger: no shockwave from a houndeye that doesn't zap
+	if ( pev->spawnflags & SF_MONSTER_NOZAP )
+	{
+		switch ( RANDOM_LONG( 0, 2 ) )
+		{
+		case 0:	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "houndeye/he_hunt1.wav", 1, ATTN_NORM);	break;
+		case 1:	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "houndeye/he_hunt2.wav", 1, ATTN_NORM);	break;
+		case 2:	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "houndeye/he_hunt3.wav", 1, ATTN_NORM);	break;
+		}
+		return;
+	}
 
 	switch ( RANDOM_LONG( 0, 2 ) )
 	{

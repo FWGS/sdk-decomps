@@ -85,6 +85,10 @@ public:
 	void DeathSound( void );
 	void IdleSound( void );
 	void AlertSound( void );
+	// They Hunger: the three attack sounds, for the hand and the chicken (names ours)
+	virtual void AttackSound( void );
+	virtual void JumpSound( void );
+	virtual void BiteSound( void );
 	void PrescheduleThink( void );
 	int  Classify ( void );
 	void HandleAnimEvent( MonsterEvent_t *pEvent );
@@ -225,7 +229,7 @@ void CHeadCrab :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			Vector vecJumpDir;
 			if (m_hEnemy != NULL)
 			{
-				float gravity = g_psv_gravity->value;
+				float gravity = CVAR_GET_FLOAT( "sv_gravity" );
 				if (gravity <= 1)
 					gravity = 1;
 
@@ -257,9 +261,7 @@ void CHeadCrab :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				vecJumpDir = Vector( gpGlobals->v_forward.x, gpGlobals->v_forward.y, gpGlobals->v_up.z ) * 350;
 			}
 
-			int iSound = RANDOM_LONG(0,2);
-			if ( iSound != 0 )
-				EMIT_SOUND_DYN( edict(), CHAN_VOICE, pAttackSounds[iSound], GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+			JumpSound();
 
 			pev->velocity = vecJumpDir;
 			m_flNextAttack = gpGlobals->time + 2;
@@ -284,7 +286,7 @@ void CHeadCrab :: Spawn()
 
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
-	m_bloodColor		= BLOOD_COLOR_GREEN;
+	m_bloodColor		= BLOOD_COLOR_RED;
 	pev->effects		= 0;
 	pev->health			= gSkillData.headcrabHealth;
 	pev->view_ofs		= Vector ( 0, 0, 20 );// position of the eyes relative to monster's origin.
@@ -355,7 +357,7 @@ void CHeadCrab :: LeapTouch ( CBaseEntity *pOther )
 	// Don't hit if back on ground
 	if ( !FBitSet( pev->flags, FL_ONGROUND ) )
 	{
-		EMIT_SOUND_DYN( edict(), CHAN_WEAPON, RANDOM_SOUND_ARRAY(pBiteSounds), GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+		BiteSound();
 		
 		pOther->TakeDamage( pev, pev, GetDamageAmount(), DMG_SLASH );
 	}
@@ -383,7 +385,7 @@ void CHeadCrab :: StartTask ( Task_t *pTask )
 	{
 	case TASK_RANGE_ATTACK1:
 		{
-			EMIT_SOUND_DYN( edict(), CHAN_WEAPON, pAttackSounds[0], GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+			AttackSound();
 			m_IdealActivity = ACT_RANGE_ATTACK1;
 			SetTouch ( LeapTouch );
 			break;
@@ -464,6 +466,32 @@ void CHeadCrab :: PainSound ( void )
 void CHeadCrab :: DeathSound ( void )
 {
 	EMIT_SOUND_DYN( edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY(pDeathSounds), GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+}
+
+//=========================================================
+// AttackSound - when the leap task starts
+//=========================================================
+void CHeadCrab :: AttackSound ( void )
+{
+	EMIT_SOUND_DYN( edict(), CHAN_WEAPON, pAttackSounds[0], GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+}
+
+//=========================================================
+// JumpSound - at the jump event
+//=========================================================
+void CHeadCrab :: JumpSound ( void )
+{
+	int iSound = RANDOM_LONG(0,2);
+	if ( iSound != 0 )
+		EMIT_SOUND_DYN( edict(), CHAN_VOICE, pAttackSounds[iSound], GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+}
+
+//=========================================================
+// BiteSound - when the leap hits
+//=========================================================
+void CHeadCrab :: BiteSound ( void )
+{
+	EMIT_SOUND_DYN( edict(), CHAN_WEAPON, RANDOM_SOUND_ARRAY(pBiteSounds), GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
 }
 
 Schedule_t* CHeadCrab :: GetScheduleOfType ( int Type )
@@ -552,4 +580,365 @@ Schedule_t* CBabyCrab :: GetScheduleOfType ( int Type )
 	}
 
 	return CHeadCrab::GetScheduleOfType( Type );
+}
+
+
+//=========================================================
+// They Hunger: the hand, a headcrab with twice the health
+// and bite that makes no voice sounds (class name ours)
+//=========================================================
+class CEinarHand : public CHeadCrab
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	void SetYawSpeed ( void );
+	int  Classify ( void );
+	float GetDamageAmount( void ) { return gSkillData.headcrabDmgBite * 2; }
+	void DeathSound( void ) { }
+	void AlertSound( void ) { }
+	void IdleSound( void ) { }
+	void PainSound( void ) { }
+	void JumpSound( void ) { }
+	void AttackSound( void );
+	void BiteSound( void );
+};
+LINK_ENTITY_TO_CLASS( einar_hand, CEinarHand );
+
+//=========================================================
+// Spawn
+//=========================================================
+void CEinarHand :: Spawn()
+{
+	Precache( );
+
+	SET_MODEL(ENT(pev), "models/thehand.mdl");
+	UTIL_SetSize(pev, Vector(-12, -12, 0), Vector(12, 12, 24));
+
+	pev->solid			= SOLID_SLIDEBOX;
+	pev->movetype		= MOVETYPE_STEP;
+	m_bloodColor		= BLOOD_COLOR_RED;
+	pev->effects		= 0;
+	pev->health			= gSkillData.headcrabHealth * 2;
+	pev->view_ofs		= Vector ( 0, 0, 20 );// position of the eyes relative to monster's origin.
+	pev->yaw_speed		= 5;//!!! should we put this in the monster's changeanim function since turn rates may vary with state/anim?
+	m_flFieldOfView		= 0.5;// indicates the width of this monster's forward view cone ( as a dotproduct result )
+	m_MonsterState		= MONSTERSTATE_NONE;
+
+	MonsterInit();
+}
+
+//=========================================================
+// Precache - precaches all resources this monster needs
+//=========================================================
+void CEinarHand :: Precache()
+{
+	PRECACHE_SOUND("thehand/hnd_attack1.wav");
+	PRECACHE_SOUND("thehand/hnd_headbite.wav");
+
+	PRECACHE_MODEL("models/thehand.mdl");
+}	
+
+//=========================================================
+// SetYawSpeed - allows each sequence to have a different
+// turn rate associated with it.
+//=========================================================
+void CEinarHand :: SetYawSpeed ( void )
+{
+	int ys;
+
+	switch ( m_Activity )
+	{
+	case ACT_IDLE:			
+		ys = 60;
+		break;
+	case ACT_RUN:			
+	case ACT_WALK:			
+		ys = 30;
+		break;
+	case ACT_TURN_LEFT:
+	case ACT_TURN_RIGHT:
+		ys = 120;
+		break;
+	case ACT_RANGE_ATTACK1:	
+		ys = 60;
+		break;
+	default:
+		ys = 60;
+		break;
+	}
+
+	pev->yaw_speed = ys;
+}
+
+//=========================================================
+// Classify - indicates this monster's place in the 
+// relationship table.
+//=========================================================
+int	CEinarHand :: Classify ( void )
+{
+	return	CLASS_ALIEN_MONSTER;
+}
+
+//=========================================================
+// AttackSound 
+//=========================================================
+void CEinarHand :: AttackSound ( void )
+{
+	EMIT_SOUND_DYN( edict(), CHAN_WEAPON, "thehand/hnd_attack1.wav", GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+}
+
+//=========================================================
+// BiteSound 
+//=========================================================
+void CEinarHand :: BiteSound ( void )
+{
+	EMIT_SOUND_DYN( edict(), CHAN_WEAPON, "thehand/hnd_headbite.wav", GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+}
+
+//=========================================================
+// They Hunger: the chicken, a headcrab that can leap again
+// at once (class name ours)
+//=========================================================
+class CEinarChicken : public CHeadCrab
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	void SetYawSpeed ( void );
+	int  Classify ( void );
+	void HandleAnimEvent( MonsterEvent_t *pEvent );
+	void DeathSound( void ) { }
+	void IdleSound( void );
+	void AlertSound( void );
+	void PainSound( void );
+	void AttackSound( void );
+	void JumpSound( void );
+	void BiteSound( void );
+
+	static const char *pIdleSounds[];
+	static const char *pAlertSounds[];
+	static const char *pPainSounds[];
+	static const char *pAttackSounds[];
+};
+LINK_ENTITY_TO_CLASS( monster_th_chicken, CEinarChicken );
+
+const char *CEinarChicken::pIdleSounds[] = 
+{
+	"chicken/ch_idle1.wav",
+	"chicken/ch_idle2.wav",
+};
+const char *CEinarChicken::pAlertSounds[] = 
+{
+	"chicken/ch_alert1.wav",
+	"chicken/ch_alert2.wav",
+};
+const char *CEinarChicken::pPainSounds[] = 
+{
+	"chicken/ch_attack2.wav",// sic
+	"chicken/ch_pain2.wav",
+	"chicken/ch_die1.wav",
+	"chicken/ch_die2.wav",
+};
+const char *CEinarChicken::pAttackSounds[] = 
+{
+	"chicken/ch_attack1.wav",
+	"chicken/ch_pain1.wav",// sic
+};
+
+//=========================================================
+// HandleAnimEvent - the headcrab's, without the two seconds
+// to the next attack
+//=========================================================
+void CEinarChicken :: HandleAnimEvent( MonsterEvent_t *pEvent )
+{
+	switch( pEvent->event )
+	{
+		case HC_AE_JUMPATTACK:
+		{
+			ClearBits( pev->flags, FL_ONGROUND );
+
+			UTIL_SetOrigin (pev, pev->origin + Vector ( 0 , 0 , 1) );// take him off ground so engine doesn't instantly reset onground 
+			UTIL_MakeVectors ( pev->angles );
+
+			Vector vecJumpDir;
+			if (m_hEnemy != NULL)
+			{
+				float gravity = CVAR_GET_FLOAT( "sv_gravity" );
+				if (gravity <= 1)
+					gravity = 1;
+
+				// How fast does the headcrab need to travel to reach that height given gravity?
+				float height = (m_hEnemy->pev->origin.z + m_hEnemy->pev->view_ofs.z - pev->origin.z);
+				if (height < 16)
+					height = 16;
+				float speed = sqrt( 2 * gravity * height );
+				float time = speed / gravity;
+
+				// Scale the sideways velocity to get there at the right time
+				vecJumpDir = (m_hEnemy->pev->origin + m_hEnemy->pev->view_ofs - pev->origin);
+				vecJumpDir = vecJumpDir * ( 1.0 / time );
+
+				// Speed to offset gravity at the desired height
+				vecJumpDir.z = speed;
+
+				// Don't jump too far/fast
+				float distance = vecJumpDir.Length();
+				
+				if (distance > 650)
+				{
+					vecJumpDir = vecJumpDir * ( 650.0 / distance );
+				}
+			}
+			else
+			{
+				// jump hop, don't care where
+				vecJumpDir = Vector( gpGlobals->v_forward.x, gpGlobals->v_forward.y, gpGlobals->v_up.z ) * 350;
+			}
+
+			JumpSound();
+
+			pev->velocity = vecJumpDir;
+		}
+		break;
+
+		default:
+			CBaseMonster::HandleAnimEvent( pEvent );
+			break;
+	}
+}
+
+//=========================================================
+// Spawn
+//=========================================================
+void CEinarChicken :: Spawn()
+{
+	Precache( );
+
+	SET_MODEL(ENT(pev), "models/chicken.mdl");
+	UTIL_SetSize(pev, Vector(-12, -12, 0), Vector(12, 12, 24));
+
+	pev->solid			= SOLID_SLIDEBOX;
+	pev->movetype		= MOVETYPE_STEP;
+	m_bloodColor		= BLOOD_COLOR_RED;
+	pev->effects		= 0;
+	pev->health			= gSkillData.headcrabHealth;
+	pev->view_ofs		= Vector ( 0, 0, 20 );// position of the eyes relative to monster's origin.
+	pev->yaw_speed		= 5;//!!! should we put this in the monster's changeanim function since turn rates may vary with state/anim?
+	m_flFieldOfView		= 0.5;// indicates the width of this monster's forward view cone ( as a dotproduct result )
+	m_MonsterState		= MONSTERSTATE_NONE;
+
+	MonsterInit();
+}
+
+//=========================================================
+// Precache - precaches all resources this monster needs
+//=========================================================
+void CEinarChicken :: Precache()
+{
+	PRECACHE_SOUND("thehand/hnd_attack1.wav");
+	PRECACHE_SOUND("thehand/hnd_headbite.wav");
+
+	PRECACHE_SOUND_ARRAY(pIdleSounds);
+	PRECACHE_SOUND_ARRAY(pAlertSounds);
+	PRECACHE_SOUND_ARRAY(pPainSounds);
+	PRECACHE_SOUND_ARRAY(pAttackSounds);
+
+	PRECACHE_MODEL("models/chicken.mdl");
+}	
+
+//=========================================================
+// SetYawSpeed - allows each sequence to have a different
+// turn rate associated with it.
+//=========================================================
+void CEinarChicken :: SetYawSpeed ( void )
+{
+	int ys;
+
+	switch ( m_Activity )
+	{
+	case ACT_IDLE:			
+		ys = 60;
+		break;
+	case ACT_RUN:			
+	case ACT_WALK:			
+		ys = 30;
+		break;
+	case ACT_TURN_LEFT:
+	case ACT_TURN_RIGHT:
+		ys = 120;
+		break;
+	case ACT_RANGE_ATTACK1:	
+		ys = 60;
+		break;
+	default:
+		ys = 60;
+		break;
+	}
+
+	pev->yaw_speed = ys;
+}
+
+//=========================================================
+// Classify - indicates this monster's place in the 
+// relationship table.
+//=========================================================
+int	CEinarChicken :: Classify ( void )
+{
+	return	CLASS_ALIEN_MONSTER;
+}
+
+//=========================================================
+// IdleSound
+//=========================================================
+void CEinarChicken :: IdleSound ( void )
+{
+	EMIT_SOUND_DYN( edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY(pIdleSounds), GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+}
+
+//=========================================================
+// AlertSound 
+//=========================================================
+void CEinarChicken :: AlertSound ( void )
+{
+	EMIT_SOUND_DYN( edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY(pAlertSounds), GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+}
+
+//=========================================================
+// PainSound 
+//=========================================================
+void CEinarChicken :: PainSound ( void )
+{
+	EMIT_SOUND_DYN( edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY(pPainSounds), GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+}
+
+//=========================================================
+// AttackSound - one leap in ten starts with an idle sound
+//=========================================================
+void CEinarChicken :: AttackSound ( void )
+{
+	if ( RANDOM_LONG(0,9) == 0 )
+		IdleSound();
+}
+
+//=========================================================
+// JumpSound 
+//=========================================================
+void CEinarChicken :: JumpSound ( void )
+{
+	if ( RANDOM_LONG(0,1) == 0 )
+		EMIT_SOUND_DYN( edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY(pAttackSounds), GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+
+	EMIT_SOUND_DYN( edict(), CHAN_WEAPON, "thehand/hnd_attack1.wav", GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+}
+
+//=========================================================
+// BiteSound 
+//=========================================================
+void CEinarChicken :: BiteSound ( void )
+{
+	if ( RANDOM_LONG(0,9) == 0 )
+		EMIT_SOUND_DYN( edict(), CHAN_VOICE, "chicken/ch_alert1.wav", GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+
+	EMIT_SOUND_DYN( edict(), CHAN_WEAPON, "thehand/hnd_headbite.wav", GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
 }
