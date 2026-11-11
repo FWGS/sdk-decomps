@@ -186,10 +186,6 @@ SOURCE=.\flashlight.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\GameStudioModelRenderer.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\geiger.cpp
 # End Source File
 # Begin Source File
@@ -267,14 +263,6 @@ SOURCE=.\status_icons.cpp
 # Begin Source File
 
 SOURCE=.\statusbar.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\studio_util.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\StudioModelRenderer.cpp
 # End Source File
 # Begin Source File
 
@@ -378,10 +366,6 @@ SOURCE=.\eventscripts.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\GameStudioModelRenderer.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\health.h
 # End Source File
 # Begin Source File
@@ -431,14 +415,6 @@ SOURCE=..\pm_shared\pm_movevars.h
 # Begin Source File
 
 SOURCE=..\pm_shared\pm_shared.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\studio_util.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\StudioModelRenderer.h
 # End Source File
 # Begin Source File
 
