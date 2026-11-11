@@ -47,6 +47,8 @@ static CBasePlayerWeapon *g_pWpns[ 32 ];
 
 // HLDM Weapon placeholder entities.
 CGlock g_Glock;
+// They Hunger's five guns (names ours; retail constructs them in this order)
+CWeaponEinarAP9 g_AP9;
 
 /*
 ======================
@@ -683,6 +685,10 @@ void HUD_InitClientWeapons( void )
 
 	// Allocate slot(s) for each weapon that we are going to be predicting
 	HUD_PrepEntity( &g_Glock	, &player );
+	// They Hunger's guns. Our guess, here and in HUD_WeaponsPostThink's
+	// switch: neither project defines CLIENT_WEAPONS, so nothing calls these
+	// two functions and the linker left them out of retail's client.dll.
+	HUD_PrepEntity( &g_AP9		, &player );
 }
 
 /*
@@ -714,6 +720,11 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	{
 	case WEAPON_GLOCK:
 		pWeapon = &g_Glock;
+		break;
+
+	// They Hunger's guns (our guess, see HUD_InitClientWeapons)
+	case WEAPON_TH_AP9:
+		pWeapon = &g_AP9;
 		break;
 	}
 

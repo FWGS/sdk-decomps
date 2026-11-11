@@ -51,6 +51,9 @@ void EV_FirePython( struct event_args_s *args  );
 void EV_FireGauss( struct event_args_s *args  );
 void EV_SpinGauss( struct event_args_s *args  );
 void EV_TrainPitchAdjust( struct event_args_s *args );
+
+// They Hunger (names ours)
+void EV_FireAP9( struct event_args_s *args  );
 }
 
 #define VECTOR_CONE_1DEGREES Vector( 0.00873, 0.00873, 0.00873 )
@@ -1148,6 +1151,78 @@ void EV_TrainPitchAdjust( event_args_t *args )
 	else
 	{
 		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_STATIC, sz, m_flVolume, ATTN_NORM, SND_CHANGE_PITCH, pitch );
+	}
+}
+
+//======================
+// They Hunger's guns. The functions' names are ours.
+//======================
+
+// events/ap9.sc; bparam1: primary attack (a shot of a burst otherwise)
+void EV_FireAP9( event_args_t *args )
+{
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t velocity;
+	int primary = args->bparam1;
+
+	int i;
+	vec3_t ShellVelocity;
+	vec3_t ShellOrigin;
+	int shell;
+	vec3_t vecSrc, vecAiming;
+	vec3_t vecSpread;
+	vec3_t up, right, forward;
+	float flSpread = primary ? 0.07 : 0.035;
+	int multiplayer;
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+	VectorCopy( args->velocity, velocity );
+
+	AngleVectors( angles, forward, right, up );
+
+	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/shell.mdl");// brass shell
+	
+	if ( EV_IsLocal( idx ) )
+	{
+		// Add muzzle flash to current weapon model
+		EV_MuzzleFlash();
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( AP9_SHOOT1 + gEngfuncs.pfnRandomLong(0,2), 0 );
+	}
+
+	EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 27, -10, 11 );
+
+	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL ); 
+
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/ap9_fire.wav", 1, ATTN_NORM, 0, 94 + gEngfuncs.pfnRandomLong( 0, 0xf ) );
+
+	EV_GetGunPosition( args, vecSrc, origin );
+	VectorCopy( forward, vecAiming );
+
+	for ( i = 0; i < 3; i++ )
+	{
+		vecSpread[ i ] = flSpread;
+	}
+
+	multiplayer = ( gEngfuncs.GetMaxClients() != 1 );
+
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, multiplayer ? BULLET_PLAYER_9MM : BULLET_PLAYER_MP5, 0, &tracerCount[idx-1] );
+
+	if ( EV_IsLocal( idx ) )
+	{
+		if ( primary )
+		{
+			V_PunchAxis( 0, gEngfuncs.pfnRandomFloat( -3.5, 2.0 ) );
+			V_PunchAxis( 1, gEngfuncs.pfnRandomFloat( -1.5, 1.5 ) );
+		}
+		else
+		{
+			V_PunchAxis( 0, gEngfuncs.pfnRandomFloat( -3.5, -1.5 ) );
+			V_PunchAxis( 1, gEngfuncs.pfnRandomFloat( -1.0, 1.0 ) );
+		}
 	}
 }
 

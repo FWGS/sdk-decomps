@@ -80,6 +80,16 @@ enum gauss_e {
 	GAUSS_DRAW
 };
 
+// They Hunger's guns (names ours, after the models' sequences)
+enum ap9_e {
+	AP9_IDLE1 = 0,
+	AP9_RELOAD,
+	AP9_DRAW,
+	AP9_SHOOT1,
+	AP9_SHOOT2,
+	AP9_SHOOT3
+};
+
 void EV_HLDM_GunshotDecalTrace( pmtrace_t *pTrace, char *decalName );
 void EV_HLDM_DecalGunshot( pmtrace_t *pTrace, int iBulletType );
 int EV_HLDM_CheckTracer( int idx, float *vecSrc, float *end, float *forward, float *right, int iBulletType, int iTracerFreq, int *tracerCount );

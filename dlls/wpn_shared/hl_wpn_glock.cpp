@@ -358,6 +358,234 @@ LINK_ENTITY_TO_CLASS( ammo_glockclip, CGlockAmmo );
 LINK_ENTITY_TO_CLASS( ammo_9mmclip, CGlockAmmo );
 
 
+//=========================================================
+// They Hunger: the AP9 (weapon_th_ap9), a machine pistol with
+// a three-round burst as secondary attack. Class, enum and
+// member names are ours.
+//=========================================================
+enum ap9_e {
+	AP9_IDLE1 = 0,
+	AP9_RELOAD,
+	AP9_DRAW,
+	AP9_SHOOT1,
+	AP9_SHOOT2,
+	AP9_SHOOT3
+};
+
+LINK_ENTITY_TO_CLASS( weapon_th_ap9, CWeaponEinarAP9 );
+
+void CWeaponEinarAP9::Spawn( )
+{
+	Precache( );
+	m_iId = WEAPON_TH_AP9;
+	SET_MODEL(ENT(pev), "models/w_ap9.mdl");
+
+	m_iDefaultAmmo = AP9_DEFAULT_GIVE;
+
+	FallInit();// get ready to fall down.
+}
+
+
+void CWeaponEinarAP9::Precache( void )
+{
+	PRECACHE_MODEL("models/v_ap9.mdl");
+	PRECACHE_MODEL("models/w_ap9.mdl");
+	PRECACHE_MODEL("models/p_ap9.mdl");
+
+	m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shell
+
+	PRECACHE_SOUND("items/9mmclip1.wav");
+
+	PRECACHE_SOUND ("weapons/ap9_fire.wav");
+	PRECACHE_SOUND ("weapons/ap9_clipout.wav");
+	PRECACHE_SOUND ("weapons/ap9_clipin.wav");
+	PRECACHE_SOUND ("weapons/ap9_bolt.wav");
+	PRECACHE_SOUND ("items/cliprelease1.wav");
+
+	m_usFireAP9 = PRECACHE_EVENT( 1, "events/ap9.sc" );
+}
+
+int CWeaponEinarAP9::GetItemInfo(ItemInfo *p)
+{
+	p->pszName = STRING(pev->classname);
+	p->pszAmmo1 = "ap9";
+	p->iMaxAmmo1 = AP9_MAX_CARRY;
+	p->pszAmmo2 = NULL;
+	p->iMaxAmmo2 = -1;
+	p->iMaxClip = AP9_MAX_CLIP;
+	p->iSlot = 1;
+	p->iPosition = 2;
+	p->iFlags = 0;
+	p->iId = m_iId = WEAPON_TH_AP9;
+	p->iWeight = AP9_WEIGHT;
+
+	return 1;
+}
+
+int CWeaponEinarAP9::AddToPlayer( CBasePlayer *pPlayer )
+{
+	if ( CBasePlayerWeapon::AddToPlayer( pPlayer ) )
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgWeapPickup, NULL, pPlayer->pev );
+			WRITE_BYTE( m_iId );
+		MESSAGE_END();
+		return TRUE;
+	}
+	return FALSE;
+}
+
+BOOL CWeaponEinarAP9::Deploy( )
+{
+	return DefaultDeploy( "models/v_ap9.mdl", "models/p_ap9.mdl", AP9_DRAW, "onehanded", /*UseDecrement() ? 1 : 0*/ 0 );
+}
+
+// The burst. m_fInReload counts its shots in twos: with m_fInReload above 1
+// CBasePlayerWeapon::ItemPostFrame calls WeaponIdle when
+// m_pPlayer->m_flNextAttack has passed, and WeaponIdle fires again until
+// the count is 6.
+void CWeaponEinarAP9::SecondaryAttack( void )
+{
+	m_fInReload += 2;
+	AP9Fire( 0.035, 0.6, FALSE );
+	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.04;
+}
+
+void CWeaponEinarAP9::PrimaryAttack( void )
+{
+	AP9Fire( 0.07, 0.125, TRUE );
+}
+
+void CWeaponEinarAP9::AP9Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
+{
+	if (m_iClip <= 0)
+	{
+		if (m_fFireOnEmpty)
+		{
+			PlayEmptySound();
+			m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.2;
+		}
+
+		return;
+	}
+
+	m_iClip--;
+
+	m_pPlayer->pev->effects = (int)(m_pPlayer->pev->effects) | EF_MUZZLEFLASH;
+
+	int flags;
+
+#if defined( CLIENT_WEAPONS )
+	flags = FEV_NOTHOST;
+#else
+	flags = 0;
+#endif
+
+	// bparam1: primary attack
+	PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usFireAP9, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, fUseAutoAim ? 1 : 0, 0 );
+
+	// player "shoot" animation
+	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
+
+	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
+	m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
+
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+	Vector vecAiming = gpGlobals->v_forward;
+
+	if ( TH_IsMultiplayer() )
+	{
+		m_pPlayer->FireBullets( 1, vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, BULLET_PLAYER_9MM, 0 );
+	}
+	else
+	{
+		m_pPlayer->FireBullets( 1, vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, BULLET_PLAYER_MP5, 0 );
+	}
+
+	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
+		// HEV suit - indicate out of ammo condition
+		m_pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0);
+
+	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
+
+	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
+}
+
+
+void CWeaponEinarAP9::Reload( void )
+{
+	int iResult;
+
+	iResult = DefaultReload( AP9_MAX_CLIP, AP9_RELOAD, 1.8 );
+
+	if (iResult)
+	{
+		if ( !TH_IsMultiplayer() )
+			m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 2.9;
+
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
+	}
+}
+
+
+
+void CWeaponEinarAP9::WeaponIdle( void )
+{
+	ResetEmptySound( );
+
+	m_pPlayer->GetAutoaimVector( 0.001 );
+
+	// the rest of a burst (see SecondaryAttack)
+	if ( m_fInReload >= 2 )
+	{
+		if ( m_pPlayer->m_flNextAttack <= UTIL_WeaponTimeBase() )
+		{
+			SecondaryAttack();
+			if ( m_fInReload >= 6 )
+				m_fInReload = 0;
+		}
+	}
+
+	if ( m_flTimeWeaponIdle > UTIL_WeaponTimeBase() )
+		return;
+
+	// only idle if the slid isn't back
+	if (m_iClip != 0)
+	{
+		int iAnim;
+
+		iAnim = AP9_IDLE1;
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 20;
+		SendWeaponAnim( iAnim, 1 );
+	}
+}
+
+
+class CAmmoEinarAP9 : public CBasePlayerAmmo	// name ours
+{
+	void Spawn( void )
+	{ 
+		Precache( );
+		SET_MODEL(ENT(pev), "models/w_ap9clip.mdl");
+		CBasePlayerAmmo::Spawn( );
+	}
+	void Precache( void )
+	{
+		PRECACHE_MODEL ("models/w_ap9clip.mdl");
+		PRECACHE_SOUND("items/9mmclip1.wav");
+	}
+	BOOL AddAmmo( CBaseEntity *pOther ) 
+	{ 
+		if (pOther->GiveAmmo( AMMO_AP9CLIP_GIVE, "ap9", AP9_MAX_CARRY ) != -1)
+		{
+			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
+			return TRUE;
+		}
+		return FALSE;
+	}
+};
+LINK_ENTITY_TO_CLASS( ammo_th_ap9, CAmmoEinarAP9 );
+
+
 
 
 
