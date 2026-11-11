@@ -72,6 +72,12 @@ extern DLL_GLOBAL int		g_iSkillLevel;
 #define GUN_MP5						0
 #define GUN_SHOTGUN					1
 #define GUN_NONE					2
+// They Hunger: the parachute of a grunt dropped by a monster_grunt_repel (names ours)
+#define CHUTE_GROUP					3
+#define CHUTE_NONE					0
+#define CHUTE_OPEN					1
+
+#define SF_GRUNTREPEL_PARACHUTE		32 // the fgd's "TH_PARACHUTE": no rope, a parachute on the grunt (name ours)
 
 //=========================================================
 // Monster's Anim Events Go Here
@@ -138,6 +144,7 @@ public:
 	void StartTask ( Task_t *pTask );
 	void RunTask ( Task_t *pTask );
 	void DeathSound( void );
+	void Killed( entvars_t *pevAttacker, int iGib );
 	void PainSound( void );
 	void IdleSound ( void );
 	Vector GetGunPosition( void );
@@ -186,6 +193,18 @@ public:
 
 	static const char *pGruntSentences[];
 };
+
+//=========================================================
+// Killed - They Hunger: a grunt killed in the air loses
+// its parachute
+//=========================================================
+void CHGrunt :: Killed( entvars_t *pevAttacker, int iGib )
+{
+	if ( GetBodygroup( CHUTE_GROUP ) == CHUTE_OPEN )
+		SetBodygroup( CHUTE_GROUP, CHUTE_NONE );
+
+	CSquadMonster::Killed( pevAttacker, iGib );
+}
 
 LINK_ENTITY_TO_CLASS( monster_human_grunt, CHGrunt );
 
@@ -263,9 +282,19 @@ void CHGrunt :: SpeakSentence( void )
 //=========================================================
 int CHGrunt::IRelationship ( CBaseEntity *pTarget )
 {
-	if ( FClassnameIs( pTarget->pev, "monster_alien_grunt" ) || ( FClassnameIs( pTarget->pev,  "monster_gargantua" ) ) )
+	// They Hunger: the player is disliked whatever the class table says (the zombie
+	// soldier's class is the aliens'), and a zombie soldier has no nemesis
+	if ( FClassnameIs( pTarget->pev, "player" ) )
 	{
-		return R_NM;
+		return R_DL;
+	}
+
+	if ( !( pev->spawnflags & SF_MONSTER_ZSOLDIER ) )
+	{
+		if ( FClassnameIs( pTarget->pev, "monster_alien_grunt" ) || ( FClassnameIs( pTarget->pev,  "monster_gargantua" ) ) )
+		{
+			return R_NM;
+		}
 	}
 
 	return CSquadMonster::IRelationship( pTarget );
@@ -330,6 +359,10 @@ int CHGrunt :: ISoundMask ( void )
 //=========================================================
 BOOL CHGrunt :: FOkToSpeak( void )
 {
+	// They Hunger: the zombie soldier doesn't speak
+	if ( pev->spawnflags & SF_MONSTER_ZSOLDIER )
+		return FALSE;
+
 // if someone else is talking, don't speak
 	if (gpGlobals->time <= CTalkMonster::g_talkWaitTime)
 		return FALSE;
@@ -740,7 +773,8 @@ void CHGrunt :: CheckAmmo ( void )
 //=========================================================
 int	CHGrunt :: Classify ( void )
 {
-	return	CLASS_HUMAN_MILITARY;
+	// They Hunger: the zombie soldier is one of the monsters
+	return	( pev->spawnflags & SF_MONSTER_ZSOLDIER ) ? CLASS_ALIEN_MONSTER : CLASS_HUMAN_MILITARY;
 }
 
 //=========================================================
@@ -980,7 +1014,13 @@ void CHGrunt :: Spawn()
 {
 	Precache( );
 
-	SET_MODEL(ENT(pev), "models/hgrunt.mdl");
+	// They Hunger: the map's model, or the zombie soldier's
+	if ( pev->model )
+		SET_MODEL(ENT(pev), STRING(pev->model));
+	else if ( pev->spawnflags & SF_MONSTER_ZSOLDIER )
+		SET_MODEL(ENT(pev), "models/zgrunt.mdl");
+	else
+		SET_MODEL(ENT(pev), "models/hgrunt.mdl");
 	UTIL_SetSize(pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX);
 
 	pev->solid			= SOLID_SLIDEBOX;
@@ -1025,13 +1065,20 @@ void CHGrunt :: Spawn()
 	else
 		pev->skin = 1;	// dark skin
 
+	// They Hunger: the zombie soldier's heads (models/zgrunt.mdl: 0 has no head, 1 is a skeleton officer)
 	if (FBitSet( pev->weapons, HGRUNT_SHOTGUN ))
 	{
-		SetBodygroup( HEAD_GROUP, HEAD_SHOTGUN);
+		if ( pev->spawnflags & SF_MONSTER_ZSOLDIER )
+			SetBodygroup( HEAD_GROUP, HEAD_COMMANDER );
+		else
+			SetBodygroup( HEAD_GROUP, HEAD_SHOTGUN);
 	}
 	else if (FBitSet( pev->weapons, HGRUNT_GRENADELAUNCHER ))
 	{
-		SetBodygroup( HEAD_GROUP, HEAD_M203 );
+		if ( pev->spawnflags & SF_MONSTER_ZSOLDIER )
+			SetBodygroup( HEAD_GROUP, HEAD_GRUNT );
+		else
+			SetBodygroup( HEAD_GROUP, HEAD_M203 );
 		pev->skin = 1; // alway dark skin
 	}
 
@@ -1045,7 +1092,12 @@ void CHGrunt :: Spawn()
 //=========================================================
 void CHGrunt :: Precache()
 {
-	PRECACHE_MODEL("models/hgrunt.mdl");
+	if ( pev->model )
+		PRECACHE_MODEL((char *)STRING(pev->model));
+	else if ( pev->spawnflags & SF_MONSTER_ZSOLDIER )
+		PRECACHE_MODEL("models/zgrunt.mdl");
+	else
+		PRECACHE_MODEL("models/hgrunt.mdl");
 
 	PRECACHE_SOUND( "hgrunt/gr_mgun1.wav" );
 	PRECACHE_SOUND( "hgrunt/gr_mgun2.wav" );
@@ -2362,6 +2414,9 @@ Schedule_t* CHGrunt :: GetScheduleOfType ( int Type )
 		}
 	case SCHED_GRUNT_REPEL_LAND:
 		{
+			// They Hunger: down; the parachute goes
+			if ( GetBodygroup( CHUTE_GROUP ) == CHUTE_OPEN )
+				SetBodygroup( CHUTE_GROUP, CHUTE_NONE );
 			return &slGruntRepelLand[ 0 ];
 		}
 	default:
@@ -2413,18 +2468,31 @@ void CHGruntRepel::RepelUse ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE
 
 	CBaseEntity *pEntity = Create( "monster_human_grunt", pev->origin, pev->angles );
 	CBaseMonster *pGrunt = pEntity->MyMonsterPointer( );
+	// They Hunger: a parachute instead of the rope
+	if ( pev->spawnflags & SF_GRUNTREPEL_PARACHUTE )
+		pGrunt->SetBodygroup( CHUTE_GROUP, CHUTE_OPEN );
 	pGrunt->pev->movetype = MOVETYPE_FLY;
 	pGrunt->pev->velocity = Vector( 0, 0, RANDOM_FLOAT( -196, -128 ) );
 	pGrunt->SetActivity( ACT_GLIDE );
 	// UNDONE: position?
 	pGrunt->m_vecLastPosition = tr.vecEndPos;
 
-	CBeam *pBeam = CBeam::BeamCreate( "sprites/rope.spr", 10 );
-	pBeam->PointEntInit( pev->origin + Vector(0,0,112), pGrunt->entindex() );
-	pBeam->SetFlags( BEAM_FSOLID );
-	pBeam->SetColor( 255, 255, 255 );
-	pBeam->SetThink( SUB_Remove );
-	pBeam->pev->nextthink = gpGlobals->time + -4096.0 * tr.flFraction / pGrunt->pev->velocity.z + 0.5;
+	// They Hunger: the grunt gets the repel's fade corpse flag and trigger condition
+	if ( pev->spawnflags & SF_MONSTER_FADECORPSE )
+		pGrunt->pev->spawnflags |= SF_MONSTER_FADECORPSE;
+
+	pGrunt->m_iszTriggerTarget = m_iszTriggerTarget;
+	pGrunt->m_iTriggerCondition = m_iTriggerCondition;
+
+	if ( !( pev->spawnflags & SF_GRUNTREPEL_PARACHUTE ) )
+	{
+		CBeam *pBeam = CBeam::BeamCreate( "sprites/rope.spr", 10 );
+		pBeam->PointEntInit( pev->origin + Vector(0,0,112), pGrunt->entindex() );
+		pBeam->SetFlags( BEAM_FSOLID );
+		pBeam->SetColor( 255, 255, 255 );
+		pBeam->SetThink( SUB_Remove );
+		pBeam->pev->nextthink = gpGlobals->time + -4096.0 * tr.flFraction / pGrunt->pev->velocity.z + 0.5;
+	}
 
 	UTIL_Remove( this );
 }
@@ -2438,7 +2506,7 @@ class CDeadHGrunt : public CBaseMonster
 {
 public:
 	void Spawn( void );
-	int	Classify ( void ) { return	CLASS_HUMAN_MILITARY; }
+	int	Classify ( void ) { return	( pev->spawnflags & SF_MONSTER_ZSOLDIER ) ? CLASS_ALIEN_MONSTER : CLASS_HUMAN_MILITARY; }	// They Hunger: the dead zombie soldier
 
 	void KeyValue( KeyValueData *pkvd );
 
@@ -2466,8 +2534,22 @@ LINK_ENTITY_TO_CLASS( monster_hgrunt_dead, CDeadHGrunt );
 //=========================================================
 void CDeadHGrunt :: Spawn( void )
 {
-	PRECACHE_MODEL("models/hgrunt.mdl");
-	SET_MODEL(ENT(pev), "models/hgrunt.mdl");
+	// They Hunger: the map's model, or the zombie soldier's
+	if ( pev->model )
+	{
+		PRECACHE_MODEL((char *)STRING(pev->model));
+		SET_MODEL(ENT(pev), STRING(pev->model));
+	}
+	else if ( pev->spawnflags & SF_MONSTER_ZSOLDIER )
+	{
+		PRECACHE_MODEL("models/zgrunt.mdl");
+		SET_MODEL(ENT(pev), "models/zgrunt.mdl");
+	}
+	else
+	{
+		PRECACHE_MODEL("models/hgrunt.mdl");
+		SET_MODEL(ENT(pev), "models/hgrunt.mdl");
+	}
 
 	pev->effects		= 0;
 	pev->yaw_speed		= 8;
