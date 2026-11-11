@@ -57,7 +57,14 @@
 #define SF_MONSTER_TURRET_AUTOACTIVATE	32
 #define SF_MONSTER_TURRET_STARTINACTIVE	64
 #define SF_MONSTER_WAIT_UNTIL_PROVOKED	64 // don't attack the player unless provoked
-#define SF_MONSTER_ZOMBIECOP			64 // They Hunger, the fgd's "TH_ZOMBIECOP" on monster_barney: a hostile one. CTalkMonster keeps it out of the talking and the friends. name ours
+
+// They Hunger's spawnflags, named after the fgd's "TH_" flags (names ours).
+// A monstermaker with one of them gives it to its children.
+#define SF_MONSTER_REDBLOOD				32 // "TH_REDBLOOD": red blood instead of the alien's (big momma, bloater, controller, gargantua, nihilanth, tentacle)
+#define SF_MONSTER_ZOMBIECOP			64 // "TH_ZOMBIECOP": a hostile monster_barney (CLASS_ALIEN_MONSTER). CTalkMonster keeps it out of the talking and the friends
+#define SF_MONSTER_ZSOLDIER				64 // "TH_ZSOLDIER": a zombie monster_human_grunt (CLASS_ALIEN_MONSTER)
+#define SF_MONSTER_NOZAP				256 // "TH_NOZAP": no ranged attack 1 (alien grunt, vortigaunt, baby Kelly); the houndeye's reaches 64 units instead of 192
+#define SF_MONSTER_FASTMODEZOMBIE		1024 // "TH_FASTMODEZOMBIE": monster_zombie's RunAI speeds its walk towards an enemy up (framerate 1.5)
 
 
 
