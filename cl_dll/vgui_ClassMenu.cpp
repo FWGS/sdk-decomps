@@ -34,6 +34,14 @@
 #include "vgui_TeamFortressViewport.h"
 #include "vgui_ServerBrowser.h"
 
+// sic: a stand-in, names ours, nothing uses it. Retail's headers declared
+// more than SDK 2.1's before this file's code (their text is unknown). VC6
+// numbers every symbol it declares, and two register reloads in
+// CClassMenuPanel's constructor follow those numbers modulo 64: 5 to 39 or
+// 46 to 59 more symbols here give retail's order. This enum declares 5 (4
+// constants and the enum), the fewest.
+enum { SIC_CLASSMENU_0, SIC_CLASSMENU_1, SIC_CLASSMENU_2, SIC_CLASSMENU_3 };
+
 // Class Menu Dimensions
 #define CLASSMENU_TITLE_X				XRES(40)
 #define CLASSMENU_TITLE_Y				YRES(32)
