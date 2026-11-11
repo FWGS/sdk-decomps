@@ -661,6 +661,9 @@ void ClientPrecache( void )
 
 	if (giPrecacheGrunt)
 		UTIL_PrecacheOther("monster_human_grunt");
+
+	PRECACHE_SOUND("garg/gar_step1.wav");
+	PRECACHE_SOUND("garg/gar_step2.wav");
 }
 
 /*

@@ -113,6 +113,11 @@ public:
 #define SNARK_WEIGHT		5
 #define SATCHEL_WEIGHT		-10
 #define TRIPMINE_WEIGHT		-10
+// They Hunger's guns, from their GetItemInfo (names ours); the shovel and the spanner weigh 0
+#define AP9_WEIGHT			15
+#define TAURUS_WEIGHT		15
+#define SNIPER_WEIGHT		15	// both sniper rifles
+#define TH_CHAINGUN_WEIGHT	15
 
 
 // weapon clip/carry ammo capacities
@@ -128,6 +133,11 @@ public:
 #define SNARK_MAX_CARRY			15
 #define HORNET_MAX_CARRY		8
 #define M203_GRENADE_MAX_CARRY	10
+// They Hunger's ammo types (names ours): "ap9", "taurus", "bullets" (both sniper rifles).
+// The chaingun takes "9mm"
+#define AP9_MAX_CARRY			200
+#define TAURUS_MAX_CARRY		80
+#define SNIPER_MAX_CARRY		50
 
 // the maximum amount of ammo each weapon's clip can hold
 #define WEAPON_NOCLIP			-1
@@ -147,6 +157,11 @@ public:
 #define SATCHEL_MAX_CLIP		WEAPON_NOCLIP
 #define TRIPMINE_MAX_CLIP		WEAPON_NOCLIP
 #define SNARK_MAX_CLIP			WEAPON_NOCLIP
+// They Hunger (names ours)
+#define AP9_MAX_CLIP			40
+#define TAURUS_MAX_CLIP			10
+#define SNIPER_MAX_CLIP			5	// both sniper rifles
+#define TH_CHAINGUN_MAX_CLIP	100
 
 
 // the default amount of ammo that comes with each gun when it spawns
@@ -165,6 +180,11 @@ public:
 #define TRIPMINE_DEFAULT_GIVE		1
 #define SNARK_DEFAULT_GIVE			5
 #define HIVEHAND_DEFAULT_GIVE		8
+// They Hunger (names ours)
+#define AP9_DEFAULT_GIVE			80
+#define TAURUS_DEFAULT_GIVE			20
+#define SNIPER_DEFAULT_GIVE			5	// both sniper rifles
+#define TH_CHAINGUN_DEFAULT_GIVE	100
 
 // The amount of ammo given to a player by an ammo item.
 #define AMMO_URANIUMBOX_GIVE	20
@@ -178,6 +198,10 @@ public:
 #define AMMO_RPGCLIP_GIVE		RPG_MAX_CLIP
 #define AMMO_URANIUMBOX_GIVE	20
 #define AMMO_SNARKBOX_GIVE		5
+// They Hunger (names ours): ammo_th_ap9, ammo_th_taurus, ammo_th_sniper and ammo_einar1
+#define AMMO_AP9CLIP_GIVE		AP9_MAX_CLIP
+#define AMMO_TAURUSCLIP_GIVE	TAURUS_MAX_CLIP
+#define AMMO_SNIPERCLIP_GIVE	SNIPER_MAX_CLIP
 
 // bullet types
 typedef	enum
@@ -463,6 +487,15 @@ public:
 	int m_cAmmoTypes;// how many ammo types packed into this box (if packed by a level designer)
 };
 
+// They Hunger: what the weapons of wpn_shared/hl_wpn_glock.cpp, which is
+// compiled into both DLLs, ask their DLL. The game DLL's versions are at the
+// end of weapons.cpp (the game rules' IsMultiplayer, UTIL_ScreenFade with
+// FFADE_IN and with FFADE_OUT | FFADE_STAYOUT); the client has its own.
+// Names ours.
+BOOL TH_IsMultiplayer( void );
+void TH_ScreenFadeIn( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha );
+void TH_ScreenFadeOut( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha );
+
 class CGlock : public CBasePlayerWeapon
 {
 public:
@@ -470,6 +503,7 @@ public:
 	void Precache( void );
 	int iItemSlot( void ) { return 2; }
 	int GetItemInfo(ItemInfo *p);
+	int AddToPlayer( CBasePlayer *pPlayer );
 
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
@@ -493,6 +527,181 @@ private:
 
 	unsigned short m_usFireGlock1;
 	unsigned short m_usFireGlock2;
+};
+
+//=========================================================
+// They Hunger's five guns. Their code follows the glock's in
+// wpn_shared/hl_wpn_glock.cpp, in the order AP9, Taurus, sniper rifle,
+// weapon_einar1, chaingun; the client compiles it too. They are declared
+// here in the order of their ids, which is the order retail's game DLL
+// emits their inline functions in. The class and member names are ours
+// (nothing of these classes is exported or saved); the classes are named
+// after retail's CWeaponEinarShovel.
+//=========================================================
+
+// weapon_th_ap9
+class CWeaponEinarAP9 : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 2; }
+	int GetItemInfo(ItemInfo *p);
+	int AddToPlayer( CBasePlayer *pPlayer );
+
+	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void AP9Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim );
+	BOOL Deploy( void );
+	void Reload( void );
+	void WeaponIdle( void );
+
+	virtual BOOL UseDecrement( void )
+	{ 
+#if defined( CLIENT_WEAPONS )
+		return TRUE;
+#else
+		return FALSE;
+#endif
+	}
+
+private:
+	int m_iShell;
+
+	unsigned short m_usFireAP9;
+};
+
+// weapon_th_sniper
+class CWeaponEinarSniper : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 3; }
+	int GetItemInfo(ItemInfo *p);
+	int AddToPlayer( CBasePlayer *pPlayer );
+
+	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	BOOL Deploy( void );
+	void Holster( int skiplocal = 0 );
+	void Reload( void );
+	void WeaponIdle( void );
+
+	virtual BOOL UseDecrement( void )
+	{ 
+#if defined( CLIENT_WEAPONS )
+		return TRUE;
+#else
+		return FALSE;
+#endif
+	}
+
+private:
+	int m_fInZoom;
+
+	unsigned short m_usFireSniper;
+};
+
+// weapon_einar1, the first sniper rifle (TFC's model)
+class CWeaponEinarTFCSniper : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 3; }
+	int GetItemInfo(ItemInfo *p);
+	int AddToPlayer( CBasePlayer *pPlayer );
+
+	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	BOOL Deploy( void );
+	void Holster( int skiplocal = 0 );
+	void Reload( void );
+	void WeaponIdle( void );
+
+	virtual BOOL UseDecrement( void )
+	{ 
+#if defined( CLIENT_WEAPONS )
+		return TRUE;
+#else
+		return FALSE;
+#endif
+	}
+
+private:
+	int m_fInZoom;
+
+	unsigned short m_usFireSniper;
+};
+
+// weapon_th_taurus
+class CWeaponEinarTaurus : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 2; }
+	int GetItemInfo(ItemInfo *p);
+	int AddToPlayer( CBasePlayer *pPlayer );
+
+	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void TaurusFire( float flSpread, float flCycleTime, BOOL fUseAutoAim );
+	BOOL Deploy( void );
+	void Reload( void );
+	void WeaponIdle( void );
+
+	virtual BOOL UseDecrement( void )
+	{ 
+#if defined( CLIENT_WEAPONS )
+		return TRUE;
+#else
+		return FALSE;
+#endif
+	}
+
+private:
+	int m_iShell;
+
+	unsigned short m_usFireTaurus;
+};
+
+// weapon_th_chaingun
+class CWeaponEinarChaingun : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 4; }
+	int GetItemInfo(ItemInfo *p);
+	int AddToPlayer( CBasePlayer *pPlayer );
+
+	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void SpinUp( void );
+	void ChaingunFire( float flCycleTime );
+	void SpinDown( void );
+	BOOL Deploy( void );
+	void Holster( int skiplocal = 0 );
+	void Reload( void );
+	void WeaponIdle( void );
+
+	virtual BOOL UseDecrement( void )
+	{ 
+#if defined( CLIENT_WEAPONS )
+		return TRUE;
+#else
+		return FALSE;
+#endif
+	}
+
+private:
+	int m_fSpinning;	// the barrels turn (SpinUp to SpinDown)
+	int m_iShell;
+
+	unsigned short m_usChaingunSpin;	// events/chaingun1.sc
+	unsigned short m_usChaingunFire;	// events/chaingun2.sc
 };
 
 #endif // WEAPONS_H

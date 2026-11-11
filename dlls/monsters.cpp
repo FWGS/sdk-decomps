@@ -318,10 +318,11 @@ void CBaseMonster :: Look ( int iDistance )
 	{
 		CBaseEntity *pList[100];
 
-		Vector delta = Vector( iDistance, iDistance, iDistance );
+		Vector vecMins( pev->origin.x - iDistance, pev->origin.y - iDistance, pev->origin.z - iDistance );
+		Vector vecMaxs( pev->origin.x + iDistance, pev->origin.y + iDistance, pev->origin.z + iDistance );
 
 		// Find only monsters/clients in box, NOT limited to PVS
-		int count = UTIL_EntitiesInBox( pList, 100, pev->origin - delta, pev->origin + delta, FL_CLIENT|FL_MONSTER );
+		int count = UTIL_EntitiesInBox( pList, 100, vecMins, vecMaxs, FL_CLIENT|FL_MONSTER );
 		for ( int i = 0; i < count; i++ )
 		{
 			pSightEnt = pList[i];

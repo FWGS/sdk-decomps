@@ -92,14 +92,8 @@ BOOL CGameRules::CanHavePlayerItem( CBasePlayer *pPlayer, CBasePlayerItem *pWeap
 			}
 		}
 	}
-	else
-	{
-		// weapon doesn't use ammo, don't take another if you already have it.
-		if ( pPlayer->HasPlayerItem( pWeapon ) )
-		{
-			return FALSE;
-		}
-	}
+	// They Hunger: a weapon that doesn't use ammo can be taken again
+	// (CBasePlayer::AddPlayerItem deals with the duplicate)
 
 	// note: will fall through to here if GetItemInfo doesn't fill the struct!
 	return TRUE;

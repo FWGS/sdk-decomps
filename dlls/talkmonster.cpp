@@ -659,6 +659,9 @@ CBaseEntity	*CTalkMonster::EnumFriends( CBaseEntity *pPrevious, int listNumber, 
 		if (pFriend == this || !pFriend->IsAlive())
 			// don't talk to self or dead people
 			continue;
+		if ( ( pev->spawnflags ^ pFriend->pev->spawnflags ) & SF_MONSTER_ZOMBIECOP )
+			// zombie cops are friends of each other only
+			continue;
 		if ( bTrace )
 		{
 			vecCheck = pFriend->pev->origin;
@@ -837,6 +840,9 @@ CBaseEntity *CTalkMonster :: FindNearestFriend(BOOL fPlayer)
 				// don't talk to self or dead people
 				continue;
 
+			if ( pFriend->pev->spawnflags & SF_MONSTER_ZOMBIECOP )
+				continue;
+
 			CBaseMonster *pMonster = pFriend->MyMonsterPointer();
 
 			// If not a monster for some reason, or in a script, or prone
@@ -920,6 +926,12 @@ int CTalkMonster :: FOkToSpeak( void )
 
 	// if not alive, certainly don't speak
 	if ( pev->deadflag != DEAD_NO )
+	{
+		return FALSE;
+	}
+
+	// zombie cops don't speak
+	if ( pev->spawnflags & SF_MONSTER_ZOMBIECOP )
 	{
 		return FALSE;
 	}
@@ -1192,7 +1204,7 @@ void CTalkMonster :: SetAnswerQuestion( CTalkMonster *pSpeaker )
 
 int CTalkMonster :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
 {
-	if ( IsAlive() )
+	if ( !( pev->spawnflags & SF_MONSTER_ZOMBIECOP ) && IsAlive() )
 	{
 		// if player damaged this entity, have other friends talk about it
 		if (pevAttacker && m_MonsterState != MONSTERSTATE_PRONE && FBitSet(pevAttacker->flags, FL_CLIENT))

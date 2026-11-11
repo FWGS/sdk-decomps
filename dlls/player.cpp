@@ -870,8 +870,6 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 
 	SetAnimation( PLAYER_DIE );
 		
-	m_iRespawnFrames = 0;
-
 	pev->modelindex = g_ulModelIndexPlayer;    // don't use eyes
 
 	pev->deadflag		= DEAD_DYING;
@@ -1434,7 +1432,23 @@ void CBasePlayer::PlayerUse ( void )
 					m_afPhysicsFlags |= PFLAG_ONTRAIN;
 					m_iTrain = TrainSpeed(pTrain->pev->speed, pTrain->pev->impulse);
 					m_iTrain |= TRAIN_NEW;
-					EMIT_SOUND( ENT(pev), CHAN_ITEM, "plats/train_use1.wav", 0.8, ATTN_NORM);
+					if ( FBitSet( pTrain->pev->spawnflags, SF_TRACKTRAIN_SOUNDS ) )
+					{
+						// one "use" sound per rail sound
+						switch ( ((CFuncTrackTrain *)pTrain)->m_sounds )
+						{
+						case 2: EMIT_SOUND( ENT(pev), CHAN_ITEM, "plats/train_use2.wav", 0.8, ATTN_NORM); break;
+						case 3: EMIT_SOUND( ENT(pev), CHAN_ITEM, "plats/train_use3.wav", 0.8, ATTN_NORM); break;
+						case 4: EMIT_SOUND( ENT(pev), CHAN_ITEM, "plats/train_use4.wav", 0.8, ATTN_NORM); break;
+						case 5: EMIT_SOUND( ENT(pev), CHAN_ITEM, "plats/train_use6.wav", 0.8, ATTN_NORM); break;
+						case 6: EMIT_SOUND( ENT(pev), CHAN_ITEM, "plats/train_use7.wav", 0.8, ATTN_NORM); break;
+						default: EMIT_SOUND( ENT(pev), CHAN_ITEM, "plats/train_use1.wav", 0.8, ATTN_NORM); break;
+						}
+					}
+					else
+					{
+						EMIT_SOUND( ENT(pev), CHAN_ITEM, "plats/train_use1.wav", 0.8, ATTN_NORM);
+					}
 					return;
 				}
 			}
@@ -2422,6 +2436,10 @@ void CBasePlayer::CheckSuitUpdate()
 	if ( !(pev->weapons & (1<<WEAPON_SUIT)) )
 		return;
 
+	// the red suit is silent in single player
+	if ( ( m_iHideHUD & HIDEHUD_REDMODE ) && !g_pGameRules->IsMultiplayer() )
+		return;
+
 	// if in range of radiation source, ping geiger counter
 	UpdateGeigerCounter();
 
@@ -2483,6 +2501,9 @@ void CBasePlayer::SetSuitUpdate(char *name, int fgroup, int iNoRepeatTime)
 	
 	// Ignore suit updates if no suit
 	if ( !(pev->weapons & (1<<WEAPON_SUIT)) )
+		return;
+
+	if ( m_iHideHUD & HIDEHUD_REDMODE )
 		return;
 
 	if ( g_pGameRules->IsMultiplayer() )
@@ -3185,6 +3206,9 @@ int CBasePlayer::Restore( CRestore &restore )
 
 	RenewItems();
 
+	m_iFOV = 0;
+	m_iClientFOV = -1;
+
 	return status;
 }
 
@@ -3288,6 +3312,16 @@ void CBasePlayer::SelectItem(const char *pstr)
 void CBasePlayer::SelectLastItem(void)
 {
 	if (!m_pLastItem)
+	{
+		return;
+	}
+
+	if ( !m_pLastItem->CanDeploy() )
+	{
+		return;
+	}
+
+	if ( m_pLastItem == m_pActiveItem )
 	{
 		return;
 	}
@@ -3455,6 +3489,14 @@ void CBasePlayer::GiveNamedItem( const char *pszName )
 	}
 	VARS( pent )->origin = pev->origin;
 	pent->v.spawnflags |= SF_NORESPAWN;
+
+	// deathmatch players get the silenced pistol
+	if ( g_pGameRules->IsMultiplayer() && !strcmp( pszName, "weapon_9mmhandgun" ) )
+		pent->v.body = 1;
+
+	// a suit given by code in single player is the red one
+	if ( !g_pGameRules->IsMultiplayer() && !strcmp( pszName, "item_suit" ) )
+		pent->v.spawnflags |= SF_SUIT_REDMODE;
 
 	DispatchSpawn( pent );
 	DispatchTouch( pent, ENT( pev ) );
@@ -3682,7 +3724,16 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 		GiveNamedItem( "ammo_rpgclip" );
 		GiveNamedItem( "weapon_satchel" );
 		GiveNamedItem( "weapon_snark" );
-		GiveNamedItem( "weapon_hornetgun" );
+		GiveNamedItem( "weapon_th_sniper" );
+		GiveNamedItem( "ammo_th_sniper" );
+		GiveNamedItem( "weapon_th_medkit" );
+		GiveNamedItem( "weapon_th_chaingun" );
+		GiveNamedItem( "weapon_th_spanner" );
+		GiveNamedItem( "weapon_th_shovel" );
+		GiveNamedItem( "weapon_th_taurus" );
+		GiveNamedItem( "ammo_th_taurus" );
+		GiveNamedItem( "weapon_th_ap9" );
+		GiveNamedItem( "ammo_th_ap9" );
 #endif
 		gEvilImpulse101 = FALSE;
 		break;
@@ -3821,6 +3872,16 @@ int CBasePlayer::AddPlayerItem( CBasePlayerItem *pItem )
 			{
 				g_pGameRules->PlayerGotWeapon ( this, pItem );
 				pItem->CheckRespawn();
+
+				// They Hunger: a second crowbar, shovel or spanner (no ammo: AddDuplicate
+				// is TRUE through GiveAmmo's -1) is "picked up" like the first, with the
+				// pickup message, and stays attached to the player, but is not put on
+				// the item list (sic)
+				if ( pItem->iMaxAmmo1() == -1 )
+				{
+					pItem->AddToPlayer( this );
+					return TRUE;
+				}
 
 				// ugly hack to update clip w/o an update clip message
 				pInsert->UpdateItemInfo( );
@@ -4761,10 +4822,12 @@ BOOL CBasePlayer :: SwitchWeapon( CBasePlayerItem *pWeapon )
 	if (m_pActiveItem)
 	{
 		m_pActiveItem->Holster( );
+		m_pLastItem = m_pActiveItem;
 	}
 
 	m_pActiveItem = pWeapon;
 	pWeapon->Deploy( );
+	pWeapon->UpdateItemInfo( );
 
 	return TRUE;
 }
