@@ -868,9 +868,6 @@ void EV_FireGauss( event_args_t *args )
 		return;
 	}
 
-	// Make sure we don't have a gauss spin event in the queue for this guy
-	gEngfuncs.pEventAPI->EV_KillEvents( idx, "events/gaussspin.sc" );
-
 //	Con_Printf( "Firing gauss with %f\n", flDamage );
 	EV_GetGunPosition( args, vecSrc, origin );
 
