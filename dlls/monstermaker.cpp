@@ -136,7 +136,8 @@ void CMonsterMaker :: Spawn( )
 			SetThink ( MakerThink );
 	}
 
-	if ( m_cNumMonsters == 1 )
+	// They Hunger: a single child fades too if the maker has the fade corpse flag
+	if ( m_cNumMonsters == 1 && !( pev->spawnflags & SF_MONSTER_FADECORPSE ) )
 	{
 		m_fFadeChildren = FALSE;
 	}
@@ -152,7 +153,29 @@ void CMonsterMaker :: Precache( void )
 {
 	CBaseMonster::Precache();
 
-	UTIL_PrecacheOther( STRING( m_iszMonsterClassname ) );
+	// They Hunger: the child's Precache has to see the maker's "message" (monster_zombie
+	// takes its sound set from it), so this is UTIL_PrecacheOther with the string passed on
+	if ( pev->message )
+	{
+		edict_t	*pent;
+
+		pent = CREATE_NAMED_ENTITY( m_iszMonsterClassname );
+		if ( FNullEnt( pent ) )
+		{
+			ALERT ( at_console, "NULL Ent in UTIL_PrecacheOther\n" );
+			return;
+		}
+		
+		CBaseEntity *pEntity = CBaseEntity::Instance (VARS( pent ));
+		if (pEntity)
+		{
+			pEntity->pev->message = pev->message;
+			pEntity->Precache( );
+		}
+		REMOVE_ENTITY(pent);
+	}
+	else
+		UTIL_PrecacheOther( STRING( m_iszMonsterClassname ) );
 }
 
 //=========================================================
@@ -213,6 +236,33 @@ void CMonsterMaker::MakeMonster( void )
 	// Children hit monsterclip brushes
 	if ( pev->spawnflags & SF_MONSTERMAKER_MONSTERCLIP )
 		SetBits( pevCreate->spawnflags, SF_MONSTER_HITMONSTERCLIP );
+
+	// They Hunger: the maker's own flags for the child (zombie cop or zombie soldier,
+	// no zap, red blood, fast zombie)
+	if ( pev->spawnflags & SF_MONSTER_ZOMBIECOP )
+		SetBits( pevCreate->spawnflags, SF_MONSTER_ZOMBIECOP );
+
+	if ( pev->spawnflags & SF_MONSTER_NOZAP )
+		SetBits( pevCreate->spawnflags, SF_MONSTER_NOZAP );
+
+	if ( pev->spawnflags & SF_MONSTER_REDBLOOD )
+		SetBits( pevCreate->spawnflags, SF_MONSTER_REDBLOOD );
+
+	if ( pev->spawnflags & SF_MONSTER_FASTMODEZOMBIE )
+		SetBits( pevCreate->spawnflags, SF_MONSTER_FASTMODEZOMBIE );
+
+	// and its message, model, skin and health, where the map set them
+	if ( pev->message )
+		pevCreate->message = pev->message;
+
+	if ( pev->model )
+		pevCreate->model = pev->model;
+
+	if ( pev->skin )
+		pevCreate->skin = pev->skin;
+
+	if ( pev->health != 0 )
+		pevCreate->health = pev->health;
 
 	DispatchSpawn( ENT( pevCreate ) );
 	pevCreate->owner = edict();
