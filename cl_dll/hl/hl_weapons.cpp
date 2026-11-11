@@ -49,6 +49,7 @@ static CBasePlayerWeapon *g_pWpns[ 32 ];
 CGlock g_Glock;
 // They Hunger's five guns (names ours; retail constructs them in this order)
 CWeaponEinarAP9 g_AP9;
+CWeaponEinarTaurus g_Taurus;
 
 /*
 ======================
@@ -689,6 +690,7 @@ void HUD_InitClientWeapons( void )
 	// switch: neither project defines CLIENT_WEAPONS, so nothing calls these
 	// two functions and the linker left them out of retail's client.dll.
 	HUD_PrepEntity( &g_AP9		, &player );
+	HUD_PrepEntity( &g_Taurus	, &player );
 }
 
 /*
@@ -725,6 +727,10 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	// They Hunger's guns (our guess, see HUD_InitClientWeapons)
 	case WEAPON_TH_AP9:
 		pWeapon = &g_AP9;
+		break;
+
+	case WEAPON_TH_TAURUS:
+		pWeapon = &g_Taurus;
 		break;
 	}
 

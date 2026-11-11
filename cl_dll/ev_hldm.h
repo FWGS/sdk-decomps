@@ -90,6 +90,20 @@ enum ap9_e {
 	AP9_SHOOT3
 };
 
+enum taurus_e {
+	TAURUS_IDLE1 = 0,
+	TAURUS_IDLE2,
+	TAURUS_IDLE3,
+	TAURUS_SHOOT,
+	TAURUS_SHOOT2,
+	TAURUS_SHOOT3,
+	TAURUS_SHOOT_EMPTY,
+	TAURUS_RELOAD,
+	TAURUS_RELOAD2,
+	TAURUS_DRAW,
+	TAURUS_DRAW2
+};
+
 void EV_HLDM_GunshotDecalTrace( pmtrace_t *pTrace, char *decalName );
 void EV_HLDM_DecalGunshot( pmtrace_t *pTrace, int iBulletType );
 int EV_HLDM_CheckTracer( int idx, float *vecSrc, float *end, float *forward, float *right, int iBulletType, int iTracerFreq, int *tracerCount );

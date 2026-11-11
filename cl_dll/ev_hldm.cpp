@@ -54,6 +54,7 @@ void EV_TrainPitchAdjust( struct event_args_s *args );
 
 // They Hunger (names ours)
 void EV_FireAP9( struct event_args_s *args  );
+void EV_FireTaurus( struct event_args_s *args  );
 }
 
 #define VECTOR_CONE_1DEGREES Vector( 0.00873, 0.00873, 0.00873 )
@@ -1223,6 +1224,52 @@ void EV_FireAP9( event_args_t *args )
 			V_PunchAxis( 0, gEngfuncs.pfnRandomFloat( -3.5, -1.5 ) );
 			V_PunchAxis( 1, gEngfuncs.pfnRandomFloat( -1.0, 1.0 ) );
 		}
+	}
+}
+
+// events/taurus.sc; bparam1: the last round. No shell
+void EV_FireTaurus( event_args_t *args )
+{
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	int empty;
+
+	int i;
+	vec3_t vecSrc, vecAiming;
+	vec3_t vecSpread;
+	vec3_t up, right, forward;
+	float flSpread = 0.04;
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+
+	empty = args->bparam1;
+	AngleVectors( angles, forward, right, up );
+
+	if ( EV_IsLocal( idx ) )
+	{
+		EV_MuzzleFlash();
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( empty ? TAURUS_SHOOT_EMPTY : TAURUS_SHOOT + gEngfuncs.pfnRandomLong(0,2), 0 );
+	}
+
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/tau_fire.wav", gEngfuncs.pfnRandomFloat(0.92, 1.0), ATTN_NORM, 0, 98 + gEngfuncs.pfnRandomLong( 0, 3 ) );
+
+	EV_GetGunPosition( args, vecSrc, origin );
+	
+	VectorCopy( forward, vecAiming );
+
+	for ( i = 0; i < 3; i++ )
+	{
+		vecSpread[ i ] = flSpread;
+	}
+
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_9MM, 0, &tracerCount[idx-1] );
+
+	if ( EV_IsLocal( idx ) )
+	{
+		V_PunchAxis( 0, -3.0 );
 	}
 }
 

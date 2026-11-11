@@ -31,6 +31,7 @@ void EV_TrainPitchAdjust( struct event_args_s *args );
 
 // They Hunger (names ours)
 void EV_FireAP9( struct event_args_s *args  );
+void EV_FireTaurus( struct event_args_s *args  );
 }
 
 /*
@@ -60,4 +61,5 @@ void Game_HookEvents( void )
 
 	// They Hunger
 	gEngfuncs.pfnHookEvent( "events/ap9.sc",					EV_FireAP9 );
+	gEngfuncs.pfnHookEvent( "events/taurus.sc",					EV_FireTaurus );
 }
