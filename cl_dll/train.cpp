@@ -24,6 +24,9 @@
 #include <stdio.h>
 #include "parsemsg.h"
 
+// TODO(core): belongs in cdll_dll.h
+#define HIDEHUD_REDMODE ( 1<<5 )
+
 DECLARE_MESSAGE(m_Train, Train )
 
 
@@ -54,7 +57,14 @@ int CHudTrain::Draw(float fTime)
 	{
 		int r, g, b, x, y;
 
-		UnpackRGB(r,g,b, RGB_YELLOWISH);
+		if ( gHUD.m_iHideHUDDisplay & HIDEHUD_REDMODE )
+		{
+			UnpackRGB(r,g,b, RGB_REDISH);
+		}
+		else
+		{
+			UnpackRGB(r,g,b, RGB_YELLOWISH);
+		}
 		SPR_Set(m_hSprite, r, g, b );
 
 		// This should show up to the right and part way up the armor number

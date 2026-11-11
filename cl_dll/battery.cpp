@@ -25,6 +25,9 @@
 #include <string.h>
 #include <stdio.h>
 
+// TODO(core): belongs in cdll_dll.h
+#define HIDEHUD_REDMODE ( 1<<5 )
+
 DECLARE_MESSAGE(m_Battery, Battery)
 
 int CHudBattery::Init(void)
@@ -83,7 +86,17 @@ int CHudBattery::Draw(float flTime)
 	rc = *m_prc2;
 	rc.top  += m_iHeight * ((float)(100-(min(100,m_iBat))) * 0.01);	// battery can go from 0 to 100 so * 0.01 goes from 0 to 1
 
-	UnpackRGB(r,g,b, RGB_YELLOWISH);
+	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_REDMODE )
+	{
+		UnpackRGB(r,g,b, RGB_REDISH);
+	}
+	else
+	{
+		UnpackRGB(r,g,b, RGB_YELLOWISH);
+	}
+
+	if ( !m_iBat && (gHUD.m_iHideHUDDisplay & HIDEHUD_REDMODE) )
+		return 1;
 
 	if (!(gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT)) ))
 		return 1;
