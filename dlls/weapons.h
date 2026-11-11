@@ -77,6 +77,16 @@ public:
 #define WEAPON_TRIPMINE			13
 #define	WEAPON_SATCHEL			14
 #define	WEAPON_SNARK			15
+// They Hunger's weapons, by the iId each one's GetItemInfo returns (names
+// ours, after the entity names)
+#define WEAPON_TH_SPANNER		16
+#define WEAPON_TH_AP9			17
+#define WEAPON_TH_SHOVEL		18
+#define WEAPON_TH_SNIPER		19
+#define WEAPON_EINAR1			20
+#define WEAPON_TH_TAURUS		21
+#define WEAPON_TH_CHAINGUN		22
+#define WEAPON_TH_MEDKIT		23
 
 #define WEAPON_ALLWEAPONS		(~(1<<WEAPON_SUIT))
 
