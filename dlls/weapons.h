@@ -571,6 +571,75 @@ private:
 	unsigned short m_usFireAP9;
 };
 
+// sic: a stand-in, not They Hunger's text. Nothing calls this function and
+// it compiles to no code. Its 60 empty statements are 366 bytes of VC6's
+// intermediate code in front of the sniper rifle's class, which is what puts
+// the guns' inline iItemSlot/UseDecrement where retail's hl_wpn_glock.obj has
+// them (52 to 67 statements do; see the commit message). Name ours.
+inline void TH_StandIn( void )
+{
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+}
+
 // weapon_th_sniper
 class CWeaponEinarSniper : public CBasePlayerWeapon
 {
