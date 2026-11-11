@@ -1747,6 +1747,7 @@ void CBlood::Spawn( void )
 	pev->effects		= 0;
 	pev->frame			= 0;
 	SetMovedir( pev );
+	SetColor( BLOOD_COLOR_RED );	// They Hunger: always red, whatever "color" said (KeyValue runs before Spawn)
 }
 
 
