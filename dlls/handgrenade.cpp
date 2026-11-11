@@ -48,6 +48,7 @@ public:
 	BOOL CanHolster( void );
 	void Holster( int skiplocal = 0 );
 	void WeaponIdle( void );
+	CGrenade *ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );	// name ours
 	float m_flStartThrow;
 	float m_flReleaseThrow;
 };
@@ -58,7 +59,7 @@ void CHandGrenade::Spawn( )
 {
 	Precache( );
 	m_iId = WEAPON_HANDGRENADE;
-	SET_MODEL(ENT(pev), "models/w_grenade.mdl");
+	SET_MODEL(ENT(pev), "models/w_tnt.mdl");
 
 	pev->dmg = gSkillData.plrDmgHandGrenade;
 
@@ -70,8 +71,10 @@ void CHandGrenade::Spawn( )
 
 void CHandGrenade::Precache( void )
 {
+	PRECACHE_MODEL("models/w_tnt.mdl");
+	PRECACHE_MODEL("models/v_tnt.mdl");
+	PRECACHE_MODEL("models/p_tnt.mdl");
 	PRECACHE_MODEL("models/w_grenade.mdl");
-	PRECACHE_MODEL("models/v_grenade.mdl");
 	PRECACHE_MODEL("models/p_grenade.mdl");
 }
 
@@ -96,7 +99,7 @@ int CHandGrenade::GetItemInfo(ItemInfo *p)
 BOOL CHandGrenade::Deploy( )
 {
 	m_flReleaseThrow = -1;
-	return DefaultDeploy( "models/v_grenade.mdl", "models/p_grenade.mdl", HANDGRENADE_DRAW, "crowbar" );
+	return DefaultDeploy( "models/v_tnt.mdl", "models/p_tnt.mdl", HANDGRENADE_DRAW, "crowbar" );
 }
 
 BOOL CHandGrenade::CanHolster( void )
@@ -168,7 +171,7 @@ void CHandGrenade::WeaponIdle( void )
 		if (time < 0)
 			time = 0;
 
-		CGrenade::ShootTimed( m_pPlayer->pev, vecSrc, vecThrow, time );
+		ShootTimed( m_pPlayer->pev, vecSrc, vecThrow, time );
 
 		if (flVel < 500)
 		{
@@ -241,5 +244,45 @@ void CHandGrenade::WeaponIdle( void )
 }
 
 
+//=========================================================
+// They Hunger: CGrenade::ShootTimed with the dynamite's model, as a
+// (non-static) member of the weapon
+//=========================================================
+CGrenade * CHandGrenade:: ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time )
+{
+	CGrenade *pGrenade = GetClassPtr( (CGrenade *)NULL );
+	pGrenade->Spawn();
+	UTIL_SetOrigin( pGrenade->pev, vecStart );
+	pGrenade->pev->velocity = vecVelocity;
+	pGrenade->pev->angles = UTIL_VecToAngles(pGrenade->pev->velocity);
+	pGrenade->pev->owner = ENT(pevOwner);
+	
+	pGrenade->SetTouch( CGrenade::BounceTouch );	// Bounce if touched
+	
+	// Take one second off of the desired detonation time and set the think to PreDetonate. PreDetonate
+	// will insert a DANGER sound into the world sound list and delay detonation for one second so that 
+	// the grenade explodes after the exact amount of time specified in the call to ShootTimed(). 
 
+	pGrenade->pev->dmgtime = gpGlobals->time + time;
+	pGrenade->SetThink( CGrenade::TumbleThink );
+	pGrenade->pev->nextthink = gpGlobals->time + 0.1;
+	if (time < 0.1)
+	{
+		pGrenade->pev->nextthink = gpGlobals->time;
+		pGrenade->pev->velocity = Vector( 0, 0, 0 );
+	}
+		
+	pGrenade->pev->sequence = RANDOM_LONG( 3, 6 );
+	pGrenade->pev->framerate = 1.0;
 
+	// Tumble through the air
+	// pGrenade->pev->avelocity.x = -400;
+
+	pGrenade->pev->gravity = 0.5;
+	pGrenade->pev->friction = 0.8;
+
+	SET_MODEL(ENT(pGrenade->pev), "models/w_tnt.mdl");
+	pGrenade->pev->dmg = 100;
+
+	return pGrenade;
+}
