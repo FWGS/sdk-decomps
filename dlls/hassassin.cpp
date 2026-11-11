@@ -638,7 +638,7 @@ BOOL CHAssassin :: CheckMeleeAttack1 ( float flDot, float flDist )
 			return FALSE;
 		}
 
-		float flGravity = g_psv_gravity->value;
+		float flGravity = CVAR_GET_FLOAT( "sv_gravity" );
 
 		float time = sqrt( 160 / (0.5 * flGravity));
 		float speed = flGravity * time / 160;

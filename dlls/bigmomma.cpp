@@ -664,7 +664,11 @@ void CBigMomma :: Spawn()
 
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
-	m_bloodColor		= BLOOD_COLOR_GREEN;
+	// They Hunger: red blood on request
+	if ( pev->spawnflags & SF_MONSTER_REDBLOOD )
+		m_bloodColor		= BLOOD_COLOR_RED;
+	else
+		m_bloodColor		= BLOOD_COLOR_GREEN;
 	pev->health			= 150 * gSkillData.bigmommaHealthFactor;
 	pev->view_ofs		= Vector ( 0, 0, 128 );// position of the eyes relative to monster's origin.
 	m_flFieldOfView		= 0.3;// indicates the width of this monster's forward view cone ( as a dotproduct result )
@@ -1090,7 +1094,7 @@ Vector VecCheckSplatToss( entvars_t *pev, const Vector &vecSpot1, Vector vecSpot
 	Vector			vecScale;
 	Vector			vecGrenadeVel;
 	Vector			vecTemp;
-	float			flGravity = g_psv_gravity->value;
+	float			flGravity = CVAR_GET_FLOAT( "sv_gravity" );
 
 	// calculate the midpoint and apex of the 'triangle'
 	vecMidPoint = vecSpot1 + (vecSpot2 - vecSpot1) * 0.5;
