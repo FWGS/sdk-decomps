@@ -93,8 +93,8 @@ public:
 	static const char *pPainSounds[];
 	static const char *pDeathSounds[];
 };
-LINK_ENTITY_TO_CLASS( monster_alien_slave, CISlave );
-LINK_ENTITY_TO_CLASS( monster_vortigaunt, CISlave );
+// They Hunger: no entity is a plain CISlave any more; monster_alien_slave is
+// the class at the end of this file and monster_vortigaunt is gone
 
 
 TYPEDESCRIPTION	CISlave::m_SaveData[] = 
@@ -147,7 +147,7 @@ const char *CISlave::pDeathSounds[] =
 //=========================================================
 int	CISlave :: Classify ( void )
 {
-	return	CLASS_ALIEN_MILITARY;
+	return	CLASS_ALIEN_MONSTER;
 }
 
 
@@ -196,6 +196,7 @@ void CISlave :: AlertSound( void )
 		SENTENCEG_PlayRndSz(ENT(pev), "SLV_ALERT", 0.85, ATTN_NORM, 0, m_voicePitch);
 
 		CallForHelp( "monster_alien_slave", 512, m_hEnemy, m_vecEnemyLKP );
+		CallForHelp( "monster_th_babykelly", 512, m_hEnemy, m_vecEnemyLKP );
 	}
 }
 
@@ -588,6 +589,11 @@ int CISlave :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, floa
 		return 0;
 
 	m_afMemory |= bits_MEMORY_PROVOKED;
+
+	// They Hunger: never gibbed
+	bitsDamageType &= ~DMG_ALWAYSGIB;
+	bitsDamageType |= DMG_NEVERGIB;
+
 	return CSquadMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
 }
 
@@ -864,3 +870,250 @@ void CISlave :: ClearBeams( )
 
 	STOP_SOUND( ENT(pev), CHAN_WEAPON, "debris/zap4.wav" );
 }
+
+
+//=========================================================
+// They Hunger: Kelly, the monster_alien_slave of the maps
+// (class name ours). A CISlave that takes its model from
+// the map, doesn't bleed and can be told not to zap.
+//=========================================================
+class CEinarKelly : public CISlave
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	BOOL CheckRangeAttack1 ( float flDot, float flDist );
+};
+
+//=========================================================
+// Spawn
+//=========================================================
+void CEinarKelly :: Spawn()
+{
+	Precache( );
+
+	if ( pev->model )
+		SET_MODEL(ENT(pev), STRING(pev->model));
+	else
+		SET_MODEL(ENT(pev), "models/islave.mdl");
+	UTIL_SetSize(pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX);
+
+	pev->solid			= SOLID_SLIDEBOX;
+	pev->movetype		= MOVETYPE_STEP;
+	m_bloodColor		= DONT_BLEED;
+	pev->effects		= 0;
+	pev->health			= gSkillData.slaveHealth;
+	pev->view_ofs		= Vector ( 0, 0, 64 );// position of the eyes relative to monster's origin.
+	m_flFieldOfView		= VIEW_FIELD_WIDE; // NOTE: we need a wide field of view so npc will notice player and say hello
+	m_MonsterState		= MONSTERSTATE_NONE;
+	m_afCapability		= bits_CAP_HEAR | bits_CAP_TURN_HEAD | bits_CAP_RANGE_ATTACK2 | bits_CAP_DOORS_GROUP;
+
+	m_voicePitch		= RANDOM_LONG( 85, 110 );
+
+	MonsterInit();
+}
+
+//=========================================================
+// Precache - precaches all resources this monster needs
+//=========================================================
+void CEinarKelly :: Precache()
+{
+	int i;
+
+	if ( pev->model )
+		PRECACHE_MODEL((char *)STRING(pev->model));
+	else
+		PRECACHE_MODEL("models/islave.mdl");
+	PRECACHE_MODEL("sprites/lgtning.spr");
+	PRECACHE_SOUND("debris/zap1.wav");
+	PRECACHE_SOUND("debris/zap4.wav");
+	PRECACHE_SOUND("weapons/electro4.wav");
+	PRECACHE_SOUND("hassault/hw_shoot1.wav");
+	PRECACHE_SOUND("zombie/zo_pain2.wav");
+	PRECACHE_SOUND("headcrab/hc_headbite.wav");
+	PRECACHE_SOUND("weapons/cbar_miss1.wav");
+
+	for ( i = 0; i < ARRAYSIZE( pAttackHitSounds ); i++ )
+		PRECACHE_SOUND((char *)pAttackHitSounds[i]);
+
+	for ( i = 0; i < ARRAYSIZE( pAttackMissSounds ); i++ )
+		PRECACHE_SOUND((char *)pAttackMissSounds[i]);
+
+	for ( i = 0; i < ARRAYSIZE( pPainSounds ); i++ )
+		PRECACHE_SOUND((char *)pPainSounds[i]);
+
+	for ( i = 0; i < ARRAYSIZE( pDeathSounds ); i++ )
+		PRECACHE_SOUND((char *)pDeathSounds[i]);
+
+	UTIL_PrecacheOther( "test_effect" );
+}	
+
+//=========================================================
+// CheckRangeAttack1 - no lightning with the "no zap" flag
+//=========================================================
+BOOL CEinarKelly :: CheckRangeAttack1 ( float flDot, float flDist )
+{
+	if ( pev->spawnflags & SF_MONSTER_NOZAP )
+	{
+		return FALSE;
+	}
+
+	return CISlave::CheckRangeAttack1( flDot, flDist );
+}
+
+LINK_ENTITY_TO_CLASS( monster_alien_slave, CEinarKelly );
+
+//=========================================================
+// They Hunger: baby Kelly (class name ours), the same with
+// its own voice
+//=========================================================
+class CEinarBabyKelly : public CISlave
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	BOOL CheckRangeAttack1 ( float flDot, float flDist );
+
+	void DeathSound( void );
+	void PainSound( void );
+	void AlertSound( void );
+	void IdleSound( void );
+
+	static const char *pPainSounds[];
+	static const char *pDeathSounds[];
+};
+
+const char *CEinarBabyKelly::pPainSounds[] = 
+{
+	"babykelly/slv_pain1.wav",
+	"babykelly/slv_pain2.wav",
+};
+
+const char *CEinarBabyKelly::pDeathSounds[] = 
+{
+	"babykelly/slv_die1.wav",
+	"babykelly/slv_die2.wav",
+};
+
+//=========================================================
+// Spawn
+//=========================================================
+void CEinarBabyKelly :: Spawn()
+{
+	Precache( );
+
+	if ( pev->model )
+		SET_MODEL(ENT(pev), STRING(pev->model));
+	else
+		SET_MODEL(ENT(pev), "models/babykelly.mdl");
+	UTIL_SetSize(pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX);
+
+	pev->solid			= SOLID_SLIDEBOX;
+	pev->movetype		= MOVETYPE_STEP;
+	m_bloodColor		= DONT_BLEED;
+	pev->effects		= 0;
+	pev->health			= gSkillData.slaveHealth;
+	pev->view_ofs		= Vector ( 0, 0, 64 );// position of the eyes relative to monster's origin.
+	m_flFieldOfView		= VIEW_FIELD_WIDE; // NOTE: we need a wide field of view so npc will notice player and say hello
+	m_MonsterState		= MONSTERSTATE_NONE;
+	m_afCapability		= bits_CAP_HEAR | bits_CAP_TURN_HEAD | bits_CAP_RANGE_ATTACK2 | bits_CAP_DOORS_GROUP;
+
+	m_voicePitch		= RANDOM_LONG( 85, 110 );
+
+	MonsterInit();
+}
+
+//=========================================================
+// Precache - precaches all resources this monster needs
+//=========================================================
+void CEinarBabyKelly :: Precache()
+{
+	int i;
+
+	if ( pev->model )
+		PRECACHE_MODEL((char *)STRING(pev->model));
+	else
+		PRECACHE_MODEL("models/babykelly.mdl");
+	PRECACHE_MODEL("sprites/lgtning.spr");
+	PRECACHE_SOUND("debris/zap1.wav");
+	PRECACHE_SOUND("debris/zap4.wav");
+	PRECACHE_SOUND("weapons/electro4.wav");
+	PRECACHE_SOUND("hassault/hw_shoot1.wav");
+	PRECACHE_SOUND("zombie/zo_pain2.wav");
+	PRECACHE_SOUND("headcrab/hc_headbite.wav");
+	PRECACHE_SOUND("weapons/cbar_miss1.wav");
+
+	for ( i = 0; i < ARRAYSIZE( pAttackHitSounds ); i++ )
+		PRECACHE_SOUND((char *)pAttackHitSounds[i]);
+
+	for ( i = 0; i < ARRAYSIZE( pAttackMissSounds ); i++ )
+		PRECACHE_SOUND((char *)pAttackMissSounds[i]);
+
+	for ( i = 0; i < ARRAYSIZE( pPainSounds ); i++ )
+		PRECACHE_SOUND((char *)pPainSounds[i]);
+
+	for ( i = 0; i < ARRAYSIZE( pDeathSounds ); i++ )
+		PRECACHE_SOUND((char *)pDeathSounds[i]);
+
+	UTIL_PrecacheOther( "test_effect" );
+}	
+
+//=========================================================
+// CheckRangeAttack1 - no lightning with the "no zap" flag
+//=========================================================
+BOOL CEinarBabyKelly :: CheckRangeAttack1 ( float flDot, float flDist )
+{
+	if ( pev->spawnflags & SF_MONSTER_NOZAP )
+	{
+		return FALSE;
+	}
+
+	return CISlave::CheckRangeAttack1( flDot, flDist );
+}
+
+//=========================================================
+// ALertSound - scream
+//=========================================================
+void CEinarBabyKelly :: AlertSound( void )
+{
+	if ( m_hEnemy != NULL )
+	{
+		SENTENCEG_PlayRndSz(ENT(pev), "BKL_ALERT", 0.85, ATTN_NORM, 0, m_voicePitch);
+
+		CallForHelp( "monster_alien_slave", 512, m_hEnemy, m_vecEnemyLKP );
+		CallForHelp( "monster_th_babykelly", 512, m_hEnemy, m_vecEnemyLKP );
+	}
+}
+
+//=========================================================
+// IdleSound
+//=========================================================
+void CEinarBabyKelly :: IdleSound( void )
+{
+	if (RANDOM_LONG( 0, 2 ) == 0)
+	{
+		SENTENCEG_PlayRndSz(ENT(pev), "BKL_IDLE", 0.85, ATTN_NORM, 0, m_voicePitch);
+	}
+}
+
+//=========================================================
+// PainSound
+//=========================================================
+void CEinarBabyKelly :: PainSound( void )
+{
+	if (RANDOM_LONG( 0, 2 ) == 0)
+	{
+		EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pPainSounds[ RANDOM_LONG(0,ARRAYSIZE(pPainSounds)-1) ], 1.0, ATTN_NORM, 0, m_voicePitch );
+	}
+}
+
+//=========================================================
+// DieSound
+//=========================================================
+
+void CEinarBabyKelly :: DeathSound( void )
+{
+	EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pDeathSounds[ RANDOM_LONG(0,ARRAYSIZE(pDeathSounds)-1) ], 1.0, ATTN_NORM, 0, m_voicePitch );
+}
+
+LINK_ENTITY_TO_CLASS( monster_th_babykelly, CEinarBabyKelly );
