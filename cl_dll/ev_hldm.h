@@ -80,6 +80,59 @@ enum gauss_e {
 	GAUSS_DRAW
 };
 
+// They Hunger's guns (names ours, after the models' sequences)
+enum ap9_e {
+	AP9_IDLE1 = 0,
+	AP9_RELOAD,
+	AP9_DRAW,
+	AP9_SHOOT1,
+	AP9_SHOOT2,
+	AP9_SHOOT3
+};
+
+enum taurus_e {
+	TAURUS_IDLE1 = 0,
+	TAURUS_IDLE2,
+	TAURUS_IDLE3,
+	TAURUS_SHOOT,
+	TAURUS_SHOOT2,
+	TAURUS_SHOOT3,
+	TAURUS_SHOOT_EMPTY,
+	TAURUS_RELOAD,
+	TAURUS_RELOAD2,
+	TAURUS_DRAW,
+	TAURUS_DRAW2
+};
+
+enum sniper_e {
+	SNIPER_IDLE = 0,
+	SNIPER_RELOAD,
+	SNIPER_DRAW,
+	SNIPER_SHOOT1
+};
+
+enum tfcsniper_e {
+	TFCSNIPER_IDLE = 0,
+	TFCSNIPER_AIM,
+	TFCSNIPER_FIRE,
+	TFCSNIPER_DRAW,
+	TFCSNIPER_HOLSTER,
+	TFCSNIPER_AUTOIDLE,
+	TFCSNIPER_AUTOFIRE,
+	TFCSNIPER_AUTODRAW,
+	TFCSNIPER_AUTOHOLSTER
+};
+
+enum chaingun_e {
+	CHAINGUN_IDLE = 0,
+	CHAINGUN_IDLE2,
+	CHAINGUN_SPINUP,
+	CHAINGUN_SPINDOWN,
+	CHAINGUN_FIRE,
+	CHAINGUN_DRAW,
+	CHAINGUN_HOLSTER
+};
+
 void EV_HLDM_GunshotDecalTrace( pmtrace_t *pTrace, char *decalName );
 void EV_HLDM_DecalGunshot( pmtrace_t *pTrace, int iBulletType );
 int EV_HLDM_CheckTracer( int idx, float *vecSrc, float *end, float *forward, float *right, int iBulletType, int iTracerFreq, int *tracerCount );

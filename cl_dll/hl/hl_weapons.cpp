@@ -47,6 +47,12 @@ static CBasePlayerWeapon *g_pWpns[ 32 ];
 
 // HLDM Weapon placeholder entities.
 CGlock g_Glock;
+// They Hunger's five guns (names ours; retail constructs them in this order)
+CWeaponEinarAP9 g_AP9;
+CWeaponEinarTaurus g_Taurus;
+CWeaponEinarSniper g_Sniper;
+CWeaponEinarTFCSniper g_TFCSniper;
+CWeaponEinarChaingun g_Chaingun;
 
 /*
 ======================
@@ -384,7 +390,12 @@ Handles weapon firing, reloading, etc.
 */
 void CBasePlayerWeapon::ItemPostFrame( void )
 {
-	if ((m_fInReload) && (m_pPlayer->m_flNextAttack <= 0.0))
+	if ((m_fInReload > 1) && (m_pPlayer->m_flNextAttack <= 0.0))
+	{
+		// a weapon that reloads by itself (m_fInReload 2 and up) goes on in WeaponIdle
+		WeaponIdle();
+	}
+	else if ((m_fInReload) && (m_pPlayer->m_flNextAttack <= 0.0))
 	{
 #if 0 // FIXME, need ammo on client to make this work right
 		// complete the reload. 
@@ -678,6 +689,14 @@ void HUD_InitClientWeapons( void )
 
 	// Allocate slot(s) for each weapon that we are going to be predicting
 	HUD_PrepEntity( &g_Glock	, &player );
+	// They Hunger's guns. Our guess, here and in HUD_WeaponsPostThink's
+	// switch: neither project defines CLIENT_WEAPONS, so nothing calls these
+	// two functions and the linker left them out of retail's client.dll.
+	HUD_PrepEntity( &g_AP9		, &player );
+	HUD_PrepEntity( &g_Taurus	, &player );
+	HUD_PrepEntity( &g_Sniper	, &player );
+	HUD_PrepEntity( &g_TFCSniper, &player );
+	HUD_PrepEntity( &g_Chaingun	, &player );
 }
 
 /*
@@ -709,6 +728,27 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	{
 	case WEAPON_GLOCK:
 		pWeapon = &g_Glock;
+		break;
+
+	// They Hunger's guns (our guess, see HUD_InitClientWeapons)
+	case WEAPON_TH_AP9:
+		pWeapon = &g_AP9;
+		break;
+
+	case WEAPON_TH_TAURUS:
+		pWeapon = &g_Taurus;
+		break;
+
+	case WEAPON_TH_SNIPER:
+		pWeapon = &g_Sniper;
+		break;
+
+	case WEAPON_EINAR1:
+		pWeapon = &g_TFCSniper;
+		break;
+
+	case WEAPON_TH_CHAINGUN:
+		pWeapon = &g_Chaingun;
 		break;
 	}
 
@@ -1006,4 +1046,22 @@ void _DLLEXPORT HUD_PostRunCmd( struct local_state_s *from, struct local_state_s
 
 	// All games can use FOV state
 	g_lastFOV = to->client.fov;
+}
+
+//=========================================================
+// They Hunger: the client's versions of what the weapons of
+// wpn_shared/hl_wpn_glock.cpp ask their DLL (the game DLL's
+// are at the end of weapons.cpp). Names ours.
+//=========================================================
+BOOL TH_IsMultiplayer( void )
+{
+	return gEngfuncs.GetMaxClients() != 1;
+}
+
+void TH_ScreenFadeIn( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha )
+{
+}
+
+void TH_ScreenFadeOut( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha )
+{
 }
