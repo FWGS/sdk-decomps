@@ -91,6 +91,8 @@ void CShotgun::Spawn( )
 
 void CShotgun::Precache( void )
 {
+	return;
+
 	PRECACHE_MODEL("models/v_shotgun.mdl");
 	PRECACHE_MODEL("models/w_shotgun.mdl");
 	PRECACHE_MODEL("models/p_shotgun.mdl");
@@ -134,7 +136,7 @@ int CShotgun::GetItemInfo(ItemInfo *p)
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = SHOTGUN_MAX_CLIP;
 	p->iSlot = 2;
-	p->iPosition = 1;
+	p->iPosition = 10;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_SHOTGUN;
 	p->iWeight = SHOTGUN_WEIGHT;
@@ -430,7 +432,7 @@ class CShotgunAmmo : public CBasePlayerAmmo
 	}
 	BOOL AddAmmo( CBaseEntity *pOther ) 
 	{ 
-		if (pOther->GiveAmmo( AMMO_BUCKSHOTBOX_GIVE, "buckshot", BUCKSHOT_MAX_CARRY ) != -1)
+		if (pOther->GiveAmmo( 8, "buckshot", BUCKSHOT_MAX_CARRY ) != -1)	// the SDK's AMMO_BUCKSHOTBOX_GIVE is 12
 		{
 			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
 			return TRUE;

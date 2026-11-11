@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir ".\Releasemp"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /G5 /MT /W3 /GX /Zi /O2 /I "..\engine" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "VALVE_DLL" /YX /FD /c
+# ADD CPP /nologo /G5 /MT /W3 /GX /Zi /O2 /Ob0 /I "..\engine" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "VALVE_DLL" /YX /FD /c
 # SUBTRACT CPP /Fr
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -163,11 +163,19 @@ SOURCE=.\airtank.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\ammo.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\animating.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\animation.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\awp.cpp
 # End Source File
 # Begin Source File
 
@@ -215,11 +223,19 @@ SOURCE=.\explode.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\flashbang.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\func_break.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\func_tank.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\g3sg1.cpp
 # End Source File
 # Begin Source File
 
@@ -244,6 +260,10 @@ SOURCE=.\globals.cpp
 # Begin Source File
 
 SOURCE=.\glock.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\glock18.cpp
 # End Source File
 # Begin Source File
 
@@ -279,11 +299,27 @@ SOURCE=.\hornetgun.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\hostage.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\items.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\lights.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\m249.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\m3.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\m4a1.cpp
 # End Source File
 # Begin Source File
 
@@ -296,6 +332,10 @@ SOURCE=.\mortar.cpp
 # Begin Source File
 
 SOURCE=.\mp5.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\mp5navy.cpp
 # End Source File
 # Begin Source File
 
@@ -371,11 +411,19 @@ SOURCE=.\teamplay_gamerules.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\tmp.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\triggers.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\tripmine.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\usp.cpp
 # End Source File
 # Begin Source File
 

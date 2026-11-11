@@ -217,6 +217,26 @@ void EjectBrass ( const Vector &vecOrigin, const Vector &vecVelocity, float rota
 	MESSAGE_END();
 }
 
+//
+// EjectBrass2 - the same shell, shown to one player only (the one who fired)
+//
+void EjectBrass2 ( const Vector &vecOrigin, const Vector &vecVelocity, float rotation, int model, int soundtype, entvars_t *pev )
+{
+	MESSAGE_BEGIN( MSG_ONE, SVC_TEMPENTITY, NULL, pev );
+		WRITE_BYTE( TE_MODEL);
+		WRITE_COORD( vecOrigin.x);
+		WRITE_COORD( vecOrigin.y);
+		WRITE_COORD( vecOrigin.z);
+		WRITE_COORD( vecVelocity.x);
+		WRITE_COORD( vecVelocity.y);
+		WRITE_COORD( vecVelocity.z);
+		WRITE_ANGLE( rotation );
+		WRITE_SHORT( model );
+		WRITE_BYTE ( 0 );	// sic: not soundtype
+		WRITE_BYTE ( 5 );// 0.5 seconds
+	MESSAGE_END();
+}
+
 
 #if 0
 // UNDONE: This is no longer used?
@@ -302,6 +322,47 @@ void UTIL_PrecacheOtherWeapon( const char *szClassname )
 	REMOVE_ENTITY(pent);
 }
 
+// Counter-Strike's weapons are registered through a copy of the function above (retail
+// 0x10051780 has UTIL_PrecacheOtherWeapon's bytes, message included).
+void UTIL_PrecacheOtherWeapon2( const char *szClassname )
+{
+	edict_t	*pent;
+
+	pent = CREATE_NAMED_ENTITY( MAKE_STRING( szClassname ) );
+	if ( FNullEnt( pent ) )
+	{
+		ALERT ( at_console, "NULL Ent in UTIL_PrecacheOtherWeapon\n" );
+		return;
+	}
+	
+	CBaseEntity *pEntity = CBaseEntity::Instance (VARS( pent ));
+
+	if (pEntity)
+	{
+		ItemInfo II;
+		pEntity->Precache( );
+		memset( &II, 0, sizeof II );
+		if ( ((CBasePlayerItem*)pEntity)->GetItemInfo( &II ) )
+		{
+			CBasePlayerItem::ItemInfoArray[II.iId] = II;
+
+			if ( II.pszAmmo1 && *II.pszAmmo1 )
+			{
+				AddAmmoNameToAmmoRegistry( II.pszAmmo1 );
+			}
+
+			if ( II.pszAmmo2 && *II.pszAmmo2 )
+			{
+				AddAmmoNameToAmmoRegistry( II.pszAmmo2 );
+			}
+
+			memset( &II, 0, sizeof II );
+		}
+	}
+
+	REMOVE_ENTITY(pent);
+}
+
 // called by worldspawn
 void W_Precache(void)
 {
@@ -317,6 +378,18 @@ void W_Precache(void)
 	UTIL_PrecacheOther( "item_antidote" );
 	UTIL_PrecacheOther( "item_security" );
 	UTIL_PrecacheOther( "item_longjump" );
+
+	// Counter-Strike
+	UTIL_PrecacheOtherWeapon2( "weapon_awp" );
+	UTIL_PrecacheOtherWeapon2( "weapon_g3sg1" );
+	UTIL_PrecacheOtherWeapon2( "weapon_glock18" );
+	UTIL_PrecacheOtherWeapon2( "weapon_m249" );
+	UTIL_PrecacheOtherWeapon2( "weapon_m3" );
+	UTIL_PrecacheOtherWeapon2( "weapon_m4a1" );
+	UTIL_PrecacheOtherWeapon2( "weapon_mp5navy" );
+	UTIL_PrecacheOtherWeapon2( "weapon_tmp" );
+	UTIL_PrecacheOtherWeapon2( "weapon_usp" );
+	UTIL_PrecacheOtherWeapon2( "weapon_flashbang" );
 
 	// shotgun
 	UTIL_PrecacheOtherWeapon( "weapon_shotgun" );
@@ -523,8 +596,8 @@ void CBasePlayerItem::Materialize( void )
 
 	UTIL_SetOrigin( pev, pev->origin );// link into world.
 	SetTouch (DefaultTouch);
-	SetThink (NULL);
-
+	SetThink (SUB_Remove);
+	pev->nextthink = gpGlobals->time + 20;	// a weapon nobody picks up is gone after 20 seconds
 }
 
 //=========================================================
@@ -553,7 +626,7 @@ void CBasePlayerItem :: CheckRespawn ( void )
 	switch ( g_pGameRules->WeaponShouldRespawn( this ) )
 	{
 	case GR_WEAPON_RESPAWN_YES:
-		Respawn();
+//		Respawn();
 		break;
 	case GR_WEAPON_RESPAWN_NO:
 		return;
@@ -599,6 +672,10 @@ void CBasePlayerItem::DefaultTouch( CBaseEntity *pOther )
 
 	CBasePlayer *pPlayer = (CBasePlayer *)pOther;
 
+	// one primary weapon at a time; the pistols, the flashbang and the crowbar go with it
+	if ( pPlayer->HasPrimaryWeapon() && m_iId != WEAPON_FLASHBANG && m_iId != WEAPON_USP && m_iId != WEAPON_GLOCK18 && m_iId != WEAPON_CROWBAR && pPlayer->pev->flags != FL_SPECTATOR )
+		return;
+
 	// can I have this?
 	if ( !g_pGameRules->CanHavePlayerItem( pPlayer, this ) )
 	{
@@ -618,8 +695,107 @@ void CBasePlayerItem::DefaultTouch( CBaseEntity *pOther )
 	SUB_UseTargets( pOther, USE_TOGGLE, 0 ); // UNDONE: when should this happen?
 }
 
+//=========================================================
+// EjectBrassLate - the shell of a bolt or pump action: the
+// weapon sets m_pPlayer->m_flEjectBrass when it fires and
+// ItemPostFrame calls this when the time has come.
+//=========================================================
+void CBasePlayerWeapon::EjectBrassLate( void )
+{
+	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+
+	Vector	vecShellVelocity = m_pPlayer->pev->velocity 
+							 + gpGlobals->v_right * RANDOM_FLOAT(50,70) 
+							 + gpGlobals->v_up * RANDOM_FLOAT(100,150) 
+							 + gpGlobals->v_forward * 25;
+	EjectBrass ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 16 - gpGlobals->v_right * 10 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL); 
+}
+
+//=========================================================
+// FireRemaining - the second and third shot of a burst.
+// The weapon fires the first one and sets
+// m_pPlayer->m_flNextBurstShot; ItemPostFrame calls this
+// as long as that is not zero.
+//=========================================================
+void CBasePlayerWeapon::FireRemaining( void )
+{
+	float flDelay;
+
+	m_iClip--;
+	if ( m_iClip < 0 )
+		m_iClip = 0;
+
+	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+
+	Vector	vecShellVelocity = m_pPlayer->pev->velocity 
+							 + gpGlobals->v_right * RANDOM_FLOAT(50,70) 
+							 + gpGlobals->v_up * RANDOM_FLOAT(100,150) 
+							 + gpGlobals->v_forward * 25;
+
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+	Vector vecDir;
+
+	vecDir = gpGlobals->v_forward;
+
+	if ( m_iId == WEAPON_GLOCK18 )
+	{
+		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 32 - gpGlobals->v_right * 11 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL, m_pPlayer->pev ); 
+		m_pPlayer->FireBullets3( vecSrc, vecDir, Vector( 0.025, 0.025, 0.025 ), 8192, 1, BULLET_PLAYER_9MM, 18, 0.9, 0 );
+		flDelay = 0.1;
+	}
+	else if ( m_iId == WEAPON_M4A1 )
+	{
+		ALERT( at_console, " I'm here!\n" );
+		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs - gpGlobals->v_up * 8 + gpGlobals->v_forward * 20 - gpGlobals->v_right * 10 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL, m_pPlayer->pev ); 
+		m_pPlayer->FireBullets3( vecSrc, vecDir, Vector( 0.015, 0.015, 0.015 ), 8192, 1, BULLET_PLAYER_556MM, 26, 0.94, 0 );
+		flDelay = 0.075;
+	}
+
+	m_pPlayer->pev->effects |= EF_MUZZLEFLASH;
+	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
+
+	m_pPlayer->m_iBurstShotsFired++;
+	if ( m_pPlayer->m_iBurstShotsFired != 3 )
+		m_pPlayer->m_flNextBurstShot = gpGlobals->time + flDelay;
+	else
+		m_pPlayer->m_flNextBurstShot = 0;
+}
+
 void CBasePlayerWeapon::ItemPostFrame( void )
 {
+	// the G3SG1's night vision: the green fade is renewed every 13 seconds
+	if ( m_flNightVisionTime != 0.0 && gpGlobals->time >= m_flNightVisionTime + 13.0 )
+	{
+		ALERT( at_console, "night vision!\n" );
+		m_flNightVisionTime = gpGlobals->time;
+		UTIL_ScreenFade( m_pPlayer, Vector(10,180,10), 0.1, 1024, 80, 1 );
+	}
+
+	if ( m_pPlayer->m_flNextBurstShot != 0.0 )
+		FireRemaining();
+
+	// back to the scope once the bolt has been worked
+	if ( m_flNextPrimaryAttack <= gpGlobals->time )
+	{
+		if ( m_pPlayer->m_fResumeZoom == TRUE )
+		{
+			m_pPlayer->m_iFOV = m_pPlayer->m_iLastZoom;
+			if ( m_pPlayer->m_iFOV == m_pPlayer->m_iLastZoom )
+			{
+				if ( m_iId == WEAPON_G3SG1 )
+					UTIL_ScreenFade( m_pPlayer, Vector(10,180,10), 1.5, 9999, 80, 1 );
+				m_pPlayer->pev->viewmodel = 0;
+				m_pPlayer->m_fResumeZoom = FALSE;
+			}
+		}
+	}
+
+	if ( m_pPlayer->m_flEjectBrass != 0.0 && m_pPlayer->m_flEjectBrass <= gpGlobals->time )
+	{
+		m_pPlayer->m_flEjectBrass = 0;
+		EjectBrassLate();
+	}
+
 	if ((m_fInReload) && (m_pPlayer->m_flNextAttack <= gpGlobals->time))
 	{
 		// complete the reload. 
@@ -661,6 +837,7 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		// no fire buttons down
 
 		m_fFireOnEmpty = FALSE;
+		m_pPlayer->m_iShotsFired = 0;
 
 		if ( !IsUseable() && m_flNextPrimaryAttack < gpGlobals->time ) 
 		{
@@ -932,6 +1109,11 @@ BOOL CBasePlayerWeapon :: DefaultDeploy( char *szViewModel, char *szWeaponModel,
 	m_pPlayer->m_flNextAttack = gpGlobals->time + 0.5;
 	m_flTimeWeaponIdle = gpGlobals->time + 1.0;
 
+	m_pPlayer->m_iFOV = 90;
+	m_pPlayer->m_fResumeZoom = FALSE;
+	m_pPlayer->m_iLastZoom = 90;
+	m_flNightVisionTime = 0;
+
 	return TRUE;
 }
 
@@ -953,7 +1135,7 @@ BOOL CBasePlayerWeapon :: DefaultReload( int iClipSize, int iAnim, float fDelay 
 
 	m_fInReload = TRUE;
 
-	m_flTimeWeaponIdle = gpGlobals->time + 3;
+	m_flTimeWeaponIdle = gpGlobals->time + fDelay + 0.5;
 	return TRUE;
 }
 
@@ -989,6 +1171,10 @@ int CBasePlayerWeapon::SecondaryAmmoIndex( void )
 
 void CBasePlayerWeapon::Holster( void )
 { 
+	// the scopes: clear the screen
+	if ( m_iId == WEAPON_AWP || m_iId == WEAPON_G3SG1 )
+		UTIL_ScreenFade( m_pPlayer, Vector(20,20,20), 0.5, 0.1, 0, 0 );
+
 	m_fInReload = FALSE; // cancel any reload in progress.
 	m_pPlayer->pev->viewmodel = 0; 
 	m_pPlayer->pev->weaponmodel = 0;
@@ -1002,6 +1188,8 @@ void CBasePlayerAmmo::Spawn( void )
 	UTIL_SetOrigin( pev, pev->origin );
 
 	SetTouch( DefaultTouch );
+	SetThink( SUB_Remove );
+	pev->nextthink = gpGlobals->time + 5;	// ammo lies around for five seconds
 }
 
 CBaseEntity* CBasePlayerAmmo::Respawn( void )
@@ -1226,6 +1414,12 @@ void CWeaponBox::Touch( CBaseEntity *pOther )
 
 	CBasePlayer *pPlayer = (CBasePlayer *)pOther;
 	int i;
+
+	if ( pPlayer->HasPrimaryWeapon() )
+	{
+		// the box of a dead player is for those who have no primary weapon
+		return;
+	}
 
 // dole out ammo
 	for ( i = 0 ; i < MAX_AMMO_SLOTS ; i++ )

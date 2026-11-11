@@ -65,7 +65,7 @@ int CPython::GetItemInfo(ItemInfo *p)
 	p->iMaxClip = PYTHON_MAX_CLIP;
 	p->iFlags = 0;
 	p->iSlot = 1;
-	p->iPosition = 1;
+	p->iPosition = 10;
 	p->iId = m_iId = WEAPON_PYTHON;
 	p->iWeight = PYTHON_WEIGHT;
 
@@ -99,6 +99,8 @@ void CPython::Spawn( )
 
 void CPython::Precache( void )
 {
+	return;
+
 	PRECACHE_MODEL("models/v_357.mdl");
 	PRECACHE_MODEL("models/w_357.mdl");
 	PRECACHE_MODEL("models/p_357.mdl");

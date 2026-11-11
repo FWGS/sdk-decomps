@@ -73,6 +73,8 @@ void CCrowbar::Spawn( )
 
 void CCrowbar::Precache( void )
 {
+	return;
+
 	PRECACHE_MODEL("models/v_crowbar.mdl");
 	PRECACHE_MODEL("models/w_crowbar.mdl");
 	PRECACHE_MODEL("models/p_crowbar.mdl");
@@ -252,12 +254,12 @@ int CCrowbar::Swing( int fFirst )
 		if ( (m_flNextPrimaryAttack + 1 < gpGlobals->time) || g_pGameRules->IsMultiplayer() )
 		{
 			// first swing does full damage
-			pEntity->TraceAttack(m_pPlayer->pev, gSkillData.plrDmgCrowbar, gpGlobals->v_forward, &tr, DMG_CLUB ); 
+			pEntity->TraceAttack(m_pPlayer->pev, 20, gpGlobals->v_forward, &tr, DMG_CLUB ); 
 		}
 		else
 		{
 			// subsequent swings do half
-			pEntity->TraceAttack(m_pPlayer->pev, gSkillData.plrDmgCrowbar / 2, gpGlobals->v_forward, &tr, DMG_CLUB ); 
+			pEntity->TraceAttack(m_pPlayer->pev, 10, gpGlobals->v_forward, &tr, DMG_CLUB ); 
 		}	
 		ApplyMultiDamage( m_pPlayer->pev, m_pPlayer->pev );
 

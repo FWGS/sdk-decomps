@@ -446,6 +446,8 @@ void CRpg::Spawn( )
 
 void CRpg::Precache( void )
 {
+	return;
+
 	PRECACHE_MODEL("models/w_rpg.mdl");
 	PRECACHE_MODEL("models/v_rpg.mdl");
 	PRECACHE_MODEL("models/p_rpg.mdl");
@@ -469,7 +471,7 @@ int CRpg::GetItemInfo(ItemInfo *p)
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = RPG_MAX_CLIP;
 	p->iSlot = 3;
-	p->iPosition = 0;
+	p->iPosition = 10;
 	p->iId = m_iId = WEAPON_RPG;
 	p->iFlags = 0;
 	p->iWeight = RPG_WEIGHT;

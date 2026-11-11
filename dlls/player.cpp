@@ -193,16 +193,26 @@ LINK_ENTITY_TO_CLASS( player, CBasePlayer );
 
 void CBasePlayer :: Pain( void )
 {
-	float	flRndSound;//sound randomizer
+	ALERT( at_console, "CBasePlayer::Pain\n" );
 
-	flRndSound = RANDOM_FLOAT ( 0 , 1 ); 
-	
-	if ( flRndSound <= 0.33 )
+	switch (RANDOM_LONG(1,5))
+	{
+	case 1:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain2.wav", 1, ATTN_NORM);
+		break;
+	case 2:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain4.wav", 1, ATTN_NORM);
+		break;
+	case 3:
 		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain5.wav", 1, ATTN_NORM);
-	else if ( flRndSound <= 0.66 )	
+		break;
+	case 4:
 		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain6.wav", 1, ATTN_NORM);
-	else
+		break;
+	case 5:
 		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain7.wav", 1, ATTN_NORM);
+		break;
+	}
 }
 
 /* 
@@ -301,16 +311,24 @@ void CBasePlayer :: DeathSound( void )
 	}
 	*/
 
+	ALERT( at_console, "CBasePlayer::DeathSound\n" );
+
 	// temporarily using pain sounds for death sounds
-	switch (RANDOM_LONG(1,5)) 
+	switch (RANDOM_LONG(1,5))
 	{
-	case 1: 
+	case 1:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain2.wav", 1, ATTN_NORM);
+		break;
+	case 2:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain4.wav", 1, ATTN_NORM);
+		break;
+	case 3:
 		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain5.wav", 1, ATTN_NORM);
 		break;
-	case 2: 
+	case 4:
 		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain6.wav", 1, ATTN_NORM);
 		break;
-	case 3: 
+	case 5:
 		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain7.wav", 1, ATTN_NORM);
 		break;
 	}
@@ -340,6 +358,8 @@ Vector CBasePlayer :: GetGunPosition( )
 //=========================================================
 void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType)
 {
+	ALERT( at_console, "CBasePlayer::TraceAttack\n" );
+
 	if ( pev->takedamage )
 	{
 		m_LastHitGroup = ptr->iHitgroup;
@@ -349,21 +369,19 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 		case HITGROUP_GENERIC:
 			break;
 		case HITGROUP_HEAD:
-			flDamage *= gSkillData.plrHead;
+			flDamage *= 4;
 			break;
 		case HITGROUP_CHEST:
-			flDamage *= gSkillData.plrChest;
 			break;
 		case HITGROUP_STOMACH:
-			flDamage *= gSkillData.plrStomach;
+			flDamage *= 1.25;
 			break;
 		case HITGROUP_LEFTARM:
 		case HITGROUP_RIGHTARM:
-			flDamage *= gSkillData.plrArm;
 			break;
 		case HITGROUP_LEFTLEG:
 		case HITGROUP_RIGHTLEG:
-			flDamage *= gSkillData.plrLeg;
+			flDamage *= 0.75;
 			break;
 		default:
 			break;
@@ -387,6 +405,8 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 
 int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
 {
+	ALERT( at_console, "CBasePlayer::TakeDamage\n" );
+
 	// have suit diagnose the problem - ie: report damage type
 	int bitsDamage = bitsDamageType;
 	int ffound = TRUE;
@@ -401,6 +421,19 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	flBonus = ARMOR_BONUS;
 	flRatio = ARMOR_RATIO;
 
+	Pain();
+
+	// slow the player down
+	m_flVelocityModifier = 0.2;
+
+	// a heavy hit: more than 60 to the head, more than 20 anywhere else
+	if ( ( m_LastHitGroup == HITGROUP_HEAD && flDamage > 60 ) || ( m_LastHitGroup != HITGROUP_HEAD && flDamage > 20 ) )
+		m_fHeavyDamage = TRUE;
+	else
+		m_fHeavyDamage = FALSE;
+
+	SetAnimation( PLAYER_FLINCH );
+
 	if ( ( bitsDamageType & DMG_BLAST ) && g_pGameRules->IsMultiplayer() )
 	{
 		// blasts damage armor more.
@@ -412,8 +445,15 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		return 0;
 	// go take the damage first
 
-	
-	CBaseEntity *pAttacker = CBaseEntity::Instance(pevAttacker);
+
+	CBasePlayer *pAttacker = (CBasePlayer *)CBaseEntity::Instance(pevAttacker);
+
+	// sic: the attacker's team is read before it is known to be a player
+	if ( pAttacker->m_iTeam == m_iTeam )
+		flDamage *= 0.25;
+
+	if ( pAttacker->IsPlayer() && pAttacker != this && pAttacker->m_iTeam != m_iTeam )
+		pAttacker->m_iAccount += 10;
 
 	if ( !g_pGameRules->FPlayerCanTakeDamage( this, pAttacker ) )
 	{
@@ -424,8 +464,8 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	// keep track of amount of damage last sustained
 	m_lastDamageAmount = flDamage;
 
-	// Armor. 
-	if (pev->armorvalue && !(bitsDamageType & (DMG_FALL | DMG_DROWN)) )// armor doesn't protect against fall or drown damage!
+	// Armor.
+	if (pev->armorvalue && !(bitsDamageType & (DMG_FALL | DMG_DROWN)) && ( m_LastHitGroup == HITGROUP_CHEST || m_LastHitGroup == HITGROUP_STOMACH || m_LastHitGroup == HITGROUP_GENERIC ) )// armor doesn't protect against fall or drown damage!
 	{
 		float flNew = flDamage * flRatio;
 
@@ -443,8 +483,11 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		}
 		else
 			pev->armorvalue -= flArmor;
-		
+
 		flDamage = flNew;
+
+		if ( pev->armorvalue <= 0.0 )
+			m_fHasKevlar = FALSE;
 	}
 
 	// this cast to INT is critical!!! If a player ends up with 0.5 health, the engine will get that
@@ -713,7 +756,7 @@ void CBasePlayer::PackDeadPlayerItems( void )
 	pWeaponBox->pev->angles.z = 0;
 
 	pWeaponBox->SetThink( CWeaponBox::Kill );
-	pWeaponBox->pev->nextthink = gpGlobals->time + 120;
+	pWeaponBox->pev->nextthink = gpGlobals->time + 20;
 
 // back these two lists up to their first elements
 	iPA = 0;
@@ -826,8 +869,31 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	pev->solid			= SOLID_NOT;
 	pev->movetype		= MOVETYPE_TOSS;
 	ClearBits(pev->flags, FL_ONGROUND);
-	if (pev->velocity.z < 10)
-		pev->velocity.z += RANDOM_FLOAT(0,300);
+
+	// throw the body as the death animation says
+	if ( m_iDeathThrow )
+	{
+		switch ( m_iDeathThrow )
+		{
+		case 1:		// forwards
+			UTIL_MakeVectors( pev->angles );
+			pev->velocity = gpGlobals->v_forward * RANDOM_FLOAT( 100, 200 );
+			pev->velocity.z = RANDOM_FLOAT( 50, 100 );
+			break;
+		case 2:		// backwards
+			UTIL_MakeVectors( pev->angles );
+			pev->velocity = gpGlobals->v_forward * RANDOM_FLOAT( -100, -200 );
+			pev->velocity.z = RANDOM_FLOAT( 50, 100 );
+			break;
+		case 3:		// away from the attacker
+			UTIL_MakeVectors( pevAttacker->angles );
+			pev->velocity = gpGlobals->v_forward * RANDOM_FLOAT( 200, 300 );
+			pev->velocity.z = RANDOM_FLOAT( 200, 300 );
+			break;
+		}
+
+		m_iDeathThrow = 0;
+	}
 
 	// clear out the suit message cache so we don't keep chattering
 	SetSuitUpdate(NULL, FALSE, 0);
@@ -860,6 +926,7 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	{
 		GibMonster();	// This clears pev->model
 		pev->effects |= EF_NODRAW;
+		((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
 		return;
 	}
 
@@ -870,6 +937,8 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 
 	SetThink(PlayerDeathThink);
 	pev->nextthink = gpGlobals->time + 0.1;
+
+	((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
 }
 
 
@@ -879,6 +948,10 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 	int animDesired;
 	float speed;
 	char szAnim[64];
+
+	// a flinch plays to its end, unless a new flinch comes or the player is dead
+	if ( playerAnim != PLAYER_FLINCH && m_flFlinchTime >= gpGlobals->time && pev->health > 0.0 )
+		return;
 
 	speed = pev->velocity.Length2D();
 
@@ -900,7 +973,7 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 	
 	case PLAYER_DIE:
 		m_IdealActivity = ACT_DIESIMPLE;
-		m_IdealActivity = GetDeathActivity( );
+		DeathSound();
 		break;
 
 	case PLAYER_ATTACK1:	
@@ -936,6 +1009,12 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 			m_IdealActivity = ACT_WALK;
 		}
 		break;
+
+	case PLAYER_FLINCH:
+		if ( m_flNextFlinchTime > gpGlobals->time )
+			return;
+		m_IdealActivity = ACT_FLINCH;
+		break;
 	}
 
 	switch (m_IdealActivity)
@@ -944,7 +1023,6 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 	case ACT_LEAP:
 	case ACT_SWIM:
 	case ACT_HOP:
-	case ACT_DIESIMPLE:
 	default:
 		if ( m_Activity == m_IdealActivity)
 			return;
@@ -1004,6 +1082,212 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		{
 			animDesired = pev->sequence;
 		}
+		break;
+
+	case ACT_FLINCH:
+		m_Activity = m_IdealActivity;
+
+		switch ( m_LastHitGroup )
+		{
+		case HITGROUP_GENERIC:
+			break;
+
+		case HITGROUP_HEAD:
+			switch ( RANDOM_LONG( 0, 2 ) )
+			{
+			case 0:
+				EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/headshot1.wav", 1, ATTN_NORM);
+				break;
+			case 1:
+				EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/headshot2.wav", 1, ATTN_NORM);
+				break;
+			case 2:
+				EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/headshot3.wav", 1, ATTN_NORM);
+				break;
+			}
+
+			if ( m_fHeavyDamage == TRUE )
+				animDesired = LookupSequence( "flinch_head1" );
+			else
+				animDesired = LookupSequence( "sflinch_head1" );
+			break;
+
+		case HITGROUP_CHEST:
+			if ( m_fHeavyDamage == TRUE )
+				animDesired = LookupSequence( "flinch_stomach1" );
+			else
+				animDesired = LookupSequence( "sflinch_stomach1" );
+			break;
+
+		case HITGROUP_STOMACH:
+			if ( m_fHeavyDamage == TRUE )
+				animDesired = LookupSequence( "flinch_stomach1" );
+			else
+				animDesired = LookupSequence( "sflinch_stomach2" );
+			break;
+
+		case HITGROUP_LEFTARM:
+			if ( m_fHeavyDamage == TRUE )
+				animDesired = LookupSequence( "flinch_leftarm1" );
+			else
+				animDesired = LookupSequence( "sflinch_leftarm1" );
+			break;
+
+		case HITGROUP_RIGHTARM:
+			if ( m_fHeavyDamage == TRUE )
+				animDesired = LookupSequence( "flinch_rightarm1" );
+			else
+				animDesired = LookupSequence( "sflinch_rightarm1" );
+			break;
+
+		case HITGROUP_LEFTLEG:
+			if ( m_fHeavyDamage == TRUE )
+				animDesired = LookupSequence( "flinch_leftleg1" );
+			else
+				animDesired = LookupSequence( "sflinch_leftleg1" );
+			break;
+
+		case HITGROUP_RIGHTLEG:
+			if ( m_fHeavyDamage == TRUE )
+				animDesired = LookupSequence( "flinch_rightleg1" );
+			else
+				animDesired = LookupSequence( "sflinch_rightleg1" );
+			break;
+		}
+
+		if ( FBitSet( pev->flags, FL_DUCKING ) )
+		{
+			if ( RANDOM_LONG( 0, 1 ) )
+				animDesired = LookupSequence( "flinch_crouch1" );
+			else
+				animDesired = LookupSequence( "flinch_crouch2" );
+		}
+
+		if ( m_fHeavyDamage == TRUE )
+		{
+			m_flNextFlinchTime = gpGlobals->time + 0.1;
+			m_flFlinchTime = gpGlobals->time + 1.2;
+		}
+		else
+		{
+			m_flNextFlinchTime = gpGlobals->time + 0.1;
+			m_flFlinchTime = gpGlobals->time + 0.5;
+		}
+
+		pev->gaitsequence = 0;
+		pev->sequence		= animDesired;
+		pev->frame			= 0;
+		ResetSequenceInfo( );
+		return;
+
+	case ACT_DIESIMPLE:
+		if ( m_Activity == m_IdealActivity)
+			return;
+		m_Activity = m_IdealActivity;
+
+		m_iUnused164 = 0;
+		m_iDeathThrow = 0;
+
+		// the death animation goes by where the last hit was
+		switch ( m_LastHitGroup )
+		{
+		case HITGROUP_GENERIC:
+			break;
+
+		case HITGROUP_HEAD:
+			{
+			int iRand = RANDOM_LONG( 0, 6 );
+
+			if ( m_fHeavyDamage == TRUE )
+				iRand += 2;
+
+			if ( iRand == 0 )
+				animDesired = LookupSequence( "headshot" );
+			else if ( iRand == 1 || iRand == 2 )
+			{
+				animDesired = LookupSequence( "die_head1" );
+				m_iDeathThrow = 2;
+			}
+			else if ( iRand == 3 || iRand == 4 )
+			{
+				animDesired = LookupSequence( "die_head2" );
+				m_iDeathThrow = 1;
+			}
+			else
+			{
+				animDesired = LookupSequence( "die_head3" );
+				m_iDeathThrow = 3;
+			}
+			}
+			break;
+
+		case HITGROUP_CHEST:
+			if ( RANDOM_LONG( 0, 3 ) )
+				animDesired = LookupSequence( "die_stomach1" );
+			else
+				animDesired = LookupSequence( "gutshot" );
+			break;
+
+		case HITGROUP_STOMACH:
+			if ( m_fHeavyDamage == TRUE || RANDOM_LONG( 0, 3 ) == 0 )
+			{
+				animDesired = LookupSequence( "die_backwards" );
+				m_iDeathThrow = 3;
+			}
+			else
+				animDesired = LookupSequence( "die_stomach1" );
+			break;
+
+		case HITGROUP_LEFTARM:
+			{
+			int iRand = RANDOM_LONG( 0, 1 );
+
+			if ( m_fHeavyDamage == TRUE || iRand == 0 )
+			{
+				animDesired = LookupSequence( "die_leftarm2" );
+				m_iDeathThrow = 3;
+			}
+			else if ( iRand == 1 )
+				animDesired = LookupSequence( "die_leftarm1" );
+			}
+			break;
+
+		case HITGROUP_RIGHTARM:
+			m_iDeathThrow = 3;
+			animDesired = LookupSequence( "die_rightarm1" );
+			break;
+
+		case HITGROUP_LEFTLEG:
+		case HITGROUP_RIGHTLEG:
+			{
+			int iRand = RANDOM_LONG( 0, 4 );
+
+			if ( iRand == 0 || iRand == 1 )
+				animDesired = LookupSequence( "die_legs1" );
+			else if ( iRand == 2 || iRand == 3 )
+				animDesired = LookupSequence( "die_legs2" );
+			else
+				animDesired = LookupSequence( "die_forwards" );
+			}
+			break;
+		}
+
+		if ( FBitSet( pev->flags, FL_DUCKING ) )
+		{
+			animDesired = LookupSequence( "die_crouch1" );
+			m_iDeathThrow = 2;
+		}
+
+		// Already using the desired animation?
+		if (pev->sequence == animDesired)
+			return;
+
+		pev->gaitsequence = 0;
+		pev->sequence		= animDesired;
+		pev->frame			= 0;
+		ResetSequenceInfo( );
+		return;
+
 	}
 
 	if ( FBitSet( pev->flags, FL_DUCKING ) )
@@ -1232,6 +1516,46 @@ void CBasePlayer::CheckWaterJump( )
 	}
 }
 
+//
+// ThrowWeapon - drop the named weapon, if the player has it
+//
+void CBasePlayer::ThrowWeapon( char *pszItemName )
+{
+	CBasePlayerItem *pItem;
+	int i;
+
+	for ( i = 0 ; i <= 5 ; i++ )
+	{
+		pItem = m_rgpPlayerItems[ i ];
+
+		while (pItem)
+		{
+			if ( !strcmp( pszItemName, STRING( pItem->pev->classname ) ) )
+			{
+				ALERT( at_console, "%i \n", pItem->m_iId );
+				pev->weapons &= ~(1<<pItem->m_iId);
+				DropPlayerItem( pszItemName );
+				return;
+			}
+			pItem = pItem->m_pNext;
+		}
+	}
+}
+
+//
+// ThrowPrimary - drop whichever primary weapon the player has
+//
+void CBasePlayer::ThrowPrimary( void )
+{
+	ThrowWeapon( "weapon_m249" );
+	ThrowWeapon( "weapon_g3sg1" );
+	ThrowWeapon( "weapon_awp" );
+	ThrowWeapon( "weapon_mp5navy" );
+	ThrowWeapon( "weapon_tmp" );
+	ThrowWeapon( "weapon_m4a1" );
+	ThrowWeapon( "weapon_m3" );
+}
+
 
 void CBasePlayer::PlayerDeathThink(void)
 {
@@ -1261,7 +1585,7 @@ void CBasePlayer::PlayerDeathThink(void)
 		StudioFrameAdvance( );
 
 		m_iRespawnFrames++;
-		if ( m_iRespawnFrames < 60 )  // animations should be no longer than this
+		if ( m_iRespawnFrames < 120 )  // animations should be no longer than this
 			return;
 	}
 
@@ -1307,10 +1631,7 @@ void CBasePlayer::PlayerDeathThink(void)
 	pev->button = 0;
 	m_iRespawnFrames = 0;
 
-	//ALERT(at_console, "Respawn\n");
-
-	respawn(pev, !(m_afPhysicsFlags & PFLAG_OBSERVER) );// don't copy a corpse if we're in deathcam.
-	pev->nextthink = -1;
+	// Counter-Strike: no respawn here, the dead wait for the next round
 }
 
 //=========================================================
@@ -1347,14 +1668,12 @@ void CBasePlayer::StartDeathCam( void )
 			iRand--;
 		}
 
-		CopyToBodyQue( pev );
 		StartObserver( pSpot->v.origin, pSpot->v.v_angle );
 	}
 	else
 	{
 		// no intermission spot. Push them up in the air, looking down at their corpse
 		TraceResult tr;
-		CopyToBodyQue( pev );
 		UTIL_TraceLine( pev->origin, pev->origin + Vector( 0, 0, 128 ), ignore_monsters, edict(), &tr );
 		StartObserver( tr.vecEndPos, UTIL_VecToAngles( tr.vecEndPos - pev->origin  ) );
 		return;
@@ -1373,6 +1692,9 @@ void CBasePlayer::StartObserver( Vector vecPosition, Vector vecViewAngle )
 	pev->movetype = MOVETYPE_NONE;
 	pev->modelindex = 0;
 	UTIL_SetOrigin( pev, vecPosition );
+
+	pev->flags = FL_SPECTATOR;
+	pev->movetype = MOVETYPE_NOCLIP;
 }
 
 // 
@@ -1482,6 +1804,20 @@ void CBasePlayer::PlayerUse ( void )
 	{
 		if ( m_afButtonPressed & IN_USE )
 			EMIT_SOUND( ENT(pev), CHAN_ITEM, "common/wpn_denyselect.wav", 0.4, ATTN_NORM);
+	}
+
+	// use the hostages within 64 units (the first twelve the map has)
+	CBaseEntity *pHostage = UTIL_FindEntityByClassname( NULL, "hostage_entity" );
+
+	for ( int i = 0; i < 12; i++ )
+	{
+		if ( pHostage )
+		{
+			if ( ( pHostage->pev->origin - pev->origin ).Length() < 64 )
+				pHostage->Use( this, this, USE_TOGGLE, 1 );
+		}
+
+		pHostage = UTIL_FindEntityByClassname( pHostage, "hostage_entity" );
 	}
 }
 
@@ -2116,6 +2452,16 @@ void CBasePlayer::PreThink(void)
 	
 	ItemPreFrame( );
 	WaterMove();
+
+	// a hit slows the player down: get back to full speed by 0.01 a frame on the ground
+	if ( m_flVelocityModifier < 1.0 && FBitSet( pev->flags, FL_ONGROUND ) )
+	{
+		m_flVelocityModifier += 0.01;
+		pev->velocity = pev->velocity * m_flVelocityModifier;
+	}
+
+	if ( m_flVelocityModifier > 1.0 )
+		m_flVelocityModifier = 1;
 
 	if ( g_pGameRules && g_pGameRules->FAllowFlashlight() )
 		m_iHideHUD &= ~HIDEHUD_FLASHLIGHT;
@@ -2839,6 +3185,40 @@ void CBasePlayer::PostThink()
 		}
 	}
 
+	// every two seconds, name the player in the crosshair
+	if ( m_flLastIdCheck + 2 <= gpGlobals->time )
+	{
+		m_flLastIdCheck = gpGlobals->time;
+
+		UTIL_MakeVectors( pev->v_angle );
+
+		TraceResult tr;
+		Vector vecAiming = gpGlobals->v_forward;
+		Vector vecSrc = pev->origin;
+		Vector vecEnd = vecSrc + vecAiming * 1024;
+
+		UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, ENT( pev ), &tr );
+
+		if ( tr.flFraction != 1.0 )
+		{
+			CBaseEntity *pObject = CBaseEntity::Instance( tr.pHit );
+
+			if ( pObject->IsPlayer() )
+			{
+				CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pObject->pev );
+				char szText[ 120 ];
+
+				if ( pPlayer->m_iTeam == TEAM_CT )
+					strcpy( szText, "(Counter-Terrorist)" );
+				else
+					strcpy( szText, "(Terrorist)" );
+
+				strcat( szText, STRING( pPlayer->pev->netname ) );
+				ClientPrint( pev, HUD_PRINTTALK, szText );
+			}
+		}
+	}
+
 // do weapon stuff
 	ItemPostFrame( );
 
@@ -2967,7 +3347,7 @@ BOOL IsSpawnPointValid( CBaseEntity *pPlayer, CBaseEntity *pSpot )
 		return FALSE;
 	}
 
-	while ( (ent = UTIL_FindEntityInSphere( ent, pSpot->pev->origin, 128 )) != NULL )
+	while ( (ent = UTIL_FindEntityInSphere( ent, pSpot->pev->origin, 64 )) != NULL )
 	{
 		// if ent is a client, don't spawn on 'em
 		if ( ent->IsPlayer() && ent != pPlayer )
@@ -2979,6 +3359,8 @@ BOOL IsSpawnPointValid( CBaseEntity *pPlayer, CBaseEntity *pSpot )
 
 
 DLL_GLOBAL CBaseEntity	*g_pLastSpawn;
+DLL_GLOBAL CBaseEntity	*g_pLastCTSpawn;			// retail 0x1008d538; name ours. world.cpp clears all three
+DLL_GLOBAL CBaseEntity	*g_pLastTerroristSpawn;		// retail 0x1008d53c; name ours
 inline int FNullEnt( CBaseEntity *ent ) { return (ent == NULL) || FNullEnt( ent->edict() ); }
 
 /*
@@ -3007,12 +3389,55 @@ edict_t *EntSelectSpawnPoint( CBaseEntity *pPlayer )
 		if ( !FNullEnt(pSpot) ) 
 			goto ReturnSpot;
 	}
-	else if ( g_pGameRules->IsDeathmatch() )
+	// Counter-Terrorists start at info_player_start, terrorists at info_player_deathmatch,
+	// each team going round its own points
+	else if ( g_pGameRules->IsDeathmatch() && ((CBasePlayer *)pPlayer)->m_iTeam == TEAM_CT )
 	{
-		pSpot = g_pLastSpawn;
-		// Randomize the start spot
-		for ( int i = RANDOM_LONG(1,5); i > 0; i-- )
-			pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_deathmatch" );
+		pSpot = g_pLastCTSpawn;
+		pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_start" );
+		if ( FNullEnt( pSpot ) )  // skip over the null point
+			pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_start" );
+
+		CBaseEntity *pFirstSpot = pSpot;
+
+		do 
+		{
+			if ( pSpot )
+			{
+				// check if pSpot is valid
+				if ( IsSpawnPointValid( pPlayer, pSpot ) )
+				{
+					if ( pSpot->pev->origin == Vector( 0, 0, 0 ) )
+					{
+						pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_start" );
+						continue;
+					}
+
+					// if so, go to pSpot
+					goto ReturnSpot;
+				}
+			}
+			// increment pSpot
+			pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_start" );
+		} while ( pSpot != pFirstSpot ); // loop if we're not back to the start
+
+		// we haven't found a place to spawn yet,  so kill any guy at the first spawn point and spawn there
+		if ( !FNullEnt( pSpot ) )
+		{
+			CBaseEntity *ent = NULL;
+			while ( (ent = UTIL_FindEntityInSphere( ent, pSpot->pev->origin, 128 )) != NULL )
+			{
+				// if ent is a client, kill em (unless they are ourselves)
+				if ( ent->IsPlayer() && !(ent->edict() == player) )
+					ent->TakeDamage( VARS(INDEXENT(0)), VARS(INDEXENT(0)), 300, DMG_GENERIC );
+			}
+			goto ReturnSpot;
+		}
+	}
+	else if ( g_pGameRules->IsDeathmatch() && ((CBasePlayer *)pPlayer)->m_iTeam == TEAM_TERRORIST )
+	{
+		pSpot = g_pLastTerroristSpawn;
+		pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_deathmatch" );
 		if ( FNullEnt( pSpot ) )  // skip over the null point
 			pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_deathmatch" );
 
@@ -3053,10 +3478,12 @@ edict_t *EntSelectSpawnPoint( CBaseEntity *pPlayer )
 		}
 	}
 
+	ALERT( at_console, "default start!" );
+
 	// If startspot is set, (re)spawn there.
 	if ( FStringNull( gpGlobals->startspot ) || !strlen(STRING(gpGlobals->startspot)))
 	{
-		pSpot = UTIL_FindEntityByClassname(NULL, "info_player_start");
+		pSpot = UTIL_FindEntityByClassname(NULL, "info_player_deathmatch");
 		if ( !FNullEnt(pSpot) )
 			goto ReturnSpot;
 	}
@@ -3074,7 +3501,11 @@ ReturnSpot:
 		return INDEXENT(0);
 	}
 
-	g_pLastSpawn = pSpot;
+	if ( ((CBasePlayer *)pPlayer)->m_iTeam == TEAM_TERRORIST )
+		g_pLastTerroristSpawn = pSpot;
+	else
+		g_pLastCTSpawn = pSpot;
+
 	return pSpot->edict();
 }
 
@@ -3099,8 +3530,25 @@ void CBasePlayer::Spawn( void )
 	m_bitsDamageType	= 0;
 	m_afPhysicsFlags	= 0;
 	m_fLongJump			= FALSE;// no longjump module. 
-	m_iFOV				= 0;// init field of view.
+	m_iFOV				= 90;// init field of view.
+	m_iLastZoom			= 90;
 	m_iClientFOV		= -1; // make sure fov reset is sent
+
+	m_flVelocityModifier = 1.0;
+	m_flLastFired		= 0;
+	m_flAccuracy		= 0.8;
+	m_flNextBurstShot	= 0;
+	m_fHasKevlar		= FALSE;
+	m_flLastSay			= 0;
+
+	// a sniper rifle may have hidden its view model when zoomed in: show it again
+	if ( m_pActiveItem )
+	{
+		if ( m_pActiveItem->m_iId == WEAPON_AWP )
+			pev->viewmodel = MAKE_STRING( "models/v_awp.mdl" );
+		else if ( m_pActiveItem->m_iId == WEAPON_G3SG1 )
+			pev->viewmodel = MAKE_STRING( "models/v_g3sg1.mdl" );
+	}
 
 	m_flNextDecalTime	= 0;// let this player decal as soon as he spawns.
 
@@ -3439,6 +3887,37 @@ BOOL CBasePlayer::HasWeapons( void )
 	return FALSE;
 }
 
+//
+// HasPrimaryWeapon - does the player carry one of the seven primary weapons? (name ours)
+//
+bool CBasePlayer::HasPrimaryWeapon( void )
+{
+	CBasePlayerItem *pItem;
+	int i;
+
+	for ( i = 0 ; i <= 5 ; i++ )
+	{
+		pItem = m_rgpPlayerItems[ i ];
+
+		while (pItem)
+		{
+			if ( !strcmp( "weapon_mp5navy", STRING( pItem->pev->classname ) ) ||
+				 !strcmp( "weapon_m4a1", STRING( pItem->pev->classname ) ) ||
+				 !strcmp( "weapon_awp", STRING( pItem->pev->classname ) ) ||
+				 !strcmp( "weapon_tmp", STRING( pItem->pev->classname ) ) ||
+				 !strcmp( "weapon_m3", STRING( pItem->pev->classname ) ) ||
+				 !strcmp( "weapon_g3sg1", STRING( pItem->pev->classname ) ) ||
+				 !strcmp( "weapon_m249", STRING( pItem->pev->classname ) ) )
+			{
+				return true;
+			}
+			pItem = pItem->m_pNext;
+		}
+	}
+
+	return false;
+}
+
 void CBasePlayer::SelectPrevItem( int iItem )
 {
 }
@@ -3767,37 +4246,6 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 		}
 
 
-	case 101:
-		gEvilImpulse101 = TRUE;
-		GiveNamedItem( "item_suit" );
-		GiveNamedItem( "item_battery" );
-		GiveNamedItem( "weapon_crowbar" );
-		GiveNamedItem( "weapon_9mmhandgun" );
-		GiveNamedItem( "ammo_9mmclip" );
-		GiveNamedItem( "weapon_shotgun" );
-		GiveNamedItem( "ammo_buckshot" );
-		GiveNamedItem( "weapon_9mmAR" );
-		GiveNamedItem( "ammo_9mmAR" );
-		GiveNamedItem( "ammo_ARgrenades" );
-		GiveNamedItem( "weapon_handgrenade" );
-		GiveNamedItem( "weapon_tripmine" );
-#ifndef OEM_BUILD
-		GiveNamedItem( "weapon_357" );
-		GiveNamedItem( "ammo_357" );
-		GiveNamedItem( "weapon_crossbow" );
-		GiveNamedItem( "ammo_crossbow" );
-		GiveNamedItem( "weapon_egon" );
-		GiveNamedItem( "weapon_gauss" );
-		GiveNamedItem( "ammo_gaussclip" );
-		GiveNamedItem( "weapon_rpg" );
-		GiveNamedItem( "ammo_rpgclip" );
-		GiveNamedItem( "weapon_satchel" );
-		GiveNamedItem( "weapon_snark" );
-		GiveNamedItem( "weapon_hornetgun" );
-#endif
-		gEvilImpulse101 = FALSE;
-		break;
-
 	case 102:
 		// Gibbage!!!
 		CGib::SpawnRandomGibs( pev, 1, 1 );
@@ -4020,6 +4468,10 @@ int CBasePlayer::RemovePlayerItem( CBasePlayerItem *pItem )
 //
 int CBasePlayer :: GiveAmmo( int iCount, char *szName, int iMax )
 {
+	// spectators pick nothing up
+	if ( pev->flags == FL_SPECTATOR )
+		return -1;
+
 	if ( !szName )
 	{
 		// no ammo.

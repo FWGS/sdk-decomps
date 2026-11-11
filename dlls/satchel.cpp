@@ -250,6 +250,8 @@ void CSatchel::Spawn( )
 
 void CSatchel::Precache( void )
 {
+	return;
+
 	PRECACHE_MODEL("models/v_satchel.mdl");
 	PRECACHE_MODEL("models/v_satchel_radio.mdl");
 	PRECACHE_MODEL("models/w_satchel.mdl");
@@ -269,7 +271,7 @@ int CSatchel::GetItemInfo(ItemInfo *p)
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
 	p->iSlot = 4;
-	p->iPosition = 1;
+	p->iPosition = 10;
 	p->iFlags = ITEM_FLAG_SELECTONEMPTY | ITEM_FLAG_LIMITINWORLD | ITEM_FLAG_EXHAUSTIBLE;
 	p->iId = m_iId = WEAPON_SATCHEL;
 	p->iWeight = SATCHEL_WEIGHT;

@@ -58,6 +58,16 @@ const char *CBreakable::pSpawnObjects[] =
 	"weapon_satchel",	// 19
 	"weapon_snark",		// 20
 	"weapon_hornetgun",	// 21
+	"weapon_usp",		// 22
+	"weapon_glock18",	// 23
+	"weapon_awp",		// 24
+	"weapon_mp5n",		// 25 sic: the entity is weapon_mp5navy
+	"weapon_m249",		// 26
+	"weapon_m3",		// 27
+	"weapon_m4a1",		// 28
+	"weapon_tmp",		// 29
+	"weapon_g3sg1",		// 30
+	"weapon_flashbang",	// 31
 };
 
 void CBreakable::KeyValue( KeyValueData* pkvd )

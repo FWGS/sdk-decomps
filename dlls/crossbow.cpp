@@ -78,6 +78,8 @@ void CCrossbowBolt::Spawn( )
 
 void CCrossbowBolt::Precache( )
 {
+	return;
+
 	PRECACHE_MODEL ("models/crossbow_bolt.mdl");
 	PRECACHE_SOUND("weapons/xbow_hitbod1.wav");
 	PRECACHE_SOUND("weapons/xbow_hitbod2.wav");
@@ -302,7 +304,7 @@ int CCrossbow::GetItemInfo(ItemInfo *p)
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = CROSSBOW_MAX_CLIP;
 	p->iSlot = 2;
-	p->iPosition = 2;
+	p->iPosition = 20;
 	p->iId = WEAPON_CROSSBOW;
 	p->iFlags = 0;
 	p->iWeight = CROSSBOW_WEIGHT;

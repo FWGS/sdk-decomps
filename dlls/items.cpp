@@ -333,3 +333,36 @@ class CItemLongJump : public CItem
 };
 
 LINK_ENTITY_TO_CLASS( item_longjump, CItemLongJump );
+
+
+class CItemKevlar : public CItem
+{
+	void Spawn( void )
+	{ 
+		Precache( );
+		SET_MODEL(ENT(pev), "models/w_longjump.mdl");
+		CItem::Spawn( );
+	}
+	void Precache( void )
+	{
+		PRECACHE_MODEL ("models/w_longjump.mdl");
+	}
+	BOOL MyTouch( CBasePlayer *pPlayer )
+	{
+		if ( pPlayer->m_fHasKevlar )
+		{
+			return FALSE;
+		}
+
+		pPlayer->m_fHasKevlar = TRUE;
+		pPlayer->pev->armorvalue = 100;
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
+			WRITE_STRING( STRING(pev->classname) );
+		MESSAGE_END();
+
+		return TRUE;		
+	}
+};
+
+LINK_ENTITY_TO_CLASS( item_kevlar, CItemKevlar );

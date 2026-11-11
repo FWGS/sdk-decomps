@@ -24,12 +24,21 @@
 #include	"skill.h"
 #include	"game.h"
 #include	"items.h"
+#include	"hostage.h"
 
 extern DLL_GLOBAL CGameRules	*g_pGameRules;
 extern DLL_GLOBAL BOOL	g_fGameOver;
+extern void respawn( entvars_t* pev, BOOL fCopyCorpse );
 extern int gmsgDeathMsg;	// client dll messages
 extern int gmsgScoreInfo;
 extern int gmsgMOTD;
+
+// sic: a stand-in for at least one declaration retail had between the headers and
+// GetNextBestWeapon (a local, an extern, a prototype: the image cannot say which).
+// VC5 orders the two iWeight() calls there by the number of declarations
+// seen; 1 to 13 more give
+// retail's order.
+typedef int sic_declcount_multiplay;
 
 #define ITEM_RESPAWN_TIME	30
 #define WEAPON_RESPAWN_TIME	20
@@ -43,6 +52,11 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 {
 	RefreshSkillData();
 	m_flIntermissionEndTime = 0;
+	m_flRestartRoundTime = 0;
+	m_iAccountCT = 0;
+	m_iAccountTerrorist = 0;
+	m_iHostagesRescued = 0;
+	m_iRoundWinStatus = 0;
 	
 	// 11/8/98
 	// Modified by YWB:  Server .cfg file is now a cvar, so that 
@@ -136,6 +150,186 @@ void CHalfLifeMultiplay::RefreshSkillData( void )
 	gSkillData.plrDmgHornet = 10;
 }
 
+//=========================================================
+// CleanUpMap - takes the crowbars out of the map
+//=========================================================
+void CHalfLifeMultiplay::CleanUpMap( void )
+{
+	CBaseEntity *pCrowbar = UTIL_FindEntityByClassname( NULL, "weapon_crowbar" );
+
+	while ( pCrowbar )
+	{
+		pCrowbar->SUB_Remove();
+		pCrowbar = UTIL_FindEntityByClassname( NULL, "weapon_crowbar" );	// sic: from the start again
+	}
+}
+
+//=========================================================
+// CheckWinConditions - counts the living and the dead of both
+// teams; a team with nobody left alive loses the round, and
+// the next one starts five seconds later.
+//=========================================================
+void CHalfLifeMultiplay::CheckWinConditions( void )
+{
+	ALERT( at_console, "CHalfLifeMultiplay::CheckWinConditions\n" );
+
+	CBaseEntity *pPlayer = NULL;
+	int NumDeadTerrorist = 0;
+	int NumDeadCT = 0;
+	int NumAliveCT = 0;
+	int NumAliveTerrorist = 0;
+
+	m_iNumCT = 0;
+	m_iNumTerrorist = 0;
+
+	pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
+	{
+		if ( pPlayer->IsPlayer() && pPlayer->pev->flags != FL_DORMANT )
+		{
+			CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+
+			if ( pPlayer && ( pPlayer->pev->deadflag == DEAD_DYING || pPlayer->pev->deadflag == DEAD_RESPAWNABLE || pPlayer->pev->deadflag == DEAD_DEAD ) )
+			{
+				if ( player->m_iTeam == TEAM_CT )
+				{
+					m_iNumCT++;
+					NumDeadCT++;
+				}
+				else if ( player->m_iTeam == TEAM_TERRORIST )
+				{
+					m_iNumTerrorist++;
+					NumDeadTerrorist++;
+				}
+			}
+			else if ( pPlayer )
+			{
+				if ( player->m_iTeam == TEAM_CT )
+				{
+					m_iNumCT++;
+					NumAliveCT++;
+				}
+				else if ( player->m_iTeam == TEAM_TERRORIST )
+				{
+					m_iNumTerrorist++;
+					NumAliveTerrorist++;
+				}
+			}
+		}
+		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	}
+
+	if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && m_iNumCT > 0 )
+	{
+		m_iRoundWinStatus = 1;
+		m_iAccountCT = 250;
+	}
+	else if ( NumAliveCT == 0 && NumDeadCT != 0 && m_iNumTerrorist > 0 )
+	{
+		m_iRoundWinStatus = 2;
+		m_iAccountTerrorist = 300;
+	}
+	else if ( NumAliveCT == 0 && NumAliveTerrorist == 0 )
+	{
+		m_iRoundWinStatus = 3;
+	}
+
+	ALERT( at_console, "NumAliveCT = %i\n", NumAliveCT );
+	ALERT( at_console, "NumDeadCT = %i\n", NumDeadCT );
+	ALERT( at_console, "NumAliveTerrorist = %i\n", NumAliveTerrorist );
+	ALERT( at_console, "NumDeadTerrorist = %i\n", NumDeadTerrorist );
+
+	if ( m_iRoundWinStatus == 1 || m_iRoundWinStatus == 2 || m_iRoundWinStatus == 3 )
+	{
+		if ( m_flRestartRoundTime == 0.0 )
+		{
+			ALERT( at_console, "Number of Terrorists = %i\n", m_iNumTerrorist );
+			ALERT( at_console, "Number of CT = %i\n", m_iNumCT );
+			m_flRestartRoundTime = gpGlobals->time + 5.0;
+		}
+	}
+}
+
+//=========================================================
+// RestartRound - the hostages go back to where they stood,
+// both teams are paid and every player is respawned.
+//=========================================================
+void CHalfLifeMultiplay::RestartRound( void )
+{
+	CBaseEntity *pHostage = NULL;
+
+	pHostage = UTIL_FindEntityByClassname( pHostage, "hostage_entity" );
+	while ( pHostage != NULL )
+	{
+		if ( pHostage->pev->solid != SOLID_NOT )
+		{
+			// a hostage still standing in the map
+			if ( m_iRoundWinStatus == 2 )
+			{
+				m_iAccountTerrorist += 250;
+				ALERT( at_console, "Terrorist account = %i\n", m_iAccountTerrorist );
+			}
+			else if ( m_iRoundWinStatus == 1 )
+			{
+				m_iAccountCT += 200;
+				ALERT( at_console, "CT account = %i\n", m_iAccountCT );
+			}
+
+			if ( pHostage->pev->deadflag == DEAD_DEAD )
+			{
+				ALERT( at_console, "resucrrection!\n" );
+				pHostage->pev->deadflag = DEAD_RESPAWNABLE;
+			}
+		}
+		((CHostage *)pHostage)->RePosition();
+		pHostage = UTIL_FindEntityByClassname( pHostage, "hostage_entity" );
+	}
+
+	m_iAccountCT += m_iHostagesRescued * 200;
+
+	CBaseEntity *pPlayer = NULL;
+
+	pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
+	{
+		if ( pPlayer->IsPlayer() && pPlayer->pev->flags != FL_DORMANT )
+		{
+			CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+
+			// nobody is paid while a team is empty
+			if ( m_iNumCT != 0 && m_iNumTerrorist != 0 )
+			{
+				if ( player->m_iTeam == TEAM_CT )
+					player->m_iAccount += m_iAccountCT;
+				else if ( player->m_iTeam == TEAM_TERRORIST )
+					player->m_iAccount += m_iAccountTerrorist;
+			}
+
+			if ( player->pev->deadflag == DEAD_DYING )
+			{
+				respawn( pPlayer->pev, FALSE );
+				pPlayer->pev->button = 0;
+				player->m_iRespawnFrames = 0;
+				pPlayer->pev->nextthink = -1;
+			}
+			else
+			{
+				player->m_iRespawnFrames = 0;
+				respawn( pPlayer->pev, FALSE );
+			}
+		}
+		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	}
+
+	m_flIntermissionEndTime = 0;
+	m_flRestartRoundTime = 0;
+	m_iAccountCT = 0;
+	m_iAccountTerrorist = 0;
+	m_iHostagesRescued = 0;
+	m_iRoundWinStatus = 0;
+	m_flRoundStartTime = gpGlobals->time;
+}
+
 // longest the intermission can last, in seconds
 #define MAX_INTERMISSION_TIME		120
 
@@ -156,29 +350,16 @@ void CHalfLifeMultiplay :: Think ( void )
 		return;
 	}
 
-	float flTimeLimit = timelimit.value * 60;
-	float flFragLimit = fraglimit.value;
-	
-	if ( flTimeLimit != 0 && gpGlobals->time >= flTimeLimit )
+	// a round lasts eight minutes at most
+	if ( gpGlobals->time > m_flRoundStartTime + 480.0 )
 	{
-		GoToIntermission();
-		return;
+		m_iRoundWinStatus = 3;
+		m_flRestartRoundTime = gpGlobals->time + 5.0;
+		m_flRoundStartTime = gpGlobals->time + 60;
 	}
 
-	if ( flFragLimit )
-	{
-		// check if any player is over the frag limit
-		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-		{
-			CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
-
-			if ( pPlayer && pPlayer->pev->frags >= flFragLimit )
-			{
-				GoToIntermission();
-				return;
-			}
-		}
-	}
+	if ( m_flRestartRoundTime != 0.0 && m_flRestartRoundTime <= gpGlobals->time )
+		RestartRound();
 }
 
 
@@ -376,6 +557,8 @@ void CHalfLifeMultiplay :: ClientDisconnected( edict_t *pClient )
 			pPlayer->RemoveAllItems( TRUE );// destroy all of the players weapons and items
 		}
 	}
+
+	CheckWinConditions();
 }
 
 //=========================================================
@@ -438,11 +621,33 @@ void CHalfLifeMultiplay :: PlayerSpawn( CBasePlayer *pPlayer )
 		addDefault = FALSE;
 	}
 
-	if ( addDefault )
+	if ( pPlayer->m_fNoDefaultItems == TRUE )
+		addDefault = FALSE;
+
+	if ( pPlayer->m_iTeam == TEAM_CT && addDefault )
 	{
-		pPlayer->GiveNamedItem( "weapon_crowbar" );
-		pPlayer->GiveNamedItem( "weapon_9mmhandgun" );
-		pPlayer->GiveAmmo( 68, "9mm", _9MM_MAX_CARRY );// 4 full reloads
+		pPlayer->GiveNamedItem( "weapon_usp" );
+		pPlayer->GiveAmmo( 24, "45acp", _9MM_MAX_CARRY );
+	}
+	else if ( pPlayer->m_iTeam == TEAM_TERRORIST && addDefault )
+	{
+		pPlayer->GiveNamedItem( "weapon_glock18" );
+		pPlayer->GiveAmmo( 40, "9mm", _9MM_MAX_CARRY );
+	}
+
+	int clientIndex = pPlayer->entindex();
+
+	if ( pPlayer->m_iTeam == TEAM_CT )
+	{
+		ALERT( at_console, "New Counter-Terrorist\n" );
+		CLIENT_COMMAND( ENT(pPlayer->pev), "model urban\n" );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "model", "urban" );
+	}
+	else if ( pPlayer->m_iTeam == TEAM_TERRORIST )
+	{
+		ALERT( at_console, "New TERRORIST\n" );
+		CLIENT_COMMAND( ENT(pPlayer->pev), "model terror\n" );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "model", "terror" );
 	}
 }
 
@@ -499,6 +704,15 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 	{
 		// if a player dies in a deathmatch game and the killer is a client, award the killer some points
 		pKiller->frags += IPointsForKill( peKiller, pVictim );
+
+		// 200 for the kill; a team kill costs 500
+		GetClassPtr( (CBasePlayer *)pKiller )->m_iAccount += 200;
+		if ( GetClassPtr( (CBasePlayer *)pKiller )->m_iTeam == pVictim->m_iTeam )
+		{
+			GetClassPtr( (CBasePlayer *)pKiller )->m_iAccount -= 500;
+			if ( GetClassPtr( (CBasePlayer *)pKiller )->m_iAccount < 0 )
+				GetClassPtr( (CBasePlayer *)pKiller )->m_iAccount = 0;
+		}
 		
 		FireTargets( "game_playerkill", ktmp, ktmp, USE_TOGGLE, 0 );
 	}
@@ -616,6 +830,8 @@ void CHalfLifeMultiplay::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, 
 	{  // killed by the world
 		UTIL_LogPrintf( "\"%s<%i>\" killed by world with %s\n",  STRING( pVictim->pev->netname ), GETPLAYERUSERID( pVictim->edict() ), killer_weapon_name );
 	}
+
+	CheckWinConditions();
 
 //  Print a standard message
 	// TODO: make this go direct to console
@@ -898,7 +1114,22 @@ edict_t *CHalfLifeMultiplay::GetPlayerSpawnSpot( CBasePlayer *pPlayer )
 //=========================================================
 int CHalfLifeMultiplay::PlayerRelationship( CBaseEntity *pPlayer, CBaseEntity *pTarget )
 {
-	// half life deathmatch has only enemies
+	if ( !pPlayer || !pTarget || !pTarget->IsPlayer() || !pPlayer->IsPlayer() )
+		return GR_NOTTEAMMATE;
+
+	CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+	CBasePlayer *target = GetClassPtr( (CBasePlayer *)pTarget->pev );
+
+	// the dead are the dead's team mates, whatever their teams
+	if ( player->pev->deadflag != DEAD_NO && target->pev->deadflag == DEAD_NO )
+		return GR_NOTTEAMMATE;
+
+	if ( player->pev->deadflag != DEAD_NO && target->pev->deadflag != DEAD_NO )
+		return GR_TEAMMATE;
+
+	if ( player->m_iTeam == target->m_iTeam )
+		return GR_TEAMMATE;
+
 	return GR_NOTTEAMMATE;
 }
 

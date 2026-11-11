@@ -148,6 +148,8 @@ void CEgon::Spawn( )
 
 void CEgon::Precache( void )
 {
+	return;
+
 	PRECACHE_MODEL("models/w_egon.mdl");
 	PRECACHE_MODEL("models/v_egon.mdl");
 	PRECACHE_MODEL("models/p_egon.mdl");
@@ -205,7 +207,7 @@ int CEgon::GetItemInfo(ItemInfo *p)
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
 	p->iSlot = 3;
-	p->iPosition = 2;
+	p->iPosition = 21;
 	p->iId = m_iId = WEAPON_EGON;
 	p->iFlags = 0;
 	p->iWeight = EGON_WEIGHT;

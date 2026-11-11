@@ -23,6 +23,13 @@
 
 extern int IsSoundEvent( int eventNumber );
 
+// sic: a stand-in for one declaration retail had where animating.cpp sees it and
+// util.cpp, plats.cpp and maprules.cpp do not. VC5 orders some x87 operands by the
+// number of declarations a file has seen;
+// CBaseAnimating::SetSequenceBox needs 1 more here (or 3, 4,
+// 5 or 7, mod 8). What it was the image cannot say.
+typedef int sic_declcount_animation_h;
+
 int LookupActivity( void *pmodel, entvars_t *pev, int activity );
 int LookupActivityHeaviest( void *pmodel, entvars_t *pev, int activity );
 int LookupSequence( void *pmodel, const char *label );

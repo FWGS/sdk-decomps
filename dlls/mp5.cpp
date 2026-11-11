@@ -80,6 +80,8 @@ void CMP5::Spawn( )
 
 void CMP5::Precache( void )
 {
+	return;
+
 	PRECACHE_MODEL("models/v_9mmAR.mdl");
 	PRECACHE_MODEL("models/w_9mmAR.mdl");
 	PRECACHE_MODEL("models/p_9mmAR.mdl");
@@ -187,10 +189,10 @@ void CMP5::PrimaryAttack()
 							 + gpGlobals->v_right * RANDOM_FLOAT(50,70) 
 							 + gpGlobals->v_up * RANDOM_FLOAT(100,150) 
 							 + gpGlobals->v_forward * 25;
-	EjectBrass ( pev->origin + m_pPlayer->pev->view_ofs
+	EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs
 					+ gpGlobals->v_up * -12 
 					+ gpGlobals->v_forward * 20 
-					+ gpGlobals->v_right * 4, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL); 
+					+ gpGlobals->v_right * 4, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev ); 
 	
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_5DEGREES );
@@ -198,12 +200,12 @@ void CMP5::PrimaryAttack()
 	if ( g_pGameRules->IsDeathmatch() )
 	{
 		// optimized multiplayer. Widened to make it easier to hit a moving player
-		m_pPlayer->FireBullets( 1, vecSrc, vecAiming, VECTOR_CONE_6DEGREES, 8192, BULLET_PLAYER_MP5, 2 );
+		m_pPlayer->FireBullets2( 1, vecSrc, vecAiming, VECTOR_CONE_6DEGREES, 8192, BULLET_PLAYER_MP5, 2 );
 	}
 	else
 	{
 		// single player spread
-		m_pPlayer->FireBullets( 1, vecSrc, vecAiming, VECTOR_CONE_3DEGREES, 8192, BULLET_PLAYER_MP5, 2 );
+		m_pPlayer->FireBullets2( 1, vecSrc, vecAiming, VECTOR_CONE_3DEGREES, 8192, BULLET_PLAYER_MP5, 2 );
 	}
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)

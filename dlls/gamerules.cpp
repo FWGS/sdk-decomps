@@ -316,7 +316,7 @@ CGameRules *InstallGameRules( void )
 		if ( CVAR_GET_FLOAT( "mp_teamplay" ) > 0 )
 		{
 			// teamplay
-			return new CHalfLifeTeamplay;
+			return new CHalfLifeMultiplay;
 		}
 		if ((int)gpGlobals->deathmatch == 1)
 		{

@@ -106,6 +106,7 @@ void CGauss::Spawn( )
 {
 	Precache( );
 	m_iId = WEAPON_GAUSS;
+	pev->classname = MAKE_STRING("weapon_gauss");
 	SET_MODEL(ENT(pev), "models/w_gauss.mdl");
 
 	m_iDefaultAmmo = GAUSS_DEFAULT_GIVE;
@@ -116,6 +117,8 @@ void CGauss::Spawn( )
 
 void CGauss::Precache( void )
 {
+	return;
+
 	PRECACHE_MODEL("models/w_gauss.mdl");
 	PRECACHE_MODEL("models/v_gauss.mdl");
 	PRECACHE_MODEL("models/p_gauss.mdl");
@@ -154,7 +157,7 @@ int CGauss::GetItemInfo(ItemInfo *p)
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
 	p->iSlot = 3;
-	p->iPosition = 1;
+	p->iPosition = 22;
 	p->iId = m_iId = WEAPON_GAUSS;
 	p->iFlags = 0;
 	p->iWeight = GAUSS_WEIGHT;

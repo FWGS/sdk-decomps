@@ -70,6 +70,8 @@ void CHandGrenade::Spawn( )
 
 void CHandGrenade::Precache( void )
 {
+	return;
+
 	PRECACHE_MODEL("models/w_grenade.mdl");
 	PRECACHE_MODEL("models/v_grenade.mdl");
 	PRECACHE_MODEL("models/p_grenade.mdl");
@@ -84,7 +86,7 @@ int CHandGrenade::GetItemInfo(ItemInfo *p)
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
 	p->iSlot = 4;
-	p->iPosition = 0;
+	p->iPosition = 50;
 	p->iId = m_iId = WEAPON_HANDGRENADE;
 	p->iWeight = HANDGRENADE_WEIGHT;
 	p->iFlags = ITEM_FLAG_LIMITINWORLD | ITEM_FLAG_EXHAUSTIBLE;

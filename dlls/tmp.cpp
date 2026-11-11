@@ -1,0 +1,241 @@
+/***
+*
+*	Counter-Strike Beta 1.0, tmp.cpp: the TMP submachine gun (weapon_tmp).
+*
+*	The MP5 Navy's shape, silenced: no muzzle flash, no gun flash, the shot
+*	at volume 0.6. File, class and method names are Beta 3.1's (Linux
+*	symbols); the animation names and m_fEjectShell are ours.
+*
+****/
+
+#include "extdll.h"
+#include "util.h"
+#include "cbase.h"
+#include "monsters.h"
+#include "weapons.h"
+#include "nodes.h"
+#include "player.h"
+
+enum tmp_e {
+	TMP_IDLE1 = 0,
+	TMP_RELOAD,
+	TMP_DRAW,
+	TMP_SHOOT1,
+	TMP_SHOOT2,
+	TMP_SHOOT3,
+};
+
+class CTMP : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 4; }
+	int GetItemInfo(ItemInfo *p);
+
+	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void TMPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim );
+	BOOL Deploy( void );
+	void Reload( void );
+	void WeaponIdle( void );
+	int m_iShell;
+	BOOL m_fEjectShell;		// the shot throws a shell; flips with every shot
+};
+LINK_ENTITY_TO_CLASS( weapon_tmp, CTMP );
+
+
+void CTMP::Spawn( )
+{
+	pev->classname = MAKE_STRING("weapon_tmp");
+	Precache( );
+	m_iId = WEAPON_TMP;
+	SET_MODEL(ENT(pev), "models/w_tmp.mdl");
+
+	m_iDefaultAmmo = TMP_DEFAULT_GIVE;
+
+	FallInit();// get ready to fall down.
+}
+
+
+void CTMP::Precache( void )
+{
+	PRECACHE_MODEL("models/v_tmp.mdl");
+	PRECACHE_MODEL("models/w_tmp.mdl");
+	PRECACHE_MODEL("models/p_tmp.mdl");
+
+	PRECACHE_SOUND("weapons/tmp-1.wav");
+	PRECACHE_SOUND("weapons/tmp-2.wav");
+
+	m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shell
+}
+
+int CTMP::GetItemInfo(ItemInfo *p)
+{
+	p->pszName = STRING(pev->classname);
+	p->pszAmmo1 = "9mm";
+	p->iMaxAmmo1 = TMP_MAX_CARRY;
+	p->pszAmmo2 = NULL;
+	p->iMaxAmmo2 = -1;
+	p->iMaxClip = TMP_MAX_CLIP;
+	p->iSlot = 3;
+	p->iPosition = 3;
+	p->iFlags = 0;
+	p->iId = m_iId = WEAPON_TMP;
+	p->iWeight = TMP_WEIGHT;
+
+	return 1;
+}
+
+BOOL CTMP::Deploy( )
+{
+	return DefaultDeploy( "models/v_tmp.mdl", "models/p_tmp.mdl", TMP_DRAW, "tmp" );
+}
+
+void CTMP::SecondaryAttack( void )
+{
+	float flSpread;
+
+	if (m_pPlayer->pev->velocity.Length2D() > 0)
+	{
+		flSpread = m_pPlayer->m_flAccuracy * 0.06;
+		TMPFire( flSpread, 0.08, FALSE );
+	}
+	else if (m_pPlayer->pev->flags & FL_DUCKING)
+	{
+		flSpread = m_pPlayer->m_flAccuracy * 0.035;
+		TMPFire( flSpread, 0.08, FALSE );
+	}
+	else
+	{
+		flSpread = m_pPlayer->m_flAccuracy * 0.045;
+		TMPFire( flSpread, 0.08, FALSE );
+	}
+}
+
+void CTMP::PrimaryAttack( void )
+{
+	float flSpread;
+
+	if (m_pPlayer->pev->velocity.Length2D() > 0)
+	{
+		flSpread = m_pPlayer->m_flAccuracy * 0.06;
+		TMPFire( flSpread, 0.08, FALSE );
+	}
+	else if (m_pPlayer->pev->flags & FL_DUCKING)
+	{
+		flSpread = m_pPlayer->m_flAccuracy * 0.035;
+		TMPFire( flSpread, 0.08, FALSE );
+	}
+	else
+	{
+		flSpread = m_pPlayer->m_flAccuracy * 0.045;
+		TMPFire( flSpread, 0.08, FALSE );
+	}
+}
+
+void CTMP::TMPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
+{
+	// the spread grows with the cube of the shots fired
+	m_pPlayer->m_iShotsFired++;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.65;
+
+	if (m_pPlayer->m_flAccuracy > 2)
+		m_pPlayer->m_flAccuracy = 2;
+
+	if (m_iClip <= 0)
+	{
+		if (m_fFireOnEmpty)
+		{
+			PlayEmptySound();
+			m_flNextPrimaryAttack = gpGlobals->time + 0.2;
+		}
+
+		return;
+	}
+
+	m_iClip--;
+
+	if (m_iClip != 0)
+	{
+		switch (RANDOM_LONG(0,2))
+		{
+		case 0:
+			SendWeaponAnim( TMP_SHOOT1 );
+			// no breaks (sic): case 0 sends all three animations, case 1 the last two
+		case 1:
+			SendWeaponAnim( TMP_SHOOT2 );
+		case 2:
+			SendWeaponAnim( TMP_SHOOT3 );
+		}
+	}
+
+	// player "shoot" animation
+	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
+
+	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+
+	Vector	vecShellVelocity = m_pPlayer->pev->velocity
+							 + gpGlobals->v_right * RANDOM_FLOAT(100,120)
+							 - gpGlobals->v_up * RANDOM_FLOAT(5,55)
+							 + gpGlobals->v_forward * 25;
+	if (m_fEjectShell)
+		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -6 + gpGlobals->v_forward * 32 - gpGlobals->v_right * 11, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+	m_fEjectShell = 1 - m_fEjectShell;
+
+	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
+
+	if (RANDOM_LONG(0,1))
+		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/tmp-1.wav", 0.6, ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+	else
+		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/tmp-2.wav", 0.6, ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+	Vector vecAiming;
+
+	if ( fUseAutoAim )
+	{
+		vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_10DEGREES );
+	}
+	else
+	{
+		vecAiming = gpGlobals->v_forward;
+	}
+
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 16, 0.85 );
+	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
+
+	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
+		// HEV suit - indicate out of ammo condition
+		m_pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0);
+
+	m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
+
+	m_pPlayer->pev->punchangle.x = RANDOM_FLOAT( -1.5, 1.5 );
+}
+
+
+void CTMP::Reload( void )
+{
+	if (DefaultReload( TMP_MAX_CLIP, TMP_RELOAD, 2.0 ))
+	{
+		m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
+	}
+
+	m_pPlayer->m_flAccuracy = 0;
+}
+
+
+
+void CTMP::WeaponIdle( void )
+{
+	ResetEmptySound( );
+
+	m_pPlayer->GetAutoaimVector( AUTOAIM_10DEGREES );
+
+	if (m_flTimeWeaponIdle > gpGlobals->time)
+		return;
+
+	// sic: m_flTimeWeaponIdle is not renewed, so once it has passed every call sends the idle animation again
+	SendWeaponAnim( TMP_IDLE1 );
+}

@@ -65,6 +65,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 
 	int iContents = UTIL_PointContents ( pev->origin );
 	
+/*
 	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_EXPLOSION );		// This makes a dynamic light and the explosion sprites/sound
 		WRITE_COORD( pev->origin.x );	// Send to PAS because of the sound
@@ -82,6 +83,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 		WRITE_BYTE( 15  ); // framerate
 		WRITE_BYTE( TE_EXPLFLAG_NONE );
 	MESSAGE_END();
+*/
 
 	CSoundEnt::InsertSound ( bits_SOUND_COMBAT, pev->origin, NORMAL_EXPLOSION_VOLUME, 3.0 );
 	entvars_t *pevOwner;
@@ -92,7 +94,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 
 	pev->owner = NULL; // can't traceline attack owner if this is set
 
-	RadiusDamage ( pev, pevOwner, pev->dmg, CLASS_NONE, bitsDamageType );
+	RadiusFlash ( pev->origin, pev, pevOwner, 4, CLASS_NONE, bitsDamageType );
 
 	if ( RANDOM_FLOAT( 0 , 1 ) < 0.5 )
 	{
@@ -105,11 +107,10 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 
 	flRndSound = RANDOM_FLOAT( 0 , 1 );
 
-	switch ( RANDOM_LONG( 0, 2 ) )
+	switch ( RANDOM_LONG( 0, 1 ) )
 	{
-		case 0:	EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/debris1.wav", 0.55, ATTN_NORM);	break;
-		case 1:	EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/debris2.wav", 0.55, ATTN_NORM);	break;
-		case 2:	EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/debris3.wav", 0.55, ATTN_NORM);	break;
+		case 0:	EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/flashbang-2.wav", 0.55, ATTN_NORM);	break;
+		default:	EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/flashbang-1.wav", 0.55, ATTN_NORM);	break;
 	}
 
 	pev->effects |= EF_NODRAW;
@@ -141,7 +142,7 @@ void CGrenade::Smoke( void )
 			WRITE_COORD( pev->origin.z );
 			WRITE_SHORT( g_sModelIndexSmoke );
 			WRITE_BYTE( (pev->dmg - 50) * 0.80 ); // scale * 10
-			WRITE_BYTE( 12  ); // framerate
+			WRITE_BYTE( 6  ); // framerate
 		MESSAGE_END();
 	}
 	UTIL_Remove( this );
@@ -222,6 +223,7 @@ void CGrenade::BounceTouch( CBaseEntity *pOther )
 	if ( pOther->edict() == pev->owner )
 		return;
 
+/*
 	// only do damage if we're moving fairly fast
 	if (m_flNextAttack < gpGlobals->time && pev->velocity.Length() > 100)
 	{
@@ -235,6 +237,7 @@ void CGrenade::BounceTouch( CBaseEntity *pOther )
 		}
 		m_flNextAttack = gpGlobals->time + 1.0; // debounce
 	}
+*/
 
 	Vector vecTestVelocity;
 	// pev->avelocity = Vector (300, 300, 300);
@@ -416,7 +419,7 @@ CGrenade * CGrenade:: ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector v
 	pGrenade->pev->gravity = 0.5;
 	pGrenade->pev->friction = 0.8;
 
-	SET_MODEL(ENT(pGrenade->pev), "models/w_grenade.mdl");
+	SET_MODEL(ENT(pGrenade->pev), "models/w_flashbang.mdl");
 	pGrenade->pev->dmg = 100;
 
 	return pGrenade;

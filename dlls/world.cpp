@@ -38,6 +38,8 @@ extern CGraph WorldGraph;
 extern CSoundEnt *pSoundEnt;
 
 extern CBaseEntity				*g_pLastSpawn;
+extern CBaseEntity				*g_pLastCTSpawn;
+extern CBaseEntity				*g_pLastTerroristSpawn;
 DLL_GLOBAL edict_t				*g_pBodyQueueHead;
 CGlobalState					gGlobalState;
 extern DLL_GLOBAL	int			gDisplayTitle;
@@ -479,6 +481,8 @@ void CWorld :: Spawn( void )
 void CWorld :: Precache( void )
 {
 	g_pLastSpawn = NULL;
+	g_pLastCTSpawn = NULL;
+	g_pLastTerroristSpawn = NULL;
 	
 #if 1
 	CVAR_SET_STRING("sv_gravity", "800"); // 67ft/sec

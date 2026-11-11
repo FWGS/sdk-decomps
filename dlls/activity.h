@@ -95,6 +95,7 @@ typedef enum {
 	ACT_FLINCH_RIGHTARM,
 	ACT_FLINCH_LEFTLEG,
 	ACT_FLINCH_RIGHTLEG,
+	ACT_FLINCH,				// Counter-Strike: the player's flinch (77; retail's activity_map has it last)
 } Activity;
 
 

@@ -77,6 +77,17 @@ public:
 #define WEAPON_TRIPMINE			13
 #define	WEAPON_SATCHEL			14
 #define	WEAPON_SNARK			15
+// Counter-Strike's weapons (ids are retail's GetItemInfo values; the macro names are ours)
+#define WEAPON_USP				16
+#define WEAPON_GLOCK18			17
+#define WEAPON_AWP				18
+#define WEAPON_MP5N				19
+#define WEAPON_M249				20
+#define WEAPON_M3				21
+#define WEAPON_M4A1				22
+#define WEAPON_TMP				23
+#define WEAPON_G3SG1			24
+#define WEAPON_FLASHBANG		25
 
 #define WEAPON_ALLWEAPONS		(~(1<<WEAPON_SUIT))
 
@@ -103,6 +114,17 @@ public:
 #define SNARK_WEIGHT		5
 #define SATCHEL_WEIGHT		-10
 #define TRIPMINE_WEIGHT		-10
+// Counter-Strike (names ours)
+#define USP_WEIGHT			25
+#define GLOCK18_WEIGHT		25
+#define AWP_WEIGHT			30
+#define MP5N_WEIGHT			25
+#define M249_WEIGHT			25
+#define M3_WEIGHT			20
+#define M4A1_WEIGHT			25
+#define TMP_WEIGHT			25
+#define G3SG1_WEIGHT		20
+#define FLASHBANG_WEIGHT	20
 
 
 // weapon clip/carry ammo capacities
@@ -118,6 +140,19 @@ public:
 #define SNARK_MAX_CARRY			15
 #define HORNET_MAX_CARRY		8
 #define M203_GRENADE_MAX_CARRY	10
+// Counter-Strike: what each weapon's GetItemInfo gives as iMaxAmmo1 (names ours).
+// The limit goes with the weapon, not with the ammo: "9mm" is 80 for the Glock 18,
+// 120 for the MP5 Navy and the TMP; "556Nato" 200 for the M249, 90 for the M4A1.
+#define USP_MAX_CARRY			48		// "45ACP"
+#define GLOCK18_MAX_CARRY		80		// "9mm"
+#define AWP_MAX_CARRY			30		// "338Magnum"
+#define MP5N_MAX_CARRY			120		// "9mm"
+#define M249_MAX_CARRY			200		// "556Nato"
+#define M3_MAX_CARRY			24		// "buckshot"
+#define M4A1_MAX_CARRY			90		// "556Nato"
+#define TMP_MAX_CARRY			120		// "9mm"
+#define G3SG1_MAX_CARRY			60		// "762Nato"
+#define FLASHBANG_MAX_CARRY		3		// "Hand Grenade"
 
 // the maximum amount of ammo each weapon's clip can hold
 #define WEAPON_NOCLIP			-1
@@ -137,6 +172,17 @@ public:
 #define SATCHEL_MAX_CLIP		WEAPON_NOCLIP
 #define TRIPMINE_MAX_CLIP		WEAPON_NOCLIP
 #define SNARK_MAX_CLIP			WEAPON_NOCLIP
+// Counter-Strike (names ours)
+#define USP_MAX_CLIP			12
+#define GLOCK18_MAX_CLIP		20
+#define AWP_MAX_CLIP			10
+#define MP5N_MAX_CLIP			30
+#define M249_MAX_CLIP			100
+#define M3_MAX_CLIP				8
+#define M4A1_MAX_CLIP			30
+#define TMP_MAX_CLIP			30
+#define G3SG1_MAX_CLIP			20
+#define FLASHBANG_MAX_CLIP		WEAPON_NOCLIP
 
 
 // the default amount of ammo that comes with each gun when it spawns
@@ -155,6 +201,18 @@ public:
 #define TRIPMINE_DEFAULT_GIVE		1
 #define SNARK_DEFAULT_GIVE			5
 #define HIVEHAND_DEFAULT_GIVE		8
+// Counter-Strike: m_iDefaultAmmo as each Spawn sets it (names ours). The USP's is 17, the
+// SDK Glock's GLOCK_DEFAULT_GIVE, with a magazine of 12.
+#define USP_DEFAULT_GIVE			17
+#define GLOCK18_DEFAULT_GIVE		20
+#define AWP_DEFAULT_GIVE			10
+#define MP5N_DEFAULT_GIVE			30
+#define M249_DEFAULT_GIVE			100
+#define M3_DEFAULT_GIVE				8
+#define M4A1_DEFAULT_GIVE			30
+#define TMP_DEFAULT_GIVE			30
+#define G3SG1_DEFAULT_GIVE			20
+#define FLASHBANG_DEFAULT_GIVE		1
 
 // The amount of ammo given to a player by an ammo item.
 #define AMMO_URANIUMBOX_GIVE	20
@@ -168,6 +226,16 @@ public:
 #define AMMO_RPGCLIP_GIVE		RPG_MAX_CLIP
 #define AMMO_URANIUMBOX_GIVE	20
 #define AMMO_SNARKBOX_GIVE		5
+// Counter-Strike: the four ammo boxes of ammo.cpp, amount and limit as their AddAmmo
+// passes them to GiveAmmo (names ours). ammo_762nato allows 90, the G3SG1 itself 60.
+#define AMMO_556NATOBOX_GIVE	30
+#define AMMO_556NATOBOX_MAX		200
+#define AMMO_762NATOBOX_GIVE	30
+#define AMMO_762NATOBOX_MAX		90
+#define AMMO_45ACPBOX_GIVE		12
+#define AMMO_45ACPBOX_MAX		48
+#define AMMO_338MAGNUMBOX_GIVE	10
+#define AMMO_338MAGNUMBOX_MAX	30
 
 // bullet types
 typedef	enum
@@ -182,6 +250,12 @@ typedef	enum
 	BULLET_MONSTER_9MM,
 	BULLET_MONSTER_MP5,
 	BULLET_MONSTER_12MM,
+
+	// Counter-Strike (values 9 to 12 are retail's, the names ours)
+	BULLET_PLAYER_45ACP,	// USP
+	BULLET_PLAYER_338MAG,	// AWP
+	BULLET_PLAYER_762MM,	// G3SG1
+	BULLET_PLAYER_556MM,	// M249, M4A1
 } Bullet;
 
 
@@ -316,6 +390,8 @@ public:
 	virtual BOOL IsUseable( void );
 	BOOL DefaultDeploy( char *szViewModel, char *szWeaponModel, int iAnim, char *szAnimExt );
 	int DefaultReload( int iClipSize, int iAnim, float fDelay );
+	void EjectBrassLate( void );	// the shell of a bolt or pump action, m_pPlayer->m_flEjectBrass after the shot
+	void FireRemaining( void );		// the second and third shot of a burst (Glock 18, M4A1)
 
 	virtual void ItemPostFrame( void );	// called each frame by the player PostThink
 	// called by CBasePlayerWeapons ItemPostFrame()
@@ -342,6 +418,10 @@ public:
 	int		m_fInReload;										// Are we in the middle of a reload;
 
 	int		m_iDefaultAmmo;// how much ammo you get when you pick up this weapon as placed by a level designer.
+
+	// Counter-Strike (names ours)
+	int		m_iShellLate;										// model index of the shell EjectBrassLate and FireRemaining throw
+	float	m_flNightVisionTime;								// G3SG1: when the scope's night vision was last faded in; 0 = off. ItemPostFrame renews the fade every 13 seconds
 };
 
 
@@ -376,6 +456,7 @@ extern void DecalGunshot( TraceResult *pTrace, int iBulletType );
 extern void SpawnBlood(Vector vecSpot, int bloodColor, float flDamage);
 extern int DamageDecal( CBaseEntity *pEntity, int bitsDamageType );
 extern void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType );
+extern void RadiusFlash( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType );
 
 typedef struct 
 {
