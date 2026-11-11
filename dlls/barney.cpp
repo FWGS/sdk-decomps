@@ -261,7 +261,8 @@ int CBarney :: ISoundMask ( void)
 //=========================================================
 int	CBarney :: Classify ( void )
 {
-	return	CLASS_PLAYER_ALLY;
+	// They Hunger: the zombie cop is one of the monsters
+	return	( pev->spawnflags & SF_MONSTER_ZOMBIECOP ) ? CLASS_ALIEN_MONSTER : CLASS_PLAYER_ALLY;
 }
 
 //=========================================================
@@ -352,7 +353,11 @@ void CBarney :: BarneyFirePistol ( void )
 	SetBlending( 0, angDir.x );
 	pev->effects = EF_MUZZLEFLASH;
 
-	FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_2DEGREES, 1024, BULLET_MONSTER_9MM );
+	// They Hunger: the zombie cop is a bad shot
+	if ( pev->spawnflags & SF_MONSTER_ZOMBIECOP )
+		FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_10DEGREES, 1024, BULLET_MONSTER_9MM );
+	else
+		FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_2DEGREES, 1024, BULLET_MONSTER_9MM );
 	
 	int pitchShift = RANDOM_LONG( 0, 20 );
 	
@@ -407,13 +412,18 @@ void CBarney :: Spawn()
 {
 	Precache( );
 
-	SET_MODEL(ENT(pev), "models/barney.mdl");
+	// They Hunger: the map may give its own model and health
+	if ( pev->model )
+		SET_MODEL(ENT(pev), STRING(pev->model));
+	else
+		SET_MODEL(ENT(pev), "models/barney.mdl");
 	UTIL_SetSize(pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX);
 
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
 	m_bloodColor		= BLOOD_COLOR_RED;
-	pev->health			= gSkillData.barneyHealth;
+	if ( pev->health == 0 )
+		pev->health			= gSkillData.barneyHealth;
 	pev->view_ofs		= Vector ( 0, 0, 50 );// position of the eyes relative to monster's origin.
 	m_flFieldOfView		= VIEW_FIELD_WIDE; // NOTE: we need a wide field of view so npc will notice player and say hello
 	m_MonsterState		= MONSTERSTATE_NONE;
@@ -424,7 +434,11 @@ void CBarney :: Spawn()
 	m_afCapability		= bits_CAP_HEAR | bits_CAP_TURN_HEAD | bits_CAP_DOORS_GROUP;
 
 	MonsterInit();
-	SetUse( FollowerUse );
+	// They Hunger: the zombie cop follows nobody
+	if ( pev->spawnflags & SF_MONSTER_ZOMBIECOP )
+		SetUse( NULL );
+	else
+		SetUse( FollowerUse );
 }
 
 //=========================================================
@@ -432,7 +446,10 @@ void CBarney :: Spawn()
 //=========================================================
 void CBarney :: Precache()
 {
-	PRECACHE_MODEL("models/barney.mdl");
+	if ( pev->model )
+		PRECACHE_MODEL((char *)STRING(pev->model));
+	else
+		PRECACHE_MODEL("models/barney.mdl");
 
 	PRECACHE_SOUND("barney/ba_attack1.wav" );
 	PRECACHE_SOUND("barney/ba_attack2.wav" );
@@ -517,29 +534,33 @@ int CBarney :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, floa
 	{
 		m_flPlayerDamage += flDamage;
 
-		// This is a heurstic to determine if the player intended to harm me
-		// If I have an enemy, we can't establish intent (may just be crossfire)
-		if ( m_hEnemy == NULL )
+		// They Hunger: the zombie cop has nothing to say about it
+		if ( !( pev->spawnflags & SF_MONSTER_ZOMBIECOP ) )
 		{
-			// If the player was facing directly at me, or I'm already suspicious, get mad
-			if ( (m_afMemory & bits_MEMORY_SUSPICIOUS) || IsFacing( pevAttacker, pev->origin ) )
+			// This is a heurstic to determine if the player intended to harm me
+			// If I have an enemy, we can't establish intent (may just be crossfire)
+			if ( m_hEnemy == NULL )
 			{
-				// Alright, now I'm pissed!
-				PlaySentence( "BA_MAD", 4, VOL_NORM, ATTN_NORM );
+				// If the player was facing directly at me, or I'm already suspicious, get mad
+				if ( (m_afMemory & bits_MEMORY_SUSPICIOUS) || IsFacing( pevAttacker, pev->origin ) )
+				{
+					// Alright, now I'm pissed!
+					PlaySentence( "BA_MAD", 4, VOL_NORM, ATTN_NORM );
 
-				Remember( bits_MEMORY_PROVOKED );
-				StopFollowing( TRUE );
+					Remember( bits_MEMORY_PROVOKED );
+					StopFollowing( TRUE );
+				}
+				else
+				{
+					// Hey, be careful with that
+					PlaySentence( "BA_SHOT", 4, VOL_NORM, ATTN_NORM );
+					Remember( bits_MEMORY_SUSPICIOUS );
+				}
 			}
-			else
+			else if ( !(m_hEnemy->IsPlayer()) && pev->deadflag == DEAD_NO )
 			{
-				// Hey, be careful with that
 				PlaySentence( "BA_SHOT", 4, VOL_NORM, ATTN_NORM );
-				Remember( bits_MEMORY_SUSPICIOUS );
 			}
-		}
-		else if ( !(m_hEnemy->IsPlayer()) && pev->deadflag == DEAD_NO )
-		{
-			PlaySentence( "BA_SHOT", 4, VOL_NORM, ATTN_NORM );
 		}
 	}
 
@@ -819,8 +840,17 @@ LINK_ENTITY_TO_CLASS( monster_barney_dead, CDeadBarney );
 //=========================================================
 void CDeadBarney :: Spawn( )
 {
-	PRECACHE_MODEL("models/barney.mdl");
-	SET_MODEL(ENT(pev), "models/barney.mdl");
+	// They Hunger: the map may give its own model
+	if ( pev->model )
+	{
+		PRECACHE_MODEL((char *)STRING(pev->model));
+		SET_MODEL(ENT(pev), STRING(pev->model));
+	}
+	else
+	{
+		PRECACHE_MODEL("models/barney.mdl");
+		SET_MODEL(ENT(pev), "models/barney.mdl");
+	}
 
 	pev->effects		= 0;
 	pev->yaw_speed		= 8;
