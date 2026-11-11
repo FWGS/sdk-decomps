@@ -20,6 +20,7 @@
 #define SF_TRACKTRAIN_NOCONTROL		0x0002
 #define SF_TRACKTRAIN_FORWARDONLY	0x0004
 #define SF_TRACKTRAIN_PASSABLE		0x0008
+#define SF_TRACKTRAIN_SOUNDS		0x0020	// They Hunger, the fgd's "TH_SOUNDS": start, brake and use sounds follow m_sounds. name ours
 
 // Spawnflag for CPathTrack
 #define SF_PATH_DISABLED		0x00000001

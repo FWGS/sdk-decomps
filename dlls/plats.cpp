@@ -1109,7 +1109,20 @@ void CFuncTrackTrain :: StopSound( void )
 		/*
 		STOP_SOUND(ENT(pev), CHAN_STATIC, (char*)STRING(pev->noise));
 		*/
-		EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_brake1.wav", m_flVolume, ATTN_NORM, 0, 100);
+		if ( FBitSet( pev->spawnflags, SF_TRACKTRAIN_SOUNDS ) )
+		{
+			switch (m_sounds)
+			{
+			default: EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_brake1.wav", m_flVolume, ATTN_NORM, 0, 100); break;
+			case 2: EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_brake2.wav", m_flVolume, ATTN_NORM, 0, 100); break;
+			case 3: EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_brake3.wav", m_flVolume, ATTN_NORM, 0, 100); break;
+			case 4: EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_brake4.wav", m_flVolume, ATTN_NORM, 0, 100); break;
+			case 5: EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_brake6.wav", m_flVolume, ATTN_NORM, 0, 100); break;
+			case 6: EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_brake7.wav", m_flVolume, ATTN_NORM, 0, 100); break;
+			}
+		}
+		else
+			EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_brake1.wav", m_flVolume, ATTN_NORM, 0, 100);
 	}
 
 	m_soundPlaying = 0;
@@ -1131,7 +1144,20 @@ void CFuncTrackTrain :: UpdateSound( void )
 	if (!m_soundPlaying)
 	{
 		// play startup sound for train
-		EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_start1.wav", m_flVolume, ATTN_NORM, 0, 100);
+		if ( FBitSet( pev->spawnflags, SF_TRACKTRAIN_SOUNDS ) )
+		{
+			switch (m_sounds)
+			{
+			default: EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_start1.wav", m_flVolume, ATTN_NORM, 0, 100); break;
+			case 2: EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_start2.wav", m_flVolume, ATTN_NORM, 0, 100); break;
+			case 3: EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_start3.wav", m_flVolume, ATTN_NORM, 0, 100); break;
+			case 4: EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_start4.wav", m_flVolume, ATTN_NORM, 0, 100); break;
+			case 5: EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_start6.wav", m_flVolume, ATTN_NORM, 0, 100); break;
+			case 6: EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_start7.wav", m_flVolume, ATTN_NORM, 0, 100); break;
+			}
+		}
+		else
+			EMIT_SOUND_DYN(ENT(pev), CHAN_ITEM, "plats/ttrain_start1.wav", m_flVolume, ATTN_NORM, 0, 100);
 		EMIT_SOUND_DYN(ENT(pev), CHAN_STATIC, (char*)STRING(pev->noise), m_flVolume, ATTN_NORM, 0, (int) flpitch);
 		m_soundPlaying = 1;
 	} 
@@ -1528,18 +1554,58 @@ void CFuncTrackTrain :: Precache( void )
 	if (m_flVolume == 0.0)
 		m_flVolume = 1.0;
 
-	switch (m_sounds)
+	if ( FBitSet( pev->spawnflags, SF_TRACKTRAIN_SOUNDS ) )
 	{
-	default:
-		// no sound
-		pev->noise = 0;
-		break;
-	case 1: PRECACHE_SOUND("plats/ttrain1.wav"); pev->noise = MAKE_STRING("plats/ttrain1.wav");break;
-	case 2: PRECACHE_SOUND("plats/ttrain2.wav"); pev->noise = MAKE_STRING("plats/ttrain2.wav");break;
-	case 3: PRECACHE_SOUND("plats/ttrain3.wav"); pev->noise = MAKE_STRING("plats/ttrain3.wav");break; 
-	case 4: PRECACHE_SOUND("plats/ttrain4.wav"); pev->noise = MAKE_STRING("plats/ttrain4.wav");break;
-	case 5: PRECACHE_SOUND("plats/ttrain6.wav"); pev->noise = MAKE_STRING("plats/ttrain6.wav");break;
-	case 6: PRECACHE_SOUND("plats/ttrain7.wav"); pev->noise = MAKE_STRING("plats/ttrain7.wav");break;
+		// They Hunger: each sound set has its own brake, start and use sounds
+		switch (m_sounds)
+		{
+		default:
+			// no sound
+			pev->noise = 0;
+			break;
+		case 1: PRECACHE_SOUND("plats/ttrain1.wav"); pev->noise = MAKE_STRING("plats/ttrain1.wav");break;
+		case 2: PRECACHE_SOUND("plats/ttrain2.wav"); pev->noise = MAKE_STRING("plats/ttrain2.wav");
+			PRECACHE_SOUND("plats/ttrain_brake2.wav");
+			PRECACHE_SOUND("plats/ttrain_start2.wav");
+			PRECACHE_SOUND("plats/train_use2.wav");
+			break;
+		case 3: PRECACHE_SOUND("plats/ttrain3.wav"); pev->noise = MAKE_STRING("plats/ttrain3.wav");
+			PRECACHE_SOUND("plats/ttrain_brake3.wav");
+			PRECACHE_SOUND("plats/ttrain_start3.wav");
+			PRECACHE_SOUND("plats/train_use3.wav");
+			break;
+		case 4: PRECACHE_SOUND("plats/ttrain4.wav"); pev->noise = MAKE_STRING("plats/ttrain4.wav");
+			PRECACHE_SOUND("plats/ttrain_brake4.wav");
+			PRECACHE_SOUND("plats/ttrain_start4.wav");
+			PRECACHE_SOUND("plats/train_use4.wav");
+			break;
+		case 5: PRECACHE_SOUND("plats/ttrain6.wav"); pev->noise = MAKE_STRING("plats/ttrain6.wav");
+			PRECACHE_SOUND("plats/ttrain_brake6.wav");
+			PRECACHE_SOUND("plats/ttrain_start6.wav");
+			PRECACHE_SOUND("plats/train_use6.wav");
+			break;
+		case 6: PRECACHE_SOUND("plats/ttrain7.wav"); pev->noise = MAKE_STRING("plats/ttrain7.wav");
+			PRECACHE_SOUND("plats/ttrain_brake7.wav");
+			PRECACHE_SOUND("plats/ttrain_start7.wav");
+			PRECACHE_SOUND("plats/train_use7.wav");
+			break;
+		}
+	}
+	else
+	{
+		switch (m_sounds)
+		{
+		default:
+			// no sound
+			pev->noise = 0;
+			break;
+		case 1: PRECACHE_SOUND("plats/ttrain1.wav"); pev->noise = MAKE_STRING("plats/ttrain1.wav");break;
+		case 2: PRECACHE_SOUND("plats/ttrain2.wav"); pev->noise = MAKE_STRING("plats/ttrain2.wav");break;
+		case 3: PRECACHE_SOUND("plats/ttrain3.wav"); pev->noise = MAKE_STRING("plats/ttrain3.wav");break; 
+		case 4: PRECACHE_SOUND("plats/ttrain4.wav"); pev->noise = MAKE_STRING("plats/ttrain4.wav");break;
+		case 5: PRECACHE_SOUND("plats/ttrain6.wav"); pev->noise = MAKE_STRING("plats/ttrain6.wav");break;
+		case 6: PRECACHE_SOUND("plats/ttrain7.wav"); pev->noise = MAKE_STRING("plats/ttrain7.wav");break;
+		}
 	}
 
 	PRECACHE_SOUND("plats/ttrain_brake1.wav");
