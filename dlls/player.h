@@ -64,6 +64,10 @@
 
 #define TEAM_NAME_LENGTH	16
 
+// They Hunger: item_suit's spawnflag for the red suit (the fgd's "TH_REDMODE"); it sets HIDEHUD_REDMODE.
+// Here because CBasePlayer::GiveNamedItem sets it too. name ours
+#define SF_SUIT_REDMODE			0x0020
+
 typedef enum
 {
 	PLAYER_IDLE,

@@ -31,6 +31,7 @@
 #define	HIDEHUD_FLASHLIGHT	( 1<<1 )
 #define	HIDEHUD_ALL			( 1<<2 )
 #define 	HIDEHUD_HEALTH		( 1<<3 )
+#define	HIDEHUD_REDMODE		( 1<<5 )	// They Hunger: set by an item_suit with spawnflag 32 (the fgd's "TH_REDMODE"): red HUD, no HEV voice. name ours
 
 #define	MAX_AMMO_TYPES	32		// ???
 #define MAX_AMMO_SLOTS  32		// not really slots
