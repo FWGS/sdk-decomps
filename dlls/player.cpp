@@ -3873,7 +3873,10 @@ int CBasePlayer::AddPlayerItem( CBasePlayerItem *pItem )
 				g_pGameRules->PlayerGotWeapon ( this, pItem );
 				pItem->CheckRespawn();
 
-				// a second weapon that takes no ammo is added all the same
+				// They Hunger: a second crowbar, shovel or spanner (no ammo: AddDuplicate
+				// is TRUE through GiveAmmo's -1) is "picked up" like the first, with the
+				// pickup message, and stays attached to the player, but is not put on
+				// the item list (sic)
 				if ( pItem->iMaxAmmo1() == -1 )
 				{
 					pItem->AddToPlayer( this );
