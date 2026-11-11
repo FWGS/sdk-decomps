@@ -1444,10 +1444,20 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 
 			if ( iDamage )
 			{
-				pEntity->TraceAttack(pevAttacker, iDamage, vecDir, &tr, DMG_BULLET | ((iDamage > 16) ? DMG_ALWAYSGIB : DMG_NEVERGIB) );
-				
-				TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-				DecalGunshot( &tr, iBulletType );
+				if ( iBulletType == BULLET_PLAYER_357 )
+				{
+					pEntity->TraceAttack(pevAttacker, iDamage, vecDir, &tr, DMG_BULLET);
+				}
+				else
+				{
+					pEntity->TraceAttack(pevAttacker, iDamage, vecDir, &tr, DMG_BULLET | ((iDamage > 16) ? DMG_ALWAYSGIB : DMG_NEVERGIB) );
+					
+					if ( iBulletType != BULLET_PLAYER_9MM && iBulletType != BULLET_PLAYER_MP5 )
+					{
+						TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
+						DecalGunshot( &tr, iBulletType );
+					}
+				}
 			} 
 			else switch(iBulletType)
 			{
