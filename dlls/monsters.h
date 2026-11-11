@@ -57,6 +57,7 @@
 #define SF_MONSTER_TURRET_AUTOACTIVATE	32
 #define SF_MONSTER_TURRET_STARTINACTIVE	64
 #define SF_MONSTER_WAIT_UNTIL_PROVOKED	64 // don't attack the player unless provoked
+#define SF_MONSTER_ZOMBIECOP			64 // They Hunger, the fgd's "TH_ZOMBIECOP" on monster_barney: a hostile one. CTalkMonster keeps it out of the talking and the friends. name ours
 
 
 
