@@ -6,13 +6,14 @@ objects went into it, and the order in which the linker met things. Two
 builds of the same source on two machines can differ in every one of these.
 
 This page lists each part of the image that is not code, says how it was
-reproduced for the four mods in this repository, and what to look at when a
+reproduced for the five mods in this repository, and what to look at when a
 rebuild "differs from retail". How the code itself was matched is in
 [vc6-notes.md](vc6-notes.md). The compilers are described in
 [compilers.md](compilers.md), the toolchain folder and Wine prefix in
 [setup.md](setup.md), and each mod's own details in
 [point-of-view.md](point-of-view.md), [t2def.md](t2def.md),
-[wanted.md](wanted.md) and [gunman-chronicles.md](gunman-chronicles.md).
+[wanted.md](wanted.md), [gunman-chronicles.md](gunman-chronicles.md) and
+[they-hunger.md](they-hunger.md).
 
 Terms used below:
 
@@ -64,32 +65,32 @@ Terms used below:
 | Image version, base, alignment | PE optional header | the link line and LINK's defaults | [Other header fields](#other-header-fields-and-padding) |
 | Padding | between and after sections | whatever was in LINK's memory | [Other header fields](#other-header-fields-and-padding) |
 
-Retail's values for the eight DLLs:
+Retail's values for the ten DLLs:
 
-| Server | Point of View `hl.dll` | T2DEF `t2def.dll` | Wanted! `wanted.dll` | Gunman Chronicles `gunman.dll` |
-|---|---|---|---|---|
-| Compiler | VC6 RTM Professional | VC6 RTM Standard | VC6 RTM Professional | VC6 RTM Professional |
-| Link time (UTC) | 2003-05-06 07:56:13 | 2002-12-16 01:56:59 | 2001-06-05 13:13:19; export directory 13:13:17 | 2000-11-10 22:46:15 |
-| PDB path | `D:\Editors\Levels\POVSourceCode\dlls\Releasehl\hl.pdb` | `C:\hledit todesangst2\code\dlls\Releasehl\hl.pdb` | `K:\Wantedhl\Source Code\New Code\Code\dlls\Releasehl\hl.pdb` | `C:\Gunman\Source\dlls\Releasehl\gunman.pdb` |
-| PDB created | at the final link | 2002-12-10 04:33:33 | 2001-04-02 10:56:04 | at the final link |
-| PDB age | 1 | 15 | 18 | 1 |
-| Export name | `hl.dll` | `hl.dll` | `hl.dll` | `hl.dll` |
-| C++ objects in the Rich header | 142 | 113 (Standard edition) | 146 | 124 |
-| Placeholder objects needed | 1 | 0 | 8 | 2 |
-| Last build | full build | 3 files recompiled after it | 3 files recompiled after it | full build; 5 objects need per-file `.pch` stand-ins |
-| Identical-code folding | no (`/debug`) | no | no | no |
-| Rebuild | identical | identical | 810 bytes differ, all in `CBot::Wander` | identical |
+| Server | Point of View `hl.dll` | T2DEF `t2def.dll` | Wanted! `wanted.dll` | Gunman Chronicles `gunman.dll` | They Hunger `einar.dll` |
+|---|---|---|---|---|---|
+| Compiler | VC6 RTM Professional | VC6 RTM Standard | VC6 RTM Professional | VC6 RTM Professional | VC6 RTM Professional |
+| Link time (UTC) | 2003-05-06 07:56:13 | 2002-12-16 01:56:59 | 2001-06-05 13:13:19; export directory 13:13:17 | 2000-11-10 22:46:15 | 2001-03-26 05:43:20 |
+| PDB path | `D:\Editors\Levels\POVSourceCode\dlls\Releasehl\hl.pdb` | `C:\hledit todesangst2\code\dlls\Releasehl\hl.pdb` | `K:\Wantedhl\Source Code\New Code\Code\dlls\Releasehl\hl.pdb` | `C:\Gunman\Source\dlls\Releasehl\gunman.pdb` | `C:\hlsrc11\dlls\Releasehl\hl.pdb` |
+| PDB created | at the final link | 2002-12-10 04:33:33 | 2001-04-02 10:56:04 | at the final link | 2001-03-10 06:25:12 |
+| PDB age | 1 | 15 | 18 | 1 | 73 |
+| Export name | `hl.dll` | `hl.dll` | `hl.dll` | `hl.dll` | `hl.dll` |
+| C++ objects in the Rich header | 142 | 113 (Standard edition) | 146 | 124 | 100 |
+| Placeholder objects needed | 1 | 0 | 8 | 2 | 0 |
+| Last build | full build | 3 files recompiled after it | 3 files recompiled after it | full build; 5 objects need per-file `.pch` stand-ins | the 51 files that include `weapons.h` recompiled after it |
+| Identical-code folding | no (`/debug`) | no | no | no | no |
+| Rebuild | identical | identical | 810 bytes differ, all in `CBot::Wander` | identical | identical |
 
-| Client (`client.dll`) | Point of View | T2DEF | Wanted! | Gunman Chronicles |
-|---|---|---|---|---|
-| Compiler | VC6 RTM Professional | VC6 SP4 Standard | VC6 RTM Professional | VC6 RTM Professional |
-| Link time (UTC) | 2003-05-02 01:24:25 | 2002-12-06 05:06:23 | 2000-12-02 15:44:22 | 2000-11-12 19:45:26 |
-| Debug directory | none | none | none | none |
-| C++ objects in the Rich header | 62 | 80 (Standard edition) | 61 | 78 |
-| Placeholder objects needed | 1 | 0 | 0 | 1 |
-| Identical-code folding | yes | yes | yes | yes |
-| Dead functions added to the source (dropped by LINK) | 1 | 0 | 1 | 3, plus one handler from SDK 2.0 |
-| Rebuild | identical | identical | identical | 152,034 bytes differ |
+| Client (`client.dll`) | Point of View | T2DEF | Wanted! | Gunman Chronicles | They Hunger |
+|---|---|---|---|---|---|
+| Compiler | VC6 RTM Professional | VC6 SP4 Standard | VC6 RTM Professional | VC6 RTM Professional | VC6 RTM Professional |
+| Link time (UTC) | 2003-05-02 01:24:25 | 2002-12-06 05:06:23 | 2000-12-02 15:44:22 | 2000-11-12 19:45:26 | 2001-03-26 05:49:33 |
+| Debug directory | none | none | none | none | none |
+| C++ objects in the Rich header | 62 | 80 (Standard edition) | 61 | 78 | 61 |
+| Placeholder objects needed | 1 | 0 | 0 | 1 | 0 |
+| Identical-code folding | yes | yes | yes | yes | yes |
+| Dead functions added to the source (dropped by LINK) | 1 | 0 | 1 | 3, plus one handler from SDK 2.0 | 0 invented; two dead stubs of SDK 2.2b's stub file are needed |
+| Rebuild | identical | identical | identical | 152,034 bytes differ | identical |
 
 Fix these parts after the code and data match, not before. Most of them are
 cheap and independent of each other, but a time stamp or a PDB path is
@@ -97,7 +98,7 @@ worth nothing while a function before it is still one byte too long.
 
 ## The PDB path
 
-The four server projects link with `/debug`. LINK then writes a debug
+The five server projects link with `/debug`. LINK then writes a debug
 directory and a CodeView record: the tag `NB10`, the PDB's signature and age,
 and the full path of the PDB as LINK saw it. The record sits after the last
 section, so the length of the path also sets the size of the file. The
@@ -112,13 +113,14 @@ To reproduce the path:
    the DLL and the PDB land in the build folder and never in the checkout.
 2. **Give the drive letter to Wine.** Wine maps each drive to a Unix folder
    through a link in the prefix's `dosdevices` folder. For `C:` the tree
-   goes inside the prefix's own `drive_c`. For another letter (`D:` for
+   goes inside the prefix's own `drive_c` (T2DEF, Gunman Chronicles, They
+   Hunger). For another letter (`D:` for
    Point of View, `K:` for Wanted) the script adds the link
    (`dosdevices/d:` pointing at the tree's root). This is done in a copy of
    the shared prefix made for each build (`cp -a --reflink=auto`), so the
    shared prefix stays untouched.
 3. **Build in the project's own output folder.** `dlls\Releasehl` is the
-   Release folder of the SDK's `hl.dsp`; all four mods kept it.
+   Release folder of the SDK's `hl.dsp`; all five mods kept it.
    `build_dsp.py --drive D:=/path/to/root` makes the tool write paths under
    that root as `D:\...`.
 
@@ -144,6 +146,7 @@ numbers are a short history of the build folder.
 | Gunman Chronicles | age 1, signature = link time | The same. |
 | T2DEF | age 15, created 2002-12-10 04:33:33, six days before the final link | **1 + 13 + 1 links.** A full build with LINK's clock frozen at the creation time (age 1). Then 13 relinks at the same time: every object is up to date, so `build_dsp.py` only links (ages 2 to 14). Then the last build session (below). Then the final link at retail's link time (age 15). |
 | Wanted! | age 18, created 2001-04-02 10:56:04, two months before the final link | **1 + 17 links.** After the full build and the last build session, the PDB and DLL are deleted. One link at the creation time starts a fresh `hl.pdb`, then 17 more links follow, the last at retail's link time (with the two-second export stamp below). |
+| They Hunger | age 73, created 2001-03-10 06:25:12, about sixteen days before the final link | **1 + 72 links.** After the full build and the last build sessions, the PDB and DLL are deleted. One link at the creation time starts a fresh `hl.pdb`, then 72 more at retail's link time. |
 
 What is known and what isn't: retail gives only the creation time, the
 count of links and the time of the last one. The times of the links in
@@ -162,7 +165,7 @@ LINK writes the current time into:
 - the CodeView signature, when the final link creates the PDB (Point of
   View and Gunman).
 
-The import descriptors' time stamps are 0 in all eight files (not bound).
+The import descriptors' time stamps are 0 in all ten files (not bound).
 
 **How:** only LINK runs under libfaketime, with the clock frozen at
 retail's own `TimeDateStamp`:
@@ -185,7 +188,7 @@ libfaketime reads its time from a file (`FAKETIME_TIMESTAMP_FILE`, with
 `FAKETIME_NO_CACHE=1`). The file says 13:13:17 when LINK starts, and a
 watcher rewrites it to 13:13:19 as soon as `hl.exp` appears in the output
 folder. Only the two stamps are evidence; "the link took two seconds" is our
-reading of them. In the other seven files both stamps are equal.
+reading of them. In the other nine files both stamps are equal.
 
 ## The Rich header and the object count
 
@@ -249,7 +252,9 @@ functions land. So:
   them, so each reuses its `.pch`. Wanted's last build session starts from
   the `.pch` the full build leaves; an empty one would undo it.
 
-T2DEF and Wanted's client need none: their code accounts for every object.
+T2DEF, Wanted's client and both They Hunger DLLs need none: their code
+accounts for every object. For They Hunger the counts are exactly those of
+Valve's own file lists, which is how we know the mod added no source file.
 
 ## Import table order
 
@@ -280,11 +285,12 @@ linker had:
 | T2DEF server | `TlsAlloc` and `CreateDirectoryA` swapped (17 bytes) | retail's order | some later `msvcrt`, which breaks ties like Wine's |
 | Gunman server | retail's order | 17 bytes of `.rdata` and 7 of `.text` differ | a 1998-style `qsort` |
 | Gunman client | retail's order (after `790ca3e`) | the same table | either |
-| Wanted server and client, Point of View client | retail's order | not recorded | |
+| Wanted server and client, Point of View client, They Hunger server | retail's order | not recorded | |
+| They Hunger client | retail's order | functions change places inside two DLLs' lists: 14 of `vgui.dll`'s 542 thunks, 11 of KERNEL32's 65 | a 1998-style `qsort` |
 | T2DEF client | links on Service Pack 4's own `MSVCRT.DLL`: retail's order | not recorded | |
 
 So T2DEF's server builds with its tools on Wine's builtin runtime, T2DEF's
-client on Service Pack 4's `MSVCRT.DLL` (6.00.8797), and the other six DLLs
+client on Service Pack 4's `MSVCRT.DLL` (6.00.8797), and the other eight DLLs
 on the VC6 CD's. The same `qsort` also decides which copy of
 identical functions LINK keeps ([vc6-notes.md](vc6-notes.md#links-identical-code-folding)).
 Only Wine 11.0 was tested; another Wine version could break ties in its
@@ -292,7 +298,7 @@ builtin differently, which would change T2DEF's server.
 
 ## Precompiled header state: full builds and build sessions
 
-All four mods' projects use `/YX`, the VC6 IDE's automatic precompiled
+All five mods' projects use `/YX`, the VC6 IDE's automatic precompiled
 header. All files of a project share one `vc60.pch`. Before each file the
 compiler compares the `.pch` with the file's list of `#include`s and reuses,
 shrinks or rebuilds it. So each file sees whatever `.pch` the previous
@@ -322,6 +328,13 @@ What VC6 does with the shared `.pch`, measured with real compiles:
   reuses.
 - A `.pch` is reused only with the same `/Fd` PDB (`vc60.pdb`); otherwise
   VC6 rebuilds it without a word.
+- A `.pch` is stale once a header inside it has a newer time stamp, and the
+  next file rebuilds it. Measured on They Hunger's `combat.cpp`: compiled
+  twice, the second compile reuses the first one's `.pch`; with a new time
+  stamp on `weapons.h`, which is in that `.pch`, it rebuilds it; with a new
+  time stamp on `doors.h`, which is not, it still reuses it. When the stale
+  `.pch`'s list is a prefix of the file's own, the rebuilt `.pch` keeps that
+  shorter list (They Hunger's client `hl_weapons.cpp`).
 
 **Full build.** The compiler runs over the sources in project order, which
 is also the link order. Each `.pch` is VC6's own decision, so nothing needs
@@ -340,7 +353,7 @@ an incremental build after a header edit once lost 6 of Point of View's
 server functions that a full build of the same tree matched. Use full
 builds for anything you compare.
 
-**Replayed build sessions** (T2DEF and Wanted servers). After the full
+**Replayed build sessions** (T2DEF, Wanted and They Hunger servers). After the full
 build, the release script recompiles a short list of files with plain
 `CL /c`, the project's flags, and the same `/Fp` and `/Fd` as the build, so
 the real compiler decides each `.pch` from the one the previous compile
@@ -367,6 +380,26 @@ left. No model is involved. Then come the links (previous section).
   one. `bot.obj` also needs IL that compiled to no code (an unused inline
   function in `bot.cpp`, `ca08901`; see
   [vc6-notes.md](vc6-notes.md#text-that-compiles-to-nothing-still-counts)).
+- **They Hunger:** a header edit, not a list of files. `weapons.h` gets a
+  new time stamp, and the 51 sources that include it are recompiled in
+  project order, `agrunt.cpp` first; then the same again. Retail's
+  `agrunt.obj`, `barney.obj`, `client.obj`, `combat.obj` and `effects.obj`
+  have their header inlines where VC6 puts them when the `.pch` holds more
+  of the file's include list than a full build gives it: `agrunt.cpp` needs
+  at least its first 7 headers in it and gets 4, `barney.cpp` at least 5 and
+  gets 4, and `client.cpp`, `combat.cpp` and `effects.cpp` create the `.pch`
+  from their own lists where a full build has them reuse one of 3 headers.
+  We compiled every source in every `.pch` state it can meet (1,430
+  compiles): 75 objects are the same in every state, a full build gives 15
+  of the other 21 as retail has them, and a rebuild of `weapons.h`'s
+  dependents that starts without a usable `.pch` gives those five and keeps
+  the 15. `weapons.h` is the only single header that does. The second
+  rebuild is there so that its first file finds a stale `.pch`: the full
+  build leaves `zombie.cpp`'s, which doesn't hold `weapons.h`, and the first
+  rebuild's `agrunt.cpp` would reuse it. Known is only that the last build's
+  first file found no usable `.pch`. One more object, `hl_wpn_glock.obj`,
+  fits in no state and needs IL that compiled to no code (an unused inline
+  function in `weapons.h`, `0aab512`).
 
 **Per-file `.pch` stand-ins** (Gunman). Five server objects show other
 states in retail: `ggrenade`, `demoman`, `banditgrunt` and `friendlygunman`
@@ -388,9 +421,9 @@ Point of View needs neither: a full build gives every object, including
 ## Export name, output name and PDB name
 
 The export directory names the DLL. That name comes from the `.def` file's
-`LIBRARY` line, not from the file LINK writes. All four servers export as
+`LIBRARY` line, not from the file LINK writes. All five servers export as
 `hl.dll` (`LIBRARY hl`), although they ship as `hl.dll`, `t2def.dll`,
-`wanted.dll` and `gunman.dll`. When `/out` names another file, LINK warns
+`wanted.dll`, `gunman.dll` and `einar.dll`. When `/out` names another file, LINK warns
 `LNK4070: /OUT:hl.dll directive in .EXP differs from output filename`; that
 is expected. T2DEF's base, Spirit of Half-Life, said `LIBRARY spirit`;
 retail's export name gave `LIBRARY hl` (`3c83e84`).
@@ -410,6 +443,8 @@ the PDB's name: LINK names the PDB after the output unless the link line has
   as written gives retail's file.
 - **Wanted:** linked as `hl.dll` (so `hl.pdb`) and renamed to `wanted.dll`
   afterwards.
+- **They Hunger:** the same: linked as `hl.dll`, the project's own output
+  name, and renamed to `einar.dll`.
 
 The export list itself comes from the source (`EXPORT` members, the `.def`
 file). One detail that surprises: VC6 exports a string literal (`??_C@...`)
@@ -457,6 +492,16 @@ lands where retail has it. Examples:
   first); with `CHalfLifeCTC` to 529 and 11.
 - Gunman `ccaf4db`: holes of 4 bytes that nothing in retail reads are
   `static int` placeholders (names ours, marked `// sic`).
+- They Hunger `e90c20f`: the client's five gun objects are globals whose
+  names retail doesn't give. Their addresses give each one a window of
+  buckets between the SDK's globals (below 60; 60 to 171; 172 to 519; 738 to
+  818; above the previous one, up to 819), and the names were chosen to hash
+  into them (`g_Chain` 4, `g_Ap9` 137, `g_Hkg36` 354, `g_ClTaurus` 753,
+  `g_TfcSniper` 817). No naming scheme we tried fits all five, so retail's
+  names are not known. In the server (`1e4cdca`), the gun counters of the
+  two helicopters are function statics; named `cnt`, in `CApache::FireGun`
+  and in the `FireGun` of a class named `CEinarBoss`, they come in retail's
+  order.
 
 To test candidate names, compute the buckets, or compile the file with the
 candidates and read the order of the symbols in the object. One compile can
@@ -486,6 +531,11 @@ code that is not in the image:
 - **Gunman client:** 160 bytes short with the live fixups equal: 80 dir32
   fixups in dead code, now in three placeholder event handlers and one SDK
   handler (`1eeeef3`, `6e7096e`).
+- **They Hunger client:** equal (0x8824), with our guess for the dead
+  weapon-prediction code of the five guns in place: 15 absolute fixups, two
+  per `HUD_PrepEntity` line and one per `case`. So retail's dead code had
+  that many, and the text its `hl_weapons.cpp` had beyond ours had none: a
+  probe function with three made the size 0x882a.
 
 Check the live code first. Wanted's server was 2 bytes short too; the cause
 was a live function's missing third read of `gpGlobals` (block padding hid
@@ -507,7 +557,7 @@ function there.
   default for these link lines.
 - **Padding.** LINK doesn't write every byte between and after the
   sections; those keep whatever was in memory. Wine's memory is zeroed, and
-  all eight retail files have zero padding, so this needed nothing. It is
+  all ten retail files have zero padding, so this needed nothing. It is
   not a given: Sweet Half-Life's server, another VC6 DLL, keeps one byte of
   leftover memory after its debug directory.
 
@@ -568,6 +618,8 @@ lines).
 | T2DEF server | tools on Wine's builtin `msvcrt.dll` | T2DEF's linker broke `qsort` ties like it; which runtime it was is unknown |
 | Wanted server | 16 links at the final time between the first and the last; `bot.cpp`, `colonel.cpp`, `combat.cpp` as the session | only the count and the two end times are known; the session is one consistent history |
 | Wanted server | the export stamp two seconds before the image | the two stamps are retail's; the moving clock is our way to get them |
+| They Hunger server | 71 links at the final time between the first and the last | only the count and the two end times are known |
+| They Hunger server | the last builds: `weapons.h`'s 51 dependents recompiled twice | known: five objects were compiled against fuller `.pch` states than a full build gives, and the last build's first file found no usable `.pch`; the first of the two rebuilds only makes the `.pch` stale for the second |
 | Gunman server and client | per-file `/Fp` (and one `/YX"schedule.h"`) in the project files | five server and four client objects show other `.pch` states; the history that gave them is not found |
 | Point of View, Gunman, Wanted | placeholder objects | the count is retail's; names, contents and places are not |
 | all other DLLs | LINK on the VC6 CD's `MSVCRT.DLL` (T2DEF's client: Service Pack 4's) | gives retail's import order and kept copies; which runtime the original linkers ran on is not known |

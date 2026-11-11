@@ -1,6 +1,6 @@
 # VC6 field notes: matching code from Visual C++ 6
 
-These are the rules we learned about Visual C++ 6 (VC6) while rebuilding four
+These are the rules we learned about Visual C++ 6 (VC6) while rebuilding five
 Half-Life mods: first function by function, then whole images byte for byte.
 None of this is documented by Microsoft. It is written as a field guide for
 someone matching their own VC6 binary: each rule comes with its evidence, an
@@ -16,7 +16,7 @@ the parts of the image that are not code.
 
 Most rules are for VC6 RTM (the first release, without service packs)
 Professional, `C2.DLL` 12.00.8168, with `/O2`, which built Point of View,
-Wanted! and Gunman Chronicles, and for LINK 6.00.8168. T2DEF's server was
+Wanted!, Gunman Chronicles and They Hunger, and for LINK 6.00.8168. T2DEF's server was
 built by the Standard edition, which ignores `/O2` and gives `/Od` code; its
 client by Service Pack 4's Standard edition. Identify your compiler from the
 Rich header before anything else ([compilers.md](compilers.md)).
@@ -41,7 +41,8 @@ Terms used below:
 Commit ids are from the mod branches
 ([point-of-view](../../../tree/point-of-view), [t2def](../../../tree/t2def),
 [wanted](../../../tree/wanted),
-[gunman-chronicles](../../../tree/gunman-chronicles)). `git show <id>` shows
+[gunman-chronicles](../../../tree/gunman-chronicles),
+[they-hunger](../../../tree/they-hunger)). `git show <id>` shows
 the change; most commit messages hold the sweep of variants behind it.
 
 ## How sure each rule is
@@ -95,7 +96,8 @@ Each rule carries one of three marks:
   six-entry enum in Wanted's `nodes.cpp` flipped `BuildNodeGraph` between
   exact and one instruction off; prototypes added to `util.h` changed
   register choice in Point of View's `nodes.obj`. Finish the headers before
-  chasing those.
+  chasing those. The rule behind it is under
+  [Reloads at a loop end](#reloads-at-a-loop-end-symbol-numbers).
 - **Compiler switches that help:**
   - `/Bk<base>` keeps C1XX's IL files (`<base>gl`, `sy`, `ex`, `in`). The
     `ex` file gives each function's IL offset, which the emission rules
@@ -147,7 +149,8 @@ copy constructor 57, `operator+` and `operator-` 76, `operator*` and
 `operator/` 67, `Length` 59, `Length2D` 47, `Normalize` 119, unary minus 63,
 `DotProduct` 51, `float * Vector` 43, `CrossProduct` 108. Free ones:
 `Vector()` 20, `operator float *()` 22, `ENT()` 20 or 23, `EMIT_SOUND` 40.
-Other SDK inlines: `TraceResult()` 42, `FClassnameIs` 36.
+Other SDK inlines: `TraceResult()` 42, `FClassnameIs` 36, the egon's
+`HasAmmo()` 46 and `UseAmmo( int )` 84.
 
 What a statement adds to S (measured): `int i;` 0, `int i = 1;` 4, `x = 1;`
 7, `x = y;` 11, `Vector v;` 11 (and one site), `Vector v = a;` 12,
@@ -193,6 +196,19 @@ product 53, `DotProduct( a, b )` 19.
 - **`#pragma inline_depth( 1 )`** before a group of inline functions expands
   them but none of their own calls. Used once, marked `// sic`: Wanted's
   `CBotMemory::Update` (`17f79ea`).
+- **The budget can pull against another rule.** In They Hunger's
+  `CEgon::PrimaryAttack` (`a2276df`) retail keeps the ammo count in a
+  register from its test to its decrement, which VC6 does only when both go
+  through one pointer or reference variable
+  ([below](#member-reads-through-a-local-pointer)). But a pointer replaces
+  the SDK's `HasAmmo()` and `UseAmmo( 1 )`, which cost 46 + 84 = 130. The
+  function's size is 487, so its budget is the minimum 1000, and with 130
+  of it unspent VC6 expands `Vector( x, y, z )` in the function's last two
+  sums, which retail calls. Retail's tail needs 102 to 177 units spent
+  before those sums (55 to 130 if one more inline call follows them).
+  Unused locals with inline constructors, and one `HasAmmo()` after the
+  sums, spend them. Many such forms compile to retail's bytes and none is
+  forced, so the lines are marked `// sic`.
 - **Sweeping.** When nothing visible explains retail's inlining, add N dead
   stores and try N = 0, 1, 2, ... Gunman's
   `CBasePlayer::CheatImpulseCommands` needs exactly seven (`2ffd851`),
@@ -327,6 +343,82 @@ the register choice of everything after it. Gunman's
 `ELOF_FAIL` copy that merges away (`e992bea`); Wanted's `StartRound` ends
 both branches with their own copy of the same two statements (`f9d9a24`).
 
+### Reloads at a loop end: symbol numbers
+
+**Exact** as a black-box rule (They Hunger `0ffe1b9`, `2b0dedb`); why C2
+orders the reloads this way was not read from its code.
+
+In a few long functions the order in which C2 reloads two or three
+registers at one point (the end of a loop, in the two `nodes.cpp` functions
+below) is moved by nothing inside the function. The order follows the
+numbers C1XX gives the symbols of the file.
+
+- **C1XX numbers every symbol a file declares, in order,** headers
+  included. C2 gets only the numbers: the IL of two compiles that differ by
+  one unused declaration has the same size and differs only in number
+  fields, each by one. The unused declaration itself is not written.
+- **Only the function's compiler-made symbols matter:** its labels and
+  temporaries, not its parameters or named locals. N unused symbols give
+  the same code whether they are declared before all headers, after the
+  includes, right before the function, at the start of its body or after
+  its named locals. Declared after the function they do nothing. So what
+  counts is how many symbols are declared before the function's body,
+  anywhere.
+- **Modulo 64** (checked for 0 to 70 extra symbols).
+- **What a declaration costs,** measured as the shift of a later local's
+  number:
+
+  | Declaration | Symbols |
+  |---|---|
+  | a variable (`extern`, `static` or `const` too), a `typedef`, a forward declaration of a class | 1 |
+  | a repeated `extern` of the same variable | 0 |
+  | a prototype | 1 + its parameters, at least 2; a repeated prototype counts again |
+  | an enum | 1 + its constants |
+  | a struct or class | 8, + 1 per data member, + 2 per member function (5 for a virtual one) |
+  | a function definition | 3, and more for its parameters, locals, string literals and labels |
+  | each distinct included file | 1; a guarded header included again 0 |
+  | `#define`, `#pragma`, comments | 0 |
+
+  `/Zi` and `/YX` change nothing.
+- **One function, one mapping.** `CGraph::LinkVisibleNodes` (SDK
+  `nodes.cpp`) has three reloads at a loop end that go through five
+  arrangements per period of 64. The mapping from count to arrangement is
+  the same in the Point of View, Gunman Chronicles, Wanted! and They Hunger
+  trees, so it belongs to the function, not to a tree. In They Hunger,
+  retail's arrangement needs 19 to 54 more symbols than the tree's headers
+  declare. `CTestHull::BuildNodeGraph`, in the same file, follows the same
+  count and allows 0, 5 to 16, 20 to 24, 34 to 47 and 56 to 63, so both are
+  retail's for 20 to 24 and 34 to 47.
+- **Few functions follow the count at all.** We compiled every source of
+  They Hunger's two projects with 0 to 63 extra symbols in front (6,400 and
+  3,400 compiles). In the server only `LinkVisibleNodes` and
+  `BuildNodeGraph` change, in the client only the constructors of
+  `CClassMenuPanel` and `CMessageWindowPanel`.
+- **Where the symbols are declared matters a little** when inline functions
+  with compiler-made symbols of their own come between them and the
+  function. For `CClassMenuPanel`'s constructor, 5 to 39 or 46 to 59 extra
+  symbols after the file's includes give retail's order and leave the other
+  constructor alone; at the end of `hud.h`, which
+  `vgui_TeamFortressViewport.h` with its inline constructors follows, only
+  5 to 7, 10 to 13, 16, 21 to 39, 49, 51 to 54 and 57 to 59 do.
+
+**How to use it.** When a long function differs from retail only in the
+order of reloads at a loop end, and no text inside it moves that:
+
+1. Sweep an unused enum of N constants after the file's includes, N = 0 to
+   63, and note which N give retail's code. Do the same for every other
+   function of the file that follows the count; the windows must overlap.
+2. Look for real declarations of that count: another SDK version of a
+   header, a prototype or class the mod would have added. Count them with
+   the table.
+3. A fit alone is weak evidence: about one count in six fitted all four of
+   They Hunger's functions by chance, and two different explanations both
+   fitted (an engine header without one unused block; the mod's weapon ids
+   as an enum in a shared header) and excluded each other. If nothing else
+   in the image decides, use a marked unused enum where no other file sees
+   it, and say so. Wanted's `nodes.cpp` has one for the same two functions
+   (`d19fb1d`).
+
 ### Other levers
 
 All **Observed**:
@@ -350,8 +442,8 @@ All **Observed**:
   after 512 combinations of no-code changes moved nothing).
 - In the functions studied, enum constants, unused locals, discarded
   expressions, local names and a larger memory arena for C2 never moved an
-  allocation. The symbols of shared headers did, in a few long functions
-  ([Before you start](#before-you-start)).
+  allocation, except in the few long functions that follow the count of
+  declared symbols ([above](#reloads-at-a-loop-end-symbol-numbers)).
 
 ### x87 registers
 
@@ -498,6 +590,27 @@ function taking the member by reference doesn't: the inliner substitutes the
 argument. The rule doesn't apply to locals: pointers and references to a
 local fold away before the merge.
 
+The other direction (**Observed**: one function, many variants; They
+Hunger `a2276df`). When a test and a later decrement of the same count both
+go through one pointer or reference variable, VC6 takes the address first,
+loads the count once with the address folded into the load, and keeps it in
+a register in between, even across a test that reads other memory:
+
+```cpp
+int &iAmmo = m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType];	// sic
+if ( iAmmo > 0 && m_pPlayer->pev->waterlevel != 3 )
+{
+	if ( iAmmo >= 1 )
+		iAmmo -= 1;
+```
+
+With the member expression itself, as the SDK's inline `HasAmmo()` and
+`UseAmmo( 1 )` read it, VC6 loads the count for the first test, makes an
+address temporary and loads again through it after the second test. It
+keeps the count only when nothing between the two tests reads memory, and
+then the code differs elsewhere. Unused locals and a uniform shift of the
+symbol numbers never change this.
+
 ## Tail merging and block layout
 
 All **Observed**, each in one or more retail functions.
@@ -559,10 +672,12 @@ numbers from different files disagree in detail, so measure your own):
 | a line where a statement starts: an empty `;`, an unused declaration | 5 |
 | a label | 8 |
 | `{ }` | 13 |
+| braces around a single statement (`if ( a ) { b; }` against `if ( a ) b;`) | 18 (They Hunger's `ammo.cpp`) |
 | a line record | 3 below line 128, 5 from line 128 on (Wanted's `aflock.cpp`); Point of View measured 1 byte more per line from 128 |
 | an `#include` | 7 on entering and 7 on returning (9 each from line 128), also when the include guard skips the header's body (Wanted, Gunman); one later measurement found repeated guarded includes free |
 | a blank line, a comment, a prototype, a `;` at file scope | 0 by itself |
-| an unused inline function in a header | its IL (only used ones get a symbol) |
+| an unused inline function in a header | its IL (only used ones get a symbol). 60 empty statements on 60 lines: 366 (They Hunger's `weapons.h`) |
+| an unused inline function in a `.cpp` | its IL and nothing else: no code, no data, no relocation, no symbol. 44 statements of the form `p[0] = p[1] * 2 + p[2];`: 3,149 (They Hunger's `hl_weapons.cpp`) |
 | a local's name | 0 |
 | a new distinct class type among the members of a class the file uses | about 31 lines' worth (Gunman's `CHud`) |
 
@@ -584,17 +699,37 @@ Examples, each marked `// sic` in the source:
   functions, for the 8 to 12 lines retail's `util.h` had there.
 - Wanted `ca08901`: an unused 42-statement inline function in `bot.cpp`
   standing in for about 2,250 bytes of IL that compiled to no code.
+- They Hunger `4040aea`: eleven brace pairs around single statements taken
+  out of `ammo.cpp` (198 bytes), because retail's text had 172 to 206 bytes
+  less by the end of `GetSpriteList`. Ten pairs fit as well. This one is
+  not marked: unbraced statements are the SDK's own style there.
+- They Hunger `0aab512`: an unused inline function of 60 empty statements
+  in `weapons.h`, for the 325 to 403 bytes of inline IL retail's header had
+  in front of one class (52 to 67 statements work).
+- They Hunger `e553179`: an unused 44-statement inline function in the
+  client's `hl_weapons.cpp`, for 3,095 to 3,290 bytes of IL (44 to 46
+  statements work).
 
 Retail had *some* text there. Uncalled inline functions, `if ( 0 )` blocks
 and statements after a `return` all add IL, leave every function's code the
 same, and leave no string or constant in the object. Which one it was can't
 be read from the image.
 
+How much text it was can be measured, and the rest of the image narrows
+what it was. For They Hunger's `hl_weapons.cpp`: a sweep of empty
+statements gave the size (619 to 658 lines of 5 bytes fit, 618 and 659
+don't); the client's `.reloc` size said the text had no absolute address
+([reproducing.md](reproducing.md#the-reloc-size)); LINK's fold sort said it
+added no function; `.bss` said it added no static.
+
 ## Where header inline functions land
 
 **Exact** (predicted 12 of 12 compiled variants of Point of View's
 `ammo.cpp`, 55 of Wanted's `aflock.cpp`, about 50 of Wanted's `bot.cpp`,
-and the whole section sequence of 67 of 69 objects of Gunman's client).
+and the whole section sequence of 67 of 69 objects of Gunman's client; in
+They Hunger's `hl_wpn_glock.obj` the rule gave a window of 325 to 403 bytes
+of header IL, and a sweep fitted from 326 to 401 and failed at 321 and
+406).
 
 C1XX emits a file's functions in two streams:
 
@@ -645,7 +780,25 @@ Consequences:
   27,902 and 27,916.
 - The include list of one file moves inlines in the next: it decides what
   `.pch` the next file finds.
-- `/Zi` on or off changes the order too.
+- `/Zi` on or off changes the order too (in They Hunger's client
+  `hl_weapons.cpp` it moves the cursor by 400 to 450 bytes).
+- **A creating file pins the headers.** In an object whose file creates the
+  `.pch`, every header inline's place depends on the IL of all header
+  inlines before it. In They Hunger's server, 71 bytes more inline IL at
+  the end of `extdll.h`, `util.h`, `schedule.h`, `basemonster.h` or
+  `cbase.h` already move functions in `aflock.obj`, `buttons.obj` or
+  `client.obj`. So the objects of creating files hold the shared headers'
+  inline IL to a narrow range, and they locate IL that is missing: what
+  `hl_wpn_glock.obj` lacked had to sit in `weapons.h` between
+  `CBasePlayerItem` and the class whose inlines came out early, or be
+  surplus in the file's own text.
+- **A header edit changes the `.pch` chain.** A `.pch` that holds a header
+  with a newer time stamp is rebuilt by the next file that meets it
+  ([reproducing.md](reproducing.md#precompiled-header-state-full-builds-and-build-sessions)).
+  After a header edit the IDE recompiles the header's dependents in project
+  order, the first of them starting from a stale `.pch`, and the states
+  that follow differ from a full build's. Five objects of They Hunger's
+  server show that for `weapons.h`.
 
 **How to use it:**
 
@@ -673,8 +826,9 @@ exact.
 Inside one object:
 
 - Top-level non-inline functions are emitted in source order. VC6 never
-  reorders them (Point of View and Gunman both define `Sys_Error` before
-  `GetGameDescription` in `client.cpp`, as retail places it).
+  reorders them (Point of View, Gunman and They Hunger all define
+  `Sys_Error` before `GetGameDescription` in `client.cpp`, as retail places
+  it).
 - Inline functions defined in a class body are emitted after the first
   function that instantiates the class's vtable (usually the entity
   factory), base classes first. Declared in a header inside the `.pch`, they
@@ -720,8 +874,8 @@ call; a simulator built from them predicts every address of our own links
 (all 857 checked in Point of View's client).
 
 With `/OPT:ICF`, LINK keeps one copy of each set of functions that have the
-same bytes and relocations. It is on by default without `/debug`, so the four
-clients fold and the four servers (which link with `/debug`) don't. Which copy
+same bytes and relocations. It is on by default without `/debug`, so the five
+clients fold and the five servers (which link with `/debug`) don't. Which copy
 it keeps decides where every function after it lands.
 
 1. **The array.** LINK collects every foldable code COMDAT: objects in link
@@ -742,6 +896,13 @@ it keeps decides where every function after it lands.
    targets are; LINK makes two passes, using groups folded earlier in sorted
    order (T2DEF's client needed this limit).
 6. An inline and a non-inline copy never fold together.
+7. The COMDAT record's checksum takes part in "identical". LIBCMT's
+   `_CallMemberFunction2` has the bytes of `_CallMemberFunction0` and `1`
+   but another checksum, and LINK keeps it apart (They Hunger's client).
+8. In the image, LINK groups contributions by section name: the `.text` of
+   every object first, then all `.text$x` (They Hunger's client; with this
+   and rule 7 the model placed 1,745 of 1,745 named sections of our own
+   link).
 
 So code that leaves no byte in the image still moves the ties, and so does
 the C runtime: Wine's builtin `qsort` breaks ties differently from the VC6
@@ -787,6 +948,16 @@ Examples:
 - **T2DEF's client** (`d03b7a2`): no dead code; moving one class
   declaration in `vgui_TeamFortressViewport.h` put that object's inlines in
   retail's order, and with them the kept copies of 11 functions.
+- **They Hunger's client** (`d55d13c`, `4040aea`, `e553179`): no invented
+  dead function. At first 29 of 65 folded groups kept another copy than
+  retail's, and three inputs to the one sort were wrong. The stub file
+  needed SDK 2.2b's order and two of its dead stubs (without either one,
+  101,466 bytes of the image differ; without both, 214,594). `ammo.obj`
+  and `hl_weapons.obj` needed retail's section order, which is a matter of
+  [IL](#text-that-compiles-to-nothing-still-counts), not of dead code: one
+  more dead function of any of 98 shapes in `hl_weapons.obj` moved at least
+  36,169 bytes in the model. With all three right, every kept copy is
+  retail's.
 
 **Why the image can't always tell.** In Gunman's client, 24 of 84 classes of
 identical functions keep another copy than retail's. Searches over single
@@ -810,8 +981,11 @@ names: `h = h*4 + (h >> 4) + c` over the name (32-bit), bucket
 first; then zero-initialised data in definition order. The name is the plain
 identifier for file-scope data and the decorated name for function statics
 and static class members, so a class name can decide where a function's
-statics land (Wanted `77d79d0`). The details, a Python version and the
-examples are in [reproducing.md](reproducing.md#bss-order).
+statics land (Wanted `77d79d0`). When retail doesn't give a global's name,
+the globals around it whose names are known give a window of buckets its
+name must hash into (They Hunger `e90c20f`: five windows for five objects,
+and no naming scheme that fits them all). The details, a Python version and
+the examples are in [reproducing.md](reproducing.md#bss-order).
 
 ## What leaves no trace
 
@@ -839,6 +1013,10 @@ and the order of both. It doesn't keep:
   file compiled into both DLLs whose two compiled forms differ.
 - **Which C runtime the original linker ran on**, except through how it broke
   ties.
+- **Declarations.** How many symbols the headers declared shows in the few
+  functions whose reload order follows the count modulo 64
+  ([above](#reloads-at-a-loop-end-symbol-numbers)); what they declared
+  doesn't show at all.
 - **Compiler state the final code doesn't show:** how far the scheduler
   hoisted a call's set-up in a long block, or the reload order at a loop's
   exit that moves with the function's constants modulo 64. Three of Gunman's
@@ -849,7 +1027,7 @@ and the order of both. It doesn't keep:
 
 ## A working order
 
-What worked for four mods, in order:
+What worked for five mods, in order:
 
 1. Pick the compiler from the Rich header and the base from SDK builds.
 2. Match functions with an address-masked matcher, then check call targets,

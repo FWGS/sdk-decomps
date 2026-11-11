@@ -30,7 +30,8 @@ that is known.
 The discs and the retail DLLs are not in this repository (copyright). The
 discs are on the Internet Archive; where each mod's retail files come from
 is in that mod's page ([Point of View](point-of-view.md), [T2DEF](t2def.md),
-[Wanted!](wanted.md), [Gunman Chronicles](gunman-chronicles.md)).
+[Wanted!](wanted.md), [Gunman Chronicles](gunman-chronicles.md),
+[They Hunger](they-hunger.md)).
 
 ## The toolchain folder
 
@@ -52,13 +53,13 @@ $VC_TOOLCHAINS/
 
 | Tree | Builds |
 |---|---|
-| `vc6` | Point of View, Wanted! and Gunman Chronicles, server and client |
+| `vc6` | Point of View, Wanted!, Gunman Chronicles and They Hunger, server and client |
 | `vc6std` | the T2DEF server |
 | `vc6sp4std` | the T2DEF client |
-| `vc6sp4` | none of the four mods; made in the same step, so it is included |
+| `vc6sp4` | none of the five mods; made in the same step, so it is included |
 
 The wrappers `tools/vc5.sh` and `tools/vc4.sh` run Visual C++ 5.0 and 4.x
-from `vc5/` and `vc4/` in the same folder. None of the four mods needs them;
+from `vc5/` and `vc4/` in the same folder. None of the five mods needs them;
 see [Older compilers](#older-compilers-optional).
 
 ## 1. Download the discs
@@ -345,10 +346,12 @@ client: .../build-pov/client/client.dll
 ```
 
 The exit code is 0 only if every DLL built is identical to retail. The
-other scripts work the same way: `t2def.sh`, `wanted.sh` and
-`gunman-chronicles.sh`. The Wanted! server and the Gunman Chronicles client
-are not identical yet, so their scripts end with `differs from retail` and
-exit code 1 (the mods' pages give the hashes they produce).
+other scripts work the same way: `t2def.sh`, `wanted.sh`,
+`gunman-chronicles.sh` and `they-hunger.sh`. The Wanted! server and the
+Gunman Chronicles client are not identical yet, so their scripts end with
+`differs from retail` and exit code 1 (the mods' pages give the hashes they
+produce). They Hunger's server takes longer than the others, about five
+minutes here: its script replays 102 more compiles and 73 links.
 
 To compare byte for byte with your own copy of the retail files, set
 `RETAIL` to the mod's folder in the game, the one with `dlls/` and
@@ -400,6 +403,11 @@ a WoW64 build), libfaketime 0.9.12, Python 3.14.10 and 7-Zip 26.03:
   Wanted! client and the Gunman Chronicles server) byte for byte, and the
   known hashes for the other two.
 
+They Hunger was added on 2026-11-11. `they-hunger.sh` gave both of its DLLs
+byte for byte from a fresh clone of its branch, with the toolchain folder
+used throughout the reconstruction and the same Wine. The steps from the
+downloads were not repeated for it.
+
 Not tested:
 - **Other Wine versions.** The T2DEF server is linked on Wine's builtin
   `msvcrt.dll`, and its import table depends on how that `qsort` orders
@@ -411,7 +419,7 @@ Not tested:
 ## Older compilers (optional)
 
 `tools/vc5.sh` and `tools/vc4.sh` run Visual C++ 5.0 and 4.x, which were
-used to identify the compilers of other mods. None of these four needs
+used to identify the compilers of other mods. None of these five needs
 them. Layout and sources, briefly:
 
 | Tree | Contents | Source (archive.org item / file, SHA-1) |

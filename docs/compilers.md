@@ -1,6 +1,6 @@
 # Compilers
 
-All eight DLLs were built with Microsoft Visual C++ 6.0 (VC6), in three
+All ten DLLs were built with Microsoft Visual C++ 6.0 (VC6), in three
 variants: the Professional edition as first released, the Standard edition
 as first released, and the Standard edition with Service Pack 4. This page
 says which variant built which DLL, how that is known, where each variant
@@ -27,6 +27,8 @@ stamps its objects as Standard edition objects.
 | Wanted! `client.dll` | the same | | | | | the CD's `LIBCMT.LIB` | the same | `vc6` |
 | Gunman Chronicles `gunman.dll` | the same | | | | | the CD's `LIBCMT.LIB` | the same | `vc6` |
 | Gunman Chronicles `client.dll` | the same | | | | | the same | the CD's `MSVCRT.DLL` (not pinned) | `vc6` |
+| They Hunger `einar.dll` | the same | | | | | the CD's `LIBCMT.LIB` | the CD's `MSVCRT.DLL` | `vc6` |
+| They Hunger `client.dll` | the same | | | | | the same | the same | `vc6` |
 
 All but two of these DLLs rebuild byte for byte with the tree named. The
 Wanted! server and the Gunman Chronicles client don't yet; their remaining
@@ -83,7 +85,7 @@ inside a C runtime library carry the stamp of the compiler Microsoft built
 that library with: 8168 in the VC6 CD's `LIBCMT.LIB`, 8797 in SP4's. That is
 how the C runtime library is identified.
 
-The eight retail files (read from the files themselves; product ID, build,
+The ten retail files (read from the files themselves; product ID, build,
 count):
 
 | DLL | Compiler objects | C runtime and libraries | Linker |
@@ -96,9 +98,11 @@ count):
 | Wanted! `client.dll` | C 8168 ×128, C++ 8168 ×61 | MASM ×30, AliasObj ×2, Linker 5.12 ×9, Import0 ×636 | 6.00 8168 ×3 |
 | Gunman `gunman.dll` | C 8168 ×123, C++ 8168 ×124 | MASM ×30, AliasObj ×3, Linker 5.12 ×3, Import0 ×74 | 6.00 8168 ×1 |
 | Gunman `client.dll` | C 8168 ×128, C++ 8168 ×78 | MASM ×32, AliasObj ×2, Linker 5.12 ×9, Import0 ×636 | 6.00 8168 ×3 |
+| They Hunger `einar.dll` | C 8168 ×122, C++ 8168 ×100 | MASM ×30, AliasObj ×3, Linker 5.12 ×3, Import0 ×74 | 6.00 8168 ×1 |
+| They Hunger `client.dll` | C 8168 ×128, C++ 8168 ×61 | MASM ×30, AliasObj ×2, Linker 5.12 ×9, Import0 ×636 | 6.00 8168 ×3 |
 
 How to read it:
-- **Edition.** Six DLLs have only Professional stamps (0x0a, 0x0b). In the
+- **Edition.** Eight DLLs have only Professional stamps (0x0a, 0x0b). In the
   T2DEF DLLs the mod's own sources carry Standard stamps (0x15, 0x16); the
   Professional-stamped objects there (C 8168 ×127 and C++ 8168 ×3 in the
   server) are the C runtime library's, which Microsoft compiled with the
@@ -114,11 +118,15 @@ How to read it:
 - **Linker.** 6.00.8168 is the CD's LINK; 8447 is the LINK of Service
   Packs 3 to 6, and SP4's `LINK.EXE` is 6.00.8447. In the clients, two of
   the three Linker 6.00 objects are `vgui.lib`'s import objects: SDK 2.0's
-  `vgui.lib` was made with build 8168, SDK 2.2's (T2DEF) with 8447.
+  `vgui.lib` (which SDK 2.1 ships unchanged) was made with build 8168, SDK
+  2.2's (T2DEF) with 8447.
 - **Object counts.** Every object counts, including empty ones and alias
   objects. LINK also sizes the header from the number of objects, so one
   object too few moves the PE header. The mods' pages list the placeholder
-  objects that make the counts match.
+  objects that make the counts match. They Hunger needs none: its counts are
+  those of Valve's own file lists (2.2b's `hl.dsp` without
+  `voice_gamemgr.cpp`, and 2.1's `cl_dll.dsp` without the three studio
+  renderer files), which shows that the mod added no source file.
 
 ### The code
 
@@ -130,8 +138,8 @@ How to read it:
 - **Standard edition.** The T2DEF server's code is `/Od` code (every
   function has a frame pointer, no optimisation) although `hl.dsp` says
   `/O2`. With the Standard back end the project's own flags give it.
-- **Rebuilding.** Each variant was confirmed by rebuilding: six of the
-  eight DLLs are byte-identical. The Wanted! server differs inside one
+- **Rebuilding.** Each variant was confirmed by rebuilding: eight of the
+  ten DLLs are byte-identical. The Wanted! server differs inside one
   function only. The Gunman Chronicles client differs in which copies of
   identical functions LINK keeps, which moves much of its code, and in the
   code of three functions.
@@ -158,6 +166,8 @@ objects come out identical with either runtime.
 | Wanted! `client.dll` | VC6 CD's | On the builtin, seven folded stubs keep another object's copy. |
 | Gunman `gunman.dll` | VC6 CD's | On the builtin, the import table changes (17 bytes of `.rdata`, 7 of `.text`). |
 | Gunman `client.dll` | not pinned | Most of the client's remaining differences are the copies LINK keeps of folded functions, and with the current sources neither runtime's `qsort` gives retail's copies. Its build uses the CD's runtime, as the server's does. |
+| They Hunger `einar.dll` | VC6 CD's | Rebuilds identical on it (`/debug`, so no folding; one import DLL). Whether the builtin gives the same import order is not recorded. |
+| They Hunger `client.dll` | VC6 CD's | Rebuilds identical on it. On the builtin, functions change places inside two import lists (14 of `vgui.dll`'s 542 thunks, 11 of KERNEL32's 65); the build we tried it on differed from retail in 216,849 bytes. |
 
 ## Where the compilers come from
 
@@ -178,7 +188,7 @@ What each tree takes from them:
 | `vc6` | The Professional CD's `VC98/BIN`, `VC98/INCLUDE`, `VC98/LIB`, plus `MSPDB60.DLL`, `MSOBJ10.DLL` and `MSDIS110.DLL` from its `COMMON/MSDEV98/BIN`. `nativecrt` uses the CD's `OS/SYSTEM/MSVCRT.DLL`. |
 | `vc6std` | `vc6` with `C2.DLL` and `CL.EXE` from the Learning Edition CD (11.99.8168), the only two files in which its `VC98/BIN` differs from the Professional CD's. That `C2.DLL` is the Standard edition's back end: its objects carry the Standard stamps. `nativecrt` uses the Professional CD's `MSVCRT.DLL` (the two CDs' copies are identical). |
 | `vc6sp4std` | `vc6` with SP4's English VC files (`enu/vc98/bin`, `include`, `lib`, and `enu/common/msdev98/bin/msdis110.dll`), and SP4's Standard back end `enu/os/system/msse.dll` as `C2.DLL`. `nativecrt` uses SP4's `enu/os/system/msvcrt.dll`. |
-| `vc6sp4` | The same with the Professional back end `enu/os/system/msvcep.dll` as `C2.DLL`. Not used by these four mods. |
+| `vc6sp4` | The same with the Professional back end `enu/os/system/msvcep.dll` as `C2.DLL`. Not used by these five mods. |
 
 The C runtime DLLs the `nativecrt` copies run on:
 
@@ -235,9 +245,10 @@ The copies that actually run (`nativecrt`, `msvcrt.dll` imports renamed to
 | `MSVCRX.DLL` | `fb6260b07c05bdbcb6928156da514be5b6b69f095b335692ba46c561d85bd5f8` (the CD's `MSVCRT.DLL`) | `887eb5ce93edb7192ca3e9220f07f9ca0f94db02af5862ebcbdfcb852db99fd1` (SP4's) |
 
 The clients also link `utils/vgui/lib/win32_vc6/vgui.lib` from their own
-branch: SDK 2.0's in Point of View, Wanted! and Gunman Chronicles
-(`df1d49f874c87ba1fbcfe0d164bec90d7940e81341c01c001a701b85ef46677a`), SDK
-2.2's in T2DEF (`2f3a070def04fb0d542c1a10c2cc005d18d15fdd32d547a91e0c8e43bfb99785`).
+branch: SDK 2.0's in Point of View, Wanted!, Gunman Chronicles and They
+Hunger (`df1d49f874c87ba1fbcfe0d164bec90d7940e81341c01c001a701b85ef46677a`;
+SDK 2.1, They Hunger's base, ships the same file), SDK 2.2's in T2DEF
+(`2f3a070def04fb0d542c1a10c2cc005d18d15fdd32d547a91e0c8e43bfb99785`).
 
 Besides the toolchain, the build reproduces what the image records about
 the build itself: the PDB path, the link time, the PDB's age and the build

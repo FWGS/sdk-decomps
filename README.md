@@ -1,8 +1,8 @@
 # Half-Life mods, rebuilt byte for byte
 
-This repository holds C++ source for the game DLLs of four Half-Life mods,
+This repository holds C++ source for the game DLLs of five Half-Life mods,
 reconstructed from the shipped binaries. Each tree compiles with the original
-compiler, Visual C++ 6.0, back into the retail files. For six of the eight
+compiler, Visual C++ 6.0, back into the retail files. For eight of the ten
 DLLs, the rebuilt file is identical to the retail one, byte for byte. That
 includes the headers, time stamps, debug record and padding, so the SHA-256
 matches.
@@ -12,8 +12,8 @@ documentation and the build tools.
 
 ## Status
 
-Verified on 2026-11-01 with fresh release builds, by SHA-256 and `cmp`
-against the retail files.
+Verified with fresh release builds, by SHA-256 and `cmp` against the retail
+files: They Hunger on 2026-11-11, the other four mods on 2026-11-01.
 
 | Mod | Branch | Server DLL | Client DLL | Details |
 |---|---|---|---|---|
@@ -21,6 +21,7 @@ against the retail files.
 | T2DEF (Todesangst 2) 1.1 | [`t2def`](../../tree/t2def) | `t2def.dll`: **identical** | `client.dll`: **identical** | [docs/t2def.md](docs/t2def.md) |
 | Wanted! 1.5 | [`wanted`](../../tree/wanted) | `wanted.dll`: 810 of 1,122,380 bytes differ | `client.dll`: **identical** | [docs/wanted.md](docs/wanted.md) |
 | Gunman Chronicles | [`gunman-chronicles`](../../tree/gunman-chronicles) | `gunman.dll`: **identical** | `client.dll`: 152,034 of 565,248 bytes differ | [docs/gunman-chronicles.md](docs/gunman-chronicles.md) |
+| They Hunger (episodes 1 to 3) | [`they-hunger`](../../tree/they-hunger) | `einar.dll`: **identical** | `client.dll`: **identical** | [docs/they-hunger.md](docs/they-hunger.md) |
 
 SHA-256 of the retail files, which the identical builds reproduce:
 
@@ -32,6 +33,8 @@ SHA-256 of the retail files, which the identical builds reproduce:
 | T2DEF `client.dll` | `cbd18f9318fe5a626bb35318f70db6a340300d8c6874f8b64e7bdb53f5e91762` |
 | Wanted! `client.dll` | `584813e7ec904ec6fa596fa1360d3da37bfc87cfb1b1785886b8d868d793e479` |
 | Gunman Chronicles `gunman.dll` | `e6e8d4497f11787889f12e7356157cbce98d380570805ca55faef3c07ce088f0` |
+| They Hunger `einar.dll` | `0b9c21c87dab0eec02b323eaab434cf77a2f69982bbf0a3f3f6a316fa95159d3` |
+| They Hunger `client.dll` | `09e8de1a62f4f1fae32b040678fc5b97fe5ba8f20ec44db14b29aedcf37db105` |
 
 What the two remaining DLLs still lack:
 
@@ -60,8 +63,9 @@ explains each part.
 
 Where the binary doesn't say what the source was, the trees contain a marked
 stand-in. Examples: a function nothing calls, an empty object file, a
-`// sic` line that steers the compiler. The per-mod documents list every one
-with the evidence for it.
+`// sic` line that steers the compiler. So "identical" is a statement about
+the built file, not about every line of the source. The per-mod documents
+list every stand-in with the evidence for it.
 
 ## Rebuilding
 
@@ -85,7 +89,7 @@ The script prints each built file's SHA-256 next to retail's.
 - [docs/setup.md](docs/setup.md): setting up the compilers under Wine.
 - [docs/reproducing.md](docs/reproducing.md): what a DLL holds besides its code, and how each part is rebuilt.
 - [docs/vc6-notes.md](docs/vc6-notes.md): what we learned about Visual C++ 6.0's compiler and linker while matching.
-- Per mod: [Point of View](docs/point-of-view.md), [T2DEF](docs/t2def.md), [Wanted!](docs/wanted.md), [Gunman Chronicles](docs/gunman-chronicles.md).
+- Per mod: [Point of View](docs/point-of-view.md), [T2DEF](docs/t2def.md), [Wanted!](docs/wanted.md), [Gunman Chronicles](docs/gunman-chronicles.md), [They Hunger](docs/they-hunger.md).
 
 ## Not included
 
