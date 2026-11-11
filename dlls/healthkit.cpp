@@ -24,6 +24,12 @@
 
 extern int gmsgItemPickup;
 
+// They Hunger: the HUD flag an item_suit with spawnflag 32 (the fgd's "TH_REDMODE") sets.
+// The player then has no working suit in single player (no chargers, batteries or
+// long jump) and the client draws the HUD red. name ours
+// TODO(core): belongs in cdll_dll.h
+#define	HIDEHUD_REDMODE		( 1<<5 )
+
 class CHealthKit : public CItem
 {
 	void Spawn( void );
@@ -68,7 +74,10 @@ void CHealthKit::Precache( void )
 
 BOOL CHealthKit::MyTouch( CBasePlayer *pPlayer )
 {
-	if ( pPlayer->TakeHealth( gSkillData.healthkitCapacity, DMG_GENERIC ) )
+	// They Hunger: the map can set the kit's "health"
+	float flHealth = pev->health ? pev->health : gSkillData.healthkitCapacity;
+
+	if ( pPlayer->TakeHealth( flHealth, DMG_GENERIC ) )
 	{
 		MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
 			WRITE_STRING( STRING(pev->classname) );
@@ -191,7 +200,8 @@ void CWallHealth::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE u
 	}
 
 	// if the player doesn't have the suit, or there is no juice left, make the deny noise
-	if ((m_iJuice <= 0) || (!(pActivator->pev->weapons & (1<<WEAPON_SUIT))))
+	if ((m_iJuice <= 0) || (!(pActivator->pev->weapons & (1<<WEAPON_SUIT))) ||
+		((((CBasePlayer *)pActivator)->m_iHideHUD & HIDEHUD_REDMODE) && !g_pGameRules->IsMultiplayer()))
 	{
 		if (m_flSoundTime <= gpGlobals->time)
 		{
