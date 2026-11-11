@@ -805,14 +805,7 @@ public:
 	BOOL PlayEmptySound( void );
 	BOOL ShouldWeaponIdle( void ) { return TRUE; };
 
-	virtual BOOL UseDecrement( void )
-	{ 
-#if defined( CLIENT_WEAPONS )
-		return TRUE;
-#else
-		return FALSE;
-#endif
-	}
+	virtual BOOL UseDecrement( void ) { return FALSE; }
 
 	int m_fHealing;	// the use animation is playing; the health is given when it ends
 };
