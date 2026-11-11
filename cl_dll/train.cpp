@@ -24,9 +24,6 @@
 #include <stdio.h>
 #include "parsemsg.h"
 
-// TODO(core): belongs in cdll_dll.h
-#define HIDEHUD_REDMODE ( 1<<5 )
-
 DECLARE_MESSAGE(m_Train, Train )
 
 

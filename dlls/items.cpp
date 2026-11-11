@@ -170,10 +170,6 @@ void CItem::Materialize( void )
 }
 
 #define SF_SUIT_SHORTLOGON		0x0001
-#define SF_SUIT_REDMODE			0x0020	// They Hunger, the fgd's "TH_REDMODE": no HEV, red HUD. name ours
-
-// TODO(core): belongs in cdll_dll.h
-#define	HIDEHUD_REDMODE		( 1<<5 )	// set by an item_suit with SF_SUIT_REDMODE. name ours
 
 class CItemSuit : public CItem
 {

@@ -28,10 +28,6 @@
 #include "gamerules.h"
 #include "player.h"
 
-// They Hunger: the HUD flag an item_suit with spawnflag 32 sets (see items.cpp). name ours
-// TODO(core): belongs in cdll_dll.h
-#define	HIDEHUD_REDMODE		( 1<<5 )
-
 class CRecharge : public CBaseToggle
 {
 public:

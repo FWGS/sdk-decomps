@@ -28,9 +28,6 @@
 #include "ammohistory.h"
 #include "vgui_TeamFortressViewport.h"
 
-// TODO(core): belongs in cdll_dll.h
-#define HIDEHUD_REDMODE ( 1<<5 )
-
 WEAPON *gpActiveSel;	// NULL means off, 1 means just the menu bar, otherwise
 						// this points to the active weapon menu item
 WEAPON *gpLastSel;		// Last weapon menu selection 

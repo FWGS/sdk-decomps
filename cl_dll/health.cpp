@@ -27,9 +27,6 @@
 #include "parsemsg.h"
 #include <string.h>
 
-// TODO(core): belongs in cdll_dll.h
-#define HIDEHUD_REDMODE ( 1<<5 )
-
 
 DECLARE_MESSAGE(m_Health, Health )
 DECLARE_MESSAGE(m_Health, Damage )

@@ -24,12 +24,6 @@
 
 extern int gmsgItemPickup;
 
-// They Hunger: the HUD flag an item_suit with spawnflag 32 (the fgd's "TH_REDMODE") sets.
-// The player then has no working suit in single player (no chargers, batteries or
-// long jump) and the client draws the HUD red. name ours
-// TODO(core): belongs in cdll_dll.h
-#define	HIDEHUD_REDMODE		( 1<<5 )
-
 class CHealthKit : public CItem
 {
 	void Spawn( void );

@@ -25,9 +25,6 @@
 #include <string.h>
 #include <stdio.h>
 
-// TODO(core): belongs in cdll_dll.h
-#define HIDEHUD_REDMODE ( 1<<5 )
-
 DECLARE_MESSAGE(m_Battery, Battery)
 
 int CHudBattery::Init(void)
