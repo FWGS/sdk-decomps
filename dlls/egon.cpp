@@ -140,7 +140,7 @@ void CEgon::Spawn( )
 	m_iId = WEAPON_EGON;
 	SET_MODEL(ENT(pev), "models/w_egon.mdl");
 
-	m_iDefaultAmmo = EGON_DEFAULT_GIVE;
+	m_iDefaultAmmo = 25;
 
 	FallInit();// get ready to fall down.
 }
@@ -163,6 +163,128 @@ void CEgon::Precache( void )
 	PRECACHE_MODEL( EGON_FLARE_SPRITE );
 
 	PRECACHE_SOUND ("weapons/357_cock1.wav");
+
+	PRECACHE_SOUND ("weapons/flmfire2.wav");
+
+	UTIL_PrecacheOther( "einar_flame" );
+}
+
+
+//=========================================================
+// They Hunger: the flamethrower's flame, made from the RPG's
+// rocket and the crossbow bolt's touch
+//=========================================================
+class CEinarFlameRocket : public CGrenade
+{
+public:
+	int		Save( CSave &save );
+	int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
+	void Spawn( void );
+	void Precache( void );
+	void EXPORT FlameTouch( CBaseEntity *pOther );
+	static CEinarFlameRocket *CreateFlameRocket( Vector vecOrigin, Vector vecAngles, CBaseEntity *pOwner );	// name ours
+
+	int m_iTrail;
+};
+LINK_ENTITY_TO_CLASS( einar_flame, CEinarFlameRocket );
+
+TYPEDESCRIPTION	CEinarFlameRocket::m_SaveData[] = 
+{
+	DEFINE_FIELD( CEinarFlameRocket, m_iTrail, FIELD_INTEGER ),
+};
+IMPLEMENT_SAVERESTORE( CEinarFlameRocket, CGrenade );
+
+//=========================================================
+//=========================================================
+CEinarFlameRocket *CEinarFlameRocket::CreateFlameRocket( Vector vecOrigin, Vector vecAngles, CBaseEntity *pOwner )
+{
+	CEinarFlameRocket *pRocket = GetClassPtr( (CEinarFlameRocket *)NULL );
+
+	UTIL_SetOrigin( pRocket->pev, vecOrigin );
+	pRocket->pev->angles = vecAngles;
+	pRocket->Spawn();
+	pRocket->pev->owner = pOwner->edict();
+
+	return pRocket;
+}
+
+//=========================================================
+//=========================================================
+void CEinarFlameRocket :: Spawn( void )
+{
+	Precache( );
+	// motor
+	pev->movetype = MOVETYPE_FLY;
+	pev->effects |= EF_DIMLIGHT;
+	pev->solid = SOLID_BBOX;
+	pev->rendermode = kRenderTransTexture;
+	pev->renderamt = 0;
+
+	SET_MODEL(ENT(pev), "sprites/fthrow.spr");
+	UTIL_SetSize(pev, Vector( 0, 0, 0), Vector(0, 0, 0));
+	UTIL_SetOrigin( pev, pev->origin );
+
+	pev->classname = MAKE_STRING("einar_flame");
+
+	SetTouch( FlameTouch );
+	SetThink( SUB_Remove );
+	pev->nextthink = gpGlobals->time + 1.1;
+
+	UTIL_MakeVectors( pev->angles );
+
+	pev->speed = g_pGameRules->IsMultiplayer() ? 500 : 400;
+	pev->velocity = gpGlobals->v_forward * pev->speed;
+	pev->gravity = 0;
+
+	// the flame itself is invisible (renderamt 0); what is seen is this client-side sprite
+	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
+		WRITE_BYTE( TE_PROJECTILE );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		WRITE_COORD( pev->velocity.x );
+		WRITE_COORD( pev->velocity.y );
+		WRITE_COORD( pev->velocity.z );
+		WRITE_SHORT( m_iTrail );	// model
+		WRITE_BYTE( 1 ); // life
+		WRITE_BYTE( 0 ); // owner
+	MESSAGE_END();
+}
+
+//=========================================================
+//=========================================================
+void CEinarFlameRocket :: FlameTouch ( CBaseEntity *pOther )
+{
+	SetTouch( NULL );
+	SetThink( NULL );
+
+	if ( UTIL_PointContents( pev->origin ) != CONTENTS_WATER && pOther->pev->takedamage )
+	{
+		TraceResult tr = UTIL_GetGlobalTrace( );
+		entvars_t	*pevOwner;
+
+		pevOwner = VARS( pev->owner );
+
+		ClearMultiDamage( );
+
+		pOther->TraceAttack(pevOwner, ( g_pGameRules->IsMultiplayer() ? gSkillData.plrDmgEgonWide : gSkillData.plrDmgEgonNarrow * 1.5 ) * 2, pev->velocity.Normalize(), &tr, DMG_NEVERGIB ); 
+
+		ApplyMultiDamage( pev, pevOwner );
+	}
+
+	pev->solid = SOLID_NOT;
+	pev->takedamage = DAMAGE_NO;
+	pev->velocity = g_vecZero;
+	pev->deadflag = DEAD_DEAD;
+	UTIL_Remove( this );
+}
+
+//=========================================================
+//=========================================================
+void CEinarFlameRocket :: Precache( void )
+{
+	m_iTrail = PRECACHE_MODEL("sprites/fthrow.spr");
 }
 
 
@@ -199,7 +321,7 @@ void CEgon::Holster( int skiplocal /* = 0 */ )
 int CEgon::GetItemInfo(ItemInfo *p)
 {
 	p->pszName = STRING(pev->classname);
-	p->pszAmmo1 = "uranium";
+	p->pszAmmo1 = "gas";
 	p->iMaxAmmo1 = URANIUM_MAX_CARRY;
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
@@ -326,9 +448,38 @@ void CEgon::Attack( void )
 
 void CEgon::PrimaryAttack( void )
 {
-	m_fireMode = FIRE_WIDE;
-	Attack();
+	// don't fire underwater
+	if ( HasAmmo() && m_pPlayer->pev->waterlevel != 3 )
+	{
+		UseAmmo( 1 );
 
+		m_pPlayer->m_iWeaponVolume = 200;
+
+		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/flmfire2.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 93 + RANDOM_LONG(0,0xF));
+
+		SendWeaponAnim( g_fireAnims1[ RANDOM_LONG(0,ARRAYSIZE(g_fireAnims1)-1) ] );
+
+		// player "shoot" animation
+		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
+
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+		Vector vecSrc = m_pPlayer->GetGunPosition( ) + gpGlobals->v_forward * 20 + gpGlobals->v_right * 5 + gpGlobals->v_up * 3;
+		
+		CEinarFlameRocket *pRocket = CEinarFlameRocket::CreateFlameRocket( vecSrc, m_pPlayer->pev->v_angle, m_pPlayer );
+
+		if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
+			// HEV suit - indicate out of ammo condition
+			m_pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0);
+
+		m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + 0.2;
+		m_flTimeWeaponIdle = gpGlobals->time + 0.5;
+	}
+	else
+	{
+		PlayEmptySound( );
+		m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + 0.2;
+		m_flTimeWeaponIdle = gpGlobals->time + 5;
+	}
 }
 
 void CEgon::Fire( const Vector &vecOrigSrc, const Vector &vecDir )
@@ -600,19 +751,19 @@ class CEgonAmmo : public CBasePlayerAmmo
 	void Spawn( void )
 	{ 
 		Precache( );
-		SET_MODEL(ENT(pev), "models/w_chainammo.mdl");
+		SET_MODEL(ENT(pev), "models/w_gas.mdl");
 		CBasePlayerAmmo::Spawn( );
 	}
 	void Precache( void )
 	{
-		PRECACHE_MODEL ("models/w_chainammo.mdl");
-		PRECACHE_SOUND("items/9mmclip1.wav");
+		PRECACHE_MODEL ("models/w_gas.mdl");
+		PRECACHE_SOUND("player/pl_slosh1.wav");
 	}
 	BOOL AddAmmo( CBaseEntity *pOther ) 
 	{ 
-		if (pOther->GiveAmmo( AMMO_URANIUMBOX_GIVE, "uranium", URANIUM_MAX_CARRY ) != -1)
+		if (pOther->GiveAmmo( 25, "gas", URANIUM_MAX_CARRY ) != -1)
 		{
-			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
+			EMIT_SOUND(ENT(pev), CHAN_ITEM, "player/pl_slosh1.wav", 1, ATTN_NORM);
 			return TRUE;
 		}
 		return FALSE;
