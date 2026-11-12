@@ -12,9 +12,6 @@
 *   without written permission from Valve LLC.
 *
 ****/
-// sic: these lines stand for lines retail has ahead of the first functions: with
-// 1 to 20 more (VC5 spends two bytes more on a statement from line 128 on), Beta
-// 4.0's object places CBaseMonster::Remember as retail.
 /*
 
 ===== combat.cpp ========================================================
@@ -1797,13 +1794,15 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 			{
 				// Counter-Strike Beta 2.0: with bPistol (name ours: the pistols, but also the
 				// AWP and the G3/SG-1 pass it) every bullet marks the wall; the other guns'
-				// bullets do so every time with mp_lowlag 0, one in four with mp_lowlag 1
+				// bullets do so one in four with mp_lowlag 1, and every time with
+				// mp_lowlag 0 (Beta 5.0 leak: with sv_sendvelocity 0, which the engine
+				// registers; mp_lowlag is not registered any more, game.cpp)
 				// (Beta 4.0: one in three where the bullet goes through)
 				if ( !bPistol )
 				{
 					if ( RANDOM_LONG( 0, 3 ) == 0 && CVAR_GET_FLOAT( "mp_lowlag" ) == 1 )
 						DecalGunshot( &tr, iBulletType, false, pev );
-					else if ( CVAR_GET_FLOAT( "mp_lowlag" ) == 0 )
+					else if ( CVAR_GET_FLOAT( "sv_sendvelocity" ) == 0 )
 						DecalGunshot( &tr, iBulletType, false, pev );
 					else
 						DecalGunshot( &tr, iBulletType, true, pev );
@@ -1824,7 +1823,7 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 				{
 					if ( RANDOM_LONG( 0, 3 ) == 0 && CVAR_GET_FLOAT( "mp_lowlag" ) == 1 )
 						DecalGunshot( &tr, iBulletType, false, pev );
-					else if ( CVAR_GET_FLOAT( "mp_lowlag" ) == 0 )
+					else if ( CVAR_GET_FLOAT( "sv_sendvelocity" ) == 0 )
 						DecalGunshot( &tr, iBulletType, false, pev );
 					else
 						DecalGunshot( &tr, iBulletType, true, pev );

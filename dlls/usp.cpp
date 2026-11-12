@@ -42,9 +42,9 @@ public:
 	void Precache( void );
 	int iItemSlot( void ) { return 2; }
 	int GetItemInfo(ItemInfo *p);
+	float GetMaxSpeed( void ) { return 260; }	// Beta 5.0 (leak): Linux symbol
 
 	void PrimaryAttack( void );
-	void SecondaryAttack( void );
 	void USPFire( float flSpread, float flCycleTime, BOOL fUseSemi );
 	BOOL Deploy( void );
 	void Reload( void );
@@ -93,7 +93,7 @@ int CUSP::GetItemInfo(ItemInfo *p)
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = USP_MAX_CLIP;
 	p->iSlot = 1;
-	p->iPosition = 1;
+	p->iPosition = 4;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_USP;
 	p->iWeight = USP_WEIGHT;
@@ -104,24 +104,11 @@ int CUSP::GetItemInfo(ItemInfo *p)
 BOOL CUSP::Deploy( )
 {
 	m_pPlayer->m_flAccuracy = 0.98;
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 260 );
 
 	if (RANDOM_LONG(0,1))
 		return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_DRAW, "tmp" );
 	else
 		return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_DRAW2, "tmp" );
-}
-
-void CUSP::SecondaryAttack( void )
-{
-	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.225, 0.285, FALSE );
-	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.3, 0.285, FALSE );
-	else if (FBitSet(m_pPlayer->pev->flags, FL_DUCKING))
-		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.07, 0.285, FALSE );
-	else
-		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.1, 0.285, FALSE );
 }
 
 void CUSP::PrimaryAttack( void )

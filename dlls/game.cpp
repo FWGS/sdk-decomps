@@ -24,26 +24,25 @@ cvar_t  servercfgfile = {"servercfgfile","server.cfg"};
 cvar_t  lservercfgfile = {"lservercfgfile","listenserver.cfg"};
 
 // multiplayer server rules
-cvar_t	lowlag		= {"mp_lowlag","1", FCVAR_SERVER };		// Counter-Strike Beta 2.0 (name ours): FireBullets3's wall decals
-cvar_t	limitteams	= {"mp_limitteams","1", FCVAR_SERVER };	// Counter-Strike Beta 2.0 (name ours)
-cvar_t	fraglimit	= {"mp_fraglimit","0", FCVAR_SERVER };
+// Beta 5.0 (leak): mp_lowlag, mp_limitteams, mp_fraglimit, mp_falldamage,
+// mp_weaponstay, mp_forcerespawn, mp_autocrosshair, mp_teamlist,
+// mp_teamoverride, mp_defaultteam and mp_friendly_grenade_damage are no longer
+// registered (FireBullets3 and AllowAutoTargetCrosshair still read mp_lowlag
+// and mp_autocrosshair by name)
 cvar_t	timelimit	= {"mp_timelimit","0", FCVAR_SERVER };
 cvar_t	friendlyfire= {"mp_friendlyfire","0", FCVAR_SERVER };
-cvar_t	falldamage	= {"mp_falldamage","0", FCVAR_SERVER };
-cvar_t	weaponstay	= {"mp_weaponstay","0", FCVAR_SERVER };
-cvar_t	forcerespawn= {"mp_forcerespawn","1", FCVAR_SERVER };
 cvar_t	footsteps	= {"mp_footsteps","1", FCVAR_SERVER };
 cvar_t	flashlight	= {"mp_flashlight","0", FCVAR_SERVER };
-cvar_t	aimcrosshair= {"mp_autocrosshair","1", FCVAR_SERVER };
 cvar_t	decalfrequency = {"decalfrequency","30", FCVAR_SERVER };
-cvar_t	teamlist = {"mp_teamlist","hgrunt;scientist", FCVAR_SERVER };
-cvar_t	teamoverride = {"mp_teamoverride","1" };
-cvar_t	defaultteam = {"mp_defaultteam","0" };
 cvar_t	allowmonsters={"mp_allowmonsters","0", FCVAR_SERVER };
-// Counter-Strike Beta 4.0 (names from the Linux symbols)
+// Counter-Strike Beta 4.0 and 5.0 (leak) (names from the Linux symbols)
 cvar_t	roundtime	= {"mp_roundtime","5", FCVAR_SERVER };			// minutes, 3 to 9 (CHalfLifeMultiplay)
-cvar_t	c4timer		= {"mp_c4timer","35", FCVAR_SERVER };			// seconds, 10 to 90 (Beta 4.1: 35 by default, was 30)
-cvar_t	friendlygrenadedamage = {"mp_friendly_grenade_damage","1", FCVAR_SERVER };
+cvar_t	freezetime	= {"mp_freezetime","6", FCVAR_SERVER };			// Beta 5.0 (leak): seconds the players stand still at a round's start, 0 to 15
+cvar_t	c4timer		= {"mp_c4timer","45", FCVAR_SERVER };			// seconds, 10 to 90 (Beta 4.1: 35 by default, Beta 5.0 leak: 45)
+cvar_t	ghostfrequency = {"mp_ghostfrequency","0.1", FCVAR_SERVER };	// Beta 5.0 (leak): how often an observer's view of the other ghosts is updated (CObserver::CGhosts::Update)
+cvar_t	chasecam	= {"mp_chasecam","0", FCVAR_SERVER };			// Beta 5.0 (leak): the observer modes allowed (CObserver)
+cvar_t	autokick	= {"mp_autokick","1", FCVAR_SERVER };			// Beta 5.0 (leak): kick idle players and team killers
+cvar_t	restartround = {"sv_restartround","0", FCVAR_SERVER };		// Beta 5.0 (leak): restart the round in so many seconds (Think)
 
 //CVARS FOR SKILL LEVEL SETTINGS
 // Agrunt
@@ -458,26 +457,20 @@ void GameDLLInit( void )
 	CVAR_REGISTER (&servercfgfile);
 	CVAR_REGISTER (&lservercfgfile);
 
-	CVAR_REGISTER (&fraglimit);
 	CVAR_REGISTER (&timelimit);
-	CVAR_REGISTER (&lowlag);
-	CVAR_REGISTER (&limitteams);
 
 	CVAR_REGISTER (&friendlyfire);
-	CVAR_REGISTER (&falldamage);
-	CVAR_REGISTER (&weaponstay);
-	CVAR_REGISTER (&forcerespawn);
 	CVAR_REGISTER (&footsteps);
 	CVAR_REGISTER (&flashlight);
-	CVAR_REGISTER (&aimcrosshair);
 	CVAR_REGISTER (&decalfrequency);
-	CVAR_REGISTER (&teamlist);
-	CVAR_REGISTER (&teamoverride);
-	CVAR_REGISTER (&defaultteam);
 	CVAR_REGISTER (&allowmonsters);
 	CVAR_REGISTER (&roundtime);
+	CVAR_REGISTER (&freezetime);
 	CVAR_REGISTER (&c4timer);
-	CVAR_REGISTER (&friendlygrenadedamage);
+	CVAR_REGISTER (&ghostfrequency);
+	CVAR_REGISTER (&chasecam);
+	CVAR_REGISTER (&autokick);
+	CVAR_REGISTER (&restartround);
 
 // REGISTER CVARS FOR SKILL LEVEL STUFF
 	// Agrunt

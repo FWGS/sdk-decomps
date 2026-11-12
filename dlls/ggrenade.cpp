@@ -31,7 +31,7 @@
 
 extern void Broadcast( const char *sentence );	// multiplay_gamerules.cpp (Beta 3.0)
 extern int gmsgItemPickup;	// Beta 4.1 (player.cpp)
-extern int gmsgGiveItem;
+extern int gmsgBarTime;	// Beta 5.0 (leak) (player.cpp)
 
 
 //===================debris
@@ -241,7 +241,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 		vecDir = vecDir + x * vecSpread.x * vecRight + y * vecSpread.y * gpGlobals->v_up;
 
 		CDebris *pDebris = CDebris::BoltCreate();
-		pDebris->pev->owner = ENT( pev );
+		pDebris->pev->owner = ENT( pev->owner );	// Beta 5.0 (leak): the thrower owns the shrapnel (was the grenade)
 		pDebris->pev->origin = pev->origin + vecDir * 5;
 		pDebris->pev->angles = pev->angles;
 		pDebris->pev->velocity = vecDir * RANDOM_LONG( 800, 1100 );
@@ -328,16 +328,9 @@ void CGrenade::Explode2( TraceResult *pTrace, int bitsDamageType )
 
 	UTIL_ScreenShake( pTrace->vecEndPos, 25.0, 150.0, 1.0, 3000 );
 
-	CBaseEntity *pTarget = UTIL_FindEntityByClassname( NULL, "info_bomb_target" );	// name ours
-	while ( pTarget )
-	{
-		if ( (pTarget->pev->origin - pev->origin).Length() < 256 )
-		{
-			((CHalfLifeMultiplay *)g_pGameRules)->m_fTargetBombed = TRUE;
-			break;
-		}
-		pTarget = UTIL_FindEntityByClassname( pTarget, "info_bomb_target" );
-	}
+	// Beta 5.0 (leak): a C4 is planted only at a bomb target, so it always counts
+	// (Beta 4.0 and 4.1: within 256 units of an info_bomb_target)
+	((CHalfLifeMultiplay *)g_pGameRules)->m_fTargetBombed = true;
 
 	m_fC4Done = TRUE;
 	((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
@@ -668,6 +661,8 @@ void CGrenade::Detonate( void )
 // Counter-Strike Beta 4.0: the C4 (C4Think)
 void CGrenade::Detonate2( void )
 {
+	ALERT( at_console, " ******* STAGE 0 ******* \n" );	// Beta 5.0 (leak)
+
 	TraceResult tr;
 	Vector		vecSpot;// trace starts here!
 
@@ -868,6 +863,7 @@ void CGrenade:: Spawn( void )
 {
 	pev->movetype = MOVETYPE_BOUNCE;
 	pev->classname = MAKE_STRING( "grenade" );
+	m_fPlantedC4 = false;	// Beta 5.0 (leak)
 	
 	pev->solid = SOLID_BBOX;
 
@@ -935,7 +931,7 @@ CGrenade * CGrenade:: ShootTimed2( entvars_t *pevOwner, Vector vecStart, Vector 
 	pGrenade->m_iTeam = iTeam;
 
 	SET_MODEL(ENT(pGrenade->pev), "models/w_hegrenade.mdl");
-	pGrenade->pev->dmg = 75;
+	pGrenade->pev->dmg = 100;	// Beta 5.0 (leak) (Beta 4.0 and 4.1: 75)
 
 	return pGrenade;
 }
@@ -981,6 +977,56 @@ CGrenade * CGrenade:: ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector v
 	return pGrenade;
 }
 
+//
+// Beta 5.0 (leak): a counter-terrorist defuses the planted C4 by holding USE on it
+// (FCAP_CONTINUOUS_USE): 5 seconds with a defuse kit, 10 without; the progress
+// bar shows it (BarTime). C4Think checks that he goes on using it.
+//
+void CGrenade::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	if ( m_fPlantedC4 )
+	{
+		CBasePlayer *player = GetClassPtr( (CBasePlayer *)pActivator->pev );	// name ours
+
+		if ( player->m_iTeam == TEAM_CT )
+		{
+			if ( !m_fStartDefuse )
+			{
+				if ( player->m_fHasDefuser == true )
+				{
+					ClientPrint( player->pev, HUD_PRINTCENTER, "Defusing bomb WITH Defuse kit..." );
+					EMIT_SOUND( ENT(player->pev), CHAN_ITEM, "weapons/c4_disarm.wav", 1.0, ATTN_NORM );
+					m_pDefuser = pActivator;
+					m_fStartDefuse = true;
+					m_flDefuseDone = gpGlobals->time + 5.0;
+					m_flNextDefuseCheck = gpGlobals->time + 0.5;
+
+					MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, player->pev );
+						WRITE_SHORT( 5 );
+					MESSAGE_END();
+				}
+				else
+				{
+					ClientPrint( player->pev, HUD_PRINTCENTER, "Defusing bomb WITHOUT Defuse kit..." );
+					EMIT_SOUND( ENT(player->pev), CHAN_ITEM, "weapons/c4_disarm.wav", 1.0, ATTN_NORM );
+					m_pDefuser = pActivator;
+					m_fStartDefuse = true;
+					m_flDefuseDone = gpGlobals->time + 10.0;
+					m_flNextDefuseCheck = gpGlobals->time + 0.5;
+
+					MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, player->pev );
+						WRITE_SHORT( 10 );
+					MESSAGE_END();
+				}
+			}
+			else
+			{
+				m_flNextDefuseCheck = gpGlobals->time + 0.5;
+			}
+		}
+	}
+}
+
 
 //
 // Counter-Strike Beta 4.0: the planted C4 (CBasePlayer::PlantC4). It goes off
@@ -991,7 +1037,7 @@ CGrenade * CGrenade:: ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector v
 CGrenade * CGrenade :: ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity )
 {
 	CGrenade *pGrenade = GetClassPtr( (CGrenade *)NULL );
-	pGrenade->pev->movetype = MOVETYPE_BOUNCE;
+	pGrenade->pev->movetype = MOVETYPE_TOSS;	// Beta 5.0 (leak) (was MOVETYPE_BOUNCE)
 	pGrenade->pev->classname = MAKE_STRING( "grenade" );
 	
 	pGrenade->pev->solid = SOLID_BBOX;
@@ -1002,8 +1048,8 @@ CGrenade * CGrenade :: ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart,
 
 	pGrenade->pev->dmg = 100;
 	UTIL_SetOrigin( pGrenade->pev, vecStart );
-	pGrenade->pev->velocity = vecVelocity;
-	pGrenade->pev->angles = g_vecZero;
+	pGrenade->pev->velocity = g_vecZero;		// Beta 5.0 (leak): it lies where it is planted,
+	pGrenade->pev->angles = vecVelocity;		// turned the way the planter looked (CC4 passes his angles)
 	pGrenade->pev->owner = ENT(pevOwner);
 	
 	// Detonate in "time" seconds
@@ -1015,11 +1061,23 @@ CGrenade * CGrenade :: ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart,
 	pGrenade->m_flC4Blow = gpGlobals->time + ((CHalfLifeMultiplay *)g_pGameRules)->m_iC4Timer;
 	pGrenade->m_flBeepInterval = ((CHalfLifeMultiplay *)g_pGameRules)->m_iC4Timer / 8;
 	pGrenade->m_flNextBeep = gpGlobals->time + pGrenade->m_flBeepInterval;
+	pGrenade->m_flNextBlink = gpGlobals->time + 2.0;
+	pGrenade->m_fPlantedC4 = true;
+	pGrenade->m_flNextDefuseCheck = 0;
 	pGrenade->m_fStartDefuse = false;
 
 	pGrenade->pev->friction = 0.9;
 	pGrenade->m_fC4Done = false;
 
+	// the bomb target the planter stands in is used when the C4 goes off
+	CBaseEntity *pOwner = CBaseEntity::Instance( ENT( pevOwner ) );	// name ours
+	if ( pOwner && pOwner->IsPlayer() )
+	{
+		pGrenade->m_pentBombTarget = ((CBasePlayer *)pOwner)->m_pentBombTarget;
+		return pGrenade;
+	}
+
+	pGrenade->m_pentBombTarget = NULL;
 	return pGrenade;
 }
 
@@ -1039,13 +1097,13 @@ void CGrenade::C4Think( void )
 		return;
 	}
 
-	pev->nextthink = gpGlobals->time + 0.1;
+	pev->nextthink = gpGlobals->time + 0.12;	// Beta 5.0 (leak) (was 0.1)
 
 	m_flBeepInterval *= 0.99;
-	if ( m_flBeepInterval < 0.1 )
-		m_flBeepInterval = 0.1;
+	if ( m_flBeepInterval < 0.12 )
+		m_flBeepInterval = 0.12;
 
-	float flAttenuation = m_flBeepInterval;	// name ours
+	float flAttenuation = m_flBeepInterval - 0.1;	// name ours
 	if ( flAttenuation > 2 )
 		flAttenuation = 2;
 
@@ -1055,79 +1113,80 @@ void CGrenade::C4Think( void )
 		EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/c4_beep.wav", 1.0, flAttenuation);
 	}
 
+	// Beta 5.0 (leak): the C4 glows every two seconds
+	if ( gpGlobals->time >= m_flNextBlink )
+	{
+		m_flNextBlink = gpGlobals->time + 2.0;
+
+		MESSAGE_BEGIN( MSG_ALL, SVC_TEMPENTITY );
+			WRITE_BYTE( TE_GLOWSPRITE );
+			WRITE_COORD( pev->origin.x );
+			WRITE_COORD( pev->origin.y );
+			WRITE_COORD( pev->origin.z + 5 );
+			WRITE_SHORT( g_sModelIndexC4Glow );
+			WRITE_BYTE( 1 );	// life
+			WRITE_BYTE( 3 );	// scale
+			WRITE_BYTE( 255 );	// brightness
+		MESSAGE_END();
+	}
+
 	if ( m_flC4Blow <= gpGlobals->time )
 	{
+		// Beta 5.0 (leak): the bomb target the C4 was planted in is used
+		if ( m_pentBombTarget )
+		{
+			CBaseEntity *pBombTarget = CBaseEntity::Instance( m_pentBombTarget );	// name ours
+			if ( pBombTarget )
+				pBombTarget->Use( CBaseEntity::Instance( pev->owner ), this, USE_TOGGLE, 0 );
+		}
+
 		if ( pev->waterlevel == 0 )
 			SetThink( Detonate2 );
 		else
 			UTIL_Remove( this );
 	}
 
-	if ( m_fStartDefuse == TRUE && m_flDefuseDone <= gpGlobals->time )
+	// Beta 5.0 (leak): the defuser must keep using the C4 (CGrenade::Use); he may
+	// move, crouch or not, and needs no kit
+	if ( m_fStartDefuse == true && m_pDefuser )
 	{
-		if ( m_pDefuser )
+		if ( m_flDefuseDone > gpGlobals->time )
 		{
-			Vector vecDist = pev->origin - m_pDefuser->pev->origin;	// name ours
-
-			if ( vecDist.Length() < 64 && m_pDefuser->pev->deadflag == DEAD_NO && FBitSet( m_pDefuser->pev->flags, FL_DUCKING ) )
+			if ( m_flNextDefuseCheck < gpGlobals->time )
 			{
-				Broadcast( "BOMBDEF" );
-				EMIT_SOUND(ENT(m_pDefuser->pev), CHAN_WEAPON, "weapons/c4_disarmed.wav", 1.0, ATTN_NORM);
-				UTIL_Remove( this );
-				m_fC4Done = TRUE;
-				((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
+				// he let go: the progress bar goes and the defusing stops
+				MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, m_pDefuser->pev );
+					WRITE_BYTE( 0 );
+				MESSAGE_END();
+
+				m_pDefuser = NULL;
+				m_fStartDefuse = false;
+				m_flDefuseDone = 0;
 			}
 		}
-
-		m_pDefuser = NULL;
-		m_fStartDefuse = false;
+		else if ( m_pDefuser->pev->deadflag == DEAD_NO )
+		{
+			Broadcast( "BOMBDEF" );
+			EMIT_SOUND(ENT(m_pDefuser->pev), CHAN_WEAPON, "weapons/c4_disarmed.wav", 1.0, ATTN_NORM);
+			UTIL_Remove( this );
+			m_fC4Done = TRUE;
+			((CHalfLifeMultiplay *)g_pGameRules)->m_fBombDefused = true;
+			((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
+			m_pDefuser = NULL;
+			m_fStartDefuse = false;
+		}
 	}
 }
 
 
 //
 // Counter-Strike Beta 4.0: a ducking counter-terrorist with a defuser who
-// touches the planted C4 starts defusing it (5 seconds)
-//
+// touches the planted C4 starts defusing it (5 seconds).
+// Beta 5.0 (leak): touching the planted C4 does nothing (Beta 4.0 and 4.1: a
+// crouching CT with a defuser defused it, Beta 4.1: a crouching terrorist took
+// it back away from the bomb targets); it is used to defuse it
 void CGrenade::C4Touch( CBaseEntity *pOther )
 {
-	// Beta 4.1: no longer passes over the owner
-	if ( pOther && FBitSet( pOther->pev->flags, FL_DUCKING ) && pOther->IsPlayer() == TRUE )
-	{
-		CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pOther->pev );	// name ours
-
-		if ( pPlayer->m_iTeam == TEAM_TERRORIST )
-		{
-			// Beta 4.1: a terrorist picks up a bomb that lies more than 256
-			// units from every info_bomb_target
-			CBaseEntity *pTarget = NULL;	// name ours
-
-			while ( (pTarget = UTIL_FindEntityByClassname( pTarget, "info_bomb_target" )) != NULL )
-			{
-				if ( (pTarget->pev->origin - pev->origin).Length() < 256 )
-					return;
-			}
-
-			pPlayer->m_fHasC4 = true;
-			MESSAGE_BEGIN( MSG_ONE, gmsgGiveItem, NULL, pPlayer->pev );
-				WRITE_BYTE( 0 );
-			MESSAGE_END();
-			pPlayer->pev->body = 1;
-			EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/kevlar.wav", 1, ATTN_NORM );
-			MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
-				WRITE_STRING( STRING(pev->classname) );
-			MESSAGE_END();
-			UTIL_Remove( this );
-		}
-		else if ( pPlayer->m_iTeam == TEAM_CT && pPlayer->m_fHasDefuser == TRUE && !m_fStartDefuse )
-		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Defusing bomb...<5 seconds>" );
-			EMIT_SOUND(ENT(pPlayer->pev), CHAN_ITEM, "weapons/c4_disarm.wav", 1.0, ATTN_NORM);
-			m_pDefuser = pOther;
-			m_fStartDefuse = TRUE;
-			m_flDefuseDone = gpGlobals->time + 5.0;
-		}
-	}
 }
 
 

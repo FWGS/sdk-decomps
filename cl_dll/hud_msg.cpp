@@ -24,14 +24,20 @@
 
 int CHud :: MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf )
 {
-	BEGIN_READ( pbuf, iSize );
-	READ_BYTE();
+	ASSERT( iSize == 0 );
+
+	// clear all hud data
+	HUDLIST *pList = m_pHudList;
+
+	while ( pList )
+	{
+		if ( pList->p )
+			pList->p->Reset();
+		pList = pList->pNext;
+	}
 
 	// reset sensitivity
 	m_flMouseSensitivity = 0;
-
-	// restart the round timer
-	m_Health.m_flRoundStart = m_Health.m_flDrawTime;
 
 	// reset concussion effect
 	m_iConcussionEffect = 0;
@@ -91,9 +97,34 @@ int CHud :: MsgFunc_Concuss( const char *pszName, int iSize, void *pbuf )
 	BEGIN_READ( pbuf, iSize );
 	m_iConcussionEffect = READ_BYTE();
 	if (m_iConcussionEffect)
-		this->m_StatusIcons.EnableIcon("dmg_concuss",255,160,0);
+		this->m_StatusIcons.EnableIcon("dmg_concuss",255,160,0,false);
 	else
 		this->m_StatusIcons.DisableIcon("dmg_concuss");
+	return 1;
+}
+
+int CHud :: MsgFunc_ReloadSound( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+
+	BYTE vol = READ_BYTE();	// name ours
+	BYTE type = READ_BYTE();	// name ours
+
+	switch ( type )
+	{
+	case 0:
+		PlaySound( "weapons/generic_shot_reload.wav", vol / 255.0f );
+		break;
+
+	case 1:
+		PlaySound( "weapons/generic_reload.wav", vol / 255.0f );
+		break;
+
+	default:
+		PlaySound( "weapons/generic_reload.wav", vol / 255.0f );
+		break;
+	}
+
 	return 1;
 }
 

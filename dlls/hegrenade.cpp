@@ -35,7 +35,7 @@ class CHEGrenade : public CBasePlayerWeapon
 public:
 	void Spawn( void );
 	void Precache( void );
-	int iItemSlot( void ) { return 1; }
+	int iItemSlot( void ) { return 4; }
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
@@ -45,6 +45,8 @@ public:
 	void WeaponIdle( void );
 	float m_flStartThrow;
 	float m_flReleaseThrow;
+	float GetMaxSpeed( void ) { return 260; }	// Beta 5.0 (leak): Linux symbol
+	BOOL CanDrop( void ) { return FALSE; }		// Beta 5.0 (leak): Linux symbol
 };
 LINK_ENTITY_TO_CLASS( weapon_hegrenade, CHEGrenade );
 
@@ -84,7 +86,7 @@ int CHEGrenade::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
-	p->iSlot = 0;
+	p->iSlot = 3;
 	p->iPosition = 1;
 	p->iId = m_iId = WEAPON_HEGRENADE;
 	p->iWeight = HEGRENADE_WEIGHT;
@@ -97,7 +99,6 @@ int CHEGrenade::GetItemInfo(ItemInfo *p)
 BOOL CHEGrenade::Deploy( )
 {
 	m_flReleaseThrow = -1;
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 260 );
 	return DefaultDeploy( "models/v_hegrenade.mdl", "models/p_hegrenade.mdl", HEGRENADE_DEPLOY, "crowbar" );
 }
 
@@ -116,7 +117,6 @@ void CHEGrenade::Holster( )
 		m_pPlayer->pev->weapons &= ~(1<<WEAPON_HEGRENADE);
 		SetThink( DestroyItem );
 		pev->nextthink = gpGlobals->time + 0.1;
-		m_pPlayer->m_iHEGrenades = 0;
 	}
 
 	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "common/null.wav", 1.0, ATTN_NORM);
@@ -145,7 +145,7 @@ void CHEGrenade::WeaponIdle( void )
 
 	if (m_flStartThrow)
 	{
-		m_pPlayer->Radio( "FIREINHOLE" );
+		m_pPlayer->Radio( "%!MRAD_FIREINHOLE", "Fire in the hole!\n" );	// Beta 5.0 (leak): the sentence and the chat text
 
 		Vector angThrow = m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle;
 
@@ -178,7 +178,6 @@ void CHEGrenade::WeaponIdle( void )
 		m_flTimeWeaponIdle = gpGlobals->time + 0.75;
 
 		m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]--;
-		m_pPlayer->m_iHEGrenades--;
 
 		if ( !m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] )
 		{
@@ -220,7 +219,8 @@ void CHEGrenade::WeaponIdle( void )
 		}
 		else
 		{
-			iAnim = HEGRENADE_IDLE;
+			// sic: iAnim unset here, as the flashbang's (Beta 4.0 set HEGRENADE_IDLE);
+			// retail sends whatever its stack slot holds
 			m_flTimeWeaponIdle = gpGlobals->time + 75.0 / 30.0;
 		}
 

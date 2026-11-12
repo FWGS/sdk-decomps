@@ -39,11 +39,11 @@ RSC=rc.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir ".\Releasemp"
+# PROP Output_Dir ""
 # PROP Intermediate_Dir ".\Releasemp"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /G5 /MT /W3 /GX /Zi /O2 /Ob0 /I "..\engine" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "VALVE_DLL" /YX /FD /c
+# ADD CPP /nologo /G5 /MT /W3 /GX /O2 /Ob0 /I "..\engine" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "VALVE_DLL" /YX /FD /c
 # SUBTRACT CPP /Fr
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -54,12 +54,12 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /dll /machine:I386
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:windows /dll /map /debug /machine:I386 /def:".\mp.def"
+# ADD LINK32 user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:windows /dll /map /debug /machine:I386 /def:".\mp.def" /incremental:no
 # SUBTRACT LINK32 /profile
 # Begin Custom Build - Copying to \half-life\mp\dlls
-TargetPath=.\Releasemp\mp.dll
+TargetPath=.\mp.dll
 TargetName=mp
-InputPath=.\Releasemp\mp.dll
+InputPath=.\mp.dll
 SOURCE="$(InputPath)"
 
 "$(TargetName)" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -191,6 +191,10 @@ SOURCE=.\buttons.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\c4.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\cbase.cpp
 # End Source File
 # Begin Source File
@@ -279,6 +283,10 @@ SOURCE=.\hegrenade.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\hintmessage.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\hornet.cpp
 # End Source File
 # Begin Source File
@@ -328,6 +336,10 @@ SOURCE=.\mpstubb.cpp
 # Begin Source File
 
 SOURCE=.\multiplay_gamerules.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\observer.cpp
 # End Source File
 # Begin Source File
 
@@ -395,10 +407,6 @@ SOURCE=.\subs.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\teamplay_gamerules.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\tmp.cpp
 # End Source File
 # Begin Source File
@@ -424,6 +432,10 @@ SOURCE=.\world.cpp
 # Begin Source File
 
 SOURCE=.\xen.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\xm1014.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -495,6 +507,10 @@ SOURCE=.\gamerules.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\hintmessage.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\hornet.h
 # End Source File
 # Begin Source File
@@ -516,6 +532,10 @@ SOURCE=.\monsters.h
 # Begin Source File
 
 SOURCE=.\nodes.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\observer.h
 # End Source File
 # Begin Source File
 

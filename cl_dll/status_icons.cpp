@@ -36,6 +36,7 @@ int CHudStatusIcons::Init( void )
 
 int CHudStatusIcons::VidInit( void )
 {
+	m_iCrossWidth = gHUD.GetSpriteWidth( gHUD.GetSpriteIndex( "cross" ) );
 
 	return 1;
 }
@@ -44,23 +45,34 @@ void CHudStatusIcons::Reset( void )
 {
 	memset( m_IconList, 0, sizeof m_IconList );
 	m_iFlags &= ~HUD_ACTIVE;
+	m_bFlashOn = 1;
+	m_flFlashTime = 0;
 }
 
 // Draw status icons along the left-hand side of the screen
 int CHudStatusIcons::Draw( float flTime )
 {
 	// find starting position to draw from, along right-hand side of screen
-	int x = 5;
+	int x = m_iCrossWidth / 2;
 	int y = ScreenHeight / 2;
 	
 	// loop through icon list, and draw any valid icons drawing up from the middle of screen
 	for ( int i = 0; i < MAX_ICONSPRITES; i++ )
 	{
+		if ( flTime > m_flFlashTime )
+		{
+			m_flFlashTime = flTime + 0.1;
+			m_bFlashOn = 1 - m_bFlashOn;
+		}
+
 		if ( m_IconList[i].spr )
 		{
 			y -= ( m_IconList[i].rc.bottom - m_IconList[i].rc.top ) + 5;
 			
-			SPR_Set( m_IconList[i].spr, m_IconList[i].r, m_IconList[i].g, m_IconList[i].b );
+			if ( !m_bFlashOn && m_IconList[i].bFlash )
+				SPR_Set( m_IconList[i].spr, 250, 0, 0 );
+			else
+				SPR_Set( m_IconList[i].spr, m_IconList[i].r, m_IconList[i].g, m_IconList[i].b );
 			SPR_DrawAdditive( 0, x, y, &m_IconList[i].rc );
 		}
 	}
@@ -86,7 +98,7 @@ int CHudStatusIcons::MsgFunc_StatusIcon( const char *pszName, int iSize, void *p
 		int r = READ_BYTE();
 		int g = READ_BYTE();
 		int b = READ_BYTE();
-		EnableIcon( pszIconName, r, g, b );
+		EnableIcon( pszIconName, r, g, b, ShouldEnable == 2 );
 		m_iFlags |= HUD_ACTIVE;
 	}
 	else
@@ -98,7 +110,7 @@ int CHudStatusIcons::MsgFunc_StatusIcon( const char *pszName, int iSize, void *p
 }
 
 // add the icon to the icon list, and set it's drawing color
-void CHudStatusIcons::EnableIcon( char *pszIconName, unsigned char red, unsigned char green, unsigned char blue )
+void CHudStatusIcons::EnableIcon( char *pszIconName, unsigned char red, unsigned char green, unsigned char blue, bool bFlash )
 {
 	// check to see if the sprite is in the current list
 	for ( int i = 0; i < MAX_ICONSPRITES; i++ )
@@ -131,6 +143,7 @@ void CHudStatusIcons::EnableIcon( char *pszIconName, unsigned char red, unsigned
 	m_IconList[i].r = red;
 	m_IconList[i].g = green;
 	m_IconList[i].b = blue;
+	m_IconList[i].bFlash = bFlash;
 	strcpy( m_IconList[i].szSpriteName, pszIconName );
 }
 

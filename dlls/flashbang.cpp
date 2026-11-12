@@ -37,7 +37,7 @@ class CFlashbang : public CBasePlayerWeapon
 public:
 	void Spawn( void );
 	void Precache( void );
-	int iItemSlot( void ) { return 1; }
+	int iItemSlot( void ) { return 4; }
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
@@ -47,6 +47,8 @@ public:
 	void WeaponIdle( void );
 	float m_flStartThrow;
 	float m_flReleaseThrow;
+	float GetMaxSpeed( void ) { return 260; }	// Beta 5.0 (leak): Linux symbol
+	BOOL CanDrop( void ) { return FALSE; }		// Beta 5.0 (leak): Linux symbol
 };
 LINK_ENTITY_TO_CLASS( weapon_flashbang, CFlashbang );
 
@@ -85,7 +87,7 @@ int CFlashbang::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
-	p->iSlot = 0;
+	p->iSlot = 3;
 	p->iPosition = 2;
 	p->iId = m_iId = WEAPON_FLASHBANG;
 	p->iWeight = FLASHBANG_WEIGHT;
@@ -98,7 +100,6 @@ int CFlashbang::GetItemInfo(ItemInfo *p)
 BOOL CFlashbang::Deploy( )
 {
 	m_flReleaseThrow = -1;
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 260 );
 	return DefaultDeploy( "models/v_flashbang.mdl", "models/p_flashbang.mdl", FLASHBANG_DEPLOY, "crowbar" );
 }
 
@@ -117,7 +118,6 @@ void CFlashbang::Holster( )
 		m_pPlayer->pev->weapons &= ~(1<<WEAPON_FLASHBANG);
 		SetThink( DestroyItem );
 		pev->nextthink = gpGlobals->time + 0.1;
-		m_pPlayer->m_iFlashBangs = 0;
 	}
 
 	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "common/null.wav", 1.0, ATTN_NORM);
@@ -146,7 +146,7 @@ void CFlashbang::WeaponIdle( void )
 
 	if (m_flStartThrow)
 	{
-		m_pPlayer->Radio( "FIREINHOLE" );	// Beta 4.0: back ("automatic flashbang .wav added back")
+		m_pPlayer->Radio( "%!MRAD_FIREINHOLE", "Fire in the hole!\n" );	// Beta 4.0: back ("automatic flashbang .wav added back"); Beta 5.0 (leak): the sentence and the chat text
 
 		Vector angThrow = m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle;
 
@@ -183,7 +183,6 @@ void CFlashbang::WeaponIdle( void )
 		m_flTimeWeaponIdle = gpGlobals->time + 0.75;
 
 		m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]--;
-		m_pPlayer->m_iFlashBangs--;
 
 		if ( !m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] )
 		{
@@ -225,7 +224,8 @@ void CFlashbang::WeaponIdle( void )
 		}
 		else
 		{
-			iAnim = FLASHBANG_IDLE;	// Beta 4.0 (Beta 3.x left it unset here)
+			// sic: iAnim unset here, as in Beta 3.x (Beta 4.0 set FLASHBANG_IDLE);
+			// retail sends whatever its stack slot holds
 			m_flTimeWeaponIdle = gpGlobals->time + 75.0 / 30.0;
 		}
 

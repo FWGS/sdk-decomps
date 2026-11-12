@@ -35,6 +35,7 @@ public:
 	void Holster( void );
 	int m_iSwing;
 	TraceResult m_trHit;
+	float GetMaxSpeed( void ) { return 200; }	// Beta 5.0 (leak): Linux symbol
 };
 LINK_ENTITY_TO_CLASS( weapon_shield, CShield );
 
@@ -85,7 +86,6 @@ int CShield::GetItemInfo(ItemInfo *p)
 
 BOOL CShield::Deploy( )
 {
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 200 );
 	return DefaultDeploy( "models/v_knife.mdl", "models/p_shield.mdl", SHIELD_DRAW, "shield" );
 }
 

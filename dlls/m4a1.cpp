@@ -33,7 +33,7 @@ class CM4A1 : public CBasePlayerWeapon
 public:
 	void Spawn( void );
 	void Precache( void );
-	int iItemSlot( void ) { return 4; }
+	int iItemSlot( void ) { return 1; }
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
@@ -42,6 +42,7 @@ public:
 	BOOL Deploy( void );
 	void Reload( void );
 	void WeaponIdle( void );
+	float GetMaxSpeed( void ) { if ( m_pPlayer->m_iFOV != 90 ) return 200; return 240; }	// Beta 5.0 (leak): Linux symbol
 	int m_iShell;
 	BOOL m_fEjectShell;		// the shot throws a shell; flips with every shot
 };
@@ -81,8 +82,8 @@ int CM4A1::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = M4A1_MAX_CLIP;
-	p->iSlot = 3;
-	p->iPosition = 1;
+	p->iSlot = 0;
+	p->iPosition = 6;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_M4A1;
 	p->iWeight = M4A1_WEIGHT;
@@ -95,7 +96,6 @@ BOOL CM4A1::Deploy( )
 	m_pPlayer->m_flAccuracy = 0;
 	m_fDelayFire = true;
 	m_fEjectShell = 1;
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 240 );
 	return DefaultDeploy( "models/v_m4a1.mdl", "models/p_m4a1.mdl", M4A1_DRAW, "silenced_rifle" );
 }
 
@@ -227,6 +227,12 @@ void CM4A1::Reload( void )
 	int iResult;
 
 	iResult = DefaultReload( M4A1_MAX_CLIP, M4A1_RELOAD, 2.2 );
+	// Beta 5.0 (leak): a reload takes the zoom off. Tested on its own, as
+	// written here: with the test inside the idle block below VC6 keeps a
+	// zero in eax for the three resets, retail stores them as immediates
+	if (iResult && m_pPlayer->m_iFOV != 90)
+		SecondaryAttack();
+
 	if (iResult)
 	{
 		m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );

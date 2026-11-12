@@ -30,7 +30,7 @@ class CAWP : public CBasePlayerWeapon
 public:
 	void Spawn( void );
 	void Precache( void );
-	int iItemSlot( void ) { return 5; }
+	int iItemSlot( void ) { return 1; }
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
@@ -39,6 +39,7 @@ public:
 	BOOL Deploy( void );
 	void Reload( void );
 	void WeaponIdle( void );
+	float GetMaxSpeed( void ) { if ( m_pPlayer->m_iFOV != 90 ) return 160; return 200; }	// Beta 5.0 (leak): Linux symbol; slower zoomed in
 	int m_iShell;
 };
 LINK_ENTITY_TO_CLASS( weapon_awp, CAWP );
@@ -83,8 +84,8 @@ int CAWP::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = AWP_MAX_CLIP;
-	p->iSlot = 4;
-	p->iPosition = 1;
+	p->iSlot = 0;
+	p->iPosition = 2;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_AWP;
 	p->iWeight = AWP_WEIGHT;
@@ -94,7 +95,6 @@ int CAWP::GetItemInfo(ItemInfo *p)
 
 BOOL CAWP::Deploy( )
 {
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 225 );
 	return DefaultDeploy( "models/v_awp.mdl", "models/p_awp.mdl", AWP_DRAW, "bow" );
 }
 
@@ -105,21 +105,19 @@ void CAWP::SecondaryAttack( void )
 	// Beta 4.0: slower while zoomed in
 	if (m_pPlayer->m_iFOV == 90)
 	{
-		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 150 );
 		m_pPlayer->m_iFOV = 45;
 	}
 	else if (m_pPlayer->m_iFOV == 45)
 	{
 		m_pPlayer->m_iFOV = 10;
-		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 150 );
 	}
 	else if (m_pPlayer->m_iFOV == 10)
 	{
-		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 225 );
 		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_awp.mdl");
 		m_pPlayer->m_iFOV = 90;
 	}
 
+	m_pPlayer->ResetMaxSpeed();	// Beta 5.0 (leak): GetMaxSpeed decides
 	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/zoom.wav", 1, ATTN_NORM);
 	m_flNextSecondaryAttack = gpGlobals->time + 0.3;
 }
@@ -127,13 +125,13 @@ void CAWP::SecondaryAttack( void )
 void CAWP::PrimaryAttack( void )
 {
 	if (m_pPlayer->pev->velocity.Length2D() > 170)
-		AWPFire( 0.15, 2.2, FALSE );
+		AWPFire( 0.15, 1.9, FALSE );
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		AWPFire( 0.2, 2.2, FALSE );
+		AWPFire( 0.2, 1.9, FALSE );
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
-		AWPFire( 0, 2.2, FALSE );
+		AWPFire( 0, 1.9, FALSE );
 	else
-		AWPFire( 0.007, 2.2, FALSE );
+		AWPFire( 0.007, 1.9, FALSE );
 }
 
 void CAWP::AWPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
@@ -206,16 +204,15 @@ void CAWP::Reload( void )
 
 	iResult = DefaultReload( AWP_MAX_CLIP, AWP_RELOAD, 2.5 );
 
-	if (m_pPlayer->m_iFOV != 90)
-	{
-		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_awp.mdl");
-		m_pPlayer->m_fResumeZoom = TRUE;
-		m_pPlayer->m_iLastZoom = m_pPlayer->m_iFOV;
-		m_pPlayer->m_iFOV = 90;
-	}
-
 	if (iResult)
 	{
+		// Beta 5.0 (leak): zoomed in, the last zoom step takes the scope off
+		if (m_pPlayer->m_iFOV != 90)
+		{
+			m_pPlayer->m_iFOV = 10;
+			SecondaryAttack();
+		}
+
 		m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
 	}
 }

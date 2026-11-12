@@ -30,7 +30,7 @@
 #include "gamerules.h"
 
 extern int gmsgItemPickup;
-extern int gmsgGiveItem;	// Beta 4.0 (player.cpp; Linux symbol)
+extern int gmsgArmorType;	// Beta 5.0 (leak) (player.cpp; Linux symbol)
 
 class CWorldItem : public CBaseEntity
 {
@@ -362,6 +362,11 @@ class CItemKevlar : public CItem
 			WRITE_STRING( STRING(pev->classname) );
 		MESSAGE_END();
 
+		// Beta 5.0 (leak): the HUD shows the armour without a helmet
+		MESSAGE_BEGIN( MSG_ONE, gmsgArmorType, NULL, pPlayer->pev );
+			WRITE_BYTE( 0 );
+		MESSAGE_END();
+
 		return TRUE;		
 	}
 };
@@ -393,6 +398,11 @@ class CItemAssaultSuit : public CItem
 			WRITE_STRING( STRING(pev->classname) );
 		MESSAGE_END();
 
+		// Beta 5.0 (leak): the HUD shows the armour with the helmet
+		MESSAGE_BEGIN( MSG_ONE, gmsgArmorType, NULL, pPlayer->pev );
+			WRITE_BYTE( 1 );
+		MESSAGE_END();
+
 		return TRUE;		
 	}
 };
@@ -400,48 +410,11 @@ class CItemAssaultSuit : public CItem
 LINK_ENTITY_TO_CLASS( item_assaultsuit, CItemAssaultSuit );
 
 
-// Counter-Strike Beta 4.0 (class names from the Linux symbols): the backpack
-// a terrorist carries the C4 in, the thigh pack a counter-terrorist carries
-// the defuser in. Picked up, each sets its flag, tells the client (GiveItem
-// 0 the C4, 1 the defuser) and shows on the player model (body 1).
-class CItemBackPack : public CItem
-{
-	void Spawn( void )
-	{ 
-		Precache( );
-		SET_MODEL(ENT(pev), "models/w_backpack.mdl");
-		CItem::Spawn( );
-	}
-	void Precache( void )
-	{
-		PRECACHE_MODEL ("models/w_backpack.mdl");
-	}
-	BOOL MyTouch( CBasePlayer *pPlayer )
-	{
-		if ( pPlayer->m_iTeam == TEAM_TERRORIST )
-		{
-			pPlayer->m_fHasC4 = true;
-
-			MESSAGE_BEGIN( MSG_ONE, gmsgGiveItem, NULL, pPlayer->pev );
-				WRITE_BYTE( 0 );
-			MESSAGE_END();
-
-			pPlayer->pev->body = 1;
-			EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/kevlar.wav", 1, ATTN_NORM );
-
-			MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
-				WRITE_STRING( STRING(pev->classname) );
-			MESSAGE_END();
-
-			return TRUE;
-		}
-		return FALSE;
-	}
-};
-
-LINK_ENTITY_TO_CLASS( item_backpack, CItemBackPack );
-
-
+// Counter-Strike Beta 4.0 (class name from the Linux symbols): the thigh pack a
+// counter-terrorist carries the defuser in. Picked up, it sets the flag and
+// shows on the player model (body 1). Beta 5.0 (leak): the C4 is a weapon, so
+// Beta 4.0's backpack (item_backpack, CItemBackPack) is gone; the client learns
+// of the defuser through SetBombIcon (GiveItem is gone).
 class CItemThighPack : public CItem
 {
 	void Spawn( void )
@@ -459,10 +432,7 @@ class CItemThighPack : public CItem
 		if ( pPlayer->m_iTeam == TEAM_CT )
 		{
 			pPlayer->m_fHasDefuser = true;
-
-			MESSAGE_BEGIN( MSG_ONE, gmsgGiveItem, NULL, pPlayer->pev );
-				WRITE_BYTE( 1 );
-			MESSAGE_END();
+			pPlayer->SetBombIcon( FALSE );
 
 			pPlayer->pev->body = 1;
 			EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/kevlar.wav", 1, ATTN_NORM );

@@ -313,21 +313,8 @@ CGameRules *InstallGameRules( void )
 	}
 	else
 	{
-		if ( CVAR_GET_FLOAT( "mp_teamplay" ) > 0 )
-		{
-			// teamplay
-			return new CHalfLifeMultiplay;
-		}
-		if ((int)gpGlobals->deathmatch == 1)
-		{
-			// vanilla deathmatch
-			return new CHalfLifeMultiplay;
-		}
-		else
-		{
-			// vanilla deathmatch??
-			return new CHalfLifeMultiplay;
-		}
+		// Beta 5.0 (leak): the round game whatever deathmatch says (teamplay_gamerules.cpp is gone)
+		return new CHalfLifeMultiplay;
 	}
 }
 

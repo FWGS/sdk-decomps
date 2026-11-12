@@ -58,6 +58,7 @@ public:
 	float DamageForce( float damage );
 	virtual void Killed( entvars_t *pevAttacker, int iGib );
 	virtual void PainSound ( void ) { return; };
+	virtual void ResetMaxSpeed( void ) {}	// Beta 5.0 (leak): Linux symbol; the player's speed follows his weapon
 
 	void RadiusDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType );
 	void RadiusDamage(Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType );

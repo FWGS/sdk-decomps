@@ -45,6 +45,7 @@ public:
 	void Precache( void );
 	int iItemSlot( void ) { return 2; }
 	int GetItemInfo(ItemInfo *p);
+	float GetMaxSpeed( void ) { return 260; }	// Beta 5.0 (leak): Linux symbol
 
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
@@ -111,7 +112,6 @@ int CGLOCK18::GetItemInfo(ItemInfo *p)
 BOOL CGLOCK18::Deploy( )
 {
 	m_fBurstMode = false;
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 260 );
 
 	if (RANDOM_LONG(0,1))
 		return DefaultDeploy( "models/v_glock18.mdl", "models/p_glock18.mdl", GLOCK18_DRAW, "onehanded" );
@@ -213,8 +213,9 @@ void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseBurstMo
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
 	m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
 
-	// one sound for the burst, the other for the single shot
-	if (fUseBurstMode == TRUE)
+	// one sound for the burst, the other for the single shot (Beta 5.0 leak: and
+	// for the burst's last round)
+	if (fUseBurstMode == TRUE && m_iClip > 0)
 		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/glock18-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
 	else
 		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/glock18-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);

@@ -491,7 +491,7 @@ void CBreakable::BreakTouch( CBaseEntity *pOther )
 		// play creaking sound here.
 		DamageSound();
 
-		SetThink ( Die );
+		Die();	// Beta 5.0 (leak): it breaks at once (was SetThink( Die ))
 		SetTouch( NULL );
 		
 		if ( m_flDelay == 0 )

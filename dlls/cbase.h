@@ -786,19 +786,3 @@ public:
 	void Precache( void );
 	void KeyValue( KeyValueData *pkvd );
 };
-
-// sic: a stand-in for declarations Beta 2.0 has and Beta 1.1 had not, where every
-// source file sees them; what they were the image cannot say.
-// VC5 orders some operands by the number of declarations
-// seen. With Beta 2.0's known header text (FireBullets3's tenth
-// parameter, AddAccount, BULLET_PLAYER_50AE) CFuncTrackTrain::Use, UTIL_MonstersInSphere,
-// CRestore::ReadFields and CBaseAnimating::SetSequenceBox are retail's together only
-// with 6 more numbers in a header all files include (N = 6 of 0 to 31 with a ruler
-// in this file; every other function of the project stays retail's there). The
-// enum's tag and five enumerators are those 6. Beta 4.0 (Rebuild All's .pch, the
-// count split below in weapons.h and gamerules.h): CBaseAnimating::SetSequenceBox,
-// CFuncTrackTrain::Use and CGameCounter::HitLimit, which see neither weapons.h nor
-// (but HitLimit) gamerules.h, are retail's together with 9 numbers here (8 and 10
-// fail; of 0 to 31 more only 3 and 7 serve them, and 7 breaks UTIL_TraceLine,
-// CRestore::ReadFields and CFuncTank::TankTrace).
-enum sic_declcount_b20 { SIC_DECLCOUNT_B20_0, SIC_DECLCOUNT_B20_1, SIC_DECLCOUNT_B20_2, SIC_DECLCOUNT_B20_3, SIC_DECLCOUNT_B20_4, SIC_DECLCOUNT_B20_5, SIC_DECLCOUNT_B20_6, SIC_DECLCOUNT_B20_7 };

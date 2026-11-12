@@ -36,6 +36,7 @@ typedef struct rect_s
 #define DHN_DRAWZERO 1
 #define DHN_2DIGITS  2
 #define DHN_3DIGITS  4
+#define DHN_PADZERO  8	// name ours
 #define MIN_ALPHA	 100	
 
 #define		HUDELEM_ACTIVE	1
@@ -246,30 +247,33 @@ public:
 	void InitHUDData( void );
 	int VidInit( void );
 	int Draw( float flTime );
-	int DrawPlayers( int xoffset, float listslot, int nameoffset = 0, char *team = NULL ); // returns the ypos where it finishes drawing
+	int DrawPlayers( int xoffset, float listslot, int nameoffset = 0, int team = 0 ); // returns the ypos where it finishes drawing
 	void UserCmd_ShowScores( void );
 	void UserCmd_HideScores( void );
-	void UserCmd_ShowFrags( void );
-	void UserCmd_HideFrags( void );
+	int MsgFunc_ScoreAttrib( const char *pszName, int iSize, void *pbuf );
 	int MsgFunc_ScoreInfo( const char *pszName, int iSize, void *pbuf );
 	int MsgFunc_TeamInfo( const char *pszName, int iSize, void *pbuf );
 	int MsgFunc_TeamScore( const char *pszName, int iSize, void *pbuf );
 	void DeathMsg( int killer, int victim );
 
 	enum { 
-		MAX_PLAYERS = 64,
-		MAX_TEAMS = 64,
-		MAX_TEAM_NAME = 16,
+		MAX_PLAYERS = 20,
+		MAX_TEAMS = 3,
+	};
+
+	struct player_info_t : public hud_player_info_t {	// name ours
+		bool dead;	// name ours
 	};
 
 	struct extra_player_info_t {
 		short frags;
 		short deaths;
-		char teamname[MAX_TEAM_NAME];
+		short teamnumber;	// name ours
+		int has_c4;			// name ours
 	};
 
 	struct team_info_t {
-		char name[MAX_TEAM_NAME];
+		short name;			// an index into the team names
 		short frags;
 		short deaths;
 		short ping;
@@ -277,20 +281,18 @@ public:
 		short ownteam;
 		short players;
 		int already_drawn;
-		int scores_overriden;
 	};
 
-	hud_player_info_t m_PlayerInfoList[MAX_PLAYERS+1];	   // player info from the engine
+	player_info_t m_PlayerInfoList[MAX_PLAYERS+1];	   // player info from the engine
 	extra_player_info_t m_PlayerExtraInfo[MAX_PLAYERS+1];  // additional player info sent directly to the client dll
 	team_info_t m_TeamInfo[MAX_TEAMS+1];
-
-	int m_iNumTeams;
 
 	int m_iLastKilledBy;
 	int m_fLastKillTime;
 	int m_iPlayerNum;
 	int m_iShowscoresHeld;
-	bool m_bShowFrags;		// name ours
+	int m_HUD_smallskull;	// name ours
+	int m_HUD_smallc4;		// name ours
 
 	void GetAllPlayersInfo( void );
 };
@@ -359,15 +361,16 @@ public:
 	int VidInit( void );
 	int Draw(float flTime);
 	int MsgFunc_Battery(const char *pszName,  int iSize, void *pbuf );
+	int MsgFunc_ArmorType(const char *pszName,  int iSize, void *pbuf );
 	
 private:
-	HSPRITE m_hSprite1;
-	HSPRITE m_hSprite2;
-	wrect_t *m_prc1;
-	wrect_t *m_prc2;
+	int m_HUD_suit_empty;			// name ours
+	int m_HUD_suit_full;			// name ours
+	int m_HUD_suithelmet_empty;		// name ours
+	int m_HUD_suithelmet_full;		// name ours
 	int	  m_iBat;	
 	float m_fFade;
-	int	  m_iHeight;		// width of the battery innards
+	int	  m_enArmorType;			// name ours
 };
 
 
@@ -489,7 +492,7 @@ public:
 	
 	//had to make these public so CHud could access them (to enable concussion icon)
 	//could use a friend declaration instead...
-	void EnableIcon( char *pszIconName, unsigned char red, unsigned char green, unsigned char blue );
+	void EnableIcon( char *pszIconName, unsigned char red, unsigned char green, unsigned char blue, bool bFlash );
 	void DisableIcon( char *pszIconName );
 
 private:
@@ -500,10 +503,82 @@ private:
 		HSPRITE spr;
 		wrect_t rc;
 		unsigned char r, g, b;
+		int bFlash;			// name ours
 	} icon_sprite_t;
 
+	int m_iCrossWidth;		// name ours
+	int m_bFlashOn;			// name ours
+	float m_flFlashTime;	// name ours
 	icon_sprite_t m_IconList[MAX_ICONSPRITES];
 
+};
+
+//
+//-----------------------------------------------------
+//
+class CHudMoney: public CHudBase	// name ours
+{
+public:
+	int Init( void );
+	int VidInit( void );
+	int Draw( float flTime );
+	void Reset( void );
+	int MsgFunc_Money( const char *pszName, int iSize, void *pbuf );
+	int MsgFunc_BlinkAcct( const char *pszName, int iSize, void *pbuf );
+
+private:
+	int m_HUD_dollar;		// name ours
+	int m_HUD_minus;		// name ours
+	int m_HUD_plus;			// name ours
+	int m_iMoneyCount;		// name ours
+	int m_iDelta;			// name ours
+	float m_fFade;
+	float m_fFadeDelta;		// name ours
+	int m_bShowDelta;		// name ours
+	int m_iBlinkAmt;		// name ours
+	float m_fBlinkTime;		// name ours
+};
+
+//
+//-----------------------------------------------------
+//
+class CHudRoundTimer: public CHudBase	// name ours
+{
+public:
+	int Init( void );
+	int VidInit( void );
+	int Draw( float flTime );
+	void Reset( void );
+	int MsgFunc_RoundTime( const char *pszName, int iSize, void *pbuf );
+
+private:
+	int m_HUD_timer;		// name ours
+	int m_iUnused;			// name ours
+	float m_flEndTime;		// name ours
+	float m_flRoundTime;	// name ours
+	float m_flNextToggle;	// name ours
+	int m_bPanicColor;		// name ours
+};
+
+//
+//-----------------------------------------------------
+//
+class CHudProgressBar: public CHudBase	// name ours
+{
+public:
+	int Init( void );
+	int VidInit( void );
+	int Draw( float flTime );
+	void Reset( void );
+	int MsgFunc_BarTime( const char *pszName, int iSize, void *pbuf );
+
+private:
+	float m_flEndTime;		// name ours
+	float m_flStartTime;	// name ours
+	float m_flDuration;		// name ours
+	int m_iWidth;			// name ours
+	int m_iHeight;			// name ours
+	int m_x0, m_y0, m_x1, m_y1;	// names ours
 };
 
 
@@ -538,6 +613,7 @@ public:
 
 	int m_iFontHeight;
 	int DrawHudNumber(int x, int y, int iFlags, int iNumber, int r, int g, int b );
+	int DrawHudNumber(int x, int y, int iNumber, int r, int g, int b );		// overload ours
 	int DrawHudString(int x, int y, int iMaxX, char *szString, int r, int g, int b );
 	int DrawHudStringReverse( int xpos, int ypos, int iMinX, char *szString, int r, int g, int b );
 	int DrawHudNumberString( int xpos, int ypos, int iMinX, int iNumber, int r, int g, int b );
@@ -561,6 +637,16 @@ public:
 		return m_rgrcRects[index];
 	}
 
+	int GetSpriteWidth( int index )		// name ours
+	{
+		return m_rgrcRects[index].right - m_rgrcRects[index].left;
+	}
+
+	int GetSpriteHeight( int index )	// name ours
+	{
+		return m_rgrcRects[index].bottom - m_rgrcRects[index].top;
+	}
+
 	
 	int GetSpriteIndex( const char *SpriteName );	// gets a sprite index, for use in the m_rghSprites[] array
 
@@ -580,6 +666,9 @@ public:
 	CHudAmmoSecondary	m_AmmoSecondary;
 	CHudTextMessage m_TextMessage;
 	CHudStatusIcons m_StatusIcons;
+	CHudMoney		m_Money;		// name ours
+	CHudRoundTimer	m_RoundTimer;	// name ours
+	CHudProgressBar	m_ProgressBar;	// name ours
 
 	void Init( void );
 	void VidInit( void );
@@ -598,6 +687,7 @@ public:
 	void _cdecl MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_SetFOV(const char *pszName,  int iSize, void *pbuf);
 	int  _cdecl MsgFunc_Concuss( const char *pszName, int iSize, void *pbuf );
+	int  _cdecl MsgFunc_ReloadSound( const char *pszName, int iSize, void *pbuf );
 	// Screen information
 	SCREENINFO	m_scrinfo;
 
@@ -614,3 +704,44 @@ public:
 };
 
 extern CHud gHUD;
+
+// sic: a stand-in, name ours.  The
+// leak's headers held 213 to 243 bytes more intermediate code between class CHud's inline
+// functions and util.h's CVAR_GET_FLOAT than ours: ammo.obj and health.obj place their header
+// inline functions by it.  Which text it was, the image does not say; nothing calls this.
+inline void b50leak_unknown( void )
+{
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+}

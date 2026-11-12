@@ -507,12 +507,9 @@ void CBaseDoor::DoorTouch( CBaseEntity *pOther )
 {
 	entvars_t*	pevToucher = pOther->pev;
 	
-	// Ignore touches by anything but players (Counter-Strike Beta 3.0: and hostages,
-	// not dead ones)
-	if (!FClassnameIs(pevToucher, "player") && !FClassnameIs(pevToucher, "hostage_entity"))
-		return;
-
-	if (pevToucher->deadflag == DEAD_RESPAWNABLE)
+	// Counter-Strike Beta 5.0 (leak): anything that is not dead opens it (Beta 3.0
+	// to 4.1: players and hostages that were not respawnable; the SDK: players)
+	if (pevToucher->deadflag != DEAD_NO)
 		return;
 
 	// If door has master, and it's not ready to trigger, 

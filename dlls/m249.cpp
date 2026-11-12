@@ -31,15 +31,15 @@ class CM249 : public CBasePlayerWeapon
 public:
 	void Spawn( void );
 	void Precache( void );
-	int iItemSlot( void ) { return 5; }
+	int iItemSlot( void ) { return 1; }
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
-	void SecondaryAttack( void );
 	void M249Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim );
 	BOOL Deploy( void );
 	void Reload( void );
 	void WeaponIdle( void );
+	float GetMaxSpeed( void ) { return 200; }	// Beta 5.0 (leak): Linux symbol
 	int m_iShell;
 	BOOL m_fEjectShell;		// the shot throws a shell; flips with every shot
 };
@@ -84,8 +84,8 @@ int CM249::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = M249_MAX_CLIP;
-	p->iSlot = 4;
-	p->iPosition = 5;
+	p->iSlot = 0;
+	p->iPosition = 4;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_M249;
 	p->iWeight = M249_WEIGHT;
@@ -97,13 +97,7 @@ BOOL CM249::Deploy( )
 {
 	m_pPlayer->m_flAccuracy = 0.95;
 	m_fEjectShell = 1;
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 200 );
 	return DefaultDeploy( "models/v_m249.mdl", "models/p_m249.mdl", M249_DRAW, "m249" );
-}
-
-void CM249::SecondaryAttack( void )
-{
-	M249Fire( m_pPlayer->m_flAccuracy * 0.03, 0.1, FALSE );
 }
 
 void CM249::PrimaryAttack( void )

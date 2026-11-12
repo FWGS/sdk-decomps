@@ -27,6 +27,7 @@
 #include "saverestore.h"
 #include "trains.h"			// trigger_camera has train functionality
 #include "gamerules.h"
+#include "hostage.h"	// Beta 5.0 (leak): func_hostage_rescue
 
 #define	SF_TRIGGER_PUSH_START_OFF	2//spawnflag that makes trigger_push spawn turned OFF
 #define SF_TRIGGER_HURT_TARGETONCE	1// Only fire hurt target once
@@ -1940,6 +1941,117 @@ void CTriggerTeleport :: Spawn( void )
 LINK_ENTITY_TO_CLASS( info_teleport_destination, CPointEntity );
 
 
+//=========================================================
+// Counter-Strike Beta 5.0 (leak): the map zones (class, method and entity
+// names are retail's exports and Linux symbols). A player inside a zone
+// signals it to himself every frame he touches it (CBasePlayer::m_signals,
+// read by HandleSignals): buy zone 1, bomb target 2.
+//=========================================================
+
+// func_buyzone: players of its team (pev->team 1 or 2; 0: everybody) may buy
+class CBuyZone : public CBaseTrigger
+{
+public:
+	void Spawn( void );
+	void EXPORT BuyTouch( CBaseEntity *pOther );
+};
+
+LINK_ENTITY_TO_CLASS( func_buyzone, CBuyZone );
+
+void CBuyZone::Spawn( void )
+{
+	InitTrigger();
+	SetTouch( BuyTouch );
+
+	if ( pev->team > TEAM_CT || pev->team < 0 )
+	{
+		ALERT( at_console, "Bad team number (%i) in func_buyzone\n", pev->team );
+		pev->team = 0;
+	}
+}
+
+void CBuyZone::BuyTouch( CBaseEntity *pOther )
+{
+	if ( !pOther->IsPlayer() )
+		return;
+
+	CBasePlayer *p = (CBasePlayer *)pOther;	// name ours
+
+	if ( pev->team == 0 || pev->team == p->m_iTeam )
+		p->m_signals.Signal( 1 );	// in a buy zone
+}
+
+// func_bomb_target: a terrorist carrying the C4 may plant it here; when the C4
+// goes off, it uses the zone, which fires its target
+class CBombTarget : public CBaseTrigger
+{
+public:
+	void Spawn( void );
+	void EXPORT BombTargetTouch( CBaseEntity *pOther );
+	void EXPORT BombTargetUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+};
+
+LINK_ENTITY_TO_CLASS( func_bomb_target, CBombTarget );
+
+void CBombTarget::Spawn( void )
+{
+	InitTrigger();
+	SetTouch( BombTargetTouch );
+	SetUse( BombTargetUse );
+}
+
+void CBombTarget::BombTargetTouch( CBaseEntity *pOther )
+{
+	if ( !pOther->IsPlayer() )
+		return;
+
+	CBasePlayer *p = (CBasePlayer *)pOther;	// name ours
+
+	if ( p->m_fHasC4 == true )
+	{
+		p->m_signals.Signal( 2 );	// at a bomb target
+		p->m_pentBombTarget = edict();
+	}
+}
+
+void CBombTarget::BombTargetUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	if ( FStringNull( pev->target ) )
+		return;
+
+	edict_t *pentTarget = FIND_ENTITY_BY_TARGETNAME( NULL, STRING( pev->target ) );	// name ours
+	while ( !FNullEnt( pentTarget ) )
+	{
+		CBaseEntity *pTarget = CBaseEntity::Instance( pentTarget );	// name ours
+		if ( pTarget )
+			pTarget->Use( pActivator, this, USE_TOGGLE, 0 );
+		pentTarget = FIND_ENTITY_BY_TARGETNAME( pentTarget, STRING( pev->target ) );
+	}
+}
+
+// func_hostage_rescue: a hostage that walks into it is rescued (CHostage::IdleThink)
+class CHostageRescue : public CBaseTrigger
+{
+public:
+	void Spawn( void );
+	void EXPORT HostageRescueTouch( CBaseEntity *pOther );
+};
+
+LINK_ENTITY_TO_CLASS( func_hostage_rescue, CHostageRescue );
+
+void CHostageRescue::Spawn( void )
+{
+	InitTrigger();
+	SetTouch( HostageRescueTouch );
+}
+
+void CHostageRescue::HostageRescueTouch( CBaseEntity *pOther )
+{
+	if ( !strcmp( STRING( pOther->pev->classname ), "hostage_entity" ) )
+		((CHostage *)pOther)->m_fRescued = TRUE;
+}
+
+
 
 class CTriggerSave : public CBaseTrigger
 {
@@ -2245,6 +2357,9 @@ void CTriggerCamera::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 	if (m_state == 0)
 	{
 		m_flReturnTime = gpGlobals->time;
+		// Counter-Strike Beta 5.0 (leak): the player gets his speed back
+		if ( pActivator->IsPlayer() )
+			((CBasePlayer *)pActivator)->ResetMaxSpeed();
 		return;
 	}
 	if ( !pActivator || !pActivator->IsPlayer() )
@@ -2272,6 +2387,10 @@ void CTriggerCamera::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 	{
 		return;
 	}
+
+	// Counter-Strike Beta 5.0 (leak): the player stands still while the camera runs
+	if ( pActivator->IsPlayer() )
+		g_engfuncs.pfnSetClientMaxspeed( ENT( pActivator->pev ), 0.001 );
 
 
 	if (FBitSet (pev->spawnflags, SF_CAMERA_PLAYER_TAKECONTROL ) )
@@ -2335,6 +2454,7 @@ void CTriggerCamera::FollowTarget( )
 		{
 			SET_VIEW( m_hPlayer->edict(), m_hPlayer->edict() );
 			((CBasePlayer *)((CBaseEntity *)m_hPlayer))->EnableControl(TRUE);
+			((CBasePlayer *)((CBaseEntity *)m_hPlayer))->ResetMaxSpeed();	// Counter-Strike Beta 5.0 (leak)
 		}
 		SUB_UseTargets( this, USE_TOGGLE, 0 );
 		pev->avelocity = Vector( 0, 0, 0 );

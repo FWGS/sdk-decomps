@@ -30,11 +30,11 @@ class CTMP : public CBasePlayerWeapon
 public:
 	void Spawn( void );
 	void Precache( void );
-	int iItemSlot( void ) { return 4; }
+	int iItemSlot( void ) { return 1; }
 	int GetItemInfo(ItemInfo *p);
+	float GetMaxSpeed( void ) { return 260; }	// Beta 5.0 (leak): Linux symbol
 
 	void PrimaryAttack( void );
-	void SecondaryAttack( void );
 	void TMPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim );
 	BOOL Deploy( void );
 	void Reload( void );
@@ -78,8 +78,8 @@ int CTMP::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = TMP_MAX_CLIP;
-	p->iSlot = 3;
-	p->iPosition = 3;
+	p->iSlot = 0;
+	p->iPosition = 11;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_TMP;
 	p->iWeight = TMP_WEIGHT;
@@ -92,28 +92,22 @@ BOOL CTMP::Deploy( )
 	m_pPlayer->m_flAccuracy = 0.95;
 	m_fEjectShell = 1;
 	m_fDelayFire = false;
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 260 );
 	return DefaultDeploy( "models/v_tmp.mdl", "models/p_tmp.mdl", TMP_DRAW, "tmp" );
-}
-
-void CTMP::SecondaryAttack( void )
-{
-	TMPFire( m_pPlayer->m_flAccuracy * 0.04, 0.07, FALSE );
 }
 
 void CTMP::PrimaryAttack( void )
 {
-	TMPFire( m_pPlayer->m_flAccuracy * 0.04, 0.07, FALSE );
+	TMPFire( m_pPlayer->m_flAccuracy * 0.03, 0.07, FALSE );
 }
 
 void CTMP::TMPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 {
 	// the spread grows with the cube of the shots fired
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 220) + 0.5;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.55;
 
-	if (m_pPlayer->m_flAccuracy > 1.3)
-		m_pPlayer->m_flAccuracy = 1.3;
+	if (m_pPlayer->m_flAccuracy > 1.4)
+		m_pPlayer->m_flAccuracy = 1.4;
 
 	if (m_iClip <= 0)
 	{
@@ -174,7 +168,7 @@ void CTMP::TMPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		vecAiming = gpGlobals->v_forward;
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 22, 0.8 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 20, 0.85 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -189,9 +183,9 @@ void CTMP::TMPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
 		KickBack( 1, 0.4, 0.25, 0.035, 3.5, 2.5, 7 );
 	else if ( FBitSet(m_pPlayer->pev->flags, FL_DUCKING) )
-		KickBack( 0.55, 0.3, 0.125, 0.025, 2.5, 2, 10 );
+		KickBack( 0.7, 0.35, 0.125, 0.025, 2.5, 2, 10 );
 	else
-		KickBack( 0.6, 0.35, 0.15, 0.025, 2.75, 2.25, 9 );
+		KickBack( 0.725, 0.375, 0.15, 0.025, 2.75, 2.25, 9 );
 }
 
 

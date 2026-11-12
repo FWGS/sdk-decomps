@@ -314,7 +314,7 @@ int CHalfLifeRules::DeadPlayerAmmo( CBasePlayer *pPlayer )
 
 //=========================================================
 //=========================================================
-int CHalfLifeRules::PlayerRelationship( CBaseEntity *pPlayer, CBaseEntity *pTarget )
+int CHalfLifeRules::PlayerRelationship( CBasePlayer *pPlayer, CBaseEntity *pTarget )
 {
 	// why would a single player in half life need this? 
 	return GR_NOTTEAMMATE;

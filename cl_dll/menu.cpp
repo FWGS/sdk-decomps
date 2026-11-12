@@ -59,6 +59,55 @@ int CHudMenu :: VidInit( void )
 	return 1;
 }
 
+// the colour and position of the menu text, set by the escape tokens in the menu string (names ours)
+int menu_r, menu_g, menu_b, menu_x, menu_ralign;
+
+// reads an escape token (a backslash and one letter) and returns the text after it (name ours)
+static char *ParseEscapeToken( char *token )
+{
+	if ( *token != '\\' )
+		return token;
+
+	token++;
+
+	switch ( *token )
+	{
+	case '\0':
+		return token;
+
+	case 'w':
+		menu_r = 255;
+		menu_g = 255;
+		menu_b = 255;
+		break;
+
+	case 'd':
+		menu_r = 100;
+		menu_g = 100;
+		menu_b = 100;
+		break;
+
+	case 'y':
+		menu_r = 255;
+		menu_g = 210;
+		menu_b = 64;
+		break;
+
+	case 'r':
+		menu_r = 210;
+		menu_g = 24;
+		menu_b = 0;
+		break;
+
+	case 'R':
+		menu_x = 299;
+		menu_ralign = TRUE;
+		break;
+	}
+
+	return ++token;
+}
+
 int CHudMenu :: Draw( float flTime )
 {
 	// check for if menu is set to disappear
@@ -88,18 +137,47 @@ int CHudMenu :: Draw( float flTime )
 
 	// center it
 	int y = (ScreenHeight/2) - ((nlc/2)*12) - 40; // make sure it is above the say text
-	int x = 20;
 
-	i = 0;
-	while ( i < MAX_MENU_STRING && g_szMenuString[i] != '\0' )
+	menu_r = 255;
+	menu_g = 255;
+	menu_b = 255;
+	menu_x = 20;
+	menu_ralign = FALSE;
+
+	char *sptr = g_szMenuString;	// name ours
+
+	while ( *sptr != '\0' )
 	{
-		gHUD.DrawHudString( x, y, 320, g_szMenuString + i, 255, 255, 255 );
-		y += 12;
+		if ( *sptr == '\\' )
+		{
+			sptr = ParseEscapeToken( sptr );
+		}
+		else if ( *sptr == '\n' )
+		{
+			menu_ralign = FALSE;
+			menu_x = 20;
+			y += 12;
 
-		while ( i < MAX_MENU_STRING && g_szMenuString[i] != '\0' && g_szMenuString[i] != '\n' )
-			i++;
-		if ( g_szMenuString[i] == '\n' )
-			i++;
+			sptr++;
+		}
+		else
+		{
+			if ( menu_ralign )
+			{
+				// right-aligned text is drawn up to the end of the line; it does not parse escape tokens
+				menu_x = gHUD.DrawHudStringReverse( menu_x, y, 0, sptr, menu_r, menu_g, menu_b );
+
+				while ( *sptr != '\0' && *sptr != '\n' )
+					sptr++;
+			}
+			else
+			{
+				menu_x = gHUD.DrawHudString( menu_x, y, 320, sptr, menu_r, menu_g, menu_b );
+
+				while ( *sptr != '\0' && *sptr != '\n' && *sptr != '\\' )
+					sptr++;
+			}
+		}
 	}
 	
 	return 1;

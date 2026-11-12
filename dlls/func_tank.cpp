@@ -376,7 +376,12 @@ void CFuncTank :: StopControl()
 		return;
 
 	if ( m_pController->m_pActiveItem )
+	{
 		m_pController->m_pActiveItem->Deploy();
+		// Beta 5.0 (leak): the player's speed follows his weapon again
+		if ( m_pController->IsPlayer() )
+			m_pController->ResetMaxSpeed();
+	}
 
 	ALERT( at_console, "stopped using TANK\n");
 

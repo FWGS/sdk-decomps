@@ -198,7 +198,7 @@ WEAPON *WeaponsResource :: GetFirstPos( int iSlot )
 
 	for (int i = 0; i < MAX_WEAPON_POSITIONS; i++)
 	{
-		if ( rgSlots[iSlot][i] && HasAmmo( rgSlots[iSlot][i] ) )
+		if ( rgSlots[iSlot][i] )
 		{
 			pret = rgSlots[iSlot][i];
 			break;
@@ -216,7 +216,7 @@ WEAPON* WeaponsResource :: GetNextActivePos( int iSlot, int iSlotPos )
 
 	WEAPON *p = gWR.rgSlots[ iSlot ][ iSlotPos+1 ];
 	
-	if ( !p || !gWR.HasAmmo(p) )
+	if ( !p )
 		return GetNextActivePos( iSlot, iSlotPos + 1 );
 
 	return p;
@@ -742,7 +742,7 @@ void CHudAmmo::UserCmd_NextWeapon(void)
 			{
 				WEAPON *wsp = gWR.GetWeaponSlot( slot, pos );
 
-				if ( wsp && gWR.HasAmmo(wsp) )
+				if ( wsp )
 				{
 					gpActiveSel = wsp;
 					return;
@@ -783,7 +783,7 @@ void CHudAmmo::UserCmd_PrevWeapon(void)
 			{
 				WEAPON *wsp = gWR.GetWeaponSlot( slot, pos );
 
-				if ( wsp && gWR.HasAmmo(wsp) )
+				if ( wsp )
 				{
 					gpActiveSel = wsp;
 					return;
@@ -1076,7 +1076,15 @@ int CHudAmmo::DrawWList(float flTime)
 
 				UnpackRGB( r,g,b, RGB_YELLOWISH );
 			
-				// if active, then we must have ammo.
+				// Draw Weapon if Red if no ammo
+
+				if ( gWR.HasAmmo(p) )
+					ScaleColors(r, g, b, 192);
+				else
+				{
+					UnpackRGB(r,g,b, RGB_REDISH);
+					ScaleColors(r, g, b, 128);
+				}
 
 				if ( gpActiveSel == p )
 				{
@@ -1088,23 +1096,13 @@ int CHudAmmo::DrawWList(float flTime)
 				}
 				else
 				{
-					// Draw Weapon if Red if no ammo
-
-					if ( gWR.HasAmmo(p) )
-						ScaleColors(r, g, b, 192);
-					else
-					{
-						UnpackRGB(r,g,b, RGB_REDISH);
-						ScaleColors(r, g, b, 128);
-					}
-
 					SPR_Set( p->hInactive, r, g, b );
 					SPR_DrawAdditive( 0, x, y, &p->rcInactive );
 				}
 
 				// Draw Ammo Bar
 
-				DrawAmmoBar(p, x + giABWidth/2, y, giABWidth, giABHeight);
+				DrawAmmoBar(p, x + giABWidth/2, y + 3, giABWidth, giABHeight);
 				
 				y += p->rcActive.bottom - p->rcActive.top + 5;
 			}
@@ -1149,6 +1147,182 @@ int CHudAmmo::DrawWList(float flTime)
 
 }
 
+
+//
+//-----------------------------------------------------
+// the money
+//
+DECLARE_MESSAGE(m_Money, Money)
+DECLARE_MESSAGE(m_Money, BlinkAcct)
+
+int CHudMoney::Init( void )
+{
+	HOOK_MESSAGE(Money);
+	HOOK_MESSAGE(BlinkAcct);
+
+	gHUD.AddHudElem(this);
+
+	Reset();
+
+	return 1;
+}
+
+int CHudMoney::VidInit( void )
+{
+	m_HUD_dollar = gHUD.GetSpriteIndex( "dollar" );
+	m_HUD_minus = gHUD.GetSpriteIndex( "minus" );
+	m_HUD_plus = gHUD.GetSpriteIndex( "plus" );
+
+	return 1;
+}
+
+void CHudMoney::Reset( void )
+{
+	m_iFlags |= HUD_ACTIVE;
+
+	m_iMoneyCount = 0;
+	m_iDelta = 0;
+	m_fFade = 0;
+	m_fFadeDelta = 0;
+	m_iBlinkAmt = 0;
+	m_fBlinkTime = 0;
+}
+
+int CHudMoney::Draw( float flTime )
+{
+	int r, g, b, x, y, a;
+	int r2, g2, b2;	// names ours
+
+	if ( !( gHUD.m_iWeaponBits & ( 1<<(WEAPON_SUIT) ) ) )
+		return 1;
+
+	UnpackRGB( r, g, b, RGB_YELLOWISH );
+
+	// Has the money changed? Flash it, green for more, red for less
+	if ( m_fFade )
+	{
+		m_fFade -= gHUD.m_flTimeDelta;
+
+		if ( m_fFade <= 0 )
+		{
+			a = MIN_ALPHA;
+			m_fFade = 0;
+			m_iDelta = 0;
+		}
+		else
+		{
+			a = MIN_ALPHA + m_fFade * 25.6f;
+
+			if ( m_iDelta > 0 )
+			{
+				r = r * ( 5 - m_fFade ) / 5;
+				g = g * ( 5 - m_fFade ) / 5 + m_fFade * 51;
+				b = b * ( 5 - m_fFade ) / 5;
+			}
+			else if ( m_iDelta < 0 )
+			{
+				r = r * ( 5 - m_fFade ) / 5 + m_fFade * 51;
+				g = g * ( 5 - m_fFade ) / 5;
+				b = b * ( 5 - m_fFade ) / 5;
+			}
+		}
+	}
+	else
+		a = MIN_ALPHA;
+
+	ScaleColors( r, g, b, a );
+
+	// the change of the last transaction
+	if ( m_bShowDelta && m_fFadeDelta )
+	{
+		m_fFadeDelta -= gHUD.m_flTimeDelta;
+
+		if ( m_fFadeDelta <= 0 )
+		{
+			m_fFadeDelta = 0;
+			m_bShowDelta = 0;
+		}
+		else
+		{
+			r2 = r;
+			g2 = g;
+			b2 = b;
+			ScaleColors( r2, g2, b2, m_fFadeDelta * 102.4 );
+		}
+	}
+
+	// blink the account
+	if ( m_iBlinkAmt > 0 )
+	{
+		if ( flTime > m_fBlinkTime )
+		{
+			m_fBlinkTime = flTime + 0.05;
+			m_iBlinkAmt--;
+		}
+
+		if ( m_iBlinkAmt & 1 )
+			return 1;
+	}
+
+	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_MONEY )
+		return 1;
+
+	x = ScreenWidth - gHUD.GetSpriteWidth( gHUD.m_HUD_number_0 ) * 5 - ( ScreenWidth < 640 ? 12 : 16 );
+	y = ScreenHeight - gHUD.m_iFontHeight * 3;
+
+	SPR_Set( gHUD.GetSprite( m_HUD_dollar ), r, g, b );
+	SPR_DrawAdditive( 0, x - gHUD.GetSpriteWidth( m_HUD_dollar ), y, &gHUD.GetSpriteRect( m_HUD_dollar ) );
+
+	gHUD.DrawHudNumber( x, y, m_iMoneyCount, r, g, b );
+
+	if ( m_bShowDelta )
+	{
+		int iIcon;	// name ours
+
+		if ( m_iDelta < 0 )
+			iIcon = m_HUD_minus;
+		else
+			iIcon = m_HUD_plus;
+
+		y -= gHUD.m_iFontHeight + gHUD.m_iFontHeight / 2;
+
+		SPR_Set( gHUD.GetSprite( iIcon ), r2, g2, b2 );
+		SPR_DrawAdditive( 0, x - gHUD.GetSpriteWidth( iIcon ), y, &gHUD.GetSpriteRect( iIcon ) );
+
+		gHUD.DrawHudNumber( x, y, m_iDelta < 0 ? -m_iDelta : m_iDelta, r2, g2, b2 );
+	}
+
+	return 1;
+}
+
+int CHudMoney::MsgFunc_Money( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+	int iMoney = READ_LONG();	// name ours
+	m_bShowDelta = READ_BYTE();
+
+	m_iDelta = iMoney - m_iMoneyCount;
+	m_iMoneyCount = iMoney;
+
+	if ( m_iDelta )
+	{
+		m_fFade = 5.0;
+		m_fFadeDelta = 2.5;
+	}
+	else if ( m_bShowDelta )
+		m_bShowDelta = 0;
+
+	return 1;
+}
+
+int CHudMoney::MsgFunc_BlinkAcct( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+	m_iBlinkAmt = READ_BYTE() * 2;
+	m_fBlinkTime = 0;
+
+	return 1;
+}
 
 /* =================================
 	GetSpriteList

@@ -32,7 +32,7 @@ class CG3SG1 : public CBasePlayerWeapon
 public:
 	void Spawn( void );
 	void Precache( void );
-	int iItemSlot( void ) { return 5; }
+	int iItemSlot( void ) { return 1; }
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
@@ -41,6 +41,7 @@ public:
 	BOOL Deploy( void );
 	void Reload( void );
 	void WeaponIdle( void );
+	float GetMaxSpeed( void ) { if ( m_pPlayer->m_iFOV != 90 ) return 160; return 200; }	// Beta 5.0 (leak): Linux symbol; slower zoomed in
 	int m_iShell;
 };
 LINK_ENTITY_TO_CLASS( weapon_g3sg1, CG3SG1 );
@@ -82,7 +83,7 @@ int CG3SG1::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = G3SG1_MAX_CLIP;
-	p->iSlot = 4;
+	p->iSlot = 0;
 	p->iPosition = 3;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_G3SG1;
@@ -93,7 +94,6 @@ int CG3SG1::GetItemInfo(ItemInfo *p)
 
 BOOL CG3SG1::Deploy( )
 {
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 200 );
 	return DefaultDeploy( "models/v_g3sg1.mdl", "models/p_g3sg1.mdl", G3SG1_DRAW, "mp5" );
 }
 
@@ -106,21 +106,19 @@ void CG3SG1::SecondaryAttack( void )
 	// Beta 4.0: slower while zoomed in
 	if (m_pPlayer->m_iFOV == 90)
 	{
-		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 160 );
 		m_pPlayer->m_iFOV = 40;
 	}
 	else if (m_pPlayer->m_iFOV == 40)
 	{
-		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 160 );
 		m_pPlayer->m_iFOV = 15;
 	}
 	else if (m_pPlayer->m_iFOV == 15)
 	{
-		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 200 );
 		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_g3sg1.mdl");
 		m_pPlayer->m_iFOV = 90;
 	}
 
+	m_pPlayer->ResetMaxSpeed();	// Beta 5.0 (leak): GetMaxSpeed decides
 	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/zoom.wav", 1, ATTN_NORM);
 	m_flNextSecondaryAttack = gpGlobals->time + 0.3;
 }
@@ -218,16 +216,15 @@ void CG3SG1::Reload( void )
 
 	iResult = DefaultReload( G3SG1_MAX_CLIP, G3SG1_RELOAD, 4.6 );
 
-	if (m_pPlayer->m_iFOV != 90)
-	{
-		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_g3sg1.mdl");
-		m_pPlayer->m_fResumeZoom = TRUE;
-		m_pPlayer->m_iLastZoom = m_pPlayer->m_iFOV;
-		m_pPlayer->m_iFOV = 90;
-	}
-
 	if (iResult)
 	{
+		// Beta 5.0 (leak): zoomed in, the last zoom step takes the scope off
+		if (m_pPlayer->m_iFOV != 90)
+		{
+			m_pPlayer->m_iFOV = 15;
+			SecondaryAttack();
+		}
+
 		m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
 	}
 }

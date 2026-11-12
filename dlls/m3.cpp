@@ -44,15 +44,14 @@ public:
 
 	void Spawn( void );
 	void Precache( void );
-	int iItemSlot( ) { return 3; }
+	int iItemSlot( ) { return 1; }
 	int GetItemInfo(ItemInfo *p);
-	int AddToPlayer( CBasePlayer *pPlayer );
 
 	void PrimaryAttack( void );
-	void SecondaryAttack( void );
 	BOOL Deploy( );
 	void Reload( void );
 	void WeaponIdle( void );
+	float GetMaxSpeed( void ) { return 240; }	// Beta 5.0 (leak): Linux symbol
 	int m_fInReload;
 	float m_flNextReload;
 	int m_iShell;
@@ -100,18 +99,6 @@ void CM3::Precache( void )
 	PRECACHE_SOUND ("weapons/reload3.wav");	// shotgun reload
 }
 
-int CM3::AddToPlayer( CBasePlayer *pPlayer )
-{
-	if ( CBasePlayerWeapon::AddToPlayer( pPlayer ) )
-	{
-		MESSAGE_BEGIN( MSG_ONE, gmsgWeapPickup, NULL, pPlayer->pev );
-			WRITE_BYTE( m_iId );
-		MESSAGE_END();
-		return TRUE;
-	}
-	return FALSE;
-}
-
 
 int CM3::GetItemInfo(ItemInfo *p)
 {
@@ -121,8 +108,8 @@ int CM3::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = M3_MAX_CLIP;
-	p->iSlot = 2;
-	p->iPosition = 1;
+	p->iSlot = 0;
+	p->iPosition = 5;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_M3;
 	p->iWeight = M3_WEIGHT;
@@ -134,7 +121,6 @@ int CM3::GetItemInfo(ItemInfo *p)
 
 BOOL CM3::Deploy( )
 {
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 240 );
 	return DefaultDeploy( "models/v_m3.mdl", "models/p_m3.mdl", M3_DRAW, "mp5" );
 }
 
@@ -217,12 +203,6 @@ void CM3::PrimaryAttack()
 }
 
 
-void CM3::SecondaryAttack( void )
-{
-	PrimaryAttack( );
-}
-
-
 void CM3::Reload( void )
 {
 	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0 || m_iClip == M3_MAX_CLIP)
@@ -240,8 +220,8 @@ void CM3::Reload( void )
 	{
 		SendWeaponAnim( M3_START_RELOAD );
 		m_fInReload = 1;
-		m_pPlayer->m_flNextAttack = gpGlobals->time + 0.6;
-		m_flTimeWeaponIdle = gpGlobals->time + 0.6;
+		m_pPlayer->m_flNextAttack = gpGlobals->time + 0.45;	// Beta 5.0 (leak) (was 0.6)
+		m_flTimeWeaponIdle = gpGlobals->time + 0.45;
 		m_flNextPrimaryAttack = gpGlobals->time + 1.0;
 		m_flNextSecondaryAttack = gpGlobals->time + 1.0;
 		return;
@@ -260,8 +240,8 @@ void CM3::Reload( void )
 
 		SendWeaponAnim( M3_RELOAD );
 
-		m_flNextReload = gpGlobals->time + 0.5;
-		m_flTimeWeaponIdle = gpGlobals->time + 0.5;
+		m_flNextReload = gpGlobals->time + 0.35;	// Beta 5.0 (leak) (was 0.5)
+		m_flTimeWeaponIdle = gpGlobals->time + 0.35;
 	}
 	else
 	{

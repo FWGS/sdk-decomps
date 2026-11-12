@@ -405,11 +405,11 @@ extern DLL_GLOBAL int			g_Language;
 #define VEC_HUMAN_HULL_MAX	Vector( 16, 16, 72 )
 #define VEC_HUMAN_HULL_DUCK	Vector( 16, 16, 36 )
 
-#define VEC_VIEW			Vector( 0, 0, 24 )
+#define VEC_VIEW			Vector( 0, 0, 17 )	// Beta 5.0 (leak): 17 (Beta 1.1 to 4.1: 24)
 
 #define VEC_DUCK_HULL_MIN		Vector(-16, -16, -18 )
 #define VEC_DUCK_HULL_MAX		Vector( 16,  16,  18)
-#define VEC_DUCK_VIEW			Vector( 0, 0, 10 )
+#define VEC_DUCK_VIEW			Vector( 0, 0, 12 )	// Beta 5.0 (leak): 12 (Beta 1.1 to 4.1: 10)
 
 #define SVC_TEMPENTITY		23
 #define SVC_INTERMISSION	30

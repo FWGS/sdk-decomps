@@ -34,9 +34,9 @@ public:
 	void Precache( void );
 	int iItemSlot( void ) { return 2; }
 	int GetItemInfo(ItemInfo *p);
+	float GetMaxSpeed( void ) { return 260; }	// Beta 5.0 (leak): Linux symbol
 
 	void PrimaryAttack( void );
-	void SecondaryAttack( void );
 	void P228Fire( float flSpread, float flCycleTime, BOOL fUseSemi );
 	BOOL Deploy( void );
 	void Reload( void );
@@ -84,7 +84,7 @@ int CP228::GetItemInfo(ItemInfo *p)
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = P228_MAX_CLIP;
 	p->iSlot = 1;
-	p->iPosition = 5;
+	p->iPosition = 3;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_P228;
 	p->iWeight = P228_WEIGHT;
@@ -95,20 +95,7 @@ int CP228::GetItemInfo(ItemInfo *p)
 BOOL CP228::Deploy( )
 {
 	m_pPlayer->m_flAccuracy = 0.98;
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 260 );
 	return DefaultDeploy( "models/v_p228.mdl", "models/p_p228.mdl", P228_DRAW, "onehanded" );
-}
-
-void CP228::SecondaryAttack( void )
-{
-	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		P228Fire( (1 - m_pPlayer->m_flAccuracy) * 0.255, 0.225, FALSE );
-	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		P228Fire( (1 - m_pPlayer->m_flAccuracy) * 0.35, 0.225, FALSE );
-	else if (FBitSet(m_pPlayer->pev->flags, FL_DUCKING))
-		P228Fire( (1 - m_pPlayer->m_flAccuracy) * 0.075, 0.225, FALSE );
-	else
-		P228Fire( (1 - m_pPlayer->m_flAccuracy) * 0.15, 0.225, FALSE );
 }
 
 void CP228::PrimaryAttack( void )
@@ -138,7 +125,7 @@ void CP228::P228Fire( float flSpread , float flCycleTime, BOOL fUseSemi )
 	else
 	{
 		// accuracy grows with the time since the last shot
-		m_pPlayer->m_flAccuracy = 0.65 + (gpGlobals->time - m_pPlayer->m_flLastFired) * 0.2;
+		m_pPlayer->m_flAccuracy = 0.7 + (gpGlobals->time - m_pPlayer->m_flLastFired) * 0.3;	// Beta 5.0 (leak): Beta 4.0's (4.1: 0.65 + 0.2)
 		if (m_pPlayer->m_flAccuracy > 0.98)
 			m_pPlayer->m_flAccuracy = 0.98;
 		m_pPlayer->m_flLastFired = gpGlobals->time;
@@ -198,7 +185,7 @@ void CP228::P228Fire( float flSpread , float flCycleTime, BOOL fUseSemi )
 
 	vecAiming = gpGlobals->v_forward;
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_357SIG, 30, 0.9, NULL, true );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_357SIG, 34, 0.9, NULL, true );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)

@@ -65,16 +65,22 @@ public:
 	virtual void BounceSound( void );
 	virtual int	BloodColor( void ) { return DONT_BLEED; }
 	virtual void Killed( entvars_t *pevAttacker, int iGib );
+	virtual int ObjectCaps( void ) { return m_fPlantedC4 ? FCAP_CONTINUOUS_USE : 0; }	// Beta 5.0 (leak): Linux symbol; a planted C4 is defused by holding USE on it
+	virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );	// Beta 5.0 (leak): Linux symbol
 
-	// Counter-Strike Beta 4.0 (names ours; offsets retail's)
-	bool m_fStartDefuse;			// 0x118 a CT with a defuser is defusing the planted C4 (C4Touch)
+	// Counter-Strike Beta 4.0 (names ours; offsets retail's; Beta 5.0 leak's in brackets where they moved)
+	bool m_fStartDefuse;			// 0x118 a CT is defusing the planted C4 (Beta 4.0: C4Touch; 5.0: Use)
+	bool m_fPlantedC4;				// 0x119 [new in 5.0] a planted C4 (ShootSatchelCharge): it can be used (ObjectCaps) and defused (Use)
 	CBaseEntity *m_pDefuser;		// 0x11c the one defusing
-	float m_flDefuseDone;			// 0x120 when the defusing is done (5 seconds after it starts)
+	float m_flDefuseDone;			// 0x120 when the defusing is done (5 seconds after it starts with a defuse kit, 10 without)
 	float m_flC4Blow;				// 0x124 when the C4 goes off
-	float m_flBeepInterval;			// 0x128 between two beeps; shrinks by 1 % a tenth of a second
+	float m_flBeepInterval;			// 0x128 between two beeps; shrinks by 1 % at every think
 	float m_flNextBeep;				// 0x12c when C4Think beeps next
-	bool m_fC4Done;					// 0x130 false only while a planted C4 ticks (ShootSatchelCharge); every other grenade has it set, and the C4 sets it when it goes off or is defused (CheckWinConditions waits for it)
-	int m_iTeam;					// 0x134 the thrower's team: an HE grenade does not hurt his team mates (CBasePlayer::TakeDamage)
+	float m_flNextBlink;			// 0x130 [new in 5.0] when C4Think shows the C4's glow sprite next (every 2 seconds)
+	float m_flNextDefuseCheck;		// 0x134 [new in 5.0] the defuser must use the C4 again before this time (half a second), or the defusing stops
+	bool m_fC4Done;					// 0x138 [0x130] false only while a planted C4 ticks (ShootSatchelCharge); every other grenade has it set, and the C4 sets it when it goes off or is defused (CheckWinConditions waits for it)
+	int m_iTeam;					// 0x13c [0x134] the thrower's team: an HE grenade does not hurt his team mates (CBasePlayer::TakeDamage)
+	edict_t *m_pentBombTarget;		// 0x140 [new in 5.0] the bomb target the planter stood in (his own member); when the C4 goes off, it is used
 
 	BOOL m_fRegisteredSound;// whether or not this grenade has issued its DANGER sound to the world sound list yet.
 };
@@ -120,6 +126,8 @@ public:
 #define WEAPON_AK47				28
 #define WEAPON_KNIFE			29
 #define WEAPON_P90				30
+#define WEAPON_XM1014			5		// Beta 5.0 (leak): Half-Life's chaingun's id
+#define WEAPON_C4				6	// Beta 5.0 (leak): the C4 takes the crossbow's id (CC4::Spawn, GetItemInfo)
 
 #define WEAPON_ALLWEAPONS		(~(1<<WEAPON_SUIT))
 
@@ -162,10 +170,13 @@ public:
 #define AK47_WEIGHT			25
 #define P90_WEIGHT			26
 #define KNIFE_WEIGHT		2
+#define C4_WEIGHT			3		// Beta 5.0 (leak)
 // Beta 4.0
 #define P228_WEIGHT			5
 #define SCOUT_WEIGHT		30
 #define HEGRENADE_WEIGHT	3
+// Beta 5.0 (leak)
+#define XM1014_WEIGHT		20
 #define SHIELD_WEIGHT		2
 
 
@@ -186,23 +197,25 @@ public:
 // The limit goes with the weapon, not with the ammo: "9mm" is 90 for the Glock 18,
 // 120 for the MP5 Navy and the TMP; "556Nato" 200 for the M249, 90 for the M4A1.
 #define USP_MAX_CARRY			48		// "45ACP"
-#define GLOCK18_MAX_CARRY		90		// "9mm"
+#define GLOCK18_MAX_CARRY		120		// "9mm" (Beta 5.0 leak; was 90)
 #define AWP_MAX_CARRY			30		// "338Magnum"
 #define MP5N_MAX_CARRY			120		// "9mm"
 #define M249_MAX_CARRY			200		// "556Nato"
 #define M3_MAX_CARRY			48		// "buckshot"
-#define M4A1_MAX_CARRY			90		// "556Nato"
+#define M4A1_MAX_CARRY			200		// "556Nato" (Beta 5.0 leak: 200, was 90)
 #define TMP_MAX_CARRY			120		// "9mm"
-#define G3SG1_MAX_CARRY			60		// "762Nato"
-#define FLASHBANG_MAX_CARRY		3		// "Flashbang"
+#define G3SG1_MAX_CARRY			120		// "762Nato" (Beta 5.0 leak: 120, was 60)
+#define FLASHBANG_MAX_CARRY		2		// "Flashbang" (Beta 5.0 leak; was 3)
 #define DEAGLE_MAX_CARRY		35		// "50AE"
-#define SG552_MAX_CARRY			90		// "556Nato"
-#define AK47_MAX_CARRY			90		// "762Nato"
+#define SG552_MAX_CARRY			200		// "556Nato" (Beta 5.0 leak: 200, was 90)
+#define AK47_MAX_CARRY			120		// "762Nato" (Beta 5.0 leak: 120, was 90)
 #define P90_MAX_CARRY			150		// "57mm"
+#define C4_MAX_CARRY			1		// "C4" (Beta 5.0 leak)
 // Beta 4.0
 #define P228_MAX_CARRY			52		// "357SIG"
-#define SCOUT_MAX_CARRY			30		// "762Nato"
-#define HEGRENADE_MAX_CARRY		3		// "HEGrenade"
+#define SCOUT_MAX_CARRY			120		// "762Nato" (Beta 5.0 leak: 120, was 30)
+#define HEGRENADE_MAX_CARRY		1		// "HEGrenade" (Beta 5.0 leak; was 3)
+#define XM1014_MAX_CARRY		48		// "buckshot" (Beta 5.0 leak)
 
 // the maximum amount of ammo each weapon's clip can hold
 #define WEAPON_NOCLIP			-1
@@ -241,6 +254,7 @@ public:
 #define P228_MAX_CLIP			13
 #define SCOUT_MAX_CLIP			10
 #define HEGRENADE_MAX_CLIP		WEAPON_NOCLIP
+#define XM1014_MAX_CLIP			7		// Beta 5.0 (leak)
 
 
 // the default amount of ammo that comes with each gun when it spawns
@@ -275,9 +289,11 @@ public:
 #define SG552_DEFAULT_GIVE			30
 #define AK47_DEFAULT_GIVE			30
 #define P90_DEFAULT_GIVE			50
-#define P228_DEFAULT_GIVE			13	// Beta 4.0: 12, one short of its magazine
+#define C4_DEFAULT_GIVE				1	// Beta 5.0 (leak)
+#define P228_DEFAULT_GIVE			12	// Beta 4.0 and 5.0 (leak): 12, one short of its magazine (Beta 4.1: 13)
 #define SCOUT_DEFAULT_GIVE			10
 #define HEGRENADE_DEFAULT_GIVE		1
+#define XM1014_DEFAULT_GIVE			7	// Beta 5.0 (leak)
 
 // The amount of ammo given to a player by an ammo item.
 #define AMMO_URANIUMBOX_GIVE	20
@@ -292,11 +308,12 @@ public:
 #define AMMO_URANIUMBOX_GIVE	20
 #define AMMO_SNARKBOX_GIVE		5
 // Counter-Strike: the six ammo boxes of ammo.cpp, amount and limit as their AddAmmo
-// passes them to GiveAmmo (names ours). ammo_762nato allows 90, the G3SG1 itself 60.
+// passes them to GiveAmmo (names ours). ammo_762nato allows 90, the G3SG1 itself 60
+// (Beta 4.1); Beta 5.0 (leak): 120 both.
 #define AMMO_556NATOBOX_GIVE	30
 #define AMMO_556NATOBOX_MAX		200
 #define AMMO_762NATOBOX_GIVE	30
-#define AMMO_762NATOBOX_MAX		90
+#define AMMO_762NATOBOX_MAX		120		// Beta 5.0 (leak): 120 (was 90)
 #define AMMO_45ACPBOX_GIVE		12
 #define AMMO_45ACPBOX_MAX		48
 #define AMMO_338MAGNUMBOX_GIVE	10
@@ -304,7 +321,7 @@ public:
 #define AMMO_50AEBOX_GIVE		7
 #define AMMO_50AEBOX_MAX		35
 #define AMMO_FLASHBANGBOX_GIVE	1
-#define AMMO_FLASHBANGBOX_MAX	3
+#define AMMO_FLASHBANGBOX_MAX	2		// Beta 5.0 (leak): 2 (was 3)
 #define AMMO_57MMBOX_GIVE		50
 #define AMMO_57MMBOX_MAX		150
 // Beta 4.0: ammo_9mm (Glock 18, MP5 Navy, TMP), ammo_buckshot (the M3; the
@@ -369,27 +386,42 @@ typedef struct
 	int iId;
 } AmmoInfo;
 
-// sic: a stand-in for declarations Beta 1.1's headers have beyond ours where the
-// files that include weapons.h see them; what they were the image cannot say. VC5
-// orders some operands by the number of declarations a file has seen:
-// UTIL_TraceLine, UTIL_ClampVectorToBox, UTIL_MonstersInSphere, CRestore::ReadField,
-// USENTENCEG_Pick, FShouldSwitchWeapon and GetNextBestWeapon need more than Beta
-// 1.0's text gives, CFuncTank::TankTrace and the rest must keep theirs. effects.h,
-// included above, is most of it (295 numbers; func_tank.cpp includes it itself,
-// before weapons.h); this enum's tag and ten enumerators are the rest, 11 numbers.
-// These counts here keep every object retail's: Beta 1.1 11 to 15 and 19 (of 0 to
-// 32); Beta 2.0, with its cbase.h and multiplay_gamerules.cpp stand-ins, 6, 7, 10,
-// 11, 28 and 30 (of 0 to 32); Beta 3.0, whose files compile as without /YX
-// (debris.cpp), 11, 12, 16 and 17
-// (of 0 to 24); Betas 4.0 and 4.1, 11 (the
-// one count tried here; at the end of gamerules.h 4.0 takes 11 and 12, 4.1 11).
-// Before effects.h was found this place held an enum of 303
-// numbers and an unused inline function of 159 statement lines (Beta 3.0: 306).
-enum sic_declcount_b11
+// sic: intermediate code Beta 5.0's weapons.h had ahead of CBasePlayerItem
+// that compiled to nothing. It shows only
+// through VC6's placement of header inline functions: CBasePlayerItem's
+// accessors in weapons.obj (which writes its own .pch), CBaseMonster's and
+// UTIL_MakeVectorsPrivate's in combat.obj and func_tank.obj (weapons.h is text
+// after their .pch), CGameRules's in Beta 5.0's multiplay_gamerules.obj (which
+// reuses the .pch it wrote). These 24 empty statements are 179 bytes (/Bk);
+// 23 to 26 (174 to 189 bytes) serve all of them, 22 and 27 do not (the leak
+// alone: 20 to 34). What the text was the image cannot say.
+inline void sic_il_weapons( void )
 {
-	SIC_DECLCOUNT_B11_BASE, SIC_DECLCOUNT_B11_0, SIC_DECLCOUNT_B11_1, SIC_DECLCOUNT_B11_2, SIC_DECLCOUNT_B11_3, SIC_DECLCOUNT_B11_4, SIC_DECLCOUNT_B11_5, SIC_DECLCOUNT_B11_6,
-	SIC_DECLCOUNT_B11_7, SIC_DECLCOUNT_B11_8
-};
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+}
 
 // Items that the player has in their inventory that they can use
 class CBasePlayerItem : public CBaseAnimating
@@ -414,8 +446,9 @@ public:
 	void CheckRespawn( void );
 	virtual int GetItemInfo(ItemInfo *p) { return 0; };	// returns 0 if struct not filled out
 	virtual BOOL CanDeploy( void ) { return TRUE; };
-	virtual BOOL Deploy( )								// returns is deploy was successful
-		 { return TRUE; };
+	virtual BOOL CanDrop( void ) { return TRUE; }		// Beta 5.0 (leak): Linux symbol; the knife and the grenades say no (slot 63)
+	virtual BOOL Deploy( );								// returns is deploy was successful (Beta 5.0 leak: out of line in weapons.cpp, slot 64)
+	virtual BOOL IsWeapon( void ) { return FALSE; }	// Beta 5.0 (leak): Linux symbol
 
 	virtual BOOL CanHolster( void ) { return TRUE; };// can this weapon be put away right now?
 	virtual void Holster( );
@@ -432,6 +465,8 @@ public:
 	virtual int SecondaryAmmoIndex() { return -1; };
 
 	virtual int UpdateClientData( CBasePlayer *pPlayer ) { return 0; }
+
+	virtual float GetMaxSpeed( void ) { return 260; }	// Beta 5.0 (leak): Linux symbol; the speed the player runs at with it in his hands
 
 	static ItemInfo ItemInfoArray[ MAX_WEAPONS ];
 	static AmmoInfo AmmoInfoArray[ MAX_AMMO_SLOTS ];
@@ -492,6 +527,7 @@ public:
 	virtual BOOL CanDeploy( void );
 	virtual BOOL IsUseable( void );
 	BOOL DefaultDeploy( char *szViewModel, char *szWeaponModel, int iAnim, char *szAnimExt );
+	void ReloadSound( void );		// Beta 5.0 (leak): Linux symbol; the others near the reloading player hear it
 	int DefaultReload( int iClipSize, int iAnim, float fDelay );
 	void EjectBrassLate( void );	// the shell of a bolt or pump action, m_pPlayer->m_flEjectBrass after the shot
 	void FireRemaining( void );		// the second and third shot of a burst (Glock 18, M4A1)
@@ -506,6 +542,7 @@ public:
 	virtual int UpdateClientData( CBasePlayer *pPlayer );		// sends hud info to client dll, if things have changed
 	virtual void RetireWeapon( void );
 	virtual BOOL ShouldWeaponIdle( void ) {return FALSE; };
+	virtual BOOL IsWeapon( void ) { return TRUE; }		// Beta 5.0 (leak): Linux symbol; declared here, after ShouldWeaponIdle, where ak47.obj (the first object to emit CBasePlayerWeapon's class-body inlines) has its body
 	virtual void Holster( void );
 	
 	int	PrimaryAmmoIndex(); 
@@ -525,9 +562,8 @@ public:
 
 	// Counter-Strike (names ours)
 	int		m_iShellLate;										// model index of the shell EjectBrassLate and FireRemaining throw
-	int		m_iUnused7C;										// 0x7c new in Beta 3.0; no function refers to it
-	bool	m_fDelayFire;										// 0x80 new in Beta 3.0: set by a shot, cleared by Reload; ItemPostFrame lets m_iShotsFired run down once the trigger is released
-	int		m_iDirection;										// 0x84 new in Beta 4.0: the side KickBack pushes the view to (1 or 0); name ours
+	bool	m_fDelayFire;										// 0x7c new in Beta 3.0: set by a shot, cleared by Reload; ItemPostFrame lets m_iShotsFired run down once the trigger is released (Beta 5.0 leak: Beta 3.0's unused int before it is gone)
+	int		m_iDirection;										// 0x80 new in Beta 4.0: the side KickBack pushes the view to (1 or 0); name ours
 };
 
 
@@ -559,6 +595,10 @@ extern DLL_GLOBAL	short	g_sModelIndexFireball2;
 extern DLL_GLOBAL	short	g_sModelIndexFireball3;
 extern DLL_GLOBAL	short	g_sModelIndexFireball4;
 extern DLL_GLOBAL	short	g_sModelIndexRadio;
+// Beta 5.0 (leak) (Linux symbols; weapons.cpp): the ghosts' sprites and the planted C4's glow
+extern DLL_GLOBAL	short	g_sModelIndexCTGhost;
+extern DLL_GLOBAL	short	g_sModelIndexTGhost;
+extern DLL_GLOBAL	short	g_sModelIndexC4Glow;
 
 extern void ClearMultiDamage(void);
 extern void ApplyMultiDamage(entvars_t* pevInflictor, entvars_t* pevAttacker );

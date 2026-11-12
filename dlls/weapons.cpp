@@ -12,31 +12,6 @@
 *   without written permission from Valve LLC.
 *
 ****/
-// sic: retail's weapons.cpp has more lines than ours ahead of its first
-// functions: VC5's intermediate code spends two bytes more on a statement
-// from line 128 on, and Beta 4.1's object (written with its own .pch)
-// places CBasePlayerItem::pszAmmo2 and iMaxClip where retail has them only
-// with 25 or more lines here. What
-// they were the image cannot say; the rest of this block is empty
-// comment lines that stand for them.
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
 /*
 
 ===== weapons.cpp ========================================================
@@ -77,6 +52,10 @@ DLL_GLOBAL	short	g_sModelIndexFireball2;
 DLL_GLOBAL	short	g_sModelIndexFireball3;
 DLL_GLOBAL	short	g_sModelIndexFireball4;
 DLL_GLOBAL	short	g_sModelIndexRadio;
+// Beta 5.0 (leak) (Linux symbols): the ghosts' sprites and the planted C4's glow
+DLL_GLOBAL	short	g_sModelIndexCTGhost;
+DLL_GLOBAL	short	g_sModelIndexTGhost;
+DLL_GLOBAL	short	g_sModelIndexC4Glow;
 
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
 AmmoInfo CBasePlayerItem::AmmoInfoArray[MAX_AMMO_SLOTS];
@@ -412,7 +391,6 @@ void W_Precache(void)
 	// Counter-Strike: armour, Beta 4.0's backpack and thigh pack
 	UTIL_PrecacheOther( "item_kevlar" );
 	UTIL_PrecacheOther( "item_assaultsuit" );
-	UTIL_PrecacheOther( "item_backpack" );
 	UTIL_PrecacheOther( "item_thighpack" );
 
 	// Counter-Strike: each gun with its ammunition (Beta 4.0: Half-Life's
@@ -435,6 +413,7 @@ void W_Precache(void)
 
 	// shotgun
 	UTIL_PrecacheOtherWeapon( "weapon_m3" );
+	UTIL_PrecacheOtherWeapon( "weapon_xm1014" );	// Beta 5.0 (leak)
 	UTIL_PrecacheOther( "ammo_buckshot" );
 
 	// .45
@@ -464,10 +443,12 @@ void W_Precache(void)
 
 	// flashbang
 	UTIL_PrecacheOtherWeapon( "weapon_flashbang" );
-	UTIL_PrecacheOther( "ammo_flashbang" );
 
 	// HE grenade
 	UTIL_PrecacheOtherWeapon( "weapon_hegrenade" );
+
+	// Beta 5.0 (leak): the C4 is a weapon
+	UTIL_PrecacheOtherWeapon( "weapon_c4" );
 	UTIL_PrecacheOther( "debris" );
 
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
@@ -495,6 +476,10 @@ void W_Precache(void)
 	g_sModelIndexFireball3 = PRECACHE_MODEL ("sprites/fexplo.spr");
 	g_sModelIndexFireball4 = PRECACHE_MODEL ("sprites/fexplo1.spr");
 	g_sModelIndexRadio = PRECACHE_MODEL ("sprites/radio.spr");
+	// Beta 5.0 (leak): the ghosts of the dead (counter-terrorists, terrorists) and the planted C4's glow
+	g_sModelIndexCTGhost = PRECACHE_MODEL ("sprites/b-tele1.spr");
+	g_sModelIndexTGhost = PRECACHE_MODEL ("sprites/c-tele1.spr");
+	g_sModelIndexC4Glow = PRECACHE_MODEL ("sprites/ledglow.spr");
 
 	g_sModelIndexLaser = PRECACHE_MODEL( (char *)g_pModelNameLaser );
 	g_sModelIndexLaserDot = PRECACHE_MODEL("sprites/laserdot.spr");
@@ -517,6 +502,9 @@ void W_Precache(void)
 	PRECACHE_SOUND ("weapons/bullet_hit2.wav");	// hit by bullet
 	
 	PRECACHE_SOUND ("items/weapondrop1.wav");// weapon falls to the ground
+
+	// Beta 5.0 (leak): what the others hear of a reload (ReloadSound)
+	PRECACHE_SOUND ("weapons/generic_reload.wav");
 
 }
 
@@ -659,6 +647,14 @@ void CBasePlayerItem :: CheckRespawn ( void )
 	}
 }
 
+// Beta 5.0 (leak): the SDK's Deploy, out of the class body (retail has its body
+// here, after CheckRespawn; every gun's Deploy overrides vtable slot 64, after
+// CanDrop's 63)
+BOOL CBasePlayerItem::Deploy( void )
+{
+	return TRUE;
+}
+
 //=========================================================
 // Respawn- this item is already in the world, but it is
 // invisible and intangible. Make it visible and tangible.
@@ -697,12 +693,8 @@ void CBasePlayerItem::DefaultTouch( CBaseEntity *pOther )
 
 	CBasePlayer *pPlayer = (CBasePlayer *)pOther;
 
-	// one primary weapon at a time; the pistols and the grenades go with it
-	// (Beta 3.1 had the crowbar where the P228, id 1, is now; Beta 4.0 adds the HE grenade)
-	if ( pPlayer->HasPrimaryWeapons() && m_iId != WEAPON_FLASHBANG && m_iId != WEAPON_USP && m_iId != WEAPON_GLOCK18 && m_iId != WEAPON_P228 && m_iId != WEAPON_DEAGLE && m_iId != WEAPON_HEGRENADE && pPlayer->pev->flags != FL_SPECTATOR )
-		return;
-
-	// can I have this?
+	// can I have this? (Beta 5.0 leak: the game rules decide whether the slot is
+	// free; Beta 2.0 to 4.1 tested for a primary weapon here)
 	if ( !g_pGameRules->CanHavePlayerItem( pPlayer, this ) )
 	{
 		if ( gEvilImpulse101 )
@@ -763,16 +755,14 @@ void CBasePlayerWeapon::KickBack( float up_base, float lateral_base, float up_mo
 		flKickLateral = lateral_base + m_pPlayer->m_iShotsFired * lateral_modifier;
 	}
 
+	ALERT( at_console, "Kick: UP = %.2f/%.2f  LAT = %.2f/%.2f\n", flKickUp, up_max, flKickLateral, lateral_max );	// Beta 5.0 (leak)
+
 	m_pPlayer->pev->punchangle.x -= flKickUp;
 	if ( m_pPlayer->pev->punchangle.x < up_max * -1 )
 		m_pPlayer->pev->punchangle.x = up_max * -1;
 
-	if ( !RANDOM_LONG( 0, direction_change ) )
-	{
-		flKickLateral /= 2;
-		m_iDirection = 1 - m_iDirection;
-	}
-
+	// Beta 5.0 (leak): Beta 4.0's order again: the side turns over after the
+	// sideways kick, and the kick that turns it is not halved (Beta 4.1)
 	if ( m_iDirection == 1 )
 	{
 		m_pPlayer->pev->punchangle.y += flKickLateral;
@@ -785,6 +775,9 @@ void CBasePlayerWeapon::KickBack( float up_base, float lateral_base, float up_mo
 		if ( m_pPlayer->pev->punchangle.y < lateral_max * -1 )
 			m_pPlayer->pev->punchangle.y = lateral_max * -1;
 	}
+
+	if ( !RANDOM_LONG( 0, direction_change ) )
+		m_iDirection = 1 - m_iDirection;
 }
 
 //=========================================================
@@ -799,7 +792,13 @@ void CBasePlayerWeapon::FireRemaining( void )
 
 	m_iClip--;
 	if ( m_iClip < 0 )
+	{
+		// Beta 5.0 (leak): an empty magazine ends the burst
 		m_iClip = 0;
+		m_pPlayer->m_iBurstShotsFired = 3;
+		m_pPlayer->m_flNextBurstShot = 0;
+		return;
+	}
 
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
@@ -821,6 +820,7 @@ void CBasePlayerWeapon::FireRemaining( void )
 	}
 	else if ( m_iId == WEAPON_M4A1 )
 	{
+		ALERT( at_console, " I'm here!\n" );	// Beta 5.0 (leak)
 		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs - gpGlobals->v_up * 8 + gpGlobals->v_forward * 20 - gpGlobals->v_right * 10 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL, m_pPlayer->pev ); 
 		m_pPlayer->FireBullets3( vecSrc, vecDir, Vector( 0.015, 0.015, 0.015 ), 8192, 1, BULLET_PLAYER_556MM, 26, 0.94, 0 );
 		flDelay = 0.075;
@@ -890,7 +890,9 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 			m_fFireOnEmpty = TRUE;
 		}
 
-		PrimaryAttack();
+		// Beta 5.0 (leak): no shooting in the freeze period at the start of a round
+		if ( g_pGameRules->IsMultiplayer() && !((CHalfLifeMultiplay *)g_pGameRules)->IsFreezePeriod() )
+			PrimaryAttack();
 	}
 	else if ( m_pPlayer->pev->button & IN_RELOAD && iMaxClip() != WEAPON_NOCLIP && !m_fInReload ) 
 	{
@@ -917,11 +919,12 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		if ( !IsUseable() && m_flNextPrimaryAttack < gpGlobals->time ) 
 		{
 			// weapon isn't useable, switch.
-			if ( !(iFlags() & ITEM_FLAG_NOAUTOSWITCHEMPTY) && g_pGameRules->GetNextBestWeapon( m_pPlayer, this ) )
-			{
-				m_flNextPrimaryAttack = gpGlobals->time + 0.3;
-				return;
-			}
+			// Beta 5.0 (leak): no more; an empty weapon stays in the player's hands
+//			if ( !(iFlags() & ITEM_FLAG_NOAUTOSWITCHEMPTY) && g_pGameRules->GetNextBestWeapon( m_pPlayer, this ) )
+//			{
+//				m_flNextPrimaryAttack = gpGlobals->time + 0.3;
+//				return;
+//			}
 		}
 		else
 		{
@@ -958,6 +961,11 @@ void CBasePlayerItem::DestroyItem( void )
 int CBasePlayerItem::AddToPlayer( CBasePlayer *pPlayer )
 {
 	m_pPlayer = pPlayer;
+
+	// Beta 5.0 (leak): the client shows the pickup
+	MESSAGE_BEGIN( MSG_ONE, gmsgWeapPickup, NULL, pPlayer->pev );
+		WRITE_BYTE( m_iId );
+	MESSAGE_END();
 
 	return TRUE;
 }
@@ -1012,7 +1020,7 @@ int CBasePlayerWeapon::AddDuplicate( CBasePlayerItem *pOriginal )
 
 int CBasePlayerWeapon::AddToPlayer( CBasePlayer *pPlayer )
 {
-	int bResult = CBasePlayerItem::AddToPlayer( pPlayer );
+	m_pPlayer = pPlayer;
 
 	pPlayer->pev->weapons |= (1<<m_iId);
 
@@ -1022,10 +1030,14 @@ int CBasePlayerWeapon::AddToPlayer( CBasePlayer *pPlayer )
 		m_iSecondaryAmmoType = pPlayer->GetAmmoIndex( pszAmmo2() );
 	}
 
+	if ( !AddWeapon() )
+		return FALSE;
 
-	if (bResult)
-		return AddWeapon( );
-	return FALSE;
+	// Beta 5.0 (leak): a weapon the player can take shows on his client
+	MESSAGE_BEGIN( MSG_ONE, gmsgWeapPickup, NULL, pPlayer->pev );
+		WRITE_BYTE( m_iId );
+	MESSAGE_END();
+	return TRUE;
 }
 
 int CBasePlayerWeapon::UpdateClientData( CBasePlayer *pPlayer )
@@ -1143,31 +1155,7 @@ BOOL CBasePlayerWeapon :: IsUseable( void )
 
 BOOL CBasePlayerWeapon :: CanDeploy( void )
 {
-	BOOL bHasAmmo = 0;
-
-	if ( !pszAmmo1() )
-	{
-		// this weapon doesn't use ammo, can always deploy.
-		return TRUE;
-	}
-
-	if ( pszAmmo1() )
-	{
-		bHasAmmo |= (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] != 0);
-	}
-	if ( pszAmmo2() )
-	{
-		bHasAmmo |= (m_pPlayer->m_rgAmmo[m_iSecondaryAmmoType] != 0);
-	}
-	if (m_iClip > 0)
-	{
-		bHasAmmo |= 1;
-	}
-	if (!bHasAmmo)
-	{
-		return FALSE;
-	}
-
+	// Beta 5.0 (leak): a weapon can be drawn whether it has ammunition or not
 	return TRUE;
 }
 
@@ -1191,6 +1179,44 @@ BOOL CBasePlayerWeapon :: DefaultDeploy( char *szViewModel, char *szWeaponModel,
 	return TRUE;
 }
 
+//=========================================================
+// ReloadSound - Beta 5.0 (leak) (Linux symbol): every other
+// player within 512 units hears the reload (ReloadSound
+// message: the volume, 255 next to him down to 0 at 512
+// units, and 0 for a shotgun's shells, 1 for a magazine)
+//=========================================================
+extern int gmsgReloadSound;
+
+void CBasePlayerWeapon::ReloadSound( void )
+{
+	Vector vecDelta;
+	Vector vecOrigin( m_pPlayer->pev->origin );
+	float flDistance;
+	CBaseEntity *pPlayer = UTIL_FindEntityByClassname( NULL, "player" );
+
+	while ( pPlayer && pPlayer->pev->flags != FL_DORMANT )
+	{
+		if ( pPlayer != m_pPlayer )
+		{
+			vecDelta = vecOrigin - pPlayer->pev->origin;
+			flDistance = vecDelta.Length();
+
+			if ( flDistance <= 512 )
+			{
+				MESSAGE_BEGIN( MSG_ONE, gmsgReloadSound, NULL, pPlayer->pev );
+					WRITE_BYTE( (BYTE)( ( 1.0 - flDistance / 512 ) * 255.0 ) );
+					if ( !strcmp( STRING( pev->classname ), "weapon_m3" ) || !strcmp( STRING( pev->classname ), "weapon_xm1014" ) )
+						WRITE_BYTE( 0 );
+					else
+						WRITE_BYTE( 1 );
+				MESSAGE_END();
+			}
+		}
+
+		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	}
+}
+
 
 BOOL CBasePlayerWeapon :: DefaultReload( int iClipSize, int iAnim, float fDelay )
 {
@@ -1204,7 +1230,7 @@ BOOL CBasePlayerWeapon :: DefaultReload( int iClipSize, int iAnim, float fDelay 
 
 	m_pPlayer->m_flNextAttack = gpGlobals->time + fDelay;
 
-	//!!UNDONE -- reload sound goes here !!!
+	ReloadSound();	// Beta 5.0 (leak): the others near him hear it
 	SendWeaponAnim( iAnim );
 
 	m_fInReload = TRUE;
@@ -1488,57 +1514,82 @@ void CWeaponBox::Touch( CBaseEntity *pOther )
 
 	CBasePlayer *pPlayer = (CBasePlayer *)pOther;
 	int i;
+	bool bRemove = true;		// name ours
+	bool bEmitSound = false;	// name ours
 
-	if ( pPlayer->HasPrimaryWeapons() )
-	{
-		// the box of a dead player is for those who have no primary weapon
-		return;
-	}
-
-// dole out ammo
-	for ( i = 0 ; i < MAX_AMMO_SLOTS ; i++ )
-	{
-		if ( !FStringNull( m_rgiszAmmo[ i ] ) )
-		{
-			// there's some ammo of this type. 
-			pPlayer->GiveAmmo( m_rgAmmo[ i ], (char *)STRING( m_rgiszAmmo[ i ] ), MaxAmmoCarry( m_rgiszAmmo[ i ] ) );
-
-			//ALERT ( at_console, "Gave %d rounds of %s\n", m_rgAmmo[i], STRING(m_rgiszAmmo[i]) );
-
-			// now empty the ammo from the weaponbox since we just gave it to the player
-			m_rgiszAmmo[ i ] = iStringNull;
-			m_rgAmmo[ i ] = 0;
-		}
-	}
-
-// go through my weapons and try to give the usable ones to the player. 
-// it's important the the player be given ammo first, so the weapons code doesn't refuse 
-// to deploy a better weapon that the player may pick up because he has no ammo for it.
+	// Beta 5.0 (leak): the weapons first. A player who has a primary weapon or a
+	// pistol leaves the box's of that slot in it (and then the box and its
+	// ammunition stay); the C4 goes to a living terrorist only, and puts it on
+	// his model.
 	for ( i = 0 ; i < MAX_ITEM_TYPES ; i++ )
 	{
-		if ( m_rgpPlayerItems[ i ] )
+		CBasePlayerItem *pItem = m_rgpPlayerItems[ i ];
+
+		while ( pItem )
 		{
-			CBasePlayerItem *pItem;
-
-			// have at least one weapon in this slot
-			while ( m_rgpPlayerItems[ i ] )
+			if ( !strcmp( STRING( pItem->pev->classname ), "weapon_c4" ) )
 			{
-				//ALERT ( at_console, "trying to give %s\n", STRING( m_rgpPlayerItems[ i ]->pev->classname ) );
+				if ( pPlayer->m_iTeam != TEAM_TERRORIST )
+					return;
+				if ( pPlayer->pev->deadflag != DEAD_NO )
+					return;
+				if ( !pPlayer )
+					return;
 
-				pItem = m_rgpPlayerItems[ i ];
-				m_rgpPlayerItems[ i ] = m_rgpPlayerItems[ i ]->m_pNext;// unlink this weapon from the box
+				pPlayer->m_fHasC4 = true;
+				pPlayer->SetBombIcon( FALSE );
+				pPlayer->pev->body = 1;
+			}
+
+			if ( i > 0 && i < 3 && pPlayer->m_rgpPlayerItems[ i ] )
+			{
+				bRemove = false;
+				pItem = m_rgpPlayerItems[ i ]->m_pNext;	// sic: the slot's first weapon's next, whichever was looked at
+			}
+			else
+			{
+				bEmitSound = true;
 
 				if ( pPlayer->AddPlayerItem( pItem ) )
 				{
 					pItem->AttachToPlayer( pPlayer );
 				}
+
+				// unlink it from the box (sic: after AddPlayerItem has linked it into the player's list)
+				pItem = m_rgpPlayerItems[ i ] = m_rgpPlayerItems[ i ]->m_pNext;
 			}
 		}
 	}
 
-	EMIT_SOUND( pOther->edict(), CHAN_ITEM, "items/gunpickup2.wav", 1, ATTN_NORM );
-	SetTouch(NULL);
-	UTIL_Remove(this);
+	// dole out ammo, if the box goes
+	if ( bRemove )
+	{
+		for ( i = 0 ; i < MAX_AMMO_SLOTS ; i++ )
+		{
+			if ( !FStringNull( m_rgiszAmmo[ i ] ) )
+			{
+				// there's some ammo of this type. 
+				pPlayer->GiveAmmo( m_rgAmmo[ i ], (char *)STRING( m_rgiszAmmo[ i ] ), MaxAmmoCarry( m_rgiszAmmo[ i ] ) );
+
+				//ALERT ( at_console, "Gave %d rounds of %s\n", m_rgAmmo[i], STRING(m_rgiszAmmo[i]) );
+
+				// now empty the ammo from the weaponbox since we just gave it to the player
+				m_rgiszAmmo[ i ] = iStringNull;
+				m_rgAmmo[ i ] = 0;
+			}
+		}
+	}
+
+	if ( bEmitSound )
+	{
+		EMIT_SOUND( pOther->edict(), CHAN_ITEM, "items/gunpickup2.wav", 1, ATTN_NORM );
+	}
+
+	if ( bRemove )
+	{
+		SetTouch(NULL);
+		UTIL_Remove(this);
+	}
 }
 
 //=========================================================

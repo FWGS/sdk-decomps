@@ -29,11 +29,13 @@ public:
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void Touch( CBaseEntity *pOther );
 	int  BloodColor( void ) { return BLOOD_COLOR_RED; }
+	int  ObjectCaps( void );	// Beta 5.0 (leak) (Linux symbol): the hostage is used on and off
 
 	// names ours; offsets are retail's. m_hTargetEnt (CBaseMonster's) is the
 	// player the hostage follows.
 	int		m_iActivity;		// 0x118 the activity SetActivity last started
 	BOOL	m_fTouched;			// 0x11c new in Beta 1.1: a counter-terrorist has used it since the last RePosition (the first use pays)
+	BOOL	m_fRescued;			// 0x120 new in Beta 5.0 (leak): it reached a rescue zone (CHostageRescue::HostageRescueTouch, IdleThink); Spawn clears it (name ours; every member after it 4 bytes later than in Beta 4.1)
 	float	m_flFollowDistance;	// 0x120 Spawn: 128; Beta 2.0's Use: 82 when following, 36 when told to stay; IdleThink moves the hostage only when farther than this
 	float	m_flFlinchTime;		// 0x124 TakeDamage: now + 0.75; IdleThink leaves the activity alone until then
 	float	m_flNextUse;		// 0x128 Use answers once a second
@@ -42,7 +44,8 @@ public:
 	BOOL	m_fStopped;			// 0x134 TRUE: stays where it is (Spawn); FALSE: follows m_hTargetEnt (Use toggles it); 2 (Beta 2.0's IdleThink): no leader within reach
 	Vector	m_vecStart;			// 0x138 where Spawn stood; RePosition moves the hostage back there (Beta 3.0 drops the unused Vector before it)
 	Vector	m_vecPath[20];		// 0x144 new in Beta 3.0: the positions of the leader's trail the hostage walks along (IdleThink)
-	int		m_iPathIndex;		// 0x234 the point of m_vecPath it walks to
+	int		m_iPathIndex;		// 0x238 the point of m_vecPath it walks to
+	int		m_iUnused23C;		// 0x23c new in Beta 5.0 (leak): no function refers to it (CHostage is 0x240 bytes, GetClassPtr<CHostage>)
 };
 
 #endif // HOSTAGE_H

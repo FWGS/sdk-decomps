@@ -69,41 +69,108 @@ typedef enum
 	PLAYER_FLINCH,		// Counter-Strike: 6, SetAnimation's flinch (name ours)
 } PLAYER_ANIM;
 
-// Counter-Strike: the two teams (CBasePlayer::m_iTeam). Names ours.
-#define TEAM_TERRORIST		0
-#define TEAM_CT				1
+// Counter-Strike: the teams (CBasePlayer::m_iTeam). Names ours. Beta 5.0 (leak):
+// a player joins without a team (ClientPutInServer), the terrorists are 1 and the
+// counter-terrorists 2 (Beta 1.0 to 4.1: 0 and 1); the client's scoreboard names
+// them Observer, Terrorist, Counter-Terrorist.
+#define TEAM_UNASSIGNED		0
+#define TEAM_TERRORIST		1
+#define TEAM_CT				2
 
-// Counter-Strike: the menu a player has open (CBasePlayer::m_iMenu; client.cpp).
-// Menu_BuyWeapon to Menu_BuyItem are retail's names: the enum's text, two tabs
-// deep, was left in titles.txt. The other names are ours. Where it stood the
-// image cannot say for sure; here it puts UTIL_MonstersInSphere and
-// CGameCounter::HitLimit in retail's form.
+// Counter-Strike: the menu a player has open (CBasePlayer::m_iMenu; client.cpp's
+// menuselect). Menu_Buy to Menu_BuyItem are retail's names: the enum's text, two
+// tabs deep, was left in titles.txt (Beta 1.0's to 4.1's has Menu_BuyWeapon,
+// Beta 5.0's Menu_Buy). The other names are ours. Beta 5.0 (leak): the team and
+// appearance menus first; no ammunition menu, three radio menus.
 enum
 {
-	Menu_TeamSelect,		// name ours
-	Menu_TerroristSelect,	// name ours
-	Menu_CTSelect,			// name ours
-	Menu_BuyWeapon,
+	Menu_OFF,				// name ours: no menu
+	Menu_ChooseTeam,		// name ours
+	Menu_ChooseTeam2,		// name ours: menuselect treats it as the team menu; nothing sets it
+	Menu_ChooseAppearance,	// name ours
+	Menu_Buy,
 	Menu_BuyPistol,
 	Menu_BuyRifle,
 	Menu_BuyMachineGun,
 	Menu_BuyShotgun,
 	Menu_BuySubMachineGun,
 	Menu_BuyItem,
-	Menu_BuyAmmo,			// name ours
-	Menu_Radio,				// name ours (Beta 3.0's titles.txt: Radio; Beta 4.0's RadioA)
-	Menu_Radio2,			// name ours (Beta 4.0's titles.txt: RadioB; ClientCommand's menu 12)
-	Menu_CommanderRadio		// name ours (Beta 3.0's titles.txt: CommanderRadio)
+	Menu_Radio1,			// name ours (titles.txt: RadioA)
+	Menu_Radio2,			// name ours (RadioB)
+	Menu_Radio3				// name ours (RadioC)
+};
+
+// Beta 5.0 (leak): where a joining player is (CBasePlayer::m_iJoiningState;
+// JoiningThink, ClientPutInServer, the team menus, CHalfLifeMultiplay::PlayerThink).
+// Names ours.
+enum
+{
+	JOIN_DONE,				// in the game
+	JOIN_START,				// ClientPutInServer: JoiningThink shows the map's text or goes on
+	JOIN_READING_TEXT,		// the map's text is up until a key is pressed
+	JOIN_TEAM_MENU,			// PlayerThink shows the team menu
+	JOIN_CHOOSING,			// the team and appearance menus are up
+	JOIN_SPAWN				// an appearance was chosen: JoiningThink spawns him
+};
+
+#include "hintmessage.h"	// Beta 5.0 (leak)
+
+class CObserver;	// Beta 5.0 (leak): observer.cpp
+
+// Beta 5.0 (leak): the status bar names the player in the crosshair
+// (InitStatusBar, UpdateStatusBar): SDK 2.3's text, with the leak's values:
+// 1024 units (8192 for a spectator), and the values the type of what is seen,
+// its name and its health (names ours: SDK 2.3 has name, health and armor)
+#define MAX_ID_RANGE 1024
+#define MAX_SPEC_ID_RANGE 8192	// name ours
+#define SBAR_STRING_SIZE 128
+
+enum sbar_data
+{
+	SBAR_ID_TARGETTYPE = 1,	// name ours: %c1
+	SBAR_ID_TARGETNAME,		// %p2
+	SBAR_ID_TARGETHEALTH,	// %i3
+	SBAR_END,
+};
+
+// what SBAR_ID_TARGETTYPE says (names ours)
+#define SBAR_TARGETTYPE_TEAMMATE	1
+#define SBAR_TARGETTYPE_ENEMY		2
+#define SBAR_TARGETTYPE_HOSTAGE		3
+
+// Beta 5.0 (leak): what the zones a player stands in signal (buy zone, bomb
+// target, rescue zone: the zone entities' touch functions and PostThink's
+// checks set bits; once in a while PostThink takes them as the new state).
+// The class, its members and its inline functions' names are ours; retail
+// has the three bodies (Signal, Update in player.obj, GetState first in
+// c4.obj). Update's body is in player.cpp: VC6 emits it after the zone
+// icons' helpers defined before it (the order of definition).
+class CSignals
+{
+public:
+	CSignals( void ) { m_iSignals = 0; m_iState = 0; }	// retail's body: 0x1000e5a0, in client.obj after CBasePlayer's constructor
+	void Signal( int flags ) { m_iSignals |= flags; }
+	int Update( void );
+	int GetState( void ) { return m_iState; }
+
+	int m_iSignals;		// 0x00 the bits signalled since the last Update
+	int m_iState;		// 0x04 the bits in force
 };
 
 class CBasePlayer : public CBaseMonster
 {
 public:
-	// Counter-Strike's members: 412 bytes in front of the SDK's (Beta 1.0: 96, 1.1: 88,
-	// 2.0: 116, 3.0: 376, 3.1: 380). Beta 2.0 makes the two flags at 0x148 bools and adds the members from
+	// Counter-Strike's members: 476 bytes in front of the SDK's (Beta 1.0: 96, 1.1: 88,
+	// 2.0: 116, 3.0: 376, 3.1: 380, 4.0: 412). Beta 2.0 makes the two flags at 0x148 bools and adds the members from
 	// 0x168 on; Beta 3.0 makes the kevlar flag an int and adds 256 bytes before
-	// m_iMenu, which stays last; Beta 4.0 adds m_iHEGrenades before m_iFlashBangs and
-	// 28 bytes after m_fIgnoreRadio. Every name here is ours; the offsets are retail's
+	// m_iMenu; Beta 4.0 adds m_iHEGrenades before m_iFlashBangs and
+	// 28 bytes after m_fIgnoreRadio. Beta 5.0 (leak) drops the name check, the
+	// kick vote, the grenade counters, the night vision and the vote timer,
+	// adds the joining state, the intro camera, the idle time, the briefing
+	// flag, the hint messages, the display history (retail's save-table name),
+	// the zone signals and the bomb target, and moves m_iMenu behind them
+	// (offsets of the leak; Beta 4.1's in brackets where they moved). Every
+	// name here is ours but m_flDisplayHistory; the offsets are retail's
 	// (CBaseMonster ends at 0x118).
 	float				m_flFlinchTime;			// 0x118 the flinch animation plays until then: SetAnimation ignores everything but PLAYER_FLINCH meanwhile
 	float				m_flNextFlinchTime;		// 0x11c no new flinch animation before this time
@@ -125,32 +192,36 @@ public:
 	int					m_iUnused15C;			// 0x15c only written: SetAnimation zeroes it when the death animation starts
 	int					m_iDeathThrow;			// 0x160 how Killed throws the body: 0 not, 1 forwards, 2 backwards, 3 away from the attacker
 	float				m_flLastSay;			// 0x164 time of the last chat line (Host_Say lets one through a second)
-	float				m_flLastIdCheck;		// 0x168 PostThink names the player in the crosshair every two seconds
-	bool				m_fJustConnected;		// 0x16c set by ClientPutInServer; the first Spawn after it clears it
-	int					m_iAppearance;			// 0x170 the player model: 0 urban, 1 terror, 2 arab
-	int					m_iKickVote;			// 0x174 the player (entity index, 1 to 20) this one votes to kick; 0 = none
-	bool				m_fKicked;				// 0x178 sent away (team killer, kick vote): Spawn kills him
-	int					m_iHEGrenades;			// 0x17c new in Beta 4.0: HE grenades bought since the last death
-	int					m_iFlashBangs;			// 0x180 flashbangs bought since the last death (three at most)
-	int					m_iTeamKills;			// 0x184 team mates killed; the third disconnects the killer
-	int					m_iIgnoreMessages;		// 0x188 ignoremessages: 0 all, 1 no broadcast messages, 2 no team messages either
-	bool				m_fHasNightVision;		// 0x18c night vision goggles bought
-	bool				m_fNightVisionOn;		// 0x18d the goggles are switched on
-	bool				m_fSendResetHUD;		// 0x18e Spawn sets it; UpdateClientData then sends ResetHUD (the client restarts its round timer) and clears it
-	int					m_iNightVisionAlpha;	// 0x190 new in Beta 3.0: the alpha of the night vision fade (ClientPutInServer: 60; adjustnvg)
-	Vector				m_vecOldOrigins[20];	// 0x194 new in Beta 3.0: the trail a hostage follows; PreThink pushes pev->origin in front every 0.2 seconds
-	float				m_flNextOldOrigin;		// 0x284 when PreThink records the next position
-	float				m_flNextRadio;			// 0x288 no radio message before this time (1.5 seconds after the last)
-	int					m_iRadioMessages;		// 0x28c radio messages left (Spawn sets the number)
-	bool				m_fIgnoreRadio;			// 0x290 new in Beta 3.1: the ignoreradio command; CBasePlayer::Radio sends such a player nothing
-	bool				m_fHasC4;				// 0x291 new in Beta 4.0: carries the C4 bomb (GiveC4, PlantC4)
-	bool				m_fHasDefuser;			// 0x292 new in Beta 4.0: carries a bomb defuser (GiveDefusers); only such a CT can defuse
-	CBasePlayer			*m_pIdTarget;			// 0x294 new in Beta 4.0: the player PostThink last named in the crosshair
-	float				m_flNextVote;			// 0x298 new in Beta 4.0: no vote before this time (3 seconds after the last)
-	bool				m_fKilledByBlast;		// 0x29c new in Beta 4.0: the last hit was a blast (DMG_BLAST); picks the death animation
-	Vector				m_vecBlastDir;			// 0x2a0 new in Beta 4.0: from the inflictor to the player, at the last hit (TakeDamage)
-	bool				m_fKilledByHEGrenade;	// 0x2ac new in Beta 4.0: the last hit was an HE grenade's (DMG_HEGRENADE); a team mate killed so is not counted
-	int					m_iMenu;				// 0x2b0 the menu the client has open (client.cpp)
+	bool				m_fJustConnected;		// 0x168 [0x16c] set by ClientPutInServer; JoiningThink clears it when the player first spawns
+	bool				m_fUnused169;			// 0x169 [new] only written: ClientPutInServer sets it
+	int					m_iJoiningState;		// 0x16c [new] JoiningThink's step: 0 playing, 1 just connected (camera, briefing), 2 reading the briefing, 3 choosing a team, 4 choosing a model, 5 about to spawn (ClientPutInServer, PreThink, the menus, multiplay's Think and PlayerThink)
+	CBaseEntity			*m_pIntroCamera;		// 0x170 [new] the trigger_camera a joining player looks through (ClientPutInServer, JoiningThink: the next one every 6 seconds)
+	float				m_flIntroCameraTime;	// 0x174 [new] when JoiningThink moves to the next camera
+	int					m_iIgnoreGhosts;		// 0x178 [new] the client's ignoreghosts key (JoiningThink); CObserver::CGhosts::Update shows no ghosts to him
+	float				m_flLastActivity;		// 0x17c [new] when the player last pressed a button (PreThink); idle longer than the game rules allow, mp_autokick kicks him
+	bool				m_fShowingLevelText;	// 0x180 [new] the map's briefing is on the screen (showbriefing, JoiningThink); a button press takes it away (RemoveLevelText)
+	int					m_iAppearance;			// 0x184 [0x170] the player model (ClientPutInServer 1, HandleMenu_ChooseAppearance; ClientUserInfoChanged and SetPlayerModel map it to a model)
+	bool				m_fKicked;				// 0x188 [0x178] sent away (team killer): ClientCommand ignores him, Spawn kills him
+	int					m_iTeamKills;			// 0x18c [0x184] team mates killed; the third kicks the killer (PlayerKilled)
+	int					m_iIgnoreMessages;		// 0x190 [0x188] ignoremsg: 0 all, 1 no broadcast messages, 2 no team messages either
+	bool				m_fSendResetHUD;		// 0x194 [0x18e] only written in the leak: Spawn sets it (Beta 4.1's UpdateClientData sent ResetHUD for it)
+	int					m_iNightVisionAlpha;	// 0x198 [0x190] only written in the leak: ClientPutInServer and JoiningThink set 60 (no night vision any more)
+	Vector				m_vecOldOrigins[20];	// 0x19c [0x194] the trail a hostage follows; PreThink pushes pev->origin in front every 0.2 seconds
+	float				m_flNextOldOrigin;		// 0x28c [0x284] when PreThink records the next position
+	float				m_flNextRadio;			// 0x290 [0x288] no radio message before this time (1.5 seconds after the last)
+	int					m_iRadioMessages;		// 0x294 [0x28c] radio messages left (Spawn sets the number)
+	bool				m_fIgnoreRadio;			// 0x298 [0x290] the ignoreradio command; CBasePlayer::Radio sends such a player nothing
+	bool				m_fHasC4;				// 0x299 [0x291] carries the C4 bomb
+	bool				m_fHasDefuser;			// 0x29a [0x292] carries a defuse kit (bought: BuyItem); CGrenade::Use defuses in 5 seconds with it, 10 without
+	bool				m_fKilledByBlast;		// 0x29b [0x29c] the last hit was a blast (DMG_BLAST); picks the death animation
+	Vector				m_vecBlastDir;			// 0x29c [0x2a0] from the inflictor to the player, at the last hit (TakeDamage)
+	bool				m_fKilledByHEGrenade;	// 0x2a8 [0x2ac] the last hit was an HE grenade's (DMG_HEGRENADE); a team mate killed so is not counted
+	CHintMessageQueue	m_hintMessageQueue;		// 0x2ac [new] the hints waiting (HintMessage adds, PreThink shows, Spawn empties)
+	int					m_flDisplayHistory;		// 0x2dc [new] retail's save-table name (FIELD_INTEGER): a bit per hint the player has seen (PreThink, Spawn, HostageUsed, TakeDamage, multiplay's PlayerKilled, ...)
+	int					m_iMenu;				// 0x2e0 [0x2b0] the menu the client has open (client.cpp)
+	float				m_flNextZoneCheck;		// 0x2e4 [new] PostThink checks the zones the player stands in every 0.2 seconds (Spawn: 0)
+	CSignals			m_signals;				// 0x2e8 [new] the zones' signals: buy zone 1, bomb target 2 (the buy commands, CC4::PrimaryAttack, CBuyZone, CBombTarget)
+	edict_t				*m_pentBombTarget;		// 0x2f0 [new] the bomb target the player is in (CBombTarget::BombTargetTouch); the planted C4 keeps it (ShootSatchelCharge)
 
 	int					m_iPlayerSound;// the index of the sound list slot reserved for this player
 	int					m_iTargetVolume;// ideal sound volume. 
@@ -226,6 +297,10 @@ public:
 	int			m_iClientHideHUD;
 	int			m_iFOV;			// field of view
 	int			m_iClientFOV;	// client's known FOV
+	// Beta 5.0 (leak), names ours:
+	BOOL		m_fHasAssaultSuit;	// 0x4f4 GiveNamedItem: TRUE for item_assaultsuit, FALSE for item_kevlar; HasAssaultSuit wants it and armor
+	int			m_iNumSpawns;		// 0x4f8 spawns since the player joined (Spawn counts, JoiningThink clears; FPlayerCanRespawn)
+	CObserver	*m_pObserver;		// 0x4fc the player's observer entity (Spawn creates it, StartObserver hands it the player, ClientDisconnected removes it)
 	// usable player items 
 	CBasePlayerItem	*m_rgpPlayerItems[MAX_ITEM_TYPES];
 	CBasePlayerItem *m_pActiveItem;
@@ -239,6 +314,16 @@ public:
 	BOOL				m_fOnTarget;
 	int					m_iDeaths;
 	float				m_iRespawnFrames;	// used in PlayerDeathThink() to make sure players can always respawn
+
+	// Beta 5.0 (leak): SDK 2.3's status bar, here (0x638 to 0x750)
+	//Player ID
+	void InitStatusBar( void );
+	void UpdateStatusBar( void );
+	int m_izSBarState[ SBAR_END ];
+	float m_flNextSBarUpdateTime;
+	float m_flStatusBarDisappearDelay;
+	char m_SbarString0[ SBAR_STRING_SIZE ];
+	char m_SbarString1[ SBAR_STRING_SIZE ];
 
 	int m_lastx, m_lasty;  // These are the previous update's crosshair angles, DON"T SAVE/RESTORE
 
@@ -266,7 +351,7 @@ public:
 	virtual BOOL IsSneaking( void ) { return m_tSneaking <= gpGlobals->time; }
 	virtual BOOL IsAlive( void ) { return (pev->deadflag == DEAD_NO) && pev->health > 0; }
 	virtual BOOL ShouldFadeOnDeath( void ) { return FALSE; }
-	virtual	BOOL IsPlayer( void ) { return TRUE; }			// Spectators should return FALSE for this, they aren't "players" as far as game logic is concerned
+	virtual	BOOL IsPlayer( void ) { return !( pev->flags & FL_SPECTATOR ); }	// Beta 5.0 (leak): a joining player (FL_SPECTATOR, ClientPutInServer) is not one
 
 	virtual BOOL IsNetClient( void ) { return TRUE; }		// Bots should return FALSE for this, they can't receive NET messages
 															// Spectators should return TRUE for this
@@ -311,13 +396,29 @@ public:
 	void AddPointsToTeam( int score, BOOL bAllowNegativeScore );
 	BOOL AddPlayerItem( CBasePlayerItem *pItem );
 	BOOL RemovePlayerItem( CBasePlayerItem *pItem );
-	void DropPlayerItem ( char *pszItemName );
 	void ThrowWeapon( char *pszItemName );
 	void ThrowPrimary( void );
-	void AddAccount( int amount );
-	bool HasPrimaryWeapons( void );	// Beta 3.1's Linux symbol HasPrimaryWeapons__11CBasePlayer (Beta 2.0 to 2.1: our HasPrimaryWeapon)
-	void Radio( const char *msg_id );	// Beta 3.0's radio: plays %!MRAD_<msg_id> to the team (parameter name ours)
-	void PlantC4( void );	// Beta 4.0's plant_c4 command (Linux symbol PlantC4__11CBasePlayer)
+
+	// Beta 5.0 (leak), Linux symbols; parameter counts from retail's stack cleanup
+	// (names ours)
+	void AddAccount( int amount, bool bTrackChange );
+	void Radio( const char *msg_id, const char *msg_verbose );
+	void DropPlayerItem( const char *pszItemName );
+	void SetPlayerModel( BOOL HasC4 );
+	void SetBombIcon( BOOL bFlash );
+	BOOL IsCommander( void );
+	void SyncRoundTimer( void );
+	void MenuPrint( CBasePlayer *pPlayer, const char *msg );
+	void RoundRespawn( void );
+	void HostageUsed( void );
+	bool HintMessage( const char *pMessage, BOOL bDisplayIfPlayerDead );
+	BOOL HasAssaultSuit( void );
+	void SetScoreboardAttributes( CBasePlayer *destination = NULL );	// NULL: every player sees this one's marks
+	void ResetMenu( void );
+	void RemoveLevelText( void );
+	void JoiningThink( void );
+	void HandleSignals( void );
+	virtual void ResetMaxSpeed( void );
 	BOOL HasPlayerItem( CBasePlayerItem *pCheckItem );
 	BOOL HasNamedPlayerItem( const char *pszItemName );
 	BOOL HasWeapons( void );// do I have ANY weapons?

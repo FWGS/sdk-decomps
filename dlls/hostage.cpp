@@ -34,6 +34,7 @@
 #include "../engine/studio.h"
 
 extern void Broadcast( const char *sentence );	// multiplay_gamerules.cpp (Beta 3.0)
+extern void ShowMenu( CBasePlayer *pPlayer, int bitsValidSlots, int nDisplayTime, BOOL fNeedMore, char *pszText );	// client.cpp (Beta 5.0 leak)
 
 LINK_ENTITY_TO_CLASS( hostage_entity, CHostage );
 
@@ -47,7 +48,8 @@ void CHostage::Spawn( void )
 	pev->takedamage	= DAMAGE_YES;
 	pev->flags		|= FL_MONSTER;
 	pev->deadflag	= DEAD_NO;
-	pev->health		= 100;
+	pev->max_health	= 100;			// Beta 5.0 (leak)
+	pev->health		= pev->max_health;
 	pev->gravity	= 1.0;
 
 	SET_MODEL( ENT(pev), "models/scientist.mdl" );
@@ -62,6 +64,7 @@ void CHostage::Spawn( void )
 	m_flFollowDistance = 128;
 	m_flFlinchTime = 0;
 	m_vecPath[0] = Vector( 0, 0, 0 );	// Beta 3.0
+	m_fRescued = FALSE;					// Beta 5.0 (leak)
 
 	UTIL_SetSize( pev, Vector( -16, -16, 0 ), Vector( 16, 16, 72 ) );
 	UTIL_MakeVectors( pev->v_angle );
@@ -70,7 +73,8 @@ void CHostage::Spawn( void )
 
 	SetThink( IdleThink );
 	pev->nextthink = gpGlobals->time + 0.1;
-	SetTouch( Touch );	// Beta 4.1
+	// Beta 5.0 (leak): no SetTouch( Touch ) (Beta 4.1's): the engine calls the
+	// Touch override anyway
 
 	m_vecStart = pev->origin;
 }
@@ -136,61 +140,62 @@ void CHostage::IdleThink( void )
 			m_hTargetEnt = NULL;
 		}
 
-		if ( m_hTargetEnt != NULL && ( pev->origin - m_hTargetEnt->pev->origin ).Length() < 2048 && m_fStopped == FALSE )	// Beta 4.1: 2048 (was 1024)
+		if ( m_hTargetEnt != NULL && ( pev->origin - m_hTargetEnt->pev->origin ).Length() < 1024 && m_fStopped == FALSE )	// Beta 4.1: 2048 (Beta 5.0 leak: 1024 again)
 		{
-			// Beta 4.1 (in place of ClientCommand's "hostage"): once a second, a
-			// hostage that follows a counter-terrorist and is within 200 units of
-			// an info_hostage_rescue (a map without one: of an info_player_start)
-			// is rescued, worth 900 dollars to him
-			if ( m_flNextRescueCheck < gpGlobals->time )
+			TraceResult tr;
+
+			// Beta 5.0 (leak): a hostage that follows a counter-terrorist is rescued in a
+			// func_hostage_rescue (m_fRescued), or on a map without one within 256 units of
+			// an info_hostage_rescue (without those: of an info_player_start); checked at
+			// every think, worth 1000 dollars to him (Beta 4.1: once a second, 200 units, 900)
+			CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)m_hTargetEnt->pev );	// names ours
+
+			if ( pPlayer )
 			{
-				m_flNextRescueCheck = gpGlobals->time + 1;
-
-				CBasePlayer *pPlayer = (CBasePlayer *)(CBaseEntity *)m_hTargetEnt;	// names ours
-
-				if ( pPlayer->m_iTeam == TEAM_CT )
+				if ( !((CHalfLifeMultiplay *)g_pGameRules)->m_fMapHasRescueZone && pPlayer->m_iTeam == TEAM_CT )
 				{
-					CBaseEntity *pSpot = UTIL_FindEntityByClassname( NULL, "info_hostage_rescue" );
+					BOOL fRescueSpots = FALSE;
+					if ( UTIL_FindEntityByClassname( NULL, "info_hostage_rescue" ) )
+						fRescueSpots = TRUE;
 
-					if ( pSpot != NULL )
+					CBaseEntity *pSpot;
+					for ( pSpot = UTIL_FindEntityByClassname( NULL, "info_hostage_rescue" ); pSpot != NULL; pSpot = UTIL_FindEntityByClassname( pSpot, "info_hostage_rescue" ) )
 					{
-						while ( pSpot != NULL )
+						if ( ( pSpot->pev->origin - pev->origin ).Length() < 256 )
 						{
-							if ( ( pSpot->pev->origin - pev->origin ).Length() < 200 )
-							{
-								pev->deadflag = DEAD_RESPAWNABLE;	// rescued
-								pPlayer->AddAccount( 900 );
-								Remove();
-								((CHalfLifeMultiplay *)g_pGameRules)->m_iHostagesRescued++;
-								((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
-								Broadcast( "rescued" );
-							}
-							pSpot = UTIL_FindEntityByClassname( pSpot, "info_hostage_rescue" );
+							m_fRescued = TRUE;
+							ALERT( at_console, " Rescued on a info_hostage_rescue\n" );
+							break;
 						}
 					}
-					else
-					{
-						pSpot = UTIL_FindEntityByClassname( NULL, "info_player_start" );
 
-						while ( pSpot != NULL )
+					if ( !fRescueSpots )
+					{
+						for ( pSpot = UTIL_FindEntityByClassname( NULL, "info_player_start" ); pSpot != NULL; pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_start" ) )
 						{
-							if ( ( pSpot->pev->origin - pev->origin ).Length() < 200 )
+							if ( ( pSpot->pev->origin - pev->origin ).Length() < 256 )
 							{
-								pev->deadflag = DEAD_RESPAWNABLE;	// rescued
-								pPlayer->AddAccount( 900 );
-								Remove();
-								((CHalfLifeMultiplay *)g_pGameRules)->m_iHostagesRescued++;
-								((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
-								Broadcast( "rescued" );
+								m_fRescued = TRUE;
+								ALERT( at_console, " Rescued on a info_player_start\n" );
+								break;
 							}
-							pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_start" );
 						}
 					}
+				}
+
+				if ( m_fRescued )
+				{
+					pev->deadflag = DEAD_RESPAWNABLE;	// rescued
+					pPlayer->AddAccount( 1000, true );
+					Remove();
+					((CHalfLifeMultiplay *)g_pGameRules)->m_iHostagesRescued++;
+					((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
+					Broadcast( "rescued" );
+					ShowMenu( pPlayer, 0, 2, FALSE, "Hostage rescued." );
 				}
 			}
 
 			// follow: turn to the leader and run to him
-			TraceResult tr;
 			Vector vecDir = m_hTargetEnt->pev->origin - pev->origin;
 
 			pev->angles = UTIL_VecToAngles( vecDir );
@@ -221,7 +226,7 @@ void CHostage::IdleThink( void )
 					pev->velocity.z = 150;
 			}
 		}
-		else if ( m_hTargetEnt != NULL && ( pev->origin - m_hTargetEnt->pev->origin ).Length() < 256 && m_fStopped == TRUE )	// Beta 4.1: 256 (was 200)
+		else if ( m_hTargetEnt != NULL && ( pev->origin - m_hTargetEnt->pev->origin ).Length() < 200 && m_fStopped == TRUE )	// Beta 4.1: 256 (Beta 5.0 leak: 200 again)
 		{
 			// told to stay, but the leader is too close: back away from him
 			TraceResult tr;
@@ -233,7 +238,7 @@ void CHostage::IdleThink( void )
 
 			if ( vecDir.Length() > m_flFollowDistance )
 			{
-				pev->velocity = vecDir / vecDir.Length() * 200;	// Beta 4.1 (was 110)
+				pev->velocity = vecDir / vecDir.Length() * 110;	// Beta 4.1: 200 (Beta 5.0 leak: 110 again)
 				pev->velocity.z -= 40;
 			}
 
@@ -249,8 +254,12 @@ void CHostage::IdleThink( void )
 		else if ( m_fStopped == 6 && m_hTargetEnt != NULL )
 		{
 			// Beta 3.0: the leader is out of sight; walk along his trail
+			ALERT( at_console, "Waypoint = %i\n", m_iPathIndex );	// Beta 5.0 (leak)
+
 			if ( m_hTargetEnt->IsPlayer() && m_vecPath[0] == Vector( 0, 0, 0 ) )
 			{
+				ALERT( at_console, " I'm downloading the player's path now\n" );	// Beta 5.0 (leak)
+
 				// take over the leader's last 20 positions and start at the nearest
 				CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)m_hTargetEnt->pev );
 
@@ -289,6 +298,7 @@ void CHostage::IdleThink( void )
 				UTIL_TraceLine( pev->origin + gpGlobals->v_up * 25, pev->origin + vecLeader * 4096 + gpGlobals->v_up * 25, dont_ignore_monsters, ENT( pev ), &tr );	// Beta 4.0: 4096 (was 2048)
 				if ( VARS( tr.pHit )->solid != SOLID_BSP )
 				{
+					ALERT( at_console, " I can see the player now.. \n" );	// Beta 5.0 (leak)
 					m_fStopped = FALSE;
 					m_vecPath[0] = Vector( 0, 0, 0 );
 					return;
@@ -321,6 +331,7 @@ void CHostage::IdleThink( void )
 					UTIL_TraceLine( pev->origin + gpGlobals->v_up * 25 - gpGlobals->v_forward * 32, pev->origin + gpGlobals->v_forward * 100 + gpGlobals->v_up * 25, ignore_monsters, ENT( pev ), &tr );
 					if ( tr.flFraction == 1.0 )
 					{
+						ALERT( at_console, "There's something at my feet!\n" );	// Beta 3.1's; Beta 4.0 had dropped it
 						pev->velocity.z = 150;
 					}
 				}
@@ -354,9 +365,10 @@ void CHostage::Remove( void )
 	pev->nextthink = -1;
 }
 
-// back to where Spawn found it, alive again (its health is not restored)
+// back to where Spawn found it, alive again (Beta 5.0 leak: and healed)
 void CHostage::RePosition( void )
 {
+	pev->health = pev->max_health;	// Beta 5.0 (leak): healed at every new round
 	pev->movetype = MOVETYPE_STEP;
 	pev->solid = SOLID_SLIDEBOX;
 	pev->takedamage = DAMAGE_YES;
@@ -478,7 +490,13 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 		{
 			CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pevAttacker );
 
-			pPlayer->AddAccount( -1500 );
+			pPlayer->AddAccount( -1500, true );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You killed a hostage!" );	// Beta 5.0 (leak)
+			if ( !(pPlayer->m_flDisplayHistory & 0x40) )	// hostage killed
+			{
+				pPlayer->HintMessage( "You have lost money for killing a hostage.", FALSE );
+				pPlayer->m_flDisplayHistory |= 0x40;
+			}
 		}
 
 		// the body flies away from the killer
@@ -500,9 +518,23 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 		((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
 
 		if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander != NULL )
-			((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander->Radio( "hosdown" );
+			((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander->Radio( "%!MRAD_HOSDOWN", "Hostage down.\n" );
 
 		return 0;
+	}
+
+	// Beta 5.0 (leak): a player who hurts a hostage is told so, and the first
+	// time given a hint
+	if ( GetClassPtr( (CBaseEntity *)pevAttacker )->IsPlayer() )
+	{
+		CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pevAttacker );	// name ours
+
+		ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You injured a hostage!" );
+		if ( !(pPlayer->m_flDisplayHistory & 0x20) )	// hostage injured
+		{
+			pPlayer->HintMessage( "Be careful around hostages.\nYou will lose money if you kill a hostage.", FALSE );
+			pPlayer->m_flDisplayHistory |= 0x20;
+		}
 	}
 
 	return 1;
@@ -520,16 +552,6 @@ void CHostage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 
 	if ( pActivator->IsPlayer() )
 	{
-		// Beta 4.1: a player has to face the hostage to use it
-		Vector vecFromHostage;	// names ours
-		Vector vecForward;
-
-		UTIL_MakeVectors( pActivator->pev->v_angle );
-		vecFromHostage = pActivator->pev->origin - pev->origin;
-		vecForward = gpGlobals->v_forward;
-		if ( DotProduct( vecForward, vecFromHostage ) > 0 )
-			return;
-
 		// Beta 3.0: the leader's use makes a following hostage stay; any
 		// other use, or a new leader, makes it follow
 		if ( pActivator == m_hTargetEnt && m_fStopped == FALSE )
@@ -558,19 +580,21 @@ void CHostage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 			}
 
 			// the first counter-terrorist to lead it pays himself and his team
-			// (Beta 4.0: 500 each, was 150)
+			// (Beta 4.0: 500 each, was 150; Beta 5.0 leak: 150 to him, 100 to the team)
 			if ( !m_fTouched )
 			{
 				m_fTouched = TRUE;
-				((CHalfLifeMultiplay *)g_pGameRules)->m_iAccountCT += 500;
-				((CBasePlayer *)pActivator)->AddAccount( 500 );
+				((CHalfLifeMultiplay *)g_pGameRules)->m_iAccountCT += 100;
+				((CBasePlayer *)pActivator)->AddAccount( 150, true );
 			}
 		}
+
+		((CBasePlayer *)pActivator)->HostageUsed();	// Beta 5.0 (leak): the hint
 	}
 
 	if ( m_fStopped == TRUE )
 	{
-		m_flFollowDistance = 36;
+		m_flFollowDistance = 60;	// Beta 5.0 (leak) (was 36)
 		m_flFollowRange = 300;
 	}
 	else if ( m_fStopped == FALSE )
@@ -580,19 +604,25 @@ void CHostage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 	}
 }
 
+// Beta 5.0 (leak): the hostage is used on and off (FCAP_ONOFF_USE)
+int CHostage::ObjectCaps( void )
+{
+	return CBaseMonster::ObjectCaps() | FCAP_ONOFF_USE;
+}
+
 // Beta 4.1: the player the hostage follows pushes it away when he runs into
 // it, at 225 units a second
 void CHostage::Touch( CBaseEntity *pOther )
 {
-	Vector vecPush;		// name ours
-
-	if ( pOther->IsPlayer() )
+	// Beta 5.0 (leak): any player pushes it away, at 200 units a second (Beta 4.1:
+	// the one it follows, at 225)
+	if ( pOther->IsPlayer() == TRUE )
 	{
-		if ( pOther == m_hTargetEnt )
-		{
-			vecPush = pev->origin - pOther->pev->origin;
-			vecPush = vecPush / vecPush.Length();
-			pev->velocity = vecPush * 225;
-		}
+		Vector vecPush;		// name ours
+
+		vecPush = pev->origin - pOther->pev->origin;
+		vecPush = vecPush / vecPush.Length();
+		vecPush = vecPush * 200;
+		pev->velocity = vecPush;
 	}
 }

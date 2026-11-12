@@ -33,7 +33,7 @@ class CKnife : public CBasePlayerWeapon
 public:
 	void Spawn( void );
 	void Precache( void );
-	int iItemSlot( void ) { return 1; }
+	int iItemSlot( void ) { return 3; }
 	void EXPORT SwingAgain( void );
 	void EXPORT Smack( void );
 	int GetItemInfo(ItemInfo *p);
@@ -44,6 +44,8 @@ public:
 	void Holster( void );
 	int m_iSwing;
 	TraceResult m_trHit;
+	float GetMaxSpeed( void ) { return 300; }	// Beta 5.0 (leak): Linux symbol
+	BOOL CanDrop( void ) { return FALSE; }		// Beta 5.0 (leak): Linux symbol
 };
 LINK_ENTITY_TO_CLASS( weapon_knife, CKnife );
 
@@ -91,8 +93,8 @@ int CKnife::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
-	p->iSlot = 0;
-	p->iPosition = 3;
+	p->iSlot = 2;
+	p->iPosition = 1;
 	p->iId = WEAPON_KNIFE;
 	p->iWeight = KNIFE_WEIGHT;
 	return 1;
@@ -103,7 +105,6 @@ int CKnife::GetItemInfo(ItemInfo *p)
 BOOL CKnife::Deploy( )
 {
 	EMIT_SOUND( ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/knife_deploy1.wav", 1, ATTN_NORM );
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 300 );
 	return DefaultDeploy( "models/v_knife.mdl", "models/p_knife.mdl", KNIFE_DRAW, "crowbar" );
 }
 

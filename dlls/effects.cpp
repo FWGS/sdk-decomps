@@ -331,7 +331,7 @@ void CBeam::TriggerTouch( CBaseEntity *pOther )
 			CBaseEntity *pOwner = CBaseEntity::Instance(pev->owner);
 			pOwner->Use( pOther, this, USE_TOGGLE, 0 );
 		}
-		//ALERT( at_console, "Firing targets!!!\n" );	// Counter-Strike Beta 4.0: commented out
+		ALERT( at_console, "Firing targets!!!\n" );	// Counter-Strike Beta 4.0 commented it out; back in Beta 5.0 (leak)
 	}
 }
 
@@ -1162,6 +1162,68 @@ void CGlow::Animate( float frames )
 { 
 	if ( m_maxFrame > 0 )
 		pev->frame = fmod( pev->frame + frames, m_maxFrame );
+}
+
+
+//=========================================================
+// Counter-Strike Beta 5.0 (leak): env_bombglow (class name from the Linux
+// symbols; member names ours): a red glow that blinks with a beep, first
+// every two seconds, then 5 % faster each time down to a tenth of a second.
+// Nothing in the DLL creates one.
+//=========================================================
+class CBombGlow : public CSprite
+{
+public:
+	void Spawn( void );
+	void Think( void );
+
+	float	m_lastTime;			// the last beep
+	float	m_tmBeepPeriod;		// the time to the next one
+	bool	m_bSetModel;		// Think has set the flare sprite
+};
+
+LINK_ENTITY_TO_CLASS( env_bombglow, CBombGlow );
+
+void CBombGlow::Spawn( void )
+{
+	pev->solid			= SOLID_NOT;
+	pev->movetype		= MOVETYPE_NONE;
+	pev->effects		= 0;
+	pev->frame			= 0;
+	pev->nextthink		= gpGlobals->time + 0.05;
+	pev->rendermode		= kRenderGlow;
+	pev->rendercolor.x	= 255;
+	pev->rendercolor.y	= 15;
+	pev->rendercolor.z	= 15;
+	pev->renderamt		= 100;
+	pev->renderfx		= kRenderFxNone;
+	m_lastTime			= gpGlobals->time;
+	m_tmBeepPeriod		= 2.0;
+	m_bSetModel			= false;
+}
+
+void CBombGlow::Think( void )
+{
+	if ( !m_bSetModel )
+	{
+		m_bSetModel = true;
+		PRECACHE_MODEL( "sprites/flare1.spr" );
+		SET_MODEL( ENT(pev), "sprites/flare1.spr" );
+	}
+
+	pev->effects |= EF_NODRAW;
+
+	if ( m_lastTime + m_tmBeepPeriod < gpGlobals->time )
+	{
+		m_lastTime = gpGlobals->time;
+		m_tmBeepPeriod *= 0.95;
+		if ( m_tmBeepPeriod < 0.1 )
+			m_tmBeepPeriod = 0.1;
+		pev->effects = 0;
+		EMIT_SOUND( ENT(pev), CHAN_VOICE, "weapons/c4_beep.wav", 1.0, 1.0 );
+	}
+
+	pev->nextthink = gpGlobals->time + 0.05;
 }
 
 

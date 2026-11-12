@@ -33,11 +33,11 @@ class CMP5N : public CBasePlayerWeapon
 public:
 	void Spawn( void );
 	void Precache( void );
-	int iItemSlot( void ) { return 4; }
+	int iItemSlot( void ) { return 1; }
 	int GetItemInfo(ItemInfo *p);
+	float GetMaxSpeed( void ) { return 260; }	// Beta 5.0 (leak): Linux symbol
 
 	void PrimaryAttack( void );
-	void SecondaryAttack( void );
 	void MP5NFire( float flSpread, float flCycleTime, BOOL fUseAutoAim );
 	BOOL Deploy( void );
 	void Reload( void );
@@ -84,8 +84,8 @@ int CMP5N::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = MP5N_MAX_CLIP;
-	p->iSlot = 3;
-	p->iPosition = 4;
+	p->iSlot = 0;
+	p->iPosition = 7;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_MP5N;
 	p->iWeight = MP5N_WEIGHT;
@@ -98,13 +98,7 @@ BOOL CMP5N::Deploy( )
 	m_pPlayer->m_flAccuracy = 0;
 	m_fEjectShell = 1;
 	m_fDelayFire = false;
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 260 );
 	return DefaultDeploy( "models/v_mp5.mdl", "models/p_mp5.mdl", MP5N_DRAW, "mp5" );
-}
-
-void CMP5N::SecondaryAttack( void )
-{
-	MP5NFire( m_pPlayer->m_flAccuracy * 0.04, 0.075, FALSE );
 }
 
 void CMP5N::PrimaryAttack( void )

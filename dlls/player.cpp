@@ -33,6 +33,7 @@
 #include "../engine/shake.h"
 #include "decals.h"
 #include "gamerules.h"
+#include "observer.h"	// Beta 5.0 (leak)
 
 // #define DUCKFIX
 
@@ -40,6 +41,7 @@ extern DLL_GLOBAL ULONG		g_ulModelIndexPlayer;
 extern DLL_GLOBAL BOOL		g_fGameOver;
 extern DLL_GLOBAL	BOOL	g_fDrawLines;
 int gEvilImpulse101;
+char g_szMapBriefingText[512];	// Beta 5.0 (leak) (Linux symbol): the map's briefing text (world.cpp reads it, JoiningThink and showbriefing show it)
 extern DLL_GLOBAL int		g_iSkillLevel, gDisplayTitle;
 BOOL gInitHUD = TRUE;
 
@@ -122,6 +124,7 @@ TYPEDESCRIPTION	CBasePlayer::m_playerSaveData[] =
 	DEFINE_FIELD( CBasePlayer, m_pTank, FIELD_EHANDLE ),
 	DEFINE_FIELD( CBasePlayer, m_iHideHUD, FIELD_INTEGER ),
 	DEFINE_FIELD( CBasePlayer, m_iFOV, FIELD_INTEGER ),
+	DEFINE_FIELD( CBasePlayer, m_flDisplayHistory, FIELD_INTEGER ),	// Beta 5.0 (leak)
 	
 	//DEFINE_FIELD( CBasePlayer, m_fDeadTime, FIELD_FLOAT ), // only used in multiplayer games
 	//DEFINE_FIELD( CBasePlayer, m_fGameHUDInitialized, FIELD_INTEGER ), // only used in multiplayer games
@@ -172,6 +175,7 @@ int gmsgWeaponList = 0;
 int gmsgAmmoX = 0;
 int gmsgHudText = 0;
 int gmsgDeathMsg = 0;
+int gmsgScoreAttrib = 0;	// Beta 5.0 (leak)
 int gmsgScoreInfo = 0;
 int gmsgTeamInfo = 0;
 int gmsgTeamScore = 0;
@@ -194,46 +198,117 @@ int gmsgSendAudio = 0;	// Beta 3.0's radio: a sentence and the entity it comes f
 // iSkipStep (Betas 2.0 and 2.1 the same after gmsgShowMenu).
 //
 int gmsgRoundTime = 0;
-int gmsgGiveItem = 0;	// Beta 4.0: the client shows the C4 (0) or the defuser (1) its player got
-int gmsgRemoveItem = 0;	// Beta 4.0: ... and takes it off again
+// Beta 5.0 (leak)'s new messages (Beta 4.0's GiveItem and RemoveItem are gone)
+int gmsgMoney = 0;
+int gmsgBlinkAcct = 0;
+int gmsgArmorType = 0;
+int gmsgStatusValue = 0;
+int gmsgStatusText = 0;
+int gmsgStatusIcon = 0;
+int gmsgBarTime = 0;
+int gmsgReloadSound = 0;
 
 LINK_ENTITY_TO_CLASS( player, CBasePlayer );
 
 //=========================================================
-// Radio - Beta 3.0's radio (name from the later versions'
-// Linux symbols): "**RADIO** <name> : <msg_id>" in the chat of
-// every team mate who is not dying and has not turned the
-// radio off (Beta 3.0: ignoremessages 3; 3.1: ignoreradio), and the sentence !MRAD_<msg_id>
-// sent to him with his own entity index (sic). A player in
-// noclip (observing) has no radio.
+// GetCSModelName - Beta 5.0 (leak) (Linux symbol): the world
+// model of a weapon dropped in a weaponbox; the C4 is the
+// backpack. Linux symbol, a static function as there: VC6
+// emits it after its first user, PackDeadPlayerItems
 //=========================================================
-void CBasePlayer::Radio( const char *msg_id )
+static char *GetCSModelName( int item_id )
 {
-	char szSentence[32];
-	char szMessage[128];
+	char *modelName;	// name ours
 
-	if ( !msg_id )
+	switch ( item_id )
+	{
+	case WEAPON_AK47:		modelName = "models/w_ak47.mdl"; break;
+	case WEAPON_AWP:		modelName = "models/w_awp.mdl"; break;
+	case WEAPON_DEAGLE:		modelName = "models/w_deagle.mdl"; break;
+	case WEAPON_G3SG1:		modelName = "models/w_g3sg1.mdl"; break;
+	case WEAPON_GLOCK18:	modelName = "models/w_glock18.mdl"; break;
+	case WEAPON_M249:		modelName = "models/w_m249.mdl"; break;
+	case WEAPON_M3:			modelName = "models/w_m3.mdl"; break;
+	case WEAPON_M4A1:		modelName = "models/w_m4a1.mdl"; break;
+	case WEAPON_MP5N:		modelName = "models/w_mp5.mdl"; break;
+	case WEAPON_SG552:		modelName = "models/w_sg552.mdl"; break;
+	case WEAPON_TMP:		modelName = "models/w_tmp.mdl"; break;
+	case WEAPON_USP:		modelName = "models/w_usp.mdl"; break;
+	case WEAPON_P90:		modelName = "models/w_p90.mdl"; break;
+	case WEAPON_P228:		modelName = "models/w_p228.mdl"; break;
+	case WEAPON_SCOUT:		modelName = "models/w_scout.mdl"; break;
+	case WEAPON_KNIFE:		modelName = "models/w_knife.mdl"; break;
+	case WEAPON_FLASHBANG:	modelName = "models/w_flashbang.mdl"; break;
+	case WEAPON_HEGRENADE:	modelName = "models/w_hegrenade.mdl"; break;
+	case WEAPON_XM1014:		modelName = "models/w_xm1014.mdl"; break;
+	case WEAPON_C4:			modelName = "models/w_backpack.mdl"; break;
+	default:
+		modelName = NULL;
+		ALERT( at_console, "CBasePlayer::PackDeadPlayerItems(): Unhandled item- not creating weaponbox\n" );
+	}
+
+	return modelName;
+}
+
+//=========================================================
+// SetPlayerModel - Beta 5.0 (leak) (Linux symbol): the model
+// of the player's appearance (m_iAppearance: 1 urban, 2
+// terror, 3 arab, 4 gsg9, 5 sas; anything else urban). The
+// C4 carrier's flag picks between the same two models (sic).
+//=========================================================
+void CBasePlayer::SetPlayerModel( BOOL HasC4 )
+{
+	int clientIndex = entindex();	// name ours
+
+	switch ( m_iAppearance )
+	{
+	case 1:
+		CLIENT_COMMAND( edict(), "model urban\n" );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "urban" );
+		break;
+	case 2:
+		if ( HasC4 )
+			CLIENT_COMMAND( edict(), "model terror\n" );
+		else
+			CLIENT_COMMAND( edict(), "model terror\n" );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "terror" );
+		break;
+	case 3:
+		if ( HasC4 )
+			CLIENT_COMMAND( edict(), "model arab\n" );
+		else
+			CLIENT_COMMAND( edict(), "model arab\n" );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "arab" );
+		break;
+	case 4:
+		CLIENT_COMMAND( edict(), "model gsg9\n" );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "gsg9" );
+		break;
+	case 5:
+		CLIENT_COMMAND( edict(), "model sas\n" );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "sas" );
+		break;
+	default:
+		CLIENT_COMMAND( edict(), "model urban\n" );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "urban" );
+		break;
+	}
+}
+
+//=========================================================
+// Radio - Beta 5.0 (leak): "<name> (RADIO): <msg_verbose>" in
+// the chat of every living team mate who has not turned the
+// radio off, and the sentence msg_id (the callers pass
+// "%!MRAD_..." themselves) sent to him with his own entity
+// index (sic, as Beta 3.0's); then the radio sprite over the
+// speaker's head, for each of them alone.
+//=========================================================
+void CBasePlayer::Radio( const char *msg_id, const char *msg_verbose )
+{
+	if ( !IsPlayer() )
 		return;
 
-	if ( pev->movetype == MOVETYPE_NOCLIP )
-		return;
-
-	// Beta 4.0: the radio sprite over the speaker's head for 1.5 seconds, for everybody
-	MESSAGE_BEGIN( MSG_ALL, SVC_TEMPENTITY );
-		WRITE_BYTE( TE_PLAYERATTACHMENT );
-		WRITE_BYTE( ENTINDEX( edict() ) );
-		WRITE_COORD( 35 );
-		WRITE_SHORT( g_sModelIndexRadio );
-		WRITE_SHORT( 15 );
-	MESSAGE_END();
-
-	strcpy( szMessage, "**RADIO** " );
-	strcat( szMessage, STRING( pev->netname ) );
-	strcat( szMessage, " : " );
-	strcat( szMessage, msg_id );
-
-	strcpy( szSentence, "%!MRAD_" );
-	strcat( szSentence, UTIL_VarArgs( "%s", msg_id ) );
+	char *szMessage = UTIL_VarArgs( "%s (RADIO): %s\n", STRING( pev->netname ), msg_verbose );	// name ours
 
 	CBaseEntity *pPlayer = NULL;
 	pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
@@ -243,13 +318,22 @@ void CBasePlayer::Radio( const char *msg_id )
 		{
 			CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
 
-			if ( player->pev->deadflag != DEAD_DYING && player->m_iTeam == m_iTeam && !player->m_fIgnoreRadio )
+			if ( player->pev->deadflag == DEAD_NO && player->m_iTeam == m_iTeam && !player->m_fIgnoreRadio )
 			{
 				ClientPrint( pPlayer->pev, HUD_PRINTTALK, szMessage );
 
 				MESSAGE_BEGIN( MSG_ONE, gmsgSendAudio, NULL, pPlayer->pev );
 					WRITE_BYTE( ENTINDEX( player->edict() ) );
-					WRITE_STRING( szSentence );
+					WRITE_STRING( msg_id );
+				MESSAGE_END();
+
+				// the radio sprite over the speaker's head for 1.5 seconds
+				MESSAGE_BEGIN( MSG_ONE, SVC_TEMPENTITY, NULL, pPlayer->pev );
+					WRITE_BYTE( TE_PLAYERATTACHMENT );
+					WRITE_BYTE( ENTINDEX( edict() ) );
+					WRITE_COORD( 35 );
+					WRITE_SHORT( g_sModelIndexRadio );
+					WRITE_SHORT( 15 );
 				MESSAGE_END();
 			}
 		}
@@ -476,10 +560,9 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 			else if ( pev->punchangle.z > 9 )
 				pev->punchangle.z = 9;
 			break;
-		case HITGROUP_CHEST:	// Beta 4.0: the chest takes 1.25 times the damage, the stomach no longer
+		case HITGROUP_CHEST:	// Beta 4.0 to 4.1: the chest took 1.25 times the damage; Beta 5.0 (leak): the stomach again, as Beta 3.1
 			if ( m_iKevlar )
 				bShouldBleed = false;
-			flDamage *= 1.25;
 			pev->punchangle.x = flDamage * -0.1;
 			if ( pev->punchangle.x < -4 )
 				pev->punchangle.x = -4;
@@ -487,6 +570,7 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 		case HITGROUP_STOMACH:
 			if ( m_iKevlar )
 				bShouldBleed = false;
+			flDamage *= 1.25;
 			pev->punchangle.x = flDamage * -0.1;
 			if ( pev->punchangle.x < -4 )
 				pev->punchangle.x = -4;
@@ -547,8 +631,9 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		if ( !IsAlive() )
 			return 0;
 
-		// an HE grenade spares the thrower's team unless mp_friendly_grenade_damage
-		if ( CVAR_GET_FLOAT( "mp_friendly_grenade_damage" ) == 0 && ( bitsDamageType & DMG_HEGRENADE ) )
+		// an HE grenade spares the thrower's team unless mp_friendlyfire (Beta 5.0 leak;
+		// Beta 4.0 to 4.1: mp_friendly_grenade_damage)
+		if ( CVAR_GET_FLOAT( "mp_friendlyfire" ) == 0 && ( bitsDamageType & DMG_HEGRENADE ) )
 		{
 			CBaseEntity *pInflictor = GetClassPtr( (CBaseEntity *)pevInflictor );	// name ours
 
@@ -616,6 +701,8 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 			if ( bitsDamageType & ( DMG_PARALYZE << i ) )
 				m_rgbTimeBasedDamage[i] = 0;
 
+		ALERT( at_console, "EXPLOSION DAMAGE\n" );	// Beta 5.0 (leak)
+
 		return flDamage;
 	}
 
@@ -645,16 +732,26 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	// go take the damage first
 
 
-	// a player's hits: half damage to a team mate (and to himself), 20 dollars for hitting an enemy (Beta 3.1: 10)
+	// a player's hits: half damage to a team mate (and to himself), who is told
+	// so (Beta 5.0 leak: the money for hitting an enemy is gone)
 	if ( GetClassPtr( (CBaseEntity *)pevAttacker )->IsPlayer() )
 	{
 		pAttacker = GetClassPtr( (CBasePlayer *)pevAttacker );
 
 		if ( pAttacker->m_iTeam == m_iTeam )
-			flDamage *= 0.5;
+		{
+			ClientPrint( pAttacker->pev, HUD_PRINTCENTER, "You injured a teammate!\n" );
 
-		if ( pAttacker != this && pAttacker->m_iTeam != m_iTeam )
-			pAttacker->AddAccount( 20 );	// Beta 4.0: 20 (was 10)
+			// the victim's history decides whether the attacker hears the hint (sic)
+			if ( !( m_flDisplayHistory & 0x200 ) )
+			{
+				m_flDisplayHistory |= 0x200;
+				pAttacker->HintMessage( "Try not to injure your teammates.\n", FALSE );
+			}
+		}
+
+		if ( pAttacker->m_iTeam == m_iTeam )
+			flDamage *= 0.5;
 
 		// Beta 3.0: how much of the damage the armour lets through depends
 		// on the attacker's weapon, a multiple of ARMOR_RATIO
@@ -666,6 +763,10 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		// (one case per weapon: the object's constants come in the order of
 		// their first use, M4A1's 0.775 first, the code in the order of the
 		// cases kept after VC5 merges equal ones, the later copy of each)
+		// Beta 5.0 (leak): no active weapon, the default; the MP5 Navy has
+		// the default's ratio too now (Beta 4.1: 0.45), and so has the TMP,
+		// whose case is gone
+		if ( pAttacker->m_pActiveItem )
 		switch ( pAttacker->m_pActiveItem->m_iId )
 		{
 		case WEAPON_USP:	// Beta 4.0: times 1, which VC5 folds away; the case keeps its jump-table slot, as retail's (an empty case gets none)
@@ -680,11 +781,8 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		case WEAPON_AWP:
 			flRatio *= 1.95;
 			break;
-		case WEAPON_MP5N:	// Beta 4.0
-			flRatio *= 0.9;
-			break;
-		case WEAPON_TMP:	// Beta 4.0
-			flRatio *= 0.9;
+		case WEAPON_MP5N:	// Beta 4.0 (Beta 4.1: 0.9; Beta 5.0 leak: 1)
+			flRatio *= 1;
 			break;
 		case WEAPON_G3SG1:
 			flRatio *= 1.65;
@@ -710,8 +808,8 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		case WEAPON_KNIFE:	// Beta 3.1
 			flRatio *= 1.7;
 			break;
-		case WEAPON_P228:	// Beta 4.0 (Beta 4.1: 1.3, was 1.4)
-			flRatio *= 1.3;
+		case WEAPON_P228:	// Beta 4.0 (Beta 4.1: 1.3, was 1.4; Beta 5.0 leak: 1.4 again)
+			flRatio *= 1.4;
 			break;
 		case WEAPON_SCOUT:	// Beta 4.0
 			flRatio *= 1.6;
@@ -753,15 +851,6 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		}
 
 		Pain( m_LastHitGroup, true );
-
-		// the attacker hears where he hit
-		if ( pevAttacker && !strcmp( STRING( pevAttacker->classname ), "player" ) )
-		{
-			if ( m_LastHitGroup == HITGROUP_HEAD )
-				ClientPrint( pevAttacker, HUD_PRINTTALK, "You hit a kevlar helmet" );
-			else
-				ClientPrint( pevAttacker, HUD_PRINTTALK, "You hit a kevlar vest" );
-		}
 	}
 	else
 		Pain( m_LastHitGroup, false );
@@ -926,195 +1015,70 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 }
 
 //=========================================================
-// PackDeadPlayerItems - call this when a player dies to
-// pack up the appropriate weapons and ammo items, and to
-// destroy anything that shouldn't be packed.
-//
-// This is pretty brute force :(
+// PackDeadPlayerItems - Beta 5.0 (leak): the dead player drops
+// his heaviest weapon of the first three HUD slots (primary,
+// pistol, knife: the knife cannot be dropped otherwise) in a
+// weaponbox with that weapon's model, three quarters of his
+// velocity, gone after five minutes, with all his ammunition
+// of its kind unless the rules keep the ammunition; the rest
+// is removed. Nothing is dropped where the rules say so.
 //=========================================================
 void CBasePlayer::PackDeadPlayerItems( void )
 {
-	int iWeaponRules;
-	int iAmmoRules;
-	int i;
-	CBasePlayerWeapon *rgpPackWeapons[ 20 ];// 20 hardcoded for now. How to determine exactly how many weapons we have?
-	int iPackAmmo[ MAX_AMMO_SLOTS + 1];
-	int iPW = 0;// index into packweapons array
-	int iPA = 0;// index into packammo array
-	int iWeaponID;	// Counter-Strike Beta 2.0: the id of the last weapon looked at (name ours)
+	bool bPackGun = ( g_pGameRules->DeadPlayerWeapons( this ) != GR_PLR_DROP_GUN_NO );	// names ours
+	bool bPackAmmo = ( g_pGameRules->DeadPlayerAmmo( this ) != GR_PLR_DROP_AMMO_NO );
 
-	memset(rgpPackWeapons, NULL, sizeof(rgpPackWeapons) );
-	memset(iPackAmmo, -1, sizeof(iPackAmmo) );
-
-	// get the game rules 
-	iWeaponRules = g_pGameRules->DeadPlayerWeapons( this );
- 	iAmmoRules = g_pGameRules->DeadPlayerAmmo( this );
-
-	if ( iWeaponRules == GR_PLR_DROP_GUN_NO && iAmmoRules == GR_PLR_DROP_AMMO_NO )
+	if ( !bPackGun )
 	{
-		// nothing to pack. Remove the weapons and return. Don't call create on the box!
 		RemoveAllItems( TRUE );
 		return;
 	}
 
-// go through all of the weapons and make a list of the ones to pack
-	for ( i = 0 ; i < MAX_ITEM_TYPES ; i++ )
+	int nBestWeight = 0;	// names ours
+	CBasePlayerItem *pBestItem = NULL;
+
+	for ( int n = 0; n < MAX_ITEM_TYPES; n++ )
 	{
-		if ( m_rgpPlayerItems[ i ] )
+		CBasePlayerItem *pPlayerItem = m_rgpPlayerItems[ n ];
+
+		while ( pPlayerItem )
 		{
-			// there's a weapon here. Should I pack it?
-			CBasePlayerItem *pPlayerItem = m_rgpPlayerItems[ i ];
+			ItemInfo II;
 
-			while ( pPlayerItem )
+			if ( pPlayerItem->iItemSlot() < 3 && pPlayerItem->GetItemInfo( &II ) )
 			{
-				iWeaponID = pPlayerItem->m_iId;
-
-				switch( iWeaponRules )
+				if ( II.iWeight > nBestWeight )
 				{
-				case GR_PLR_DROP_GUN_ACTIVE:
-					if ( m_pActiveItem && pPlayerItem == m_pActiveItem )
-					{
-						// this is the active item. Pack it.
-						rgpPackWeapons[ iPW++ ] = (CBasePlayerWeapon *)pPlayerItem;
-					}
-					break;
-
-				case GR_PLR_DROP_GUN_ALL:
-					rgpPackWeapons[ iPW++ ] = (CBasePlayerWeapon *)pPlayerItem;
-					break;
-
-				default:
-					break;
+					nBestWeight = II.iWeight;
+					pBestItem = pPlayerItem;
 				}
-
-				pPlayerItem = pPlayerItem->m_pNext;
 			}
+
+			pPlayerItem = pPlayerItem->m_pNext;
 		}
 	}
 
-// now go through ammo and make a list of which types to pack.
-	if ( iAmmoRules != GR_PLR_DROP_AMMO_NO )
+	if ( pBestItem )
 	{
-		for ( i = 0 ; i < MAX_AMMO_SLOTS ; i++ )
+		char *modelName = GetCSModelName( pBestItem->m_iId );
+
+		if ( modelName )
 		{
-			if ( m_rgAmmo[ i ] > 0 )
-			{
-				// player has some ammo of this type.
-				switch ( iAmmoRules )
-				{
-				case GR_PLR_DROP_AMMO_ALL:
-					iPackAmmo[ iPA++ ] = i;
-					break;
+			CWeaponBox *pWeaponBox = (CWeaponBox *)CBaseEntity::Create( "weaponbox", pev->origin, pev->angles, edict() );
 
-				case GR_PLR_DROP_AMMO_ACTIVE:
-					if ( m_pActiveItem && i == m_pActiveItem->PrimaryAmmoIndex() ) 
-					{
-						// this is the primary ammo type for the active weapon
-						iPackAmmo[ iPA++ ] = i;
-					}
-					else if ( m_pActiveItem && i == m_pActiveItem->SecondaryAmmoIndex() ) 
-					{
-						// this is the secondary ammo type for the active weapon
-						iPackAmmo[ iPA++ ] = i;
-					}
-					break;
+			pWeaponBox->pev->angles.x = 0;// don't let weaponbox tilt.
+			pWeaponBox->pev->angles.z = 0;
+			pWeaponBox->pev->velocity = pev->velocity * 0.75;
+			pWeaponBox->SetThink( &CWeaponBox::Kill );
+			pWeaponBox->pev->nextthink = gpGlobals->time + 300;
+			pWeaponBox->PackWeapon( pBestItem );
 
-				default:
-					break;
-				}
-			}
+			if ( bPackAmmo )
+				pWeaponBox->PackAmmo( MAKE_STRING( pBestItem->pszAmmo1() ), m_rgAmmo[ pBestItem->PrimaryAmmoIndex() ] );
+
+			SET_MODEL( ENT( pWeaponBox->pev ), modelName );
 		}
 	}
-
-// create a box to pack the stuff into.
-	CWeaponBox *pWeaponBox = (CWeaponBox *)CBaseEntity::Create( "weaponbox", pev->origin, pev->angles, edict() );
-
-	pWeaponBox->pev->angles.x = 0;// don't let weaponbox tilt.
-	pWeaponBox->pev->angles.z = 0;
-
-	pWeaponBox->SetThink( CWeaponBox::Kill );
-	pWeaponBox->pev->nextthink = gpGlobals->time + 300;	// Beta 3.0 (2.0: 30, 2.1: 150)
-
-	// the box shows the last weapon of the list (sic: not necessarily one that is packed)
-	switch ( iWeaponID )
-	{
-	case WEAPON_AK47:
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_ak47.mdl" );
-		break;
-	case WEAPON_AWP:
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_awp.mdl" );
-		break;
-	case WEAPON_DEAGLE:
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_deagle.mdl" );
-		break;
-	case WEAPON_G3SG1:
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_g3sg1.mdl" );
-		break;
-	case WEAPON_GLOCK18:
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_glock18.mdl" );
-		break;
-	case WEAPON_M249:
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_m249.mdl" );
-		break;
-	case WEAPON_M3:
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_m3.mdl" );
-		break;
-	case WEAPON_M4A1:
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_m4a1.mdl" );
-		break;
-	case WEAPON_MP5N:
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_mp5.mdl" );
-		break;
-	case WEAPON_SG552:
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_sg552.mdl" );
-		break;
-	case WEAPON_TMP:
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_tmp.mdl" );
-		break;
-	case WEAPON_USP:
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_usp.mdl" );
-		break;
-	case WEAPON_P90:
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_p90.mdl" );
-		break;
-	case WEAPON_KNIFE:
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_knife.mdl" );
-		break;
-	case WEAPON_P228:	// Beta 4.0
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_p228.mdl" );
-		break;
-	case WEAPON_SCOUT:	// Beta 4.0
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_scout.mdl" );
-		break;
-	case WEAPON_FLASHBANG:	// Beta 3.1
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_flashbang.mdl" );
-		break;
-	case WEAPON_HEGRENADE:	// Beta 4.0
-		SET_MODEL( ENT(pWeaponBox->pev), "models/w_hegrenade.mdl" );
-		break;
-	}
-
-// back these two lists up to their first elements
-	iPA = 0;
-	iPW = 0;
-
-// pack the ammo
-	while ( iPackAmmo[ iPA ] != -1 )
-	{
-		pWeaponBox->PackAmmo( MAKE_STRING( CBasePlayerItem::AmmoInfoArray[ iPackAmmo[ iPA ] ].pszName ), m_rgAmmo[ iPackAmmo[ iPA ] ] );
-		iPA++;
-	}
-
-// now pack all of the items in the lists
-	while ( rgpPackWeapons[ iPW ] )
-	{
-		// weapon unhooked from the player. Pack it into der box.
-		pWeaponBox->PackWeapon( rgpPackWeapons[ iPW ] );
-
-		iPW++;
-	}
-
-	pWeaponBox->pev->velocity = pev->velocity * 0.75;// Beta 4.0: three quarters of the player's velocity (was 1.2)
 
 	RemoveAllItems( TRUE );// now strip off everything that wasn't handled by the code above.
 }
@@ -1173,6 +1137,49 @@ void CBasePlayer::RemoveAllItems( BOOL removeSuit )
 entvars_t *g_pevLastInflictor;  // Set in combat.cpp.  Used to pass the damage inflictor for death messages.
 								// Better solution:  Add as parameter to all Killed() functions.
 
+//=========================================================
+// Beta 5.0 (leak): the bomb icon on the HUD while the player
+// carries the C4 (flashing in a bomb target), its scoreboard
+// mark (SetBombIcon is a Linux symbol)
+//=========================================================
+void CBasePlayer::SetBombIcon( BOOL bFlash )
+{
+	if ( m_fHasC4 )
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, pev );
+			WRITE_BYTE( bFlash ? 2 : 1 );
+			WRITE_STRING( "c4" );
+			WRITE_BYTE( 15 );
+			WRITE_BYTE( 15 );
+			WRITE_BYTE( 200 );
+		MESSAGE_END();
+	}
+	else
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, pev );
+			WRITE_BYTE( 0 );
+			WRITE_STRING( "c4" );
+		MESSAGE_END();
+	}
+
+	SetScoreboardAttributes();
+}
+
+// Beta 5.0 (leak): the buy zone's icon goes, and with it an open buy menu
+// (name ours). It and the other zone helpers are inline functions: the Linux
+// build has no copy of them (Beta 5.0's), while it has one of the small
+// static CheckPowerups; VC6 (/Ob0) emits them after their first user.
+inline void BuyZoneIcon_Clear( CBasePlayer *player )
+{
+	MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, player->pev );
+		WRITE_BYTE( 0 );
+		WRITE_STRING( "buyzone" );
+	MESSAGE_END();
+
+	if ( player->m_iMenu >= Menu_Buy && player->m_iMenu <= Menu_BuyItem )
+		CLIENT_COMMAND( player->edict(), "slot10\n" );
+}
+
 void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 {
 	CSound *pSound;
@@ -1208,6 +1215,8 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	pev->movetype		= MOVETYPE_TOSS;
 	ClearBits(pev->flags, FL_ONGROUND);
 
+	ALERT( at_console, "Throw Direction : %i\n", m_iDeathThrow );	// Beta 5.0 (leak)
+
 	// throw the body as the death animation says
 	if ( m_iDeathThrow )
 	{
@@ -1234,10 +1243,12 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 		case 4:		// Beta 4.0: blown away by the C4, the harder the nearer
 			pev->velocity = ( m_vecBlastDir / m_vecBlastDir.Length() ) * ( 2300 - m_vecBlastDir.Length() ) / 4;
 			pev->velocity.z = ( 2300 - m_vecBlastDir.Length() ) / 2.75;
+			ALERT( at_console, "Fly with the Bomb's blast!!\n" );	// Beta 5.0 (leak)
 			break;
 		case 5:		// Beta 4.0: blown away by an HE grenade
 			pev->velocity = ( m_vecBlastDir / m_vecBlastDir.Length() ) * ( 500 - m_vecBlastDir.Length() );
 			pev->velocity.z = ( 350 - m_vecBlastDir.Length() ) * 1.5;
+			ALERT( at_console, "Fly with the HE Grenade's blast!!\n" );	// Beta 5.0 (leak)
 			break;
 		}
 
@@ -1267,6 +1278,41 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 		WRITE_BYTE(0);
 	MESSAGE_END();
 
+	((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
+
+	// a dead player starts the next round with nothing
+	m_fNotKilled = FALSE;
+
+	// Beta 5.0 (leak): the C4 is dropped as a weapon; a defuse kit falls
+	// where he died (item_thighpack); the progress bar and the icons go
+	if ( m_fHasC4 == true )
+	{
+		DropPlayerItem( "weapon_c4" );
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, pev );
+			WRITE_SHORT( 0 );
+		MESSAGE_END();
+	}
+	else if ( m_fHasDefuser == true )
+	{
+		m_fHasDefuser = false;
+		pev->body = 0;
+		GiveNamedItem( "item_thighpack" );
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, pev );
+			WRITE_BYTE( 0 );
+			WRITE_STRING( "defuser" );
+		MESSAGE_END();
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, pev );
+			WRITE_SHORT( 0 );
+		MESSAGE_END();
+	}
+
+	BuyZoneIcon_Clear( this );
+
+	SetThink(PlayerDeathThink);
+	pev->nextthink = gpGlobals->time + 0.1;
 
 	// UNDONE: Put this in, but add FFADE_PERMANENT and make fade time 8.8 instead of 4.12
 	// UTIL_ScreenFade( edict(), Vector(128,0,0), 6, 15, 255, FFADE_OUT | FFADE_MODULATE );
@@ -1284,36 +1330,29 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	
 	pev->angles.x = 0;
 	pev->angles.z = 0;
+}
 
-	SetThink(PlayerDeathThink);
-	pev->nextthink = gpGlobals->time + 0.1;
-
-	((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
-
-	// a dead player starts the next round with nothing
-	m_fNotKilled = FALSE;
-
-	// Beta 4.0: the C4 (item_backpack) or the defuser (item_thighpack) falls where he died
-	if ( m_fHasC4 == true )
+// Beta 5.0 (leak) (Linux symbol): whether the player is his team's commander
+BOOL CBasePlayer::IsCommander( void )
+{
+	if ( g_pGameRules->IsMultiplayer() )
 	{
-		m_fHasC4 = false;
-		pev->body = 0;
-		GiveNamedItem( "item_backpack" );
+		CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// name ours
 
-		MESSAGE_BEGIN( MSG_ONE, gmsgRemoveItem, NULL, pev );
-			WRITE_BYTE( 0 );
-		MESSAGE_END();
+		switch ( m_iTeam )
+		{
+		case TEAM_TERRORIST:
+			if ( this == mp->m_pTerroristCommander )
+				return TRUE;
+			break;
+		case TEAM_CT:
+			if ( this == mp->m_pCTCommander )
+				return TRUE;
+			break;
+		}
 	}
-	else if ( m_fHasDefuser == true )
-	{
-		m_fHasDefuser = false;
-		pev->body = 0;
-		GiveNamedItem( "item_thighpack" );
 
-		MESSAGE_BEGIN( MSG_ONE, gmsgRemoveItem, NULL, pev );
-			WRITE_BYTE( 1 );
-		MESSAGE_END();
-	}
+	return FALSE;
 }
 
 
@@ -1464,19 +1503,19 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 
 		switch ( m_LastHitGroup )
 		{
-		case HITGROUP_HEAD:
-			if ( m_fHeavyDamage == TRUE )
-				animDesired = LookupSequence( "flinch_head1" );
-			else
-				animDesired = LookupSequence( "sflinch_head1" );
-			break;
-
-		case HITGROUP_GENERIC:
+		case HITGROUP_GENERIC:	// Beta 5.0 (leak): before the head (the code's order)
 		case HITGROUP_CHEST:
 			if ( m_fHeavyDamage == TRUE )
 				animDesired = LookupSequence( "flinch_stomach1" );
 			else
 				animDesired = LookupSequence( "sflinch_stomach1" );
+			break;
+
+		case HITGROUP_HEAD:
+			if ( m_fHeavyDamage == TRUE )
+				animDesired = LookupSequence( "flinch_head1" );
+			else
+				animDesired = LookupSequence( "sflinch_head1" );
 			break;
 
 		case HITGROUP_STOMACH:
@@ -1940,26 +1979,6 @@ void CBasePlayer::CheckWaterJump( )
 }
 
 //
-// PlantC4 - Beta 4.0's plant_c4: the carrier radios BOMBPL and puts the C4
-// down where he stands, wherever that is (Linux symbol PlantC4__11CBasePlayer)
-//
-void CBasePlayer::PlantC4( void )
-{
-	if ( m_fHasC4 == true )
-	{
-		Radio( "BOMBPL" );
-		m_fHasC4 = false;
-		CGrenade::ShootSatchelCharge( pev, pev->origin, Vector( 0, 0, 20 ) );
-		EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/c4_plant.wav", 1, ATTN_NORM );
-		pev->body = 0;
-
-		MESSAGE_BEGIN( MSG_ONE, gmsgRemoveItem, NULL, pev );
-			WRITE_BYTE( 0 );
-		MESSAGE_END();
-	}
-}
-
-//
 // ThrowWeapon - drop the named weapon, if the player has it
 //
 void CBasePlayer::ThrowWeapon( char *pszItemName )
@@ -1967,7 +1986,7 @@ void CBasePlayer::ThrowWeapon( char *pszItemName )
 	CBasePlayerItem *pItem;
 	int i;
 
-	for ( i = 0 ; i <= 5 ; i++ )
+	for ( i = 0 ; i <= 4 ; i++ )	// Beta 5.0 (leak): five slots
 	{
 		pItem = m_rgpPlayerItems[ i ];
 
@@ -1975,7 +1994,7 @@ void CBasePlayer::ThrowWeapon( char *pszItemName )
 		{
 			if ( !strcmp( pszItemName, STRING( pItem->pev->classname ) ) )
 			{
-				pev->weapons &= ~(1<<pItem->m_iId);
+				ALERT( at_console, "%i \n", pItem->m_iId );	// Beta 5.0 (leak); the weapons bit is DropPlayerItem's now
 				DropPlayerItem( pszItemName );
 				return;
 			}
@@ -2002,8 +2021,9 @@ void CBasePlayer::ThrowPrimary( void )
 }
 
 // AddAccount - money in and out, kept between 0 and 16000 (name from the
-// later versions' Linux symbols)
-void CBasePlayer::AddAccount( int amount )
+// later versions' Linux symbols). Beta 5.0 (leak): the client is sent the
+// money (Money), with whether to show the change
+void CBasePlayer::AddAccount( int amount, bool bTrackChange )
 {
 	m_iAccount += amount;
 
@@ -2011,12 +2031,240 @@ void CBasePlayer::AddAccount( int amount )
 		m_iAccount = 0;
 	else if ( m_iAccount > 16000 )
 		m_iAccount = 16000;
+
+	MESSAGE_BEGIN( MSG_ONE, gmsgMoney, NULL, pev );
+		WRITE_LONG( m_iAccount );
+		WRITE_BYTE( bTrackChange );
+	MESSAGE_END();
+}
+
+// Beta 5.0 (leak) (Linux symbol): close the client's menu
+void CBasePlayer::ResetMenu( void )
+{
+	MESSAGE_BEGIN( MSG_ONE, gmsgShowMenu, NULL, pev );
+		WRITE_SHORT( 0 );
+		WRITE_CHAR( 0 );
+		WRITE_BYTE( 0 );
+		WRITE_STRING( "" );
+	MESSAGE_END();
+}
+
+// Beta 5.0 (leak) (Linux symbol): the round's seconds left for the client's timer
+void CBasePlayer::SyncRoundTimer( void )
+{
+	float tmRemaining;	// name ours
+
+	if ( g_pGameRules->IsMultiplayer() )
+		tmRemaining = ((CHalfLifeMultiplay *)g_pGameRules)->TimeRemaining();
+	else
+		tmRemaining = 0;
+
+	MESSAGE_BEGIN( MSG_ONE, gmsgRoundTime, NULL, pev );
+		WRITE_SHORT( max( 0, (int)tmRemaining ) );
+	MESSAGE_END();
+}
+
+// Beta 5.0 (leak) (Linux symbol): the map's briefing goes, and with the intro
+// cameras the screen fades in
+void CBasePlayer::RemoveLevelText( void )
+{
+	ResetMenu();
+
+	if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_iMapHasCameras == 1 )
+		UTIL_ScreenFade( this, Vector( 0, 0, 0 ), 0.5, 0.5, 0, 0 );
+}
+
+// Beta 5.0 (leak) (Linux symbol): a text shown to pl in the menu space, sent in
+// pieces of 50 characters
+void CBasePlayer::MenuPrint( CBasePlayer *pl, const char *msg )
+{
+	const char *msg_portion = msg;	// names ours
+	char sbuf[51];
+
+	while ( strlen( msg_portion ) >= 50 )
+	{
+		strncpy( sbuf, msg_portion, 50 );
+		sbuf[50] = 0;
+		msg_portion += 50;
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgShowMenu, NULL, pl->pev );
+			WRITE_SHORT( 0xFFFF );
+			WRITE_CHAR( -1 );
+			WRITE_BYTE( 1 );	// more to come
+			WRITE_STRING( sbuf );
+		MESSAGE_END();
+	}
+
+	MESSAGE_BEGIN( MSG_ONE, gmsgShowMenu, NULL, pl->pev );
+		WRITE_SHORT( 0xFFFF );
+		WRITE_CHAR( -1 );
+		WRITE_BYTE( 0 );
+		WRITE_STRING( msg_portion );
+	MESSAGE_END();
+}
+
+//=========================================================
+// JoiningThink - Beta 5.0 (leak) (Linux symbol): a player
+// who has connected but not joined (m_iJoiningState):
+//  start: the map's briefing (g_szMapBriefingText) in the
+//   menu space with the screen faded out and the HUD hidden,
+//   unless the map has none or the client's "dm" key is 0 or
+//   off; the defuser icon cleared; his "ignoreghosts" key
+//   (sic: 0 or off sets the flag);
+//  reading the text: fire, jump or attack 2 ends it;
+//  the team and appearance menus (PlayerThink, client.cpp);
+//  spawn: the per-player state reset, then spawned, or an
+//   observer where the rules let him not respawn; the first
+//   of his team is its commander (a terrorist on a bomb map
+//   gets the C4 instead).
+// Meanwhile he looks through the map's trigger_cameras, the
+// next one every 6 seconds.
+//=========================================================
+void CBasePlayer::JoiningThink( void )
+{
+	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// names ours
+
+	switch ( m_iJoiningState )
+	{
+	case JOIN_DONE:
+		return;
+
+	case JOIN_START:
+	{
+		ResetMenu();
+
+		BOOL bShowText = TRUE;
+		char *infobuffer = g_engfuncs.pfnGetInfoKeyBuffer( edict() );
+		char *value = g_engfuncs.pfnInfoKeyValue( infobuffer, "dm" );
+
+		if ( value && *value )
+		{
+			if ( !strcmp( value, "0" ) || !strcmp( value, "off" ) )
+				bShowText = FALSE;
+		}
+
+		if ( g_szMapBriefingText[0] && bShowText )
+		{
+			if ( mp->m_iMapHasCameras )
+				UTIL_ScreenFade( this, Vector( 0, 0, 0 ), 0.5, 15.9, 255, FFADE_OUT | FFADE_MODULATE | FFADE_STAYOUT );
+			else
+				UTIL_ScreenFade( this, Vector( 10, 10, 10 ), 0, 0, 255, FFADE_OUT | FFADE_STAYOUT );
+
+			m_iHideHUD |= HIDEHUD_WEAPONS | HIDEHUD_HEALTH | HIDEHUD_TIMER | HIDEHUD_MONEY;
+			MenuPrint( this, g_szMapBriefingText );
+			m_iJoiningState = JOIN_READING_TEXT;
+		}
+		else
+			m_iJoiningState = JOIN_TEAM_MENU;
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, pev );
+			WRITE_BYTE( 0 );
+			WRITE_STRING( "defuser" );
+		MESSAGE_END();
+
+		m_fHasDefuser = false;
+		m_flLastActivity = gpGlobals->time;
+		m_fShowingLevelText = false;
+		m_iIgnoreGhosts = 0;
+
+		value = g_engfuncs.pfnInfoKeyValue( infobuffer, "ignoreghosts" );
+		if ( value && *value )
+		{
+			if ( !strcmp( value, "0" ) || !strcmp( value, "off" ) )	// sic
+				m_iIgnoreGhosts = 1;
+		}
+		break;
+	}
+
+	case JOIN_READING_TEXT:
+		if ( m_afButtonPressed & ( IN_ATTACK | IN_ATTACK2 | IN_JUMP ) )
+		{
+			m_afButtonPressed &= ~( IN_ATTACK | IN_ATTACK2 | IN_JUMP );
+			RemoveLevelText();
+			m_iJoiningState = JOIN_TEAM_MENU;
+		}
+		break;
+
+	case JOIN_TEAM_MENU:
+	case JOIN_CHOOSING:
+		break;
+
+	case JOIN_SPAWN:
+		if ( !mp->m_iMapHasCameras )
+			UTIL_ScreenFade( this, Vector( 0, 0, 0 ), 0, 0, 255, FFADE_IN );
+
+		m_fNotKilled = false;
+		m_iNightVisionAlpha = 60;
+		m_fKicked = false;
+		m_iIgnoreMessages = 0;
+		m_iTeamKills = 0;
+		m_iFOV = 90;
+		m_fJustConnected = false;
+		m_iNumSpawns = 0;
+		ResetMaxSpeed();
+		m_iJoiningState = JOIN_DONE;
+
+		mp = (CHalfLifeMultiplay *)g_pGameRules;
+		if ( !g_pGameRules->FPlayerCanRespawn( this ) )
+		{
+			pev->deadflag = DEAD_RESPAWNABLE;
+			pev->classname = MAKE_STRING( "player" );
+			pev->flags = FL_SPECTATOR | FL_CLIENT;
+			StartObserver( pev->origin, VARS( mp->GetPlayerSpawnSpot( this ) )->angles );
+			mp->CheckWinConditions();
+			return;
+		}
+
+		Spawn();
+		mp->CheckWinConditions();
+
+		// the first of each team to spawn when no restart is pending commands it
+		if ( mp->m_flRestartRoundTime == 0 )
+		{
+			if ( m_iTeam == TEAM_CT )
+			{
+				if ( !mp->m_pCTCommander )
+					mp->m_pCTCommander = this;
+			}
+			else
+			{
+				if ( !mp->m_pTerroristCommander )
+				{
+					if ( mp->m_fMapHasBombTarget )
+						mp->GiveC4();
+					else
+						mp->m_pTerroristCommander = this;
+				}
+			}
+		}
+		return;
+	}
+
+	// the intro cameras
+	if ( m_pIntroCamera && gpGlobals->time >= m_flIntroCameraTime )
+	{
+		m_pIntroCamera = UTIL_FindEntityByClassname( m_pIntroCamera, "trigger_camera" );
+		if ( !m_pIntroCamera )
+			m_pIntroCamera = UTIL_FindEntityByClassname( NULL, "trigger_camera" );
+
+		UTIL_SetOrigin( pev, m_pIntroCamera->pev->origin );
+		pev->angles = m_pIntroCamera->pev->angles;
+		pev->v_angle = pev->angles;
+		pev->velocity = g_vecZero;
+		pev->punchangle = g_vecZero;
+		pev->fixangle = TRUE;
+		m_flIntroCameraTime = gpGlobals->time + 6;
+	}
 }
 
 
 void CBasePlayer::PlayerDeathThink(void)
 {
 	float flForward;
+
+	// Beta 5.0 (leak): not while joining
+	if ( m_iJoiningState != JOIN_DONE )
+		return;
 
 	if (FBitSet(pev->flags, FL_ONGROUND))
 	{
@@ -2046,8 +2294,12 @@ void CBasePlayer::PlayerDeathThink(void)
 			return;
 	}
 
+	// Beta 5.0 (leak): the time of death is when the body comes to rest
 	if (pev->deadflag == DEAD_DYING)
+	{
+		m_fDeadTime = gpGlobals->time;
 		pev->deadflag = DEAD_DEAD;
+	}
 	
 	StopAnimation();
 
@@ -2055,42 +2307,57 @@ void CBasePlayer::PlayerDeathThink(void)
 	pev->framerate = 0.0;
 
 	BOOL fAnyButtonDown = (pev->button);
-	
+
+// three seconds after his death, a player who is not observing yet goes to the dead camera
+	if ( g_pGameRules->IsMultiplayer() && ( gpGlobals->time > (m_fDeadTime + 3) ) && !(m_afPhysicsFlags & PFLAG_OBSERVER) )
+	{
+		// go to dead camera. 
+		pev->flags |= FL_SPECTATOR;
+		StartDeathCam();
+	}
+
 	// wait for all buttons released
-	if (pev->deadflag == DEAD_DEAD)
+	if ( pev->deadflag == DEAD_DEAD && m_iTeam != TEAM_UNASSIGNED )
 	{
 		if (fAnyButtonDown)
 			return;
 
-		g_engfuncs.pfnSetClientMaxspeed( ENT(pev), 340 );	// Beta 4.1
-
 		if ( g_pGameRules->FPlayerCanRespawn( this ) )
 		{
-			m_fDeadTime = gpGlobals->time;
 			pev->deadflag = DEAD_RESPAWNABLE;
+
+			if ( g_pGameRules->IsMultiplayer() )
+				((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
 		}
-		
+
+		pev->nextthink = gpGlobals->time + 0.1;
 		return;
 	}
 
-// if the player has been dead for one second longer than allowed by forcerespawn, 
-// forcerespawn isn't on. Send the player off to an intermission camera until they 
-// choose to respawn.
-	if ( g_pGameRules->IsMultiplayer() && ( gpGlobals->time > (m_fDeadTime + 3) ) && !(m_afPhysicsFlags & PFLAG_OBSERVER) )
+	// Beta 5.0 (leak): a respawnable player respawns at once
+	if ( pev->deadflag == DEAD_RESPAWNABLE )
 	{
-		// go to dead camera. 
-		StartDeathCam();
+		respawn( pev, FALSE );
+		pev->button = 0;
+		m_iRespawnFrames = 0;
+		pev->nextthink = -1;
 	}
-	
-// wait for any button down,  or mp_forcerespawn is set and the respawn time is up
-	if (!fAnyButtonDown 
-		&& !( g_pGameRules->IsMultiplayer() && CVAR_GET_FLOAT("mp_forcerespawn") > 0 && (gpGlobals->time > (m_fDeadTime + 5))) )
-		return;
+}
 
-	pev->button = 0;
-	m_iRespawnFrames = 0;
-
-	// Counter-Strike: no respawn here, the dead wait for the next round
+//=========================================================
+// RoundRespawn - Beta 5.0 (leak) (Linux symbol): the new
+// round respawns every player but one still choosing his
+// appearance
+//=========================================================
+void CBasePlayer::RoundRespawn( void )
+{
+	if ( m_iMenu != Menu_ChooseAppearance )
+	{
+		respawn( pev, FALSE );
+		pev->button = 0;
+		m_iRespawnFrames = 0;
+		pev->nextthink = -1;
+	}
 }
 
 //=========================================================
@@ -2106,41 +2373,6 @@ void CBasePlayer::StartDeathCam( void )
 	{
 		// don't accept subsequent attempts to StartDeathCam()
 		return;
-	}
-
-	// Counter-Strike Beta 2.0: every two seconds, name the player in the crosshair
-	// (PostThink's code, copied)
-	if ( m_flLastIdCheck + 2 <= gpGlobals->time )
-	{
-		m_flLastIdCheck = gpGlobals->time;
-
-		UTIL_MakeVectors( pev->v_angle );
-
-		TraceResult tr;
-		Vector vecAiming = gpGlobals->v_forward;
-		Vector vecSrc = pev->origin;
-		Vector vecEnd = vecSrc + vecAiming * 8024;
-
-		UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, ENT( pev ), &tr );
-
-		if ( tr.flFraction != 1.0 )
-		{
-			CBaseEntity *pObject = CBaseEntity::Instance( tr.pHit );
-
-			if ( pObject->IsPlayer() )
-			{
-				CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pObject->pev );
-				char szText[ 120 ];
-
-				if ( pPlayer->m_iTeam == TEAM_CT )
-					strcpy( szText, "(Counter-Terrorist)" );
-				else
-					strcpy( szText, "(Terrorist)" );
-
-				strcat( szText, STRING( pPlayer->pev->netname ) );
-				ClientPrint( pev, HUD_PRINTTALK, szText );
-			}
-		}
 	}
 
 	pSpot = FIND_ENTITY_BY_CLASSNAME( NULL, "info_intermission");	
@@ -2174,21 +2406,29 @@ void CBasePlayer::StartDeathCam( void )
 	}
 }
 
+// Beta 5.0 (leak): the observer flies (noclip), unseen, without weapons
+// and health on the HUD; his observer entity takes him; no longer ducking
 void CBasePlayer::StartObserver( Vector vecPosition, Vector vecViewAngle )
 {
+	m_iHideHUD |= HIDEHUD_WEAPONS | HIDEHUD_HEALTH;
 	m_afPhysicsFlags |= PFLAG_OBSERVER;
 
 	pev->view_ofs = g_vecZero;
 	pev->angles = pev->v_angle = vecViewAngle;
 	pev->fixangle = TRUE;
 	pev->solid = SOLID_NOT;
+	pev->movetype = MOVETYPE_NOCLIP;
 	pev->takedamage = DAMAGE_NO;
-	pev->movetype = MOVETYPE_NONE;
 	pev->modelindex = 0;
+	pev->effects = EF_NODRAW;
 	UTIL_SetOrigin( pev, vecPosition );
 
-	pev->flags = FL_SPECTATOR;
-	pev->movetype = MOVETYPE_NOCLIP;
+	if ( m_pObserver )
+		m_pObserver->SetOwner( this );
+
+	ClearBits( m_afPhysicsFlags, PFLAG_DUCKING );
+	ClearBits( pev->flags, FL_DUCKING );
+	ResetMaxSpeed();
 }
 
 // 
@@ -2300,19 +2540,29 @@ void CBasePlayer::PlayerUse ( void )
 			EMIT_SOUND( ENT(pev), CHAN_ITEM, "common/wpn_denyselect.wav", 0.4, ATTN_NORM);
 	}
 
-	// use the hostages within 64 units (the first twelve the map has)
-	CBaseEntity *pHostage = UTIL_FindEntityByClassname( NULL, "hostage_entity" );
+	// Beta 5.0 (leak): Beta 2.0 to 4.1's use of the hostages within 64 units is
+	// gone: the hostage is used as any entity (CHostage::ObjectCaps)
+}
 
-	for ( int i = 0; i < 12; i++ )
+
+
+// Beta 5.0 (leak): the hostage's Use calls it: the first use's hint
+void CBasePlayer::HostageUsed( void )
+{
+	if ( m_flDisplayHistory & 0x10 )	// hostage used
+		return;
+
+	switch ( m_iTeam )
 	{
-		if ( pHostage )
-		{
-			if ( ( pHostage->pev->origin - pev->origin ).Length() < 64 )
-				pHostage->Use( this, this, USE_TOGGLE, 1 );
-		}
-
-		pHostage = UTIL_FindEntityByClassname( pHostage, "hostage_entity" );
+	case TEAM_TERRORIST:
+		HintMessage( "You may USE the hostage again to\nstop him from following.", FALSE );
+		break;
+	case TEAM_CT:
+		HintMessage( "Lead the hostage to the rescue point!\nYou may USE the hostage again to\nstop him from following.", FALSE );
+		break;
 	}
+
+	m_flDisplayHistory |= 0x10;
 }
 
 
@@ -2937,10 +3187,23 @@ void CBasePlayer::PreThink(void)
 	m_afButtonPressed =  buttonsChanged & pev->button;		// The changed ones still down are "pressed"
 	m_afButtonReleased = buttonsChanged & (~pev->button);	// The ones not down are "released"
 
+	m_hintMessageQueue.Update( *this );
+
 	g_pGameRules->PlayerThink( this );
 
 	if ( g_fGameOver )
 		return;         // intermission or finale
+
+	if ( m_iJoiningState != JOIN_DONE )
+		JoiningThink();
+
+	// fire, secondary fire or jump takes the map's text away (and does nothing else)
+	if ( m_fShowingLevelText == true && ( m_afButtonPressed & ( IN_ATTACK | IN_ATTACK2 | IN_JUMP ) ) )
+	{
+		m_afButtonPressed &= ~( IN_ATTACK | IN_ATTACK2 | IN_JUMP );
+		RemoveLevelText();
+		m_fShowingLevelText = false;
+	}
 
 	UTIL_MakeVectors(pev->v_angle);             // is this still used?
 	
@@ -2966,6 +3229,19 @@ void CBasePlayer::PreThink(void)
 			m_vecOldOrigins[i] = m_vecOldOrigins[i - 1];
 
 		m_vecOldOrigins[0] = pev->origin;
+
+		// Beta 5.0 (leak): a player who presses no button for longer than the
+		// game rules' limit (mp_roundtime times 120 seconds) is kicked
+		// when mp_autokick is set
+		if ( pev->button )
+			m_flLastActivity = gpGlobals->time;
+
+		if ( gpGlobals->time - m_flLastActivity > ((CHalfLifeMultiplay *)g_pGameRules)->m_flMaxIdlePeriod && CVAR_GET_FLOAT( "mp_autokick" ) != 0 )
+		{
+			UTIL_ClientPrintAll( HUD_PRINTCONSOLE, "%s has been idle for too long and has been kicked.\n", STRING( pev->netname ) );
+			SERVER_COMMAND( UTIL_VarArgs( "kick %s\n", STRING( pev->netname ) ) );
+			m_flLastActivity = gpGlobals->time;
+		}
 	}
 
 	if ( g_pGameRules && g_pGameRules->FAllowFlashlight() )
@@ -2988,7 +3264,7 @@ void CBasePlayer::PreThink(void)
 		pev->flags &= ~FL_WATERJUMP;	// Clear this if out of water
 	}
 
-	if (pev->deadflag >= DEAD_DYING)
+	if ( pev->deadflag >= DEAD_DYING && pev->deadflag != DEAD_RESPAWNABLE )
 	{
 		PlayerDeathThink();
 		return;
@@ -3085,6 +3361,18 @@ void CBasePlayer::PreThink(void)
 	if ( m_afPhysicsFlags & PFLAG_ONBARNACLE )
 	{
 		pev->velocity = g_vecZero;
+	}
+
+	if ( !( m_flDisplayHistory & 0x2 ) )	// buy key
+	{
+		HintMessage( "Press the BUY key to purchase items.", FALSE );
+		m_flDisplayHistory |= 0x2;
+	}
+
+	if ( m_fHasC4 && !( m_flDisplayHistory & 0x1000 ) )	// have the bomb
+	{
+		m_flDisplayHistory |= 0x1000;
+		HintMessage( "You have the bomb!\nFind the target zone or DROP\nthe bomb for another Terrorist.", FALSE );
 	}
 }
 /* Time based Damage works as follows: 
@@ -3690,47 +3978,8 @@ void CBasePlayer::PostThink()
 		}
 	}
 
-	// name the player in the crosshair (Beta 4.0: looked for every 0.3 seconds
-	// along the punched view from the eyes, 2048 units, and named once until the
-	// crosshair finds someone else; Beta 2.0 to 3.1: every two seconds, 8024 units)
-	if ( gpGlobals->time >= m_flLastIdCheck + 0.3 )
-	{
-		m_flLastIdCheck = gpGlobals->time;
-
-		UTIL_MakeVectors( pev->v_angle + pev->punchangle );
-
-		TraceResult tr;
-		Vector vecSrc = EyePosition( );
-		Vector vecEnd = vecSrc + gpGlobals->v_forward * 2048;
-
-		UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, edict(), &tr );
-
-		if ( tr.flFraction != 1.0 )
-		{
-			if ( !FNullEnt( tr.pHit ) )
-			{
-				CBaseEntity *pObject = CBaseEntity::Instance( tr.pHit );
-
-				if ( pObject->IsPlayer() && GetClassPtr( (CBasePlayer *)pObject->pev ) != m_pIdTarget )
-				{
-					m_pIdTarget = GetClassPtr( (CBasePlayer *)pObject->pev );
-
-					CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pObject->pev );
-					char szText[ 120 ];
-
-					if ( pPlayer->m_iTeam == TEAM_CT )
-						strcpy( szText, "(COUNTER-TERRORIST)" );
-					else
-						strcpy( szText, "(TERRORIST)" );
-
-					strcat( szText, STRING( pPlayer->pev->netname ) );
-					ClientPrint( pev, HUD_PRINTTALK, szText );
-				}
-			}
-			else
-				m_pIdTarget = NULL;
-		}
-	}
+	// Beta 5.0 (leak): Beta 2.0 to 4.1's naming of the player in the crosshair
+	// is gone: the status bar names him (UpdateStatusBar)
 
 // do weapon stuff
 	ItemPostFrame( );
@@ -3845,6 +4094,13 @@ void CBasePlayer::PostThink()
 
 	UpdatePlayerSound();
 
+	// Beta 5.0 (leak): the zones the player stands in, every 0.2 seconds
+	if ( gpGlobals->time > m_flNextZoneCheck )
+	{
+		m_flNextZoneCheck = gpGlobals->time + 0.2;
+		HandleSignals();
+	}
+
 	// Track button info so we can detect 'pressed' and 'released' buttons next frame
 	m_afButtonLast = pev->button;
 }
@@ -3863,10 +4119,10 @@ BOOL IsSpawnPointValid( CBaseEntity *pPlayer, CBaseEntity *pSpot )
 	while ( (ent = UTIL_FindEntityInSphere( ent, pSpot->pev->origin, 64 )) != NULL )
 	{
 		// if ent is a client, don't spawn on 'em
-		// (sic: Beta 2.1 returns TRUE here too, so every spot whose master allows it is
-		// valid, occupied or not; the readme calls this the telefragging fix)
+		// (Beta 2.1 to 4.1 return TRUE here too, so every spot whose master allows it
+		// is valid, occupied or not; Beta 5.0 (leak) has the SDK's FALSE again)
 		if ( ent->IsPlayer() && ent != pPlayer )
-			return TRUE;
+			return FALSE;
 	}
 
 	return TRUE;
@@ -3874,8 +4130,8 @@ BOOL IsSpawnPointValid( CBaseEntity *pPlayer, CBaseEntity *pSpot )
 
 
 DLL_GLOBAL CBaseEntity	*g_pLastSpawn;
-DLL_GLOBAL CBaseEntity	*g_pLastCTSpawn;			// retail 0x1008d538; name ours. world.cpp clears all three
-DLL_GLOBAL CBaseEntity	*g_pLastTerroristSpawn;		// retail 0x1008d53c; name ours
+DLL_GLOBAL CBaseEntity	*g_pLastCTSpawn;			// Beta 4.1 0x1008d538, Beta 5.0 (leak) 0x1008f53c; name ours. world.cpp clears all three
+DLL_GLOBAL CBaseEntity	*g_pLastTerroristSpawn;		// Beta 4.1 0x1008d53c, Beta 5.0 (leak) 0x1008f540; name ours
 inline int FNullEnt( CBaseEntity *ent ) { return (ent == NULL) || FNullEnt( ent->edict() ); }
 
 /*
@@ -3993,8 +4249,6 @@ edict_t *EntSelectSpawnPoint( CBaseEntity *pPlayer )
 		}
 	}
 
-	ALERT( at_console, "default start!" );
-
 	// If startspot is set, (re)spawn there.
 	if ( FStringNull( gpGlobals->startspot ) || !strlen(STRING(gpGlobals->startspot)))
 	{
@@ -4030,12 +4284,11 @@ void CBasePlayer::Spawn( void )
 	pev->classname		= MAKE_STRING("player");
 	pev->health			= 100;
 
-	// a survivor of the last round keeps his armor, kevlar and goggles
+	// a survivor of the last round keeps his armor and kevlar
 	if ( !m_fNotKilled )
 	{
 		pev->armorvalue		= 0;
 		m_iKevlar			= 0;
-		m_fHasNightVision	= false;
 	}
 
 	pev->takedamage		= DAMAGE_AIM;
@@ -4053,14 +4306,29 @@ void CBasePlayer::Spawn( void )
 	m_bitsDamageType	= 0;
 	m_afPhysicsFlags	= 0;
 	m_fLongJump			= FALSE;// no longjump module. 
-	m_iFOV				= 90;// init field of view.
 	m_iClientFOV		= -1; // make sure fov reset is sent
+	m_fHasAssaultSuit	= FALSE;
+	m_pentBombTarget	= NULL;
+
+	// Beta 5.0 (leak): each player has an observer entity for his time dead
+	if ( m_pObserver == NULL )
+	{
+		m_pObserver = CObserver::Create();
+
+		if ( m_pObserver == NULL )
+			ALERT( at_console, UTIL_VarArgs( "Could not create observer for %s\n", STRING( pev->netname ) ) );
+	}
+
+	if ( m_pObserver != NULL )
+		m_pObserver->Spawn();
+
+	m_hintMessageQueue.Reset();
 
 	m_flVelocityModifier = 1.0;
 	m_flLastFired		= 0;
 	m_flAccuracy		= 0.8;
 	m_flNextBurstShot	= 0;
-	m_iLastZoom			= 90;	// here, after m_flNextBurstShot: retail's store order in Beta 2.0 (where after m_flLastSay gives the same code) and 3.0 (where it does not); next to m_iFOV, Beta 1.1's place, schedules the night vision test differently
+	m_iLastZoom			= 90;
 	m_flLastSay			= 0;
 
 	// Beta 3.0: the hostages' trail starts afresh, and 60 radio messages a life
@@ -4068,33 +4336,34 @@ void CBasePlayer::Spawn( void )
 	m_flNextRadio		= 0;
 	m_iRadioMessages	= 60;
 
-	// Beta 4.0: no C4, no defuser shown on the model, no vote pending, no blast death
+	// Beta 4.0: no C4, no blast death; Beta 5.0 (leak): the defuse kit is kept
 	m_fHasC4			= false;
-	m_fHasDefuser		= false;
-	pev->body			= 0;
-	m_flNextVote		= 0;
 	m_fKilledByBlast	= false;
 	m_fKilledByHEGrenade = false;
+
+	// Beta 5.0 (leak): the hints about the buy key, the dead (multiplay's
+	// PlayerKilled), being killed by a teammate and carrying the bomb come again
+	m_flDisplayHistory	&= ~( 0x2 | 0x40 | 0x400 | 0x1000 );
+	m_flNextZoneCheck	= 0;
+	m_SbarString0[0]	= 0;
+	m_SbarString1[0]	= 0;
+	m_iNumSpawns++;
 
 	for ( int i = 0; i < 20; i++ )
 		m_vecOldOrigins[i] = Vector( 0, 0, 0 );
 
-	// the night vision goes off
-	if ( m_fNightVisionOn == true )
-	{
-		m_fNightVisionOn = false;
-		UTIL_ScreenFade( this, Vector( 20, 20, 20 ), 0.5, 0.1, 0, 0 );
-	}
-
-	// a sniper rifle may have hidden its view model when zoomed in: show it again
-	if ( m_pActiveItem )
+	// a sniper rifle hides its view model when zoomed in: show it again
+	if ( m_pActiveItem && m_iFOV != 90 )
 	{
 		if ( m_pActiveItem->m_iId == WEAPON_AWP )
 			pev->viewmodel = MAKE_STRING( "models/v_awp.mdl" );
 		else if ( m_pActiveItem->m_iId == WEAPON_G3SG1 )
 			pev->viewmodel = MAKE_STRING( "models/v_g3sg1.mdl" );
+		else if ( m_pActiveItem->m_iId == WEAPON_SCOUT )
+			pev->viewmodel = MAKE_STRING( "models/v_scout.mdl" );
 	}
 
+	m_iFOV				= 90;// init field of view.
 	m_flNextDecalTime	= 0;// let this player decal as soon as he spawns.
 
 	m_flgeigerDelay = gpGlobals->time + 2.0;	// wait a few seconds until user-defined message registrations
@@ -4111,10 +4380,21 @@ void CBasePlayer::Spawn( void )
 	m_iFlashBattery = 99;
 	m_flFlashLightTime = 1; // force first message
 
+	// Beta 5.0 (leak): a defuse kit shows on the model
+	if ( m_fHasDefuser == true )
+		pev->body = 1;
+	else
+		pev->body = 0;
+
+	if ( m_fShowingLevelText == true )
+	{
+		RemoveLevelText();
+		m_fShowingLevelText = false;
+	}
+
 // dont let uninitialized value here hurt the player
 	m_flFallVelocity = 0;
 
-	g_pGameRules->SetDefaultPlayerTeam( this );
 	g_pGameRules->GetPlayerSpawnSpot( this );
 
     SET_MODEL(ENT(pev), "models/player.mdl");
@@ -4141,14 +4421,13 @@ void CBasePlayer::Spawn( void )
 	m_fWeapon = FALSE;
 	m_pClientActiveItem = NULL;
 	m_iClientBattery = -1;
-	m_fSendResetHUD = true;		// the client restarts its round timer
+	m_fSendResetHUD = true;
+	m_fInitHUD = TRUE;
+	m_iHideHUD &= ~( HIDEHUD_WEAPONS | HIDEHUD_HEALTH | HIDEHUD_TIMER | HIDEHUD_MONEY );
 
 	// and his ammunition
 	if ( !m_fNotKilled )
 	{
-		m_fInitHUD = TRUE;
-		m_iHEGrenades = 0;
-		m_iFlashBangs = 0;
 		m_iClientHideHUD = -1;  // force this to be recalculated
 
 		// reset all ammo values to 0
@@ -4165,31 +4444,6 @@ void CBasePlayer::Spawn( void )
 
 	m_fNotKilled = true;
 
-	// a new player who comes more than 20 seconds into the round watches it dead
-	if ( m_fJustConnected == true )
-	{
-		m_iKickVote = 0;
-		m_fJustConnected = false;
-
-		// sic: the players are counted, and the count is not used
-		int iNumPlayers = 0;	// name ours
-		CBaseEntity *pPlayer = NULL;
-
-		while ( ((pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" )) != NULL) && (!FNullEnt(pPlayer->edict())) )
-		{
-			if ( pPlayer->IsPlayer() )
-				iNumPlayers++;
-		}
-
-		if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_flRoundStartTime + 20 < gpGlobals->time )
-		{
-			pev->health = 0;
-			Killed( pev, GIB_NEVER );
-			m_iDeaths--;		// Killed's death and lost frag do not count
-			pev->frags++;
-		}
-	}
-
 	// a kicked player stays dead
 	if ( m_fKicked == true )
 	{
@@ -4197,17 +4451,8 @@ void CBasePlayer::Spawn( void )
 		Killed( pev, GIB_NEVER );
 	}
 
-	g_engfuncs.pfnSetClientMaxspeed( ENT(pev), 260 );
-
-	// Beta 3.0: the AWP, the M249 and the G3/SG-1 slow their carrier down
-	// (sic: the active item is not checked for NULL); Beta 4.0: to 200 (was 220)
-	if ( m_pActiveItem->m_iId == WEAPON_AWP || m_pActiveItem->m_iId == WEAPON_M249 || m_pActiveItem->m_iId == WEAPON_G3SG1 )
-		g_engfuncs.pfnSetClientMaxspeed( ENT(pev), 200 );
-
-	// Beta 4.0: the client's round timer gets mp_roundtime's minutes
-	MESSAGE_BEGIN( MSG_ONE, gmsgRoundTime, NULL, pev );
-		WRITE_BYTE( ((CHalfLifeMultiplay *)g_pGameRules)->m_iRoundTime );
-	MESSAGE_END();
+	ResetMaxSpeed();
+	SetScoreboardAttributes();
 }
 
 
@@ -4258,10 +4503,11 @@ void CBasePlayer :: Precache( void )
 	gmsgSayText = REG_USER_MSG( "SayText", -1 );
 	gmsgTextMsg = REG_USER_MSG( "TextMsg", -1 );
 	gmsgWeaponList = REG_USER_MSG("WeaponList", -1);
-	gmsgResetHUD = REG_USER_MSG("ResetHUD", 1);		// called every respawn
+	gmsgResetHUD = REG_USER_MSG("ResetHUD", 0);		// called every respawn (Beta 5.0 (leak): no byte)
 	gmsgInitHUD = REG_USER_MSG("InitHUD", 0 );		// called every time a new player joins the server
 	gmsgShowGameTitle = REG_USER_MSG("GameTitle", 1);
 	gmsgDeathMsg = REG_USER_MSG( "DeathMsg", -1 );
+	gmsgScoreAttrib = REG_USER_MSG( "ScoreAttrib", 2 );	// Beta 5.0 (leak)
 	gmsgScoreInfo = REG_USER_MSG( "ScoreInfo", 5 );
 	gmsgTeamInfo = REG_USER_MSG( "TeamInfo", -1 );  // sets the name of a player's team
 	gmsgTeamScore = REG_USER_MSG( "TeamScore", -1 );  // sets the score of a team on the scoreboard
@@ -4277,9 +4523,16 @@ void CBasePlayer :: Precache( void )
 	gmsgFade = REG_USER_MSG("ScreenFade", sizeof(ScreenFade));
 	gmsgAmmoX = REG_USER_MSG("AmmoX", 2);
 	gmsgSendAudio = REG_USER_MSG( "SendAudio", -1 );
-	gmsgRoundTime = REG_USER_MSG( "RoundTime", 1 );	// Beta 4.0
-	gmsgGiveItem = REG_USER_MSG( "GiveItem", 1 );
-	gmsgRemoveItem = REG_USER_MSG( "RemoveItem", 1 );
+	gmsgRoundTime = REG_USER_MSG( "RoundTime", 2 );	// Beta 4.0; Beta 5.0 (leak): seconds in a short
+	// Beta 5.0 (leak)
+	gmsgMoney = REG_USER_MSG( "Money", 5 );
+	gmsgArmorType = REG_USER_MSG( "ArmorType", 1 );
+	gmsgBlinkAcct = REG_USER_MSG( "BlinkAcct", 1 );
+	gmsgStatusValue = REG_USER_MSG( "StatusValue", -1 );
+	gmsgStatusText = REG_USER_MSG( "StatusText", -1 );
+	gmsgStatusIcon = REG_USER_MSG( "StatusIcon", -1 );
+	gmsgBarTime = REG_USER_MSG( "BarTime", -1 );
+	gmsgReloadSound = REG_USER_MSG( "ReloadSound", 2 );
 
 	m_iUpdateTime = 5;  // won't update for 1/2 a second
 
@@ -4296,6 +4549,39 @@ int CBasePlayer::Save( CSave &save )
 	return save.WriteFields( "PLAYER", this, m_playerSaveData, ARRAYSIZE(m_playerSaveData) );
 }
 
+
+// Beta 5.0 (leak): the scoreboard's marks of one player as another sees
+// them: dead (1), and to his teammates the bomb carrier (2) (name ours)
+static void SetScoreAttrib( CBasePlayer *dest, CBasePlayer *src )
+{
+	int state = ( src->pev->deadflag != DEAD_NO );
+
+	if ( src->m_fHasC4 && dest->m_iTeam == src->m_iTeam )
+		state |= 2;
+
+	MESSAGE_BEGIN( MSG_ONE, gmsgScoreAttrib, NULL, dest->edict() );
+		WRITE_BYTE( src->entindex() );
+		WRITE_BYTE( state );
+	MESSAGE_END();
+}
+
+// Beta 5.0 (leak): this player's marks to one player, or to all
+void CBasePlayer::SetScoreboardAttributes( CBasePlayer *destination )
+{
+	if ( destination )
+	{
+		SetScoreAttrib( destination, this );
+		return;
+	}
+
+	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	{
+		CBasePlayer *pPlayer = (CBasePlayer *)UTIL_PlayerByIndex( i );
+
+		if ( pPlayer && !FNullEnt( pPlayer->edict() ) && pPlayer->IsPlayer() )
+			SetScoreAttrib( pPlayer, this );
+	}
+}
 
 //
 // Marks everything as new so the player will resend this to the hud.
@@ -4347,6 +4633,10 @@ int CBasePlayer::Restore( CRestore &restore )
 
 	RenewItems();
 
+	// Beta 5.0 (leak): after a saved game most hints come again
+	m_flDisplayHistory &= ~( 0x4 | 0x8 | 0x10 | 0x20 | 0x80 | 0x100 | 0x200 | 0x800 | 0x8000 | 0x10000 | 0x20000 | 0x40000 );
+	SetScoreboardAttributes();
+
 	return status;
 }
 
@@ -4395,6 +4685,7 @@ void CBasePlayer::SelectNextItem( int iItem )
 	{
 		m_pActiveItem->Deploy( );
 		m_pActiveItem->UpdateItemInfo( );
+		ResetMaxSpeed( );	// Beta 5.0 (leak)
 	}
 }
 
@@ -4443,6 +4734,7 @@ void CBasePlayer::SelectItem(const char *pstr)
 	{
 		m_pActiveItem->Deploy( );
 		m_pActiveItem->UpdateItemInfo( );
+		ResetMaxSpeed( );	// Beta 5.0 (leak)
 	}
 }
 
@@ -4470,6 +4762,7 @@ void CBasePlayer::SelectLastItem(void)
 	m_pLastItem = pTemp;
 	m_pActiveItem->Deploy( );
 	m_pActiveItem->UpdateItemInfo( );
+	ResetMaxSpeed( );	// Beta 5.0 (leak)
 }
 
 //==============================================
@@ -4488,22 +4781,6 @@ BOOL CBasePlayer::HasWeapons( void )
 	}
 
 	return FALSE;
-}
-
-//
-// HasPrimaryWeapons - does the player carry a weapon in one of the item slots 3
-// to 5 (the rifles, submachine guns, shotgun and machine gun)? (name from Beta
-// 3.1's Linux symbols, whose code is this one's)
-//
-bool CBasePlayer::HasPrimaryWeapons( void )
-{
-	for ( int i = 3 ; i <= 5 ; i++ )
-	{
-		if ( m_rgpPlayerItems[ i ] )
-			return true;
-	}
-
-	return false;
 }
 
 void CBasePlayer::SelectPrevItem( int iItem )
@@ -4636,6 +4913,12 @@ void CBasePlayer::GiveNamedItem( const char *pszName )
 
 	DispatchSpawn( pent );
 	DispatchTouch( pent, ENT( pev ) );
+
+	// Beta 5.0 (leak): the kind of armor given (HasAssaultSuit)
+	if ( !strcmp( pszName, "item_assaultsuit" ) )
+		m_fHasAssaultSuit = TRUE;
+	else if ( !strcmp( pszName, "item_kevlar" ) )
+		m_fHasAssaultSuit = FALSE;
 }
 
 
@@ -4833,6 +5116,13 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 			break;
 		}
 
+	case 101:
+		// Beta 5.0 (leak): the money cheat
+		gEvilImpulse101 = TRUE;
+		AddAccount( 16000, true );
+		ALERT( at_console, "Crediting %s with $16000\n", STRING( pev->netname ) );
+		break;
+
 
 	case 102:
 		// Gibbage!!!
@@ -4949,6 +5239,128 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 		break;
 	}
 #endif	// HLDEMO_BUILD
+}
+
+// Beta 5.0 (leak): the buy zone's icon comes up (name ours)
+inline void BuyZoneIcon_Set( CBasePlayer *player )
+{
+	MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, player->pev );
+		WRITE_BYTE( 1 );
+		WRITE_STRING( "buyzone" );
+		WRITE_BYTE( 0 );
+		WRITE_BYTE( 160 );
+		WRITE_BYTE( 0 );
+	MESSAGE_END();
+}
+
+// Beta 5.0 (leak): at a bomb target the C4 icon flashes, and the carrier is
+// told once how to plant (name ours)
+inline void BombTargetFlash_Set( CBasePlayer *player )
+{
+	if ( player->m_fHasC4 && !( player->m_flDisplayHistory & 0x10000 ) )	// in the target zone
+	{
+		player->m_flDisplayHistory |= 0x10000;
+		player->HintMessage( "You are in the target zone.\nSelect the bomb in your inventory\nand plant it by holding FIRE!", FALSE );
+	}
+
+	player->SetBombIcon( TRUE );
+}
+
+// name ours
+inline void BombTargetFlash_Clear( CBasePlayer *player )
+{
+	player->SetBombIcon( FALSE );
+}
+
+// Beta 5.0 (leak): the zones' signals since the last update are the new state
+inline int CSignals::Update( void )
+{
+	int iOldState = m_iState;
+	m_iState = m_iSignals;
+	m_iSignals = 0;
+	return iOldState ^ m_iState;	// the bits that changed
+}
+
+// Beta 5.0 (leak): a map without buy zones has one within 512 units of each
+// spawn point of the player's team
+static void OLD_CheckBuyZone( CBasePlayer *player )
+{
+	const char *pszSpawnClass = NULL;
+
+	switch ( player->m_iTeam )
+	{
+	case TEAM_TERRORIST:	pszSpawnClass = "info_player_deathmatch"; break;
+	case TEAM_CT:			pszSpawnClass = "info_player_start"; break;
+	}
+
+	if ( pszSpawnClass )
+	{
+		CBaseEntity *pSpot = UTIL_FindEntityByClassname( NULL, pszSpawnClass );
+
+		while ( pSpot )
+		{
+			if ( ( pSpot->pev->origin - player->pev->origin ).Length() < 512 )
+			{
+				player->m_signals.Signal( 1 );	// in a buy zone
+				break;
+			}
+
+			pSpot = UTIL_FindEntityByClassname( pSpot, pszSpawnClass );
+		}
+	}
+}
+
+// Beta 5.0 (leak): a map without func_bomb_target has a target within 256
+// units of each info_bomb_target
+static void OLD_CheckBombTarget( CBasePlayer *player )
+{
+	CBaseEntity *pSpot = UTIL_FindEntityByClassname( NULL, "info_bomb_target" );
+
+	while ( pSpot )
+	{
+		if ( ( pSpot->pev->origin - player->pev->origin ).Length() <= 256 )
+		{
+			player->m_signals.Signal( 2 );	// at a bomb target
+			break;
+		}
+
+		pSpot = UTIL_FindEntityByClassname( pSpot, "info_bomb_target" );
+	}
+}
+
+// Beta 5.0 (leak): PostThink's zone check: what the zones signalled since the
+// last check is the new state; the icons follow what changed
+void CBasePlayer::HandleSignals( void )
+{
+	if ( g_pGameRules->IsMultiplayer() )
+	{
+		CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;
+
+		if ( !mp->m_fMapHasBuyZone )
+			OLD_CheckBuyZone( this );
+
+		if ( !mp->m_fMapHasBombZone )
+			OLD_CheckBombTarget( this );
+	}
+
+	int changed = m_signals.Update();
+	int state = m_signals.GetState();
+
+	if ( changed & 1 )	// buy zone
+	{
+		if ( state & 1 )
+			BuyZoneIcon_Set( this );
+		else
+			BuyZoneIcon_Clear( this );
+	}
+
+	if ( changed & 2 )	// bomb target
+	{
+		if ( state & 2 )
+			BombTargetFlash_Set( this );
+		else
+			BombTargetFlash_Clear( this );
+	}
 }
 
 //
@@ -5216,7 +5628,6 @@ void CBasePlayer :: UpdateClientData( void )
 		gInitHUD = FALSE;
 
 		MESSAGE_BEGIN( MSG_ONE, gmsgResetHUD, NULL, pev );
-			WRITE_BYTE( 0 );
 		MESSAGE_END();
 
 		if ( !m_fGameHUDInitialized )
@@ -5232,16 +5643,30 @@ void CBasePlayer :: UpdateClientData( void )
 			}
 		}
 		FireTargets( "game_playerspawn", this, this, USE_TOGGLE, 0 );
-	}
-	else if ( m_fSendResetHUD )
-	{
-		// Counter-Strike Beta 2.0: a new round for a survivor; the client
-		// restarts its round timer
-		m_fSendResetHUD = false;
 
-		MESSAGE_BEGIN( MSG_ONE, gmsgResetHUD, NULL, pev );
-			WRITE_BYTE( 1 );
+		// Beta 5.0 (leak): the HUD gets the money, the defuse kit's icon, the
+		// round's time and no C4 icon (Beta 2.0 to 4.1's second ResetHUD for a
+		// survivor's new round is gone)
+		MESSAGE_BEGIN( MSG_ONE, gmsgMoney, NULL, pev );
+			WRITE_LONG( m_iAccount );
+			WRITE_BYTE( 0 );
 		MESSAGE_END();
+
+		if ( m_fHasDefuser == true )
+		{
+			MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, pev );
+				WRITE_BYTE( 1 );
+				WRITE_STRING( "defuser" );
+				WRITE_BYTE( 15 );
+				WRITE_BYTE( 15 );
+				WRITE_BYTE( 200 );
+			MESSAGE_END();
+		}
+
+		if ( m_iTeam != TEAM_UNASSIGNED )
+			SyncRoundTimer();
+
+		SetBombIcon( FALSE );
 	}
 
 	if ( m_iHideHUD != m_iClientHideHUD )
@@ -5434,6 +5859,25 @@ void CBasePlayer :: UpdateClientData( void )
 	// Cache and client weapon change
 	m_pClientActiveItem = m_pActiveItem;
 	m_iClientFOV = m_iFOV;
+
+	// Beta 5.0 (leak): the status bar, every 0.2 seconds
+	if ( m_flNextSBarUpdateTime < gpGlobals->time )
+	{
+		UpdateStatusBar();
+		m_flNextSBarUpdateTime = gpGlobals->time + 0.2;
+	}
+
+	// Beta 5.0 (leak): once, a weapon in hand whose ammunition is all gone
+	if ( !( m_flDisplayHistory & 0x8000 ) && m_pActiveItem && m_pActiveItem->IsWeapon() )
+	{
+		CBasePlayerWeapon *pWeapon = (CBasePlayerWeapon *)m_pActiveItem;
+
+		if ( ( pWeapon->iFlags() & ITEM_FLAG_EXHAUSTIBLE ) && !AmmoInventory( pWeapon->m_iPrimaryAmmoType ) && !pWeapon->m_iClip )
+		{
+			m_flDisplayHistory |= 0x8000;	// out of ammunition
+			HintMessage( "You are out of ammunition.\nReturn to a buy zone to purchase more.\n", FALSE );
+		}
+	}
 }
 
 
@@ -5489,6 +5933,48 @@ void CBasePlayer :: EnableControl(BOOL fControl)
 	else
 		pev->flags &= ~FL_FROZEN;
 
+}
+
+//=========================================================
+// ResetMaxSpeed - Beta 5.0 (leak) (Linux symbol): the client's
+// maximum speed: 320 observing, almost none in the round's
+// freeze period, else what the weapon in his hands allows
+// (260 with none)
+//=========================================================
+void CBasePlayer::ResetMaxSpeed( void )
+{
+	float speed;	// name ours
+
+	if ( m_afPhysicsFlags & PFLAG_OBSERVER )
+		speed = 320;
+	else if ( g_pGameRules->IsMultiplayer() && ((CHalfLifeMultiplay *)g_pGameRules)->IsFreezePeriod() )
+		speed = 0.001;
+	else if ( m_pActiveItem )
+		speed = m_pActiveItem->GetMaxSpeed();
+	else
+		speed = 260;
+
+	g_engfuncs.pfnSetClientMaxspeed( ENT( pev ), speed );
+}
+
+//=========================================================
+// HintMessage - Beta 5.0 (leak) (Linux symbol): queue a hint
+// for the player; a dead player gets none unless asked for.
+// With the client's "ah" (auto help) key 0 or missing, the
+// hint counts as shown
+//=========================================================
+bool CBasePlayer::HintMessage( const char *pMessage, BOOL bDisplayIfPlayerDead )
+{
+	char *infobuffer = g_engfuncs.pfnGetInfoKeyBuffer( edict() );	// names ours
+	const char *autohelp = g_engfuncs.pfnInfoKeyValue( infobuffer, "ah" );
+
+	if ( !bDisplayIfPlayerDead && pev->deadflag != DEAD_NO )
+		return false;
+
+	if ( !autohelp || *autohelp == '0' )
+		return true;
+
+	return m_hintMessageQueue.AddMessage( pMessage );
 }
 
 
@@ -5694,6 +6180,10 @@ Vector CBasePlayer :: AutoaimDeflection( Vector &vecSrc, float flDist, float flD
 				continue;
 		}
 
+		// Beta 5.0 (leak): nor at teammates
+		if ( pEntity->IsPlayer() && ((CBasePlayer *)pEntity)->m_iTeam == m_iTeam )
+			continue;
+
 		// can shoot at this one
 		bestdot = dot;
 		bestent = pEdict;
@@ -5756,18 +6246,174 @@ int CBasePlayer :: GetCustomDecalFrames( void )
 }
 
 
+// Beta 5.0 (leak): SDK 2.3's status bar. It names the player in the
+// crosshair, a teammate (any player to a spectator) with his health; a
+// hostage with its health. A chasing observer gets the chased player.
+void CBasePlayer::InitStatusBar()
+{
+	m_flStatusBarDisappearDelay = 0;
+	m_SbarString1[0] = m_SbarString0[0] = 0; 
+}
+
+void CBasePlayer::UpdateStatusBar()
+{
+	int newSBarState[ SBAR_END ];
+	char sbuf0[ SBAR_STRING_SIZE ];
+	char sbuf1[ SBAR_STRING_SIZE ];
+
+	memset( newSBarState, 0, sizeof(newSBarState) );
+	strcpy( sbuf0, m_SbarString0 );
+	strcpy( sbuf1, m_SbarString1 );
+
+	CObserver *pObserver = m_pObserver;
+
+	if ( ( m_afPhysicsFlags & PFLAG_OBSERVER ) && pObserver && pObserver->IsChasing() )
+	{
+		CBasePlayer *pTarget = pObserver->GetTarget();
+
+		if ( !FNullEnt( pTarget ) )
+		{
+			strcpy( sbuf1, "1 (Chase mode) %c1: %p2\n2  Health: %i3%%" );
+			newSBarState[ SBAR_ID_TARGETNAME ] = ENTINDEX( pTarget->edict() );
+			newSBarState[ SBAR_ID_TARGETTYPE ] = ( pTarget->m_iTeam == m_iTeam ) ? SBAR_TARGETTYPE_TEAMMATE : SBAR_TARGETTYPE_ENEMY;
+			newSBarState[ SBAR_ID_TARGETHEALTH ] = pTarget->pev->health * 100 / pTarget->pev->max_health;
+		}
+	}
+	else
+	{
+		// Find an ID Target
+		TraceResult tr;
+		UTIL_MakeVectors( pev->v_angle + pev->punchangle );
+		Vector vecSrc = EyePosition();
+		Vector vecEnd = vecSrc + ( gpGlobals->v_forward * ( ( pev->flags & FL_SPECTATOR ) ? MAX_SPEC_ID_RANGE : MAX_ID_RANGE ) );
+		UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, edict(), &tr );
+
+		if ( tr.flFraction != 1.0 )
+		{
+			if ( !FNullEnt( tr.pHit ) )
+			{
+				CBaseEntity *pEntity = CBaseEntity::Instance( tr.pHit );
+
+				if ( pEntity->Classify() == CLASS_PLAYER )
+				{
+					CBasePlayer *pPlayer = (CBasePlayer *)pEntity;
+
+					newSBarState[ SBAR_ID_TARGETNAME ] = ENTINDEX( pEntity->edict() );
+					newSBarState[ SBAR_ID_TARGETTYPE ] = ( pPlayer->m_iTeam == m_iTeam ) ? SBAR_TARGETTYPE_TEAMMATE : SBAR_TARGETTYPE_ENEMY;
+
+					if ( m_iTeam != pPlayer->m_iTeam && !( pev->flags & FL_SPECTATOR ) )
+					{
+						strcpy( sbuf1, "1 %c1: %p2" );
+
+						if ( !( m_flDisplayHistory & 0x100 ) )	// enemy spotted
+						{
+							m_flDisplayHistory |= 0x100;
+							HintMessage( "You have spotted an enemy.", FALSE );
+						}
+					}
+					else
+					{
+						// teammates (and spectators) see the health
+						strcpy( sbuf1, "1 %c1: %p2\n2  Health: %i3%%" );
+						newSBarState[ SBAR_ID_TARGETHEALTH ] = 100 * ( pEntity->pev->health / pEntity->pev->max_health );
+
+						if ( !( m_flDisplayHistory & 0x80 ) && !( pev->flags & FL_SPECTATOR ) )	// friend spotted
+						{
+							m_flDisplayHistory |= 0x80;
+							HintMessage( "You have spotted a friend.", FALSE );
+						}
+					}
+				}
+				else if ( pEntity->Classify() == CLASS_HUMAN_PASSIVE )
+				{
+					strcpy( sbuf1, "1 %c1  Health: %i3%%" );
+					newSBarState[ SBAR_ID_TARGETTYPE ] = SBAR_TARGETTYPE_HOSTAGE;
+					newSBarState[ SBAR_ID_TARGETHEALTH ] = 100 * ( pEntity->pev->health / pEntity->pev->max_health );
+
+					// a hostage seen from afar: the team's task; close by: how to lead it
+					if ( !( m_flDisplayHistory & 0x4 ) && tr.flFraction > 0.1 )
+					{
+						m_flDisplayHistory |= 0x4;
+
+						switch ( m_iTeam )
+						{
+						case TEAM_TERRORIST:
+							HintMessage( "Prevent the Counter-terrorists from\nrescuing the hostages!", TRUE );
+							break;
+						case TEAM_CT:
+							HintMessage( "Rescue the hostages for money!", TRUE );
+							break;
+						}
+					}
+					else if ( !( m_flDisplayHistory & 0x8 ) && tr.flFraction <= 0.1 )
+					{
+						m_flDisplayHistory |= 0x4 | 0x8;
+						HintMessage( "Press USE to get the hostage to follow you.", FALSE );
+					}
+				}
+
+				m_flStatusBarDisappearDelay = gpGlobals->time + 1.0;
+			}
+		}
+		else if ( m_flStatusBarDisappearDelay > gpGlobals->time )
+		{
+			// hold the last status bar
+			newSBarState[ SBAR_ID_TARGETTYPE ] = m_izSBarState[ SBAR_ID_TARGETTYPE ];
+			newSBarState[ SBAR_ID_TARGETNAME ] = m_izSBarState[ SBAR_ID_TARGETNAME ];
+			newSBarState[ SBAR_ID_TARGETHEALTH ] = m_izSBarState[ SBAR_ID_TARGETHEALTH ];
+		}
+	}
+
+	BOOL bForceResend = FALSE;
+
+	if ( strcmp( sbuf0, m_SbarString0 ) )
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgStatusText, NULL, pev );
+			WRITE_BYTE( 0 );
+			WRITE_STRING( sbuf0 );
+		MESSAGE_END();
+
+		strcpy( m_SbarString0, sbuf0 );
+
+		// make sure everything's resent
+		bForceResend = TRUE;
+	}
+
+	if ( strcmp( sbuf1, m_SbarString1 ) )
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgStatusText, NULL, pev );
+			WRITE_BYTE( 1 );
+			WRITE_STRING( sbuf1 );
+		MESSAGE_END();
+
+		strcpy( m_SbarString1, sbuf1 );
+
+		// make sure everything's resent
+		bForceResend = TRUE;
+	}
+
+	// Check values and send if they don't match
+	for (int i = 1; i < SBAR_END; i++)
+	{
+		if ( newSBarState[i] != m_izSBarState[i] || bForceResend )
+		{
+			MESSAGE_BEGIN( MSG_ONE, gmsgStatusValue, NULL, pev );
+				WRITE_BYTE( i );
+				WRITE_SHORT( newSBarState[ i ] );
+			MESSAGE_END();
+
+			m_izSBarState[i] = newSBarState[i];
+		}
+	}
+}
+
+
 //=========================================================
 // DropPlayerItem - drop the named item, or if no name,
 // the active item. 
 //=========================================================
-void CBasePlayer::DropPlayerItem ( char *pszItemName )
+void CBasePlayer::DropPlayerItem( const char *pszItemName )
 {
-	if ( !g_pGameRules->IsMultiplayer() || (CVAR_GET_FLOAT("mp_weaponstay") > 0) )
-	{
-		// no dropping in single player.
-		// Beta 2.1: no longer refused (the test is still made, its result unused)
-	}
-
 	if ( !strlen( pszItemName ) )
 	{
 		// if this string has no length, the client didn't type a name!
@@ -5812,11 +6458,30 @@ void CBasePlayer::DropPlayerItem ( char *pszItemName )
 		// item we want to drop and hit a BREAK;  pWeapon is the item.
 		if ( pWeapon )
 		{
+			// Beta 5.0 (leak): the knife and the grenades stay
+			if ( !pWeapon->CanDrop() )
+			{
+				ClientPrint( pev, HUD_PRINTCENTER, "This weapon cannot be dropped" );
+				return;
+			}
+
 			g_pGameRules->GetNextBestWeapon( this, pWeapon );
 
 			UTIL_MakeVectors ( pev->angles ); 
 
 			pev->weapons &= ~(1<<pWeapon->m_iId);// take item off hud
+
+			// Beta 5.0 (leak): the bomb is a weapon; everybody hears it was
+			// dropped, unless the round is about to restart
+			if ( !strcmp( STRING( pWeapon->pev->classname ), "weapon_c4" ) )
+			{
+				m_fHasC4 = false;
+				pev->body = 0;
+				SetBombIcon( FALSE );
+
+				if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_flRestartRoundTime == 0 )
+					UTIL_ClientPrintAll( HUD_PRINTCENTER, "The bomb was dropped by %s\n", STRING( pev->netname ) );
+			}
 
 			CWeaponBox *pWeaponBox = (CWeaponBox *)CBaseEntity::Create( "weaponbox", pev->origin + gpGlobals->v_forward * 10, pev->angles, edict() );
 			pWeaponBox->pev->angles.x = 0;
@@ -5824,90 +6489,27 @@ void CBasePlayer::DropPlayerItem ( char *pszItemName )
 			pWeaponBox->SetThink( CWeaponBox::Kill );
 			pWeaponBox->pev->nextthink = gpGlobals->time + 300;	// Beta 3.0 (2.0: 30)
 			pWeaponBox->PackWeapon( pWeapon );
-			pWeaponBox->pev->velocity = gpGlobals->v_forward * 300 + gpGlobals->v_forward * 100;
+			pWeaponBox->pev->velocity = gpGlobals->v_forward * 400;
+
+			// Beta 5.0 (leak): only a weapon that is its own ammunition (a grenade)
+			// takes it along, all of it; sic: the box gets a count of one if the
+			// player had any. Other weapons leave their spare ammunition with him
+			if ( pWeapon->iFlags() & ITEM_FLAG_EXHAUSTIBLE )
+			{
+				int iAmmoIndex = GetAmmoIndex( pWeapon->pszAmmo1() );
+
+				if ( iAmmoIndex != -1 )
+				{
+					pWeaponBox->PackAmmo( MAKE_STRING( pWeapon->pszAmmo1() ), m_rgAmmo[ iAmmoIndex ] > 0 );
+					m_rgAmmo[ iAmmoIndex ] = 0; 
+				}
+			}
 
 			// the box shows the weapon
-			switch ( pWeapon->m_iId )
-			{
-			case WEAPON_AK47:
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_ak47.mdl" );
-				break;
-			case WEAPON_AWP:
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_awp.mdl" );
-				break;
-			case WEAPON_DEAGLE:
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_deagle.mdl" );
-				break;
-			case WEAPON_G3SG1:
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_g3sg1.mdl" );
-				break;
-			case WEAPON_GLOCK18:
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_glock18.mdl" );
-				break;
-			case WEAPON_M249:
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_m249.mdl" );
-				break;
-			case WEAPON_M3:
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_m3.mdl" );
-				break;
-			case WEAPON_M4A1:
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_m4a1.mdl" );
-				break;
-			case WEAPON_MP5N:
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_mp5.mdl" );
-				break;
-			case WEAPON_SG552:
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_sg552.mdl" );
-				break;
-			case WEAPON_P90:
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_p90.mdl" );
-				break;
-			case WEAPON_TMP:
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_tmp.mdl" );
-				break;
-			case WEAPON_USP:
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_usp.mdl" );
-				break;
-			case WEAPON_KNIFE:
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_knife.mdl" );
-				break;
-			case WEAPON_P228:	// Beta 4.0
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_p228.mdl" );
-				break;
-			case WEAPON_SCOUT:	// Beta 4.0
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_scout.mdl" );
-				break;
-			case WEAPON_FLASHBANG:	// Beta 3.1
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_flashbang.mdl" );
-				break;
-			case WEAPON_HEGRENADE:	// Beta 4.0
-				SET_MODEL( ENT(pWeaponBox->pev), "models/w_hegrenade.mdl" );
-				break;
-			}
-			
-			// drop half of the ammo for this weapon.
-			int	iAmmoIndex;
+			const char *modelname = GetCSModelName( pWeapon->m_iId );
 
-			iAmmoIndex = GetAmmoIndex ( pWeapon->pszAmmo1() ); // ???
-			
-			if ( iAmmoIndex != -1 )
-			{
-				// this weapon weapon uses ammo, so pack an appropriate amount.
-				if ( pWeapon->iFlags() & ITEM_FLAG_EXHAUSTIBLE )
-				{
-					// pack up all the ammo, this weapon is its own ammo type
-					pWeaponBox->PackAmmo( MAKE_STRING(pWeapon->pszAmmo1()), m_rgAmmo[ iAmmoIndex ] );
-					m_rgAmmo[ iAmmoIndex ] = 0; 
-
-				}
-				else
-				{
-					// pack half of the ammo
-					pWeaponBox->PackAmmo( MAKE_STRING(pWeapon->pszAmmo1()), m_rgAmmo[ iAmmoIndex ] / 2 );
-					m_rgAmmo[ iAmmoIndex ] /= 2; 
-				}
-
-			}
+			if ( modelname )
+				SET_MODEL( ENT( pWeaponBox->pev ), modelname );
 
 			return;// we're done, so stop searching with the FOR loop.
 		}
@@ -5958,6 +6560,15 @@ BOOL CBasePlayer::HasNamedPlayerItem( const char *pszItemName )
 	return FALSE;
 }
 
+// Beta 5.0 (leak): kevlar and helmet, with armor left
+BOOL CBasePlayer::HasAssaultSuit( void )
+{
+	if ( !m_fHasAssaultSuit || pev->armorvalue == 0 )
+		return FALSE;
+
+	return TRUE;
+}
+
 //=========================================================
 // 
 //=========================================================
@@ -5977,6 +6588,10 @@ BOOL CBasePlayer :: SwitchWeapon( CBasePlayerItem *pWeapon )
 
 	m_pActiveItem = pWeapon;
 	pWeapon->Deploy( );
+
+	// Beta 5.0 (leak): the speed the new weapon allows
+	if ( pWeapon->m_pPlayer )
+		pWeapon->m_pPlayer->ResetMaxSpeed();
 
 	return TRUE;
 }
@@ -6198,4 +6813,3 @@ void CInfoIntermission::Think ( void )
 }
 
 LINK_ENTITY_TO_CLASS( info_intermission, CInfoIntermission );
-

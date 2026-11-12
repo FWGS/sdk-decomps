@@ -31,11 +31,11 @@ class CP90 : public CBasePlayerWeapon
 public:
 	void Spawn( void );
 	void Precache( void );
-	int iItemSlot( void ) { return 3; }
+	int iItemSlot( void ) { return 1; }
 	int GetItemInfo(ItemInfo *p);
+	float GetMaxSpeed( void ) { return 260; }	// Beta 5.0 (leak): Linux symbol
 
 	void PrimaryAttack( void );
-	void SecondaryAttack( void );
 	void P90Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim );
 	BOOL Deploy( void );
 	void Reload( void );
@@ -82,8 +82,8 @@ int CP90::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = P90_MAX_CLIP;
-	p->iSlot = 2;
-	p->iPosition = 4;
+	p->iSlot = 0;
+	p->iPosition = 8;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_P90;
 	p->iWeight = P90_WEIGHT;
@@ -96,25 +96,19 @@ BOOL CP90::Deploy( )
 	m_pPlayer->m_flAccuracy = 0;
 	m_fEjectShell = 1;
 	m_fDelayFire = false;
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 260 );
 	return DefaultDeploy( "models/v_p90.mdl", "models/p_p90.mdl", P90_DRAW, "p90" );
-}
-
-void CP90::SecondaryAttack( void )
-{
-	P90Fire( m_pPlayer->m_flAccuracy * 0.05, 0.066, FALSE );
 }
 
 void CP90::PrimaryAttack( void )
 {
-	P90Fire( m_pPlayer->m_flAccuracy * 0.05, 0.066, FALSE );
+	P90Fire( m_pPlayer->m_flAccuracy * 0.06, 0.066, FALSE );
 }
 
 void CP90::P90Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 {
 	// the spread grows with the square of the shots fired
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 225) + 0.45;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 175) + 0.45;
 
 	if (m_pPlayer->m_flAccuracy > 1)
 		m_pPlayer->m_flAccuracy = 1;
@@ -176,7 +170,7 @@ void CP90::P90Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		vecAiming = gpGlobals->v_forward;
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_57MM, 23, 0.9 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_57MM, 23, 0.925 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -187,13 +181,13 @@ void CP90::P90Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	// Beta 4.0: the recoil by how the player stands
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		KickBack( 0.7, 0.35, 0.2, 0.0325, 4, 2.25, 4 );
+		KickBack( 0.65, 0.3, 0.2, 0.0275, 4, 2.25, 4 );
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		KickBack( 0.75, 0.4, 0.25, 0.035, 4.25, 2.5, 3 );
+		KickBack( 0.65, 0.35, 0.25, 0.03, 4.25, 2.5, 3 );
 	else if ( FBitSet(m_pPlayer->pev->flags, FL_DUCKING) )
-		KickBack( 0.6, 0.25, 0.115, 0.02, 3.5, 1, 6 );
+		KickBack( 0.6, 0.25, 0.125, 0.02, 3.5, 1, 8 );
 	else
-		KickBack( 0.625, 0.275, 0.15, 0.035, 3.75, 1.5, 5 );
+		KickBack( 0.625, 0.275, 0.125, 0.02, 3.75, 1.25, 6 );
 }
 
 

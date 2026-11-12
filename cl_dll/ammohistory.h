@@ -17,7 +17,7 @@
 //
 
 // this is the max number of items in each bucket
-#define MAX_WEAPON_POSITIONS		7
+#define MAX_WEAPON_POSITIONS		16
 
 class WeaponsResource
 {
@@ -33,6 +33,7 @@ public:
 	void Init( void )
 	{
 		memset( rgWeapons, 0, sizeof rgWeapons );
+		memset( riAmmo, 0, sizeof riAmmo );
 		Reset();
 	}
 
@@ -40,7 +41,6 @@ public:
 	{
 		iOldWeaponBits = 0;
 		memset( rgSlots, 0, sizeof rgSlots );
-		memset( riAmmo, 0, sizeof riAmmo );
 	}
 
 ///// WEAPON /////

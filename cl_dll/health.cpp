@@ -30,9 +30,6 @@
 
 DECLARE_MESSAGE(m_Health, Health )
 DECLARE_MESSAGE(m_Health, Damage )
-DECLARE_MESSAGE(m_Health, RoundTime )
-DECLARE_MESSAGE(m_Health, GiveItem )
-DECLARE_MESSAGE(m_Health, RemoveItem )
 
 #define PAIN_NAME "sprites/%d_pain.spr"
 #define DAMAGE_NAME "sprites/%d_dmg.spr"
@@ -59,9 +56,6 @@ int CHudHealth::Init(void)
 {
 	HOOK_MESSAGE(Health);
 	HOOK_MESSAGE(Damage);
-	HOOK_MESSAGE(RoundTime);
-	HOOK_MESSAGE(GiveItem);
-	HOOK_MESSAGE(RemoveItem);
 	m_iHealth = 100;
 	m_fFade = 0;
 	m_iFlags = 0;
@@ -72,8 +66,6 @@ int CHudHealth::Init(void)
 
 	memset(m_dmg, 0, sizeof(DAMAGE_IMAGE) * NUM_DMG_TYPES);
 
-	m_flDrawTime = 0;
-	m_flRoundStart = 0;
 
 	gHUD.AddHudElem(this);
 	return 1;
@@ -99,50 +91,9 @@ int CHudHealth::VidInit(void)
 
 	m_HUD_dmg_bio = gHUD.GetSpriteIndex( "dmg_bio" ) + 1;
 	m_HUD_cross = gHUD.GetSpriteIndex( "cross" );
-	m_HUD_c4 = gHUD.GetSpriteIndex( "c4" );
-	m_HUD_defuser = gHUD.GetSpriteIndex( "defuser" );
 
 	giDmgHeight = gHUD.GetSpriteRect(m_HUD_dmg_bio).right - gHUD.GetSpriteRect(m_HUD_dmg_bio).left;
 	giDmgWidth = gHUD.GetSpriteRect(m_HUD_dmg_bio).bottom - gHUD.GetSpriteRect(m_HUD_dmg_bio).top;
-	return 1;
-}
-
-// sic: a stand-in, names ours.  The text of Beta 4.0's health.cpp
-// declared three symbols more between VidInit and CalcDamageDirection than ours.
-extern int b40_unknown5, b40_unknown6, b40_unknown7;
-
-int CHudHealth:: MsgFunc_RoundTime(const char *pszName,  int iSize, void *pbuf )
-{
-	BEGIN_READ( pbuf, iSize );
-	m_iRoundTime = READ_BYTE() * 60;
-	m_flRoundStart = m_flDrawTime;
-
-	return 1;
-}
-
-int CHudHealth:: MsgFunc_GiveItem(const char *pszName,  int iSize, void *pbuf )
-{
-	BEGIN_READ( pbuf, iSize );
-	int item = READ_BYTE();	// name ours
-
-	if ( item == 0 )
-		m_bHasC4 = true;
-	else if ( item == 1 )
-		m_bHasDefuser = true;
-
-	return 1;
-}
-
-int CHudHealth:: MsgFunc_RemoveItem(const char *pszName,  int iSize, void *pbuf )
-{
-	BEGIN_READ( pbuf, iSize );
-	int item = READ_BYTE();	// name ours
-
-	if ( item == 0 )
-		m_bHasC4 = false;
-	else if ( item == 1 )
-		m_bHasDefuser = false;
-
 	return 1;
 }
 
@@ -225,7 +176,8 @@ int CHudHealth::Draw(float flTime)
 //	if (m_iHealth <= 0)
 //		return 1;
 
-	m_flDrawTime = flTime;
+	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_HEALTH )
+		return 1;
 
 	if ( !m_hSprite )
 		m_hSprite = LoadSprite(PAIN_NAME);
@@ -258,26 +210,6 @@ int CHudHealth::Draw(float flTime)
 	// Only draw health if we have the suit.
 	if (gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT)))
 	{
-		if ( m_bHasC4 == true )
-		{
-			int iWidth = gHUD.GetSpriteRect(m_HUD_c4).right - gHUD.GetSpriteRect(m_HUD_c4).left;
-			y = ScreenHeight * 2 / 3;
-			x = ScreenWidth - iWidth;
-
-			SPR_Set(gHUD.GetSprite(m_HUD_c4), 15, 15, 220);
-			SPR_DrawAdditive(0, x, y, &gHUD.GetSpriteRect(m_HUD_c4));
-		}
-
-		if ( m_bHasDefuser == true )
-		{
-			int iWidth = gHUD.GetSpriteRect(m_HUD_defuser).right - gHUD.GetSpriteRect(m_HUD_defuser).left;
-			y = ScreenHeight * 2 / 3;
-			x = ScreenWidth - iWidth;
-
-			SPR_Set(gHUD.GetSprite(m_HUD_defuser), 15, 15, 220);
-			SPR_DrawAdditive(0, x, y, &gHUD.GetSpriteRect(m_HUD_defuser));
-		}
-
 		HealthWidth = gHUD.GetSpriteRect(gHUD.m_HUD_number_0).right - gHUD.GetSpriteRect(gHUD.m_HUD_number_0).left;
 		int CrossWidth = gHUD.GetSpriteRect(m_HUD_cross).right - gHUD.GetSpriteRect(m_HUD_cross).left;
 
@@ -289,42 +221,7 @@ int CHudHealth::Draw(float flTime)
 
 		x = CrossWidth + HealthWidth / 2;
 
-		// round timer
-		int iTimeLeft = m_iRoundTime - (int)(flTime - m_flRoundStart);
-		if ( iTimeLeft < 0 )
-			iTimeLeft = 0;
-
-		int iMinutes = iTimeLeft / 60;
-		int iSeconds = iTimeLeft % 60;
-		int iTens = iSeconds / 10;
-		int iOnes = iSeconds % 10;
-
-		int tr, tg, tb;
-		if ( iTimeLeft < 30 )
-		{
-			tr = 225;
-			tg = 25;
-			tb = 25;
-		}
-		else
-		{
-			tr = 25;
-			tg = 225;
-			tb = 25;
-		}
-
-		gHUD.DrawHudNumber( x + CrossWidth * 10, y, DHN_2DIGITS | DHN_DRAWZERO, iMinutes, tr, tg, tb );
-		gHUD.DrawHudString( x + CrossWidth * 10 + HealthWidth * 2.25, y, x + CrossWidth * 10 + HealthWidth * 2.75, ":", tr, tg, tb );
-		gHUD.DrawHudNumber( x + CrossWidth * 10 + HealthWidth * 2.75, y, DHN_DRAWZERO, iTens, tr, tg, tb );
-		gHUD.DrawHudNumber( x + CrossWidth * 10 + HealthWidth * 4, y, DHN_DRAWZERO, iOnes, tr, tg, tb );
-
 		x = gHUD.DrawHudNumber(x, y, DHN_3DIGITS | DHN_DRAWZERO, m_iHealth, r, g, b);
-
-		x += HealthWidth/2;
-
-		int iHeight = gHUD.m_iFontHeight;
-		int iWidth = HealthWidth/10;
-		FillRGBA(x, y, iWidth, iHeight, 255, 160, 0, a);
 	}
 
 	DrawDamage(flTime);
@@ -569,4 +466,222 @@ void CHudHealth::UpdateTiles(float flTime, long bitsDamage)
 
 	// damage bits are only turned on here;  they are turned off when the draw time has expired (in DrawDamage())
 	m_bitsDamage |= bitsDamage;
+}
+
+
+//
+//-----------------------------------------------------
+// the round timer
+//
+DECLARE_MESSAGE(m_RoundTimer, RoundTime)
+
+int CHudRoundTimer::Init( void )
+{
+	HOOK_MESSAGE(RoundTime);
+
+	gHUD.AddHudElem(this);
+
+	Reset();
+
+	return 1;
+}
+
+int CHudRoundTimer::VidInit( void )
+{
+	m_HUD_timer = gHUD.GetSpriteIndex( "stopwatch" );
+
+	return 1;
+}
+
+void CHudRoundTimer::Reset( void )
+{
+	m_iFlags |= HUD_ACTIVE;
+
+	m_iUnused = 0;
+	m_flEndTime = 0;
+	m_flRoundTime = 0;
+	m_flNextToggle = 0;
+	m_bPanicColor = 0;
+}
+
+int CHudRoundTimer::Draw( float flTime )
+{
+	int r, g, b;
+	int x, y;
+
+	// a new round time has come in: count down from now
+	if ( m_flRoundTime != 0 )
+	{
+		m_flEndTime = flTime + m_flRoundTime;
+		m_flRoundTime = 0;
+	}
+
+	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_TIMER )
+		return 1;
+
+	int iTimeLeft = m_flEndTime - flTime;	// name ours
+
+	if ( iTimeLeft <= 0 )
+	{
+		iTimeLeft = 0;
+		m_bPanicColor = 1;
+	}
+	else if ( iTimeLeft <= 2 )
+	{
+		if ( flTime > m_flNextToggle )
+		{
+			m_flNextToggle = flTime + 0.05;
+			m_bPanicColor = 1 - m_bPanicColor;
+		}
+	}
+	else if ( iTimeLeft <= 5 )
+	{
+		if ( flTime > m_flNextToggle )
+		{
+			m_flNextToggle = flTime + 0.1;
+			m_bPanicColor = 1 - m_bPanicColor;
+		}
+	}
+	else if ( iTimeLeft <= 10 )
+	{
+		if ( flTime > m_flNextToggle )
+		{
+			m_flNextToggle = flTime + 0.2;
+			m_bPanicColor = 1 - m_bPanicColor;
+		}
+	}
+	else if ( iTimeLeft <= 20 )
+	{
+		if ( flTime > m_flNextToggle )
+		{
+			m_flNextToggle = flTime + 0.4;
+			m_bPanicColor = 1 - m_bPanicColor;
+		}
+	}
+	else if ( iTimeLeft <= 30 )
+	{
+		if ( flTime > m_flNextToggle )
+		{
+			m_flNextToggle = flTime + 0.8;
+			m_bPanicColor = 1 - m_bPanicColor;
+		}
+	}
+
+	int iMinutes = iTimeLeft / 60;	// name ours
+	int iSeconds = iTimeLeft % 60;	// name ours
+
+	if ( m_bPanicColor )
+	{
+		UnpackRGB( r, g, b, RGB_REDISH );
+	}
+	else
+	{
+		UnpackRGB( r, g, b, RGB_YELLOWISH );
+		ScaleColors( r, g, b, MIN_ALPHA );
+	}
+
+	x = ( ScreenWidth - gHUD.GetSpriteWidth( gHUD.m_HUD_number_0 ) * ( ScreenWidth < 640 ? 5 : 4 ) ) / 2;
+	y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
+
+	SPR_Set( gHUD.GetSprite( m_HUD_timer ), r, g, b );
+	SPR_DrawAdditive( 0, x - gHUD.GetSpriteWidth( m_HUD_timer ), y, &gHUD.GetSpriteRect( m_HUD_timer ) );
+
+	x = gHUD.DrawHudNumber( x, y, DHN_2DIGITS | DHN_DRAWZERO, iMinutes, r, g, b );
+	x = gHUD.DrawHudString( x, y + ( ScreenWidth < 640 ? 1 : 4 ), ScreenWidth - 1, ":", r, g, b );
+	gHUD.DrawHudNumber( x, y, DHN_PADZERO | DHN_2DIGITS | DHN_DRAWZERO, iSeconds, r, g, b );
+
+	return 1;
+}
+
+int CHudRoundTimer::MsgFunc_RoundTime( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+	m_flRoundTime = READ_SHORT();
+	m_bPanicColor = 0;
+	m_flNextToggle = 0;
+
+	return 1;
+}
+
+
+//
+//-----------------------------------------------------
+// the progress bar
+//
+DECLARE_MESSAGE(m_ProgressBar, BarTime)
+
+int CHudProgressBar::Init( void )
+{
+	HOOK_MESSAGE(BarTime);
+
+	gHUD.AddHudElem(this);
+
+	Reset();
+
+	return 1;
+}
+
+int CHudProgressBar::VidInit( void )
+{
+	return 1;
+}
+
+void CHudProgressBar::Reset( void )
+{
+	m_flEndTime = 0;
+	m_flDuration = 0;
+	m_iFlags |= HUD_ACTIVE;
+
+	m_iWidth = ScreenWidth * 0.5f;
+	m_iHeight = 10;
+	m_x0 = m_iWidth / 2;
+	m_y0 = ScreenHeight * 0.5f + 64;
+	m_x1 = m_x0 + m_iWidth - 1;
+	m_y1 = m_y0 + 9;
+}
+
+int CHudProgressBar::Draw( float flTime )
+{
+	int r, g, b;
+
+	// a new bar has come in: it runs from now
+	if ( m_flDuration != 0 )
+	{
+		m_flEndTime = flTime + m_flDuration;
+		m_flStartTime = flTime;
+		m_flDuration = 0;
+	}
+
+	if ( flTime > m_flEndTime )
+		return 1;
+
+	UnpackRGB( r, g, b, RGB_YELLOWISH );
+
+	// the frame
+	FillRGBA( m_x0, m_y0, 1, m_iHeight, r, g, b, 80 );
+	FillRGBA( m_x1, m_y0, 1, m_iHeight, r, g, b, 80 );
+	FillRGBA( m_x0 + 1, m_y0, m_iWidth - 2, 1, r, g, b, 80 );
+	FillRGBA( m_x0 + 1, m_y1, m_iWidth - 2, 1, r, g, b, 80 );
+
+	// the bar
+	int iWidth = ( flTime - m_flStartTime ) * ( m_iWidth - 4 ) / ( m_flEndTime - m_flStartTime );	// name ours
+	if ( iWidth > m_iWidth - 4 )
+		iWidth = m_iWidth - 4;
+
+	FillRGBA( m_x0 + 2, m_y0 + 2, iWidth, m_iHeight - 4, r, g, b, 160 );
+
+	return 1;
+}
+
+int CHudProgressBar::MsgFunc_BarTime( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+	int iTime = READ_SHORT();	// name ours
+
+	if ( iTime )
+		m_flDuration = iTime;
+	else
+		m_flDuration = -1;
+
+	return 1;
 }

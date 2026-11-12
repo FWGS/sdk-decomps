@@ -35,9 +35,9 @@ public:
 	void Precache( void );
 	int iItemSlot( void ) { return 2; }
 	int GetItemInfo(ItemInfo *p);
+	float GetMaxSpeed( void ) { return 260; }	// Beta 5.0 (leak): Linux symbol
 
 	void PrimaryAttack( void );
-	void SecondaryAttack( void );
 	void DEAGLEFire( float flSpread, float flCycleTime, BOOL fUseSemi );
 	BOOL Deploy( void );
 	void Reload( void );
@@ -84,7 +84,7 @@ int CDEAGLE::GetItemInfo(ItemInfo *p)
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = DEAGLE_MAX_CLIP;
 	p->iSlot = 1;
-	p->iPosition = 4;
+	p->iPosition = 1;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_DEAGLE;
 	p->iWeight = DEAGLE_WEIGHT;
@@ -95,21 +95,8 @@ int CDEAGLE::GetItemInfo(ItemInfo *p)
 BOOL CDEAGLE::Deploy( )
 {
 	m_pPlayer->m_flAccuracy = 0.875;
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 260 );
 
 	return DefaultDeploy( "models/v_deagle.mdl", "models/p_deagle.mdl", DEAGLE_DRAW, "onehanded" );
-}
-
-void CDEAGLE::SecondaryAttack( void )
-{
-	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		DEAGLEFire( (1 - m_pPlayer->m_flAccuracy) * 0.25, 0.325, FALSE );
-	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		DEAGLEFire( (1 - m_pPlayer->m_flAccuracy) * 0.35, 0.325, FALSE );
-	else if (FBitSet(m_pPlayer->pev->flags, FL_DUCKING))
-		DEAGLEFire( (1 - m_pPlayer->m_flAccuracy) * 0.115, 0.325, FALSE );
-	else
-		DEAGLEFire( (1 - m_pPlayer->m_flAccuracy) * 0.13, 0.325, FALSE );
 }
 
 void CDEAGLE::PrimaryAttack( void )

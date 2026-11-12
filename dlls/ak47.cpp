@@ -32,7 +32,7 @@ class CAK47 : public CBasePlayerWeapon
 public:
 	void Spawn( void );
 	void Precache( void );
-	int iItemSlot( void ) { return 3; }
+	int iItemSlot( void ) { return 1; }
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
@@ -41,6 +41,7 @@ public:
 	BOOL Deploy( void );
 	void Reload( void );
 	void WeaponIdle( void );
+	float GetMaxSpeed( void ) { return 230; }	// Beta 5.0 (leak): Linux symbol
 	int m_iShell;
 	BOOL m_fEjectShell;		// the shot throws a shell; flips with every shot
 };
@@ -83,8 +84,8 @@ int CAK47::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = AK47_MAX_CLIP;
-	p->iSlot = 2;
-	p->iPosition = 3;
+	p->iSlot = 0;
+	p->iPosition = 1;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_AK47;
 	p->iWeight = AK47_WEIGHT;
@@ -94,7 +95,6 @@ int CAK47::GetItemInfo(ItemInfo *p)
 
 BOOL CAK47::Deploy( )
 {
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 230 );
 	m_pPlayer->m_flAccuracy = 0;
 	m_fEjectShell = 1;
 	return DefaultDeploy( "models/v_ak47.mdl", "models/p_ak47.mdl", AK47_DRAW, "mp5" );
@@ -102,7 +102,7 @@ BOOL CAK47::Deploy( )
 
 void CAK47::SecondaryAttack( void )
 {
-	AK47Fire( m_pPlayer->m_flAccuracy * 0.0275, 0.0955, FALSE );
+	// Beta 5.0 (leak): nothing (Beta 4.1 fired as PrimaryAttack)
 }
 
 void CAK47::PrimaryAttack( void )

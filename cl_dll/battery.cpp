@@ -26,14 +26,17 @@
 #include <stdio.h>
 
 DECLARE_MESSAGE(m_Battery, Battery)
+DECLARE_MESSAGE(m_Battery, ArmorType)
 
 int CHudBattery::Init(void)
 {
 	m_iBat = 0;
 	m_fFade = 0;
 	m_iFlags = 0;
+	m_enArmorType = 0;
 
 	HOOK_MESSAGE(Battery);
+	HOOK_MESSAGE(ArmorType);
 
 	gHUD.AddHudElem(this);
 
@@ -43,13 +46,11 @@ int CHudBattery::Init(void)
 
 int CHudBattery::VidInit(void)
 {
-	int HUD_suit_empty = gHUD.GetSpriteIndex( "suit_empty" );
-	int HUD_suit_full = gHUD.GetSpriteIndex( "suit_full" );
+	m_HUD_suit_empty = gHUD.GetSpriteIndex( "suit_empty" );
+	m_HUD_suit_full = gHUD.GetSpriteIndex( "suit_full" );
+	m_HUD_suithelmet_empty = gHUD.GetSpriteIndex( "suithelmet_empty" );
+	m_HUD_suithelmet_full = gHUD.GetSpriteIndex( "suithelmet_full" );
 
-	m_hSprite1 = m_hSprite2 = 0;  // delaying get sprite handles until we know the sprites are loaded
-	m_prc1 = &gHUD.GetSpriteRect( HUD_suit_empty );
-	m_prc2 = &gHUD.GetSpriteRect( HUD_suit_full );
-	m_iHeight = m_prc2->bottom - m_prc1->top;
 	m_fFade = 0;
 	return 1;
 };
@@ -66,7 +67,18 @@ int CHudBattery:: MsgFunc_Battery(const char *pszName,  int iSize, void *pbuf )
 	{
 		m_fFade = FADE_TIME;
 		m_iBat = x;
+
+		if ( x <= 0 )
+			m_enArmorType = 0;
 	}
+
+	return 1;
+}
+
+int CHudBattery:: MsgFunc_ArmorType(const char *pszName,  int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+	m_enArmorType = READ_BYTE();
 
 	return 1;
 }
@@ -79,9 +91,21 @@ int CHudBattery::Draw(float flTime)
 
 	int r, g, b, x, y, a;
 	wrect_t rc;
+	int iEmpty, iFull;	// names ours
 
-	rc = *m_prc2;
-	rc.top  += m_iHeight * ((float)(100-(min(100,m_iBat))) * 0.01);	// battery can go from 0 to 100 so * 0.01 goes from 0 to 1
+	if ( m_enArmorType == 1 )
+	{
+		iFull = m_HUD_suithelmet_full;
+		iEmpty = m_HUD_suithelmet_empty;
+	}
+	else
+	{
+		iFull = m_HUD_suit_full;
+		iEmpty = m_HUD_suit_empty;
+	}
+
+	rc = gHUD.GetSpriteRect( iFull );
+	rc.top  += gHUD.GetSpriteHeight( iFull ) * ((float)(100-(min(100,m_iBat))) * 0.01);	// battery can go from 0 to 100 so * 0.01 goes from 0 to 1
 
 	UnpackRGB(r,g,b, RGB_YELLOWISH);
 
@@ -111,28 +135,22 @@ int CHudBattery::Draw(float flTime)
 
 	ScaleColors(r, g, b, a );
 	
-	int iOffset = (m_prc1->bottom - m_prc1->top)/6;
+	int iOffset = gHUD.GetSpriteHeight( iEmpty ) / 6;
 
-	y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
+	y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2 + 4;
 	x = ScreenWidth/5;
 
-	// make sure we have the right sprite handles
-	if ( !m_hSprite1 )
-		m_hSprite1 = gHUD.GetSprite( gHUD.GetSpriteIndex( "suit_empty" ) );
-	if ( !m_hSprite2 )
-		m_hSprite2 = gHUD.GetSprite( gHUD.GetSpriteIndex( "suit_full" ) );
-
-	SPR_Set(m_hSprite1, r, g, b );
-	SPR_DrawAdditive( 0,  x, y - iOffset, m_prc1);
+	SPR_Set( gHUD.GetSprite( iEmpty ), r, g, b );
+	SPR_DrawAdditive( 0,  x, y - iOffset, &gHUD.GetSpriteRect( iEmpty ) );
 
 	if (rc.bottom > rc.top)
 	{
-		SPR_Set(m_hSprite2, r, g, b );
-		SPR_DrawAdditive( 0, x, y - iOffset + (rc.top - m_prc2->top), &rc);
+		SPR_Set( gHUD.GetSprite( iFull ), r, g, b );
+		SPR_DrawAdditive( 0, x, y - iOffset + (rc.top - gHUD.GetSpriteRect( iFull ).top), &rc );
 	}
 
-	x += (m_prc1->right - m_prc1->left);
-	x = gHUD.DrawHudNumber(x, y, DHN_3DIGITS | DHN_DRAWZERO, m_iBat, r, g, b);
+	x += gHUD.GetSpriteWidth( iEmpty );
+	x = gHUD.DrawHudNumber(x, y - 4, DHN_3DIGITS | DHN_DRAWZERO, m_iBat, r, g, b);
 
 	return 1;
 }

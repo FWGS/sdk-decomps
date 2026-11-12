@@ -142,6 +142,20 @@ void CHudStatusBar :: ParseStatusString( int line_num )
 						case 'i':  // number
 							sprintf( szRepString, "%d", indexval );
 							break;
+						case 'c':  // relation to the player (letter and name ours)
+							switch ( indexval )
+							{
+							case 1:
+								strcpy( szRepString, "Friend" );
+								break;
+							case 2:
+								strcpy( szRepString, "Enemy" );
+								break;
+							case 3:
+								strcpy( szRepString, "Hostage" );
+								break;
+							}
+							break;
 						default:
 							szRepString[0] = 0;
 						}

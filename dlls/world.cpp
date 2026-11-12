@@ -471,11 +471,25 @@ LINK_ENTITY_TO_CLASS( worldspawn, CWorld );
 extern DLL_GLOBAL BOOL		g_fGameOver;
 float g_flWeaponCheat; 
 
+// Beta 5.0 (leak): the map's briefing (Linux symbol; player.cpp defines it): the
+// text of maps/<map>.txt, which the client is sent too (JoiningThink, showbriefing)
+extern char g_szMapBriefingText[512];
+
 void CWorld :: Spawn( void )
 {
 	g_fGameOver = FALSE;
 	Precache( );
 	g_flWeaponCheat = CVAR_GET_FLOAT( "sv_cheats" );  // Is the impulse 101 command allowed?
+
+	g_szMapBriefingText[0] = '\0';
+	int flength = 0;	// name ours
+	char *pFile = (char *)LOAD_FILE_FOR_ME( UTIL_VarArgs( "maps/%s.txt", STRING( gpGlobals->mapname ) ), &flength );	// name ours
+	if ( pFile && flength )
+	{
+		strncpy( g_szMapBriefingText, pFile, 510 );
+		PRECACHE_GENERIC( UTIL_VarArgs( "maps/%s.txt", STRING( gpGlobals->mapname ) ) );
+	}
+	FREE_FILE( pFile );
 }
 
 void CWorld :: Precache( void )
@@ -657,14 +671,7 @@ void CWorld :: Precache( void )
 	else
 		gDisplayTitle = FALSE;
 
-	if ( pev->spawnflags & SF_WORLD_FORCETEAM )
-	{
-		CVAR_SET_FLOAT( "mp_defaultteam", 1 );
-	}
-	else
-	{
-		CVAR_SET_FLOAT( "mp_defaultteam", 0 );
-	}
+	// Counter-Strike Beta 5.0 (leak): no more SF_WORLD_FORCETEAM and mp_defaultteam
 }
 
 
@@ -740,3 +747,4 @@ void CWorld :: KeyValue( KeyValueData *pkvd )
 	else
 		CBaseEntity::KeyValue( pkvd );
 }
+
