@@ -138,7 +138,7 @@ void CP228::P228Fire( float flSpread , float flCycleTime, BOOL fUseSemi )
 	else
 	{
 		// accuracy grows with the time since the last shot
-		m_pPlayer->m_flAccuracy = 0.7 + (gpGlobals->time - m_pPlayer->m_flLastFired) * 0.3;
+		m_pPlayer->m_flAccuracy = 0.65 + (gpGlobals->time - m_pPlayer->m_flLastFired) * 0.2;
 		if (m_pPlayer->m_flAccuracy > 0.98)
 			m_pPlayer->m_flAccuracy = 0.98;
 		m_pPlayer->m_flLastFired = gpGlobals->time;
@@ -198,7 +198,7 @@ void CP228::P228Fire( float flSpread , float flCycleTime, BOOL fUseSemi )
 
 	vecAiming = gpGlobals->v_forward;
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_357SIG, 34, 0.9, NULL, true );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_357SIG, 30, 0.9, NULL, true );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)

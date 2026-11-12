@@ -119,17 +119,17 @@ void CSG552::PrimaryAttack( void )
 
 	// Beta 4.0: the same spread however the player moves (the product
 	// written in the call: retail's code loads the accuracy, compares the
-	// FOV and multiplies, in that order)
+	// FOV and multiplies, in that order); Beta 4.1: 0.02 (was 0.0225)
 	if (m_pPlayer->m_iFOV == 90)
 	{
 		flSpread = m_pPlayer->m_flAccuracy;
-		SG552Fire( flSpread * 0.0225, 0.0825, FALSE );
+		SG552Fire( flSpread * 0.02, 0.0825, FALSE );
 	}
 	else
 	{
 		// zoomed in: a slower cycle
 		flSpread = m_pPlayer->m_flAccuracy;
-		SG552Fire( flSpread * 0.0225, 0.135, FALSE );
+		SG552Fire( flSpread * 0.02, 0.135, FALSE );
 	}
 }
 
@@ -138,10 +138,10 @@ void CSG552::SG552Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	// the spread grows with the cube of the shots fired
 	m_fDelayFire = true;
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.325;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 225) + 0.3;
 
-	if (m_pPlayer->m_flAccuracy > 0.55)
-		m_pPlayer->m_flAccuracy = 0.55;
+	if (m_pPlayer->m_flAccuracy > 0.5)
+		m_pPlayer->m_flAccuracy = 0.5;
 
 	if (m_iClip <= 0)
 	{
@@ -216,9 +216,9 @@ void CSG552::SG552Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	// Beta 4.0: the recoil by how the player stands
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		KickBack( 1.15, 0.45, 0.22, 0.18, 8, 6, 4 );
+		KickBack( 1.15, 0.45, 0.22, 0.18, 5, 3.5, 6 );
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		KickBack( 1.25, 0.45, 0.22, 0.18, 8.5, 6.5, 3 );
+		KickBack( 1.25, 0.45, 0.22, 0.18, 5.5, 4, 5 );
 	else if ( FBitSet(m_pPlayer->pev->flags, FL_DUCKING) )
 		KickBack( 0.6, 0.35, 0.125, 0.0125, 4.75, 2, 10 );
 	else

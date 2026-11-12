@@ -42,7 +42,7 @@ cvar_t	defaultteam = {"mp_defaultteam","0" };
 cvar_t	allowmonsters={"mp_allowmonsters","0", FCVAR_SERVER };
 // Counter-Strike Beta 4.0 (names from the Linux symbols)
 cvar_t	roundtime	= {"mp_roundtime","5", FCVAR_SERVER };			// minutes, 3 to 9 (CHalfLifeMultiplay)
-cvar_t	c4timer		= {"mp_c4timer","30", FCVAR_SERVER };			// seconds, 10 to 90
+cvar_t	c4timer		= {"mp_c4timer","35", FCVAR_SERVER };			// seconds, 10 to 90 (Beta 4.1: 35 by default, was 30)
 cvar_t	friendlygrenadedamage = {"mp_friendly_grenade_damage","1", FCVAR_SERVER };
 
 //CVARS FOR SKILL LEVEL SETTINGS

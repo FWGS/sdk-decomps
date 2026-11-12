@@ -68,6 +68,9 @@ void CAWP::Precache( void )
 	PRECACHE_SOUND("weapons/boltup.wav");
 	PRECACHE_SOUND("weapons/boltdown.wav");
 	PRECACHE_SOUND("weapons/zoom.wav");
+	PRECACHE_SOUND("weapons/awp_deploy.wav");
+	PRECACHE_SOUND("weapons/awp_clipin.wav");
+	PRECACHE_SOUND("weapons/awp_clipout.wav");
 
 	m_iShellLate = m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shell
 }
@@ -91,7 +94,7 @@ int CAWP::GetItemInfo(ItemInfo *p)
 
 BOOL CAWP::Deploy( )
 {
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 200 );
+	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 225 );
 	return DefaultDeploy( "models/v_awp.mdl", "models/p_awp.mdl", AWP_DRAW, "bow" );
 }
 
@@ -102,17 +105,17 @@ void CAWP::SecondaryAttack( void )
 	// Beta 4.0: slower while zoomed in
 	if (m_pPlayer->m_iFOV == 90)
 	{
-		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 160 );
+		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 150 );
 		m_pPlayer->m_iFOV = 45;
 	}
 	else if (m_pPlayer->m_iFOV == 45)
 	{
 		m_pPlayer->m_iFOV = 10;
-		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 160 );
+		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 150 );
 	}
 	else if (m_pPlayer->m_iFOV == 10)
 	{
-		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 200 );
+		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 225 );
 		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_awp.mdl");
 		m_pPlayer->m_iFOV = 90;
 	}
@@ -124,13 +127,13 @@ void CAWP::SecondaryAttack( void )
 void CAWP::PrimaryAttack( void )
 {
 	if (m_pPlayer->pev->velocity.Length2D() > 170)
-		AWPFire( 0.15, 1.45, FALSE );
+		AWPFire( 0.15, 2.2, FALSE );
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		AWPFire( 0.2, 1.45, FALSE );
+		AWPFire( 0.2, 2.2, FALSE );
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
-		AWPFire( 0, 1.45, FALSE );
+		AWPFire( 0, 2.2, FALSE );
 	else
-		AWPFire( 0.007, 1.45, FALSE );
+		AWPFire( 0.007, 2.2, FALSE );
 }
 
 void CAWP::AWPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )

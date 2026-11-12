@@ -12,6 +12,31 @@
 *   without written permission from Valve LLC.
 *
 ****/
+// sic: retail's weapons.cpp has more lines than ours ahead of its first
+// functions: VC5's intermediate code spends two bytes more on a statement
+// from line 128 on, and Beta 4.1's object (written with its own .pch)
+// places CBasePlayerItem::pszAmmo2 and iMaxClip where retail has them only
+// with 25 or more lines here. What
+// they were the image cannot say; the rest of this block is empty
+// comment lines that stand for them.
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 /*
 
 ===== weapons.cpp ========================================================
@@ -162,7 +187,7 @@ int DamageDecal( CBaseEntity *pEntity, int bitsDamageType )
 	return pEntity->DamageDecal( bitsDamageType );
 }
 
-void DecalGunshot( TraceResult *pTrace, int iBulletType )
+void DecalGunshot( TraceResult *pTrace, int iBulletType, bool fShooterOnly, entvars_t *pevShooter )
 {
 	// Is the entity valid
 	if ( !UTIL_IsValidEntity( pTrace->pHit ) )
@@ -185,11 +210,11 @@ void DecalGunshot( TraceResult *pTrace, int iBulletType )
 		case BULLET_PLAYER_357:
 		default:
 			// smoke and decal
-			UTIL_GunshotDecalTrace( pTrace, DamageDecal( pEntity, DMG_BULLET ) );
+			UTIL_GunshotDecalTrace( pTrace, DamageDecal( pEntity, DMG_BULLET ), fShooterOnly, pevShooter );
 			break;
 		case BULLET_MONSTER_12MM:
 			// smoke and decal
-			UTIL_GunshotDecalTrace( pTrace, DamageDecal( pEntity, DMG_BULLET ) );
+			UTIL_GunshotDecalTrace( pTrace, DamageDecal( pEntity, DMG_BULLET ), fShooterOnly, pevShooter );
 			break;
 		case BULLET_PLAYER_CROWBAR:
 			// wall decal
@@ -719,7 +744,8 @@ void CBasePlayerWeapon::EjectBrassLate( void )
 // shot fired, to up_max at most, and sideways by the
 // lateral values to the side m_iDirection says, to
 // lateral_max; one shot in direction_change + 1 turns the
-// side over.
+// side over (Beta 4.1: before the sideways kick, which
+// that shot gives at half strength; Beta 4.0: after it).
 //=========================================================
 void CBasePlayerWeapon::KickBack( float up_base, float lateral_base, float up_modifier, float lateral_modifier, float up_max, float lateral_max, int direction_change )
 {
@@ -741,6 +767,12 @@ void CBasePlayerWeapon::KickBack( float up_base, float lateral_base, float up_mo
 	if ( m_pPlayer->pev->punchangle.x < up_max * -1 )
 		m_pPlayer->pev->punchangle.x = up_max * -1;
 
+	if ( !RANDOM_LONG( 0, direction_change ) )
+	{
+		flKickLateral /= 2;
+		m_iDirection = 1 - m_iDirection;
+	}
+
 	if ( m_iDirection == 1 )
 	{
 		m_pPlayer->pev->punchangle.y += flKickLateral;
@@ -753,9 +785,6 @@ void CBasePlayerWeapon::KickBack( float up_base, float lateral_base, float up_mo
 		if ( m_pPlayer->pev->punchangle.y < lateral_max * -1 )
 			m_pPlayer->pev->punchangle.y = lateral_max * -1;
 	}
-
-	if ( !RANDOM_LONG( 0, direction_change ) )
-		m_iDirection = 1 - m_iDirection;
 }
 
 //=========================================================

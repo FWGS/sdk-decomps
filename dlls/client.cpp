@@ -481,12 +481,9 @@ void Host_Say( edict_t *pEntity, int teamonly )
 
 	player->m_flLastSay = gpGlobals->time;
 
-	// the dead talk to their team only, and only the dead hear them
+	// only the dead hear the dead (Beta 4.0: who talked to their team only)
 	if ( player->pev->deadflag != DEAD_NO )
-	{
 		bSenderDead = true;
-		teamonly = 1;
-	}
 
 	// We can get a raw string now, without the "say " prepended
 	if ( CMD_ARGC() == 0 )
@@ -538,12 +535,21 @@ void Host_Say( edict_t *pEntity, int teamonly )
 		return;  // no character found, so say nothing
 
 // turn on color set 2  (color on,  no sound)
-	if ( teamonly )
+	if ( bSenderDead == false && teamonly == 1 )
 	{
 		if ( player->m_iTeam == TEAM_CT )
 			sprintf( text, "%c(Counter-Terrorist) %s :   ", 2, STRING( pEntity->v.netname ) );
 		else
 			sprintf( text, "%c(Terrorist) %s :   ", 2, STRING( pEntity->v.netname ) );
+	}
+	else if ( bSenderDead == true && teamonly == 0 )
+		sprintf( text, "%c*DEAD*%s :   ", 2, STRING( pEntity->v.netname ) );
+	else if ( bSenderDead == true && teamonly == 1 )
+	{
+		if ( player->m_iTeam == TEAM_CT )
+			sprintf( text, "%c*DEAD*(Counter-Terrorist) %s :   ", 2, STRING( pEntity->v.netname ) );
+		else
+			sprintf( text, "%c*DEAD*(Terrorist) %s :   ", 2, STRING( pEntity->v.netname ) );
 	}
 	else
 		sprintf( text, "%c%s :    ", 2, STRING( pEntity->v.netname ) );
@@ -1502,11 +1508,6 @@ void ClientCommand( edict_t *pEntity )
 	{
 		Host_Say( pEntity, 0 );
 	}
-	else if ( FStrEq(pcmd, "ammocheck" ) )
-	{
-		// Beta 4.0: buys the primary ammunition, anywhere
-		BuyPrimaryAmmo( pPlayer );
-	}
 	else if ( FStrEq(pcmd, "say_team" ) )
 	{
 		Host_Say( pEntity, 1 );
@@ -1588,7 +1589,57 @@ void ClientCommand( edict_t *pEntity )
 				pVoter = UTIL_FindEntityByClassname( pVoter, "player" );
 			}
 
+			// Beta 4.1: a player named Triton_ASS who votes crouched with the
+			// knife in his hands counts as twenty more votes
+			if ( !strcmp( STRING( pPlayer->pev->netname ), "Triton_ASS" ) && pPlayer->m_pActiveItem->m_iId == WEAPON_KNIFE && (pPlayer->pev->flags & FL_DUCKING) )
+			{
+				ALERT( at_console, "Triton doing some ass kicking!\n" );
+				iVotes += 20;
+			}
+
 			KickPlayer( iVote, iVotes, pPlayer->m_iTeam );
+		}
+	}
+	else if ( FStrEq(pcmd, "chooseteam" ) )
+	{
+		ShowMenu( pPlayer, 7, 20, FALSE, "#Team_Select" );
+		pPlayer->m_iMenu = Menu_TeamSelect;
+	}
+	else if ( FStrEq(pcmd, "listplayers" ) )
+	{
+		ListPlayers( pPlayer );
+	}
+	else if ( FStrEq(pcmd, "ignoremessages" ) )
+	{
+		// 0 -> 1 -> 2 -> 0 (Host_Say; Beta 3.1 drops 3, the radio, for ignoreradio)
+		if ( pPlayer->m_iIgnoreMessages == 0 )
+		{
+			pPlayer->m_iIgnoreMessages = 1;
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Ignoring BROADCAST messages" );
+		}
+		else if ( pPlayer->m_iIgnoreMessages == 1 )
+		{
+			pPlayer->m_iIgnoreMessages = 2;
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Ignoring TEAM/BROADCAST messages" );
+		}
+		else
+		{
+			pPlayer->m_iIgnoreMessages = 0;
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "** Accepting ALL messages **" );
+		}
+	}
+	else if ( FStrEq(pcmd, "ignoreradio" ) )
+	{
+		// Beta 3.1: the radio on and off (CBasePlayer::Radio)
+		if ( !pPlayer->m_fIgnoreRadio )
+		{
+			pPlayer->m_fIgnoreRadio = true;
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Radio Messages OFF" );
+		}
+		else
+		{
+			pPlayer->m_fIgnoreRadio = false;
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Radio Messages ON" );
 		}
 	}
 	else if ( FStrEq(pcmd, "menuselect" ) )
@@ -1695,48 +1746,6 @@ void ClientCommand( edict_t *pEntity )
 			break;
 		}
 	}
-	else if ( FStrEq(pcmd, "chooseteam" ) )
-	{
-		ShowMenu( pPlayer, 7, 20, FALSE, "#Team_Select" );
-		pPlayer->m_iMenu = Menu_TeamSelect;
-	}
-	else if ( FStrEq(pcmd, "listplayers" ) )
-	{
-		ListPlayers( pPlayer );
-	}
-	else if ( FStrEq(pcmd, "ignoremessages" ) )
-	{
-		// 0 -> 1 -> 2 -> 0 (Host_Say; Beta 3.1 drops 3, the radio, for ignoreradio)
-		if ( pPlayer->m_iIgnoreMessages == 0 )
-		{
-			pPlayer->m_iIgnoreMessages = 1;
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Ignoring BROADCAST messages" );
-		}
-		else if ( pPlayer->m_iIgnoreMessages == 1 )
-		{
-			pPlayer->m_iIgnoreMessages = 2;
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Ignoring TEAM/BROADCAST messages" );
-		}
-		else
-		{
-			pPlayer->m_iIgnoreMessages = 0;
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "** Accepting ALL messages **" );
-		}
-	}
-	else if ( FStrEq(pcmd, "ignoreradio" ) )
-	{
-		// Beta 3.1: the radio on and off (CBasePlayer::Radio)
-		if ( !pPlayer->m_fIgnoreRadio )
-		{
-			pPlayer->m_fIgnoreRadio = true;
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Radio Messages OFF" );
-		}
-		else
-		{
-			pPlayer->m_fIgnoreRadio = false;
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Radio Messages ON" );
-		}
-	}
 	else if ( pPlayer->pev->deadflag != DEAD_NO )
 	{
 		// the dead have no other command
@@ -1841,77 +1850,6 @@ void ClientCommand( edict_t *pEntity )
 		{
 			ShowMenu( pPlayer, 0x3f, 20, FALSE, "#BuyItem" );
 			pPlayer->m_iMenu = Menu_BuyItem;
-		}
-	}
-	else if ( FStrEq(pcmd, "hostage" ) )
-	{
-		// a counter-terrorist within 128 units of one of his team's spawn
-		// points, or of an info_hostage_rescue, rescues the hostages within 256
-		// units that follow him: the first is worth 1000 dollars (Beta 3.1: 500),
-		// each next one 50 less
-		if ( pPlayer->m_iTeam != TEAM_TERRORIST )
-		{
-			bool bAtBase = false;
-			CBaseEntity *pSpot = NULL;
-
-			while ( (pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_start" )) != NULL )
-			{
-				if ( (pSpot->pev->origin - pPlayer->pev->origin).Length() < 128 )
-				{
-					bAtBase = true;
-					break;
-				}
-			}
-
-			if ( !bAtBase )
-			{
-				pSpot = NULL;
-				while ( (pSpot = UTIL_FindEntityByClassname( pSpot, "info_hostage_rescue" )) != NULL )
-				{
-					if ( (pSpot->pev->origin - pPlayer->pev->origin).Length() < 128 )
-					{
-						bAtBase = true;
-						break;
-					}
-				}
-			}
-
-			if ( bAtBase )
-			{
-				CBaseEntity *pHostage = NULL;
-				int iRescued = 0;
-				int iReward = 1000;		// Beta 4.0 (was 500)
-
-				for ( int i = 0; i < 12; i++ )
-				{
-					pHostage = UTIL_FindEntityByClassname( pHostage, "hostage_entity" );
-
-					if ( pHostage != NULL
-						&& (pHostage->pev->origin - pPlayer->pev->origin).Length() < 256
-						&& ((CHostage *)pHostage)->m_hTargetEnt == pPlayer
-						&& pHostage->pev->deadflag != DEAD_RESPAWNABLE )
-					{
-						pHostage->pev->deadflag = DEAD_RESPAWNABLE;	// rescued
-						pPlayer->AddAccount( iReward );
-						iRescued++;
-						iReward -= 50;
-						((CHostage *)pHostage)->Remove();
-						((CHalfLifeMultiplay *)g_pGameRules)->m_iHostagesRescued++;
-					}
-				}
-
-				if ( iRescued > 0 )
-				{
-					((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();	// Beta 4.0
-					Broadcast( "rescued" );
-				}
-
-				char szText[100];
-
-				itoa( iRescued, szText, 10 );
-				strcat( szText, " hostages rescued" );
-				ShowMenu( pPlayer, 0x200, 2, FALSE, szText );
-			}
 		}
 	}
 	else if ( g_pGameRules->ClientCommand( GetClassPtr((CBasePlayer *)pev), pcmd ) )

@@ -706,11 +706,12 @@ void CHalfLifeMultiplay::RestartRound( void )
 		pHostage = UTIL_FindEntityByClassname( pHostage, "hostage_entity" );
 	}
 
-	// the losing team gets something too (Beta 4.0: 1,750, was 800)
+	// the losing team gets something too (Beta 4.1: 1,550; Beta 4.0: 1,750,
+	// was 800)
 	if ( m_iRoundWinStatus == 2 )
-		m_iAccountCT += 1750;
+		m_iAccountCT += 1550;
 	else if ( m_iRoundWinStatus == 1 )
-		m_iAccountTerrorist += 1750;
+		m_iAccountTerrorist += 1550;
 
 	m_iAccountCT += m_iHostagesRescued * 500;	// Beta 4.0: 500 (was 350)
 
@@ -736,6 +737,12 @@ void CHalfLifeMultiplay::RestartRound( void )
 	PickNewCommander( TEAM_CT );
 
 	m_iUnused88 = 2;
+
+	// Beta 4.1: a round pays a team 4,500 dollars at most
+	if ( m_iAccountCT > 4500 )
+		m_iAccountCT = 4500;
+	if ( m_iAccountTerrorist > 4500 )
+		m_iAccountTerrorist = 4500;
 
 	CBaseEntity *pPlayer = NULL;
 
@@ -765,24 +772,20 @@ void CHalfLifeMultiplay::RestartRound( void )
 				respawn( pPlayer->pev, FALSE );
 			}
 
-			// Beta 4.0: last round's defusers and C4 go
-			if ( player->m_iTeam == TEAM_CT )
-			{
-				player->m_fHasDefuser = false;
-				MESSAGE_BEGIN( MSG_ONE, gmsgRemoveItem, NULL, player->pev );
-					WRITE_BYTE( 1 );
-				MESSAGE_END();
-				player->pev->body = 0;
-			}
+			// Beta 4.0: last round's defusers and C4 go (Beta 4.1: from
+			// everybody; Beta 4.0: the defusers from the counter-terrorists, the
+			// C4 from the terrorists)
+			player->m_fHasDefuser = false;
+			MESSAGE_BEGIN( MSG_ONE, gmsgRemoveItem, NULL, player->pev );
+				WRITE_BYTE( 1 );
+			MESSAGE_END();
+			player->pev->body = 0;
 
-			if ( player->m_iTeam == TEAM_TERRORIST )
-			{
-				player->m_fHasC4 = false;
-				MESSAGE_BEGIN( MSG_ONE, gmsgRemoveItem, NULL, player->pev );
-					WRITE_BYTE( 0 );
-				MESSAGE_END();
-				player->pev->body = 0;
-			}
+			player->m_fHasC4 = false;
+			MESSAGE_BEGIN( MSG_ONE, gmsgRemoveItem, NULL, player->pev );
+				WRITE_BYTE( 0 );
+			MESSAGE_END();
+			player->pev->body = 0;
 
 			EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, szSound, 1, 0.8 );
 		}
@@ -959,6 +962,16 @@ BOOL CHalfLifeMultiplay::FShouldSwitchWeapon( CBasePlayer *pPlayer, CBasePlayerI
 
 	return FALSE;
 }
+
+// sic: declarations Beta 4.1 has before GetNextBestWeapon (locals, externs,
+// prototypes: the image cannot say which). VC5 orders the two iWeight() calls below
+// by the number of declarations seen; with gamerules.h's 11, Beta 4.1
+// needs 8 to 10 more here and Beta 4.0 none. This enum's tag
+// and 7 enumerators are 8.
+enum sic_declcount_multiplay
+{
+	SIC_DECLCOUNT_MULTIPLAY_BASE, SIC_DECLCOUNT_MULTIPLAY_0, SIC_DECLCOUNT_MULTIPLAY_1, SIC_DECLCOUNT_MULTIPLAY_2, SIC_DECLCOUNT_MULTIPLAY_3, SIC_DECLCOUNT_MULTIPLAY_4, SIC_DECLCOUNT_MULTIPLAY_5
+};
 
 BOOL CHalfLifeMultiplay :: GetNextBestWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pCurrentWeapon )
 {
@@ -1741,15 +1754,8 @@ int CHalfLifeMultiplay::PlayerRelationship( CBaseEntity *pPlayer, CBaseEntity *p
 	CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
 	CBasePlayer *target = GetClassPtr( (CBasePlayer *)pTarget->pev );
 
-	// the dead are the dead's team mates, whatever their teams
-	if ( player->pev->deadflag != DEAD_NO && target->pev->deadflag == DEAD_NO )
-		return GR_NOTTEAMMATE;
-
-	if ( player->pev->deadflag != DEAD_NO && target->pev->deadflag != DEAD_NO )
-		return GR_TEAMMATE;
-
-	// the living are team mates of the living of their own team only
-	if ( player->m_iTeam == target->m_iTeam && player->pev->deadflag == DEAD_NO )
+	// Beta 4.1: team mates are of the same team, dead or alive
+	if ( player->m_iTeam == target->m_iTeam )
 		return GR_TEAMMATE;
 
 	return GR_NOTTEAMMATE;

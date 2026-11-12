@@ -30,6 +30,8 @@
 #include "gamerules.h"
 
 extern void Broadcast( const char *sentence );	// multiplay_gamerules.cpp (Beta 3.0)
+extern int gmsgItemPickup;	// Beta 4.1 (player.cpp)
+extern int gmsgGiveItem;
 
 
 //===================debris
@@ -1089,15 +1091,35 @@ void CGrenade::C4Think( void )
 //
 void CGrenade::C4Touch( CBaseEntity *pOther )
 {
-	if ( pOther->edict() == pev->owner )
-		return;
-
+	// Beta 4.1: no longer passes over the owner
 	if ( pOther && FBitSet( pOther->pev->flags, FL_DUCKING ) && pOther->IsPlayer() == TRUE )
 	{
 		CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pOther->pev );	// name ours
 
-		if ( pPlayer->m_iTeam != TEAM_TERRORIST && pPlayer->m_iTeam == TEAM_CT &&
-			pPlayer->m_fHasDefuser == TRUE && !m_fStartDefuse )
+		if ( pPlayer->m_iTeam == TEAM_TERRORIST )
+		{
+			// Beta 4.1: a terrorist picks up a bomb that lies more than 256
+			// units from every info_bomb_target
+			CBaseEntity *pTarget = NULL;	// name ours
+
+			while ( (pTarget = UTIL_FindEntityByClassname( pTarget, "info_bomb_target" )) != NULL )
+			{
+				if ( (pTarget->pev->origin - pev->origin).Length() < 256 )
+					return;
+			}
+
+			pPlayer->m_fHasC4 = true;
+			MESSAGE_BEGIN( MSG_ONE, gmsgGiveItem, NULL, pPlayer->pev );
+				WRITE_BYTE( 0 );
+			MESSAGE_END();
+			pPlayer->pev->body = 1;
+			EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/kevlar.wav", 1, ATTN_NORM );
+			MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
+				WRITE_STRING( STRING(pev->classname) );
+			MESSAGE_END();
+			UTIL_Remove( this );
+		}
+		else if ( pPlayer->m_iTeam == TEAM_CT && pPlayer->m_fHasDefuser == TRUE && !m_fStartDefuse )
 		{
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Defusing bomb...<5 seconds>" );
 			EMIT_SOUND(ENT(pPlayer->pev), CHAN_ITEM, "weapons/c4_disarm.wav", 1.0, ATTN_NORM);

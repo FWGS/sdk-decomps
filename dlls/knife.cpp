@@ -170,7 +170,7 @@ void CKnife::PrimaryAttack()
 
 void CKnife::Smack( )
 {
-	DecalGunshot( &m_trHit, BULLET_PLAYER_CROWBAR );
+	DecalGunshot( &m_trHit, BULLET_PLAYER_CROWBAR, false, m_pPlayer->pev );
 }
 
 

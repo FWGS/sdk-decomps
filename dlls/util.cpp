@@ -1144,7 +1144,9 @@ void UTIL_PlayerDecalTrace( TraceResult *pTrace, int playernum, int decalNumber,
 	MESSAGE_END();
 }
 
-void UTIL_GunshotDecalTrace( TraceResult *pTrace, int decalNumber )
+// Counter-Strike Beta 4.1: fShooterOnly (name ours) sends the decal to the
+// shooter alone (the mp_lowlag decals the others are not sent)
+void UTIL_GunshotDecalTrace( TraceResult *pTrace, int decalNumber, bool fShooterOnly, entvars_t *pevShooter )
 {
 	if ( decalNumber < 0 )
 		return;
@@ -1156,14 +1158,28 @@ void UTIL_GunshotDecalTrace( TraceResult *pTrace, int decalNumber )
 	if (pTrace->flFraction == 1.0)
 		return;
 
-	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pTrace->vecEndPos );
-		WRITE_BYTE( TE_GUNSHOTDECAL );
-		WRITE_COORD( pTrace->vecEndPos.x );
-		WRITE_COORD( pTrace->vecEndPos.y );
-		WRITE_COORD( pTrace->vecEndPos.z );
-		WRITE_SHORT( (short)ENTINDEX(pTrace->pHit) );
-		WRITE_BYTE( index );
-	MESSAGE_END();
+	if ( !fShooterOnly )
+	{
+		MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pTrace->vecEndPos );
+			WRITE_BYTE( TE_GUNSHOTDECAL );
+			WRITE_COORD( pTrace->vecEndPos.x );
+			WRITE_COORD( pTrace->vecEndPos.y );
+			WRITE_COORD( pTrace->vecEndPos.z );
+			WRITE_SHORT( (short)ENTINDEX(pTrace->pHit) );
+			WRITE_BYTE( index );
+		MESSAGE_END();
+	}
+	else
+	{
+		MESSAGE_BEGIN( MSG_ONE, SVC_TEMPENTITY, pTrace->vecEndPos, pevShooter );
+			WRITE_BYTE( TE_GUNSHOTDECAL );
+			WRITE_COORD( pTrace->vecEndPos.x );
+			WRITE_COORD( pTrace->vecEndPos.y );
+			WRITE_COORD( pTrace->vecEndPos.z );
+			WRITE_SHORT( (short)ENTINDEX(pTrace->pHit) );
+			WRITE_BYTE( index );
+		MESSAGE_END();
+	}
 }
 
 

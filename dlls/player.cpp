@@ -710,8 +710,8 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		case WEAPON_KNIFE:	// Beta 3.1
 			flRatio *= 1.7;
 			break;
-		case WEAPON_P228:	// Beta 4.0
-			flRatio *= 1.4;
+		case WEAPON_P228:	// Beta 4.0 (Beta 4.1: 1.3, was 1.4)
+			flRatio *= 1.3;
 			break;
 		case WEAPON_SCOUT:	// Beta 4.0
 			flRatio *= 1.6;
@@ -2061,6 +2061,8 @@ void CBasePlayer::PlayerDeathThink(void)
 	{
 		if (fAnyButtonDown)
 			return;
+
+		g_engfuncs.pfnSetClientMaxspeed( ENT(pev), 340 );	// Beta 4.1
 
 		if ( g_pGameRules->FPlayerCanRespawn( this ) )
 		{

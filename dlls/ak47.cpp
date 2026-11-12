@@ -194,13 +194,13 @@ void CAK47::AK47Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	// Beta 4.0: the recoil by how the player stands
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		KickBack( 1.5, 0.45, 0.25, 0.185, 9, 6, 4 );
+		KickBack( 1.5, 0.45, 0.25, 0.185, 7, 4, 6 );
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		KickBack( 1.75, 0.5, 0.25, 0.185, 9.5, 6.5, 3 );
+		KickBack( 1.75, 0.5, 0.25, 0.185, 7.5, 4.5, 5 );
 	else if ( FBitSet(m_pPlayer->pev->flags, FL_DUCKING) )
-		KickBack( 1, 0.35, 0.125, 0.025, 5.5, 1.5, 7 );
+		KickBack( 1, 0.35, 0.125, 0.025, 5.5, 1.5, 9 );
 	else
-		KickBack( 1.15, 0.375, 0.15, 0.0375, 5.75, 1.75, 6 );
+		KickBack( 1.15, 0.375, 0.15, 0.0375, 5.75, 1.75, 8 );
 }
 
 

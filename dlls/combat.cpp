@@ -1611,7 +1611,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 				pEntity->TraceAttack(pevAttacker, iDamage, vecDir, &tr, DMG_BULLET | ((iDamage > 16) ? DMG_ALWAYSGIB : DMG_NEVERGIB) );
 				
 				TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-				DecalGunshot( &tr, iBulletType );
+				DecalGunshot( &tr, iBulletType, false, pev );
 			} 
 			else switch(iBulletType)
 			{
@@ -1621,7 +1621,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 				if ( !tracer )
 				{
 					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-					DecalGunshot( &tr, iBulletType );
+					DecalGunshot( &tr, iBulletType, false, pev );
 				}
 				break;
 
@@ -1630,7 +1630,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 				if ( !tracer )
 				{
 					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-					DecalGunshot( &tr, iBulletType );
+					DecalGunshot( &tr, iBulletType, false, pev );
 				}
 				break;
 
@@ -1640,7 +1640,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 				if ( !tracer )
 				{
 					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-					DecalGunshot( &tr, iBulletType );
+					DecalGunshot( &tr, iBulletType, false, pev );
 				}
 				break;
 			
@@ -1649,7 +1649,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 				if ( !tracer )
 				{
 					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-					DecalGunshot( &tr, iBulletType );
+					DecalGunshot( &tr, iBulletType, false, pev );
 				}
 				break;
 
@@ -1657,7 +1657,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 				pEntity->TraceAttack(pevAttacker, gSkillData.monDmg9MM, vecDir, &tr, DMG_BULLET);
 				
 				TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-				DecalGunshot( &tr, iBulletType );
+				DecalGunshot( &tr, iBulletType, false, pev );
 
 				break;
 
@@ -1665,7 +1665,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 				pEntity->TraceAttack(pevAttacker, gSkillData.monDmgMP5, vecDir, &tr, DMG_BULLET);
 				
 				TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-				DecalGunshot( &tr, iBulletType );
+				DecalGunshot( &tr, iBulletType, false, pev );
 
 				break;
 
@@ -1674,7 +1674,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 				if ( !tracer )
 				{
 					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-					DecalGunshot( &tr, iBulletType );
+					DecalGunshot( &tr, iBulletType, false, pev );
 				}
 				break;
 			
@@ -1801,13 +1801,15 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 				// (Beta 4.0: one in three where the bullet goes through)
 				if ( !bPistol )
 				{
-					if ( RANDOM_LONG( 0, 2 ) == 0 && CVAR_GET_FLOAT( "mp_lowlag" ) == 1 )
-						DecalGunshot( &tr, iBulletType );
+					if ( RANDOM_LONG( 0, 3 ) == 0 && CVAR_GET_FLOAT( "mp_lowlag" ) == 1 )
+						DecalGunshot( &tr, iBulletType, false, pev );
 					else if ( CVAR_GET_FLOAT( "mp_lowlag" ) == 0 )
-						DecalGunshot( &tr, iBulletType );
+						DecalGunshot( &tr, iBulletType, false, pev );
+					else
+						DecalGunshot( &tr, iBulletType, true, pev );
 				}
 				else
-					DecalGunshot( &tr, iBulletType );
+					DecalGunshot( &tr, iBulletType, false, pev );
 
 				vecSrc = tr.vecEndPos + vecDir * iPenetrationPower;
 				flDistance *= 0.5;
@@ -1821,12 +1823,14 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 				if ( !bPistol )
 				{
 					if ( RANDOM_LONG( 0, 3 ) == 0 && CVAR_GET_FLOAT( "mp_lowlag" ) == 1 )
-						DecalGunshot( &tr, iBulletType );
+						DecalGunshot( &tr, iBulletType, false, pev );
 					else if ( CVAR_GET_FLOAT( "mp_lowlag" ) == 0 )
-						DecalGunshot( &tr, iBulletType );
+						DecalGunshot( &tr, iBulletType, false, pev );
+					else
+						DecalGunshot( &tr, iBulletType, true, pev );
 				}
 				else
-					DecalGunshot( &tr, iBulletType );
+					DecalGunshot( &tr, iBulletType, false, pev );
 
 				vecSrc = tr.vecEndPos + vecDir * 32;
 				flDistance *= 0.7;
@@ -1897,7 +1901,7 @@ void CBaseEntity::FireBullets2( ULONG cShots, Vector vecSrc, Vector vecDirShooti
 			// through the wall
 			if ( VARS(tr.pHit)->solid == SOLID_BSP && iPenetration )
 			{
-				DecalGunshot( &tr, iBulletType );
+				DecalGunshot( &tr, iBulletType, false, pev );
 				iPenetration--;
 
 				vecSrc = tr.vecEndPos + vecDir * 32;
@@ -1917,7 +1921,7 @@ void CBaseEntity::FireBullets2( ULONG cShots, Vector vecSrc, Vector vecDirShooti
 					pEntity->TraceAttack(pevAttacker, iDamage, vecDir, &tr, DMG_BULLET | ((iDamage > 16) ? DMG_ALWAYSGIB : DMG_NEVERGIB) );
 
 					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-					DecalGunshot( &tr, iBulletType );
+					DecalGunshot( &tr, iBulletType, false, pev );
 				}
 				else switch(iBulletType)
 				{
@@ -1927,7 +1931,7 @@ void CBaseEntity::FireBullets2( ULONG cShots, Vector vecSrc, Vector vecDirShooti
 					if ( !tracer )
 					{
 						TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-						DecalGunshot( &tr, iBulletType );
+						DecalGunshot( &tr, iBulletType, false, pev );
 					}
 					break;
 
@@ -1936,7 +1940,7 @@ void CBaseEntity::FireBullets2( ULONG cShots, Vector vecSrc, Vector vecDirShooti
 					if ( !tracer )
 					{
 						TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-						DecalGunshot( &tr, iBulletType );
+						DecalGunshot( &tr, iBulletType, false, pev );
 					}
 					break;
 
@@ -1946,7 +1950,7 @@ void CBaseEntity::FireBullets2( ULONG cShots, Vector vecSrc, Vector vecDirShooti
 					if ( !tracer )
 					{
 						// TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-						DecalGunshot( &tr, iBulletType );
+						DecalGunshot( &tr, iBulletType, false, pev );
 					}
 					break;
 
@@ -1955,7 +1959,7 @@ void CBaseEntity::FireBullets2( ULONG cShots, Vector vecSrc, Vector vecDirShooti
 					if ( !tracer )
 					{
 						TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-						DecalGunshot( &tr, iBulletType );
+						DecalGunshot( &tr, iBulletType, false, pev );
 					}
 					break;
 
@@ -1963,7 +1967,7 @@ void CBaseEntity::FireBullets2( ULONG cShots, Vector vecSrc, Vector vecDirShooti
 					pEntity->TraceAttack(pevAttacker, gSkillData.monDmg9MM, vecDir, &tr, DMG_BULLET);
 
 					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-					DecalGunshot( &tr, iBulletType );
+					DecalGunshot( &tr, iBulletType, false, pev );
 
 					break;
 
@@ -1971,7 +1975,7 @@ void CBaseEntity::FireBullets2( ULONG cShots, Vector vecSrc, Vector vecDirShooti
 					pEntity->TraceAttack(pevAttacker, gSkillData.monDmgMP5, vecDir, &tr, DMG_BULLET);
 
 					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-					DecalGunshot( &tr, iBulletType );
+					DecalGunshot( &tr, iBulletType, false, pev );
 
 					break;
 
@@ -1980,7 +1984,7 @@ void CBaseEntity::FireBullets2( ULONG cShots, Vector vecSrc, Vector vecDirShooti
 					if ( !tracer )
 					{
 						TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-						DecalGunshot( &tr, iBulletType );
+						DecalGunshot( &tr, iBulletType, false, pev );
 					}
 					break;
 

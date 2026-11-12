@@ -212,9 +212,9 @@ void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	// Beta 4.0: the recoil by how the player stands
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		KickBack( 1, 0.4, 0.23, 0.15, 8, 5, 5 );
+		KickBack( 1, 0.4, 0.23, 0.15, 5, 3, 7 );
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		KickBack( 1.2, 0.45, 0.23, 0.15, 8.5, 5.5, 3 );
+		KickBack( 1.2, 0.45, 0.23, 0.15, 5.5, 3.5, 6 );
 	else if ( FBitSet(m_pPlayer->pev->flags, FL_DUCKING) )
 		KickBack( 0.55, 0.3, 0.12, 0.0125, 4.5, 1.5, 10 );
 	else
