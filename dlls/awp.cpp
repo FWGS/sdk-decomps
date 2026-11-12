@@ -212,13 +212,9 @@ void CAWP::AWPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	m_pPlayer->pev->punchangle.x -= 2;
 
-	// Beta 6.0: the bullet leaves 5 units to the side of the hand that holds the gun
+	// Beta 6.1: the shot leaves from the eye again ("off center shooting
+	// fixed"; Beta 6.0: 5 units to the gun hand's side)
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
-
-	if ( m_pPlayer->m_bLeftHanded == true )
-		vecSrc = vecSrc - gpGlobals->v_right * 5;
-	else
-		vecSrc = vecSrc + gpGlobals->v_right * 5;
 
 	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 3, BULLET_PLAYER_338MAG, 200, 0.99, NULL, true );
 }

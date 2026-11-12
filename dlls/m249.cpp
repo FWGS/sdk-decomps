@@ -80,7 +80,7 @@ void CM249::Precache( void )
 int CM249::GetItemInfo(ItemInfo *p)
 {
 	p->pszName = STRING(pev->classname);
-	p->pszAmmo1 = "556Nato";
+	p->pszAmmo1 = "556NatoBox";	// Beta 6.1: an ammunition type of its own, the box (was "556Nato", shared with the M4A1, SG-552, AUG)
 	p->iMaxAmmo1 = M249_MAX_CARRY;
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
@@ -191,18 +191,17 @@ void CM249::M249Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
 		KickBack( 1.8, 0.65, 0.45, 0.125, 5, 3.5, 8 );
 	else if ( FBitSet(m_pPlayer->pev->flags, FL_DUCKING) )
-		KickBack( 1.1, 0.4, 0.25, 0.0375, 4, 2.5, 8 );
+		KickBack( 0.75, 0.325, 0.25, 0.0375, 4, 2.5, 9 );	// Beta 6.1 (Beta 6.0: 1.1, 0.4, ..., 8)
 	else
-		KickBack( 1.3, 0.5, 0.3, 0.04, 4.5, 3, 8 );
+		KickBack( 0.8, 0.35, 0.3, 0.04, 4.5, 3, 9 );	// Beta 6.1 (Beta 6.0: 1.3, 0.5, ..., 8)
 
-	// Beta 6.0: the bullets leave 5 units to the side of the hand that holds
-	// the gun, the shell flies out of the other side
+	// Beta 6.1: the shot leaves from the eye again ("off center shooting
+	// fixed"; Beta 6.0: 5 units to the gun hand's side); the shell still
+	// flies out of the other side
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 
 	if ( m_pPlayer->m_bLeftHanded == true )
 	{
-		vecSrc = vecSrc - gpGlobals->v_right * 5;
-
 		Vector	vecShellVelocity = m_pPlayer->pev->velocity
 								 - gpGlobals->v_right * RANDOM_FLOAT(100,120)
 								 + gpGlobals->v_up * RANDOM_FLOAT(50,90)
@@ -212,8 +211,6 @@ void CM249::M249Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	}
 	else
 	{
-		vecSrc = vecSrc + gpGlobals->v_right * 5;
-
 		Vector	vecShellVelocity = m_pPlayer->pev->velocity
 								 + gpGlobals->v_right * RANDOM_FLOAT(100,120)
 								 + gpGlobals->v_up * RANDOM_FLOAT(50,90)

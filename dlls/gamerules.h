@@ -446,7 +446,7 @@ protected:
 public:
 	// Beta 5.0 (leak), after the SDK's members (names ours)
 	BOOL m_bFreezePeriod;			// 0xd8 [0x90] TRUE from RestartRound until Think sees the freeze time run out (IsFreezePeriod)
-	float m_flNextRestartCheck;		// 0xdc [0x94] when Think reads sv_restartround next (every half second)
+	float m_flNextRestartCheck;		// 0xdc [0x94] when Think reads sv_restartround next (every half second; Beta 6.1: every second)
 	bool m_fGameCommenced;			// 0xe0 [0x98] both teams have had spawnable players (CheckWinConditions; until then a round ends at once)
 };
 

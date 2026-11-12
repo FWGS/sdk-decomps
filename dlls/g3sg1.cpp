@@ -212,14 +212,13 @@ void CG3SG1::G3SG1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	m_pPlayer->pev->punchangle.x -= 2;
 
-	// Beta 6.0: the bullets leave 5 units to the side of the hand that holds
-	// the gun, the shell flies out of the other side
+	// Beta 6.1: the shot leaves from the eye again ("off center shooting
+	// fixed"; Beta 6.0: 5 units to the gun hand's side); the shell still
+	// flies out of the other side
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 
 	if ( m_pPlayer->m_bLeftHanded == true )
 	{
-		vecSrc = vecSrc - gpGlobals->v_right * 5;
-
 		Vector	vecShellVelocity = m_pPlayer->pev->velocity
 								 + gpGlobals->v_right * RANDOM_FLOAT(100,120)
 								 + gpGlobals->v_up * RANDOM_FLOAT(35,55)
@@ -228,8 +227,6 @@ void CG3SG1::G3SG1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	}
 	else
 	{
-		vecSrc = vecSrc + gpGlobals->v_right * 5;
-
 		Vector	vecShellVelocity = m_pPlayer->pev->velocity
 								 - gpGlobals->v_right * RANDOM_FLOAT(100,120)
 								 + gpGlobals->v_up * RANDOM_FLOAT(35,55)

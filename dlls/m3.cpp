@@ -188,19 +188,18 @@ void CM3::PrimaryAttack()
 
 	m_pPlayer->pev->punchangle.x -= RANDOM_LONG( 4, 6 );
 
-	// Beta 6.0: the pellets leave 5 units to the side of the hand that holds
-	// the gun; one spread, 0.0675 sideways and up, 3000 units far
+	// Beta 6.1: the pellets leave from the eye again ("off center shooting
+	// fixed"; Beta 6.0: 5 units to the gun hand's side); one spread,
+	// 0.0675 sideways and up, 3000 units far
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 
 	// the shell comes out with the pump: EjectBrassLate, from ItemPostFrame
 	if ( m_pPlayer->m_bLeftHanded == true )
 	{
-		vecSrc = vecSrc - gpGlobals->v_right * 5;
 		m_pPlayer->m_flEjectBrass = gpGlobals->time + 0.45;
 	}
 	else
 	{
-		vecSrc = vecSrc + gpGlobals->v_right * 5;
 		m_pPlayer->m_flEjectBrass = gpGlobals->time + 0.45;
 	}
 

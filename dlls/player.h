@@ -239,9 +239,13 @@ public:
 	bool				m_bLeftHanded;			// 0x314 the client's "lefthand" key is set (ClientUserInfoChanged): the weapons deploy the v_*.mdl models, else v_*_r.mdl
 	int					m_iCurrentKickVote;		// 0x318 the user id he voted to kick (vote; KickPlayer, Spawn clear it)
 	float				m_flNextVoteTime;		// 0x31c no vote before this time (3 seconds after the last)
-	float				m_flNextZoneCheck;		// 0x320 PostThink checks the zones the player stands in every 0.2 seconds (Spawn: 0)
-	CSignals			m_signals;				// 0x324 the zones' signals: buy zone 1, bomb target 2 (the buy commands, CC4::PrimaryAttack, CBuyZone, CBombTarget)
-	edict_t				*m_pentBombTarget;		// 0x32c the bomb target the player is in (CBombTarget::BombTargetTouch); the planted C4 keeps it (ShootSatchelCharge)
+	// Beta 6.1: 4 bytes (every member after them 4 later than in Beta 6.0;
+	// m_bJustKilledTeammate from CS 1.6's Linux debug information, m_bVoteKicksAtOnce ours)
+	bool				m_bVoteKicksAtOnce;		// 0x320 set by the hidden a12 command (1977, one of six names, ducking): his vote holding the knife counts 1977 votes (ClientCommand)
+	bool				m_bJustKilledTeammate;	// 0x321 he killed a team mate (multiplay's PlayerKilled); RoundRespawn makes him sit the next round out (Spawn clears it)
+	float				m_flNextZoneCheck;		// 0x324 PostThink checks the zones the player stands in every 0.2 seconds (Spawn: 0)
+	CSignals			m_signals;				// 0x328 the zones' signals: buy zone 1, bomb target 2 (the buy commands, CC4::PrimaryAttack, CBuyZone, CBombTarget)
+	edict_t				*m_pentBombTarget;		// 0x330 the bomb target the player is in (CBombTarget::BombTargetTouch); the planted C4 keeps it (ShootSatchelCharge)
 
 	int					m_iPlayerSound;// the index of the sound list slot reserved for this player
 	int					m_iTargetVolume;// ideal sound volume. 

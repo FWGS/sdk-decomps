@@ -194,14 +194,13 @@ void CP228::P228Fire( float flSpread , float flCycleTime, BOOL fUseSemi )
 
 	m_pPlayer->pev->punchangle.x -= 2;
 
-	// Beta 6.0: the shot leaves 5 units to the side of the hand that holds
-	// the gun, and the shell flies out on the other side
+	// Beta 6.1: the shot leaves from the eye again ("off center shooting
+	// fixed"; Beta 6.0: 5 units to the gun hand's side); the shell still
+	// flies out of the other side
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 
 	if ( m_pPlayer->m_bLeftHanded == true )
 	{
-		vecSrc = vecSrc - gpGlobals->v_right * 5;
-
 		Vector	vecShellVelocity = m_pPlayer->pev->velocity
 								 + gpGlobals->v_right * RANDOM_FLOAT(40,150)
 								 + gpGlobals->v_up * RANDOM_FLOAT(100,260)
@@ -210,8 +209,6 @@ void CP228::P228Fire( float flSpread , float flCycleTime, BOOL fUseSemi )
 	}
 	else
 	{
-		vecSrc = vecSrc + gpGlobals->v_right * 5;
-
 		Vector	vecShellVelocity = m_pPlayer->pev->velocity
 								 - gpGlobals->v_right * RANDOM_FLOAT(40,150)
 								 + gpGlobals->v_up * RANDOM_FLOAT(100,260)
@@ -219,7 +216,7 @@ void CP228::P228Fire( float flSpread , float flCycleTime, BOOL fUseSemi )
 		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 32 + gpGlobals->v_right * 12 , vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_357SIG, 34, 0.9, NULL, true );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_357SIG, 31, 0.9, NULL, true );	// Beta 6.1: 31 damage (was 34)
 }
 
 

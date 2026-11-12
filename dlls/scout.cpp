@@ -207,13 +207,9 @@ void CSCOUT::SCOUTFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	m_pPlayer->pev->punchangle.x -= 2;
 
-	// Beta 6.0: the shot leaves 5 units to the side of the hand that holds the gun
+	// Beta 6.1: the shot leaves from the eye again ("off center shooting
+	// fixed"; Beta 6.0: 5 units to the gun hand's side)
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
-
-	if ( m_pPlayer->m_bLeftHanded == true )
-		vecSrc = vecSrc - gpGlobals->v_right * 5;
-	else
-		vecSrc = vecSrc + gpGlobals->v_right * 5;
 
 	// Beta 6.0: 75 damage (was 65)
 	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 3, BULLET_PLAYER_762MM, 75, 0.98, NULL, true );

@@ -191,22 +191,21 @@ void CMP5N::MP5NFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	// Beta 4.0: the recoil by how the player stands
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		KickBack( 0.65, 0.3, 0.2, 0.03, 3.5, 2, 5 );
+		KickBack( 0.65, 0.3, 0.2, 0.03, 3.5, 2, 10 );	// Beta 6.1: every direction change 10 (was 5)
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		KickBack( 0.7, 0.375, 0.25, 0.0325, 4, 2, 5 );
+		KickBack( 0.7, 0.375, 0.25, 0.0325, 4, 2, 10 );
 	else if ( FBitSet(m_pPlayer->pev->flags, FL_DUCKING) )
-		KickBack( 0.5, 0.2, 0.1, 0.015, 3, 1, 5 );
+		KickBack( 0.35, 0.2, 0.1, 0.015, 3, 1, 10 );	// Beta 6.1 (Beta 6.0: 0.5)
 	else
-		KickBack( 0.525, 0.225, 0.125, 0.02, 3.25, 1.25, 5 );
+		KickBack( 0.375, 0.225, 0.125, 0.02, 3.25, 1.25, 10 );	// Beta 6.1 (Beta 6.0: 0.525)
 
-	// Beta 6.0: the shot leaves 5 units to the side of the hand that holds
-	// the gun, and the shell flies out on the other side
+	// Beta 6.1: the shot leaves from the eye again ("off center shooting
+	// fixed"; Beta 6.0: 5 units to the gun hand's side); the shell still
+	// flies out of the other side
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 
 	if ( m_pPlayer->m_bLeftHanded == true )
 	{
-		vecSrc = vecSrc - gpGlobals->v_right * 5;
-
 		Vector	vecShellVelocity = m_pPlayer->pev->velocity
 								 + gpGlobals->v_right * RANDOM_FLOAT(40,150)
 								 + gpGlobals->v_up * RANDOM_FLOAT(-100,150)
@@ -218,8 +217,6 @@ void CMP5N::MP5NFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	}
 	else
 	{
-		vecSrc = vecSrc + gpGlobals->v_right * 5;
-
 		Vector	vecShellVelocity = m_pPlayer->pev->velocity
 								 - gpGlobals->v_right * RANDOM_FLOAT(40,150)
 								 + gpGlobals->v_up * RANDOM_FLOAT(-100,150)

@@ -189,15 +189,10 @@ void CXM1014::PrimaryAttack()
 
 	m_pPlayer->pev->punchangle.x -= RANDOM_LONG( 3, 5 );	// Beta 5.0 (the leak: 4 to 6)
 
-	// Beta 6.0: the shot leaves 5 units to the side of the hand that holds the
-	// gun, last; one cone of 0.0725 by 0.0725 and 3048 units in every game
-	// (Beta 5.0: the deathmatch cone, 2048 units)
+	// one cone of 0.0725 by 0.0725 and 3048 units in every game (Beta 5.0: the
+	// deathmatch cone, 2048 units). Beta 6.1: the shot leaves from the eye
+	// again ("off center shooting fixed"; Beta 6.0: 5 units to the gun hand's side)
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
-
-	if ( m_pPlayer->m_bLeftHanded == true )
-		vecSrc = vecSrc - gpGlobals->v_right * 5;
-	else
-		vecSrc = vecSrc + gpGlobals->v_right * 5;
 
 	m_pPlayer->FireBullets( 6, vecSrc, vecAiming, Vector( 0.0725, 0.0725, 0 ), 3048, BULLET_PLAYER_BUCKSHOT, 0 );
 }

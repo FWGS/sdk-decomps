@@ -420,6 +420,7 @@ void W_Precache(void)
 
 	// 5.56
 	UTIL_PrecacheOtherWeapon( "weapon_m249" );
+	UTIL_PrecacheOther( "ammo_556natobox" );	// Beta 6.1
 	UTIL_PrecacheOtherWeapon( "weapon_m4a1" );
 	UTIL_PrecacheOtherWeapon( "weapon_sg552" );
 	UTIL_PrecacheOtherWeapon( "weapon_aug" );		// Beta 6.0
@@ -834,15 +835,14 @@ void CBasePlayerWeapon::FireRemaining( void )
 		return;
 	}
 
-	// Beta 6.0: the shot leaves 5 units to the side of the gun hand, the
-	// shell flies out on the other side (the Glock's)
+	// Beta 6.1: the shot leaves from the eye again ("off center shooting
+	// fixed"; Beta 6.0: 5 units to the gun hand's side); the shell still
+	// flies out of the other side
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecShellVelocity;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
 	{
-		vecSrc = vecSrc - gpGlobals->v_right * 5;
-
 		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
 		vecShellVelocity = m_pPlayer->pev->velocity 
@@ -852,8 +852,6 @@ void CBasePlayerWeapon::FireRemaining( void )
 	}
 	else
 	{
-		vecSrc = vecSrc + gpGlobals->v_right * 5;
-
 		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
 		vecShellVelocity = m_pPlayer->pev->velocity 
@@ -1944,7 +1942,7 @@ public:
 			}
 			else
 			{
-				m_iCount = (float)( m_iInitialCount / mp->m_iTotalGrenadeCount ) * mp->m_iNumTerrorist * 1.5;
+				m_iCount = (float)( m_iInitialCount / mp->m_iTotalGrenadeCount ) * mp->m_iNumTerrorist * 1.75;	// Beta 6.1 (Beta 6.0: 1.5)
 
 				if ( m_iCount < 1 )
 					m_iCount = 1;
@@ -1960,7 +1958,7 @@ public:
 			}
 			else
 			{
-				m_iCount = (float)( m_iInitialCount / mp->m_iTotalArmourCount ) * mp->m_iNumTerrorist * 0.65;
+				m_iCount = (float)( m_iInitialCount / mp->m_iTotalArmourCount ) * mp->m_iNumTerrorist * 0.7;	// Beta 6.1 (Beta 6.0: 0.65)
 
 				if ( m_iCount < 1 )
 					m_iCount = 1;
@@ -2124,7 +2122,7 @@ public:
 				break;
 			case 13:
 				pPlayer->GiveNamedItem( "weapon_m249" );
-				pPlayer->GiveAmmo( 60, "556Nato", 200 );
+				pPlayer->GiveAmmo( 60, "556NatoBox", 200 );	// Beta 6.1: the M249's own ammunition now
 				break;
 			}
 		}

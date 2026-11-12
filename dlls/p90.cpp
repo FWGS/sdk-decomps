@@ -107,13 +107,14 @@ BOOL CP90::Deploy( )
 
 void CP90::PrimaryAttack( void )
 {
-	// Beta 6.0: more spread in the air (0.4) and when running (0.2)
+	// Beta 6.0: more spread in the air (0.4) and when running (0.2).
+	// Beta 6.1: less when running (0.15) and standing (0.045, 6.0: 0.06)
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
 		P90Fire( m_pPlayer->m_flAccuracy * 0.4, 0.066, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 170 )
-		P90Fire( m_pPlayer->m_flAccuracy * 0.2, 0.066, FALSE );
+		P90Fire( m_pPlayer->m_flAccuracy * 0.15, 0.066, FALSE );
 	else
-		P90Fire( m_pPlayer->m_flAccuracy * 0.06, 0.066, FALSE );
+		P90Fire( m_pPlayer->m_flAccuracy * 0.045, 0.066, FALSE );
 }
 
 void CP90::P90Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
@@ -188,18 +189,17 @@ void CP90::P90Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
 		KickBack( 0.65, 0.35, 0.25, 0.03, 4.25, 2.5, 3 );
 	else if ( FBitSet(m_pPlayer->pev->flags, FL_DUCKING) )
-		KickBack( 0.6, 0.25, 0.125, 0.02, 3.5, 1, 8 );
+		KickBack( 0.575, 0.25, 0.125, 0.02, 3.5, 1, 8 );	// Beta 6.1 (Beta 6.0: 0.6)
 	else
-		KickBack( 0.625, 0.275, 0.125, 0.02, 3.75, 1.25, 6 );
+		KickBack( 0.6, 0.275, 0.125, 0.02, 3.75, 1.25, 6 );	// Beta 6.1 (Beta 6.0: 0.625)
 
-	// Beta 6.0: the shot leaves 5 units to the side of the hand that holds
-	// the gun, and the shell flies out on the other side
+	// Beta 6.1: the shot leaves from the eye again ("off center shooting
+	// fixed"; Beta 6.0: 5 units to the gun hand's side); the shell still
+	// flies out of the other side
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 
 	if ( m_pPlayer->m_bLeftHanded == true )
 	{
-		vecSrc = vecSrc - gpGlobals->v_right * 5;
-
 		Vector	vecShellVelocity = m_pPlayer->pev->velocity
 								 - gpGlobals->v_right * RANDOM_FLOAT(100,120)
 								 + gpGlobals->v_up * RANDOM_FLOAT(50,90)
@@ -211,8 +211,6 @@ void CP90::P90Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	}
 	else
 	{
-		vecSrc = vecSrc + gpGlobals->v_right * 5;
-
 		Vector	vecShellVelocity = m_pPlayer->pev->velocity
 								 + gpGlobals->v_right * RANDOM_FLOAT(100,120)
 								 + gpGlobals->v_up * RANDOM_FLOAT(50,90)
@@ -224,7 +222,7 @@ void CP90::P90Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	}
 
 	// Beta 6.0: 20 damage (was 23), range modifier 0.9 (0.925)
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_57MM, 20, 0.9 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_57MM, 22, 0.9 );	// Beta 6.1: 22 damage (Beta 6.0: 20)
 }
 
 

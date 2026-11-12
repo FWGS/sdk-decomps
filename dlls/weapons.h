@@ -207,11 +207,11 @@ public:
 #define USP_MAX_CARRY			48		// "45ACP"
 #define GLOCK18_MAX_CARRY		90		// "9mm" (Beta 5.0 leak: 120; Beta 6.0: 90 again)
 #define AWP_MAX_CARRY			30		// "338Magnum"
-#define MP5N_MAX_CARRY			90		// "9mm" (Beta 6.0: 90, was 120)
-#define M249_MAX_CARRY			200		// "556Nato"
+#define MP5N_MAX_CARRY			120		// "9mm" (Beta 6.0: 90, was 120; Beta 6.1: 120 again, "120 round limit for the mp5 and tmp")
+#define M249_MAX_CARRY			200		// "556NatoBox" (Beta 6.1; was "556Nato")
 #define M3_MAX_CARRY			32		// "buckshot" (Beta 6.0: 32, was 48)
 #define M4A1_MAX_CARRY			90		// "556Nato" (Beta 5.0 leak: 200; Beta 6.0: 90 again)
-#define TMP_MAX_CARRY			90		// "9mm" (Beta 6.0: 90, was 120)
+#define TMP_MAX_CARRY			120		// "9mm" (Beta 6.0: 90, was 120; Beta 6.1: 120 again)
 #define G3SG1_MAX_CARRY			40		// "762Nato" (Beta 5.0 leak: 120; Beta 6.0: 40)
 #define FLASHBANG_MAX_CARRY		2		// "Flashbang" (Beta 5.0 leak; was 3)
 #define DEAGLE_MAX_CARRY		35		// "50AE"
@@ -324,7 +324,9 @@ public:
 // Counter-Strike: the six ammo boxes of ammo.cpp, amount and limit as their AddAmmo
 // passes them to GiveAmmo (names ours). ammo_762nato allows 90, the G3SG1 itself 60
 // (Beta 4.1); Beta 5.0 (leak): 120 both.
-#define AMMO_556NATOBOX_GIVE	30
+#define AMMO_556NATO_GIVE		30		// Beta 6.1: ammo_556nato's own numbers (Beta 1.0 to 6.0: AMMO_556NATOBOX_*)
+#define AMMO_556NATO_MAX		90		// Beta 6.1: 90 (was 200)
+#define AMMO_556NATOBOX_GIVE	30		// Beta 6.1: ammo_556natobox (new): "556NatoBox", the M249's own
 #define AMMO_556NATOBOX_MAX		200
 #define AMMO_762NATOBOX_GIVE	30
 #define AMMO_762NATOBOX_MAX		90		// Beta 5.0 (leak): 120 (was 90); Beta 6.0: 90 again
@@ -341,7 +343,7 @@ public:
 // Beta 4.0: ammo_9mm (Glock 18, MP5 Navy, TMP), ammo_buckshot (the M3; the
 // SDK's box, now ammo.cpp's), ammo_357sig (P228)
 #define AMMO_9MMBOX_GIVE		30
-#define AMMO_9MMBOX_MAX			90		// Beta 6.0: 90 (was 120)
+#define AMMO_9MMBOX_MAX			120		// Beta 6.0: 90 (was 120); Beta 6.1: 120 again
 #define AMMO_BUCKSHOTBOX_MAX	32		// Beta 6.0: 32 (was 48)
 #define AMMO_357SIGBOX_GIVE		13
 #define AMMO_357SIGBOX_MAX		52

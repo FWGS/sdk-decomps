@@ -1311,10 +1311,24 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	if ( m_fKilledByBlast == false )
 		g_pGameRules->PlayerKilled( this, pevAttacker, g_pevLastInflictor );
 
-	// Beta 6.0: the night vision goes off
+	// Beta 6.1: the dead camera's mode is set at death (Beta 6.0: at spawn);
+	// mp_chasecam 2 starts free; any other value leaves the mode as it was (sic)
+	int iChaseCam = (int)CVAR_GET_FLOAT( "mp_chasecam" );	// name ours
+	if ( iChaseCam == 0 )
+		m_cObserverMode = 0;
+	else if ( iChaseCam == 1 )
+		m_cObserverMode = 1;
+	else if ( iChaseCam == 2 )
+		m_cObserverMode = 0;
+
+	// Beta 6.0: the night vision goes off; Beta 6.1: the client's lighting is
+	// put back (lambert 1.5; the goggles set -1.1)
 	MESSAGE_BEGIN( MSG_ONE, gmsgNVGToggle, NULL, pev );
 		WRITE_BYTE( 0 );
 	MESSAGE_END();
+
+	m_bNightVisionOn = false;
+	CLIENT_COMMAND( edict(), "lambert 1.5\n" );
 
 	if ( m_pTank != NULL )
 	{
@@ -2837,6 +2851,16 @@ void CBasePlayer::ChaseCamMode( void )
 //=========================================================
 void CBasePlayer::RoundRespawn( void )
 {
+	// Beta 6.1: a team killer sits the next round out ("new TK 1 round
+	// time-out penalty"): he is made to kill himself as he respawns (sic: the
+	// hint says "/n" for a new line)
+	if ( m_bJustKilledTeammate == true )
+	{
+		m_bJustKilledTeammate = false;
+		CLIENT_COMMAND( edict(), "kill\n" );
+		HintMessage( "You're not allowed to play this round because/n you TK'ed last round", TRUE, TRUE );
+	}
+
 	if ( m_iMenu != Menu_ChooseAppearance )
 	{
 		respawn( pev, FALSE );
@@ -4941,15 +4965,7 @@ void CBasePlayer::Spawn( void )
 	m_vecLastRadarOrigin = Vector( 0, 0, 0 );
 	m_iCurrentKickVote	= 0;
 	m_flNextVoteTime	= 0;
-
-	// Beta 6.0: mp_chasecam 2 starts free; any other value leaves the mode as it was (sic)
-	int iChaseCam = (int)CVAR_GET_FLOAT( "mp_chasecam" );	// name ours
-	if ( iChaseCam == 0 )
-		m_cObserverMode = 0;
-	else if ( iChaseCam == 1 )
-		m_cObserverMode = 1;
-	else if ( iChaseCam == 2 )
-		m_cObserverMode = 0;
+	m_bJustKilledTeammate = false;	// Beta 6.1
 
 	m_SbarString0[0]	= 0;
 	m_SbarString1[0]	= 0;
@@ -5058,14 +5074,15 @@ void CBasePlayer::Spawn( void )
 		// Beta 6.0: no primary weapon, no night vision
 		m_bHasPrimary		= false;
 		m_bHasNightVision	= false;
-		m_bNightVisionOn	= false;
 	}
 
-	// Beta 6.0: the night vision is off at every spawn
+	// Beta 6.0: the night vision is off at every spawn; Beta 6.1: the
+	// client's lighting is put back too
 	MESSAGE_BEGIN( MSG_ONE, gmsgNVGToggle, NULL, pev );
 		WRITE_BYTE( 0 );
 	MESSAGE_END();
 	m_bNightVisionOn = false;
+	CLIENT_COMMAND( edict(), "lambert 1.5\n" );
 
 	m_lastx = m_lasty = 0;
 

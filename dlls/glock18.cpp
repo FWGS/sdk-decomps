@@ -247,13 +247,13 @@ void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseBurstMo
 		m_pPlayer->m_iBurstShotsFired++;
 	}
 
-	// Beta 6.0: the bullets leave 5 units to the side of the hand that holds
-	// the gun, the shell flies out of the other side
+	// Beta 6.1: the shot leaves from the eye again ("off center shooting
+	// fixed"; Beta 6.0: 5 units to the gun hand's side); the shell still
+	// flies out of the other side
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 
 	if ( m_pPlayer->m_bLeftHanded == true )
 	{
-		vecSrc = vecSrc - gpGlobals->v_right * 5;
 
 		// the shell comes out closer to the gun (Beta 5.2: 20 down, 32 forward, 20 to the side)
 		Vector	vecShellVelocity = m_pPlayer->pev->velocity
@@ -264,8 +264,6 @@ void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseBurstMo
 	}
 	else
 	{
-		vecSrc = vecSrc + gpGlobals->v_right * 5;
-
 		Vector	vecShellVelocity = m_pPlayer->pev->velocity
 								 - gpGlobals->v_right * RANDOM_FLOAT(40,150)
 								 + gpGlobals->v_up * RANDOM_FLOAT(100,360)

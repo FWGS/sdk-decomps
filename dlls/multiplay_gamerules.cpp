@@ -114,7 +114,21 @@ static hudtextparms_t g_textParmsEndRound = { -1, 0.4, 2, 20, 255, 20, 200, 0, 2
 
 void EndRoundMessage( const char *sentence )
 {
+	char szBuf[256];	// Beta 6.1 (name ours)
+
 	UTIL_HudMessageAll( g_textParmsEndRound, sentence );
+
+	// Beta 6.1: the round's end and the score go to the server log
+	strcpy( szBuf, "***" );
+	strcat( szBuf, sentence );
+	strcat( szBuf, "***\n" );
+	UTIL_LogPrintf( szBuf );
+
+	if ( g_pGameRules )
+	{
+		sprintf( szBuf, "CT wins = %i\nTerrorist wins = %i\n", ((CHalfLifeMultiplay *)g_pGameRules)->m_iNumCTWins, ((CHalfLifeMultiplay *)g_pGameRules)->m_iNumTerroristWins );
+		UTIL_LogPrintf( szBuf );
+	}
 }
 
 //=========================================================
@@ -627,6 +641,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 
 		if ( !m_fGameCommenced )
 		{
+			UTIL_LogPrintf( "*** First player has joined the server. Game Commencing! ***\n" );
 			TerminateRound( 0, 3 );
 			m_fGameCommenced = true;
 			return;
@@ -950,7 +965,8 @@ void CHalfLifeMultiplay::BalanceTeams( void )
 			{
 				CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
 
-				if ( player->m_iTeam == iTeamToSwap && player->pev->frags >= iHighestFrags )
+				// Beta 6.1: never the VIP
+				if ( player->m_iTeam == iTeamToSwap && player->pev->frags >= iHighestFrags && m_pVIP != player )
 				{
 					iHighestFrags = player->pev->frags;
 					pPlayerToSwap = player;
@@ -985,20 +1001,21 @@ void CHalfLifeMultiplay::RestartRound( void )
 	CVAR_SET_FLOAT( "sv_stopspeed", 75 );
 
 	// Beta 6.0: mp_autoteambalance moves players when the teams have been two
-	// or more apart for more than two rounds (announced a round ahead)
+	// or more apart; Beta 6.1: after one such round, announced as soon as the
+	// first one ends (6.0 waited more than two rounds)
 	m_iNumCT = CountTeamPlayers( TEAM_CT );
 	m_iNumTerrorist = CountTeamPlayers( TEAM_TERRORIST );
 
-	if ( CVAR_GET_FLOAT( "mp_autoteambalance" ) != 0 && m_iUnBalancedRounds > 2 )
+	if ( CVAR_GET_FLOAT( "mp_autoteambalance" ) != 0 && m_iUnBalancedRounds >= 1 )
 		BalanceTeams();
-
-	if ( CVAR_GET_FLOAT( "mp_autoteambalance" ) != 0 && m_iUnBalancedRounds == 2 )
-		UTIL_ClientPrintAll( HUD_PRINTCENTER, "Teams will be automatically balanced next round...\n" );
 
 	if ( m_iNumCT - m_iNumTerrorist >= 2 || m_iNumTerrorist - m_iNumCT >= 2 )
 		m_iUnBalancedRounds++;
 	else
 		m_iUnBalancedRounds = 0;
+
+	if ( CVAR_GET_FLOAT( "mp_autoteambalance" ) != 0 && m_iUnBalancedRounds == 1 )
+		UTIL_ClientPrintAll( HUD_PRINTCENTER, "Teams will be automatically balanced next round...\n" );
 
 	if ( m_fCompleteReset )
 	{
@@ -1608,14 +1625,65 @@ void CHalfLifeMultiplay :: Think ( void )
 	}
 	else if ( TimeRemaining() <= 0 )
 	{
-		// the round's time is up: a draw. Beta 5.0: a ticking C4 no longer
-		// holds the round (the leak let it end the round when it went off; the
-		// grenade is still looked for, and nothing done with it)
+		// the round's time is up. Beta 5.0: a ticking C4 no longer holds the
+		// round (the leak let it end the round when it went off; the grenade
+		// is still looked for, and nothing done with it). Beta 6.1: no more
+		// draws; the side that defends the map's objective wins (2,000 to it,
+		// none for an escape map), and nothing at all on a map without one
 		CBaseEntity *pC4 = UTIL_FindEntityByClassname( NULL, "grenade" );
 
-		EndRoundMessage( "Round DRAW" );
-		Broadcast( "rounddraw" );
-		TerminateRound( 5, 3 );
+		if ( m_fMapHasBombTarget == true )
+		{
+			EndRoundMessage( "CTs win!!! Target has been saved!" );
+			Broadcast( "ctwin" );
+			m_iAccountCT += 2000;
+			TerminateRound( 5, 1 );
+
+			m_iNumCTWins++;
+			MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
+				WRITE_BYTE( TEAM_CT );
+				WRITE_SHORT( m_iNumCTWins );
+			MESSAGE_END();
+		}
+		else if ( UTIL_FindEntityByClassname( NULL, "hostage_entity" ) != NULL )
+		{
+			EndRoundMessage( "Terrorists win! Hostages have not been rescued!" );
+			Broadcast( "terwin" );
+			m_iAccountTerrorist += 2000;
+			TerminateRound( 5, 2 );
+
+			m_iNumTerroristWins++;
+			MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
+				WRITE_BYTE( TEAM_TERRORIST );
+				WRITE_SHORT( m_iNumTerroristWins );
+			MESSAGE_END();
+		}
+		else if ( m_bMapHasEscapeZone == true )
+		{
+			EndRoundMessage( "CTs win! Terrorists have not escaped!" );
+			Broadcast( "ctwin" );
+			TerminateRound( 5, 1 );
+
+			m_iNumCTWins++;
+			MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
+				WRITE_BYTE( TEAM_CT );
+				WRITE_SHORT( m_iNumCTWins );
+			MESSAGE_END();
+		}
+		else if ( m_iMapHasVIPSafetyZone == 1 )
+		{
+			EndRoundMessage( "Terrorists win! VIP has not escaped!" );
+			Broadcast( "terwin" );
+			m_iAccountTerrorist += 2000;
+			TerminateRound( 5, 2 );
+
+			m_iNumTerroristWins++;
+			MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
+				WRITE_BYTE( TEAM_TERRORIST );
+				WRITE_SHORT( m_iNumTerroristWins );
+			MESSAGE_END();
+		}
+
 		m_flRoundStartTime = gpGlobals->time + 60;
 	}
 
@@ -1675,7 +1743,17 @@ void CHalfLifeMultiplay :: Think ( void )
 			CVAR_SET_FLOAT( "sv_restartround", 0 );
 		}
 
-		m_flNextRestartCheck = gpGlobals->time + 0.5;
+		m_flNextRestartCheck = gpGlobals->time + 1.0;
+
+		// Beta 6.1: and the movement settings are put back whenever changed
+		if ( CVAR_GET_FLOAT( "sv_accelerate" ) != 5.0 )
+			CVAR_SET_FLOAT( "sv_accelerate", 5 );
+
+		if ( CVAR_GET_FLOAT( "sv_friction" ) != 4.0 )
+			CVAR_SET_FLOAT( "sv_friction", 4 );
+
+		if ( CVAR_GET_FLOAT( "sv_stopspeed" ) != 75 )
+			CVAR_SET_FLOAT( "sv_stopspeed", 75 );
 	}
 }
 
@@ -1892,6 +1970,8 @@ void CHalfLifeMultiplay :: InitHUD( CBasePlayer *pl )
 //=========================================================
 void CHalfLifeMultiplay :: ClientDisconnected( edict_t *pClient )
 {
+	CLIENT_COMMAND( pClient, "lambert 1.5\n" );	// Beta 6.1: the night vision's lighting is put back
+
 	if ( pClient )
 	{
 		CBasePlayer *pPlayer = (CBasePlayer *)CBaseEntity::Instance( pClient );
@@ -2089,6 +2169,7 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 		{
 			pKillerPlayer->AddAccount( -3300, true );
 			pKillerPlayer->m_iTeamKills++;
+			pKillerPlayer->m_bJustKilledTeammate = true;	// Beta 6.1: he sits the next round out (RoundRespawn)
 			ClientPrint( pKillerPlayer->pev, HUD_PRINTCENTER, "You killed a teammate!" );
 			ClientPrint( pKillerPlayer->pev, HUD_PRINTCONSOLE, UTIL_VarArgs( "Teammate kills: %i of 3\n", pKillerPlayer->m_iTeamKills ) );
 

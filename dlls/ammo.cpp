@@ -93,7 +93,7 @@ class C556NatoAmmo : public CBasePlayerAmmo
 	}
 	BOOL AddAmmo( CBaseEntity *pOther )
 	{
-		if (pOther->GiveAmmo( AMMO_556NATOBOX_GIVE, "556Nato", AMMO_556NATOBOX_MAX ) != -1)
+		if (pOther->GiveAmmo( AMMO_556NATO_GIVE, "556Nato", AMMO_556NATO_MAX ) != -1)
 		{
 			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
 			return TRUE;
@@ -102,6 +102,35 @@ class C556NatoAmmo : public CBasePlayerAmmo
 	}
 };
 LINK_ENTITY_TO_CLASS( ammo_556nato, C556NatoAmmo );
+
+
+// Beta 6.1 (Linux symbols): a box of 30 for the M249, whose ammunition is
+// "556NatoBox" now (200 carried); ammo_556nato serves the M4A1, SG-552 and
+// AUG (90)
+class C556NatoBoxAmmo : public CBasePlayerAmmo
+{
+	void Spawn( void )
+	{
+		Precache( );
+		SET_MODEL(ENT(pev), "models/w_9mmclip.mdl");
+		CBasePlayerAmmo::Spawn( );
+	}
+	void Precache( void )
+	{
+		PRECACHE_MODEL ("models/w_9mmclip.mdl");
+		PRECACHE_SOUND("items/9mmclip1.wav");
+	}
+	BOOL AddAmmo( CBaseEntity *pOther )
+	{
+		if (pOther->GiveAmmo( AMMO_556NATOBOX_GIVE, "556NatoBox", AMMO_556NATOBOX_MAX ) != -1)
+		{
+			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
+			return TRUE;
+		}
+		return FALSE;
+	}
+};
+LINK_ENTITY_TO_CLASS( ammo_556natobox, C556NatoBoxAmmo );
 
 
 class C762NatoAmmo : public CBasePlayerAmmo

@@ -204,14 +204,13 @@ void CAK47::AK47Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	else
 		KickBack( 1, 0.375, 0.175, 0.0375, 5.75, 1.75, 8 );
 
-	// Beta 6.0: the bullets leave 5 units to the side of the hand that holds
-	// the gun, the shell flies out of the other side
+	// Beta 6.1: the shot leaves from the eye again ("off center shooting
+	// fixed"; Beta 6.0: 5 units to the gun hand's side); the shell still
+	// flies out of the other side
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 
 	if ( m_pPlayer->m_bLeftHanded == true )
 	{
-		vecSrc = vecSrc - gpGlobals->v_right * 5;
-
 		Vector	vecShellVelocity = m_pPlayer->pev->velocity
 								 + gpGlobals->v_right * RANDOM_FLOAT(100,120)
 								 + gpGlobals->v_up * RANDOM_FLOAT(35,55)
@@ -221,8 +220,6 @@ void CAK47::AK47Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	}
 	else
 	{
-		vecSrc = vecSrc + gpGlobals->v_right * 5;
-
 		Vector	vecShellVelocity = m_pPlayer->pev->velocity
 								 - gpGlobals->v_right * RANDOM_FLOAT(100,120)
 								 + gpGlobals->v_up * RANDOM_FLOAT(35,55)

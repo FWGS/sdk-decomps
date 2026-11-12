@@ -226,14 +226,13 @@ void CSG552::SG552Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	else
 		KickBack( 0.625, 0.375, 0.25, 0.0125, 5, 2.25, 9 );	// Beta 6.0: 0.25 (was 0.135)
 
-	// Beta 6.0: the shot leaves 5 units to the side of the hand that holds
-	// the gun, and the shell flies out on the other side
+	// Beta 6.1: the shot leaves from the eye again ("off center shooting
+	// fixed"; Beta 6.0: 5 units to the gun hand's side); the shell still
+	// flies out of the other side
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 
 	if ( m_pPlayer->m_bLeftHanded == true )
 	{
-		vecSrc = vecSrc - gpGlobals->v_right * 5;
-
 		Vector	vecShellVelocity = m_pPlayer->pev->velocity
 								 + gpGlobals->v_right * RANDOM_FLOAT(100,120)
 								 + gpGlobals->v_up * RANDOM_FLOAT(35,55)
@@ -245,8 +244,6 @@ void CSG552::SG552Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	}
 	else
 	{
-		vecSrc = vecSrc + gpGlobals->v_right * 5;
-
 		Vector	vecShellVelocity = m_pPlayer->pev->velocity
 								 - gpGlobals->v_right * RANDOM_FLOAT(100,120)
 								 + gpGlobals->v_up * RANDOM_FLOAT(35,55)

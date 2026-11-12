@@ -2076,6 +2076,15 @@ void CEscapeZone::EscapeTouch( CBaseEntity *pOther )
 		{
 			pPlayer->m_bEscaped = true;
 			pPlayer->Disappear();
+
+			// Beta 6.1: his team is told ("prisoners are notified when someone escapes")
+			for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+			{
+				CBasePlayer *pTeammate = (CBasePlayer *)UTIL_PlayerByIndex( i );	// name ours
+
+				if ( pTeammate && !FNullEnt( pTeammate->pev ) && pTeammate->m_iTeam == pPlayer->m_iTeam )
+					ClientPrint( pTeammate->pev, HUD_PRINTCENTER, "Terrorist has escaped!\n" );
+			}
 		}
 		else if ( pPlayer->m_iTeam == TEAM_CT )
 			pPlayer->m_signals.Signal( 8 );
