@@ -236,7 +236,7 @@ public:
 	int			ShouldToggle( USE_TYPE useType, BOOL currentState );
 	void		FireBullets( ULONG	cShots, Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iBulletType, int iTracerFreq = 4, int iDamage = 0, entvars_t *pevAttacker = NULL  );
 	void		FireBullets2( ULONG	cShots, Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iBulletType, int iPenetration, int iTracerFreq = 4, int iDamage = 0, entvars_t *pevAttacker = NULL  );
-	void		FireBullets3( Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iPenetration, int iBulletType, int iDamage, float flRangeModifier, entvars_t *pevAttacker = NULL  );
+	void		FireBullets3( Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iPenetration, int iBulletType, int iDamage, float flRangeModifier, entvars_t *pevAttacker = NULL, bool bPistol = false  );
 
 	virtual CBaseEntity *Respawn( void ) { return NULL; }
 
@@ -784,3 +784,14 @@ public:
 	void Precache( void );
 	void KeyValue( KeyValueData *pkvd );
 };
+
+// sic: a stand-in for declarations Beta 2.0 has and Beta 1.1 had not, where every
+// source file sees them; what they were the image cannot say.
+// VC5 orders some operands by the number of declarations
+// seen. With Beta 2.0's known header text (FireBullets3's tenth
+// parameter, AddAccount, BULLET_PLAYER_50AE) CFuncTrackTrain::Use, UTIL_MonstersInSphere,
+// CRestore::ReadFields and CBaseAnimating::SetSequenceBox are retail's together only
+// with 6 more numbers in a header all files include (N = 6 of 0 to 31 with a ruler
+// in this file; every other function of the project stays retail's there). The
+// enum's tag and five enumerators are those 6.
+enum sic_declcount_b20 { SIC_DECLCOUNT_B20_0, SIC_DECLCOUNT_B20_1, SIC_DECLCOUNT_B20_2, SIC_DECLCOUNT_B20_3, SIC_DECLCOUNT_B20_4 };

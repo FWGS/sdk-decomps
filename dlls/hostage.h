@@ -33,12 +33,12 @@ public:
 	// player the hostage follows.
 	int		m_iActivity;		// 0x118 the activity SetActivity last started
 	BOOL	m_fTouched;			// 0x11c new in Beta 1.1: a counter-terrorist has used it since the last RePosition (the first use pays)
-	float	m_flFollowDistance;	// 0x120 Spawn: 128; a following hostage stops closer than this
+	float	m_flFollowDistance;	// 0x120 Spawn: 128; Beta 2.0's Use: 82 when following, 36 when told to stay; IdleThink moves the hostage only when farther than this
 	float	m_flFlinchTime;		// 0x124 TakeDamage: now + 0.75; IdleThink leaves the activity alone until then
 	float	m_flNextUse;		// 0x128 Use answers once a second
 	int		m_iUnused12C;		// 0x12c Spawn: 0; nothing else refers to it
 	float	m_flFollowRange;	// 0x130 only written: Spawn 1024, Use 300 when told to stay, 1024 when following
-	BOOL	m_fStopped;			// 0x134 TRUE: stays where it is (Spawn); FALSE: follows m_hTargetEnt (Use toggles it)
+	BOOL	m_fStopped;			// 0x134 TRUE: stays where it is (Spawn); FALSE: follows m_hTargetEnt (Use toggles it); 2 (Beta 2.0's IdleThink): no leader within reach
 	Vector	m_vecUnused138;		// 0x138 constructed, never used
 	Vector	m_vecStart;			// 0x144 where Spawn stood; RePosition moves the hostage back there
 };

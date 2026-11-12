@@ -24,7 +24,8 @@ cvar_t  servercfgfile = {"servercfgfile","server.cfg"};
 cvar_t  lservercfgfile = {"lservercfgfile","listenserver.cfg"};
 
 // multiplayer server rules
-cvar_t	teamplay	= {"mp_teamplay","0", FCVAR_SERVER };
+cvar_t	lowlag		= {"mp_lowlag","1", FCVAR_SERVER };		// Counter-Strike Beta 2.0 (name ours): FireBullets3's wall decals
+cvar_t	limitteams	= {"mp_limitteams","1", FCVAR_SERVER };	// Counter-Strike Beta 2.0 (name ours)
 cvar_t	fraglimit	= {"mp_fraglimit","0", FCVAR_SERVER };
 cvar_t	timelimit	= {"mp_timelimit","0", FCVAR_SERVER };
 cvar_t	friendlyfire= {"mp_friendlyfire","0", FCVAR_SERVER };
@@ -453,9 +454,10 @@ void GameDLLInit( void )
 	CVAR_REGISTER (&servercfgfile);
 	CVAR_REGISTER (&lservercfgfile);
 
-	CVAR_REGISTER (&teamplay);
 	CVAR_REGISTER (&fraglimit);
 	CVAR_REGISTER (&timelimit);
+	CVAR_REGISTER (&lowlag);
+	CVAR_REGISTER (&limitteams);
 
 	CVAR_REGISTER (&friendlyfire);
 	CVAR_REGISTER (&falldamage);

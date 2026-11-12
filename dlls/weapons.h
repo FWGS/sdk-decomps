@@ -92,6 +92,9 @@ public:
 #define WEAPON_TMP				23
 #define WEAPON_G3SG1			24
 #define WEAPON_FLASHBANG		25
+#define WEAPON_DEAGLE			26
+#define WEAPON_SG552			27
+#define WEAPON_AK47				28
 
 #define WEAPON_ALLWEAPONS		(~(1<<WEAPON_SUIT))
 
@@ -119,8 +122,8 @@ public:
 #define SATCHEL_WEIGHT		-10
 #define TRIPMINE_WEIGHT		-10
 // Counter-Strike (names ours)
-#define USP_WEIGHT			25
-#define GLOCK18_WEIGHT		25
+#define USP_WEIGHT			5
+#define GLOCK18_WEIGHT		5
 #define AWP_WEIGHT			30
 #define MP5N_WEIGHT			25
 #define M249_WEIGHT			25
@@ -128,7 +131,10 @@ public:
 #define M4A1_WEIGHT			25
 #define TMP_WEIGHT			25
 #define G3SG1_WEIGHT		20
-#define FLASHBANG_WEIGHT	20
+#define FLASHBANG_WEIGHT	3
+#define DEAGLE_WEIGHT		7
+#define SG552_WEIGHT		25
+#define AK47_WEIGHT			25
 
 
 // weapon clip/carry ammo capacities
@@ -145,18 +151,21 @@ public:
 #define HORNET_MAX_CARRY		8
 #define M203_GRENADE_MAX_CARRY	10
 // Counter-Strike: what each weapon's GetItemInfo gives as iMaxAmmo1 (names ours).
-// The limit goes with the weapon, not with the ammo: "9mm" is 80 for the Glock 18,
+// The limit goes with the weapon, not with the ammo: "9mm" is 90 for the Glock 18,
 // 120 for the MP5 Navy and the TMP; "556Nato" 200 for the M249, 90 for the M4A1.
 #define USP_MAX_CARRY			48		// "45ACP"
-#define GLOCK18_MAX_CARRY		80		// "9mm"
+#define GLOCK18_MAX_CARRY		90		// "9mm"
 #define AWP_MAX_CARRY			30		// "338Magnum"
 #define MP5N_MAX_CARRY			120		// "9mm"
 #define M249_MAX_CARRY			200		// "556Nato"
-#define M3_MAX_CARRY			24		// "buckshot"
+#define M3_MAX_CARRY			48		// "buckshot"
 #define M4A1_MAX_CARRY			90		// "556Nato"
 #define TMP_MAX_CARRY			120		// "9mm"
 #define G3SG1_MAX_CARRY			60		// "762Nato"
-#define FLASHBANG_MAX_CARRY		3		// "Hand Grenade"
+#define FLASHBANG_MAX_CARRY		3		// "Flashbang"
+#define DEAGLE_MAX_CARRY		35		// "50AE"
+#define SG552_MAX_CARRY			90		// "556Nato"
+#define AK47_MAX_CARRY			90		// "762Nato"
 
 // the maximum amount of ammo each weapon's clip can hold
 #define WEAPON_NOCLIP			-1
@@ -187,6 +196,9 @@ public:
 #define TMP_MAX_CLIP			30
 #define G3SG1_MAX_CLIP			20
 #define FLASHBANG_MAX_CLIP		WEAPON_NOCLIP
+#define DEAGLE_MAX_CLIP			7
+#define SG552_MAX_CLIP			30
+#define AK47_MAX_CLIP			30
 
 
 // the default amount of ammo that comes with each gun when it spawns
@@ -207,7 +219,7 @@ public:
 #define HIVEHAND_DEFAULT_GIVE		8
 // Counter-Strike: m_iDefaultAmmo as each Spawn sets it (names ours). The USP's is 17, the
 // SDK Glock's GLOCK_DEFAULT_GIVE, with a magazine of 12.
-#define USP_DEFAULT_GIVE			17
+#define USP_DEFAULT_GIVE			12
 #define GLOCK18_DEFAULT_GIVE		20
 #define AWP_DEFAULT_GIVE			10
 #define MP5N_DEFAULT_GIVE			30
@@ -217,6 +229,9 @@ public:
 #define TMP_DEFAULT_GIVE			30
 #define G3SG1_DEFAULT_GIVE			20
 #define FLASHBANG_DEFAULT_GIVE		1
+#define DEAGLE_DEFAULT_GIVE			7
+#define SG552_DEFAULT_GIVE			30
+#define AK47_DEFAULT_GIVE			30
 
 // The amount of ammo given to a player by an ammo item.
 #define AMMO_URANIUMBOX_GIVE	20
@@ -230,7 +245,7 @@ public:
 #define AMMO_RPGCLIP_GIVE		RPG_MAX_CLIP
 #define AMMO_URANIUMBOX_GIVE	20
 #define AMMO_SNARKBOX_GIVE		5
-// Counter-Strike: the four ammo boxes of ammo.cpp, amount and limit as their AddAmmo
+// Counter-Strike: the six ammo boxes of ammo.cpp, amount and limit as their AddAmmo
 // passes them to GiveAmmo (names ours). ammo_762nato allows 90, the G3SG1 itself 60.
 #define AMMO_556NATOBOX_GIVE	30
 #define AMMO_556NATOBOX_MAX		200
@@ -240,6 +255,10 @@ public:
 #define AMMO_45ACPBOX_MAX		48
 #define AMMO_338MAGNUMBOX_GIVE	10
 #define AMMO_338MAGNUMBOX_MAX	30
+#define AMMO_50AEBOX_GIVE		7
+#define AMMO_50AEBOX_MAX		35
+#define AMMO_FLASHBANGBOX_GIVE	1
+#define AMMO_FLASHBANGBOX_MAX	3
 
 // bullet types
 typedef	enum
@@ -260,6 +279,7 @@ typedef	enum
 	BULLET_PLAYER_338MAG,	// AWP
 	BULLET_PLAYER_762MM,	// G3SG1
 	BULLET_PLAYER_556MM,	// M249, M4A1
+	BULLET_PLAYER_50AE,		// Desert Eagle (Beta 2.0; 13, as DEAGLEFire passes it)
 } Bullet;
 
 
@@ -300,9 +320,11 @@ typedef struct
 // 1.0's text gives, CFuncTank::TankTrace and the rest must keep theirs. effects.h,
 // included above, is most of it (295 numbers; func_tank.cpp includes it itself,
 // before weapons.h); this enum's tag and ten enumerators are the rest, 11 numbers. Of
-// 0 to 32 here 11 to 15 and 19 keep every object retail's.
-// Before effects.h was found this place held an enum of 303 numbers and
-// an unused inline function of 159 statement lines standing for its intermediate code.
+// 0 to 32 here 11 to 15 and 19 keep every object retail's in Beta 1.1, 6, 7, 10, 11,
+// 28 and 30 in Beta 2.0 with its cbase.h and multiplay_gamerules.cpp
+// stand-ins. Before effects.h was found
+// this place held an enum of 303 numbers and an unused inline function of 159
+// statement lines standing for its intermediate code.
 enum sic_declcount_b11
 {
 	SIC_DECLCOUNT_B11_BASE, SIC_DECLCOUNT_B11_0, SIC_DECLCOUNT_B11_1, SIC_DECLCOUNT_B11_2, SIC_DECLCOUNT_B11_3, SIC_DECLCOUNT_B11_4, SIC_DECLCOUNT_B11_5, SIC_DECLCOUNT_B11_6,
@@ -442,7 +464,6 @@ public:
 
 	// Counter-Strike (names ours)
 	int		m_iShellLate;										// model index of the shell EjectBrassLate and FireRemaining throw
-	float	m_flNightVisionTime;								// G3SG1: when the scope's night vision was last faded in; 0 = off. ItemPostFrame renews the fade every 13 seconds
 };
 
 

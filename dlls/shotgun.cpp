@@ -432,7 +432,7 @@ class CShotgunAmmo : public CBasePlayerAmmo
 	}
 	BOOL AddAmmo( CBaseEntity *pOther ) 
 	{ 
-		if (pOther->GiveAmmo( 8, "buckshot", BUCKSHOT_MAX_CARRY ) != -1)	// the SDK's AMMO_BUCKSHOTBOX_GIVE is 12
+		if (pOther->GiveAmmo( 8, "buckshot", M3_MAX_CARRY ) != -1)	// the SDK's AMMO_BUCKSHOTBOX_GIVE is 12
 		{
 			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
 			return TRUE;

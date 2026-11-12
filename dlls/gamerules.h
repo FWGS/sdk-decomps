@@ -356,15 +356,20 @@ public:
 
 	// member names ours; the offsets are retail's
 	float m_flRestartRoundTime;		// 0x04 Think calls RestartRound at this time; 0 = no restart pending
-	int m_iUnused08;				// 0x08 no function of Beta 1.0 refers to it
-	float m_flRoundStartTime;		// 0x0c RestartRound sets it; Think calls the round a draw 480 seconds later
-	int m_iAccountTerrorist;		// 0x10 what every terrorist gets at the next RestartRound
-	int m_iAccountCT;				// 0x14 the same for the counter-terrorists
-	int m_iNumTerrorist;			// 0x18 players per team, counted by CheckWinConditions
-	int m_iNumCT;					// 0x1c
-	int m_iHostagesRescued;			// 0x20 this round; each is worth 200 to the CT account
-	int m_iUnused24;				// 0x24 new in Beta 1.1: only RestartRound refers to it (zeroes it)
-	int m_iRoundWinStatus;			// 0x28 0 round running, 1 CTs won, 2 terrorists won, 3 nobody
+	int m_iUnused08;				// 0x08 no function refers to it
+	float m_flRoundStartTime;		// 0x0c RestartRound sets it; Think calls the round a draw 385 seconds later; Spawn kills a player joining more than 20 seconds after it
+	float m_flRoundEndTime;			// 0x10 only written: the restart time when a round is decided, 0 at RestartRound
+	float m_flRoundStartTime2;		// 0x14 only written: the time of RestartRound, like m_flRoundStartTime
+	int m_iAccountTerrorist;		// 0x18 what every terrorist gets at the next RestartRound
+	int m_iAccountCT;				// 0x1c the same for the counter-terrorists
+	int m_iNumTerrorist;			// 0x20 players per team, counted by CheckWinConditions
+	int m_iNumCT;					// 0x24
+	int m_iHostagesRescued;			// 0x28 this round; each is worth 350 to the CT account
+	int m_iUnused2C;				// 0x2c new in Beta 1.1: only RestartRound refers to it (zeroes it)
+	int m_iRoundWinStatus;			// 0x30 0 round running, 1 CTs won, 2 terrorists won, 3 nobody
+	int m_iKickVotes[20];			// 0x34 kick votes against players 1 to 20 (ClientCommand's vote, at m_iKickVotes[n - 1]); RestartRound clears them
+	short m_iNumCTWins;				// 0x84 rounds won (TeamScore)
+	short m_iNumTerroristWins;		// 0x86
 
 protected:
 	virtual void ChangeLevel( void );

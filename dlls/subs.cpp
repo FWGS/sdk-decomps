@@ -69,6 +69,7 @@ private:
 LINK_ENTITY_TO_CLASS(info_player_deathmatch,CBaseDMStart);
 LINK_ENTITY_TO_CLASS(info_player_start,CPointEntity);
 LINK_ENTITY_TO_CLASS(info_landmark,CPointEntity);
+LINK_ENTITY_TO_CLASS(info_hostage_rescue,CPointEntity);	// Counter-Strike: where the counter-terrorists bring the hostages
 
 void CBaseDMStart::KeyValue( KeyValueData *pkvd )
 {

@@ -1,10 +1,11 @@
 /***
 *
-*	Counter-Strike Beta 1.0, m4a1.cpp: the M4A1 rifle (weapon_m4a1).
+*	Counter-Strike Beta 2.0, m4a1.cpp: the M4A1 rifle (weapon_m4a1).
 *
 *	The M249's shape (SDK 1.0's glock.cpp edited, mp5.cpp's automatic fire):
 *	the spread grows with the shots fired, every other shot throws a shell,
-*	and the secondary attack is a single zoom.
+*	and the secondary attack is a single zoom. Beta 2.0 silences it (no
+*	muzzle flash, no weapon flash, the "silenced_rifle" player animations).
 *	File, class and method names are Beta 3.1's (Linux symbols); the
 *	animation names and m_fEjectShell are ours.
 *
@@ -91,7 +92,7 @@ int CM4A1::GetItemInfo(ItemInfo *p)
 
 BOOL CM4A1::Deploy( )
 {
-	return DefaultDeploy( "models/v_m4a1.mdl", "models/p_m4a1.mdl", M4A1_DRAW, "mp5" );
+	return DefaultDeploy( "models/v_m4a1.mdl", "models/p_m4a1.mdl", M4A1_DRAW, "silenced_rifle" );
 }
 
 void CM4A1::SecondaryAttack( void )
@@ -110,20 +111,52 @@ void CM4A1::PrimaryAttack( void )
 {
 	float flSpread;
 
-	if (m_pPlayer->pev->velocity.Length2D() > 0)
+	if (m_pPlayer->m_iFOV == 90)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.09;
-		M4A1Fire( flSpread, 0.092, FALSE );
-	}
-	else if (m_pPlayer->pev->flags & FL_DUCKING)
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.03;
-		M4A1Fire( flSpread, 0.092, FALSE );
+		if (m_pPlayer->pev->velocity.Length2D() > 0)
+		{
+			flSpread = m_pPlayer->m_flAccuracy * 0.13;
+			M4A1Fire( flSpread, 0.0875, FALSE );
+		}
+		else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+		{
+			flSpread = m_pPlayer->m_flAccuracy * 0.18;
+			M4A1Fire( flSpread, 0.0875, FALSE );
+		}
+		else if (m_pPlayer->pev->flags & FL_DUCKING)
+		{
+			flSpread = m_pPlayer->m_flAccuracy * 0.0325;
+			M4A1Fire( flSpread, 0.0875, FALSE );
+		}
+		else
+		{
+			flSpread = m_pPlayer->m_flAccuracy * 0.055;
+			M4A1Fire( flSpread, 0.0875, FALSE );
+		}
 	}
 	else
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.05;
-		M4A1Fire( flSpread, 0.092, FALSE );
+		// zoomed in: a slower cycle
+		if (m_pPlayer->pev->velocity.Length2D() > 0)
+		{
+			flSpread = m_pPlayer->m_flAccuracy * 0.13;
+			M4A1Fire( flSpread, 0.165, FALSE );
+		}
+		else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+		{
+			flSpread = m_pPlayer->m_flAccuracy * 0.18;
+			M4A1Fire( flSpread, 0.165, FALSE );
+		}
+		else if (m_pPlayer->pev->flags & FL_DUCKING)
+		{
+			flSpread = m_pPlayer->m_flAccuracy * 0.0325;
+			M4A1Fire( flSpread, 0.165, FALSE );
+		}
+		else
+		{
+			flSpread = m_pPlayer->m_flAccuracy * 0.055;
+			M4A1Fire( flSpread, 0.165, FALSE );
+		}
 	}
 }
 
@@ -131,10 +164,10 @@ void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 {
 	// the spread grows with the cube of the shots fired
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.65;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.375;
 
-	if (m_pPlayer->m_flAccuracy > 3)
-		m_pPlayer->m_flAccuracy = 3;
+	if (m_pPlayer->m_flAccuracy > 2.5)
+		m_pPlayer->m_flAccuracy = 2.5;
 
 	if (m_iClip <= 0)
 	{
@@ -149,8 +182,7 @@ void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	m_iClip--;
 
-	m_pPlayer->pev->effects = (int)(m_pPlayer->pev->effects) | EF_MUZZLEFLASH;
-
+	// no muzzle flash: the M4A1 is silenced
 	if (m_iClip != 0)
 	{
 		switch (RANDOM_LONG(0,2))
@@ -179,7 +211,6 @@ void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	m_fEjectShell = 1 - m_fEjectShell;
 
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
-	m_pPlayer->m_iWeaponFlash = BRIGHT_GUN_FLASH;
 
 	if (RANDOM_LONG(0,1))
 		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m4a1-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
@@ -198,7 +229,7 @@ void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		vecAiming = gpGlobals->v_forward;
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 26, 0.94 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 33, 0.94 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)

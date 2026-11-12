@@ -1,10 +1,11 @@
 /***
 *
-*	Counter-Strike Beta 1.1, g3sg1.cpp: the G3/SG-1 sniper rifle (weapon_g3sg1).
+*	Counter-Strike Beta 2.0, g3sg1.cpp: the G3/SG-1 sniper rifle (weapon_g3sg1).
 *
 *	The AWP's shape (SDK 1.0's glock.cpp edited): two zoom levels with a
-*	green night-vision fade on the first, an accuracy that recovers with
-*	the time between shots, and the shell thrown at once with EjectBrass2.
+*	green fade over the scope (Beta 1.1 renewed it as night vision), an
+*	accuracy that recovers with the time between shots, and the shell
+*	thrown at once with EjectBrass2.
 *	File, class and method names are Beta 3.1's (Linux symbols); the
 *	animation names are ours.
 *
@@ -101,18 +102,16 @@ void CG3SG1::SecondaryAttack( void )
 
 	if (m_pPlayer->m_iFOV == 90)
 	{
-		// night vision: fade out to green (FFADE_OUT), held for the next 13 seconds by ItemPostFrame
-		UTIL_ScreenFade( m_pPlayer, Vector(10,180,10), 0.75, 1024, 80, 1 );
-		m_flNightVisionTime = gpGlobals->time;
+		// the scope's green tint: fade out to green (FFADE_OUT), held until the fade in
+		UTIL_ScreenFade( m_pPlayer, Vector(20,200,20), 0.75, 1024, 60, 1 );
 		m_pPlayer->m_iFOV = 40;
 	}
 	else if (m_pPlayer->m_iFOV == 40)
-		m_pPlayer->m_iFOV = 10;
-	else if (m_pPlayer->m_iFOV == 10)
+		m_pPlayer->m_iFOV = 15;
+	else if (m_pPlayer->m_iFOV == 15)
 	{
 		// FFADE_IN
 		UTIL_ScreenFade( m_pPlayer, Vector(20,20,20), 0.5, 0.1, 10, 0 );
-		m_flNightVisionTime = 0;
 		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_g3sg1.mdl");
 		m_pPlayer->m_iFOV = 90;
 	}
@@ -124,11 +123,13 @@ void CG3SG1::SecondaryAttack( void )
 void CG3SG1::PrimaryAttack( void )
 {
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		G3SG1Fire( 0.09, 0.25, TRUE );
+		G3SG1Fire( 0.09, 0.25, FALSE );
+	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.2, 0.25, FALSE );
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
 		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.03, 0.25, FALSE );
 	else
-		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.085, 0.25, FALSE );
+		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.065, 0.25, FALSE );
 }
 
 void CG3SG1::G3SG1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
@@ -143,7 +144,7 @@ void CG3SG1::G3SG1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		m_pPlayer->m_flLastFired = gpGlobals->time;
 	else
 	{
-		m_pPlayer->m_flAccuracy = (gpGlobals->time - m_pPlayer->m_flLastFired) * 0.25 + 0.6;
+		m_pPlayer->m_flAccuracy = (gpGlobals->time - m_pPlayer->m_flLastFired) * 0.3 + 0.75;
 
 		if (m_pPlayer->m_flAccuracy > 0.98)
 			m_pPlayer->m_flAccuracy = 0.98;
@@ -192,7 +193,7 @@ void CG3SG1::G3SG1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	// sic: fUseAutoAim is not tested, the auto-aim vector is always used
 	vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_10DEGREES );
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 3, BULLET_PLAYER_762MM, 50, 0.95 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 3, BULLET_PLAYER_762MM, 65, 0.95, NULL, true );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -213,7 +214,7 @@ void CG3SG1::Reload( void )
 
 	if (m_pPlayer->m_iFOV != 90)
 	{
-		// FFADE_IN; m_flNightVisionTime is left as it is (sic)
+		// FFADE_IN
 		UTIL_ScreenFade( m_pPlayer, Vector(20,20,20), 0.5, 0.1, 250, 0 );
 		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_g3sg1.mdl");
 		m_pPlayer->m_fResumeZoom = TRUE;

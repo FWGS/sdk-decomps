@@ -1,13 +1,13 @@
 /***
 *
-*	Counter-Strike Beta 1.1, mp5navy.cpp: the MP5 Navy submachine gun
+*	Counter-Strike Beta 2.0, mp5navy.cpp: the MP5 Navy submachine gun
 *	(weapon_mp5navy).
 *
-*	The M4A1's shape without the zoom: both attacks fire. weapon_sg552,
-*	weapon_knife, weapon_c4 and weapon_claymore are this class too (sic):
-*	names without weapons of their own yet, each an MP5 Navy when it
-*	spawns. File, class and method names are Beta 3.1's (Linux symbols);
-*	the animation names and m_fEjectShell are ours.
+*	The M4A1's shape without the zoom: both attacks fire. Beta 1.0 and 1.1
+*	linked weapon_sg552, weapon_knife, weapon_c4 and weapon_claymore to
+*	this class too; Beta 2.0 no longer does. File, class and method names
+*	are Beta 3.1's (Linux symbols); the animation names and m_fEjectShell
+*	are ours.
 *
 ****/
 
@@ -45,10 +45,6 @@ public:
 	int m_iShell;
 	BOOL m_fEjectShell;		// the shot throws a shell; flips with every shot
 };
-LINK_ENTITY_TO_CLASS( weapon_sg552, CMP5N );
-LINK_ENTITY_TO_CLASS( weapon_knife, CMP5N );
-LINK_ENTITY_TO_CLASS( weapon_c4, CMP5N );
-LINK_ENTITY_TO_CLASS( weapon_claymore, CMP5N );
 LINK_ENTITY_TO_CLASS( weapon_mp5navy, CMP5N );
 
 
@@ -108,18 +104,23 @@ void CMP5N::SecondaryAttack( void )
 
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.07;
-		MP5NFire( flSpread, 0.085, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.12;
+		MP5NFire( flSpread, 0.08, FALSE );
+	}
+	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+	{
+		flSpread = m_pPlayer->m_flAccuracy * 0.15;
+		MP5NFire( flSpread, 0.08, FALSE );
 	}
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
 	{
 		flSpread = m_pPlayer->m_flAccuracy * 0.04;
-		MP5NFire( flSpread, 0.085, FALSE );
+		MP5NFire( flSpread, 0.08, FALSE );
 	}
 	else
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.05;
-		MP5NFire( flSpread, 0.085, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.055;
+		MP5NFire( flSpread, 0.08, FALSE );
 	}
 }
 
@@ -129,18 +130,23 @@ void CMP5N::PrimaryAttack( void )
 
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.07;
-		MP5NFire( flSpread, 0.085, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.12;
+		MP5NFire( flSpread, 0.08, FALSE );
+	}
+	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+	{
+		flSpread = m_pPlayer->m_flAccuracy * 0.15;
+		MP5NFire( flSpread, 0.08, FALSE );
 	}
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.07;
-		MP5NFire( flSpread, 0.085, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.04;
+		MP5NFire( flSpread, 0.08, FALSE );
 	}
 	else
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.09;
-		MP5NFire( flSpread, 0.085, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.055;
+		MP5NFire( flSpread, 0.08, FALSE );
 	}
 }
 
@@ -148,7 +154,10 @@ void CMP5N::MP5NFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 {
 	// the spread grows with the square of the shots fired
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.7;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.45;
+
+	if (m_pPlayer->m_flAccuracy > 2.5)
+		m_pPlayer->m_flAccuracy = 2.5;
 
 	if (m_iClip <= 0)
 	{
@@ -167,15 +176,13 @@ void CMP5N::MP5NFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	if (m_iClip != 0)
 	{
-		switch (RANDOM_LONG(0,2))
+		switch (RANDOM_LONG(0,1))
 		{
 		case 0:
 			SendWeaponAnim( MP5N_SHOOT1 );
-			// no breaks (sic): case 0 sends all three animations, case 1 the last two
+			// no break (sic): case 0 sends both animations
 		case 1:
 			SendWeaponAnim( MP5N_SHOOT2 );
-		case 2:
-			SendWeaponAnim( MP5N_SHOOT3 );
 		}
 	}
 
@@ -212,7 +219,7 @@ void CMP5N::MP5NFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		vecAiming = gpGlobals->v_forward;
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 19, 0.92 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 24, 0.92 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)

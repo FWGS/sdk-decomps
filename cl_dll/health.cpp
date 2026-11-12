@@ -66,6 +66,8 @@ int CHudHealth::Init(void)
 
 	memset(m_dmg, 0, sizeof(DAMAGE_IMAGE) * NUM_DMG_TYPES);
 
+	m_flDrawTime = 0;
+	m_flRoundStart = 0;
 
 	gHUD.AddHudElem(this);
 	return 1;
@@ -176,8 +178,7 @@ int CHudHealth::Draw(float flTime)
 //	if (m_iHealth <= 0)
 //		return 1;
 
-	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_HEALTH )
-		return 1;
+	m_flDrawTime = flTime;
 
 	if ( !m_hSprite )
 		m_hSprite = LoadSprite(PAIN_NAME);
@@ -220,6 +221,35 @@ int CHudHealth::Draw(float flTime)
 		SPR_DrawAdditive(0, x, y, &gHUD.GetSpriteRect(m_HUD_cross));
 
 		x = CrossWidth + HealthWidth / 2;
+
+		// round timer
+		int iTimeLeft = 390 - (int)(flTime - m_flRoundStart);
+		if ( iTimeLeft < 0 )
+			iTimeLeft = 0;
+
+		int iMinutes = iTimeLeft / 60;
+		int iSeconds = iTimeLeft % 60;
+		int iTens = iSeconds / 10;
+		int iOnes = iSeconds % 10;
+
+		int tr, tg, tb;
+		if ( iTimeLeft < 30 )
+		{
+			tr = 225;
+			tg = 25;
+			tb = 25;
+		}
+		else
+		{
+			tr = 25;
+			tg = 225;
+			tb = 25;
+		}
+
+		gHUD.DrawHudNumber( x + CrossWidth * 10, y, DHN_2DIGITS | DHN_DRAWZERO, iMinutes, tr, tg, tb );
+		gHUD.DrawHudString( x + CrossWidth * 10 + HealthWidth * 2.25, y, x + CrossWidth * 10 + HealthWidth * 2.75, ":", tr, tg, tb );
+		gHUD.DrawHudNumber( x + CrossWidth * 10 + HealthWidth * 2.75, y, DHN_DRAWZERO, iTens, tr, tg, tb );
+		gHUD.DrawHudNumber( x + CrossWidth * 10 + HealthWidth * 4, y, DHN_DRAWZERO, iOnes, tr, tg, tb );
 
 		x = gHUD.DrawHudNumber(x, y, DHN_3DIGITS | DHN_DRAWZERO, m_iHealth, r, g, b);
 
@@ -472,4 +502,15 @@ void CHudHealth::UpdateTiles(float flTime, long bitsDamage)
 
 	// damage bits are only turned on here;  they are turned off when the draw time has expired (in DrawDamage())
 	m_bitsDamage |= bitsDamage;
+}
+
+// sic: a stand-in, name and body ours (see health.h).  Nothing calls it; LINK drops it.
+int b20_unknown( int a, float b )
+{
+	int n = (int)( b * a );
+
+	if ( n > a )
+		n = a;
+
+	return n + READ_BYTE();
 }

@@ -1,6 +1,6 @@
 /***
 *
-*	Counter-Strike Beta 1.1, hostage.cpp: the hostage (hostage_entity), the
+*	Counter-Strike Beta 2.0, hostage.cpp: the hostage (hostage_entity), the
 *	map's spawn entity.
 *
 *	A scientist model that stands where the map put it until a player uses
@@ -9,7 +9,10 @@
 *	comes closer than 200 units. Shot, it flinches by hit group; killed, it
 *	costs its killer 850 dollars and its body is thrown away from him, then
 *	hidden three seconds later. ClientCommand's "hostage" rescues it,
-*	RestartRound puts it back. File, class and method names are Beta 3.1's
+*	RestartRound puts it back. Beta 2.0: it keeps 82 units from its leader
+*	(36 when backing away), is pushed down while it runs, and a hostage whose
+*	leader is out of reach is in a third state (m_fStopped 2); the money goes
+*	through AddAccount. File, class and method names are Beta 3.1's
 *	(Linux symbols); member names are ours (hostage.h).
 *
 ****/
@@ -132,7 +135,10 @@ void CHostage::IdleThink( void )
 			pev->angles.z = 0;
 
 			if ( vecDir.Length() > m_flFollowDistance )
+			{
 				pev->velocity = vecDir / vecDir.Length() * 265;
+				pev->velocity.z -= 50;
+			}
 
 			// blocked at the feet but free higher up: jump
 			UTIL_MakeVectors( pev->angles );
@@ -157,7 +163,11 @@ void CHostage::IdleThink( void )
 			pev->angles.x = 0;
 			pev->angles.z = 0;
 
-			pev->velocity = vecDir / vecDir.Length() * 145;
+			if ( vecDir.Length() > m_flFollowDistance )
+			{
+				pev->velocity = vecDir / vecDir.Length() * 145;
+				pev->velocity.z -= 50;
+			}
 
 			UTIL_MakeVectors( pev->angles );
 			UTIL_TraceLine( pev->origin + gpGlobals->v_up * 2 - gpGlobals->v_forward * 32, pev->origin + gpGlobals->v_forward * 100 + gpGlobals->v_up * 2, ignore_monsters, ENT( pev ), &tr );
@@ -171,6 +181,8 @@ void CHostage::IdleThink( void )
 				}
 			}
 		}
+		else
+			m_fStopped = 2;	// no leader near: neither following nor told to stay
 
 		if ( gpGlobals->time >= m_flFlinchTime )
 		{
@@ -307,9 +319,7 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 		{
 			CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pevAttacker );
 
-			pPlayer->m_iAccount -= 850;
-			if ( pPlayer->m_iAccount < 0 )
-				pPlayer->m_iAccount = 0;
+			pPlayer->AddAccount( -850 );
 		}
 
 		// the body flies away from the killer
@@ -339,8 +349,8 @@ void CHostage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 	if ( pev->takedamage == DAMAGE_NO )
 		return;
 
-	// a third state is treated as TRUE; retail's code keeps the test against
-	// TRUE without a jump, the two branches being the same
+	// the third state (2, IdleThink: no leader near) is treated as TRUE; retail's
+	// code keeps the test against TRUE without a jump, the two branches being the same
 	if ( m_fStopped == FALSE )
 	{
 		m_flNextUse = gpGlobals->time + 1;
@@ -388,13 +398,19 @@ void CHostage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 			{
 				m_fTouched = TRUE;
 				((CHalfLifeMultiplay *)g_pGameRules)->m_iAccountCT += 150;
-				((CBasePlayer *)pActivator)->m_iAccount += 150;
+				((CBasePlayer *)pActivator)->AddAccount( 150 );
 			}
 		}
 	}
 
 	if ( m_fStopped == TRUE )
+	{
+		m_flFollowDistance = 36;
 		m_flFollowRange = 300;
+	}
 	else if ( m_fStopped == FALSE )
+	{
+		m_flFollowDistance = 82;
 		m_flFollowRange = 1024;
+	}
 }

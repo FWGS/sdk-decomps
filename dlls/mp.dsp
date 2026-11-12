@@ -163,6 +163,10 @@ SOURCE=.\airtank.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\ak47.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\ammo.cpp
 # End Source File
 # Begin Source File
@@ -204,6 +208,10 @@ SOURCE=.\crossbow.cpp
 # Begin Source File
 
 SOURCE=.\crowbar.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\deagle.cpp
 # End Source File
 # Begin Source File
 
@@ -372,6 +380,10 @@ SOURCE=.\rpg.cpp
 # Begin Source File
 
 SOURCE=.\satchel.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\sg552.cpp
 # End Source File
 # Begin Source File
 

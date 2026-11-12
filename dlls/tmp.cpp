@@ -1,6 +1,6 @@
 /***
 *
-*	Counter-Strike Beta 1.0, tmp.cpp: the TMP submachine gun (weapon_tmp).
+*	Counter-Strike Beta 2.0, tmp.cpp: the TMP submachine gun (weapon_tmp).
 *
 *	The MP5 Navy's shape, silenced: no muzzle flash, no gun flash, the shot
 *	at volume 0.6. File, class and method names are Beta 3.1's (Linux
@@ -98,18 +98,23 @@ void CTMP::SecondaryAttack( void )
 
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.06;
-		TMPFire( flSpread, 0.08, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.05;
+		TMPFire( flSpread, 0.075, FALSE );
+	}
+	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+	{
+		flSpread = m_pPlayer->m_flAccuracy * 0.12;
+		TMPFire( flSpread, 0.075, FALSE );
 	}
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.035;
-		TMPFire( flSpread, 0.08, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.03;
+		TMPFire( flSpread, 0.075, FALSE );
 	}
 	else
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.045;
-		TMPFire( flSpread, 0.08, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.035;
+		TMPFire( flSpread, 0.075, FALSE );
 	}
 }
 
@@ -119,18 +124,23 @@ void CTMP::PrimaryAttack( void )
 
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.06;
-		TMPFire( flSpread, 0.08, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.05;
+		TMPFire( flSpread, 0.075, FALSE );
+	}
+	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+	{
+		flSpread = m_pPlayer->m_flAccuracy * 0.12;
+		TMPFire( flSpread, 0.075, FALSE );
 	}
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.035;
-		TMPFire( flSpread, 0.08, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.03;
+		TMPFire( flSpread, 0.075, FALSE );
 	}
 	else
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.045;
-		TMPFire( flSpread, 0.08, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.035;
+		TMPFire( flSpread, 0.075, FALSE );
 	}
 }
 
@@ -138,7 +148,7 @@ void CTMP::TMPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 {
 	// the spread grows with the cube of the shots fired
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.65;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.55;
 
 	if (m_pPlayer->m_flAccuracy > 2)
 		m_pPlayer->m_flAccuracy = 2;
@@ -202,7 +212,7 @@ void CTMP::TMPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		vecAiming = gpGlobals->v_forward;
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 16, 0.85 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 20, 0.85 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)

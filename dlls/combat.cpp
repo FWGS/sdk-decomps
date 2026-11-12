@@ -882,11 +882,7 @@ int CBaseMonster :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker,
 
 		pev->dmg_take += flTake;
 
-		// check for godmode or invincibility
-		if ( pev->flags & FL_GODMODE )
-		{
-			return 0;
-		}
+		// Counter-Strike Beta 2.0: no godmode check
 	}
 
 	// Counter-Strike: damage does not push
@@ -1041,7 +1037,7 @@ void RadiusFlash( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker
 	TraceResult	tr;
 	float		flAdjustedDamage, falloff;
 	Vector		vecSpot;
-	float		flRadius = 750;
+	float		flRadius = 1000;
 
 	if ( flRadius )
 		falloff = flDamage / flRadius;
@@ -1096,11 +1092,11 @@ void RadiusFlash( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker
 
 				if ( DotProduct( vecLOS, gpGlobals->v_forward ) >= 0.0 )
 				{
-					UTIL_ScreenFade( pEntity, Vector( 255, 255, 255 ), flAdjustedDamage * 3, flAdjustedDamage / 3, 255, 0 );
+					UTIL_ScreenFade( pEntity, Vector( 255, 255, 255 ), flAdjustedDamage * 3, flAdjustedDamage / 1.5, 255, 0 );
 				}
 				else
 				{
-					UTIL_ScreenFade( pEntity, Vector( 255, 255, 255 ), flAdjustedDamage, flAdjustedDamage / 9, 200, 0 );
+					UTIL_ScreenFade( pEntity, Vector( 255, 255, 255 ), flAdjustedDamage, flAdjustedDamage / 6, 200, 0 );
 				}
 			}
 		}
@@ -1567,7 +1563,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 
 			case BULLET_PLAYER_BUCKSHOT:	
 				 // make distance based!
-				pEntity->TraceAttack(pevAttacker, 15, vecDir, &tr, DMG_BULLET);
+				pEntity->TraceAttack(pevAttacker, 13, vecDir, &tr, DMG_BULLET);	// Counter-Strike: 13 a pellet (Beta 1.0: 15)
 				if ( !tracer )
 				{
 					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
@@ -1634,7 +1630,7 @@ FireBullets3
 One bullet that loses damage with distance and goes on through what it hits.
 ================
 */
-void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iPenetration, int iBulletType, int iDamage, float flRangeModifier, entvars_t *pevAttacker )
+void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iPenetration, int iBulletType, int iDamage, float flRangeModifier, entvars_t *pevAttacker, bool bPistol )
 {
 	int iCurrentDamage = iDamage;
 	float flCurrentDistance;
@@ -1660,7 +1656,10 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 		iPenetrationPower = 32;
 		flPenetrationDistance = 8000;
 	case BULLET_PLAYER_556MM:
-		iPenetrationPower = 16;	// Beta 1.1 (only this last case's values reach the code)
+		iPenetrationPower = 16;	// Beta 1.1
+		flPenetrationDistance = 8000;
+	case BULLET_PLAYER_50AE:	// Beta 2.0; its values here are a guess: only the last case's reach the code
+		iPenetrationPower = 16;
 		flPenetrationDistance = 8000;
 	}
 
@@ -1703,7 +1702,18 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 
 			if ( VARS(tr.pHit)->solid == SOLID_BSP && iPenetration != 0 )
 			{
-				DecalGunshot( &tr, iBulletType );
+				// Counter-Strike Beta 2.0: with bPistol (name ours: the pistols, but also the
+				// AWP and the G3/SG-1 pass it) every bullet marks the wall; the other guns'
+				// bullets do so every time with mp_lowlag 0, one in four with mp_lowlag 1
+				if ( !bPistol )
+				{
+					if ( RANDOM_LONG( 0, 3 ) == 0 && CVAR_GET_FLOAT( "mp_lowlag" ) == 1 )
+						DecalGunshot( &tr, iBulletType );
+					else if ( CVAR_GET_FLOAT( "mp_lowlag" ) == 0 )
+						DecalGunshot( &tr, iBulletType );
+				}
+				else
+					DecalGunshot( &tr, iBulletType );
 
 				vecSrc = tr.vecEndPos + vecDir * iPenetrationPower;
 				flDistance *= 0.5;
@@ -1714,7 +1724,15 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 			}
 			else
 			{
-				DecalGunshot( &tr, iBulletType );
+				if ( !bPistol )
+				{
+					if ( RANDOM_LONG( 0, 3 ) == 0 && CVAR_GET_FLOAT( "mp_lowlag" ) == 1 )
+						DecalGunshot( &tr, iBulletType );
+					else if ( CVAR_GET_FLOAT( "mp_lowlag" ) == 0 )
+						DecalGunshot( &tr, iBulletType );
+				}
+				else
+					DecalGunshot( &tr, iBulletType );
 
 				vecSrc = tr.vecEndPos + vecDir * 32;
 				flDistance *= 0.7;
@@ -1974,7 +1992,8 @@ void CBaseEntity :: TraceBleed( float flDamage, Vector vecDir, TraceResult *ptr,
 
 		UTIL_TraceLine( ptr->vecEndPos, ptr->vecEndPos + vecTraceDir * -172, ignore_monsters, ENT(pev), &Bloodtr);
 
-		if ( Bloodtr.flFraction != 1.0 )
+		// Counter-Strike Beta 2.0: one blood decal in three
+		if ( Bloodtr.flFraction != 1.0 && RANDOM_LONG( 0, 2 ) == 0 )
 		{
 			UTIL_BloodDecalTrace( &Bloodtr, BloodColor() );
 		}

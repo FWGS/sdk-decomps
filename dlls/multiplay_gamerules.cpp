@@ -32,13 +32,17 @@ extern void respawn( entvars_t* pev, BOOL fCopyCorpse );
 extern int gmsgDeathMsg;	// client dll messages
 extern int gmsgScoreInfo;
 extern int gmsgMOTD;
+extern int gmsgTeamScore;
 
-// sic: a stand-in for at least one declaration retail had between the headers and
-// GetNextBestWeapon (a local, an extern, a prototype: the image cannot say which).
+// sic: a stand-in for declarations retail had between the headers and
+// GetNextBestWeapon (locals, externs, prototypes: the image cannot say which).
 // VC5 orders the two iWeight() calls there by the number of declarations
-// seen; 1 to 13 more give
-// retail's order.
-typedef int sic_declcount_multiplay;
+// seen. Beta 1.0 and 1.1:
+// a typedef (1 to 13 more give retail's order). Beta 2.0, with its known text
+// (extern gmsgTeamScore, RestartRound's loop counter) and the 6 numbers of
+// cbase.h's sic_declcount_b20: 2 to 4 (or 6 to 8, 10 to 12, ...) more than
+// the typedef here give retail's order; this enum is 3 (tag, two enumerators).
+enum sic_declcount_multiplay { SIC_DECLCOUNT_MULTIPLAY_0, SIC_DECLCOUNT_MULTIPLAY_1 };
 
 #define ITEM_RESPAWN_TIME	30
 #define WEAPON_RESPAWN_TIME	20
@@ -53,10 +57,15 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 	RefreshSkillData();
 	m_flIntermissionEndTime = 0;
 	m_flRestartRoundTime = 0;
+	m_flRoundEndTime = 0;
+	m_flRoundStartTime = gpGlobals->time;
+	m_flRoundStartTime2 = gpGlobals->time;
 	m_iAccountCT = 0;
 	m_iAccountTerrorist = 0;
 	m_iHostagesRescued = 0;
 	m_iRoundWinStatus = 0;
+	m_iNumCTWins = 0;
+	m_iNumTerroristWins = 0;
 	
 	// 11/8/98
 	// Modified by YWB:  Server .cfg file is now a cvar, so that 
@@ -222,14 +231,26 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 	if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && m_iNumCT > 0 )
 	{
 		m_iRoundWinStatus = 1;
-		m_iAccountCT = 250;
+		m_iAccountCT = 500;
 		UTIL_ClientPrintAll( HUD_PRINTCENTER, "Counter-Terrorists Won!\n" );
+
+		m_iNumCTWins++;
+		MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
+			WRITE_SHORT( 0 );	// the client's team 0: the counter-terrorists
+			WRITE_SHORT( m_iNumCTWins );
+		MESSAGE_END();
 	}
 	else if ( NumAliveCT == 0 && NumDeadCT != 0 && m_iNumTerrorist > 0 )
 	{
 		m_iRoundWinStatus = 2;
-		m_iAccountTerrorist = 300;
+		m_iAccountTerrorist = 500;
 		UTIL_ClientPrintAll( HUD_PRINTCENTER, "Terrorists Won!\n" );
+
+		m_iNumTerroristWins++;
+		MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
+			WRITE_SHORT( 1 );
+			WRITE_SHORT( m_iNumTerroristWins );
+		MESSAGE_END();
 	}
 	else if ( NumAliveCT == 0 && NumAliveTerrorist == 0 )
 	{
@@ -248,6 +269,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 			ALERT( at_console, "Number of Terrorists = %i\n", m_iNumTerrorist );
 			ALERT( at_console, "Number of CT = %i\n", m_iNumCT );
 			m_flRestartRoundTime = gpGlobals->time + 5.0;
+			m_flRoundEndTime = gpGlobals->time + 5.0;
 		}
 	}
 }
@@ -260,6 +282,10 @@ void CHalfLifeMultiplay::RestartRound( void )
 {
 	CBaseEntity *pHostage = NULL;
 
+	// the kick votes start afresh
+	for ( int i = 0; i < 20; i++ )
+		m_iKickVotes[i] = 0;
+
 	pHostage = UTIL_FindEntityByClassname( pHostage, "hostage_entity" );
 	while ( pHostage != NULL )
 	{
@@ -267,9 +293,9 @@ void CHalfLifeMultiplay::RestartRound( void )
 		{
 			// a hostage still standing in the map
 			if ( m_iRoundWinStatus == 2 )
-				m_iAccountTerrorist += 300;
+				m_iAccountTerrorist += 400;
 			else if ( m_iRoundWinStatus == 1 )
-				m_iAccountCT += 200;
+				m_iAccountCT += 400;
 
 			if ( pHostage->pev->deadflag == DEAD_DEAD )
 				pHostage->pev->deadflag = DEAD_RESPAWNABLE;
@@ -280,11 +306,11 @@ void CHalfLifeMultiplay::RestartRound( void )
 
 	// the losing team gets something too
 	if ( m_iRoundWinStatus == 2 )
-		m_iAccountCT += 350;
+		m_iAccountCT += 800;
 	else if ( m_iRoundWinStatus == 1 )
-		m_iAccountTerrorist += 350;
+		m_iAccountTerrorist += 800;
 
-	m_iAccountCT += m_iHostagesRescued * 200;
+	m_iAccountCT += m_iHostagesRescued * 350;
 
 	CBaseEntity *pPlayer = NULL;
 
@@ -299,9 +325,9 @@ void CHalfLifeMultiplay::RestartRound( void )
 			if ( m_iNumCT != 0 && m_iNumTerrorist != 0 )
 			{
 				if ( player->m_iTeam == TEAM_CT )
-					player->m_iAccount += m_iAccountCT;
+					player->AddAccount( m_iAccountCT );
 				else if ( player->m_iTeam == TEAM_TERRORIST )
-					player->m_iAccount += m_iAccountTerrorist;
+					player->AddAccount( m_iAccountTerrorist );
 			}
 
 			if ( player->pev->deadflag == DEAD_DYING )
@@ -324,12 +350,14 @@ void CHalfLifeMultiplay::RestartRound( void )
 
 	m_flIntermissionEndTime = 0;
 	m_flRestartRoundTime = 0;
+	m_flRoundEndTime = 0;
 	m_iAccountCT = 0;
 	m_iAccountTerrorist = 0;
 	m_iHostagesRescued = 0;
-	m_iUnused24 = 0;
+	m_iUnused2C = 0;
 	m_iRoundWinStatus = 0;
 	m_flRoundStartTime = gpGlobals->time;
+	m_flRoundStartTime2 = gpGlobals->time;
 }
 
 // longest the intermission can last, in seconds
@@ -360,11 +388,12 @@ void CHalfLifeMultiplay :: Think ( void )
 		return;
 	}
 
-	// a round lasts eight minutes at most
-	if ( gpGlobals->time > m_flRoundStartTime + 480.0 )
+	// a round lasts 385 seconds at most (the client's timer counts down 390)
+	if ( gpGlobals->time > m_flRoundStartTime + 385.0 )
 	{
 		m_iRoundWinStatus = 3;
 		m_flRestartRoundTime = gpGlobals->time + 5.0;
+		m_flRoundEndTime = gpGlobals->time + 5.0;
 		m_flRoundStartTime = gpGlobals->time + 60;
 	}
 
@@ -561,6 +590,14 @@ void CHalfLifeMultiplay :: ClientDisconnected( edict_t *pClient )
 
 		if ( pPlayer )
 		{
+			// his kick vote no longer counts
+			if ( pPlayer->m_iKickVote )
+			{
+				m_iKickVotes[ pPlayer->m_iKickVote - 1 ]--;
+				if ( m_iKickVotes[ pPlayer->m_iKickVote - 1 ] < 0 )
+					m_iKickVotes[ pPlayer->m_iKickVote - 1 ] = 0;
+			}
+
 			FireTargets( "game_playerleave", pPlayer, pPlayer, USE_TOGGLE, 0 );
 			UTIL_LogPrintf( "\"%s<%i>\" disconnected\n",  STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ) );
 
@@ -641,22 +678,30 @@ void CHalfLifeMultiplay :: PlayerSpawn( CBasePlayer *pPlayer )
 	else if ( pPlayer->m_iTeam == TEAM_TERRORIST && addDefault )
 	{
 		pPlayer->GiveNamedItem( "weapon_glock18" );
-		pPlayer->GiveAmmo( 20, "9mm", _9MM_MAX_CARRY );
+		pPlayer->GiveAmmo( 20, "9mm", GLOCK18_MAX_CARRY );
 	}
 
 	int clientIndex = pPlayer->entindex();
 
-	if ( pPlayer->m_iTeam == TEAM_CT )
+	// the model the player chose (ChooseCT, ChooseTerrorist)
+	switch ( pPlayer->m_iAppearance )
 	{
-		ALERT( at_console, "New Counter-Terrorist\n" );
-		CLIENT_COMMAND( ENT(pPlayer->pev), "model urban\n" );
+	case 0:
+		CLIENT_COMMAND( pPlayer->edict(), "model urban\n" );
 		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "model", "urban" );
-	}
-	else if ( pPlayer->m_iTeam == TEAM_TERRORIST )
-	{
-		ALERT( at_console, "New TERRORIST\n" );
-		CLIENT_COMMAND( ENT(pPlayer->pev), "model terror\n" );
+		break;
+	case 1:
+		CLIENT_COMMAND( pPlayer->edict(), "model terror\n" );
 		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "model", "terror" );
+		break;
+	case 2:
+		CLIENT_COMMAND( pPlayer->edict(), "model arab\n" );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "model", "arab" );
+		break;
+	default:
+		CLIENT_COMMAND( pPlayer->edict(), "model urban\n" );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "model", "urban" );
+		break;
 	}
 }
 
@@ -697,7 +742,7 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 	DeathNotice( pVictim, pKiller, pInflictor );
 
 	pVictim->m_iDeaths += 1;
-
+	pVictim->m_fNotKilled = false;
 
 	FireTargets( "game_playerdie", pVictim, pVictim, USE_TOGGLE, 0 );
 	CBasePlayer *peKiller = NULL;
@@ -711,16 +756,23 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 	}
 	else if ( ktmp && ktmp->IsPlayer() )
 	{
+		CBasePlayer *pKillerPlayer = GetClassPtr( (CBasePlayer *)pKiller );	// name ours
+
 		// if a player dies in a deathmatch game and the killer is a client, award the killer some points
 		pKiller->frags += IPointsForKill( peKiller, pVictim );
 
-		// 200 for the kill; a team kill costs 500
-		GetClassPtr( (CBasePlayer *)pKiller )->m_iAccount += 200;
-		if ( GetClassPtr( (CBasePlayer *)pKiller )->m_iTeam == pVictim->m_iTeam )
+		// 300 for the kill; a team kill costs 1800, and the third one sends the killer away
+		pKillerPlayer->AddAccount( 300 );
+		if ( pKillerPlayer->m_iTeam == pVictim->m_iTeam )
 		{
-			GetClassPtr( (CBasePlayer *)pKiller )->m_iAccount -= 500;
-			if ( GetClassPtr( (CBasePlayer *)pKiller )->m_iAccount < 0 )
-				GetClassPtr( (CBasePlayer *)pKiller )->m_iAccount = 0;
+			pKillerPlayer->AddAccount( -1800 );
+			pKillerPlayer->m_iTeamKills++;
+
+			if ( pKillerPlayer->m_iTeamKills >= 3 )
+			{
+				pKillerPlayer->m_fKicked = true;
+				CLIENT_COMMAND( pKillerPlayer->edict(), "disconnect\n" );
+			}
 		}
 		
 		FireTargets( "game_playerkill", ktmp, ktmp, USE_TOGGLE, 0 );

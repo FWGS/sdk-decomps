@@ -349,13 +349,9 @@ class CItemKevlar : public CItem
 	}
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{
-		if ( pPlayer->m_fHasKevlar )
-		{
-			return FALSE;
-		}
-
 		pPlayer->m_fHasKevlar = TRUE;
 		pPlayer->pev->armorvalue = 100;
+		EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/kevlar.wav", 1, ATTN_NORM );
 
 		MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
 			WRITE_STRING( STRING(pev->classname) );

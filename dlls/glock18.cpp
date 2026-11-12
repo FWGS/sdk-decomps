@@ -1,13 +1,14 @@
 /***
 *
-*	Counter-Strike Beta 1.1, glock18.cpp: the Glock 18 Select Fire
+*	Counter-Strike Beta 2.0, glock18.cpp: the Glock 18 Select Fire
 *	(weapon_glock18), the terrorists' pistol.
 *
 *	SDK 1.0's glock.cpp as the Counter-Strike team changed it: the same
 *	class shape and WeaponIdle, the bullets fired with FireBullets3. Beta
-*	1.1: the primary attack fires single shots, the secondary a three-round
-*	burst (GLOCK18Fire fires the first round and FireRemaining, weapons.cpp,
-*	the other two). File, class and method names are Beta 3.1's (Linux
+*	2.0: the secondary attack switches the primary between single shots and
+*	a three-round burst (Beta 1.1 fired the burst from the secondary attack;
+*	GLOCK18Fire fires the first round and FireRemaining, weapons.cpp, the
+*	other two). File, class and method names are Beta 3.1's (Linux
 *	symbols); the animation names are the sequence labels of Beta 1.0's
 *	models/v_glock18.mdl (Beta 1.1's model adds one, GLOCK18_SHOOT3).
 *
@@ -52,6 +53,7 @@ public:
 	void Reload( void );
 	void WeaponIdle( void );
 	int m_iShell;
+	bool m_fBurstMode;		// the secondary attack switches the primary between single shots and three-round bursts (name ours)
 };
 LINK_ENTITY_TO_CLASS( weapon_glock18, CGLOCK18 );
 
@@ -83,6 +85,8 @@ void CGLOCK18::Precache( void )
 	PRECACHE_SOUND ("weapons/sliderelease1.wav");
 	PRECACHE_SOUND ("weapons/slideback1.wav");
 	PRECACHE_SOUND ("weapons/357_cock1.wav");
+	PRECACHE_SOUND ("weapons/de_clipin.wav");
+	PRECACHE_SOUND ("weapons/de_clipout.wav");
 
 	m_iShellLate = m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shell
 }
@@ -106,6 +110,8 @@ int CGLOCK18::GetItemInfo(ItemInfo *p)
 
 BOOL CGLOCK18::Deploy( )
 {
+	m_fBurstMode = false;
+
 	if (RANDOM_LONG(0,1))
 		return DefaultDeploy( "models/v_glock18.mdl", "models/p_glock18.mdl", GLOCK18_DRAW, "onehanded" );
 	else
@@ -114,19 +120,36 @@ BOOL CGLOCK18::Deploy( )
 
 void CGLOCK18::SecondaryAttack( void )
 {
-	// the three-round burst
-	GLOCK18Fire( 0.015, 0.65, TRUE );
+	// switch the primary attack between the single shot and the burst
+	if (!m_fBurstMode)
+	{
+		ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Switched to burst-fire" );
+		m_fBurstMode = true;
+	}
+	else
+	{
+		ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Switched to semi-automatic" );
+		m_fBurstMode = false;
+	}
+
+	m_flNextSecondaryAttack = gpGlobals->time + 0.3;
 }
 
 void CGLOCK18::PrimaryAttack( void )
 {
-	// semi-automatic
-	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.3, 0.22, FALSE );
+	if (m_fBurstMode == TRUE)
+	{
+		// the three-round burst
+		GLOCK18Fire( 0.015, 0.5, TRUE );
+	}
+	else if (m_pPlayer->pev->velocity.Length2D() > 0)
+		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.165, 0.27, FALSE );
+	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.2, 0.27, FALSE );
 	else if (FBitSet(m_pPlayer->pev->flags, FL_DUCKING))
-		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.15, 0.22, FALSE );
+		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.075, 0.27, FALSE );
 	else
-		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.175, 0.22, FALSE );
+		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.1, 0.27, FALSE );
 }
 
 void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseBurstMode )
@@ -139,7 +162,7 @@ void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseBurstMo
 	else
 	{
 		// accuracy grows with the time since the last shot
-		m_pPlayer->m_flAccuracy = (gpGlobals->time - m_pPlayer->m_flLastFired) * 0.25 + 0.65;
+		m_pPlayer->m_flAccuracy = (gpGlobals->time - m_pPlayer->m_flLastFired) * 0.2 + 0.6;
 		if (m_pPlayer->m_flAccuracy > 0.98)
 			m_pPlayer->m_flAccuracy = 0.98;
 		m_pPlayer->m_flLastFired = gpGlobals->time;
@@ -200,7 +223,7 @@ void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseBurstMo
 
 	vecAiming = gpGlobals->v_forward;
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 18, 0.9 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 23, 0.9, NULL, true );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)

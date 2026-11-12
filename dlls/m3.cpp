@@ -1,6 +1,6 @@
 /***
 *
-*	Counter-Strike Beta 1.1, m3.cpp: the Benelli M3 Super 90 shotgun
+*	Counter-Strike Beta 2.0, m3.cpp: the Benelli M3 Super 90 shotgun
 *	(weapon_m3).
 *
 *	SDK 1.0's shotgun.cpp as the Counter-Strike team changed it: CShotgun
@@ -23,7 +23,7 @@
 #include "gamerules.h"
 
 // special deathmatch shotgun spreads
-#define VECTOR_CONE_DM_SHOTGUN	Vector( 0.075, 0.075, 0.00  )
+#define VECTOR_CONE_DM_SHOTGUN	Vector( 0.0775, 0.0775, 0.00  )
 
 enum m3_e {
 	M3_IDLE = 0,
@@ -204,15 +204,15 @@ void CM3::PrimaryAttack()
 	if (m_iClip != 0)
 		m_flPumpTime = gpGlobals->time + 0.5;
 
-	m_flNextPrimaryAttack = gpGlobals->time + 0.85;
-	m_flNextSecondaryAttack = gpGlobals->time + 0.85;
+	m_flNextPrimaryAttack = gpGlobals->time + 0.75;
+	m_flNextSecondaryAttack = gpGlobals->time + 0.75;
 	if (m_iClip != 0)
 		m_flTimeWeaponIdle = gpGlobals->time + 5.0;
 	else
 		m_flTimeWeaponIdle = 0.75;	// sic: an absolute time, as in CShotgun's
 	m_fInReload = 0;
 
-	m_pPlayer->pev->punchangle.x -= 6;
+	m_pPlayer->pev->punchangle.x -= RANDOM_LONG( 4, 6 );
 }
 
 

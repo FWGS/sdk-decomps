@@ -1,6 +1,6 @@
 /***
 *
-*	Counter-Strike Beta 1.0, m249.cpp: the M249 machine gun (weapon_m249).
+*	Counter-Strike Beta 2.0, m249.cpp: the M249 machine gun (weapon_m249).
 *
 *	SDK 1.0's glock.cpp edited (the fire function is GlockFire's) with the
 *	mp5.cpp's automatic fire: the spread grows with the shots fired since
@@ -104,6 +104,11 @@ void CM249::SecondaryAttack( void )
 
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
 	{
+		flSpread = m_pPlayer->m_flAccuracy * 0.085;
+		M249Fire( flSpread, 0.1, FALSE );
+	}
+	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+	{
 		flSpread = m_pPlayer->m_flAccuracy * 0.1;
 		M249Fire( flSpread, 0.1, FALSE );
 	}
@@ -114,7 +119,7 @@ void CM249::SecondaryAttack( void )
 	}
 	else
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.055;
+		flSpread = m_pPlayer->m_flAccuracy * 0.05;
 		M249Fire( flSpread, 0.1, FALSE );
 	}
 }
@@ -123,7 +128,12 @@ void CM249::PrimaryAttack( void )
 {
 	float flSpread;
 
-	if (m_pPlayer->pev->velocity.Length2D() > 0)
+	if (m_pPlayer->pev->velocity.Length2D() > 170)
+	{
+		flSpread = m_pPlayer->m_flAccuracy * 0.085;
+		M249Fire( flSpread, 0.1, FALSE );
+	}
+	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
 	{
 		flSpread = m_pPlayer->m_flAccuracy * 0.1;
 		M249Fire( flSpread, 0.1, FALSE );
@@ -135,7 +145,7 @@ void CM249::PrimaryAttack( void )
 	}
 	else
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.055;
+		flSpread = m_pPlayer->m_flAccuracy * 0.05;
 		M249Fire( flSpread, 0.1, FALSE );
 	}
 }
@@ -144,10 +154,10 @@ void CM249::M249Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 {
 	// the spread grows with the cube of the shots fired
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.8;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.65;
 
-	if (m_pPlayer->m_flAccuracy > 3.0)
-		m_pPlayer->m_flAccuracy = 3.0;
+	if (m_pPlayer->m_flAccuracy > 2.25)
+		m_pPlayer->m_flAccuracy = 2.25;
 
 	if (m_iClip <= 0)
 	{
@@ -209,7 +219,7 @@ void CM249::M249Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		vecAiming = gpGlobals->v_forward;
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 31, 0.95 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 35, 0.95 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)

@@ -97,7 +97,7 @@ We have a minimum width of 1-320 - we could have the field widths scale with it?
 
 int CHudScoreboard :: Draw( float fTime )
 {
-	if ( !m_iShowscoresHeld && gHUD.m_Health.m_iHealth > 0 && !gHUD.m_iIntermission )
+	if ( !m_iShowscoresHeld && !gHUD.m_iIntermission )
 		return 1;
 
 	GetAllPlayersInfo();
@@ -333,9 +333,9 @@ int CHudScoreboard :: DrawPlayers( int xpos_rel, float list_slot, int nameoffset
 		}
 
 		// draw their name (left to right)
-		if ( !strcmp( pl_info->model, "terror" ) )
+		if ( !strcmp( pl_info->model, "terror" ) || !strcmp( pl_info->model, "arab" ) )
 			gHUD.DrawHudString( xpos + nameoffset, ypos, NAME_RANGE_MAX + xpos_rel, pl_info->name, 255, 25, 25 );
-		else
+		else if ( !strcmp( pl_info->model, "urban" ) )
 			gHUD.DrawHudString( xpos + nameoffset, ypos, NAME_RANGE_MAX + xpos_rel, pl_info->name, r, g, b );
 
 		// draw kills (right to left)
@@ -373,6 +373,18 @@ int CHudScoreboard :: DrawPlayers( int xpos_rel, float list_slot, int nameoffset
 		pl_info->name = NULL;  // set the name to be NULL, so this client won't get drawn again
 		list_slot++;
 	}
+
+	// rounds won by each side
+	char sz[128];
+	int xpos = NAME_RANGE_MIN + xpos_rel;
+
+	list_slot++;
+	sprintf( sz, "CT wins : %i", m_TeamInfo[0].frags );
+	gHUD.DrawHudString( xpos, ROW_RANGE_MIN + (list_slot * ROW_GAP), xpos + xpos_rel, sz, 55, 55, 225 );
+
+	list_slot++;
+	sprintf( sz, "Terrorist wins : %i", m_TeamInfo[1].frags );
+	gHUD.DrawHudString( xpos, ROW_RANGE_MIN + (list_slot * ROW_GAP), xpos + xpos_rel, sz, 225, 225, 55 );
 
 	return list_slot;
 }
@@ -486,21 +498,11 @@ int CHudScoreboard :: MsgFunc_TeamInfo( const char *pszName, int iSize, void *pb
 int CHudScoreboard :: MsgFunc_TeamScore( const char *pszName, int iSize, void *pbuf )
 {
 	BEGIN_READ( pbuf, iSize );
-	char *TeamName = READ_STRING();
-
-	// find the team matching the name
-	for ( int i = 1; i <= m_iNumTeams; i++ )
-	{
-		if ( !stricmp( TeamName, m_TeamInfo[i].name ) )
-			break;
-	}
-	if ( i > m_iNumTeams )
-		return 1;
+	short i = READ_SHORT();
 
 	// use this new score data instead of combined player scores
 	m_TeamInfo[i].scores_overriden = TRUE;
 	m_TeamInfo[i].frags = READ_SHORT();
-	m_TeamInfo[i].deaths = READ_SHORT();
 	
 	return 1;
 }

@@ -379,25 +379,35 @@ void W_Precache(void)
 	UTIL_PrecacheOther( "item_security" );
 	UTIL_PrecacheOther( "item_longjump" );
 
-	// Counter-Strike
-	UTIL_PrecacheOtherWeapon2( "weapon_awp" );
-	UTIL_PrecacheOtherWeapon2( "weapon_g3sg1" );
-	UTIL_PrecacheOtherWeapon2( "weapon_glock18" );
-	UTIL_PrecacheOtherWeapon2( "weapon_m249" );
-	UTIL_PrecacheOtherWeapon2( "weapon_m3" );
-	UTIL_PrecacheOtherWeapon2( "weapon_m4a1" );
-	UTIL_PrecacheOtherWeapon2( "weapon_mp5navy" );
-	UTIL_PrecacheOtherWeapon2( "weapon_tmp" );
-	UTIL_PrecacheOtherWeapon2( "weapon_usp" );
-	UTIL_PrecacheOtherWeapon2( "weapon_flashbang" );
+	// Counter-Strike: each gun with its ammunition, the Half-Life guns
+	// that share it among them
+	// .338
+	UTIL_PrecacheOtherWeapon( "weapon_awp" );
 	UTIL_PrecacheOther( "ammo_338magnum" );
-	UTIL_PrecacheOther( "ammo_45acp" );
-	UTIL_PrecacheOther( "ammo_556nato" );
+
+	// 7.62
+	UTIL_PrecacheOtherWeapon( "weapon_g3sg1" );
+	UTIL_PrecacheOtherWeapon( "weapon_ak47" );
 	UTIL_PrecacheOther( "ammo_762nato" );
 
+	// 5.56
+	UTIL_PrecacheOtherWeapon( "weapon_m249" );
+	UTIL_PrecacheOtherWeapon( "weapon_m4a1" );
+	UTIL_PrecacheOtherWeapon( "weapon_sg552" );
+	UTIL_PrecacheOther( "ammo_556nato" );
+
 	// shotgun
+	UTIL_PrecacheOtherWeapon( "weapon_m3" );
 	UTIL_PrecacheOtherWeapon( "weapon_shotgun" );
 	UTIL_PrecacheOther( "ammo_buckshot" );
+
+	// .45
+	UTIL_PrecacheOtherWeapon( "weapon_usp" );
+	UTIL_PrecacheOther( "ammo_45acp" );
+
+	// .50
+	UTIL_PrecacheOtherWeapon( "weapon_deagle" );
+	UTIL_PrecacheOther( "ammo_50ae" );
 
 	// crowbar
 	UTIL_PrecacheOtherWeapon( "weapon_crowbar" );
@@ -408,8 +418,15 @@ void W_Precache(void)
 
 	// mp5
 	UTIL_PrecacheOtherWeapon( "weapon_9mmAR" );
+	UTIL_PrecacheOtherWeapon( "weapon_glock18" );
+	UTIL_PrecacheOtherWeapon( "weapon_mp5navy" );
+	UTIL_PrecacheOtherWeapon( "weapon_tmp" );
 	UTIL_PrecacheOther( "ammo_9mmAR" );
 	UTIL_PrecacheOther( "ammo_ARgrenades" );
+
+	// flashbang
+	UTIL_PrecacheOtherWeapon( "weapon_flashbang" );
+	UTIL_PrecacheOther( "ammo_flashbang" );
 
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 	// python
@@ -677,7 +694,7 @@ void CBasePlayerItem::DefaultTouch( CBaseEntity *pOther )
 	CBasePlayer *pPlayer = (CBasePlayer *)pOther;
 
 	// one primary weapon at a time; the pistols, the flashbang and the crowbar go with it
-	if ( pPlayer->HasPrimaryWeapon() && m_iId != WEAPON_FLASHBANG && m_iId != WEAPON_USP && m_iId != WEAPON_GLOCK18 && m_iId != WEAPON_CROWBAR && pPlayer->pev->flags != FL_SPECTATOR )
+	if ( pPlayer->HasPrimaryWeapon() && m_iId != WEAPON_FLASHBANG && m_iId != WEAPON_USP && m_iId != WEAPON_GLOCK18 && m_iId != WEAPON_CROWBAR && m_iId != WEAPON_DEAGLE && pPlayer->pev->flags != FL_SPECTATOR )
 		return;
 
 	// can I have this?
@@ -744,7 +761,7 @@ void CBasePlayerWeapon::FireRemaining( void )
 	if ( m_iId == WEAPON_GLOCK18 )
 	{
 		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 32 - gpGlobals->v_right * 11 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL, m_pPlayer->pev ); 
-		m_pPlayer->FireBullets3( vecSrc, vecDir, Vector( 0.025, 0.025, 0.025 ), 8192, 1, BULLET_PLAYER_9MM, 18, 0.9, 0 );
+		m_pPlayer->FireBullets3( vecSrc, vecDir, Vector( 0.025, 0.025, 0.025 ), 8192, 1, BULLET_PLAYER_9MM, 18, 0.9, 0, true );
 		flDelay = 0.1;
 	}
 	else if ( m_iId == WEAPON_M4A1 )
@@ -767,14 +784,6 @@ void CBasePlayerWeapon::FireRemaining( void )
 
 void CBasePlayerWeapon::ItemPostFrame( void )
 {
-	// the G3SG1's night vision: the green fade is renewed every 13 seconds
-	if ( m_flNightVisionTime != 0.0 && gpGlobals->time >= m_flNightVisionTime + 13.0 )
-	{
-		ALERT( at_console, "night vision!\n" );
-		m_flNightVisionTime = gpGlobals->time;
-		UTIL_ScreenFade( m_pPlayer, Vector(10,180,10), 0.1, 1024, 80, 1 );
-	}
-
 	if ( m_pPlayer->m_flNextBurstShot != 0.0 )
 		FireRemaining();
 
@@ -1116,7 +1125,6 @@ BOOL CBasePlayerWeapon :: DefaultDeploy( char *szViewModel, char *szWeaponModel,
 	m_pPlayer->m_iFOV = 90;
 	m_pPlayer->m_fResumeZoom = FALSE;
 	m_pPlayer->m_iLastZoom = 90;
-	m_flNightVisionTime = 0;
 
 	return TRUE;
 }
@@ -1193,7 +1201,7 @@ void CBasePlayerAmmo::Spawn( void )
 
 	SetTouch( DefaultTouch );
 	SetThink( SUB_Remove );
-	pev->nextthink = gpGlobals->time + 5;	// ammo lies around for five seconds
+	pev->nextthink = gpGlobals->time + 2;	// ammo lies around for two seconds (Beta 1.0 and 1.1: five)
 }
 
 CBaseEntity* CBasePlayerAmmo::Respawn( void )

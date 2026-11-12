@@ -88,6 +88,12 @@
 
 
 
+// sic: a stand-in, name ours.
+// Beta 2.0's client was compiled from headers that declared three more symbols
+// ahead of class CHud than the code in the image accounts for, and it was linked
+// with one more function than the image holds, which nothing called.
+int b20_unknown( int a, float b );
+
 typedef struct
 {
 	float fExpire;
@@ -110,6 +116,8 @@ public:
 	int m_iHealth;
 	int m_HUD_dmg_bio;
 	int m_HUD_cross;
+	float m_flRoundStart;	// name ours
+	float m_flDrawTime;		// name ours
 
 private:
 	HSPRITE m_hSprite;

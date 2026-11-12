@@ -186,6 +186,12 @@ int gmsgSayText = 0;
 int gmsgTextMsg = 0;
 int gmsgSetFOV = 0;
 int gmsgShowMenu = 0;
+// Never registered; the name is from Beta 3.1's Linux symbols, which have it in
+// player.cpp's data after the last message and before PlayStepSound's iSkipStep.
+// VC5 lays out zero-initialised data in definition order; retail has 4
+// unreferenced bytes here from Beta 2.0 to 3.1.
+//
+int gmsgRoundTime = 0;
 
 LINK_ENTITY_TO_CLASS( player, CBasePlayer );
 
@@ -400,7 +406,7 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 	etc are implemented with subsequent calls to TakeDamage using DMG_GENERIC.
 */
 
-#define ARMOR_RATIO	 0.2	// Armor Takes 80% of the damage
+#define ARMOR_RATIO	 0.4	// Armor Takes 80% of the damage (Counter-Strike Beta 2.0: 60%)
 #define ARMOR_BONUS  0.5	// Each Point of Armor is work 1/x points of health
 
 int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
@@ -432,7 +438,7 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	Pain();
 
 	// slow the player down
-	m_flVelocityModifier = 0.2;
+	m_flVelocityModifier = 0.35;
 
 	// a heavy hit: more than 60 to the head, more than 20 anywhere else
 	if ( ( m_LastHitGroup == HITGROUP_HEAD && flDamage > 60 ) || ( m_LastHitGroup != HITGROUP_HEAD && flDamage > 20 ) )
@@ -463,14 +469,14 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 			flDamage *= 0.5;
 
 		if ( pAttacker != this && pAttacker->m_iTeam != m_iTeam )
-			pAttacker->m_iAccount += 10;
+			pAttacker->AddAccount( 10 );
 	}
 
 	// keep track of amount of damage last sustained
 	m_lastDamageAmount = flDamage;
 
 	// Armor.
-	if (pev->armorvalue && !(bitsDamageType & (DMG_FALL | DMG_DROWN)) && ( m_LastHitGroup == HITGROUP_CHEST || m_LastHitGroup == HITGROUP_STOMACH || m_LastHitGroup == HITGROUP_GENERIC ) )// armor doesn't protect against fall or drown damage!
+	if (pev->armorvalue && !(bitsDamageType & (DMG_FALL | DMG_DROWN)) && ( m_LastHitGroup == HITGROUP_CHEST || m_LastHitGroup == HITGROUP_STOMACH || m_LastHitGroup == HITGROUP_GENERIC || m_LastHitGroup == HITGROUP_LEFTARM || m_LastHitGroup == HITGROUP_RIGHTARM ) )// armor doesn't protect against fall or drown damage!
 	{
 		float flNew = flDamage * flRatio;
 
@@ -672,6 +678,7 @@ void CBasePlayer::PackDeadPlayerItems( void )
 	int iPackAmmo[ MAX_AMMO_SLOTS + 1];
 	int iPW = 0;// index into packweapons array
 	int iPA = 0;// index into packammo array
+	int iWeaponID;	// Counter-Strike Beta 2.0: the id of the last weapon looked at (name ours)
 
 	memset(rgpPackWeapons, NULL, sizeof(rgpPackWeapons) );
 	memset(iPackAmmo, -1, sizeof(iPackAmmo) );
@@ -697,6 +704,8 @@ void CBasePlayer::PackDeadPlayerItems( void )
 
 			while ( pPlayerItem )
 			{
+				iWeaponID = pPlayerItem->m_iId;
+
 				switch( iWeaponRules )
 				{
 				case GR_PLR_DROP_GUN_ACTIVE:
@@ -761,7 +770,48 @@ void CBasePlayer::PackDeadPlayerItems( void )
 	pWeaponBox->pev->angles.z = 0;
 
 	pWeaponBox->SetThink( CWeaponBox::Kill );
-	pWeaponBox->pev->nextthink = gpGlobals->time + 40;
+	pWeaponBox->pev->nextthink = gpGlobals->time + 30;
+
+	// the box shows the last weapon of the list (sic: not necessarily one that is packed)
+	switch ( iWeaponID )
+	{
+	case WEAPON_AK47:
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_ak47.mdl" );
+		break;
+	case WEAPON_AWP:
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_awp.mdl" );
+		break;
+	case WEAPON_DEAGLE:
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_deagle.mdl" );
+		break;
+	case WEAPON_G3SG1:
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_g3sg1.mdl" );
+		break;
+	case WEAPON_GLOCK18:
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_glock18.mdl" );
+		break;
+	case WEAPON_M249:
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_m249.mdl" );
+		break;
+	case WEAPON_M3:
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_m3.mdl" );
+		break;
+	case WEAPON_M4A1:
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_m4a1.mdl" );
+		break;
+	case WEAPON_MP5N:
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_mp5.mdl" );
+		break;
+	case WEAPON_SG552:
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_sg552.mdl" );
+		break;
+	case WEAPON_TMP:
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_tmp.mdl" );
+		break;
+	case WEAPON_USP:
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_usp.mdl" );
+		break;
+	}
 
 // back these two lists up to their first elements
 	iPA = 0;
@@ -1159,6 +1209,10 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 			else
 				animDesired = LookupSequence( "sflinch_rightleg1" );
 			break;
+
+		default:	// Counter-Strike Beta 2.0
+			animDesired = LookupSequence( "sflinch_stomach1" );
+			break;
 		}
 
 		if ( FBitSet( pev->flags, FL_DUCKING ) )
@@ -1191,7 +1245,7 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 			return;
 		m_Activity = m_IdealActivity;
 
-		m_iUnused15C = 0;
+		m_iUnused158 = 0;
 		m_iDeathThrow = 0;
 
 		// the death animation goes by where the last hit was
@@ -1205,7 +1259,7 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 			int iRand = RANDOM_LONG( 0, 6 );
 
 			if ( m_fHeavyDamage == TRUE )
-				iRand += 2;
+				iRand += 1;	// Beta 2.0 (Beta 1.0: 2)
 
 			if ( iRand == 0 )
 				animDesired = LookupSequence( "headshot" );
@@ -1264,6 +1318,18 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 			break;
 
 		case HITGROUP_LEFTLEG:
+			{
+			int iRand = RANDOM_LONG( 0, 4 );
+
+			if ( iRand == 0 || iRand == 1 )
+				animDesired = LookupSequence( "die_legs1" );
+			else if ( iRand == 2 || iRand == 3 )
+				animDesired = LookupSequence( "die_legs2" );
+			else
+				animDesired = LookupSequence( "die_forwards" );
+			}
+			break;
+
 		case HITGROUP_RIGHTLEG:
 			{
 			int iRand = RANDOM_LONG( 0, 4 );
@@ -1275,6 +1341,10 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 			else
 				animDesired = LookupSequence( "die_forwards" );
 			}
+			break;
+
+		default:	// Counter-Strike Beta 2.0
+			animDesired = LookupSequence( "die_forwards" );
 			break;
 		}
 
@@ -1560,6 +1630,19 @@ void CBasePlayer::ThrowPrimary( void )
 	ThrowWeapon( "weapon_tmp" );
 	ThrowWeapon( "weapon_m4a1" );
 	ThrowWeapon( "weapon_m3" );
+	ThrowWeapon( "weapon_sg552" );	// sic: not the AK-47
+}
+
+// AddAccount - money in and out, kept between 0 and 16000 (name from the
+// later versions' Linux symbols)
+void CBasePlayer::AddAccount( int amount )
+{
+	m_iAccount += amount;
+
+	if ( m_iAccount < 0 )
+		m_iAccount = 0;
+	else if ( m_iAccount > 16000 )
+		m_iAccount = 16000;
 }
 
 
@@ -1653,6 +1736,41 @@ void CBasePlayer::StartDeathCam( void )
 	{
 		// don't accept subsequent attempts to StartDeathCam()
 		return;
+	}
+
+	// Counter-Strike Beta 2.0: every two seconds, name the player in the crosshair
+	// (PostThink's code, copied)
+	if ( m_flLastIdCheck + 2 <= gpGlobals->time )
+	{
+		m_flLastIdCheck = gpGlobals->time;
+
+		UTIL_MakeVectors( pev->v_angle );
+
+		TraceResult tr;
+		Vector vecAiming = gpGlobals->v_forward;
+		Vector vecSrc = pev->origin;
+		Vector vecEnd = vecSrc + vecAiming * 8024;
+
+		UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, ENT( pev ), &tr );
+
+		if ( tr.flFraction != 1.0 )
+		{
+			CBaseEntity *pObject = CBaseEntity::Instance( tr.pHit );
+
+			if ( pObject->IsPlayer() )
+			{
+				CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pObject->pev );
+				char szText[ 120 ];
+
+				if ( pPlayer->m_iTeam == TEAM_CT )
+					strcpy( szText, "(Counter-Terrorist)" );
+				else
+					strcpy( szText, "(Terrorist)" );
+
+				strcat( szText, STRING( pPlayer->pev->netname ) );
+				ClientPrint( pev, HUD_PRINTTALK, szText );
+			}
+		}
 	}
 
 	pSpot = FIND_ENTITY_BY_CLASSNAME( NULL, "info_intermission");	
@@ -3201,7 +3319,7 @@ void CBasePlayer::PostThink()
 		TraceResult tr;
 		Vector vecAiming = gpGlobals->v_forward;
 		Vector vecSrc = pev->origin;
-		Vector vecEnd = vecSrc + vecAiming * 1024;
+		Vector vecEnd = vecSrc + vecAiming * 8024;	// Beta 2.0 (was 1024)
 
 		UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, ENT( pev ), &tr );
 
@@ -3521,11 +3639,12 @@ void CBasePlayer::Spawn( void )
 	pev->classname		= MAKE_STRING("player");
 	pev->health			= 100;
 
-	// a survivor of the last round keeps his armor and kevlar
+	// a survivor of the last round keeps his armor, kevlar and goggles
 	if ( !m_fNotKilled )
 	{
 		pev->armorvalue		= 0;
-		m_fHasKevlar		= FALSE;
+		m_fHasKevlar		= false;
+		m_fHasNightVision	= false;
 	}
 
 	pev->takedamage		= DAMAGE_AIM;
@@ -3544,7 +3663,6 @@ void CBasePlayer::Spawn( void )
 	m_afPhysicsFlags	= 0;
 	m_fLongJump			= FALSE;// no longjump module. 
 	m_iFOV				= 90;// init field of view.
-	m_iLastZoom			= 90;
 	m_iClientFOV		= -1; // make sure fov reset is sent
 
 	m_flVelocityModifier = 1.0;
@@ -3552,6 +3670,14 @@ void CBasePlayer::Spawn( void )
 	m_flAccuracy		= 0.8;
 	m_flNextBurstShot	= 0;
 	m_flLastSay			= 0;
+	m_iLastZoom			= 90;	// Beta 2.0: here (after m_flNextBurstShot gives the same code; next to m_iFOV, Beta 1.1's place, schedules the night vision test differently)
+
+	// the night vision goes off
+	if ( m_fNightVisionOn == true )
+	{
+		m_fNightVisionOn = false;
+		UTIL_ScreenFade( this, Vector( 20, 20, 20 ), 0.5, 0.1, 0, 0 );
+	}
 
 	// a sniper rifle may have hidden its view model when zoomed in: show it again
 	if ( m_pActiveItem )
@@ -3608,11 +3734,13 @@ void CBasePlayer::Spawn( void )
 	m_fWeapon = FALSE;
 	m_pClientActiveItem = NULL;
 	m_iClientBattery = -1;
+	m_fSendResetHUD = true;		// the client restarts its round timer
 
 	// and his ammunition
 	if ( !m_fNotKilled )
 	{
 		m_fInitHUD = TRUE;
+		m_iFlashBangs = 0;
 		m_iClientHideHUD = -1;  // force this to be recalculated
 
 		// reset all ammo values to 0
@@ -3627,7 +3755,41 @@ void CBasePlayer::Spawn( void )
 
 	g_pGameRules->PlayerSpawn( this );
 
-	m_fNotKilled = TRUE;
+	m_fNotKilled = true;
+
+	// a new player who comes more than 20 seconds into the round watches it dead
+	if ( m_fJustConnected == true )
+	{
+		m_iKickVote = 0;
+		m_fJustConnected = false;
+
+		// sic: the players are counted, and the count is not used
+		int iNumPlayers = 0;	// name ours
+		CBaseEntity *pPlayer = NULL;
+
+		while ( ((pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" )) != NULL) && (!FNullEnt(pPlayer->edict())) )
+		{
+			if ( pPlayer->IsPlayer() )
+				iNumPlayers++;
+		}
+
+		if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_flRoundStartTime + 20 < gpGlobals->time )
+		{
+			pev->health = 0;
+			Killed( pev, GIB_NEVER );
+			m_iDeaths--;		// Killed's death and lost frag do not count
+			pev->frags++;
+		}
+	}
+
+	// a kicked player stays dead
+	if ( m_fKicked == true )
+	{
+		pev->health = 0;
+		Killed( pev, GIB_NEVER );
+	}
+
+	g_engfuncs.pfnSetClientMaxspeed( ENT(pev), 260 );
 }
 
 
@@ -3907,31 +4069,15 @@ BOOL CBasePlayer::HasWeapons( void )
 }
 
 //
-// HasPrimaryWeapon - does the player carry one of the seven primary weapons? (name ours)
+// HasPrimaryWeapon - does the player carry a weapon in one of the item slots 3
+// to 5 (the rifles, submachine guns, shotgun and machine gun)? (name ours)
 //
 bool CBasePlayer::HasPrimaryWeapon( void )
 {
-	CBasePlayerItem *pItem;
-	int i;
-
-	for ( i = 0 ; i <= 5 ; i++ )
+	for ( int i = 3 ; i <= 5 ; i++ )
 	{
-		pItem = m_rgpPlayerItems[ i ];
-
-		while (pItem)
-		{
-			if ( !strcmp( "weapon_mp5navy", STRING( pItem->pev->classname ) ) ||
-				 !strcmp( "weapon_m4a1", STRING( pItem->pev->classname ) ) ||
-				 !strcmp( "weapon_awp", STRING( pItem->pev->classname ) ) ||
-				 !strcmp( "weapon_tmp", STRING( pItem->pev->classname ) ) ||
-				 !strcmp( "weapon_m3", STRING( pItem->pev->classname ) ) ||
-				 !strcmp( "weapon_g3sg1", STRING( pItem->pev->classname ) ) ||
-				 !strcmp( "weapon_m249", STRING( pItem->pev->classname ) ) )
-			{
-				return true;
-			}
-			pItem = pItem->m_pNext;
-		}
+		if ( m_rgpPlayerItems[ i ] )
+			return true;
 	}
 
 	return false;
@@ -4664,6 +4810,18 @@ void CBasePlayer :: UpdateClientData( void )
 		}
 		FireTargets( "game_playerspawn", this, this, USE_TOGGLE, 0 );
 	}
+	else if ( m_fSendResetHUD )
+	{
+		// Counter-Strike Beta 2.0: a new round for a survivor; the client
+		// restarts its round timer
+		m_fSendResetHUD = false;
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgResetHUD, NULL, pev );
+			WRITE_BYTE( 1 );
+		MESSAGE_END();
+
+		g_pGameRules->InitHUD( this );
+	}
 
 	if ( m_iHideHUD != m_iClientHideHUD )
 	{
@@ -5242,8 +5400,51 @@ void CBasePlayer::DropPlayerItem ( char *pszItemName )
 			CWeaponBox *pWeaponBox = (CWeaponBox *)CBaseEntity::Create( "weaponbox", pev->origin + gpGlobals->v_forward * 10, pev->angles, edict() );
 			pWeaponBox->pev->angles.x = 0;
 			pWeaponBox->pev->angles.z = 0;
+			pWeaponBox->SetThink( CWeaponBox::Kill );
+			pWeaponBox->pev->nextthink = gpGlobals->time + 30;
 			pWeaponBox->PackWeapon( pWeapon );
 			pWeaponBox->pev->velocity = gpGlobals->v_forward * 300 + gpGlobals->v_forward * 100;
+
+			// the box shows the weapon
+			switch ( pWeapon->m_iId )
+			{
+			case WEAPON_AK47:
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_ak47.mdl" );
+				break;
+			case WEAPON_AWP:
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_awp.mdl" );
+				break;
+			case WEAPON_DEAGLE:
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_deagle.mdl" );
+				break;
+			case WEAPON_G3SG1:
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_g3sg1.mdl" );
+				break;
+			case WEAPON_GLOCK18:
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_glock18.mdl" );
+				break;
+			case WEAPON_M249:
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_m249.mdl" );
+				break;
+			case WEAPON_M3:
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_m3.mdl" );
+				break;
+			case WEAPON_M4A1:
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_m4a1.mdl" );
+				break;
+			case WEAPON_MP5N:
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_mp5.mdl" );
+				break;
+			case WEAPON_SG552:
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_sg552.mdl" );
+				break;
+			case WEAPON_TMP:
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_tmp.mdl" );
+				break;
+			case WEAPON_USP:
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_usp.mdl" );
+				break;
+			}
 			
 			// drop half of the ammo for this weapon.
 			int	iAmmoIndex;

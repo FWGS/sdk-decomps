@@ -1,6 +1,6 @@
 /***
 *
-*	Counter-Strike Beta 1.0, flashbang.cpp: the flashbang grenade
+*	Counter-Strike Beta 2.0, flashbang.cpp: the flashbang grenade
 *	(weapon_flashbang).
 *
 *	SDK 1.0's handgrenade.cpp as the Counter-Strike team changed it: the
@@ -37,7 +37,7 @@ class CFlashbang : public CBasePlayerWeapon
 public:
 	void Spawn( void );
 	void Precache( void );
-	int iItemSlot( void ) { return 5; }
+	int iItemSlot( void ) { return 2; }
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
@@ -53,6 +53,7 @@ LINK_ENTITY_TO_CLASS( weapon_flashbang, CFlashbang );
 
 void CFlashbang::Spawn( )
 {
+	pev->classname = MAKE_STRING("weapon_flashbang");
 	Precache( );
 	m_iId = WEAPON_FLASHBANG;
 	SET_MODEL(ENT(pev), "models/w_flashbang.mdl");
@@ -79,13 +80,13 @@ void CFlashbang::Precache( void )
 int CFlashbang::GetItemInfo(ItemInfo *p)
 {
 	p->pszName = STRING(pev->classname);
-	p->pszAmmo1 = "Hand Grenade";
+	p->pszAmmo1 = "Flashbang";
 	p->iMaxAmmo1 = FLASHBANG_MAX_CARRY;
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
-	p->iSlot = 4;
-	p->iPosition = 0;
+	p->iSlot = 1;
+	p->iPosition = 3;
 	p->iId = m_iId = WEAPON_FLASHBANG;
 	p->iWeight = FLASHBANG_WEIGHT;
 	p->iFlags = ITEM_FLAG_LIMITINWORLD | ITEM_FLAG_EXHAUSTIBLE;
@@ -115,6 +116,7 @@ void CFlashbang::Holster( )
 		m_pPlayer->pev->weapons &= ~(1<<WEAPON_FLASHBANG);
 		SetThink( DestroyItem );
 		pev->nextthink = gpGlobals->time + 0.1;
+		m_pPlayer->m_iFlashBangs = 0;
 	}
 
 	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "common/null.wav", 1.0, ATTN_NORM);
@@ -150,9 +152,9 @@ void CFlashbang::WeaponIdle( void )
 		else
 			angThrow.x = -10 + angThrow.x * ((90 + 10) / 90.0);
 
-		float flVel = (90 - angThrow.x) * 4;
-		if (flVel > 500)
-			flVel = 500;
+		float flVel = (90 - angThrow.x) * 6;
+		if (flVel > 750)
+			flVel = 750;
 
 		UTIL_MakeVectors( angThrow );
 
@@ -177,6 +179,7 @@ void CFlashbang::WeaponIdle( void )
 		m_flTimeWeaponIdle = gpGlobals->time + 0.75;
 
 		m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]--;
+		m_pPlayer->m_iFlashBangs--;
 
 		if ( !m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] )
 		{

@@ -15,8 +15,8 @@
 #ifndef PLAYER_H
 #define PLAYER_H
 
-#define PLAYER_FATAL_FALL_SPEED		1024// approx 60 feet
-#define PLAYER_MAX_SAFE_FALL_SPEED	450// approx 20 feet
+#define PLAYER_FATAL_FALL_SPEED		1100// approx 60 feet (Counter-Strike Beta 2.0: 1100)
+#define PLAYER_MAX_SAFE_FALL_SPEED	500// approx 20 feet (Counter-Strike: 450 in Beta 1.1, 500 in 2.0)
 #define DAMAGE_FOR_FALL_SPEED		(float) 100 / ( PLAYER_FATAL_FALL_SPEED - PLAYER_MAX_SAFE_FALL_SPEED )// damage per unit per second.
 #define PLAYER_MIN_BOUNCE_SPEED		200
 #define PLAYER_FALL_PUNCH_THRESHHOLD (float)250 // won't punch player's screen/make scrape noise unless player falling at least this fast.
@@ -96,32 +96,42 @@ enum
 class CBasePlayer : public CBaseMonster
 {
 public:
-	// Counter-Strike's members: 88 bytes in front of the SDK's (Beta 1.0: 96). Of Beta 1.0's
-	// three dwords at 0x14c-0x154 (two unused, m_fNoDefaultItems only read by PlayerSpawn)
-	// 1.1 keeps one, with a new use; which two went the image cannot say. Every name here
-	// is ours; the offsets are retail's (CBaseMonster ends at 0x118).
+	// Counter-Strike's members: 116 bytes in front of the SDK's (Beta 1.0: 96, 1.1: 88).
+	// Beta 2.0 makes the two flags at 0x148 bools and adds the members from 0x168 on;
+	// m_iMenu stays last. Every name here is ours; the offsets are retail's
+	// (CBaseMonster ends at 0x118).
 	float				m_flFlinchTime;			// 0x118 the flinch animation plays until then: SetAnimation ignores everything but PLAYER_FLINCH meanwhile
 	float				m_flNextFlinchTime;		// 0x11c no new flinch animation before this time
-	BOOL				m_fHeavyDamage;			// 0x120 the last hit was a heavy one (TakeDamage); picks the long flinch and the thrown deaths
+	bool				m_fHeavyDamage;			// 0x120 (a bool from Beta 2.0 on) the last hit was a heavy one (TakeDamage); picks the long flinch and the thrown deaths
 	float				m_flVelocityModifier;	// 0x124 scales pev->velocity on the ground; 0.2 when hit, back to 1 by 0.01 a frame
 	float				m_flLastFired;			// 0x128 when the pistol was last fired (USP, G3SG1)
 	float				m_flAccuracy;			// 0x12c meaning depends on the weapon: the G3SG1 takes it as accuracy (spread 1 - value, back towards 0.98 with time since the last shot); the M249, M4A1, MP5 Navy and TMP as a spread factor that grows with m_iShotsFired and Reload sets to 0
 	float				m_flNextBurstShot;		// 0x130 when FireRemaining fires the burst's next shot; 0 = no burst running
 	int					m_iBurstShotsFired;		// 0x134 shots of the burst so far
 	int					m_iLastZoom;			// 0x138 the m_iFOV to come back to after the shot (AWP)
-	BOOL				m_fResumeZoom;			// 0x13c zoom back to m_iLastZoom when the weapon can fire again
+	bool				m_fResumeZoom;			// 0x13c (a bool from Beta 2.0 on) zoom back to m_iLastZoom when the weapon can fire again
 	int					m_iShotsFired;			// 0x140 shots since the trigger was pulled; ItemPostFrame clears it
 	float				m_flEjectBrass;			// 0x144 when ItemPostFrame calls EjectBrassLate; 0 = nothing pending
-	BOOL				m_fHasKevlar;			// 0x148 item_kevlar taken; cleared when the armor is used up
-	BOOL				m_fNotKilled;			// 0x14c set at the end of Spawn, cleared by Killed and ClientPutInServer: a player who lived through the round keeps armor, kevlar and ammunition
-	int					m_iTeam;				// 0x150 TEAM_TERRORIST or TEAM_CT
-	int					m_iAccount;				// 0x154 money
-	int					m_iUnused158;			// 0x158 no function refers to it
-	int					m_iUnused15C;			// 0x15c only written: SetAnimation zeroes it when the death animation starts
-	int					m_iDeathThrow;			// 0x160 how Killed throws the body: 0 not, 1 forwards, 2 backwards, 3 away from the attacker
-	float				m_flLastSay;			// 0x164 time of the last chat line (Host_Say lets one through a second)
-	float				m_flLastIdCheck;		// 0x168 PostThink names the player in the crosshair every two seconds
-	int					m_iMenu;				// 0x16c the menu the client has open (client.cpp)
+	bool				m_fHasKevlar;			// 0x148 item_kevlar taken; cleared when the armor is used up
+	bool				m_fNotKilled;			// 0x149 set at the end of Spawn, cleared by Killed and ClientPutInServer: a player who lived through the round keeps armor, kevlar and ammunition
+	int					m_iTeam;				// 0x14c TEAM_TERRORIST or TEAM_CT
+	int					m_iAccount;				// 0x150 money
+	int					m_iUnused154;			// 0x154 no function refers to it
+	int					m_iUnused158;			// 0x158 only written: SetAnimation zeroes it when the death animation starts
+	int					m_iDeathThrow;			// 0x15c how Killed throws the body: 0 not, 1 forwards, 2 backwards, 3 away from the attacker
+	float				m_flLastSay;			// 0x160 time of the last chat line (Host_Say lets one through a second)
+	float				m_flLastIdCheck;		// 0x164 PostThink names the player in the crosshair every two seconds
+	bool				m_fJustConnected;		// 0x168 set by ClientPutInServer; the first Spawn after it clears it
+	int					m_iAppearance;			// 0x16c the player model: 0 urban, 1 terror, 2 arab
+	int					m_iKickVote;			// 0x170 the player (entity index, 1 to 20) this one votes to kick; 0 = none
+	bool				m_fKicked;				// 0x174 sent away (team killer, kick vote): Spawn kills him
+	int					m_iFlashBangs;			// 0x178 flashbangs bought since the last death (three at most)
+	int					m_iTeamKills;			// 0x17c team mates killed; the third disconnects the killer
+	int					m_iIgnoreMessages;		// 0x180 ignoremessages: 0 all, 1 no broadcast messages, 2 no team messages either
+	bool				m_fHasNightVision;		// 0x184 night vision goggles bought
+	bool				m_fNightVisionOn;		// 0x185 the goggles are switched on
+	bool				m_fSendResetHUD;		// 0x186 Spawn sets it; UpdateClientData then sends ResetHUD (the client restarts its round timer) and clears it
+	int					m_iMenu;				// 0x188 the menu the client has open (client.cpp)
 
 	int					m_iPlayerSound;// the index of the sound list slot reserved for this player
 	int					m_iTargetVolume;// ideal sound volume. 
@@ -285,6 +295,7 @@ public:
 	void DropPlayerItem ( char *pszItemName );
 	void ThrowWeapon( char *pszItemName );
 	void ThrowPrimary( void );
+	void AddAccount( int amount );
 	bool HasPrimaryWeapon( void );	// name ours
 	BOOL HasPlayerItem( CBasePlayerItem *pCheckItem );
 	BOOL HasNamedPlayerItem( const char *pszItemName );

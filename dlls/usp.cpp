@@ -1,12 +1,13 @@
 /***
 *
-*	Counter-Strike Beta 1.1, usp.cpp: the Heckler & Koch USP .45 Tactical
+*	Counter-Strike Beta 2.0, usp.cpp: the Heckler & Koch USP .45 Tactical
 *	(weapon_usp), the counter-terrorists' pistol.
 *
 *	SDK 1.0's glock.cpp as the Counter-Strike team changed it: the same
 *	class shape and WeaponIdle, the silencer test on pev->body kept, the
 *	bullets fired with FireBullets3 and the spread taken from the player's
-*	accuracy; Beta 1.1's secondary attack is semi-automatic. File, class and
+*	accuracy. Beta 1.1 made the secondary attack semi-automatic; Beta 2.0
+*	passes FALSE from both attacks, and has no muzzle flash. File, class and
 *	method names are Beta 3.1's (Linux symbols); animations: models/v_usp.mdl.
 *
 ****/
@@ -102,30 +103,36 @@ int CUSP::GetItemInfo(ItemInfo *p)
 
 BOOL CUSP::Deploy( )
 {
+	m_pPlayer->m_flAccuracy = 0.98;
+
 	if (RANDOM_LONG(0,1))
-		return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_DRAW, "onehanded" );
+		return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_DRAW, "tmp" );
 	else
-		return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_DRAW2, "onehanded" );
+		return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_DRAW2, "tmp" );
 }
 
 void CUSP::SecondaryAttack( void )
 {
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.3, 0.25, TRUE );
+		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.225, 0.285, FALSE );
+	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.3, 0.285, FALSE );
 	else if (FBitSet(m_pPlayer->pev->flags, FL_DUCKING))
-		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.125, 0.25, TRUE );
+		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.07, 0.285, FALSE );
 	else
-		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.15, 0.25, TRUE );
+		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.1, 0.285, FALSE );
 }
 
 void CUSP::PrimaryAttack( void )
 {
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.3, 0.25, FALSE );
+		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.225, 0.285, FALSE );
+	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.3, 0.285, FALSE );
 	else if (FBitSet(m_pPlayer->pev->flags, FL_DUCKING))
-		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.125, 0.25, FALSE );
+		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.08, 0.285, FALSE );
 	else
-		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.15, 0.25, FALSE );
+		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.1, 0.285, FALSE );
 }
 
 void CUSP::USPFire( float flSpread , float flCycleTime, BOOL fUseSemi )
@@ -143,7 +150,7 @@ void CUSP::USPFire( float flSpread , float flCycleTime, BOOL fUseSemi )
 	else
 	{
 		// accuracy grows with the time since the last shot
-		m_pPlayer->m_flAccuracy = 0.65 + (gpGlobals->time - m_pPlayer->m_flLastFired) * 0.25;
+		m_pPlayer->m_flAccuracy = 0.7 + (gpGlobals->time - m_pPlayer->m_flLastFired) * 0.3;
 		if (m_pPlayer->m_flAccuracy > 0.98)
 			m_pPlayer->m_flAccuracy = 0.98;
 		m_pPlayer->m_flLastFired = gpGlobals->time;
@@ -162,7 +169,7 @@ void CUSP::USPFire( float flSpread , float flCycleTime, BOOL fUseSemi )
 
 	m_iClip--;
 
-	m_pPlayer->pev->effects = (int)(m_pPlayer->pev->effects) | EF_MUZZLEFLASH;
+	// no muzzle flash any more, silencer on or off
 
 	if (m_iClip != 0)
 	{
@@ -217,7 +224,7 @@ void CUSP::USPFire( float flSpread , float flCycleTime, BOOL fUseSemi )
 
 	vecAiming = gpGlobals->v_forward;
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_45ACP, 27, 0.85 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_45ACP, 34, 0.85, NULL, true );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)

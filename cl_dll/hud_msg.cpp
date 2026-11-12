@@ -24,20 +24,14 @@
 
 int CHud :: MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf )
 {
-	ASSERT( iSize == 0 );
-
-	// clear all hud data
-	HUDLIST *pList = m_pHudList;
-
-	while ( pList )
-	{
-		if ( pList->p )
-			pList->p->Reset();
-		pList = pList->pNext;
-	}
+	BEGIN_READ( pbuf, iSize );
+	READ_BYTE();
 
 	// reset sensitivity
 	m_flMouseSensitivity = 0;
+
+	// restart the round timer
+	m_Health.m_flRoundStart = m_Health.m_flDrawTime;
 
 	// reset concussion effect
 	m_iConcussionEffect = 0;
