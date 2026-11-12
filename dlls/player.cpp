@@ -200,7 +200,7 @@ LINK_ENTITY_TO_CLASS( player, CBasePlayer );
 // Radio - Beta 3.0's radio (name from the later versions'
 // Linux symbols): "**RADIO** <name> : <msg_id>" in the chat of
 // every team mate who is not dying and has not turned the
-// radio off (ignoremessages 3), and the sentence !MRAD_<msg_id>
+// radio off (Beta 3.0: ignoremessages 3; 3.1: ignoreradio), and the sentence !MRAD_<msg_id>
 // sent to him with his own entity index (sic). A player in
 // noclip (observing) has no radio.
 //=========================================================
@@ -231,7 +231,7 @@ void CBasePlayer::Radio( const char *msg_id )
 		{
 			CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
 
-			if ( player->pev->deadflag != DEAD_DYING && player->m_iTeam == m_iTeam && player->m_iIgnoreMessages != 3 )
+			if ( player->pev->deadflag != DEAD_DYING && player->m_iTeam == m_iTeam && !player->m_fIgnoreRadio )
 			{
 				ClientPrint( pPlayer->pev, HUD_PRINTTALK, szMessage );
 
@@ -443,7 +443,10 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 		m_LastHitGroup = ptr->iHitgroup;
 
 		// Beta 3.0: the hit kicks the view by the damage, by where it struck;
-		// a hit where the kevlar is (head, body, arms) draws no blood
+		// a hit where the kevlar is (head, body, arms) draws no blood. Beta 3.1:
+		// much less kick (the head up to 12 degrees up and 9 sideways, the body
+		// a tenth of the damage up to 4 degrees, arms and legs none; the
+		// readme's "disorientation system changed") and both legs 0.75
 		switch ( ptr->iHitgroup )
 		{
 		case HITGROUP_GENERIC:
@@ -453,53 +456,37 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 				bShouldBleed = false;
 			flDamage *= 4;
 			pev->punchangle.x = flDamage * -0.5;
-			if ( pev->punchangle.x < -25 )
-				pev->punchangle.x = -25;
+			if ( pev->punchangle.x < -12 )
+				pev->punchangle.x = -12;
 			pev->punchangle.z = flDamage * RANDOM_FLOAT( -1, 1 );
-			if ( pev->punchangle.z < -20 )
-				pev->punchangle.z = -20;
-			else if ( pev->punchangle.z > 20 )
-				pev->punchangle.z = 20;
+			if ( pev->punchangle.z < -9 )
+				pev->punchangle.z = -9;
+			else if ( pev->punchangle.z > 9 )
+				pev->punchangle.z = 9;
 			break;
 		case HITGROUP_CHEST:
 			if ( m_iKevlar )
 				bShouldBleed = false;
-			pev->punchangle.x = flDamage * -0.5;
-			if ( pev->punchangle.x < -10 )
-				pev->punchangle.x = -10;
+			pev->punchangle.x = flDamage * -0.1;
+			if ( pev->punchangle.x < -4 )
+				pev->punchangle.x = -4;
 			break;
 		case HITGROUP_STOMACH:
 			if ( m_iKevlar )
 				bShouldBleed = false;
 			flDamage *= 1.25;
-			pev->punchangle.x = flDamage * -0.5;
-			if ( pev->punchangle.x < -10 )
-				pev->punchangle.x = -10;
+			pev->punchangle.x = flDamage * -0.1;
+			if ( pev->punchangle.x < -4 )
+				pev->punchangle.x = -4;
 			break;
 		case HITGROUP_LEFTARM:
-			if ( m_iKevlar )
-				bShouldBleed = false;
-			pev->punchangle.z = flDamage * -0.5;
-			if ( pev->punchangle.z < -10 )
-				pev->punchangle.z = -10;
-			break;
 		case HITGROUP_RIGHTARM:
 			if ( m_iKevlar )
 				bShouldBleed = false;
-			pev->punchangle.z = flDamage * 0.5;
-			if ( pev->punchangle.z > 10 )
-				pev->punchangle.z = 10;
 			break;
 		case HITGROUP_LEFTLEG:
-			pev->punchangle.z = flDamage * -0.5;
-			if ( pev->punchangle.z < -10 )
-				pev->punchangle.z = -10;
-			break;
 		case HITGROUP_RIGHTLEG:
-			flDamage *= 0.75;	// sic: the left leg takes full damage
-			pev->punchangle.z = flDamage * 0.5;
-			if ( pev->punchangle.z > 15 )
-				pev->punchangle.z = 15;
+			flDamage *= 0.75;
 			break;
 		default:
 			break;
@@ -622,11 +609,11 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		case WEAPON_GLOCK18:
 			flRatio *= 1.05;
 			break;
-		case WEAPON_M3:
-			flRatio *= 0.8;
-			break;
-		case WEAPON_P90:
+		case WEAPON_P90:	// Beta 3.1: the M3's 0.4 is gone (the default 0.5)
 			flRatio *= 1.4;
+			break;
+		case WEAPON_KNIFE:	// Beta 3.1
+			flRatio *= 1.7;
 			break;
 		}
 	}
@@ -991,6 +978,9 @@ void CBasePlayer::PackDeadPlayerItems( void )
 		break;
 	case WEAPON_KNIFE:
 		SET_MODEL( ENT(pWeaponBox->pev), "models/w_knife.mdl" );
+		break;
+	case WEAPON_FLASHBANG:	// Beta 3.1
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_flashbang.mdl" );
 		break;
 	}
 
@@ -5673,6 +5663,9 @@ void CBasePlayer::DropPlayerItem ( char *pszItemName )
 				break;
 			case WEAPON_KNIFE:
 				SET_MODEL( ENT(pWeaponBox->pev), "models/w_knife.mdl" );
+				break;
+			case WEAPON_FLASHBANG:	// Beta 3.1
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_flashbang.mdl" );
 				break;
 			}
 			

@@ -168,7 +168,7 @@ void CFlashbang::WeaponIdle( void )
 		if (time < 0)
 			time = 0;
 
-		m_pPlayer->Radio( "fireinhole" );
+		// (Beta 3.0 radioed "fireinhole" here)
 		CGrenade::ShootTimed( m_pPlayer->pev, vecSrc, vecThrow, time );
 
 		SendWeaponAnim( FLASHBANG_THROW );

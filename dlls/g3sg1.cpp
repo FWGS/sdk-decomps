@@ -122,13 +122,13 @@ void CG3SG1::SecondaryAttack( void )
 void CG3SG1::PrimaryAttack( void )
 {
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		G3SG1Fire( 0.09, 0.25, FALSE );
+		G3SG1Fire( 0.07, 0.25, FALSE );	// Beta 3.1 (3.0: 0.09, 0.2, 0.03, 0.065)
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.2, 0.25, FALSE );
+		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.15, 0.25, FALSE );
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
-		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.03, 0.25, FALSE );
+		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.035, 0.25, FALSE );
 	else
-		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.065, 0.25, FALSE );
+		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.055, 0.25, FALSE );
 }
 
 void CG3SG1::G3SG1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
@@ -138,12 +138,16 @@ void CG3SG1::G3SG1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	if (m_pPlayer->m_iShotsFired > 1)
 		return;
 
+	// Beta 3.1: unscoped, the spread grows
+	if (m_pPlayer->m_iFOV == 90)
+		flSpread += 0.025;
+
 	// the accuracy recovers with the time since the last shot
 	if (m_pPlayer->m_flLastFired == 0)
 		m_pPlayer->m_flLastFired = gpGlobals->time;
 	else
 	{
-		m_pPlayer->m_flAccuracy = (gpGlobals->time - m_pPlayer->m_flLastFired) * 0.3 + 0.75;
+		m_pPlayer->m_flAccuracy = (gpGlobals->time - m_pPlayer->m_flLastFired) * 0.225 + 0.65;	// Beta 3.1 (3.0: 0.3, 0.75)
 
 		if (m_pPlayer->m_flAccuracy > 0.98)
 			m_pPlayer->m_flAccuracy = 0.98;

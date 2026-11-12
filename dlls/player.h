@@ -98,8 +98,8 @@ enum
 class CBasePlayer : public CBaseMonster
 {
 public:
-	// Counter-Strike's members: 376 bytes in front of the SDK's (Beta 1.0: 96, 1.1: 88,
-	// 2.0: 116). Beta 2.0 makes the two flags at 0x148 bools and adds the members from
+	// Counter-Strike's members: 380 bytes in front of the SDK's (Beta 1.0: 96, 1.1: 88,
+	// 2.0: 116, 3.0: 376). Beta 2.0 makes the two flags at 0x148 bools and adds the members from
 	// 0x168 on; Beta 3.0 makes the kevlar flag an int and adds 256 bytes before
 	// m_iMenu, which stays last. Every name here is ours; the offsets are retail's
 	// (CBaseMonster ends at 0x118).
@@ -139,7 +139,8 @@ public:
 	float				m_flNextOldOrigin;		// 0x280 when PreThink records the next position
 	float				m_flNextRadio;			// 0x284 no radio message before this time (1.5 seconds after the last)
 	int					m_iRadioMessages;		// 0x288 radio messages left (Spawn sets the number)
-	int					m_iMenu;				// 0x28c the menu the client has open (client.cpp)
+	bool				m_fIgnoreRadio;			// 0x28c new in Beta 3.1: the ignoreradio command; CBasePlayer::Radio sends such a player nothing
+	int					m_iMenu;				// 0x290 the menu the client has open (client.cpp)
 
 	int					m_iPlayerSound;// the index of the sound list slot reserved for this player
 	int					m_iTargetVolume;// ideal sound volume. 

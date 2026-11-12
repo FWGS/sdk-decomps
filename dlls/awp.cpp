@@ -135,6 +135,8 @@ void CAWP::AWPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		m_pPlayer->m_iLastZoom = m_pPlayer->m_iFOV;
 		m_pPlayer->m_iFOV = 90;
 	}
+	else
+		flSpread += 0.025;	// Beta 3.1: unscoped, the spread grows
 
 	if (m_iClip <= 0)
 	{

@@ -1119,26 +1119,29 @@ void Radio( CBasePlayer *pPlayer, int iSlot )
 		case 2:
 			pPlayer->Radio( "BACKUP" );
 			break;
-		case 3:
-			pPlayer->Radio( "COVERME" );
+		case 3:	// Beta 3.1: "Cover me/I'll take point"
+			if ( RANDOM_LONG( 0, 1 ) )
+				pPlayer->Radio( "COVERME" );
+			else
+				pPlayer->Radio( "POINT" );
 			break;
 		case 4:
-			pPlayer->Radio( "ENEMYSPOTTED" );
+			pPlayer->Radio( "ENEMYSPOT" );	// Beta 3.1: "fixed MRAD_ENEMYSPOTTED error"
 			break;
 		case 5:
-			pPlayer->Radio( "IMHIT" );
-			break;
-		case 6:
 			pPlayer->Radio( "INPOS" );
 			break;
-		case 7:
-			pPlayer->Radio( "POINT" );
-			break;
-		case 8:
+		case 6:
 			pPlayer->Radio( "REPORTIN" );
 			break;
+		case 7:
+			pPlayer->Radio( "REPRTINGIN" );	// sic: Beta 3.1's sentence name
+			break;
+		case 8:
+			pPlayer->Radio( "MATEDOWN" );	// Beta 3.1: "Teammate down!!"
+			break;
 		case 9:
-			pPlayer->Radio( "REPORTINGIN" );
+			pPlayer->Radio( "ENEMYDOWN" );	// Beta 3.1: "Enemy Down!!"
 			break;
 		}
 	}
@@ -1212,12 +1215,6 @@ void ClientCommand( edict_t *pEntity )
 	{
 		// Beta 1.x's round restart for anyone: now it throws out whoever tries it
 		CLIENT_COMMAND( pEntity, "disconnect\n" );
-	}
-	else if ( FStrEq(pcmd, "a12" ) )
-	{
-		// Beta 3.0: 50,000 dollars, for the player named REAL_Gooseman only
-		if ( !strcmp( STRING(pPlayer->pev->netname), "REAL_Gooseman" ) )
-			pPlayer->AddAccount( 50000 );
 	}
 	else if ( FStrEq(pcmd, "vote" ) )
 	{
@@ -1386,7 +1383,7 @@ void ClientCommand( edict_t *pEntity )
 	}
 	else if ( FStrEq(pcmd, "ignoremessages" ) )
 	{
-		// 0 -> 1 -> 2 -> 3 -> 0 (Host_Say; 3 also turns the radio off, CBasePlayer::Radio)
+		// 0 -> 1 -> 2 -> 0 (Host_Say; Beta 3.1 drops 3, the radio, for ignoreradio)
 		if ( pPlayer->m_iIgnoreMessages == 0 )
 		{
 			pPlayer->m_iIgnoreMessages = 1;
@@ -1397,15 +1394,24 @@ void ClientCommand( edict_t *pEntity )
 			pPlayer->m_iIgnoreMessages = 2;
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Ignoring TEAM/BROADCAST messages" );
 		}
-		else if ( pPlayer->m_iIgnoreMessages == 2 )
-		{
-			pPlayer->m_iIgnoreMessages = 3;
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Ignoring TEAM/BROADCAST/RADIO messages" );
-		}
 		else
 		{
 			pPlayer->m_iIgnoreMessages = 0;
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "** Accepting ALL messages **" );
+		}
+	}
+	else if ( FStrEq(pcmd, "ignoreradio" ) )
+	{
+		// Beta 3.1: the radio on and off (CBasePlayer::Radio)
+		if ( !pPlayer->m_fIgnoreRadio )
+		{
+			pPlayer->m_fIgnoreRadio = true;
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Radio Messages OFF" );
+		}
+		else
+		{
+			pPlayer->m_fIgnoreRadio = false;
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Radio Messages ON" );
 		}
 	}
 	else if ( pPlayer->pev->deadflag != DEAD_NO )
@@ -1451,6 +1457,12 @@ void ClientCommand( edict_t *pEntity )
 			UTIL_ScreenFade( pPlayer, Vector(20,200,20), 0.75, 1024, pPlayer->m_iNightVisionAlpha, 5 );	// FFADE_OUT | FFADE_STAYOUT
 			EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/nvg_on.wav", 1, ATTN_NORM );
 		}
+	}
+	else if ( FStrEq(pcmd, "drop" ) )
+	{
+		// Beta 3.1: drop is back (Beta 3.0 had none; 2.x's dropped the item named),
+		// now the same as throwweapon
+		DropPrimary( pPlayer );
 	}
 	else if ( FStrEq(pcmd, "fov" ) )
 	{

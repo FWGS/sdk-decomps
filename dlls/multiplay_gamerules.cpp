@@ -850,10 +850,10 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 	pVictim->m_iDeaths += 1;
 	pVictim->m_fNotKilled = false;
 
-	// Beta 3.0: the victim's team mates hear it on the radio; a dead
-	// counter-terrorist makes the CTs pick a new commander (sic: whoever
-	// he was, and not so for a terrorist)
-	pVictim->Radio( "MATEDOWN" );
+	// a dead counter-terrorist makes the CTs pick a new commander (sic:
+	// whoever he was, and not so for a terrorist); Beta 3.0's automatic
+	// radio messages, MATEDOWN from the victim and ENEMYDOWN from his
+	// killer, are gone in Beta 3.1 ("removed automatic .wav's")
 	if ( pVictim->m_iTeam == TEAM_CT )
 		PickNewCommander( TEAM_CT );
 
@@ -861,10 +861,7 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 	CBasePlayer *peKiller = NULL;
 	CBaseEntity *ktmp = CBaseEntity::Instance( pKiller );
 	if ( ktmp && (ktmp->Classify() == CLASS_PLAYER) )
-	{
 		peKiller = (CBasePlayer*)ktmp;
-		peKiller->Radio( "ENEMYDOWN" );	// Beta 3.0: and the killer's
-	}
 
 	if ( pVictim->pev == pKiller )  
 	{  // killed self

@@ -1640,37 +1640,43 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 	Vector vecRight = gpGlobals->v_right;
 	Vector vecUp = gpGlobals->v_up;
 
-	// Beta 3.0: the penetration of each bullet, the values Beta 3.1 has; and
-	// sic: still no breaks, and now a default, so that every bullet falls
-	// through to 0 and 0: no bullet goes through anything (the compiled
-	// code keeps nothing of the switch but the zeros). Beta 3.1's "bullet
-	// penetration bug fixed" adds the breaks.
+	// the penetration of each bullet (Beta 3.0 had no breaks here, so that
+	// every bullet fell through to 0 and 0; Beta 3.1: "bullet penetration bug
+	// fixed")
 	switch ( iBulletType )
 	{
 	case BULLET_PLAYER_9MM:
 		iPenetrationPower = 14;
 		flPenetrationDistance = 800;
+		break;
 	case BULLET_PLAYER_45ACP:
 		iPenetrationPower = 10;
 		flPenetrationDistance = 500;
+		break;
 	case BULLET_PLAYER_50AE:
 		iPenetrationPower = 20;
 		flPenetrationDistance = 1000;
+		break;
 	case BULLET_PLAYER_762MM:
 		iPenetrationPower = 24;
 		flPenetrationDistance = 5000;
+		break;
 	case BULLET_PLAYER_556MM:
 		iPenetrationPower = 20;
 		flPenetrationDistance = 4000;
+		break;
 	case BULLET_PLAYER_338MAG:
 		iPenetrationPower = 30;
 		flPenetrationDistance = 8000;
+		break;
 	case BULLET_PLAYER_57MM:
 		iPenetrationPower = 20;
 		flPenetrationDistance = 2500;
+		break;
 	default:
 		iPenetrationPower = 0;
 		flPenetrationDistance = 0;
+		break;
 	}
 
 	if ( pevAttacker == NULL )
@@ -1709,8 +1715,6 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 
 			if ( flCurrentDistance > flPenetrationDistance )
 				iPenetration = 0;
-
-			ALERT( at_console, "Damage = %i \n", iCurrentDamage );	// Beta 3.0
 
 			if ( VARS(tr.pHit)->solid == SOLID_BSP && iPenetration != 0 )
 			{

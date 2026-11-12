@@ -43,7 +43,7 @@ class CDebris : public CBaseEntity
 	void EXPORT BoltTouch( CBaseEntity *pOther );
 
 	int m_iTrail;
-	int m_iBounces;		// times it hit something that takes no damage; it stops making sparks and sounds at the fourth
+	int m_iBounces;		// times it hit something that takes no damage; it stops making sparks and sounds at the fourth (Beta 3.1: no longer read)
 	float m_flDamage;	// 30 at first, three quarters of it after each bounce
 
 public:
@@ -78,7 +78,7 @@ void CDebris::Spawn( )
 
 	SetTouch( BoltTouch );
 	SetThink( SUB_Remove );
-	pev->nextthink = gpGlobals->time + 2;
+	pev->nextthink = gpGlobals->time + 1.5;	// Beta 3.1 (3.0: 2)
 }
 
 
@@ -106,26 +106,24 @@ int	CDebris :: Classify ( void )
 
 void CDebris::BoltTouch( CBaseEntity *pOther )
 {
+	// Beta 3.1: no more bouncing (and no console lines): a fragment
+	// that hits what takes no damage stays until it is removed
 	if (pOther->pev->takedamage)
 	{
-		ALERT( at_console, "1\n" );
 		TraceResult tr = UTIL_GetGlobalTrace( );
 		entvars_t	*pevOwner;
 
 		pevOwner = VARS( pev->owner );
-		ALERT( at_console, "2\n" );
 
 		// UNDONE: this needs to call TraceAttack instead
 		ClearMultiDamage( );
 
 		if ( pOther->IsPlayer() )
 		{
-			ALERT( at_console, "3\n" );
 			pOther->TraceAttack(pevOwner, m_flDamage, pev->velocity.Normalize(), &tr, DMG_BULLET | DMG_NEVERGIB ); 
 		}
 		else
 		{
-			ALERT( at_console, "4\n" );
 			pOther->TraceAttack(pevOwner, m_flDamage, pev->velocity.Normalize(), &tr, DMG_BULLET | DMG_NEVERGIB ); 
 		}
 
@@ -142,39 +140,6 @@ void CDebris::BoltTouch( CBaseEntity *pOther )
 		}
 
 		Killed( pev, GIB_NEVER );
-	}
-	else
-	{
-		m_iBounces++;
-		if ( m_iBounces < 4 )
-		{
-			switch ( RANDOM_LONG( 0, 4 ) )
-			{
-			case 0:
-				EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, "weapons/ric1.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,7));
-				break;
-			case 1:
-				EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, "weapons/ric2.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,7));
-				break;
-			case 2:
-				EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, "weapons/ric3.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,7));
-				break;
-			case 3:
-				EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, "weapons/ric4.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,7));
-				break;
-			case 4:
-				EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, "weapons/ric5.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,7));
-				break;
-			}
-
-			pev->velocity = pev->velocity * 0.75;
-			m_flDamage *= 0.75;
-
-			if (UTIL_PointContents(pev->origin) != CONTENTS_WATER)
-			{
-				UTIL_Sparks( pev->origin );
-			}
-		}
 	}
 }
 
@@ -228,7 +193,8 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 
 	// Beta 3.0: the concussion grenade throws seven pieces of shrapnel
 	// (CDebris) around the horizon: ahead, behind, right, left, ahead,
-	// behind, right of its own angles, each a little off at random
+	// behind, right of its own angles, each a little off at random.
+	// Beta 3.1: five (ahead, behind, right, left, ahead)
 	UTIL_MakeVectors( pev->angles );
 
 	Vector vecForward = gpGlobals->v_forward;		// names ours
@@ -237,7 +203,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 	Vector vecRight = gpGlobals->v_right;
 	Vector vecDir;
 
-	for ( int i = 1; i <= 7; i++ )
+	for ( int i = 1; i <= 5; i++ )
 	{
 		switch ( i )
 		{
@@ -255,12 +221,6 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 			break;
 		case 5:
 			vecDir = vecForward;
-			break;
-		case 6:
-			vecDir = vecBack;
-			break;
-		case 7:
-			vecDir = vecRight;
 			break;
 		}
 

@@ -251,12 +251,12 @@ int CKnife::Swing( int fFirst )
 		if ( (m_flNextPrimaryAttack + 1 < gpGlobals->time) || g_pGameRules->IsMultiplayer() )
 		{
 			// first swing does full damage
-			pEntity->TraceAttack(m_pPlayer->pev, 30, gpGlobals->v_forward, &tr, DMG_NEVERGIB | DMG_BULLET ); 
+			pEntity->TraceAttack(m_pPlayer->pev, 40, gpGlobals->v_forward, &tr, DMG_NEVERGIB | DMG_BULLET ); 	// Beta 3.1 (3.0: 30)
 		}
 		else
 		{
 			// subsequent swings do half
-			pEntity->TraceAttack(m_pPlayer->pev, 20, gpGlobals->v_forward, &tr, DMG_NEVERGIB | DMG_BULLET ); 
+			pEntity->TraceAttack(m_pPlayer->pev, 30, gpGlobals->v_forward, &tr, DMG_NEVERGIB | DMG_BULLET ); 	// Beta 3.1 (3.0: 20)
 		}	
 		ApplyMultiDamage( m_pPlayer->pev, m_pPlayer->pev );
 

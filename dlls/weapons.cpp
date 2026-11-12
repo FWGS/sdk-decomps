@@ -864,10 +864,7 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		m_fFireOnEmpty = FALSE;
 
 		if ( m_pPlayer->m_iShotsFired > 0 )
-		{
-			ALERT( at_console, "Accuracy = %i \n", m_pPlayer->m_iShotsFired );
-			m_pPlayer->m_iShotsFired--;
-		}
+			m_pPlayer->m_iShotsFired--;	// (Beta 3.0 printed "Accuracy = %i" here)
 
 		if ( !IsUseable() && m_flNextPrimaryAttack < gpGlobals->time ) 
 		{
