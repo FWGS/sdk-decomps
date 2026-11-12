@@ -1660,7 +1660,7 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 		iPenetrationPower = 32;
 		flPenetrationDistance = 8000;
 	case BULLET_PLAYER_556MM:
-		iPenetrationPower = 32;
+		iPenetrationPower = 16;	// Beta 1.1 (only this last case's values reach the code)
 		flPenetrationDistance = 8000;
 	}
 

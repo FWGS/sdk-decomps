@@ -79,7 +79,7 @@ void CBaseMonster :: MonsterInitDead( void )
 
 	// Setup health counters, etc.
 	BecomeDead();
-	SetThink( CorpseFallThink );
+	SetThink( SUB_Remove );
 	pev->nextthink = gpGlobals->time + 0.5;
 }
 

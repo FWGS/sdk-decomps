@@ -390,6 +390,10 @@ void W_Precache(void)
 	UTIL_PrecacheOtherWeapon2( "weapon_tmp" );
 	UTIL_PrecacheOtherWeapon2( "weapon_usp" );
 	UTIL_PrecacheOtherWeapon2( "weapon_flashbang" );
+	UTIL_PrecacheOther( "ammo_338magnum" );
+	UTIL_PrecacheOther( "ammo_45acp" );
+	UTIL_PrecacheOther( "ammo_556nato" );
+	UTIL_PrecacheOther( "ammo_762nato" );
 
 	// shotgun
 	UTIL_PrecacheOtherWeapon( "weapon_shotgun" );

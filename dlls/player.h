@@ -16,7 +16,7 @@
 #define PLAYER_H
 
 #define PLAYER_FATAL_FALL_SPEED		1024// approx 60 feet
-#define PLAYER_MAX_SAFE_FALL_SPEED	400// approx 20 feet
+#define PLAYER_MAX_SAFE_FALL_SPEED	450// approx 20 feet
 #define DAMAGE_FOR_FALL_SPEED		(float) 100 / ( PLAYER_FATAL_FALL_SPEED - PLAYER_MAX_SAFE_FALL_SPEED )// damage per unit per second.
 #define PLAYER_MIN_BOUNCE_SPEED		200
 #define PLAYER_FALL_PUNCH_THRESHHOLD (float)250 // won't punch player's screen/make scrape noise unless player falling at least this fast.
@@ -96,8 +96,10 @@ enum
 class CBasePlayer : public CBaseMonster
 {
 public:
-	// Counter-Strike's members: 96 bytes in front of the SDK's. Every name here is ours;
-	// the offsets are retail's (CBaseMonster ends at 0x118).
+	// Counter-Strike's members: 88 bytes in front of the SDK's (Beta 1.0: 96). Of Beta 1.0's
+	// three dwords at 0x14c-0x154 (two unused, m_fNoDefaultItems only read by PlayerSpawn)
+	// 1.1 keeps one, with a new use; which two went the image cannot say. Every name here
+	// is ours; the offsets are retail's (CBaseMonster ends at 0x118).
 	float				m_flFlinchTime;			// 0x118 the flinch animation plays until then: SetAnimation ignores everything but PLAYER_FLINCH meanwhile
 	float				m_flNextFlinchTime;		// 0x11c no new flinch animation before this time
 	BOOL				m_fHeavyDamage;			// 0x120 the last hit was a heavy one (TakeDamage); picks the long flinch and the thrown deaths
@@ -111,17 +113,15 @@ public:
 	int					m_iShotsFired;			// 0x140 shots since the trigger was pulled; ItemPostFrame clears it
 	float				m_flEjectBrass;			// 0x144 when ItemPostFrame calls EjectBrassLate; 0 = nothing pending
 	BOOL				m_fHasKevlar;			// 0x148 item_kevlar taken; cleared when the armor is used up
-	int					m_iUnused14C;			// 0x14c no function of Beta 1.0 refers to it
-	int					m_iUnused150;			// 0x150 no function of Beta 1.0 refers to it
-	BOOL				m_fNoDefaultItems;		// 0x154 only read: PlayerSpawn gives no pistol when it is 1
-	int					m_iTeam;				// 0x158 TEAM_TERRORIST or TEAM_CT
-	int					m_iAccount;				// 0x15c money
-	int					m_iUnused160;			// 0x160 no function of Beta 1.0 refers to it
-	int					m_iUnused164;			// 0x164 only written: SetAnimation zeroes it when the death animation starts
-	int					m_iDeathThrow;			// 0x168 how Killed throws the body: 0 not, 1 forwards, 2 backwards, 3 away from the attacker
-	float				m_flLastSay;			// 0x16c time of the last chat line (Host_Say lets one through a second)
-	float				m_flLastIdCheck;		// 0x170 PostThink names the player in the crosshair every two seconds
-	int					m_iMenu;				// 0x174 the menu the client has open (client.cpp)
+	BOOL				m_fNotKilled;			// 0x14c set at the end of Spawn, cleared by Killed and ClientPutInServer: a player who lived through the round keeps armor, kevlar and ammunition
+	int					m_iTeam;				// 0x150 TEAM_TERRORIST or TEAM_CT
+	int					m_iAccount;				// 0x154 money
+	int					m_iUnused158;			// 0x158 no function refers to it
+	int					m_iUnused15C;			// 0x15c only written: SetAnimation zeroes it when the death animation starts
+	int					m_iDeathThrow;			// 0x160 how Killed throws the body: 0 not, 1 forwards, 2 backwards, 3 away from the attacker
+	float				m_flLastSay;			// 0x164 time of the last chat line (Host_Say lets one through a second)
+	float				m_flLastIdCheck;		// 0x168 PostThink names the player in the crosshair every two seconds
+	int					m_iMenu;				// 0x16c the menu the client has open (client.cpp)
 
 	int					m_iPlayerSound;// the index of the sound list slot reserved for this player
 	int					m_iTargetVolume;// ideal sound volume. 

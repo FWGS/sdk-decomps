@@ -1,6 +1,6 @@
 /***
 *
-*	Counter-Strike Beta 1.0, hostage.cpp: the hostage (hostage_entity), the
+*	Counter-Strike Beta 1.1, hostage.cpp: the hostage (hostage_entity), the
 *	map's spawn entity.
 *
 *	A scientist model that stands where the map put it until a player uses
@@ -21,6 +21,7 @@
 #include "weapons.h"
 #include "nodes.h"
 #include "player.h"
+#include "gamerules.h"
 #include "hostage.h"
 #include "../engine/studio.h"
 
@@ -44,7 +45,7 @@ void CHostage::Spawn( void )
 	SetSequenceBox();
 
 	m_flNextUse = 0;
-	m_iUnused128 = 0;
+	m_iUnused12C = 0;
 	m_flFollowRange = 1024;
 	m_fStopped = TRUE;
 	m_hTargetEnt = NULL;
@@ -131,7 +132,7 @@ void CHostage::IdleThink( void )
 			pev->angles.z = 0;
 
 			if ( vecDir.Length() > m_flFollowDistance )
-				pev->velocity = vecDir / vecDir.Length() * 225;
+				pev->velocity = vecDir / vecDir.Length() * 265;
 
 			// blocked at the feet but free higher up: jump
 			UTIL_MakeVectors( pev->angles );
@@ -156,7 +157,7 @@ void CHostage::IdleThink( void )
 			pev->angles.x = 0;
 			pev->angles.z = 0;
 
-			pev->velocity = vecDir / vecDir.Length() * 210;
+			pev->velocity = vecDir / vecDir.Length() * 145;
 
 			UTIL_MakeVectors( pev->angles );
 			UTIL_TraceLine( pev->origin + gpGlobals->v_up * 2 - gpGlobals->v_forward * 32, pev->origin + gpGlobals->v_forward * 100 + gpGlobals->v_up * 2, ignore_monsters, ENT( pev ), &tr );
@@ -206,6 +207,7 @@ void CHostage::RePosition( void )
 	pev->effects &= ~EF_NODRAW;
 
 	m_hTargetEnt = NULL;
+	m_fTouched = FALSE;
 
 	UTIL_SetOrigin( pev, m_vecStart );
 	UTIL_SetSize( pev, Vector( -16, -16, 0 ), Vector( 16, 16, 72 ) );
@@ -334,6 +336,9 @@ void CHostage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 	if ( gpGlobals->time < m_flNextUse )
 		return;
 
+	if ( pev->takedamage == DAMAGE_NO )
+		return;
+
 	// a third state is treated as TRUE; retail's code keeps the test against
 	// TRUE without a jump, the two branches being the same
 	if ( m_fStopped == FALSE )
@@ -376,6 +381,14 @@ void CHostage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 				case 3:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hostage/hos4.wav", 1, ATTN_NORM ); break;
 				case 4:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hostage/hos5.wav", 1, ATTN_NORM ); break;
 				}
+			}
+
+			// the first counter-terrorist to lead it pays himself and his team
+			if ( !m_fTouched )
+			{
+				m_fTouched = TRUE;
+				((CHalfLifeMultiplay *)g_pGameRules)->m_iAccountCT += 150;
+				((CBasePlayer *)pActivator)->m_iAccount += 150;
 			}
 		}
 	}

@@ -1,6 +1,6 @@
 /***
 *
-*	Counter-Strike Beta 1.0, m3.cpp: the Benelli M3 Super 90 shotgun
+*	Counter-Strike Beta 1.1, m3.cpp: the Benelli M3 Super 90 shotgun
 *	(weapon_m3).
 *
 *	SDK 1.0's shotgun.cpp as the Counter-Strike team changed it: CShotgun
@@ -23,7 +23,7 @@
 #include "gamerules.h"
 
 // special deathmatch shotgun spreads
-#define VECTOR_CONE_DM_SHOTGUN	Vector( 0.065, 0.065, 0.00  )
+#define VECTOR_CONE_DM_SHOTGUN	Vector( 0.075, 0.075, 0.00  )
 
 enum m3_e {
 	M3_IDLE = 0,

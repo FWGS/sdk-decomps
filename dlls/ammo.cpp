@@ -1,6 +1,6 @@
 /***
 *
-*	Counter-Strike Beta 1.0, ammo.cpp: the ammunition boxes of the new
+*	Counter-Strike Beta 1.1, ammo.cpp: the ammunition boxes of the new
 *	guns (ammo_556nato, ammo_762nato, ammo_45acp, ammo_338magnum).
 *
 *	Four copies of SDK 1.0's CGlockAmmo (glock.cpp), class-body methods
@@ -85,7 +85,7 @@ class C45ACPAmmo : public CBasePlayerAmmo
 	}
 	BOOL AddAmmo( CBaseEntity *pOther )
 	{
-		if (pOther->GiveAmmo( AMMO_45ACPBOX_GIVE, "45ACP", AMMO_45ACPBOX_MAX ) != -1)
+		if (pOther->GiveAmmo( AMMO_45ACPBOX_GIVE, "45acp", AMMO_45ACPBOX_MAX ) != -1)
 		{
 			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
 			return TRUE;

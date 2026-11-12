@@ -1,15 +1,15 @@
 /***
 *
-*	Counter-Strike Beta 1.0, glock18.cpp: the Glock 18 Select Fire
+*	Counter-Strike Beta 1.1, glock18.cpp: the Glock 18 Select Fire
 *	(weapon_glock18), the terrorists' pistol.
 *
 *	SDK 1.0's glock.cpp as the Counter-Strike team changed it: the same
-*	class shape and WeaponIdle, the silencer test on pev->body kept, the
-*	bullets fired with FireBullets3. Every shot starts a three-round burst:
-*	GLOCK18Fire fires the first round and CBasePlayerWeapon::FireRemaining
-*	(weapons.cpp) the other two. File, class and method names are Beta
-*	3.1's (Linux symbols); the animation names are the sequence labels of
-*	models/v_glock18.mdl.
+*	class shape and WeaponIdle, the bullets fired with FireBullets3. Beta
+*	1.1: the primary attack fires single shots, the secondary a three-round
+*	burst (GLOCK18Fire fires the first round and FireRemaining, weapons.cpp,
+*	the other two). File, class and method names are Beta 3.1's (Linux
+*	symbols); the animation names are the sequence labels of Beta 1.0's
+*	models/v_glock18.mdl (Beta 1.1's model adds one, GLOCK18_SHOOT3).
 *
 ****/
 
@@ -27,6 +27,7 @@ enum glock18_e {
 	GLOCK18_IDLE3,
 	GLOCK18_SHOOT,
 	GLOCK18_SHOOT2,
+	GLOCK18_SHOOT3,		// new in Beta 1.1: the single shot (name ours; the model's label is not known)
 	GLOCK18_SHOOT_EMPTY,
 	GLOCK18_RELOAD,
 	GLOCK18_DRAW,
@@ -46,7 +47,7 @@ public:
 
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
-	void GLOCK18Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim );
+	void GLOCK18Fire( float flSpread, float flCycleTime, BOOL fUseBurstMode );
 	BOOL Deploy( void );
 	void Reload( void );
 	void WeaponIdle( void );
@@ -113,17 +114,36 @@ BOOL CGLOCK18::Deploy( )
 
 void CGLOCK18::SecondaryAttack( void )
 {
-	GLOCK18Fire( 0.025, 0.65, FALSE );
+	// the three-round burst
+	GLOCK18Fire( 0.015, 0.65, TRUE );
 }
 
 void CGLOCK18::PrimaryAttack( void )
 {
-	GLOCK18Fire( 0.025, 0.65, TRUE );
+	// semi-automatic
+	if (m_pPlayer->pev->velocity.Length2D() > 0)
+		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.3, 0.22, FALSE );
+	else if (FBitSet(m_pPlayer->pev->flags, FL_DUCKING))
+		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.15, 0.22, FALSE );
+	else
+		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.175, 0.22, FALSE );
 }
 
-void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
+void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseBurstMode )
 {
-	m_pPlayer->m_iBurstShotsFired = 0;
+	if (fUseBurstMode == TRUE)
+		m_pPlayer->m_iBurstShotsFired = 0;
+
+	if (m_pPlayer->m_flLastFired == 0)
+		m_pPlayer->m_flLastFired = gpGlobals->time;
+	else
+	{
+		// accuracy grows with the time since the last shot
+		m_pPlayer->m_flAccuracy = (gpGlobals->time - m_pPlayer->m_flLastFired) * 0.25 + 0.65;
+		if (m_pPlayer->m_flAccuracy > 0.98)
+			m_pPlayer->m_flAccuracy = 0.98;
+		m_pPlayer->m_flLastFired = gpGlobals->time;
+	}
 
 	if (m_iClip <= 0)
 	{
@@ -142,10 +162,15 @@ void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim
 
 	if (m_iClip != 0)
 	{
-		if (RANDOM_LONG(0,1))
-			SendWeaponAnim( GLOCK18_SHOOT );
+		if (fUseBurstMode == TRUE)
+		{
+			if (RANDOM_LONG(0,1))
+				SendWeaponAnim( GLOCK18_SHOOT );
+			else
+				SendWeaponAnim( GLOCK18_SHOOT2 );
+		}
 		else
-			SendWeaponAnim( GLOCK18_SHOOT2 );
+			SendWeaponAnim( GLOCK18_SHOOT3 );
 	}
 	else
 		SendWeaponAnim( GLOCK18_SHOOT_EMPTY );
@@ -161,44 +186,19 @@ void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim
 							 + gpGlobals->v_forward * 15;
 	EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -20 + gpGlobals->v_forward * 32 - gpGlobals->v_right * 20 , vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
 
-	// silenced
-	if (pev->body == 1)
-	{
-		m_pPlayer->m_iWeaponVolume = LOUD_GUN_VOLUME;
-		m_pPlayer->m_iWeaponFlash = DIM_GUN_FLASH;
+	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
+	m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
 
-		switch(RANDOM_LONG(0,1))
-		{
-		case 0:
-			EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/glock18-1.wav", RANDOM_FLOAT(0.9, 1.0), ATTN_NORM);
-			break;
-		case 1:
-			EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/glock18-2.wav", RANDOM_FLOAT(0.9, 1.0), ATTN_NORM);
-			break;
-		}
-	}
+	// one sound for the burst, the other for the single shot
+	if (fUseBurstMode == TRUE)
+		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/glock18-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
 	else
-	{
-		// non-silenced
-		m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
-		m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
-		if (RANDOM_LONG(0,1))
-			EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/glock18-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
-		else
-			EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/glock18-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
-	}
+		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/glock18-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
 
-	if ( fUseAutoAim )
-	{
-		vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_10DEGREES );
-	}
-	else
-	{
-		vecAiming = gpGlobals->v_forward;
-	}
+	vecAiming = gpGlobals->v_forward;
 
 	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 18, 0.9 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
@@ -211,9 +211,12 @@ void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim
 
 	m_pPlayer->pev->punchangle.x -= 2;
 
-	// the burst's other two rounds: FireRemaining, from ItemPostFrame
-	m_pPlayer->m_flNextBurstShot = gpGlobals->time + 0.1;
-	m_pPlayer->m_iBurstShotsFired++;
+	if (fUseBurstMode == TRUE)
+	{
+		// the burst's other two rounds: FireRemaining, from ItemPostFrame
+		m_pPlayer->m_flNextBurstShot = gpGlobals->time + 0.1;
+		m_pPlayer->m_iBurstShotsFired++;
+	}
 }
 
 

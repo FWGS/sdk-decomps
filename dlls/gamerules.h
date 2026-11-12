@@ -363,7 +363,8 @@ public:
 	int m_iNumTerrorist;			// 0x18 players per team, counted by CheckWinConditions
 	int m_iNumCT;					// 0x1c
 	int m_iHostagesRescued;			// 0x20 this round; each is worth 200 to the CT account
-	int m_iRoundWinStatus;			// 0x24 0 round running, 1 CTs won, 2 terrorists won, 3 nobody
+	int m_iUnused24;				// 0x24 new in Beta 1.1: only RestartRound refers to it (zeroes it)
+	int m_iRoundWinStatus;			// 0x28 0 round running, 1 CTs won, 2 terrorists won, 3 nobody
 
 protected:
 	virtual void ChangeLevel( void );

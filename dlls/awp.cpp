@@ -1,6 +1,6 @@
 /***
 *
-*	Counter-Strike Beta 1.0, awp.cpp: the AWP sniper rifle (weapon_awp).
+*	Counter-Strike Beta 1.1, awp.cpp: the AWP sniper rifle (weapon_awp).
 *
 *	SDK 1.0's glock.cpp edited: the same class shape and fire function,
 *	FireBullets3 instead of FireBullets, two zoom levels on the secondary
@@ -115,11 +115,11 @@ void CAWP::SecondaryAttack( void )
 void CAWP::PrimaryAttack( void )
 {
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		AWPFire( 0.15, 1.0, TRUE );
+		AWPFire( 0.15, 1.25, TRUE );
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
-		AWPFire( 0, 1.0, TRUE );
+		AWPFire( 0, 1.25, TRUE );
 	else
-		AWPFire( 0.007, 1.0, TRUE );
+		AWPFire( 0.007, 1.25, TRUE );
 }
 
 void CAWP::AWPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
@@ -171,7 +171,7 @@ void CAWP::AWPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	// sic: fUseAutoAim is not tested, the auto-aim vector is always used
 	vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_10DEGREES );
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 3, BULLET_PLAYER_338MAG, 100, 0.975 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 3, BULLET_PLAYER_338MAG, 200, 0.975 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)

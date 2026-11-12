@@ -1,6 +1,6 @@
 /***
 *
-*	Counter-Strike Beta 1.0, mp5navy.cpp: the MP5 Navy submachine gun
+*	Counter-Strike Beta 1.1, mp5navy.cpp: the MP5 Navy submachine gun
 *	(weapon_mp5navy).
 *
 *	The M4A1's shape without the zoom: both attacks fire. weapon_sg552,
@@ -134,12 +134,12 @@ void CMP5N::PrimaryAttack( void )
 	}
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.04;
+		flSpread = m_pPlayer->m_flAccuracy * 0.07;
 		MP5NFire( flSpread, 0.085, FALSE );
 	}
 	else
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.05;
+		flSpread = m_pPlayer->m_flAccuracy * 0.09;
 		MP5NFire( flSpread, 0.085, FALSE );
 	}
 }

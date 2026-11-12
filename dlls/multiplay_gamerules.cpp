@@ -223,11 +223,13 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 	{
 		m_iRoundWinStatus = 1;
 		m_iAccountCT = 250;
+		UTIL_ClientPrintAll( HUD_PRINTCENTER, "Counter-Terrorists Won!\n" );
 	}
 	else if ( NumAliveCT == 0 && NumDeadCT != 0 && m_iNumTerrorist > 0 )
 	{
 		m_iRoundWinStatus = 2;
 		m_iAccountTerrorist = 300;
+		UTIL_ClientPrintAll( HUD_PRINTCENTER, "Terrorists Won!\n" );
 	}
 	else if ( NumAliveCT == 0 && NumAliveTerrorist == 0 )
 	{
@@ -265,25 +267,22 @@ void CHalfLifeMultiplay::RestartRound( void )
 		{
 			// a hostage still standing in the map
 			if ( m_iRoundWinStatus == 2 )
-			{
-				m_iAccountTerrorist += 250;
-				ALERT( at_console, "Terrorist account = %i\n", m_iAccountTerrorist );
-			}
+				m_iAccountTerrorist += 300;
 			else if ( m_iRoundWinStatus == 1 )
-			{
 				m_iAccountCT += 200;
-				ALERT( at_console, "CT account = %i\n", m_iAccountCT );
-			}
 
 			if ( pHostage->pev->deadflag == DEAD_DEAD )
-			{
-				ALERT( at_console, "resucrrection!\n" );
 				pHostage->pev->deadflag = DEAD_RESPAWNABLE;
-			}
 		}
 		((CHostage *)pHostage)->RePosition();
 		pHostage = UTIL_FindEntityByClassname( pHostage, "hostage_entity" );
 	}
+
+	// the losing team gets something too
+	if ( m_iRoundWinStatus == 2 )
+		m_iAccountCT += 350;
+	else if ( m_iRoundWinStatus == 1 )
+		m_iAccountTerrorist += 350;
 
 	m_iAccountCT += m_iHostagesRescued * 200;
 
@@ -317,6 +316,8 @@ void CHalfLifeMultiplay::RestartRound( void )
 				player->m_iRespawnFrames = 0;
 				respawn( pPlayer->pev, FALSE );
 			}
+
+			EMIT_SOUND( ENT(player->pev), CHAN_VOICE, "radio/go.wav", 1, ATTN_NORM );
 		}
 		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
 	}
@@ -326,6 +327,7 @@ void CHalfLifeMultiplay::RestartRound( void )
 	m_iAccountCT = 0;
 	m_iAccountTerrorist = 0;
 	m_iHostagesRescued = 0;
+	m_iUnused24 = 0;
 	m_iRoundWinStatus = 0;
 	m_flRoundStartTime = gpGlobals->time;
 }
@@ -347,6 +349,14 @@ void CHalfLifeMultiplay :: Think ( void )
 				|| ((m_flIntermissionEndTime + MAX_INTERMISSION_TIME) < gpGlobals->time) ) 
 				ChangeLevel(); // intermission is over
 		}
+		return;
+	}
+
+	float flTimeLimit = timelimit.value * 60;
+
+	if ( flTimeLimit != 0 && gpGlobals->time >= flTimeLimit )
+	{
+		GoToIntermission();
 		return;
 	}
 
@@ -565,25 +575,27 @@ void CHalfLifeMultiplay :: ClientDisconnected( edict_t *pClient )
 //=========================================================
 float CHalfLifeMultiplay :: FlPlayerFallDamage( CBasePlayer *pPlayer )
 {
-	int iFallDamage = (int)CVAR_GET_FLOAT("mp_falldamage");
-
-	switch ( iFallDamage )
-	{
-	case 1://progressive
-		pPlayer->m_flFallVelocity -= PLAYER_MAX_SAFE_FALL_SPEED;
-		return pPlayer->m_flFallVelocity * DAMAGE_FOR_FALL_SPEED;
-		break;
-	default:
-	case 0:// fixed
-		return 10;
-		break;
-	}
+	// always progressive now, at twice the single-player rate; mp_falldamage is no longer read
+	pPlayer->m_flFallVelocity -= PLAYER_MAX_SAFE_FALL_SPEED;
+	ALERT( at_console, "speed = %f\n", pPlayer->m_flFallVelocity );
+	return pPlayer->m_flFallVelocity * DAMAGE_FOR_FALL_SPEED * 2;
 } 
 
 //=========================================================
 //=========================================================
 BOOL CHalfLifeMultiplay::FPlayerCanTakeDamage( CBasePlayer *pPlayer, CBaseEntity *pAttacker )
 {
+	// teamplay_gamerules.cpp's test, here for the two teams of Counter-Strike
+	if ( pAttacker && PlayerRelationship( pPlayer, pAttacker ) == GR_TEAMMATE )
+	{
+		// my teammate hit me.
+		if ( (CVAR_GET_FLOAT("mp_friendlyfire") == 0) && (pAttacker != pPlayer) )
+		{
+			// friendly fire is off, and this hit came from someone other than myself,  then don't get hurt
+			return FALSE;
+		}
+	}
+
 	return TRUE;
 }
 
@@ -621,18 +633,15 @@ void CHalfLifeMultiplay :: PlayerSpawn( CBasePlayer *pPlayer )
 		addDefault = FALSE;
 	}
 
-	if ( pPlayer->m_fNoDefaultItems == TRUE )
-		addDefault = FALSE;
-
 	if ( pPlayer->m_iTeam == TEAM_CT && addDefault )
 	{
 		pPlayer->GiveNamedItem( "weapon_usp" );
-		pPlayer->GiveAmmo( 24, "45acp", _9MM_MAX_CARRY );
+		pPlayer->GiveAmmo( 12, "45acp", USP_MAX_CARRY );
 	}
 	else if ( pPlayer->m_iTeam == TEAM_TERRORIST && addDefault )
 	{
 		pPlayer->GiveNamedItem( "weapon_glock18" );
-		pPlayer->GiveAmmo( 40, "9mm", _9MM_MAX_CARRY );
+		pPlayer->GiveAmmo( 20, "9mm", _9MM_MAX_CARRY );
 	}
 
 	int clientIndex = pPlayer->entindex();
@@ -1127,7 +1136,8 @@ int CHalfLifeMultiplay::PlayerRelationship( CBaseEntity *pPlayer, CBaseEntity *p
 	if ( player->pev->deadflag != DEAD_NO && target->pev->deadflag != DEAD_NO )
 		return GR_TEAMMATE;
 
-	if ( player->m_iTeam == target->m_iTeam )
+	// the living are team mates of the living of their own team only
+	if ( player->m_iTeam == target->m_iTeam && player->pev->deadflag == DEAD_NO )
 		return GR_TEAMMATE;
 
 	return GR_NOTTEAMMATE;

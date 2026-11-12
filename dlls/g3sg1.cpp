@@ -1,6 +1,6 @@
 /***
 *
-*	Counter-Strike Beta 1.0, g3sg1.cpp: the G3/SG-1 sniper rifle (weapon_g3sg1).
+*	Counter-Strike Beta 1.1, g3sg1.cpp: the G3/SG-1 sniper rifle (weapon_g3sg1).
 *
 *	The AWP's shape (SDK 1.0's glock.cpp edited): two zoom levels with a
 *	green night-vision fade on the first, an accuracy that recovers with
@@ -126,13 +126,18 @@ void CG3SG1::PrimaryAttack( void )
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
 		G3SG1Fire( 0.09, 0.25, TRUE );
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
-		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.03, 0.3, FALSE );
+		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.03, 0.25, FALSE );
 	else
-		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.085, 0.3, FALSE );
+		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.085, 0.25, FALSE );
 }
 
 void CG3SG1::G3SG1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 {
+	// semi-automatic: one shot per press (ItemPostFrame clears m_iShotsFired)
+	m_pPlayer->m_iShotsFired++;
+	if (m_pPlayer->m_iShotsFired > 1)
+		return;
+
 	// the accuracy recovers with the time since the last shot
 	if (m_pPlayer->m_flLastFired == 0)
 		m_pPlayer->m_flLastFired = gpGlobals->time;

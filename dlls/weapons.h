@@ -15,6 +15,10 @@
 #ifndef WEAPONS_H
 #define WEAPONS_H
 
+// Counter-Strike: effects.h here, as SDK 2.2's weapons.h has it. Its intermediate code
+// and declarations ahead of CBasePlayerItem show in the image.
+#include "effects.h"
+
 
 class CBasePlayer;
 extern int gmsgWeapPickup;
@@ -129,7 +133,7 @@ public:
 
 // weapon clip/carry ammo capacities
 #define URANIUM_MAX_CARRY		100
-#define	_9MM_MAX_CARRY			250
+#define	_9MM_MAX_CARRY			100
 #define _357_MAX_CARRY			36
 #define BUCKSHOT_MAX_CARRY		125
 #define BOLT_MAX_CARRY			50
@@ -287,6 +291,23 @@ typedef struct
 	const char *pszName;
 	int iId;
 } AmmoInfo;
+
+// sic: a stand-in for declarations Beta 1.1's headers have beyond ours where the
+// files that include weapons.h see them; what they were the image cannot say. VC5
+// orders some operands by the number of declarations a file has seen:
+// UTIL_TraceLine, UTIL_ClampVectorToBox, UTIL_MonstersInSphere, CRestore::ReadField,
+// USENTENCEG_Pick, FShouldSwitchWeapon and GetNextBestWeapon need more than Beta
+// 1.0's text gives, CFuncTank::TankTrace and the rest must keep theirs. effects.h,
+// included above, is most of it (295 numbers; func_tank.cpp includes it itself,
+// before weapons.h); this enum's tag and ten enumerators are the rest, 11 numbers. Of
+// 0 to 32 here 11 to 15 and 19 keep every object retail's.
+// Before effects.h was found this place held an enum of 303 numbers and
+// an unused inline function of 159 statement lines standing for its intermediate code.
+enum sic_declcount_b11
+{
+	SIC_DECLCOUNT_B11_BASE, SIC_DECLCOUNT_B11_0, SIC_DECLCOUNT_B11_1, SIC_DECLCOUNT_B11_2, SIC_DECLCOUNT_B11_3, SIC_DECLCOUNT_B11_4, SIC_DECLCOUNT_B11_5, SIC_DECLCOUNT_B11_6,
+	SIC_DECLCOUNT_B11_7, SIC_DECLCOUNT_B11_8
+};
 
 // Items that the player has in their inventory that they can use
 class CBasePlayerItem : public CBaseAnimating

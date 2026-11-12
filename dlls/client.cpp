@@ -186,6 +186,28 @@ void ShowMenu( CBasePlayer *pPlayer, int bitsValidSlots, int nDisplayTime, BOOL 
 	MESSAGE_END();
 }
 
+//=========================================================
+// RescueNotify - every counter-terrorist hears that hostages
+// were rescued (name from the later versions' Linux symbols)
+//=========================================================
+void RescueNotify( void )
+{
+	CBaseEntity *pPlayer = NULL;
+
+	pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
+	{
+		if ( pPlayer->IsPlayer() && pPlayer->pev->flags != FL_DORMANT )
+		{
+			CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+
+			if ( player->m_iTeam == TEAM_CT )
+				EMIT_SOUND( ENT(player->pev), CHAN_VOICE, "radio/rescued.wav", 1, ATTN_NORM );
+		}
+		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	}
+}
+
 
 // the team with fewer players; counter-terrorists only when the terrorists
 // are more
@@ -228,6 +250,7 @@ void ClientPutInServer( edict_t *pEntity )
 	pPlayer->SetCustomDecalFrames(-1); // Assume none;
 
 	pPlayer->m_iTeam = SelectDefaultTeam();
+	pPlayer->m_fNotKilled = FALSE;
 	pPlayer->m_iAccount = 0;
 
 	// Allocate a CBasePlayer for pev, and call spawn
@@ -606,7 +629,8 @@ void JoinCT( edict_t *pEntity, CBasePlayer *pPlayer, int iSlot )	// name ours
 	case 1:
 		CLIENT_COMMAND( pEntity, "model urban\n" );
 		g_engfuncs.pfnSetClientKeyValue( iIndex, g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "model", "urban" );
-		ClientKill( pEntity );
+		if ( pPlayer->pev->deadflag == DEAD_NO )
+			ClientKill( pEntity );
 		break;
 	}
 }
@@ -623,7 +647,8 @@ void JoinTerrorist( edict_t *pEntity, CBasePlayer *pPlayer, int iSlot )	// name 
 	case 1:
 		CLIENT_COMMAND( pEntity, "model terror\n" );
 		g_engfuncs.pfnSetClientKeyValue( iIndex, g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "model", "terror" );
-		ClientKill( pEntity );
+		if ( pPlayer->pev->deadflag == DEAD_NO )
+			ClientKill( pEntity );
 		break;
 	}
 }
@@ -702,6 +727,10 @@ void ClientCommand( edict_t *pEntity )
 	{
 		Host_Say( pEntity, 0 );
 	}
+	else if ( FStrEq(pcmd, "say_team" ) )
+	{
+		Host_Say( pEntity, 1 );
+	}
 	else if ( FStrEq(pcmd, "gm_restartround" ) )
 	{
 		// anyone may restart the round
@@ -720,42 +749,6 @@ void ClientCommand( edict_t *pEntity )
 		else
 			strcat( szText, "Terrorist" );
 		ShowMenu( pPlayer, 0x200, 2, FALSE, szText );
-	}
-	else if ( pPlayer->pev->flags == FL_SPECTATOR )
-	{
-		// an observer has no other command
-	}
-	else if ( FStrEq(pcmd, "say_team" ) )
-	{
-		Host_Say( pEntity, 1 );
-	}
-	else if ( FStrEq(pcmd, "drop" ) )
-	{
-		// player is dropping an item.
-		GetClassPtr((CBasePlayer *)pev)->DropPlayerItem((char *)CMD_ARGV(1));
-	}
-	else if ( FStrEq(pcmd, "fov" ) )
-	{
-		if ( g_flWeaponCheat && CMD_ARGC() > 1)
-		{
-			GetClassPtr((CBasePlayer *)pev)->m_iFOV = atoi( CMD_ARGV(1) );
-		}
-		else
-		{
-			CLIENT_PRINTF( pEntity, print_console, UTIL_VarArgs( "\"fov\" is \"%d\"\n", (int)GetClassPtr((CBasePlayer *)pev)->m_iFOV ) );
-		}
-	}
-	else if ( FStrEq(pcmd, "use" ) )
-	{
-		GetClassPtr((CBasePlayer *)pev)->SelectItem((char *)CMD_ARGV(1));
-	}
-	else if (((pstr = strstr(pcmd, "weapon_")) != NULL)  && (pstr == pcmd))
-	{
-		GetClassPtr((CBasePlayer *)pev)->SelectItem(pcmd);
-	}
-	else if (FStrEq(pcmd, "lastinv" ))
-	{
-		GetClassPtr((CBasePlayer *)pev)->SelectLastItem();
 	}
 	else if ( FStrEq(pcmd, "menuselect" ) )
 	{
@@ -849,6 +842,43 @@ void ClientCommand( edict_t *pEntity )
 			break;
 		}
 	}
+	else if ( FStrEq(pcmd, "chooseteam" ) )
+	{
+		ShowMenu( pPlayer, 7, 20, FALSE, "#Team_Select" );
+		pPlayer->m_iMenu = Menu_TeamSelect;
+	}
+	else if ( pPlayer->pev->deadflag != DEAD_NO )
+	{
+		// the dead have no other command
+	}
+	else if ( FStrEq(pcmd, "drop" ) )
+	{
+		// player is dropping an item.
+		GetClassPtr((CBasePlayer *)pev)->DropPlayerItem((char *)CMD_ARGV(1));
+	}
+	else if ( FStrEq(pcmd, "fov" ) )
+	{
+		if ( g_flWeaponCheat && CMD_ARGC() > 1)
+		{
+			GetClassPtr((CBasePlayer *)pev)->m_iFOV = atoi( CMD_ARGV(1) );
+		}
+		else
+		{
+			CLIENT_PRINTF( pEntity, print_console, UTIL_VarArgs( "\"fov\" is \"%d\"\n", (int)GetClassPtr((CBasePlayer *)pev)->m_iFOV ) );
+		}
+	}
+	else if ( FStrEq(pcmd, "use" ) )
+	{
+		GetClassPtr((CBasePlayer *)pev)->SelectItem((char *)CMD_ARGV(1));
+	}
+	else if (((pstr = strstr(pcmd, "weapon_")) != NULL)  && (pstr == pcmd))
+	{
+		GetClassPtr((CBasePlayer *)pev)->SelectItem(pcmd);
+	}
+	else if (FStrEq(pcmd, "lastinv" ))
+	{
+		GetClassPtr((CBasePlayer *)pev)->SelectLastItem();
+	}
 	else if ( FStrEq(pcmd, "throwweapon" ) )
 	{
 		DropPrimary( pPlayer );
@@ -860,11 +890,6 @@ void ClientCommand( edict_t *pEntity )
 			ShowMenu( pPlayer, 0xff, 20, FALSE, "#BuyAmmo" );
 			pPlayer->m_iMenu = Menu_BuyAmmo;
 		}
-	}
-	else if ( FStrEq(pcmd, "chooseteam" ) )
-	{
-		ShowMenu( pPlayer, 7, 20, FALSE, "#Team_Select" );
-		pPlayer->m_iMenu = Menu_TeamSelect;
 	}
 	else if ( FStrEq(pcmd, "buyweapon" ) )
 	{
@@ -930,6 +955,9 @@ void ClientCommand( edict_t *pEntity )
 					}
 				}
 
+				if ( iRescued > 0 )
+					RescueNotify();
+
 				char szText[60];
 
 				itoa( iRescued, szText, 10 );
@@ -964,6 +992,19 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 	// Is the client spawned yet?
 	if ( !pEntity->pvPrivateData )
 		return;
+
+	CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE( pEntity );	// name ours
+
+	// the model goes with the team, whatever the client sets
+	switch ( pPlayer->m_iTeam )
+	{
+	case TEAM_TERRORIST:
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "terror" );
+		break;
+	case TEAM_CT:
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "urban" );
+		break;
+	}
 
 	// msg everyone if someone changes their name,  and it isn't the first time (changing no name to current name)
 	if ( pEntity->v.netname && STRING(pEntity->v.netname)[0] != 0 && !FStrEq( STRING(pEntity->v.netname), g_engfuncs.pfnInfoKeyValue( infobuffer, "name" )) )
@@ -1085,6 +1126,8 @@ void ClientPrecache( void )
 	PRECACHE_SOUND("player/headshot1.wav");
 	PRECACHE_SOUND("player/headshot2.wav");
 	PRECACHE_SOUND("player/headshot3.wav");
+	PRECACHE_SOUND("radio/go.wav");
+	PRECACHE_SOUND("radio/rescued.wav");
 
 	PRECACHE_SOUND("player/sprayer.wav");			// spray paint sound for PreAlpha
 	

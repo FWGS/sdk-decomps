@@ -421,6 +421,14 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	flBonus = ARMOR_BONUS;
 	flRatio = ARMOR_RATIO;
 
+	CBasePlayer *pAttacker = (CBasePlayer *)CBaseEntity::Instance( pevAttacker );
+
+	if ( !g_pGameRules->FPlayerCanTakeDamage( this, pAttacker ) )
+	{
+		// Refuse the damage
+		return 0;
+	}
+
 	Pain();
 
 	// slow the player down
@@ -446,19 +454,16 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	// go take the damage first
 
 
-	CBasePlayer *pAttacker = (CBasePlayer *)CBaseEntity::Instance(pevAttacker);
-
-	// sic: the attacker's team is read before it is known to be a player
-	if ( pAttacker->m_iTeam == m_iTeam )
-		flDamage *= 0.25;
-
-	if ( pAttacker->IsPlayer() && pAttacker != this && pAttacker->m_iTeam != m_iTeam )
-		pAttacker->m_iAccount += 10;
-
-	if ( !g_pGameRules->FPlayerCanTakeDamage( this, pAttacker ) )
+	// a player's hits: half damage to a team mate (and to himself), 10 dollars for hitting an enemy
+	if ( GetClassPtr( (CBaseEntity *)pevAttacker )->IsPlayer() )
 	{
-		// Refuse the damage
-		return 0;
+		pAttacker = GetClassPtr( (CBasePlayer *)pevAttacker );
+
+		if ( pAttacker->m_iTeam == m_iTeam )
+			flDamage *= 0.5;
+
+		if ( pAttacker != this && pAttacker->m_iTeam != m_iTeam )
+			pAttacker->m_iAccount += 10;
 	}
 
 	// keep track of amount of damage last sustained
@@ -756,7 +761,7 @@ void CBasePlayer::PackDeadPlayerItems( void )
 	pWeaponBox->pev->angles.z = 0;
 
 	pWeaponBox->SetThink( CWeaponBox::Kill );
-	pWeaponBox->pev->nextthink = gpGlobals->time + 20;
+	pWeaponBox->pev->nextthink = gpGlobals->time + 40;
 
 // back these two lists up to their first elements
 	iPA = 0;
@@ -939,6 +944,9 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	pev->nextthink = gpGlobals->time + 0.1;
 
 	((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
+
+	// a dead player starts the next round with nothing
+	m_fNotKilled = FALSE;
 }
 
 
@@ -1089,9 +1097,6 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 
 		switch ( m_LastHitGroup )
 		{
-		case HITGROUP_GENERIC:
-			break;
-
 		case HITGROUP_HEAD:
 			switch ( RANDOM_LONG( 0, 2 ) )
 			{
@@ -1112,6 +1117,7 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 				animDesired = LookupSequence( "sflinch_head1" );
 			break;
 
+		case HITGROUP_GENERIC:
 		case HITGROUP_CHEST:
 			if ( m_fHeavyDamage == TRUE )
 				animDesired = LookupSequence( "flinch_stomach1" );
@@ -1185,7 +1191,7 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 			return;
 		m_Activity = m_IdealActivity;
 
-		m_iUnused164 = 0;
+		m_iUnused15C = 0;
 		m_iDeathThrow = 0;
 
 		// the death animation goes by where the last hit was
@@ -1617,7 +1623,7 @@ void CBasePlayer::PlayerDeathThink(void)
 // if the player has been dead for one second longer than allowed by forcerespawn, 
 // forcerespawn isn't on. Send the player off to an intermission camera until they 
 // choose to respawn.
-	if ( g_pGameRules->IsMultiplayer() && ( gpGlobals->time > (m_fDeadTime + 6) ) && !(m_afPhysicsFlags & PFLAG_OBSERVER) )
+	if ( g_pGameRules->IsMultiplayer() && ( gpGlobals->time > (m_fDeadTime + 3) ) && !(m_afPhysicsFlags & PFLAG_OBSERVER) )
 	{
 		// go to dead camera. 
 		StartDeathCam();
@@ -3514,7 +3520,14 @@ void CBasePlayer::Spawn( void )
 {
 	pev->classname		= MAKE_STRING("player");
 	pev->health			= 100;
-	pev->armorvalue		= 0;
+
+	// a survivor of the last round keeps his armor and kevlar
+	if ( !m_fNotKilled )
+	{
+		pev->armorvalue		= 0;
+		m_fHasKevlar		= FALSE;
+	}
+
 	pev->takedamage		= DAMAGE_AIM;
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_WALK;
@@ -3538,7 +3551,6 @@ void CBasePlayer::Spawn( void )
 	m_flLastFired		= 0;
 	m_flAccuracy		= 0.8;
 	m_flNextBurstShot	= 0;
-	m_fHasKevlar		= FALSE;
 	m_flLastSay			= 0;
 
 	// a sniper rifle may have hidden its view model when zoomed in: show it again
@@ -3593,22 +3605,29 @@ void CBasePlayer::Spawn( void )
 	m_fNoPlayerSound = FALSE;// normal sound behavior.
 
 	m_pLastItem = NULL;
-	m_fInitHUD = TRUE;
-	m_iClientHideHUD = -1;  // force this to be recalculated
 	m_fWeapon = FALSE;
 	m_pClientActiveItem = NULL;
 	m_iClientBattery = -1;
 
-	// reset all ammo values to 0
-	for ( int i = 0; i < MAX_AMMO_SLOTS; i++ )
+	// and his ammunition
+	if ( !m_fNotKilled )
 	{
-		m_rgAmmo[i] = 0;
-		m_rgAmmoLast[i] = 0;  // client ammo values also have to be reset  (the death hud clear messages does on the client side)
+		m_fInitHUD = TRUE;
+		m_iClientHideHUD = -1;  // force this to be recalculated
+
+		// reset all ammo values to 0
+		for ( int i = 0; i < MAX_AMMO_SLOTS; i++ )
+		{
+			m_rgAmmo[i] = 0;
+			m_rgAmmoLast[i] = 0;  // client ammo values also have to be reset  (the death hud clear messages does on the client side)
+		}
 	}
 
 	m_lastx = m_lasty = 0;
 
 	g_pGameRules->PlayerSpawn( this );
+
+	m_fNotKilled = TRUE;
 }
 
 
