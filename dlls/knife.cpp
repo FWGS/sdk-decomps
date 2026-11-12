@@ -44,7 +44,7 @@ public:
 	void Holster( void );
 	int m_iSwing;
 	TraceResult m_trHit;
-	float GetMaxSpeed( void ) { return 300; }	// Beta 5.0 (leak): Linux symbol
+	float GetMaxSpeed( void ) { return 250; }	// Beta 5.0 (leak): Linux symbol; Beta 6.0: 250 (was 300)
 	BOOL CanDrop( void ) { return FALSE; }		// Beta 5.0 (leak): Linux symbol
 };
 LINK_ENTITY_TO_CLASS( weapon_knife, CKnife );
@@ -73,6 +73,7 @@ void CKnife::Spawn( )
 void CKnife::Precache( void )
 {
 	PRECACHE_MODEL("models/v_knife.mdl");
+	PRECACHE_MODEL("models/v_knife_r.mdl");	// Beta 6.0: the right-handed view model
 	PRECACHE_MODEL("models/w_knife.mdl");
 	PRECACHE_MODEL("models/p_knife.mdl");
 	PRECACHE_SOUND("weapons/knife_deploy1.wav");
@@ -105,7 +106,12 @@ int CKnife::GetItemInfo(ItemInfo *p)
 BOOL CKnife::Deploy( )
 {
 	EMIT_SOUND( ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/knife_deploy1.wav", 1, ATTN_NORM );
-	return DefaultDeploy( "models/v_knife.mdl", "models/p_knife.mdl", KNIFE_DRAW, "crowbar" );
+
+	// Beta 6.0: the left-handed model is the old one, the right-handed one is new
+	if ( m_pPlayer->m_bLeftHanded == true )
+		return DefaultDeploy( "models/v_knife.mdl", "models/p_knife.mdl", KNIFE_DRAW, "crowbar" );
+
+	return DefaultDeploy( "models/v_knife_r.mdl", "models/p_knife.mdl", KNIFE_DRAW, "crowbar" );
 }
 
 void CKnife::Holster( )
@@ -171,7 +177,7 @@ void CKnife::PrimaryAttack()
 
 void CKnife::Smack( )
 {
-	DecalGunshot( &m_trHit, BULLET_PLAYER_CROWBAR, false, m_pPlayer->pev );
+	DecalGunshot( &m_trHit, BULLET_PLAYER_CROWBAR, false, m_pPlayer->pev, false );	// Beta 6.0: no metal decal
 }
 
 

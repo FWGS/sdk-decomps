@@ -172,6 +172,10 @@ SOURCE=.\MOTD.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\nvg.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\parsemsg.cpp
 # End Source File
 # Begin Source File

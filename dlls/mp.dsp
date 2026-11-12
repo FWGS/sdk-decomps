@@ -179,6 +179,10 @@ SOURCE=.\animation.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\aug.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\awp.cpp
 # End Source File
 # Begin Source File
@@ -316,6 +320,10 @@ SOURCE=.\m3.cpp
 # Begin Source File
 
 SOURCE=.\m4a1.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\mac10.cpp
 # End Source File
 # Begin Source File
 

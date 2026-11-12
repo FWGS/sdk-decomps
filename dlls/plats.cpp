@@ -675,28 +675,6 @@ void CFuncTrain :: KeyValue( KeyValueData *pkvd )
 }
 
 
-//
-// Counter-Strike Beta 4.0: a new round puts the train back where Spawn found
-// it, at its first path corner
-//
-void CFuncTrain :: Restart( void )
-{
-	if (pev->speed == 0)
-		pev->speed = 100;
-
-	if (pev->dmg == 0)
-		pev->dmg = 2;
-
-	pev->movetype = MOVETYPE_PUSH;
-	m_pevCurrentTarget = m_pevFirstTarget;
-	UTIL_SetOrigin(pev, m_vStartPosition);
-	m_activated = FALSE;
-
-	if ( m_volume == 0 )
-		m_volume = 0.85;
-}
-
-
 void CFuncTrain :: Blocked( CBaseEntity *pOther )
 
 {
@@ -901,6 +879,28 @@ void CFuncTrain :: Spawn( void )
 }
 
 
+//
+// Counter-Strike Beta 4.0: a new round puts the train back where Spawn found
+// it, at its first path corner
+//
+void CFuncTrain :: Restart( void )
+{
+	if (pev->speed == 0)
+		pev->speed = 100;
+
+	if (pev->dmg == 0)
+		pev->dmg = 2;
+
+	pev->movetype = MOVETYPE_PUSH;
+	m_pevCurrentTarget = m_pevFirstTarget;
+	UTIL_SetOrigin(pev, m_vStartPosition);
+	m_activated = FALSE;
+
+	if ( m_volume == 0 )
+		m_volume = 0.85;
+}
+
+
 void CFuncTrain::Precache( void )
 {
 	CBasePlatTrain::Precache();
@@ -1050,10 +1050,7 @@ void CFuncTrackTrain :: Blocked( CBaseEntity *pOther )
 		pevOther->velocity = (pevOther->origin - pev->origin ).Normalize() * pev->dmg;
 
 	ALERT( at_aiconsole, "TRAIN(%s): Blocked by %s (dmg:%.2f)\n", STRING(pev->targetname), STRING(pOther->pev->classname), pev->dmg );
-	if ( pev->dmg <= 0 )
-		return;
-	// we can't hurt this thing, so we're not concerned with it
-	pOther->TakeDamage(pev, pev, pev->dmg, DMG_CRUSH);
+	// Counter-Strike Beta 6.0: the train no longer hurts what blocks it
 }
 
 
@@ -1165,6 +1162,8 @@ void CFuncTrackTrain :: UpdateSound( void )
 void CFuncTrackTrain :: Next( void )
 {
 	float time = 0.5;
+
+	ALERT( at_console, "Train speed = %f\n", pev->speed );	// Counter-Strike Beta 6.0
 
 	if ( !pev->speed )
 	{
@@ -1488,9 +1487,11 @@ sounds
 void CFuncTrackTrain :: Spawn( void )
 {
 	if ( pev->speed == 0 )
-		m_speed = 100;
+		m_speed = 165;	// Counter-Strike Beta 6.0 (the SDK's: 100)
 	else
 		m_speed = pev->speed;
+
+	ALERT( at_console, "M_speed = %f\n", m_speed );	// Counter-Strike Beta 6.0
 	
 	pev->speed = 0;
 	pev->velocity = g_vecZero;
@@ -1524,6 +1525,28 @@ void CFuncTrackTrain :: Spawn( void )
 	NextThink( pev->ltime + 0.1, FALSE );
 	SetThink( Find );
 	Precache();
+}
+
+// Counter-Strike Beta 6.0 (Linux symbol): a new round stops the train and
+// puts it back where it was placed, to find its track again (Spawn's text)
+void CFuncTrackTrain :: Restart( void )
+{
+	ALERT( at_console, "M_speed = %f\n", m_speed );
+
+	pev->speed = 0;
+	pev->velocity = g_vecZero;
+	pev->avelocity = g_vecZero;
+	pev->impulse = m_speed;
+
+	m_dir = 1;
+
+	if ( FStringNull(pev->target) )
+		ALERT( at_console, "FuncTrain with no target" );
+
+	UTIL_SetOrigin( pev, pev->oldorigin );
+
+	NextThink( pev->ltime + 0.1, FALSE );
+	SetThink( Find );
 }
 
 void CFuncTrackTrain :: Precache( void )

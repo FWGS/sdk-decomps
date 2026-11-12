@@ -132,6 +132,8 @@ public:
 #define WEAPON_P90				30
 #define WEAPON_XM1014			5		// Beta 5.0 (leak): Half-Life's chaingun's id
 #define WEAPON_C4				6	// Beta 5.0 (leak): the C4 takes the crossbow's id (CC4::Spawn, GetItemInfo)
+#define WEAPON_MAC10			7	// Beta 6.0: the MAC-10 takes the shotgun's id (GetItemInfo)
+#define WEAPON_AUG				8	// Beta 6.0: the AUG takes the RPG's id (GetItemInfo)
 
 #define WEAPON_ALLWEAPONS		(~(1<<WEAPON_SUIT))
 
@@ -181,6 +183,8 @@ public:
 #define HEGRENADE_WEIGHT	2	// Beta 5.0 (the leak: 3)
 // Beta 5.0 (leak)
 #define XM1014_WEIGHT		20
+#define MAC10_WEIGHT		25	// Beta 6.0
+#define AUG_WEIGHT			25	// Beta 6.0
 #define SHIELD_WEIGHT		2
 
 
@@ -201,25 +205,27 @@ public:
 // The limit goes with the weapon, not with the ammo: "9mm" is 90 for the Glock 18,
 // 120 for the MP5 Navy and the TMP; "556Nato" 200 for the M249, 90 for the M4A1.
 #define USP_MAX_CARRY			48		// "45ACP"
-#define GLOCK18_MAX_CARRY		120		// "9mm" (Beta 5.0 leak; was 90)
+#define GLOCK18_MAX_CARRY		90		// "9mm" (Beta 5.0 leak: 120; Beta 6.0: 90 again)
 #define AWP_MAX_CARRY			30		// "338Magnum"
-#define MP5N_MAX_CARRY			120		// "9mm"
+#define MP5N_MAX_CARRY			90		// "9mm" (Beta 6.0: 90, was 120)
 #define M249_MAX_CARRY			200		// "556Nato"
-#define M3_MAX_CARRY			48		// "buckshot"
-#define M4A1_MAX_CARRY			200		// "556Nato" (Beta 5.0 leak: 200, was 90)
-#define TMP_MAX_CARRY			120		// "9mm"
-#define G3SG1_MAX_CARRY			120		// "762Nato" (Beta 5.0 leak: 120, was 60)
+#define M3_MAX_CARRY			32		// "buckshot" (Beta 6.0: 32, was 48)
+#define M4A1_MAX_CARRY			90		// "556Nato" (Beta 5.0 leak: 200; Beta 6.0: 90 again)
+#define TMP_MAX_CARRY			90		// "9mm" (Beta 6.0: 90, was 120)
+#define G3SG1_MAX_CARRY			40		// "762Nato" (Beta 5.0 leak: 120; Beta 6.0: 40)
 #define FLASHBANG_MAX_CARRY		2		// "Flashbang" (Beta 5.0 leak; was 3)
 #define DEAGLE_MAX_CARRY		35		// "50AE"
-#define SG552_MAX_CARRY			200		// "556Nato" (Beta 5.0 leak: 200, was 90)
-#define AK47_MAX_CARRY			120		// "762Nato" (Beta 5.0 leak: 120, was 90)
-#define P90_MAX_CARRY			150		// "57mm"
+#define SG552_MAX_CARRY			90		// "556Nato" (Beta 5.0 leak: 200; Beta 6.0: 90 again)
+#define AK47_MAX_CARRY			90		// "762Nato" (Beta 5.0 leak: 120; Beta 6.0: 90 again)
+#define P90_MAX_CARRY			100		// "57mm" (Beta 6.0: 100, was 150)
 #define C4_MAX_CARRY			1		// "C4" (Beta 5.0 leak)
 // Beta 4.0
 #define P228_MAX_CARRY			52		// "357SIG"
-#define SCOUT_MAX_CARRY			120		// "762Nato" (Beta 5.0 leak: 120, was 30)
+#define SCOUT_MAX_CARRY			60		// "762Nato" (Beta 5.0 leak: 120; Beta 6.0: 60)
 #define HEGRENADE_MAX_CARRY		1		// "HEGrenade" (Beta 5.0 leak; was 3)
-#define XM1014_MAX_CARRY		48		// "buckshot" (Beta 5.0 leak)
+#define XM1014_MAX_CARRY		32		// "buckshot" (Beta 5.0 leak: 48; Beta 6.0: 32)
+#define MAC10_MAX_CARRY			90		// "45acp" (Beta 6.0; sic: lower case, an ammo type of its own beside the USP's "45ACP")
+#define AUG_MAX_CARRY			90		// "556Nato" (Beta 6.0)
 
 // the maximum amount of ammo each weapon's clip can hold
 #define WEAPON_NOCLIP			-1
@@ -259,6 +265,8 @@ public:
 #define SCOUT_MAX_CLIP			10
 #define HEGRENADE_MAX_CLIP		WEAPON_NOCLIP
 #define XM1014_MAX_CLIP			7		// Beta 5.0 (leak)
+#define MAC10_MAX_CLIP			30		// Beta 6.0
+#define AUG_MAX_CLIP			30		// Beta 6.0
 
 
 // the default amount of ammo that comes with each gun when it spawns
@@ -298,6 +306,8 @@ public:
 #define SCOUT_DEFAULT_GIVE			10
 #define HEGRENADE_DEFAULT_GIVE		1
 #define XM1014_DEFAULT_GIVE			7	// Beta 5.0 (leak)
+#define MAC10_DEFAULT_GIVE			30	// Beta 6.0
+#define AUG_DEFAULT_GIVE			30	// Beta 6.0
 
 // The amount of ammo given to a player by an ammo item.
 #define AMMO_URANIUMBOX_GIVE	20
@@ -317,9 +327,9 @@ public:
 #define AMMO_556NATOBOX_GIVE	30
 #define AMMO_556NATOBOX_MAX		200
 #define AMMO_762NATOBOX_GIVE	30
-#define AMMO_762NATOBOX_MAX		120		// Beta 5.0 (leak): 120 (was 90)
+#define AMMO_762NATOBOX_MAX		90		// Beta 5.0 (leak): 120 (was 90); Beta 6.0: 90 again
 #define AMMO_45ACPBOX_GIVE		12
-#define AMMO_45ACPBOX_MAX		48
+#define AMMO_45ACPBOX_MAX		90		// Beta 6.0: 90 (was 48): "45acp", the MAC-10's (the USP's is "45ACP", sic)
 #define AMMO_338MAGNUMBOX_GIVE	10
 #define AMMO_338MAGNUMBOX_MAX	30
 #define AMMO_50AEBOX_GIVE		7
@@ -327,12 +337,12 @@ public:
 #define AMMO_FLASHBANGBOX_GIVE	1
 #define AMMO_FLASHBANGBOX_MAX	2		// Beta 5.0 (leak): 2 (was 3)
 #define AMMO_57MMBOX_GIVE		50
-#define AMMO_57MMBOX_MAX		150
+#define AMMO_57MMBOX_MAX		100		// Beta 6.0: 100 (was 150)
 // Beta 4.0: ammo_9mm (Glock 18, MP5 Navy, TMP), ammo_buckshot (the M3; the
 // SDK's box, now ammo.cpp's), ammo_357sig (P228)
 #define AMMO_9MMBOX_GIVE		30
-#define AMMO_9MMBOX_MAX			120
-#define AMMO_BUCKSHOTBOX_MAX	48
+#define AMMO_9MMBOX_MAX			90		// Beta 6.0: 90 (was 120)
+#define AMMO_BUCKSHOTBOX_MAX	32		// Beta 6.0: 32 (was 48)
 #define AMMO_357SIGBOX_GIVE		13
 #define AMMO_357SIGBOX_MAX		52
 
@@ -608,7 +618,7 @@ extern void ClearMultiDamage(void);
 extern void ApplyMultiDamage(entvars_t* pevInflictor, entvars_t* pevAttacker );
 extern void AddMultiDamage( entvars_t *pevInflictor, CBaseEntity *pEntity, float flDamage, int bitsDamageType);
 
-extern void DecalGunshot( TraceResult *pTrace, int iBulletType, bool fShooterOnly, entvars_t *pevShooter );
+extern void DecalGunshot( TraceResult *pTrace, int iBulletType, bool fShooterOnly, entvars_t *pevShooter, bool bHitMetal );	// Beta 6.0: bHitMetal (Linux symbol: a fifth bool; name ours)
 extern void SpawnBlood(Vector vecSpot, int bloodColor, float flDamage);
 extern int DamageDecal( CBaseEntity *pEntity, int bitsDamageType );
 extern void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType );

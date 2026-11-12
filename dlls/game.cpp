@@ -45,6 +45,7 @@ cvar_t	chasecam	= {"mp_chasecam","0", FCVAR_SERVER };			// Beta 5.0 (leak): the 
 cvar_t	autokick	= {"mp_autokick","1", FCVAR_SERVER };			// Beta 5.0 (leak): kick idle players and team killers
 cvar_t	restartround = {"sv_restartround","0", FCVAR_SERVER };		// Beta 5.0 (leak): restart the round in so many seconds (Think)
 cvar_t	limitteams	= {"mp_limitteams","2", FCVAR_SERVER };			// Beta 5.0: how many players one team may have more than the other, 0 (no limit) to 20 (ReadMultiplayCvars, TeamStacked)
+cvar_t	autoteambalance = {"mp_autoteambalance","1", FCVAR_SERVER };	// Beta 6.0 (Linux symbol): balance the teams at a new round when they stay uneven (RestartRound, BalanceTeams)
 
 //CVARS FOR SKILL LEVEL SETTINGS
 // Agrunt
@@ -474,6 +475,7 @@ void GameDLLInit( void )
 	CVAR_REGISTER (&autokick);
 	CVAR_REGISTER (&restartround);
 	CVAR_REGISTER (&limitteams);
+	CVAR_REGISTER (&autoteambalance);
 
 // REGISTER CVARS FOR SKILL LEVEL STUFF
 	// Agrunt

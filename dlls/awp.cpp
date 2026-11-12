@@ -39,7 +39,7 @@ public:
 	BOOL Deploy( void );
 	void Reload( void );
 	void WeaponIdle( void );
-	float GetMaxSpeed( void ) { if ( m_pPlayer->m_iFOV != 90 ) return 160; return 200; }	// Beta 5.0 (leak): Linux symbol; slower zoomed in
+	float GetMaxSpeed( void ) { if ( m_pPlayer->m_iFOV != 90 ) return 150; return 210; }	// Beta 5.0 (leak): Linux symbol; slower zoomed in (Beta 6.0: 150 and 210, were 160 and 200)
 	int m_iShell;
 };
 LINK_ENTITY_TO_CLASS( weapon_awp, CAWP );
@@ -61,6 +61,7 @@ void CAWP::Spawn( )
 void CAWP::Precache( void )
 {
 	PRECACHE_MODEL("models/v_awp.mdl");
+	PRECACHE_MODEL("models/v_awp_r.mdl");	// Beta 6.0: the right-handed view model
 	PRECACHE_MODEL("models/w_awp.mdl");
 	PRECACHE_MODEL("models/p_awp.mdl");
 
@@ -73,7 +74,7 @@ void CAWP::Precache( void )
 	PRECACHE_SOUND("weapons/awp_clipin.wav");
 	PRECACHE_SOUND("weapons/awp_clipout.wav");
 
-	m_iShellLate = m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shell
+	m_iShellLate = m_iShell = PRECACHE_MODEL ("models/rshell.mdl");// brass shell (Beta 6.0: the rifle shell)
 }
 
 int CAWP::GetItemInfo(ItemInfo *p)
@@ -95,7 +96,11 @@ int CAWP::GetItemInfo(ItemInfo *p)
 
 BOOL CAWP::Deploy( )
 {
-	return DefaultDeploy( "models/v_awp.mdl", "models/p_awp.mdl", AWP_DRAW, "bow" );
+	// Beta 6.0: v_awp.mdl holds the gun in the left hand, v_awp_r.mdl in the right
+	if ( m_pPlayer->m_bLeftHanded == true )
+		return DefaultDeploy( "models/v_awp.mdl", "models/p_awp.mdl", AWP_DRAW, "sniper" );
+
+	return DefaultDeploy( "models/v_awp_r.mdl", "models/p_awp.mdl", AWP_DRAW, "sniper" );
 }
 
 void CAWP::SecondaryAttack( void )
@@ -103,17 +108,23 @@ void CAWP::SecondaryAttack( void )
 	m_pPlayer->pev->viewmodel = 0;
 
 	// Beta 4.0: slower while zoomed in
+	// Beta 6.0: the first zoom step is 40 (was 45)
 	if (m_pPlayer->m_iFOV == 90)
 	{
-		m_pPlayer->m_iFOV = 45;
+		m_pPlayer->m_iFOV = 40;
 	}
-	else if (m_pPlayer->m_iFOV == 45)
+	else if (m_pPlayer->m_iFOV == 40)
 	{
 		m_pPlayer->m_iFOV = 10;
 	}
 	else if (m_pPlayer->m_iFOV == 10)
 	{
-		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_awp.mdl");
+		// Beta 6.0: the view model of the player's hand
+		if ( m_pPlayer->m_bLeftHanded == true )
+			m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_awp.mdl");
+		else
+			m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_awp_r.mdl");
+
 		m_pPlayer->m_iFOV = 90;
 	}
 
@@ -124,10 +135,12 @@ void CAWP::SecondaryAttack( void )
 
 void CAWP::PrimaryAttack( void )
 {
-	if (m_pPlayer->pev->velocity.Length2D() > 170)
-		AWPFire( 0.15, 1.9, FALSE );
-	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		AWPFire( 0.2, 1.9, FALSE );
+	// Beta 6.0: off the ground 0.85, running 0.65 (were 0.2 and 0.15; the
+	// ground is tested first now)
+	if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+		AWPFire( 0.85, 1.9, FALSE );
+	else if (m_pPlayer->pev->velocity.Length2D() > 170)
+		AWPFire( 0.65, 1.9, FALSE );
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
 		AWPFire( 0, 1.9, FALSE );
 	else
@@ -139,7 +152,12 @@ void CAWP::AWPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	// the shot takes the scope off; Reload and ItemPostFrame put it back
 	if (m_pPlayer->m_iFOV != 90)
 	{
-		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_awp.mdl");
+		// Beta 6.0: the view model of the player's hand
+		if ( m_pPlayer->m_bLeftHanded == true )
+			m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_awp.mdl");
+		else
+			m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_awp_r.mdl");
+
 		m_pPlayer->m_fResumeZoom = TRUE;
 		m_pPlayer->m_iLastZoom = m_pPlayer->m_iFOV;
 		m_pPlayer->m_iFOV = 90;
@@ -179,13 +197,11 @@ void CAWP::AWPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
 	EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/awp1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
 
-	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
 
 	// sic: fUseAutoAim is not tested, the auto-aim vector is always used
 	vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_10DEGREES );
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 3, BULLET_PLAYER_338MAG, 200, 0.99, NULL, true );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -195,6 +211,16 @@ void CAWP::AWPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
 
 	m_pPlayer->pev->punchangle.x -= 2;
+
+	// Beta 6.0: the bullet leaves 5 units to the side of the hand that holds the gun
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+
+	if ( m_pPlayer->m_bLeftHanded == true )
+		vecSrc = vecSrc - gpGlobals->v_right * 5;
+	else
+		vecSrc = vecSrc + gpGlobals->v_right * 5;
+
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 3, BULLET_PLAYER_338MAG, 200, 0.99, NULL, true );
 }
 
 

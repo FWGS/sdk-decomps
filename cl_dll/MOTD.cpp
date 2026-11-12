@@ -35,7 +35,7 @@ int CHudMOTD :: Init( void )
 
 	HOOK_MESSAGE( MOTD );
 
-	CVAR_CREATE( "motd_display_time", "6", 0 );
+	CVAR_CREATE( "motd_display_time", "15", 0 );
 
 	m_iFlags &= ~HUD_ACTIVE;  // start out inactive
 	m_szMOTD[0] = 0;
@@ -64,16 +64,23 @@ int CHudMOTD :: Draw( float fTime )
 {
 	// Draw MOTD line-by-line
 
-	if ( m_flActiveTill < gHUD.m_flTime )
+	static float flLastTime;	// name ours
+
+	if ( m_flActiveTill <= 0.0 )
 	{ // finished with MOTD, disable it
 		m_szMOTD[0] = 0;
 		m_iLines = 0;
 		m_iFlags &= ~HUD_ACTIVE;
+		m_flActiveTill = 0;
 		return 1;
 	}
 
-	// cap activetill time to the display time
-	m_flActiveTill = min( gHUD.m_flTime + MOTD_DISPLAY_TIME, m_flActiveTill );
+	// count the display time down, by at most a second a frame
+	float flDelta = gHUD.m_flTime - flLastTime;	// name ours
+	flDelta = max( 0.0, flDelta );
+	flDelta = min( 1.0, flDelta );
+	flLastTime = gHUD.m_flTime;
+	m_flActiveTill -= flDelta;
 
 	// find the top of where the MOTD should be drawn,  so the whole thing is centered in the screen
 	int ypos = max(((ScreenHeight - (m_iLines * LINE_HEIGHT)) / 2) - 40, 30 ); // shift it up slightly
@@ -125,9 +132,9 @@ int CHudMOTD :: MsgFunc_MOTD( const char *pszName, int iSize, void *pbuf )
 	{
 		m_iFlags |= HUD_ACTIVE;
 
-		MOTD_DISPLAY_TIME = CVAR_GET_FLOAT( "motd_display_time" );
+		MOTD_DISPLAY_TIME = max( 10, CVAR_GET_FLOAT( "motd_display_time" ) );
 
-		m_flActiveTill = gHUD.m_flTime + MOTD_DISPLAY_TIME;
+		m_flActiveTill = MOTD_DISPLAY_TIME;
 
 		for ( char *sz = m_szMOTD; *sz != 0; sz++ )  // count the number of lines in the MOTD
 		{

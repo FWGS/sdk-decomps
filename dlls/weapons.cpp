@@ -160,13 +160,14 @@ void SpawnBlood(Vector vecSpot, int bloodColor, float flDamage)
 
 int DamageDecal( CBaseEntity *pEntity, int bitsDamageType )
 {
+	// Counter-Strike Beta 6.0: the last two gunshot decals only (was any of five)
 	if ( !pEntity )
-		return (DECAL_GUNSHOT1 + RANDOM_LONG(0,4));
+		return (DECAL_GUNSHOT1 + RANDOM_LONG(3,4));
 	
 	return pEntity->DamageDecal( bitsDamageType );
 }
 
-void DecalGunshot( TraceResult *pTrace, int iBulletType, bool fShooterOnly, entvars_t *pevShooter )
+void DecalGunshot( TraceResult *pTrace, int iBulletType, bool fShooterOnly, entvars_t *pevShooter, bool bHitMetal )
 {
 	// Is the entity valid
 	if ( !UTIL_IsValidEntity( pTrace->pHit ) )
@@ -179,6 +180,18 @@ void DecalGunshot( TraceResult *pTrace, int iBulletType, bool fShooterOnly, entv
 		if ( !FNullEnt(pTrace->pHit) )
 			pEntity = CBaseEntity::Instance(pTrace->pHit);
 
+		// Counter-Strike Beta 6.0: metal takes one of the first three
+		// gunshot decals (and says so on the console)
+		int decalNumber;	// name ours
+
+		if ( bHitMetal == false )
+			decalNumber = DamageDecal( pEntity, DMG_BULLET );
+		else
+		{
+			ALERT( at_console, "Hit Metal!!\n" );
+			decalNumber = RANDOM_LONG( 0, 2 );
+		}
+
 		switch( iBulletType )
 		{
 		case BULLET_PLAYER_9MM:
@@ -189,11 +202,11 @@ void DecalGunshot( TraceResult *pTrace, int iBulletType, bool fShooterOnly, entv
 		case BULLET_PLAYER_357:
 		default:
 			// smoke and decal
-			UTIL_GunshotDecalTrace( pTrace, DamageDecal( pEntity, DMG_BULLET ), fShooterOnly, pevShooter );
+			UTIL_GunshotDecalTrace( pTrace, decalNumber, fShooterOnly, pevShooter );
 			break;
 		case BULLET_MONSTER_12MM:
 			// smoke and decal
-			UTIL_GunshotDecalTrace( pTrace, DamageDecal( pEntity, DMG_BULLET ), fShooterOnly, pevShooter );
+			UTIL_GunshotDecalTrace( pTrace, decalNumber, fShooterOnly, pevShooter );
 			break;
 		case BULLET_PLAYER_CROWBAR:
 			// wall decal
@@ -409,6 +422,7 @@ void W_Precache(void)
 	UTIL_PrecacheOtherWeapon( "weapon_m249" );
 	UTIL_PrecacheOtherWeapon( "weapon_m4a1" );
 	UTIL_PrecacheOtherWeapon( "weapon_sg552" );
+	UTIL_PrecacheOtherWeapon( "weapon_aug" );		// Beta 6.0
 	UTIL_PrecacheOther( "ammo_556nato" );
 
 	// shotgun
@@ -418,6 +432,7 @@ void W_Precache(void)
 
 	// .45
 	UTIL_PrecacheOtherWeapon( "weapon_usp" );
+	UTIL_PrecacheOtherWeapon( "weapon_mac10" );	// Beta 6.0
 	UTIL_PrecacheOther( "ammo_45acp" );
 
 	// 5.7mm
@@ -693,6 +708,10 @@ void CBasePlayerItem::DefaultTouch( CBaseEntity *pOther )
 
 	CBasePlayer *pPlayer = (CBasePlayer *)pOther;
 
+	// Beta 6.0: the VIP picks up nothing but a knife
+	if ( m_iId != WEAPON_KNIFE && pPlayer->m_bIsVIP == true )
+		return;
+
 	// can I have this? (Beta 5.0 leak: the game rules decide whether the slot is
 	// free; Beta 2.0 to 4.1 tested for a primary weapon here)
 	if ( !g_pGameRules->CanHavePlayerItem( pPlayer, this ) )
@@ -720,13 +739,28 @@ void CBasePlayerItem::DefaultTouch( CBaseEntity *pOther )
 //=========================================================
 void CBasePlayerWeapon::EjectBrassLate( void )
 {
-	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+	// Beta 6.0: the shell flies out on the side away from the gun hand, 6
+	// units out (was 10)
+	if ( m_pPlayer->m_bLeftHanded == true )
+	{
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
-	Vector	vecShellVelocity = m_pPlayer->pev->velocity 
-							 + gpGlobals->v_right * RANDOM_FLOAT(50,70) 
-							 + gpGlobals->v_up * RANDOM_FLOAT(100,150) 
-							 + gpGlobals->v_forward * 25;
-	EjectBrass ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 16 - gpGlobals->v_right * 10 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL); 
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity 
+								 + gpGlobals->v_right * RANDOM_FLOAT(50,70) 
+								 + gpGlobals->v_up * RANDOM_FLOAT(100,150) 
+								 + gpGlobals->v_forward * 25;
+		EjectBrass ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 16 - gpGlobals->v_right * 6 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL); 
+	}
+	else
+	{
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity 
+								 - gpGlobals->v_right * RANDOM_FLOAT(50,70) 
+								 + gpGlobals->v_up * RANDOM_FLOAT(100,150) 
+								 + gpGlobals->v_forward * 25;
+		EjectBrass ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 16 + gpGlobals->v_right * 6 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL); 
+	}
 }
 
 //=========================================================
@@ -800,22 +834,51 @@ void CBasePlayerWeapon::FireRemaining( void )
 		return;
 	}
 
-	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
-
-	Vector	vecShellVelocity = m_pPlayer->pev->velocity 
-							 + gpGlobals->v_right * RANDOM_FLOAT(40,150) 
-							 + gpGlobals->v_up * RANDOM_FLOAT(100,260) 
-							 + gpGlobals->v_forward * RANDOM_FLOAT(-100,100);
-
+	// Beta 6.0: the shot leaves 5 units to the side of the gun hand, the
+	// shell flies out on the other side (the Glock's)
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+	Vector vecShellVelocity;
+
+	if ( m_pPlayer->m_bLeftHanded == true )
+	{
+		vecSrc = vecSrc - gpGlobals->v_right * 5;
+
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+
+		vecShellVelocity = m_pPlayer->pev->velocity 
+						 + gpGlobals->v_right * RANDOM_FLOAT(40,150) 
+						 + gpGlobals->v_up * RANDOM_FLOAT(100,260) 
+						 + gpGlobals->v_forward * RANDOM_FLOAT(-100,100);
+	}
+	else
+	{
+		vecSrc = vecSrc + gpGlobals->v_right * 5;
+
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+
+		vecShellVelocity = m_pPlayer->pev->velocity 
+						 - gpGlobals->v_right * RANDOM_FLOAT(40,150) 
+						 + gpGlobals->v_up * RANDOM_FLOAT(100,260) 
+						 + gpGlobals->v_forward * RANDOM_FLOAT(-100,100);
+	}
+
 	Vector vecDir;
 
 	vecDir = gpGlobals->v_forward;
 
 	if ( m_iId == WEAPON_GLOCK18 )
 	{
-		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 32 - gpGlobals->v_right * 11 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL, m_pPlayer->pev ); 
-		m_pPlayer->FireBullets3( vecSrc, vecDir, Vector( 0.025, 0.025, 0.025 ), 8192, 1, BULLET_PLAYER_9MM, 18, 0.9, 0, true );
+		if ( m_pPlayer->m_bLeftHanded == true )
+		{
+			EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 32 - gpGlobals->v_right * 11 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL, m_pPlayer->pev ); 
+			m_pPlayer->FireBullets3( vecSrc, vecDir, Vector( 0.025, 0.025, 0.025 ), 8192, 1, BULLET_PLAYER_9MM, 18, 0.9, 0, true );
+		}
+		else
+		{
+			EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 32 + gpGlobals->v_right * 11 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL, m_pPlayer->pev ); 
+			m_pPlayer->FireBullets3( vecSrc, vecDir, Vector( 0.025, 0.025, 0.025 ), 8192, 1, BULLET_PLAYER_9MM, 18, 0.9, 0, true );
+		}
+
 		flDelay = 0.1;
 	}
 	else if ( m_iId == WEAPON_M4A1 )
@@ -1513,6 +1576,11 @@ void CWeaponBox::Touch( CBaseEntity *pOther )
 	}
 
 	CBasePlayer *pPlayer = (CBasePlayer *)pOther;
+
+	// Beta 6.0: the VIP takes nothing from a weapon box
+	if ( pPlayer->m_bIsVIP == true )
+		return;
+
 	int i;
 	bool bRemove = true;		// name ours
 	bool bEmitSound = false;	// name ours
@@ -1766,4 +1834,360 @@ void CWeaponBox::SetObjectCollisionBox( void )
 	pev->absmax = pev->origin + Vector(16, 16, 16); 
 }
 
+//=========================================================
+// Counter-Strike Beta 6.0: armoury_entity (Linux symbols: CArmoury,
+// ArmouryTouch, KeyValue, Spawn, Restart, Precache), a stack of one kind
+// of weapon or equipment lying in the map ("item" 0 to 17, "count").
+// Each touch gives a living player one: a gun with ammunition only to
+// one without a primary weapon, a flashbang to one with fewer than two,
+// an HE grenade to one with none, armour to one without that armour; the
+// VIP takes nothing. An empty stack disappears until the next round, when
+// Restart refills it in proportion to the terrorists playing. Names of
+// the members ours.
+//=========================================================
+class CArmoury : public CBaseEntity
+{
+public:
+	void Spawn( void )
+	{
+		Precache();
 
+		pev->movetype = MOVETYPE_TOSS;
+		pev->solid = SOLID_TRIGGER;
+		UTIL_SetSize( pev, Vector( -16, -16, 0 ), Vector( 16, 16, 16 ) );
+		UTIL_SetOrigin( pev, pev->origin );
+		SetTouch( ArmouryTouch );
+
+		switch ( m_iItem )
+		{
+		case 0:	// mp5
+			SET_MODEL( ENT( pev ), "models/w_mp5.mdl" );
+			break;
+		case 1:	// tmp
+			SET_MODEL( ENT( pev ), "models/w_tmp.mdl" );
+			break;
+		case 2:	// p90
+			SET_MODEL( ENT( pev ), "models/w_p90.mdl" );
+			break;
+		case 3:	// mac10
+			SET_MODEL( ENT( pev ), "models/w_mac10.mdl" );
+			break;
+		case 4:	// ak47
+			SET_MODEL( ENT( pev ), "models/w_ak47.mdl" );
+			break;
+		case 5:	// sg552
+			SET_MODEL( ENT( pev ), "models/w_sg552.mdl" );
+			break;
+		case 6:	// m4a1
+			SET_MODEL( ENT( pev ), "models/w_m4a1.mdl" );
+			break;
+		case 7:	// aug
+			SET_MODEL( ENT( pev ), "models/w_aug.mdl" );
+			break;
+		case 8:	// scout
+			SET_MODEL( ENT( pev ), "models/w_scout.mdl" );
+			break;
+		case 9:	// g3sg1
+			SET_MODEL( ENT( pev ), "models/w_g3sg1.mdl" );
+			break;
+		case 10:	// awp
+			SET_MODEL( ENT( pev ), "models/w_awp.mdl" );
+			break;
+		case 11:	// m3
+			SET_MODEL( ENT( pev ), "models/w_m3.mdl" );
+			break;
+		case 12:	// xm1014
+			SET_MODEL( ENT( pev ), "models/w_xm1014.mdl" );
+			break;
+		case 13:	// m249
+			SET_MODEL( ENT( pev ), "models/w_m249.mdl" );
+			break;
+		case 14:	// flashbang
+			SET_MODEL( ENT( pev ), "models/w_flashbang.mdl" );
+			break;
+		case 15:	// hegrenade
+			SET_MODEL( ENT( pev ), "models/w_hegrenade.mdl" );
+			break;
+		case 16:	// kevlar
+			SET_MODEL( ENT( pev ), "models/w_kevlar.mdl" );
+			break;
+		case 17:	// assault
+			SET_MODEL( ENT( pev ), "models/w_assault.mdl" );
+			break;
+		default:
+			SET_MODEL( ENT( pev ), "models/w_kevlar.mdl" );
+			break;
+		}
+
+		if ( m_iCount <= 0 )
+			m_iCount = 1;
+
+		m_bAlreadyCounted = false;
+		m_iInitialCount = m_iCount;
+	}
+
+	// a new round: the first one counts the map's items; then each stack
+	// gets its share (its count over the total of its kind, an integer
+	// division, sic) times the terrorists playing times 0.7 for guns, 1.5 for
+	// grenades, 0.65 for armour (at least one)
+	void Restart( void )
+	{
+		CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// name ours
+
+		if ( m_iItem == 14 || m_iItem == 15 )
+		{
+			if ( !m_bAlreadyCounted )
+			{
+				m_bAlreadyCounted = true;
+				mp->m_iTotalGrenadeCount += m_iInitialCount;
+				m_iCount = m_iInitialCount;
+			}
+			else
+			{
+				m_iCount = (float)( m_iInitialCount / mp->m_iTotalGrenadeCount ) * mp->m_iNumTerrorist * 1.5;
+
+				if ( m_iCount < 1 )
+					m_iCount = 1;
+			}
+		}
+		else if ( m_iItem == 16 || m_iItem == 17 )
+		{
+			if ( !m_bAlreadyCounted )
+			{
+				m_bAlreadyCounted = true;
+				mp->m_iTotalArmourCount += m_iInitialCount;
+				m_iCount = m_iInitialCount;
+			}
+			else
+			{
+				m_iCount = (float)( m_iInitialCount / mp->m_iTotalArmourCount ) * mp->m_iNumTerrorist * 0.65;
+
+				if ( m_iCount < 1 )
+					m_iCount = 1;
+			}
+		}
+		else
+		{
+			if ( !m_bAlreadyCounted )
+			{
+				m_bAlreadyCounted = true;
+				mp->m_iTotalGunCount += m_iInitialCount;
+				m_iCount = m_iInitialCount;
+			}
+			else
+			{
+				m_iCount = (float)( m_iInitialCount / mp->m_iTotalGunCount ) * mp->m_iNumTerrorist * 0.7;
+
+				if ( m_iCount < 1 )
+					m_iCount = 1;
+			}
+		}
+
+		pev->effects &= ~EF_NODRAW;
+	}
+
+	void Precache( void )
+	{
+		switch ( m_iItem )
+		{
+		case 0:	// mp5
+			PRECACHE_MODEL( "models/w_mp5.mdl" );
+			break;
+		case 1:	// tmp
+			PRECACHE_MODEL( "models/w_tmp.mdl" );
+			break;
+		case 2:	// p90
+			PRECACHE_MODEL( "models/w_p90.mdl" );
+			break;
+		case 3:	// mac10
+			PRECACHE_MODEL( "models/w_mac10.mdl" );
+			break;
+		case 4:	// ak47
+			PRECACHE_MODEL( "models/w_ak47.mdl" );
+			break;
+		case 5:	// sg552
+			PRECACHE_MODEL( "models/w_sg552.mdl" );
+			break;
+		case 6:	// m4a1
+			PRECACHE_MODEL( "models/w_m4a1.mdl" );
+			break;
+		case 7:	// aug
+			PRECACHE_MODEL( "models/w_aug.mdl" );
+			break;
+		case 8:	// scout
+			PRECACHE_MODEL( "models/w_scout.mdl" );
+			break;
+		case 9:	// g3sg1
+			PRECACHE_MODEL( "models/w_g3sg1.mdl" );
+			break;
+		case 10:	// awp
+			PRECACHE_MODEL( "models/w_awp.mdl" );
+			break;
+		case 11:	// m3
+			PRECACHE_MODEL( "models/w_m3.mdl" );
+			break;
+		case 12:	// xm1014
+			PRECACHE_MODEL( "models/w_xm1014.mdl" );
+			break;
+		case 13:	// m249
+			PRECACHE_MODEL( "models/w_m249.mdl" );
+			break;
+		case 14:	// flashbang
+			PRECACHE_MODEL( "models/w_flashbang.mdl" );
+			break;
+		case 15:	// hegrenade
+			PRECACHE_MODEL( "models/w_hegrenade.mdl" );
+			break;
+		case 16:	// kevlar
+			PRECACHE_MODEL( "models/w_kevlar.mdl" );
+			break;
+		case 17:	// assault
+			PRECACHE_MODEL( "models/w_assault.mdl" );
+			break;
+		default:
+			PRECACHE_MODEL( "models/w_kevlar.mdl" );
+			break;
+		}
+	}
+
+	void KeyValue( KeyValueData *pkvd );
+	void EXPORT ArmouryTouch( CBaseEntity *pOther )
+	{
+		if ( !pOther->IsPlayer() )
+			return;
+
+		CBasePlayer *pPlayer = (CBasePlayer *)pOther;	// name ours
+
+		if ( pPlayer->m_bIsVIP == true )
+			return;
+
+		if ( m_iCount > 0 && m_iItem <= 13 )
+		{
+			if ( pPlayer->m_bHasPrimary == true )
+				return;
+
+			m_iCount--;
+
+			switch ( m_iItem )
+			{
+			case 0:
+				pPlayer->GiveNamedItem( "weapon_mp5navy" );
+				pPlayer->GiveAmmo( 60, "9mm", 120 );
+				break;
+			case 1:
+				pPlayer->GiveNamedItem( "weapon_tmp" );
+				pPlayer->GiveAmmo( 60, "9mm", 120 );
+				break;
+			case 2:
+				pPlayer->GiveNamedItem( "weapon_p90" );
+				pPlayer->GiveAmmo( 50, "57mm", 150 );
+				break;
+			case 3:
+				pPlayer->GiveNamedItem( "weapon_mac10" );
+				pPlayer->GiveAmmo( 60, "45acp", 120 );
+				break;
+			case 4:
+				pPlayer->GiveNamedItem( "weapon_ak47" );
+				pPlayer->GiveAmmo( 60, "762Nato", 120 );
+				break;
+			case 5:
+				pPlayer->GiveNamedItem( "weapon_sg552" );
+				pPlayer->GiveAmmo( 60, "556Nato", 200 );
+				break;
+			case 6:
+				pPlayer->GiveNamedItem( "weapon_m4a1" );
+				pPlayer->GiveAmmo( 60, "556Nato", 200 );
+				break;
+			case 7:
+				pPlayer->GiveNamedItem( "weapon_aug" );
+				pPlayer->GiveAmmo( 60, "556Nato", 200 );
+				break;
+			case 8:
+				pPlayer->GiveNamedItem( "weapon_scout" );
+				pPlayer->GiveAmmo( 30, "762Nato", 120 );
+				break;
+			case 9:
+				pPlayer->GiveNamedItem( "weapon_g3sg1" );
+				pPlayer->GiveAmmo( 30, "762Nato", 120 );
+				break;
+			case 10:
+				pPlayer->GiveNamedItem( "weapon_awp" );
+				pPlayer->GiveAmmo( 20, "338Magnum", 30 );
+				break;
+			case 11:
+				pPlayer->GiveNamedItem( "weapon_m3" );
+				pPlayer->GiveAmmo( 24, "buckshot", 35 );
+				break;
+			case 12:
+				pPlayer->GiveNamedItem( "weapon_xm1014" );
+				pPlayer->GiveAmmo( 24, "buckshot", 35 );
+				break;
+			case 13:
+				pPlayer->GiveNamedItem( "weapon_m249" );
+				pPlayer->GiveAmmo( 60, "556Nato", 200 );
+				break;
+			}
+		}
+		else if ( m_iCount > 0 && m_iItem >= 14 )
+		{
+			switch ( m_iItem )
+			{
+			case 14:
+				if ( pPlayer->AmmoInventory( CBasePlayer::GetAmmoIndex( "Flashbang" ) ) >= 2 )
+					return;
+
+				pPlayer->GiveNamedItem( "weapon_flashbang" );
+				m_iCount--;
+				break;
+			case 15:
+				if ( pPlayer->AmmoInventory( CBasePlayer::GetAmmoIndex( "HEGrenade" ) ) >= 1 )
+					return;
+
+				pPlayer->GiveNamedItem( "weapon_hegrenade" );
+				m_iCount--;
+				break;
+			case 16:
+				if ( pPlayer->m_iKevlar == 1 )
+					return;
+
+				pPlayer->GiveNamedItem( "item_kevlar" );
+				m_iCount--;
+				break;
+			case 17:
+				if ( pPlayer->m_iKevlar == 2 )
+					return;
+
+				pPlayer->GiveNamedItem( "item_assaultsuit" );
+				m_iCount--;
+				break;
+			}
+		}
+
+		if ( m_iCount == 0 )
+			pev->effects |= EF_NODRAW;
+	}
+
+	int		m_iItem;			// 0x20 "item": 0 MP5 Navy, 1 TMP, 2 P90, 3 MAC-10, 4 AK-47, 5 SG-552, 6 M4A1, 7 AUG, 8 Scout, 9 G3/SG-1, 10 AWP, 11 M3, 12 XM1014, 13 M249, 14 flashbang, 15 HE grenade, 16 kevlar, 17 assault suit
+	int		m_iCount;			// 0x24 "count": how many are left
+	int		m_iInitialCount;	// 0x28 the count the map gave (Spawn)
+	bool	m_bAlreadyCounted;	// 0x2c the first Restart added the count to the game rules' totals
+};
+
+
+void CArmoury::KeyValue( KeyValueData *pkvd )
+{
+	if ( FStrEq( pkvd->szKeyName, "item" ) )
+	{
+		m_iItem = atoi( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else if ( FStrEq( pkvd->szKeyName, "count" ) )
+	{
+		m_iCount = atoi( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CBaseEntity::KeyValue( pkvd );
+}
+
+LINK_ENTITY_TO_CLASS( armoury_entity, CArmoury );

@@ -476,7 +476,24 @@ void CBreakable::BreakTouch( CBaseEntity *pOther )
 	// only players can break these right now
 	if ( !pOther->IsPlayer() || !IsBreakable() )
 	{
-        return;
+		// Counter-Strike Beta 6.0: a grenade breaks what renders see-through
+		// (glass) at once, dead and hidden as when used; then the toucher
+		// tests below go on (sic)
+		if ( pev->rendermode == kRenderNormal )
+			return;
+
+		if ( strcmp( STRING( pOther->pev->classname ), "grenade" ) )
+			return;
+
+		pev->angles.y = m_angle;
+		UTIL_MakeVectors(pev->angles);
+		g_vecAttackDir = gpGlobals->v_forward;
+
+		pev->takedamage = DAMAGE_NO;
+		pev->deadflag = DEAD_DEAD;
+		pev->effects = EF_NODRAW;
+
+		Die();
 	}
 
 	if ( FBitSet ( pev->spawnflags, SF_BREAK_TOUCH ) )
@@ -532,13 +549,8 @@ void CBreakable::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE us
 		pev->deadflag = DEAD_DEAD;
 		pev->effects = EF_NODRAW;
 
-		// Beta 5.2: it breaks at its next think, after the delay (as when stood upon)
-		SetThink( Die );
-
-		if ( m_flDelay == 0 )
-			m_flDelay = 0.1;
-
-		pev->nextthink = pev->ltime + m_flDelay;
+		// Beta 6.0: it breaks at once again (Beta 5.2: at its next think, after the delay)
+		Die();
 	}
 }
 

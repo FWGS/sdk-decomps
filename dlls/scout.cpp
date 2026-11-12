@@ -62,6 +62,7 @@ void CSCOUT::Spawn( )
 void CSCOUT::Precache( void )
 {
 	PRECACHE_MODEL("models/v_scout.mdl");
+	PRECACHE_MODEL("models/v_scout_r.mdl");	// Beta 6.0: the right-handed view model
 	PRECACHE_MODEL("models/w_scout.mdl");
 	PRECACHE_MODEL("models/p_scout.mdl");
 
@@ -71,7 +72,7 @@ void CSCOUT::Precache( void )
 	PRECACHE_SOUND("weapons/scout_clipout.wav");
 	PRECACHE_SOUND("weapons/zoom.wav");
 
-	m_iShellLate = m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shell
+	m_iShellLate = m_iShell = PRECACHE_MODEL ("models/rshell.mdl");// brass shell (Beta 6.0: the rifle shell)
 }
 
 int CSCOUT::GetItemInfo(ItemInfo *p)
@@ -93,7 +94,12 @@ int CSCOUT::GetItemInfo(ItemInfo *p)
 
 BOOL CSCOUT::Deploy( )
 {
-	return DefaultDeploy( "models/v_scout.mdl", "models/p_scout.mdl", SCOUT_DRAW, "bow" );
+	// Beta 6.0: the left-handed model is the old one, the right-handed one is
+	// new; the player's animations are "silentsniper" (were "bow")
+	if ( m_pPlayer->m_bLeftHanded == true )
+		return DefaultDeploy( "models/v_scout.mdl", "models/p_scout.mdl", SCOUT_DRAW, "silentsniper" );
+
+	return DefaultDeploy( "models/v_scout_r.mdl", "models/p_scout.mdl", SCOUT_DRAW, "silentsniper" );
 }
 
 void CSCOUT::SecondaryAttack( void )
@@ -101,17 +107,22 @@ void CSCOUT::SecondaryAttack( void )
 	m_pPlayer->pev->viewmodel = 0;
 
 	// slower while zoomed in
+	// Beta 6.0: the first zoom is 40 degrees (was 45)
 	if (m_pPlayer->m_iFOV == 90)
 	{
-		m_pPlayer->m_iFOV = 45;
+		m_pPlayer->m_iFOV = 40;
 	}
-	else if (m_pPlayer->m_iFOV == 45)
+	else if (m_pPlayer->m_iFOV == 40)
 	{
 		m_pPlayer->m_iFOV = 15;
 	}
 	else if (m_pPlayer->m_iFOV == 15)
 	{
-		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_scout.mdl");
+		if ( m_pPlayer->m_bLeftHanded == true )
+			m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_scout.mdl");
+		else
+			m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_scout_r.mdl");
+
 		m_pPlayer->m_iFOV = 90;
 	}
 
@@ -123,13 +134,13 @@ void CSCOUT::SecondaryAttack( void )
 void CSCOUT::PrimaryAttack( void )
 {
 	if (m_pPlayer->pev->velocity.Length2D() > 170)
-		SCOUTFire( 0.075, 1.45, FALSE );
+		SCOUTFire( 0.075, 1.35, FALSE );
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		SCOUTFire( 0.1, 1.45, FALSE );
+		SCOUTFire( 0.1, 1.35, FALSE );
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
-		SCOUTFire( 0, 1.45, FALSE );
+		SCOUTFire( 0, 1.35, FALSE );
 	else
-		SCOUTFire( 0.007, 1.45, FALSE );
+		SCOUTFire( 0.007, 1.35, FALSE );	// Beta 6.0: a shot every 1.35 seconds (was 1.45)
 }
 
 void CSCOUT::SCOUTFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
@@ -137,7 +148,11 @@ void CSCOUT::SCOUTFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	// the shot takes the scope off; Reload and ItemPostFrame put it back
 	if (m_pPlayer->m_iFOV != 90)
 	{
-		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_scout.mdl");
+		if ( m_pPlayer->m_bLeftHanded == true )
+			m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_scout.mdl");
+		else
+			m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_scout_r.mdl");
+
 		m_pPlayer->m_fResumeZoom = TRUE;
 		m_pPlayer->m_iLastZoom = m_pPlayer->m_iFOV;
 		m_pPlayer->m_iFOV = 90;
@@ -158,7 +173,7 @@ void CSCOUT::SCOUTFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	m_iClip--;
 
-	m_pPlayer->pev->effects = (int)(m_pPlayer->pev->effects) | EF_MUZZLEFLASH;
+	// Beta 6.0: no muzzle flash
 
 	if (RANDOM_LONG(0,1))
 		SendWeaponAnim( SCOUT_SHOOT1 );
@@ -175,15 +190,13 @@ void CSCOUT::SCOUTFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	m_pPlayer->m_iWeaponVolume = BIG_EXPLOSION_VOLUME;
 	m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
-	EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/scout_fire-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+	EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/scout_fire-1.wav", RANDOM_FLOAT(0.92, 1.0), 1.28, 0, 98 + RANDOM_LONG(0,3));	// Beta 6.0: attenuation 1.28 (was ATTN_NORM)
 
-	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
 
 	// sic: fUseAutoAim is not tested, the auto-aim vector is always used
 	vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_10DEGREES );
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 3, BULLET_PLAYER_762MM, 65, 0.98, NULL, true );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -193,6 +206,17 @@ void CSCOUT::SCOUTFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
 
 	m_pPlayer->pev->punchangle.x -= 2;
+
+	// Beta 6.0: the shot leaves 5 units to the side of the hand that holds the gun
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+
+	if ( m_pPlayer->m_bLeftHanded == true )
+		vecSrc = vecSrc - gpGlobals->v_right * 5;
+	else
+		vecSrc = vecSrc + gpGlobals->v_right * 5;
+
+	// Beta 6.0: 75 damage (was 65)
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 3, BULLET_PLAYER_762MM, 75, 0.98, NULL, true );
 }
 
 

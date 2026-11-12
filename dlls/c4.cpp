@@ -41,7 +41,7 @@ public:
 	BOOL Deploy( void );
 	void Holster( void );
 	void WeaponIdle( void );
-	float GetMaxSpeed( void ) { return 260; }	// Linux symbol
+	float GetMaxSpeed( void ) { return 250; }	// Linux symbol; Beta 6.0: 250 (was 260)
 
 	bool m_fArming;			// 0x84 the trigger is held: the three seconds run (names ours)
 	bool m_fPlantAnim;		// 0x85 the last 0.75 seconds' animation has started

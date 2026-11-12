@@ -77,6 +77,7 @@ class CFuncTrackTrain : public CBaseEntity
 public:
 	void Spawn( void );
 	void Precache( void );
+	void Restart( void );	// Counter-Strike Beta 6.0 (Linux symbol): back to the start at a new round
 
 	void Blocked( CBaseEntity *pOther );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );

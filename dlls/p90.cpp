@@ -33,7 +33,7 @@ public:
 	void Precache( void );
 	int iItemSlot( void ) { return 1; }
 	int GetItemInfo(ItemInfo *p);
-	float GetMaxSpeed( void ) { return 260; }	// Beta 5.0 (leak): Linux symbol
+	float GetMaxSpeed( void ) { return 245; }	// Beta 5.0 (leak): Linux symbol; Beta 6.0: 245 (was 260)
 
 	void PrimaryAttack( void );
 	void P90Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim );
@@ -62,6 +62,7 @@ void CP90::Spawn( )
 void CP90::Precache( void )
 {
 	PRECACHE_MODEL("models/v_p90.mdl");
+	PRECACHE_MODEL("models/v_p90_r.mdl");	// Beta 6.0: the right-handed view model
 	PRECACHE_MODEL("models/w_p90.mdl");
 	PRECACHE_MODEL("models/p_p90.mdl");
 
@@ -71,7 +72,7 @@ void CP90::Precache( void )
 	PRECACHE_SOUND("weapons/p90_boltpull.wav");
 	PRECACHE_SOUND("weapons/p90_cliprelease.wav");
 
-	m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shell
+	m_iShell = PRECACHE_MODEL ("models/rshell.mdl");// brass shell (Beta 6.0: the rifle shell)
 }
 
 int CP90::GetItemInfo(ItemInfo *p)
@@ -96,12 +97,23 @@ BOOL CP90::Deploy( )
 	m_pPlayer->m_flAccuracy = 0;
 	m_fEjectShell = 1;
 	m_fDelayFire = false;
-	return DefaultDeploy( "models/v_p90.mdl", "models/p_p90.mdl", P90_DRAW, "p90" );
+
+	// Beta 6.0: the left-handed model is the old one, the right-handed one is new
+	if ( m_pPlayer->m_bLeftHanded == true )
+		return DefaultDeploy( "models/v_p90.mdl", "models/p_p90.mdl", P90_DRAW, "p90" );
+
+	return DefaultDeploy( "models/v_p90_r.mdl", "models/p_p90.mdl", P90_DRAW, "p90" );
 }
 
 void CP90::PrimaryAttack( void )
 {
-	P90Fire( m_pPlayer->m_flAccuracy * 0.06, 0.066, FALSE );
+	// Beta 6.0: more spread in the air (0.4) and when running (0.2)
+	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
+		P90Fire( m_pPlayer->m_flAccuracy * 0.4, 0.066, FALSE );
+	else if ( m_pPlayer->pev->velocity.Length2D() > 170 )
+		P90Fire( m_pPlayer->m_flAccuracy * 0.2, 0.066, FALSE );
+	else
+		P90Fire( m_pPlayer->m_flAccuracy * 0.06, 0.066, FALSE );
 }
 
 void CP90::P90Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
@@ -146,20 +158,11 @@ void CP90::P90Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
-	Vector	vecShellVelocity = m_pPlayer->pev->velocity
-							 - gpGlobals->v_right * RANDOM_FLOAT(100,120)
-							 + gpGlobals->v_up * RANDOM_FLOAT(50,90)
-							 + gpGlobals->v_forward * 25;
-	if (m_fEjectShell)
-		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -14 + gpGlobals->v_forward * 35 - gpGlobals->v_right * 22, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
-	m_fEjectShell = 1 - m_fEjectShell;
-
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
 	m_pPlayer->m_iWeaponFlash = DIM_GUN_FLASH;
 
 	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/p90-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
 
-	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
 
 	if ( fUseAutoAim )
@@ -171,7 +174,6 @@ void CP90::P90Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		vecAiming = gpGlobals->v_forward;
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_57MM, 23, 0.925 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -189,6 +191,40 @@ void CP90::P90Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		KickBack( 0.6, 0.25, 0.125, 0.02, 3.5, 1, 8 );
 	else
 		KickBack( 0.625, 0.275, 0.125, 0.02, 3.75, 1.25, 6 );
+
+	// Beta 6.0: the shot leaves 5 units to the side of the hand that holds
+	// the gun, and the shell flies out on the other side
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+
+	if ( m_pPlayer->m_bLeftHanded == true )
+	{
+		vecSrc = vecSrc - gpGlobals->v_right * 5;
+
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity
+								 - gpGlobals->v_right * RANDOM_FLOAT(100,120)
+								 + gpGlobals->v_up * RANDOM_FLOAT(50,90)
+								 + gpGlobals->v_forward * 25;
+		if (m_fEjectShell)
+			EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -14 + gpGlobals->v_forward * 35 - gpGlobals->v_right * 22, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+
+		m_fEjectShell = 1 - m_fEjectShell;
+	}
+	else
+	{
+		vecSrc = vecSrc + gpGlobals->v_right * 5;
+
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity
+								 + gpGlobals->v_right * RANDOM_FLOAT(100,120)
+								 + gpGlobals->v_up * RANDOM_FLOAT(50,90)
+								 + gpGlobals->v_forward * 25;
+		if (m_fEjectShell)
+			EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -14 + gpGlobals->v_forward * 35 + gpGlobals->v_right * 22, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+
+		m_fEjectShell = 1 - m_fEjectShell;
+	}
+
+	// Beta 6.0: 20 damage (was 23), range modifier 0.9 (0.925)
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_57MM, 20, 0.9 );
 }
 
 

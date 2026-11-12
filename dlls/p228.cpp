@@ -34,7 +34,7 @@ public:
 	void Precache( void );
 	int iItemSlot( void ) { return 2; }
 	int GetItemInfo(ItemInfo *p);
-	float GetMaxSpeed( void ) { return 260; }	// Beta 5.0 (leak): Linux symbol
+	float GetMaxSpeed( void ) { return 250; }	// Beta 5.0 (leak): Linux symbol; Beta 6.0: 250 (was 260)
 
 	void PrimaryAttack( void );
 	void P228Fire( float flSpread, float flCycleTime, BOOL fUseSemi );
@@ -62,6 +62,7 @@ void CP228::Spawn( )
 void CP228::Precache( void )
 {
 	PRECACHE_MODEL("models/v_p228.mdl");
+	PRECACHE_MODEL("models/v_p228_r.mdl");	// Beta 6.0: the right-handed view model
 	PRECACHE_MODEL("models/w_p228.mdl");
 	PRECACHE_MODEL("models/p_p228.mdl");
 
@@ -72,7 +73,7 @@ void CP228::Precache( void )
 	PRECACHE_SOUND ("weapons/p228_sliderelease.wav");
 	PRECACHE_SOUND ("weapons/p228_slidepull.wav");
 
-	m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shell
+	m_iShell = PRECACHE_MODEL ("models/pshell.mdl");// brass shell (Beta 6.0: the pistol shell)
 }
 
 int CP228::GetItemInfo(ItemInfo *p)
@@ -95,7 +96,12 @@ int CP228::GetItemInfo(ItemInfo *p)
 BOOL CP228::Deploy( )
 {
 	m_pPlayer->m_flAccuracy = 0.98;
-	return DefaultDeploy( "models/v_p228.mdl", "models/p_p228.mdl", P228_DRAW, "onehanded" );
+
+	// Beta 6.0: the left-handed model is the old one, the right-handed one is new
+	if ( m_pPlayer->m_bLeftHanded == true )
+		return DefaultDeploy( "models/v_p228.mdl", "models/p_p228.mdl", P228_DRAW, "onehanded" );
+
+	return DefaultDeploy( "models/v_p228_r.mdl", "models/p_p228.mdl", P228_DRAW, "onehanded" );
 }
 
 void CP228::PrimaryAttack( void )
@@ -169,23 +175,15 @@ void CP228::P228Fire( float flSpread , float flCycleTime, BOOL fUseSemi )
 
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
-	Vector	vecShellVelocity = m_pPlayer->pev->velocity
-							 + gpGlobals->v_right * RANDOM_FLOAT(40,150)
-							 + gpGlobals->v_up * RANDOM_FLOAT(100,260)
-							 + gpGlobals->v_forward * RANDOM_FLOAT(-100,100);
-	EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 32 - gpGlobals->v_right * 12 , vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
-
 	m_pPlayer->m_iWeaponVolume = BIG_EXPLOSION_VOLUME;
 	m_pPlayer->m_iWeaponFlash = DIM_GUN_FLASH;
 
 	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/p228-1.wav", RANDOM_FLOAT(0.5, 0.6), ATTN_NORM);
 
-	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
 
 	vecAiming = gpGlobals->v_forward;
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_357SIG, 34, 0.9, NULL, true );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -195,6 +193,33 @@ void CP228::P228Fire( float flSpread , float flCycleTime, BOOL fUseSemi )
 	m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
 
 	m_pPlayer->pev->punchangle.x -= 2;
+
+	// Beta 6.0: the shot leaves 5 units to the side of the hand that holds
+	// the gun, and the shell flies out on the other side
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+
+	if ( m_pPlayer->m_bLeftHanded == true )
+	{
+		vecSrc = vecSrc - gpGlobals->v_right * 5;
+
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity
+								 + gpGlobals->v_right * RANDOM_FLOAT(40,150)
+								 + gpGlobals->v_up * RANDOM_FLOAT(100,260)
+								 + gpGlobals->v_forward * RANDOM_FLOAT(-100,100);
+		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 32 - gpGlobals->v_right * 12 , vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+	}
+	else
+	{
+		vecSrc = vecSrc + gpGlobals->v_right * 5;
+
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity
+								 - gpGlobals->v_right * RANDOM_FLOAT(40,150)
+								 + gpGlobals->v_up * RANDOM_FLOAT(100,260)
+								 + gpGlobals->v_forward * RANDOM_FLOAT(-100,100);
+		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 32 + gpGlobals->v_right * 12 , vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+	}
+
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_357SIG, 34, 0.9, NULL, true );
 }
 
 

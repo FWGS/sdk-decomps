@@ -47,7 +47,7 @@ public:
 	void WeaponIdle( void );
 	float m_flStartThrow;
 	float m_flReleaseThrow;
-	float GetMaxSpeed( void ) { return 260; }	// Beta 5.0 (leak): Linux symbol
+	float GetMaxSpeed( void ) { return 250; }	// Beta 5.0 (leak): Linux symbol; Beta 6.0: 250 (was 260)
 	BOOL CanDrop( void ) { return FALSE; }		// Beta 5.0 (leak): Linux symbol
 };
 LINK_ENTITY_TO_CLASS( weapon_flashbang, CFlashbang );
@@ -71,6 +71,7 @@ void CFlashbang::Spawn( )
 void CFlashbang::Precache( void )
 {
 	PRECACHE_MODEL("models/w_flashbang.mdl");
+	PRECACHE_MODEL("models/v_flashbang_r.mdl");	// Beta 6.0: the right-handed view model
 	PRECACHE_MODEL("models/v_flashbang.mdl");
 	PRECACHE_MODEL("models/p_flashbang.mdl");
 
@@ -100,7 +101,12 @@ int CFlashbang::GetItemInfo(ItemInfo *p)
 BOOL CFlashbang::Deploy( )
 {
 	m_flReleaseThrow = -1;
-	return DefaultDeploy( "models/v_flashbang.mdl", "models/p_flashbang.mdl", FLASHBANG_DEPLOY, "crowbar" );
+
+	// Beta 6.0: the left-handed model is the old one, the right-handed one is new
+	if ( m_pPlayer->m_bLeftHanded == true )
+		return DefaultDeploy( "models/v_flashbang.mdl", "models/p_flashbang.mdl", FLASHBANG_DEPLOY, "crowbar" );
+
+	return DefaultDeploy( "models/v_flashbang_r.mdl", "models/p_flashbang.mdl", FLASHBANG_DEPLOY, "crowbar" );
 }
 
 BOOL CFlashbang::CanHolster( void )
@@ -164,14 +170,20 @@ void CFlashbang::WeaponIdle( void )
 
 		UTIL_MakeVectors( angThrow );
 
-		Vector vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16 - gpGlobals->v_right * 12;
+		// Beta 6.0: from the hand that throws
+		Vector vecSrc;
+
+		if ( m_pPlayer->m_bLeftHanded == true )
+			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16 - gpGlobals->v_right * 12;
+		else
+			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16 + gpGlobals->v_right * 12;
 
 		Vector vecThrow = gpGlobals->v_forward * flVel + m_pPlayer->pev->velocity;
 
 		// (Beta 3.0 radioed "fireinhole" here)
 		// Beta 5.0: it goes off 2 seconds after the throw (the leak: 3 seconds
-		// after the pin was pulled)
-		CGrenade::ShootTimed( m_pPlayer->pev, vecSrc, vecThrow, 2.0 );
+		// after the pin was pulled); Beta 6.0: 1.5 seconds
+		CGrenade::ShootTimed( m_pPlayer->pev, vecSrc, vecThrow, 1.5 );
 
 		SendWeaponAnim( FLASHBANG_THROW );
 

@@ -698,7 +698,7 @@ int	CBaseEntity :: DamageDecal( int bitsDamageType )
 	if ( pev->rendermode != kRenderNormal )
 		return DECAL_BPROOF1;
 
-	return DECAL_GUNSHOT1 + RANDOM_LONG(0,4);
+	return DECAL_GUNSHOT1 + RANDOM_LONG(3,4);	// Counter-Strike Beta 6.0: the last two gunshot decals only (was 0 to 4)
 }
 
 

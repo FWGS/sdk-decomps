@@ -259,5 +259,10 @@ int CHudSayText :: MsgFunc_SendAudio( const char *pszName, int iSize, void *pbuf
 	int client_index = READ_BYTE();
 	SendAudioPlay( READ_STRING(), iSize - 1 );
 
+	// flash the speaker on the radar
+	gHUD.m_Scoreboard.m_PlayerExtraInfo[client_index].flash_next = gHUD.m_flTime;
+	gHUD.m_Scoreboard.m_PlayerExtraInfo[client_index].flash_on = 1;
+	gHUD.m_Scoreboard.m_PlayerExtraInfo[client_index].flash_left = 22;
+
 	return 1;
 }

@@ -74,11 +74,8 @@ void CWorldItem::Spawn( void )
 		break;
 	}
 
-	if (!pEntity)
-	{
-		ALERT( at_console, "unable to create world_item %d\n", m_iType );
-	}
-	else
+	// Counter-Strike Beta 6.0: no console line when the item is unknown
+	if (pEntity)
 	{
 		pEntity->pev->target = pev->target;
 		pEntity->pev->targetname = pev->targetname;
@@ -97,9 +94,9 @@ void CItem::Spawn( void )
 	UTIL_SetSize(pev, Vector(-16, -16, 0), Vector(16, 16, 16));
 	SetTouch(ItemTouch);
 
+	// Counter-Strike Beta 6.0: no console line when it falls out of the level
 	if (DROP_TO_FLOOR(ENT(pev)) == 0)
 	{
-		ALERT(at_error, "Item %s fell out of level at %f,%f,%f", STRING( pev->classname ), pev->origin.x, pev->origin.y, pev->origin.z);
 		UTIL_Remove( this );
 		return;
 	}
@@ -346,12 +343,12 @@ class CItemKevlar : public CItem
 	void Spawn( void )
 	{ 
 		Precache( );
-		SET_MODEL(ENT(pev), "models/p_g3sg1.mdl");	// sic: Beta 4.0 (Beta 3.x: the long jump's model)
+		SET_MODEL(ENT(pev), "models/w_kevlar.mdl");	// Beta 6.0: its own model (Beta 4.0 to 5.2: models/p_g3sg1.mdl, sic; Beta 3.x: the long jump's)
 		CItem::Spawn( );
 	}
 	void Precache( void )
 	{
-		PRECACHE_MODEL ("models/p_g3sg1.mdl");
+		PRECACHE_MODEL ("models/w_kevlar.mdl");
 	}
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{
@@ -382,12 +379,12 @@ class CItemAssaultSuit : public CItem
 	void Spawn( void )
 	{ 
 		Precache( );
-		SET_MODEL(ENT(pev), "models/w_longjump.mdl");
+		SET_MODEL(ENT(pev), "models/w_assault.mdl");	// Beta 6.0: its own model (was the long jump's)
 		CItem::Spawn( );
 	}
 	void Precache( void )
 	{
-		PRECACHE_MODEL ("models/w_longjump.mdl");
+		PRECACHE_MODEL ("models/w_assault.mdl");
 	}
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{

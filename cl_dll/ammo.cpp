@@ -291,6 +291,9 @@ int CHudAmmo::Init(void)
 
 	m_iFlags |= HUD_ACTIVE; //!!!
 	m_bObserverCrosshair = 0;
+	m_flCrossGap = 0;
+	m_iLastClip = 0;
+	m_iCrossAlpha = 200;
 
 	gWR.Init();
 	gHR.Init();
@@ -647,11 +650,8 @@ int CHudAmmo::MsgFunc_CurWeapon(const char *pszName, int iSize, void *pbuf )
 	if ( !(gHUD.m_iHideHUDDisplay & ( HIDEHUD_WEAPONS | HIDEHUD_ALL )) )
 	{
 		if ( gHUD.m_iFOV >= 90 )
-		{ // normal crosshairs
-			if (fOnTarget && m_pWeapon->hAutoaim)
-				SetCrosshair(m_pWeapon->hAutoaim, m_pWeapon->rcAutoaim, 255, 255, 255);
-			else
-				SetCrosshair(m_pWeapon->hCrosshair, m_pWeapon->rcCrosshair, 255, 255, 255);
+		{ // normal crosshairs: Draw draws its own
+			SetCrosshair(0, nullrc, 0, 0, 0);
 		}
 		else
 		{ // zoomed crosshairs
@@ -883,6 +883,115 @@ int CHudAmmo::Draw(float flTime)
 
 	WEAPON *pw = m_pWeapon; // shorthand
 
+	// the crosshair: four lines that spread while the clip empties
+	if ( gHUD.m_iFOV >= 90 )
+	{
+		int iGapMin, iGapStep;		// names ours
+
+		switch ( pw->iId )
+		{
+		case 1:
+		case 4:
+		case 16:
+		case 17:
+		case 18:
+		case 26:
+			iGapMin = 8;
+			iGapStep = 3;
+			break;
+		case 19:
+			iGapMin = 6;
+			iGapStep = 2;
+			break;
+		case 20:
+			iGapMin = 6;
+			iGapStep = 4;
+			break;
+		case 21:
+			iGapMin = 8;
+			iGapStep = 6;
+			break;
+		case 22:
+			iGapMin = 4;
+			iGapStep = 4;
+			break;
+		case 24:
+			iGapMin = 6;
+			iGapStep = 5;
+			break;
+		case 27:
+			iGapMin = 5;
+			iGapStep = 4;
+			break;
+		case 28:
+			iGapMin = 4;
+			iGapStep = 5;
+			break;
+		case 23:
+		case 25:
+		case 29:
+			iGapMin = 7;
+			iGapStep = 3;
+			break;
+		case 30:
+			iGapMin = 7;
+			iGapStep = 4;
+			break;
+		case 3:
+			iGapMin = 5;
+			iGapStep = 3;
+			break;
+		case 5:
+			iGapMin = 9;
+			iGapStep = 5;
+			break;
+		case 6:
+			iGapMin = 6;
+			iGapStep = 3;
+			break;
+		case 7:
+			iGapMin = 9;
+			iGapStep = 3;
+			break;
+		case 8:
+			iGapMin = 3;
+			iGapStep = 4;
+			break;
+		default:
+			iGapMin = 4;
+			iGapStep = 3;
+			break;
+		}
+
+		if ( pw->iClip < m_iLastClip )
+		{
+			m_flCrossGap += iGapStep;
+			m_iCrossAlpha -= 40;
+
+			if ( m_flCrossGap > 20 )
+				m_flCrossGap = 20;
+			if ( m_iCrossAlpha < 60 )
+				m_iCrossAlpha = 60;
+		}
+		else
+		{
+			m_flCrossGap -= 0.5;
+			m_iCrossAlpha += 2;
+		}
+
+		m_iLastClip = pw->iClip;
+
+		if ( m_flCrossGap < iGapMin )
+			m_flCrossGap = iGapMin;
+		if ( m_iCrossAlpha > 250 )
+			m_iCrossAlpha = 250;
+
+		FillRGBA( ScreenWidth / 2 - (int)m_flCrossGap - 5, ScreenHeight / 2, 5, 1, 50, 250, 50, m_iCrossAlpha );
+		FillRGBA( ScreenWidth / 2 + (int)m_flCrossGap, ScreenHeight / 2, 5, 1, 50, 250, 50, m_iCrossAlpha );
+		FillRGBA( ScreenWidth / 2, ScreenHeight / 2 - (int)m_flCrossGap - 5, 1, 5, 50, 250, 50, m_iCrossAlpha );
+		FillRGBA( ScreenWidth / 2, ScreenHeight / 2 + (int)m_flCrossGap, 1, 5, 50, 250, 50, m_iCrossAlpha );
+	}
+
 	// SPR_Draw Ammo
 	if ((pw->iAmmoType < 0) && (pw->iAmmo2Type < 0))
 		return 0;
@@ -1056,7 +1165,7 @@ int CHudAmmo::DrawWList(float flTime)
 	else 
 		iActiveSlot = gpActiveSel->iSlot;
 
-	x = 10; //!!!
+	x = ScreenWidth >= 640 ? 138 : 70; //!!!
 	y = 10; //!!!
 	
 
@@ -1104,7 +1213,7 @@ int CHudAmmo::DrawWList(float flTime)
 
 
 	a = 128; //!!!
-	x = 10;
+	x = ScreenWidth >= 640 ? 138 : 70;
 
 	// Draw all of the buckets
 	for (i = 0; i < MAX_WEAPON_SLOTS; i++)

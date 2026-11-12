@@ -2048,6 +2048,76 @@ void CHostageRescue::HostageRescueTouch( CBaseEntity *pOther )
 }
 
 
+// Counter-Strike Beta 6.0 (Linux symbols): the escape maps' way out. A
+// terrorist who reaches it has escaped and leaves the round; a
+// counter-terrorist in it is signalled (bit 8)
+class CEscapeZone : public CBaseTrigger
+{
+public:
+	void Spawn( void );
+	void EXPORT EscapeTouch( CBaseEntity *pOther );
+};
+
+LINK_ENTITY_TO_CLASS( func_escapezone, CEscapeZone );
+
+void CEscapeZone::Spawn( void )
+{
+	InitTrigger();
+	SetTouch( EscapeTouch );
+}
+
+void CEscapeZone::EscapeTouch( CBaseEntity *pOther )
+{
+	if ( pOther->IsPlayer() )
+	{
+		CBasePlayer *pPlayer = (CBasePlayer *)pOther;	// name ours
+
+		if ( pPlayer->m_iTeam == TEAM_TERRORIST )
+		{
+			pPlayer->m_bEscaped = true;
+			pPlayer->Disappear();
+		}
+		else if ( pPlayer->m_iTeam == TEAM_CT )
+			pPlayer->m_signals.Signal( 8 );
+	}
+}
+
+
+// Counter-Strike Beta 6.0 (Linux symbols): the assassination maps' safety
+// zone. Every player in it is signalled (bit 16); the VIP who reaches it
+// has escaped and leaves the round
+class CVIP_SafetyZone : public CBaseTrigger
+{
+public:
+	void Spawn( void );
+	void EXPORT VIP_SafetyTouch( CBaseEntity *pOther );
+};
+
+LINK_ENTITY_TO_CLASS( func_vip_safetyzone, CVIP_SafetyZone );
+
+void CVIP_SafetyZone::Spawn( void )
+{
+	InitTrigger();
+	SetTouch( VIP_SafetyTouch );
+}
+
+void CVIP_SafetyZone::VIP_SafetyTouch( CBaseEntity *pOther )
+{
+	if ( pOther->IsPlayer() )
+	{
+		CBasePlayer *pPlayer = (CBasePlayer *)pOther;	// name ours
+
+		pPlayer->m_signals.Signal( 16 );
+
+		if ( pPlayer->m_bIsVIP == true )
+		{
+			pPlayer->m_bEscaped = true;
+			pPlayer->Disappear();
+		}
+	}
+}
+
+
 
 class CTriggerSave : public CBaseTrigger
 {

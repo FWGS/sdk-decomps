@@ -42,7 +42,7 @@ public:
 	void Precache( void );
 	int iItemSlot( void ) { return 2; }
 	int GetItemInfo(ItemInfo *p);
-	float GetMaxSpeed( void ) { return 260; }	// Beta 5.0 (leak): Linux symbol
+	float GetMaxSpeed( void ) { return 250; }	// Beta 5.0 (leak): Linux symbol; Beta 6.0: 250 (was 260)
 
 	void PrimaryAttack( void );
 	void USPFire( float flSpread, float flCycleTime, BOOL fUseSemi );
@@ -70,6 +70,7 @@ void CUSP::Spawn( )
 void CUSP::Precache( void )
 {
 	PRECACHE_MODEL("models/v_usp.mdl");
+	PRECACHE_MODEL("models/v_usp_r.mdl");	// Beta 6.0: the right-handed view model
 	PRECACHE_MODEL("models/w_usp.mdl");
 	PRECACHE_MODEL("models/p_usp.mdl");
 
@@ -81,7 +82,7 @@ void CUSP::Precache( void )
 	PRECACHE_SOUND ("weapons/sliderelease1.wav");
 	PRECACHE_SOUND ("weapons/slideback1.wav");
 
-	m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shell
+	m_iShell = PRECACHE_MODEL ("models/pshell.mdl");// brass shell (Beta 6.0: the pistol shell)
 }
 
 int CUSP::GetItemInfo(ItemInfo *p)
@@ -105,22 +106,32 @@ BOOL CUSP::Deploy( )
 {
 	m_pPlayer->m_flAccuracy = 0.98;
 
+	// Beta 6.0: the left-handed model is the old one, the right-handed one is new
+	if ( m_pPlayer->m_bLeftHanded == true )
+	{
+		if (RANDOM_LONG(0,1))
+			return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_DRAW, "tmp" );
+		else
+			return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_DRAW2, "tmp" );
+	}
+
 	if (RANDOM_LONG(0,1))
-		return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_DRAW, "tmp" );
+		return DefaultDeploy( "models/v_usp_r.mdl", "models/p_usp.mdl", USP_DRAW, "tmp" );
 	else
-		return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_DRAW2, "tmp" );
+		return DefaultDeploy( "models/v_usp_r.mdl", "models/p_usp.mdl", USP_DRAW2, "tmp" );
 }
 
 void CUSP::PrimaryAttack( void )
 {
+	// Beta 6.0: a shot every 0.25 seconds at most (was 0.285)
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.225, 0.285, FALSE );
+		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.225, 0.25, FALSE );
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.3, 0.285, FALSE );
+		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.3, 0.25, FALSE );
 	else if (FBitSet(m_pPlayer->pev->flags, FL_DUCKING))
-		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.08, 0.285, FALSE );
+		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.08, 0.25, FALSE );
 	else
-		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.1, 0.285, FALSE );
+		USPFire( (1 - m_pPlayer->m_flAccuracy) * 0.1, 0.25, FALSE );
 }
 
 void CUSP::USPFire( float flSpread , float flCycleTime, BOOL fUseSemi )
@@ -174,12 +185,6 @@ void CUSP::USPFire( float flSpread , float flCycleTime, BOOL fUseSemi )
 
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
-	Vector	vecShellVelocity = m_pPlayer->pev->velocity
-							 + gpGlobals->v_right * RANDOM_FLOAT(40,150)
-							 + gpGlobals->v_up * RANDOM_FLOAT(100,260)
-							 + gpGlobals->v_forward * RANDOM_FLOAT(-100,100);
-	EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 32 - gpGlobals->v_right * 12 , vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
-
 	// silenced
 	if (pev->body == 1)
 	{
@@ -207,12 +212,10 @@ void CUSP::USPFire( float flSpread , float flCycleTime, BOOL fUseSemi )
 			EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/usp2.wav", RANDOM_FLOAT(0.92, 1.0), 1.6);
 	}
 
-	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
 
 	vecAiming = gpGlobals->v_forward;
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_45ACP, 34, 0.83, NULL, true );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -222,6 +225,35 @@ void CUSP::USPFire( float flSpread , float flCycleTime, BOOL fUseSemi )
 	m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
 
 	m_pPlayer->pev->punchangle.x -= 2;
+
+	// Beta 6.0: the shot leaves 5 units to the side of the hand that holds
+	// the gun, and the shell flies out on the other side
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+
+	if ( m_pPlayer->m_bLeftHanded == true )
+	{
+		vecSrc = vecSrc - gpGlobals->v_right * 5;
+
+		// Beta 6.0: the shell flies lower and only forwards
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity
+								 + gpGlobals->v_right * RANDOM_FLOAT(40,150)
+								 + gpGlobals->v_up * RANDOM_FLOAT(70,170)
+								 + gpGlobals->v_forward * RANDOM_FLOAT(0,100);
+		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 32 - gpGlobals->v_right * 12 , vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+	}
+	else
+	{
+		vecSrc = vecSrc + gpGlobals->v_right * 5;
+
+		// Beta 6.0: the shell flies lower and only forwards
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity
+								 - gpGlobals->v_right * RANDOM_FLOAT(40,150)
+								 + gpGlobals->v_up * RANDOM_FLOAT(70,170)
+								 + gpGlobals->v_forward * RANDOM_FLOAT(0,100);
+		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 32 + gpGlobals->v_right * 12 , vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+	}
+
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_45ACP, 34, 0.83, NULL, true );
 }
 
 

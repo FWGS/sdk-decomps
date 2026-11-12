@@ -50,7 +50,7 @@ public:
 	BOOL Deploy( );
 	void Reload( void );
 	void WeaponIdle( void );
-	float GetMaxSpeed( void ) { return 250; }
+	float GetMaxSpeed( void ) { return 240; }	// Beta 6.0: 240 (was 250)
 	int m_fInReload;
 	float m_flNextReload;
 	int m_iShell;
@@ -87,6 +87,7 @@ void CXM1014::Spawn( )
 void CXM1014::Precache( void )
 {
 	PRECACHE_MODEL("models/v_xm1014.mdl");
+	PRECACHE_MODEL("models/v_xm1014_r.mdl");	// Beta 6.0: the right-handed view model
 	PRECACHE_MODEL("models/w_xm1014.mdl");
 	PRECACHE_MODEL("models/p_xm1014.mdl");
 
@@ -120,7 +121,12 @@ int CXM1014::GetItemInfo(ItemInfo *p)
 
 BOOL CXM1014::Deploy( )
 {
-	return DefaultDeploy( "models/v_xm1014.mdl", "models/p_xm1014.mdl", XM1014_DRAW, "mp5" );
+
+	// Beta 6.0: the left-handed model is the old one, the right-handed one is new
+	if ( m_pPlayer->m_bLeftHanded == true )
+		return DefaultDeploy( "models/v_xm1014.mdl", "models/p_xm1014.mdl", XM1014_DRAW, "mp5" );
+
+	return DefaultDeploy( "models/v_xm1014_r.mdl", "models/p_xm1014.mdl", XM1014_DRAW, "mp5" );
 }
 
 
@@ -158,30 +164,13 @@ void CXM1014::PrimaryAttack()
 
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
-	Vector	vecShellVelocity = m_pPlayer->pev->velocity
-							 + gpGlobals->v_right * RANDOM_FLOAT(100,170)
-							 + gpGlobals->v_up * RANDOM_FLOAT(100,150)
-							 + gpGlobals->v_forward * 25;
-
 	// the shell comes out with the pump: EjectBrassLate, from ItemPostFrame
 	m_pPlayer->m_flEjectBrass = gpGlobals->time + 0.1;
 
 	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/xm1014-1.wav", RANDOM_FLOAT(0.95, 1.0), 0.4);
 
 
-	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_5DEGREES );
-
-	if ( g_pGameRules->IsDeathmatch() )
-	{
-		// altered deathmatch spread
-		m_pPlayer->FireBullets( 6, vecSrc, vecAiming, VECTOR_CONE_DM_SHOTGUN, 2048, BULLET_PLAYER_BUCKSHOT, 0 );
-	}
-	else
-	{
-		// regular old, untouched spread.
-		m_pPlayer->FireBullets( 6, vecSrc, vecAiming, VECTOR_CONE_10DEGREES, 2048, BULLET_PLAYER_BUCKSHOT, 0 );
-	}
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
 		// HEV suit - indicate out of ammo condition
@@ -199,6 +188,18 @@ void CXM1014::PrimaryAttack()
 	m_fInReload = 0;
 
 	m_pPlayer->pev->punchangle.x -= RANDOM_LONG( 3, 5 );	// Beta 5.0 (the leak: 4 to 6)
+
+	// Beta 6.0: the shot leaves 5 units to the side of the hand that holds the
+	// gun, last; one cone of 0.0725 by 0.0725 and 3048 units in every game
+	// (Beta 5.0: the deathmatch cone, 2048 units)
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+
+	if ( m_pPlayer->m_bLeftHanded == true )
+		vecSrc = vecSrc - gpGlobals->v_right * 5;
+	else
+		vecSrc = vecSrc + gpGlobals->v_right * 5;
+
+	m_pPlayer->FireBullets( 6, vecSrc, vecAiming, Vector( 0.0725, 0.0725, 0 ), 3048, BULLET_PLAYER_BUCKSHOT, 0 );
 }
 
 

@@ -42,7 +42,7 @@ public:
 	BOOL Deploy( void );
 	void Reload( void );
 	void WeaponIdle( void );
-	float GetMaxSpeed( void ) { return 240; }	// Beta 5.0 (leak): Linux symbol
+	float GetMaxSpeed( void ) { return 235; }	// Beta 5.0 (leak): Linux symbol; Beta 6.0: 235 (was 240)
 	int m_iShell;
 	BOOL m_fEjectShell;		// the shot throws a shell; flips with every shot
 };
@@ -65,6 +65,7 @@ void CSG552::Spawn( )
 void CSG552::Precache( void )
 {
 	PRECACHE_MODEL("models/v_sg552.mdl");
+	PRECACHE_MODEL("models/v_sg552_r.mdl");	// Beta 6.0: the right-handed view model
 	PRECACHE_MODEL("models/w_sg552.mdl");
 	PRECACHE_MODEL("models/p_sg552.mdl");
 
@@ -74,7 +75,7 @@ void CSG552::Precache( void )
 	PRECACHE_SOUND("weapons/sg552_clipin.wav");
 	PRECACHE_SOUND("weapons/sg552_boltpull.wav");
 
-	m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shell
+	m_iShell = PRECACHE_MODEL ("models/rshell.mdl");// brass shell (Beta 6.0: the rifle shell)
 }
 
 int CSG552::GetItemInfo(ItemInfo *p)
@@ -98,14 +99,20 @@ BOOL CSG552::Deploy( )
 {
 	m_pPlayer->m_flAccuracy = 0;
 	m_fEjectShell = 1;
-	return DefaultDeploy( "models/v_sg552.mdl", "models/p_sg552.mdl", SG552_DRAW, "mp5" );
+
+	// Beta 6.0: the left-handed model is the old one, the right-handed one is new
+	if ( m_pPlayer->m_bLeftHanded == true )
+		return DefaultDeploy( "models/v_sg552.mdl", "models/p_sg552.mdl", SG552_DRAW, "mp5" );
+
+	return DefaultDeploy( "models/v_sg552_r.mdl", "models/p_sg552.mdl", SG552_DRAW, "mp5" );
 }
 
 void CSG552::SecondaryAttack( void )
 {
+	// Beta 6.0: the zoom is 45 degrees (was 25)
 	if (m_pPlayer->m_iFOV == 90)
-		m_pPlayer->m_iFOV = 25;
-	else if (m_pPlayer->m_iFOV == 25)
+		m_pPlayer->m_iFOV = 45;
+	else if (m_pPlayer->m_iFOV == 45)
 		m_pPlayer->m_iFOV = 90;
 	else
 		m_pPlayer->m_iFOV = 90;
@@ -120,7 +127,10 @@ void CSG552::PrimaryAttack( void )
 	// Beta 4.0: the same spread however the player moves (the product
 	// written in the call: retail's code loads the accuracy, compares the
 	// FOV and multiplies, in that order); Beta 4.1: 0.02 (was 0.0225)
-	if (m_pPlayer->m_iFOV == 90)
+	// Beta 6.0: in the air the spread factor is 0.25 times the accuracy
+	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
+		SG552Fire( m_pPlayer->m_flAccuracy * 0.25, 0.0825, FALSE );
+	else if (m_pPlayer->m_iFOV == 90)
 	{
 		flSpread = m_pPlayer->m_flAccuracy;
 		SG552Fire( flSpread * 0.02, 0.0825, FALSE );
@@ -179,14 +189,6 @@ void CSG552::SG552Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
-	Vector	vecShellVelocity = m_pPlayer->pev->velocity
-							 + gpGlobals->v_right * RANDOM_FLOAT(100,120)
-							 + gpGlobals->v_up * RANDOM_FLOAT(35,55)
-							 + gpGlobals->v_forward * RANDOM_FLOAT(40,55);
-	if (m_fEjectShell)
-		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs - gpGlobals->v_up * 8 + gpGlobals->v_forward * 20 - gpGlobals->v_right * 10, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
-	m_fEjectShell = 1 - m_fEjectShell;
-
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
 	m_pPlayer->m_iWeaponFlash = BRIGHT_GUN_FLASH;
 
@@ -195,7 +197,6 @@ void CSG552::SG552Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	else
 		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/sg552-2.wav", RANDOM_FLOAT(0.92, 1.0), 0.56);
 
-	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
 
 	if ( fUseAutoAim )
@@ -207,7 +208,6 @@ void CSG552::SG552Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		vecAiming = gpGlobals->v_forward;
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 33, 0.955 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -222,9 +222,42 @@ void CSG552::SG552Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
 		KickBack( 1.25, 0.45, 0.22, 0.18, 5.5, 4, 5 );
 	else if ( FBitSet(m_pPlayer->pev->flags, FL_DUCKING) )
-		KickBack( 0.6, 0.35, 0.125, 0.0125, 4.75, 2, 10 );
+		KickBack( 0.6, 0.35, 0.2, 0.0125, 4.75, 2, 10 );	// Beta 6.0: 0.2 (was 0.125)
 	else
-		KickBack( 0.625, 0.375, 0.135, 0.0125, 5, 2.25, 9 );
+		KickBack( 0.625, 0.375, 0.25, 0.0125, 5, 2.25, 9 );	// Beta 6.0: 0.25 (was 0.135)
+
+	// Beta 6.0: the shot leaves 5 units to the side of the hand that holds
+	// the gun, and the shell flies out on the other side
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+
+	if ( m_pPlayer->m_bLeftHanded == true )
+	{
+		vecSrc = vecSrc - gpGlobals->v_right * 5;
+
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity
+								 + gpGlobals->v_right * RANDOM_FLOAT(100,120)
+								 + gpGlobals->v_up * RANDOM_FLOAT(35,55)
+								 + gpGlobals->v_forward * RANDOM_FLOAT(40,55);
+		if (m_fEjectShell)
+			EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs - gpGlobals->v_up * 8 + gpGlobals->v_forward * 20 - gpGlobals->v_right * 10, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+
+		m_fEjectShell = 1 - m_fEjectShell;
+	}
+	else
+	{
+		vecSrc = vecSrc + gpGlobals->v_right * 5;
+
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity
+								 - gpGlobals->v_right * RANDOM_FLOAT(100,120)
+								 + gpGlobals->v_up * RANDOM_FLOAT(35,55)
+								 + gpGlobals->v_forward * RANDOM_FLOAT(40,55);
+		if (m_fEjectShell)
+			EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs - gpGlobals->v_up * 8 + gpGlobals->v_forward * 20 + gpGlobals->v_right * 10, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+
+		m_fEjectShell = 1 - m_fEjectShell;
+	}
+
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 33, 0.955 );
 }
 
 

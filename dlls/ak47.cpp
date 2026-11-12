@@ -41,7 +41,7 @@ public:
 	BOOL Deploy( void );
 	void Reload( void );
 	void WeaponIdle( void );
-	float GetMaxSpeed( void ) { return 230; }	// Beta 5.0 (leak): Linux symbol
+	float GetMaxSpeed( void ) { return 221; }	// Beta 5.0 (leak): Linux symbol; Beta 6.0: 221 (was 230)
 	int m_iShell;
 	BOOL m_fEjectShell;		// the shot throws a shell; flips with every shot
 };
@@ -64,6 +64,7 @@ void CAK47::Spawn( )
 void CAK47::Precache( void )
 {
 	PRECACHE_MODEL("models/v_ak47.mdl");
+	PRECACHE_MODEL("models/v_ak47_r.mdl");	// Beta 6.0: the right-handed view model
 	PRECACHE_MODEL("models/w_ak47.mdl");
 	PRECACHE_MODEL("models/p_ak47.mdl");
 
@@ -73,7 +74,7 @@ void CAK47::Precache( void )
 	PRECACHE_SOUND("weapons/ak47_clipin.wav");
 	PRECACHE_SOUND("weapons/ak47_boltpull.wav");
 
-	m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shell
+	m_iShell = PRECACHE_MODEL ("models/rshell.mdl");// brass shell (Beta 6.0: the rifle shell)
 }
 
 int CAK47::GetItemInfo(ItemInfo *p)
@@ -97,7 +98,12 @@ BOOL CAK47::Deploy( )
 {
 	m_pPlayer->m_flAccuracy = 0;
 	m_fEjectShell = 1;
-	return DefaultDeploy( "models/v_ak47.mdl", "models/p_ak47.mdl", AK47_DRAW, "mp5" );
+
+	// Beta 6.0: v_ak47.mdl holds the gun in the left hand, v_ak47_r.mdl in the right
+	if ( m_pPlayer->m_bLeftHanded == true )
+		return DefaultDeploy( "models/v_ak47.mdl", "models/p_ak47.mdl", AK47_DRAW, "mp5" );
+
+	return DefaultDeploy( "models/v_ak47_r.mdl", "models/p_ak47.mdl", AK47_DRAW, "mp5" );
 }
 
 void CAK47::SecondaryAttack( void )
@@ -107,7 +113,11 @@ void CAK47::SecondaryAttack( void )
 
 void CAK47::PrimaryAttack( void )
 {
-	AK47Fire( m_pPlayer->m_flAccuracy * 0.0275, 0.0955, FALSE );
+	// Beta 6.0: off the ground the spread is 0.35 times the accuracy
+	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
+		AK47Fire( m_pPlayer->m_flAccuracy * 0.35, 0.0955, FALSE );
+	else
+		AK47Fire( m_pPlayer->m_flAccuracy * 0.0275, 0.0955, FALSE );
 }
 
 void CAK47::AK47Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
@@ -157,14 +167,6 @@ void CAK47::AK47Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
-	Vector	vecShellVelocity = m_pPlayer->pev->velocity
-							 + gpGlobals->v_right * RANDOM_FLOAT(100,120)
-							 + gpGlobals->v_up * RANDOM_FLOAT(35,55)
-							 + gpGlobals->v_forward * RANDOM_FLOAT(40,55);
-	if (m_fEjectShell)
-		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs - gpGlobals->v_up * 8 + gpGlobals->v_forward * 20 - gpGlobals->v_right * 10, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
-	m_fEjectShell = 1 - m_fEjectShell;
-
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
 	m_pPlayer->m_iWeaponFlash = BRIGHT_GUN_FLASH;
 
@@ -173,7 +175,6 @@ void CAK47::AK47Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	else
 		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/ak47-2.wav", 1, 0.4);
 
-	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
 
 	if ( fUseAutoAim )
@@ -185,7 +186,6 @@ void CAK47::AK47Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		vecAiming = gpGlobals->v_forward;
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_762MM, 37, 0.98 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -198,11 +198,41 @@ void CAK47::AK47Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
 		KickBack( 1.5, 0.45, 0.25, 0.185, 7, 4, 6 );
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		KickBack( 1.75, 0.5, 0.25, 0.185, 7.5, 4.5, 5 );
+		KickBack( 2, 1, 0.5, 0.35, 9, 6, 5 );
 	else if ( FBitSet(m_pPlayer->pev->flags, FL_DUCKING) )
-		KickBack( 1, 0.35, 0.125, 0.025, 5.5, 1.5, 9 );
+		KickBack( 0.9, 0.35, 0.15, 0.025, 5.5, 1.5, 9 );
 	else
-		KickBack( 1.15, 0.375, 0.15, 0.0375, 5.75, 1.75, 8 );
+		KickBack( 1, 0.375, 0.175, 0.0375, 5.75, 1.75, 8 );
+
+	// Beta 6.0: the bullets leave 5 units to the side of the hand that holds
+	// the gun, the shell flies out of the other side
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+
+	if ( m_pPlayer->m_bLeftHanded == true )
+	{
+		vecSrc = vecSrc - gpGlobals->v_right * 5;
+
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity
+								 + gpGlobals->v_right * RANDOM_FLOAT(100,120)
+								 + gpGlobals->v_up * RANDOM_FLOAT(35,55)
+								 + gpGlobals->v_forward * RANDOM_FLOAT(40,55);
+		if (m_fEjectShell)
+			EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs - gpGlobals->v_up * 8 + gpGlobals->v_forward * 20 - gpGlobals->v_right * 10, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+	}
+	else
+	{
+		vecSrc = vecSrc + gpGlobals->v_right * 5;
+
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity
+								 - gpGlobals->v_right * RANDOM_FLOAT(100,120)
+								 + gpGlobals->v_up * RANDOM_FLOAT(35,55)
+								 + gpGlobals->v_forward * RANDOM_FLOAT(40,55);
+		if (m_fEjectShell)
+			EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs - gpGlobals->v_up * 8 + gpGlobals->v_forward * 20 + gpGlobals->v_right * 10, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+	}
+	m_fEjectShell = 1 - m_fEjectShell;
+
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_762MM, 37, 0.98 );
 }
 
 

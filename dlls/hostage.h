@@ -31,23 +31,25 @@ public:
 	int  BloodColor( void ) { return BLOOD_COLOR_RED; }
 	int  ObjectCaps( void );	// Beta 5.0 (leak) (Linux symbol): the hostage is used on and off
 
-	// names ours; offsets are retail's. m_hTargetEnt (CBaseMonster's) is the
-	// player the hostage follows.
+	// names ours; offsets are Beta 6.0's (CHostage is 0x258 bytes, GetClassPtr<CHostage>).
+	// m_hTargetEnt (CBaseMonster's) is the player the hostage follows.
 	int		m_iActivity;		// 0x118 the activity SetActivity last started
 	BOOL	m_fTouched;			// 0x11c new in Beta 1.1: a counter-terrorist has used it since the last RePosition (the first use pays)
-	BOOL	m_fRescued;			// 0x120 new in Beta 5.0 (leak): it reached a rescue zone (CHostageRescue::HostageRescueTouch, IdleThink); Spawn clears it (name ours; every member after it 4 bytes later than in Beta 4.1)
-	float	m_flFollowDistance;	// 0x120 Spawn: 128; Beta 2.0's Use: 82 when following, 36 when told to stay; IdleThink moves the hostage only when farther than this
-	float	m_flFlinchTime;		// 0x124 TakeDamage: now + 0.75; IdleThink leaves the activity alone until then
-	float	m_flNextUse;		// 0x128 Use answers once a second
-	float	m_flNextRescueCheck;	// 0x12c Beta 4.1: IdleThink looks for a rescue point once a second (Spawn: 0; Beta 1.1 to 4.0 nothing else referred to it)
-	float	m_flFollowRange;	// 0x130 only written: Spawn 1024, Use 300 when told to stay, 1024 when following
-	int		m_iUnused138;		// 0x138 new in Beta 5.0: no function refers to it or to the next (CHostage is 0x248 bytes,
-	int		m_iUnused13C;		// 0x13c GetClassPtr<CHostage>; m_fStopped moves from 0x138 to 0x140, m_vecStart from 0x13c to 0x144; names ours)
-	BOOL	m_fStopped;			// 0x134 TRUE: stays where it is (Spawn); FALSE: follows m_hTargetEnt (Use toggles it); 2 (Beta 2.0's IdleThink): no leader within reach
-	Vector	m_vecStart;			// 0x138 where Spawn stood; RePosition moves the hostage back there (Beta 3.0 drops the unused Vector before it)
-	Vector	m_vecPath[20];		// 0x144 new in Beta 3.0: the positions of the leader's trail the hostage walks along (IdleThink)
-	int		m_iPathIndex;		// 0x238 the point of m_vecPath it walks to
-	int		m_iUnused23C;		// 0x23c new in Beta 5.0 (leak): no function refers to it (CHostage is 0x240 bytes, GetClassPtr<CHostage>)
+	BOOL	m_fRescued;			// 0x120 new in Beta 5.0 (leak): it reached a rescue zone (CHostageRescue::HostageRescueTouch, IdleThink); Spawn clears it
+	float	m_flFollowDistance;	// 0x124 Spawn: 128; Use: 128 when following, 60 when told to stay; IdleThink moves the hostage only when farther than this
+	float	m_flFlinchTime;		// 0x128 TakeDamage: now + 0.75; IdleThink leaves the activity alone until then
+	float	m_flNextUse;		// 0x12c Use answers once a second
+	float	m_flNextRescueCheck;	// 0x130 Beta 4.1: IdleThink looked for a rescue point once a second; from Beta 5.0 (leak) on only Spawn sets it (0)
+	float	m_flFollowRange;	// 0x134 only written: Spawn 1024, Use 300 when told to stay, 1024 when following
+	float	m_flNextStuckCheck;	// 0x138 new in Beta 5.0, unreferenced there; Beta 6.0: when IdleThink next notes the position for the stuck check (every 3 seconds on the trail; set when the trail is taken)
+	int		m_iUnused13C;		// 0x13c new in Beta 5.0: no function refers to it
+	int		m_iUnused140;		// 0x140 new in Beta 6.0: no function refers to it (m_fStopped and the rest are 4 bytes later than in Beta 5.2)
+	BOOL	m_fStopped;			// 0x144 TRUE: stays where it is (Spawn); FALSE: follows m_hTargetEnt (Use toggles it); 2: no leader within reach; 6 (Beta 3.0): the leader is out of sight, it walks his trail
+	Vector	m_vecStart;			// 0x148 where Spawn stood; RePosition moves the hostage back there (Beta 3.0 drops the unused Vector before it)
+	Vector	m_vecPath[20];		// 0x154 new in Beta 3.0: the positions of the leader's trail the hostage walks along (IdleThink copies his m_vecOldOrigins)
+	Vector	m_vecStuckCheckPos;	// 0x244 new in Beta 6.0: the position noted every 3 seconds on the trail; not 4 units from it means stuck: the trail is taken afresh (IdleThink)
+	int		m_iPathIndex;		// 0x250 the point of m_vecPath it walks to
+	int		m_iUnused23C;		// 0x254 new in Beta 5.0 (leak): no function refers to it
 };
 
 #endif // HOSTAGE_H

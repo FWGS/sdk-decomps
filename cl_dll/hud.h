@@ -123,6 +123,9 @@ private:
 	HSPRITE m_hObserverCrosshair;		// name ours
 	wrect_t m_rcObserverCrosshair;		// name ours
 	int m_bObserverCrosshair;			// name ours
+	int m_iLastClip;					// name ours
+	float m_flCrossGap;					// name ours
+	int m_iCrossAlpha;					// name ours
 
 };
 
@@ -205,7 +208,7 @@ public:
 	int MsgFunc_MOTD( const char *pszName, int iSize, void *pbuf );
 
 protected:
-	enum { MAX_MOTD_LENGTH = 241, };
+	enum { MAX_MOTD_LENGTH = 245, };	// sic: 245 to 248 give the image
 	static int MOTD_DISPLAY_TIME;
 	char m_szMOTD[ MAX_MOTD_LENGTH ];
 	float m_flActiveTill;
@@ -252,13 +255,19 @@ public:
 	int VidInit( void );
 	int Draw( float flTime );
 	int DrawPlayers( int xoffset, float listslot, int nameoffset = 0, int team = 0 ); // returns the ypos where it finishes drawing
+	void DrawRadar( float flTime );	// name ours
 	void UserCmd_ShowScores( void );
 	void UserCmd_HideScores( void );
+	void UserCmd_ShowRadar( void );
+	void UserCmd_HideRadar( void );
 	int MsgFunc_ScoreAttrib( const char *pszName, int iSize, void *pbuf );
 	int MsgFunc_ScoreInfo( const char *pszName, int iSize, void *pbuf );
 	int MsgFunc_TeamInfo( const char *pszName, int iSize, void *pbuf );
 	int MsgFunc_TeamScore( const char *pszName, int iSize, void *pbuf );
+	int MsgFunc_Radar( const char *pszName, int iSize, void *pbuf );
 	void DeathMsg( int killer, int victim );
+
+	bool m_bDrawRadar;	// name ours
 
 	enum { 
 		MAX_PLAYERS = 64,
@@ -274,6 +283,11 @@ public:
 		short deaths;
 		short teamnumber;	// name ours
 		int has_c4;			// name ours
+		int is_vip;			// name ours
+		Vector radar_pos;	// name ours
+		float flash_next;	// name ours
+		int flash_on;		// name ours
+		int flash_left;		// name ours
 	};
 
 	struct team_info_t {
@@ -297,8 +311,13 @@ public:
 	int m_iShowscoresHeld;
 	int m_HUD_smallskull;	// name ours
 	int m_HUD_smallc4;		// name ours
+	int m_HUD_smallvip;		// name ours
 	float m_flNextCvarCheck;	// name ours
 	float m_flHideFrags;		// name ours: cl_hidefrags
+	wrect_t *m_prcRadar;		// name ours
+	HSPRITE m_hRadar;			// name ours
+	wrect_t *m_prcRadarBg;		// name ours
+	HSPRITE m_hRadarBg;			// name ours
 
 	void GetAllPlayersInfo( void );
 };
@@ -587,6 +606,35 @@ private:
 	int m_x0, m_y0, m_x1, m_y1;	// names ours
 };
 
+//
+//-----------------------------------------------------
+//
+class CHudNVG: public CHudBase	// name ours: night vision, and the sniper scope
+{
+public:
+	int Init( void );
+	int VidInit( void );
+	int Draw( float flTime );
+	void Reset( void );
+	int MsgFunc_NVGToggle( const char *pszName, int iSize, void *pbuf );
+	void UserCmd_NVGAdjustUp( void );		// name ours
+	void UserCmd_NVGAdjustDown( void );		// name ours
+
+private:
+	int m_iOn;						// name ours
+	int m_iAlpha;					// name ours
+	wrect_t *m_prcScope[3][8];		// name ours: the scope's pieces at 640, 800 and 1024 wide
+	wrect_t *m_prcHorizontal;		// name ours
+	wrect_t *m_prcVertical;			// name ours
+	HSPRITE m_hScope[8];			// name ours
+	HSPRITE m_hHorizontal;			// name ours
+	HSPRITE m_hVertical;			// name ours
+	HSPRITE m_hScope2[8];			// name ours
+	int m_iUnknown2[2];				// sic: 8 bytes the image never touches
+	HSPRITE m_hScope3[8];			// name ours
+	int m_iUnknown3[2];				// sic: 8 bytes the image never touches
+};
+
 
 //
 //-----------------------------------------------------
@@ -675,6 +723,7 @@ public:
 	CHudMoney		m_Money;		// name ours
 	CHudRoundTimer	m_RoundTimer;	// name ours
 	CHudProgressBar	m_ProgressBar;	// name ours
+	CHudNVG			m_NVG;			// name ours
 
 	void Init( void );
 	void VidInit( void );
@@ -704,6 +753,8 @@ public:
 	// sprite indexes
 	int m_HUD_number_0;
 
+	float m_flCvarCheckTime;	// name ours
+
 
 	void AddHudElem(CHudBase *p);
 
@@ -714,8 +765,9 @@ extern CHud gHUD;
 // sic: a stand-in, name ours.
 // The headers held more intermediate code between class CHud's inline
 // functions and util.h's CVAR_GET_FLOAT than ours: ammo.obj and health.obj place their header
-// inline functions by it.  The leak needs 213 to 243 bytes more, Beta 5.0 83 to 188 (or its .cpp
-// files that much more of their own); which text it was, the image does not say.  Nothing calls this.
+// inline functions by it.  The leak needs 213 to 243 bytes more, Beta 5.0 and 5.2 83 to 188,
+// Beta 6.0 138 to 198 (or the .cpp files that much more of their own); which text it was, the
+// image does not say.  Nothing calls this.
 inline void b50leak_unknown( void )
 {
 	;

@@ -45,7 +45,7 @@ public:
 	void Precache( void );
 	int iItemSlot( void ) { return 2; }
 	int GetItemInfo(ItemInfo *p);
-	float GetMaxSpeed( void ) { return 260; }	// Beta 5.0 (leak): Linux symbol
+	float GetMaxSpeed( void ) { return 250; }	// Beta 5.0 (leak): Linux symbol; Beta 6.0: 250 (was 260)
 
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
@@ -75,6 +75,7 @@ void CGLOCK18::Spawn( )
 void CGLOCK18::Precache( void )
 {
 	PRECACHE_MODEL("models/v_glock18.mdl");
+	PRECACHE_MODEL("models/v_glock18_r.mdl");	// Beta 6.0: the right-handed view model
 	PRECACHE_MODEL("models/w_glock18.mdl");
 	PRECACHE_MODEL("models/p_glock18.mdl");
 
@@ -89,7 +90,7 @@ void CGLOCK18::Precache( void )
 	PRECACHE_SOUND ("weapons/de_clipin.wav");
 	PRECACHE_SOUND ("weapons/de_clipout.wav");
 
-	m_iShellLate = m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shell
+	m_iShellLate = m_iShell = PRECACHE_MODEL ("models/pshell.mdl");// brass shell (Beta 6.0: the pistol shell)
 }
 
 int CGLOCK18::GetItemInfo(ItemInfo *p)
@@ -113,10 +114,21 @@ BOOL CGLOCK18::Deploy( )
 {
 	m_fBurstMode = false;
 
-	if (RANDOM_LONG(0,1))
-		return DefaultDeploy( "models/v_glock18.mdl", "models/p_glock18.mdl", GLOCK18_DRAW, "onehanded" );
+	// Beta 6.0: v_glock18.mdl holds the gun in the left hand, v_glock18_r.mdl in the right
+	if ( m_pPlayer->m_bLeftHanded == true )
+	{
+		if (RANDOM_LONG(0,1))
+			return DefaultDeploy( "models/v_glock18.mdl", "models/p_glock18.mdl", GLOCK18_DRAW, "onehanded" );
+		else
+			return DefaultDeploy( "models/v_glock18.mdl", "models/p_glock18.mdl", GLOCK18_DRAW2, "onehanded" );
+	}
 	else
-		return DefaultDeploy( "models/v_glock18.mdl", "models/p_glock18.mdl", GLOCK18_DRAW2, "onehanded" );
+	{
+		if (RANDOM_LONG(0,1))
+			return DefaultDeploy( "models/v_glock18_r.mdl", "models/p_glock18.mdl", GLOCK18_DRAW, "onehanded" );
+		else
+			return DefaultDeploy( "models/v_glock18_r.mdl", "models/p_glock18.mdl", GLOCK18_DRAW2, "onehanded" );
+	}
 }
 
 void CGLOCK18::SecondaryAttack( void )
@@ -144,13 +156,13 @@ void CGLOCK18::PrimaryAttack( void )
 		GLOCK18Fire( 0.015, 0.5, TRUE );
 	}
 	else if (m_pPlayer->pev->velocity.Length2D() > 0)
-		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.165, 0.27, FALSE );
+		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.165, 0.225, FALSE );
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.2, 0.27, FALSE );
+		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.2, 0.225, FALSE );
 	else if (FBitSet(m_pPlayer->pev->flags, FL_DUCKING))
-		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.075, 0.27, FALSE );
+		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.075, 0.225, FALSE );
 	else
-		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.1, 0.27, FALSE );
+		GLOCK18Fire( (1 - m_pPlayer->m_flAccuracy) * 0.1, 0.225, FALSE );
 }
 
 void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseBurstMode )
@@ -204,12 +216,6 @@ void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseBurstMo
 
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
-	Vector	vecShellVelocity = m_pPlayer->pev->velocity
-							 + gpGlobals->v_right * RANDOM_FLOAT(40,150)
-							 + gpGlobals->v_up * RANDOM_FLOAT(100,360)
-							 + gpGlobals->v_forward * RANDOM_FLOAT(25,200);
-	EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -20 + gpGlobals->v_forward * 32 - gpGlobals->v_right * 20 , vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
-
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
 	m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
 
@@ -220,12 +226,10 @@ void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseBurstMo
 	else
 		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/glock18-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
 
-	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
 
 	vecAiming = gpGlobals->v_forward;
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 24, 0.87, NULL, true );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -242,6 +246,34 @@ void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseBurstMo
 		m_pPlayer->m_flNextBurstShot = gpGlobals->time + 0.1;
 		m_pPlayer->m_iBurstShotsFired++;
 	}
+
+	// Beta 6.0: the bullets leave 5 units to the side of the hand that holds
+	// the gun, the shell flies out of the other side
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+
+	if ( m_pPlayer->m_bLeftHanded == true )
+	{
+		vecSrc = vecSrc - gpGlobals->v_right * 5;
+
+		// the shell comes out closer to the gun (Beta 5.2: 20 down, 32 forward, 20 to the side)
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity
+								 + gpGlobals->v_right * RANDOM_FLOAT(40,150)
+								 + gpGlobals->v_up * RANDOM_FLOAT(100,360)
+								 + gpGlobals->v_forward * RANDOM_FLOAT(25,200);
+		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 16 - gpGlobals->v_right * 6 , vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+	}
+	else
+	{
+		vecSrc = vecSrc + gpGlobals->v_right * 5;
+
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity
+								 - gpGlobals->v_right * RANDOM_FLOAT(40,150)
+								 + gpGlobals->v_up * RANDOM_FLOAT(100,360)
+								 + gpGlobals->v_forward * RANDOM_FLOAT(25,200);
+		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 16 + gpGlobals->v_right * 6 , vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+	}
+
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 24, 0.87, NULL, true );
 }
 
 

@@ -51,6 +51,7 @@ void CHostage::Spawn( void )
 	pev->max_health	= 100;			// Beta 5.0 (leak)
 	pev->health		= pev->max_health;
 	pev->gravity	= 1.0;
+	pev->view_ofs	= Vector( 0, 0, 12 );	// Beta 6.0
 
 	// Beta 5.0: the map may give the hostage a model and a skin
 	if ( pev->skin < 0 )
@@ -70,7 +71,7 @@ void CHostage::Spawn( void )
 	m_vecPath[0] = Vector( 0, 0, 0 );	// Beta 3.0
 	m_fRescued = FALSE;					// Beta 5.0 (leak)
 
-	UTIL_SetSize( pev, Vector( -16, -16, 0 ), Vector( 16, 16, 72 ) );
+	UTIL_SetSize( pev, Vector( -10, -10, 0 ), Vector( 10, 10, 62 ) );	// Beta 6.0: smaller (was 32 by 32 by 72)
 	UTIL_MakeVectors( pev->v_angle );
 	float flYaw = UTIL_VecToYaw( gpGlobals->v_forward );
 	SetBoneController( 0, flYaw );
@@ -148,7 +149,7 @@ void CHostage::IdleThink( void )
 			m_hTargetEnt = NULL;
 		}
 
-		if ( m_hTargetEnt != NULL && ( pev->origin - m_hTargetEnt->pev->origin ).Length() < 1024 && m_fStopped == FALSE )	// Beta 4.1: 2048 (Beta 5.0 leak: 1024 again)
+		if ( m_hTargetEnt != NULL && ( pev->origin - m_hTargetEnt->pev->origin ).Length() < 3024 && m_fStopped == FALSE )	// Beta 6.0: 3024 (Beta 4.1: 2048, Beta 5.0 leak: 1024)
 		{
 			TraceResult tr;
 
@@ -175,8 +176,7 @@ void CHostage::IdleThink( void )
 					{
 						if ( ( pSpot->pev->origin - pev->origin ).Length() < 256 )
 						{
-							m_fRescued = TRUE;
-							ALERT( at_console, " Rescued on a info_hostage_rescue\n" );
+							m_fRescued = TRUE;	// Beta 6.0: no console line any more
 							break;
 						}
 					}
@@ -188,7 +188,6 @@ void CHostage::IdleThink( void )
 							if ( ( pSpot->pev->origin - pev->origin ).Length() < 256 )
 							{
 								m_fRescued = TRUE;
-								ALERT( at_console, " Rescued on a info_player_start\n" );
 								break;
 							}
 						}
@@ -219,11 +218,14 @@ void CHostage::IdleThink( void )
 			pev->angles.x = 0;
 			pev->angles.z = 0;
 
-			// Beta 3.0: with a wall between, follow the leader's trail (m_fStopped 6)
-			UTIL_TraceLine( pev->origin + gpGlobals->v_up * 25, pev->origin + vecDir * 2048 + gpGlobals->v_up * 25, dont_ignore_monsters, ENT( pev ), &tr );
-			if ( VARS( tr.pHit )->solid == SOLID_BSP )
+			// Beta 6.0: the leader out of sight (a straight line 12 units up,
+			// through glass) sends it along his trail (m_fStopped 6); Beta 3.0
+			// to 5.2 looked 2048 units ahead for a wall
+			UTIL_TraceLine( pev->origin + Vector( 0, 0, 12 ), m_hTargetEnt->pev->origin + Vector( 0, 0, 12 ), ignore_monsters, ignore_glass, ENT( pev ), &tr );
+			if ( tr.flFraction != 1.0 )
 			{
 				m_fStopped = 6;
+				m_flNextStuckCheck = gpGlobals->time + 3;
 				return;
 			}
 
@@ -268,16 +270,14 @@ void CHostage::IdleThink( void )
 					pev->velocity.z = 150;
 			}
 		}
-		else if ( m_fStopped == 6 && m_hTargetEnt != NULL )
+		else if ( m_hTargetEnt != NULL && m_fStopped == 6 )
 		{
 			// Beta 3.0: the leader is out of sight; walk along his trail
-			ALERT( at_console, "Waypoint = %i\n", m_iPathIndex );	// Beta 5.0 (leak)
-
+			// (Beta 6.0: no console lines here any more)
 			if ( m_hTargetEnt->IsPlayer() && m_vecPath[0] == Vector( 0, 0, 0 ) )
 			{
-				ALERT( at_console, " I'm downloading the player's path now\n" );	// Beta 5.0 (leak)
-
-				// take over the leader's last 20 positions and start at the nearest
+				// take over the leader's last 20 positions and start at the
+				// nearest one in sight (Beta 6.0: a straight line 12 units up)
 				CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)m_hTargetEnt->pev );
 
 				for ( int i = 0; i < 20; i++ )
@@ -285,21 +285,30 @@ void CHostage::IdleThink( void )
 
 				TraceResult tr;
 				Vector vecDir;
-				float flNearest = 99999;	// name ours
+				float flNearest = 9999;	// name ours (Beta 5.0 to 5.2: 99999)
 
 				for ( i = 0; i <= 19; i++ )	// "<= 19": retail compares with 19 here, with 20 in the loop above
 				{
 					vecDir = m_vecPath[i] - pev->origin;
-					if ( vecDir.Length() < flNearest )
+					float flDistance = ( m_vecPath[i] - pev->origin ).Length();	// name ours
+
+					UTIL_TraceLine( m_vecPath[i] + Vector( 0, 0, 12 ), pev->origin + Vector( 0, 0, 12 ), ignore_monsters, ignore_glass, ENT( pev ), &tr );
+					if ( flDistance < flNearest && tr.flFraction == 1.0 )
 					{
-						flNearest = vecDir.Length();
 						m_iPathIndex = i;
+						flNearest = flDistance;
 					}
 				}
 			}
 			else
 			{
-				if ( !m_hTargetEnt->IsPlayer() )
+				if ( m_hTargetEnt != NULL && !m_hTargetEnt->IsPlayer() )
+				{
+					m_fStopped = 2;
+					return;
+				}
+
+				if ( m_hTargetEnt == NULL )
 				{
 					m_fStopped = 2;
 					return;
@@ -308,20 +317,30 @@ void CHostage::IdleThink( void )
 				UTIL_MakeVectors( pev->angles );
 
 				Vector vecDir = m_vecPath[ m_iPathIndex ] + gpGlobals->v_up * -15 - pev->origin;
-				Vector vecLeader = m_hTargetEnt->pev->origin - pev->origin;	// name ours
+				Vector vecLeader = m_hTargetEnt->pev->origin - pev->origin;	// name ours; Beta 6.0: not used any more (sic)
 				TraceResult tr;
 
 				// the leader in sight again: follow him
-				UTIL_TraceLine( pev->origin + gpGlobals->v_up * 25, pev->origin + vecLeader * 4096 + gpGlobals->v_up * 25, dont_ignore_monsters, ENT( pev ), &tr );	// Beta 4.0: 4096 (was 2048)
-				if ( VARS( tr.pHit )->solid != SOLID_BSP )
+				UTIL_TraceLine( pev->origin + Vector( 0, 0, 12 ), m_hTargetEnt->pev->origin + Vector( 0, 0, 12 ), ignore_monsters, ignore_glass, ENT( pev ), &tr );
+				if ( tr.flFraction == 1.0 )
 				{
-					ALERT( at_console, " I can see the player now.. \n" );	// Beta 5.0 (leak)
 					m_fStopped = FALSE;
 					m_vecPath[0] = Vector( 0, 0, 0 );
 					return;
 				}
 
-				if ( vecDir.Length() > 32 )
+				// Beta 6.0: not 4 units away from where it was at the last
+				// check: stuck, so take the leader's trail afresh
+				if ( ( m_vecStuckCheckPos - pev->origin ).Length() <= 4 )
+				{
+					m_vecStuckCheckPos = Vector( 0, 0, 0 );
+					m_vecPath[0] = Vector( 0, 0, 0 );
+					m_fStopped = 6;
+					m_flNextStuckCheck = gpGlobals->time + 3;
+					return;
+				}
+
+				if ( vecDir.Length() > 16 )	// Beta 6.0: 16 (was 32)
 				{
 					pev->angles = UTIL_VecToAngles( vecDir );
 					pev->angles.x = 0;
@@ -338,6 +357,7 @@ void CHostage::IdleThink( void )
 						// the end of the trail: take the leader's trail afresh
 						m_vecPath[0] = Vector( 0, 0, 0 );
 						m_fStopped = 6;
+						m_flNextStuckCheck = gpGlobals->time + 3;
 						return;
 					}
 				}
@@ -347,10 +367,14 @@ void CHostage::IdleThink( void )
 				{
 					UTIL_TraceLine( pev->origin + gpGlobals->v_up * 25 - gpGlobals->v_forward * 32, pev->origin + gpGlobals->v_forward * 100 + gpGlobals->v_up * 25, ignore_monsters, ENT( pev ), &tr );
 					if ( tr.flFraction == 1.0 )
-					{
-						ALERT( at_console, "There's something at my feet!\n" );	// Beta 3.1's; Beta 4.0 had dropped it
-						pev->velocity.z = 150;
-					}
+						pev->velocity.z = 150;	// Beta 6.0: no "There's something at my feet!" any more
+				}
+
+				// Beta 6.0: every 3 seconds the position is noted for the stuck check
+				if ( m_flNextStuckCheck < gpGlobals->time )
+				{
+					m_flNextStuckCheck = gpGlobals->time + 3;
+					m_vecStuckCheckPos = pev->origin;
 				}
 			}
 		}
@@ -503,28 +527,33 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 			break;
 		}
 
-		// killing a hostage costs the killer 1500 dollars (Beta 3.1: 850)
-		if ( GetClassPtr( (CBaseEntity *)pevAttacker )->IsPlayer() )
+		// Beta 6.0: only with an attacker (a hostage killed by nobody pays
+		// nothing and falls where it is)
+		if ( pevAttacker )
 		{
-			CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pevAttacker );
-
-			pPlayer->AddAccount( -1500, true );
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You killed a hostage!" );	// Beta 5.0 (leak)
-			if ( !(pPlayer->m_flDisplayHistory & 0x40) )	// hostage killed
+			// killing a hostage costs the killer 1500 dollars (Beta 3.1: 850)
+			if ( GetClassPtr( (CBaseEntity *)pevAttacker )->IsPlayer() )
 			{
-				pPlayer->HintMessage( "You have lost money for killing a hostage.", FALSE, FALSE );
-				pPlayer->m_flDisplayHistory |= 0x40;
+				CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pevAttacker );
+
+				pPlayer->AddAccount( -1500, true );
+				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You killed a hostage!" );	// Beta 5.0 (leak)
+				if ( !(pPlayer->m_flDisplayHistory & 0x40) )	// hostage killed
+				{
+					pPlayer->HintMessage( "You have lost money for killing a hostage.", FALSE, FALSE );
+					pPlayer->m_flDisplayHistory |= 0x40;
+				}
 			}
+
+			// the body flies away from the killer
+			pev->velocity = pev->origin - pevAttacker->origin;
+			pev->velocity = pev->velocity / pev->velocity.Length();
+			pev->velocity = pev->velocity * iForce * RANDOM_FLOAT( 100, 150 );
+			pev->velocity.z += RANDOM_FLOAT( 100, 200 ) * iForce;
+
+			if ( pev->velocity.Length() > 350 )
+				pev->velocity = pev->velocity / pev->velocity.Length() * 350;
 		}
-
-		// the body flies away from the killer
-		pev->velocity = pev->origin - pevAttacker->origin;
-		pev->velocity = pev->velocity / pev->velocity.Length();
-		pev->velocity = pev->velocity * iForce * RANDOM_FLOAT( 100, 150 );
-		pev->velocity.z += RANDOM_FLOAT( 100, 200 ) * iForce;
-
-		if ( pev->velocity.Length() > 350 )
-			pev->velocity = pev->velocity / pev->velocity.Length() * 350;
 
 		pev->takedamage = DAMAGE_NO;
 		pev->deadflag = DEAD_DEAD;
@@ -540,6 +569,10 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 
 		return 0;
 	}
+
+	// Beta 6.0: no attacker, no damage reported
+	if ( !pevAttacker )
+		return 0;
 
 	// Beta 5.0 (leak): a player who hurts a hostage is told so, and the first
 	// time given a hint
@@ -570,6 +603,9 @@ void CHostage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 
 	if ( pActivator->IsPlayer() )
 	{
+		// Beta 6.0: his path is recorded for the hostage (CBasePlayer::UpdatePath)
+		((CBasePlayer *)pActivator)->m_bLeadsHostage = true;
+
 		// Beta 3.0: the leader's use makes a following hostage stay; any
 		// other use, or a new leader, makes it follow
 		if ( pActivator == m_hTargetEnt && m_fStopped == FALSE )

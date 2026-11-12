@@ -87,6 +87,7 @@ public:
 	virtual BOOL FInViewCone ( Vector *pOrigin );// see if given location is in monster's view cone
 	void TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType);
 	void MakeDamageBloodDecal ( int cCount, float flNoise, TraceResult *ptr, const Vector &vecDir );
+	void BloodSplat( Vector &vecSrc, Vector &vecDir, int HitLocation, int iVelocity );	// Beta 6.0 (Linux symbol; parameter names ours)
 	virtual BOOL	IsAlive( void ) { return (pev->deadflag != DEAD_DEAD); }
 	virtual int		BloodColor( void ) { return m_bloodColor; }
 

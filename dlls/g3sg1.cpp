@@ -41,7 +41,7 @@ public:
 	BOOL Deploy( void );
 	void Reload( void );
 	void WeaponIdle( void );
-	float GetMaxSpeed( void ) { if ( m_pPlayer->m_iFOV != 90 ) return 160; return 200; }	// Beta 5.0 (leak): Linux symbol; slower zoomed in
+	float GetMaxSpeed( void ) { if ( m_pPlayer->m_iFOV != 90 ) return 140; return 200; }	// Beta 5.0 (leak): Linux symbol; slower zoomed in (Beta 6.0: 140, was 160)
 	int m_iShell;
 };
 LINK_ENTITY_TO_CLASS( weapon_g3sg1, CG3SG1 );
@@ -63,6 +63,7 @@ void CG3SG1::Spawn( )
 void CG3SG1::Precache( void )
 {
 	PRECACHE_MODEL("models/v_g3sg1.mdl");
+	PRECACHE_MODEL("models/v_g3sg1_r.mdl");	// Beta 6.0: the right-handed view model
 	PRECACHE_MODEL("models/w_g3sg1.mdl");
 	PRECACHE_MODEL("models/p_g3sg1.mdl");
 
@@ -72,7 +73,7 @@ void CG3SG1::Precache( void )
 	PRECACHE_SOUND("weapons/g3sg1_clipout.wav");
 	PRECACHE_SOUND("weapons/zoom.wav");
 
-	m_iShellLate = m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shell
+	m_iShellLate = m_iShell = PRECACHE_MODEL ("models/rshell.mdl");// brass shell (Beta 6.0: the rifle shell)
 }
 
 int CG3SG1::GetItemInfo(ItemInfo *p)
@@ -94,7 +95,11 @@ int CG3SG1::GetItemInfo(ItemInfo *p)
 
 BOOL CG3SG1::Deploy( )
 {
-	return DefaultDeploy( "models/v_g3sg1.mdl", "models/p_g3sg1.mdl", G3SG1_DRAW, "mp5" );
+	// Beta 6.0: v_g3sg1.mdl holds the gun in the left hand, v_g3sg1_r.mdl in the right
+	if ( m_pPlayer->m_bLeftHanded == true )
+		return DefaultDeploy( "models/v_g3sg1.mdl", "models/p_g3sg1.mdl", G3SG1_DRAW, "mp5" );
+
+	return DefaultDeploy( "models/v_g3sg1_r.mdl", "models/p_g3sg1.mdl", G3SG1_DRAW, "mp5" );
 }
 
 void CG3SG1::SecondaryAttack( void )
@@ -114,7 +119,12 @@ void CG3SG1::SecondaryAttack( void )
 	}
 	else if (m_pPlayer->m_iFOV == 15)
 	{
-		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_g3sg1.mdl");
+		// Beta 6.0: the view model of the player's hand
+		if ( m_pPlayer->m_bLeftHanded == true )
+			m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_g3sg1.mdl");
+		else
+			m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_g3sg1_r.mdl");
+
 		m_pPlayer->m_iFOV = 90;
 	}
 
@@ -125,10 +135,12 @@ void CG3SG1::SecondaryAttack( void )
 
 void CG3SG1::PrimaryAttack( void )
 {
-	if (m_pPlayer->pev->velocity.Length2D() > 0)
-		G3SG1Fire( 0.07, 0.25, FALSE );	// Beta 3.1 (3.0: 0.09, 0.2, 0.03, 0.065)
-	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.15, 0.25, FALSE );
+	// Beta 6.0: off the ground (1 - accuracy) * 0.45, then moving 0.15 (Beta 5.2:
+	// moving 0.07 first, then off the ground (1 - accuracy) * 0.15)
+	if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.45, 0.25, FALSE );
+	else if (m_pPlayer->pev->velocity.Length2D() > 0)
+		G3SG1Fire( 0.15, 0.25, FALSE );
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
 		G3SG1Fire( (1 - m_pPlayer->m_flAccuracy) * 0.035, 0.25, FALSE );
 	else
@@ -181,23 +193,15 @@ void CG3SG1::G3SG1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
-	Vector	vecShellVelocity = m_pPlayer->pev->velocity
-							 + gpGlobals->v_right * RANDOM_FLOAT(100,120)
-							 + gpGlobals->v_up * RANDOM_FLOAT(35,55)
-							 + gpGlobals->v_forward * RANDOM_FLOAT(40,55);
-	EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs - gpGlobals->v_up * 8 + gpGlobals->v_forward * 20 - gpGlobals->v_right * 10, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
-
 	m_pPlayer->m_iWeaponVolume = BIG_EXPLOSION_VOLUME;
 	m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
 	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/g3sg1-1.wav", RANDOM_FLOAT(0.92, 1.0), 0.4);
 
-	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
 
 	// sic: fUseAutoAim is not tested, the auto-aim vector is always used
 	vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_10DEGREES );
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 3, BULLET_PLAYER_762MM, 60, 0.98, NULL, true );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -207,6 +211,33 @@ void CG3SG1::G3SG1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
 
 	m_pPlayer->pev->punchangle.x -= 2;
+
+	// Beta 6.0: the bullets leave 5 units to the side of the hand that holds
+	// the gun, the shell flies out of the other side
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+
+	if ( m_pPlayer->m_bLeftHanded == true )
+	{
+		vecSrc = vecSrc - gpGlobals->v_right * 5;
+
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity
+								 + gpGlobals->v_right * RANDOM_FLOAT(100,120)
+								 + gpGlobals->v_up * RANDOM_FLOAT(35,55)
+								 + gpGlobals->v_forward * RANDOM_FLOAT(40,55);
+		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs - gpGlobals->v_up * 8 + gpGlobals->v_forward * 20 - gpGlobals->v_right * 10, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+	}
+	else
+	{
+		vecSrc = vecSrc + gpGlobals->v_right * 5;
+
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity
+								 - gpGlobals->v_right * RANDOM_FLOAT(100,120)
+								 + gpGlobals->v_up * RANDOM_FLOAT(35,55)
+								 + gpGlobals->v_forward * RANDOM_FLOAT(40,55);
+		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs - gpGlobals->v_up * 8 + gpGlobals->v_forward * 20 + gpGlobals->v_right * 10, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+	}
+
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 3, BULLET_PLAYER_762MM, 60, 0.98, NULL, true );
 }
 
 

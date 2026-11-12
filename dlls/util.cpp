@@ -2364,3 +2364,63 @@ int	CRestore::BufferCheckZString( const char *string )
 	}
 	return 0;
 }
+
+//=========================================================
+// UTIL_TextureHit - Counter-Strike Beta 6.0 (Linux symbol):
+// the material type of what a trace hit, as
+// TEXTURETYPE_PlaySound finds it (FireBullets3's
+// penetration); 0 when no texture is found
+//=========================================================
+char UTIL_TextureHit( TraceResult *ptr, Vector vecSrc, Vector vecEnd )
+{
+	char chTextureType;
+	float rgfl1[3];
+	float rgfl2[3];
+	const char *pTextureName;
+	char szbuffer[64];
+	CBaseEntity *pEntity = CBaseEntity::Instance( ptr->pHit );
+
+	chTextureType = 0;
+
+	// TEXTURETYPE_PlaySound's text (sound.cpp), one return at the end:
+	// retail returns TEXTURETYPE_Find's result and the 0 kept in a register
+	// from epilogues of their own
+	if ( pEntity && pEntity->Classify() != CLASS_NONE && pEntity->Classify() != CLASS_MACHINE )
+		// hit body
+		chTextureType = CHAR_TEX_FLESH;
+	else
+	{
+		// hit world
+
+		// find texture under strike, get material type
+
+		// copy trace vector into array for trace_texture
+
+		vecSrc.CopyToArray( rgfl1 );
+		vecEnd.CopyToArray( rgfl2 );
+
+		// get texture from entity or world (world is ent(0))
+		if ( pEntity )
+			pTextureName = TRACE_TEXTURE( ENT( pEntity->pev ), rgfl1, rgfl2 );
+		else
+			pTextureName = TRACE_TEXTURE( ENT( 0 ), rgfl1, rgfl2 );
+
+		if ( pTextureName )
+		{
+			// strip leading '-0' or '+0~' or '{' or '!'
+			if ( *pTextureName == '-' || *pTextureName == '+' )
+				pTextureName += 2;
+
+			if ( *pTextureName == '{' || *pTextureName == '!' || *pTextureName == '~' || *pTextureName == ' ' )
+				pTextureName++;
+			// '}}'
+			strcpy( szbuffer, pTextureName );
+			szbuffer[CBTEXTURENAMEMAX - 1] = 0;
+
+			// get texture type
+			chTextureType = TEXTURETYPE_Find( szbuffer );
+		}
+	}
+
+	return chTextureType;
+}

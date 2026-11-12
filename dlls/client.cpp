@@ -47,6 +47,7 @@ extern int gmsgShowMenu;
 extern int gmsgTeamInfo;
 extern int gmsgBlinkAcct;
 extern int gmsgStatusIcon;
+extern int gmsgNVGToggle;	// Beta 6.0 (player.cpp)
 extern void Broadcast( const char *sentence );	// multiplay_gamerules.cpp (Beta 3.0)
 
 
@@ -102,7 +103,7 @@ void ClientDisconnect( edict_t *pEntity )
 
 	char text[256];
 	sprintf( text, "- %s has left the game\n", STRING(pEntity->v.netname) );
-	MESSAGE_BEGIN( MSG_ALL, gmsgSayText, NULL );
+	MESSAGE_BEGIN( MSG_BROADCAST, gmsgSayText, NULL );	// Beta 6.0: unreliable (was MSG_ALL)
 		WRITE_BYTE( ENTINDEX(pEntity) );
 		WRITE_STRING( text );
 	MESSAGE_END();
@@ -158,6 +159,7 @@ GLOBALS ASSUMED SET:  g_ulModelIndexPlayer
 */
 void ClientKill( edict_t *pEntity )
 {
+	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// name ours
 	entvars_t *pev = &pEntity->v;
 
 	CBasePlayer *pl = (CBasePlayer*) CBasePlayer::Instance( pev );
@@ -169,11 +171,15 @@ void ClientKill( edict_t *pEntity )
 	if ( pl->m_fNextSuicideTime > gpGlobals->time )
 		return;  // prevent suiciding too ofter
 
-	pl->m_fNextSuicideTime = gpGlobals->time + 1;  // don't let them suicide for 5 seconds after suiciding
+	pl->m_fNextSuicideTime = gpGlobals->time + 10;  // don't let them suicide for 5 seconds after suiciding (Beta 6.0: 10 seconds)
 
 	// have the player kill themself
 	pev->health = 0;
 	pl->Killed( pev, GIB_NEVER );
+
+	// Beta 6.0: a VIP who kills himself is replaced at the next round
+	if ( mp->m_pVIP == pl )
+		mp->m_iConsecutiveVIP = 10;
 
 //	pev->modelindex = g_ulModelIndexPlayer;
 //	pev->frags -= 2;		// extra penalty
@@ -278,6 +284,70 @@ int CountTeamPlayers( int iTeam )
 	return iCount;
 }
 
+//=========================================================
+// KickPlayer - Beta 6.0 brings back Beta 4.0's vote kick
+// (Linux symbol; gone in Beta 5.0): the iKickedth player (as
+// ListPlayers numbers them), if he is on the voters' team,
+// more than 65 % of that team voted against him and the team
+// has more than one player, is told so and disconnected; then
+// nobody's kick vote stands (parameter names ours)
+//=========================================================
+void KickPlayer( int iKicked, int iVotes, int iTeam )
+{
+	char message[120];
+	int iCount = 0;
+	bool fKicked = false;	// name ours
+	CBaseEntity *pPlayer = NULL;
+
+	if ( iKicked )
+	{
+		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+		while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
+		{
+			if ( pPlayer->IsPlayer() && pPlayer->pev->flags != FL_DORMANT )
+			{
+				iCount++;
+				if ( iCount == iKicked )
+				{
+					CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+
+					if ( player->m_iTeam == iTeam && iVotes > CountTeamPlayers( iTeam ) * 0.65 && CountTeamPlayers( iTeam ) > 1 )
+					{
+						fKicked = true;
+
+						edict_t *pKicked = pPlayer->edict();
+
+						player->m_fKicked = true;
+
+						strcpy( message, "Kicked " );
+						strcat( message, STRING( pPlayer->pev->netname ) );
+						UTIL_ClientPrintAll( HUD_PRINTCENTER, message );
+
+						CLIENT_COMMAND( pKicked, "disconnect\n" );
+					}
+				}
+			}
+			pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+		}
+	}
+
+	if ( fKicked == true )
+	{
+		pPlayer = NULL;
+		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+		while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
+		{
+			if ( pPlayer->IsPlayer() && pPlayer->pev->flags != FL_DORMANT )
+			{
+				CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+
+				player->m_iCurrentKickVote = 0;
+			}
+			pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+		}
+	}
+}
+
 // Beta 5.0 (leak): the team with fewer players (the counter-terrorists when the
 // terrorists are as many or more, as CheckWinConditions counted them), else the
 // other one if that is full, else none
@@ -337,6 +407,7 @@ void ClientPutInServer( edict_t *pEntity )
 	Vector vecAngles;	// Beta 5.0: the intro camera's view (name ours)
 	CBasePlayer *pPlayer;
 	CBaseEntity *pTarget;	// name ours
+	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// name ours
 
 	entvars_t *pev = &pEntity->v;
 
@@ -344,11 +415,18 @@ void ClientPutInServer( edict_t *pEntity )
 	pPlayer->SetCustomDecalFrames(-1); // Assume none;
 
 	pPlayer->m_fNotKilled = true;
-	pPlayer->m_iNightVisionAlpha = 60;
 	pPlayer->m_fKicked = false;
 	pPlayer->m_iIgnoreMessages = 0;
 	pPlayer->m_iTeamKills = 0;
 	pPlayer->m_fJustConnected = true;
+
+	// Beta 6.0: the client's lefthand key picks the view models
+	char *infobuffer = g_engfuncs.pfnGetInfoKeyBuffer( pEntity );	// name ours
+	char *value = g_engfuncs.pfnInfoKeyValue( infobuffer, "lefthand" );	// name ours
+	if ( value && value[0] != '0' )
+		pPlayer->m_bLeftHanded = true;
+	else
+		pPlayer->m_bLeftHanded = false;
 
 	// Allocate a CBasePlayer for pev, and call spawn
 	pPlayer->Spawn() ;
@@ -375,6 +453,7 @@ void ClientPutInServer( edict_t *pEntity )
 	pPlayer->pev->fixangle = 1;
 	pPlayer->m_iAppearance = 1;
 	pPlayer->m_fUnused169 = true;
+	pPlayer->m_bHasNightVision = false;
 	g_engfuncs.pfnSetClientMaxspeed( ENT(pPlayer->pev), 0.001 );
 	SET_MODEL( ENT(pPlayer->pev), "models/player.mdl" );
 	pPlayer->SetThink( NULL );
@@ -383,8 +462,8 @@ void ClientPutInServer( edict_t *pEntity )
 
 	pPlayer->m_pIntroCamera = UTIL_FindEntityByClassname( NULL, "trigger_camera" );
 
-	if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_iMapHasCameras == 2 )
-		((CHalfLifeMultiplay *)g_pGameRules)->m_iMapHasCameras = ( pPlayer->m_pIntroCamera != NULL );
+	if ( mp && mp->m_iMapHasCameras == 2 )
+		mp->m_iMapHasCameras = ( pPlayer->m_pIntroCamera != NULL );
 
 	// Beta 5.0: the camera looks at its target (the leak took the camera's angles)
 
@@ -407,7 +486,8 @@ void ClientPutInServer( edict_t *pEntity )
 	else
 	{
 		pPlayer->m_iTeam = TEAM_CT;
-		g_pGameRules->GetPlayerSpawnSpot( pPlayer );
+		if ( mp )
+			mp->GetPlayerSpawnSpot( pPlayer );
 		pPlayer->m_iTeam = TEAM_UNASSIGNED;
 		pPlayer->pev->v_angle = g_vecZero;
 		pPlayer->pev->angles = gpGlobals->v_forward;
@@ -613,12 +693,113 @@ static void DropPrimary( CBasePlayer *pPlayer )
 }
 
 //=========================================================
+// CanBuyThis - Beta 6.0 (Linux symbol): which primary weapons
+// a team may buy. On an assassination map (one with a
+// func_vip_safetyzone) the counter-terrorists get the XM1014,
+// AUG, MP5 Navy, M249, M3, M4A1, G3/SG-1 and P90, the
+// terrorists the Scout, MAC-10, AWP, M4A1 (sic), G3/SG-1 and
+// AK-47; elsewhere the counter-terrorists everything but the
+// MAC-10, SG-552 and AK-47, the terrorists everything but the
+// AUG, M4A1 and TMP (parameter names ours)
+//=========================================================
+bool CanBuyThis( CBasePlayer *pPlayer, int iWeapon )
+{
+	if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_iMapHasVIPSafetyZone == 1 )
+	{
+		if ( pPlayer->m_iTeam == TEAM_CT )
+		{
+			switch ( iWeapon )
+			{
+			case WEAPON_XM1014:
+			case WEAPON_AUG:
+			case WEAPON_MP5N:
+			case WEAPON_M249:
+			case WEAPON_M3:
+			case WEAPON_M4A1:
+			case WEAPON_G3SG1:
+			case WEAPON_P90:
+				return true;
+			default:
+				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You cannot buy this!!\n" );
+				return false;
+			}
+		}
+		else if ( pPlayer->m_iTeam == TEAM_TERRORIST )
+		{
+			switch ( iWeapon )
+			{
+			case WEAPON_SCOUT:
+			case WEAPON_MAC10:
+			case WEAPON_AWP:
+			case WEAPON_M4A1:
+			case WEAPON_G3SG1:
+			case WEAPON_AK47:
+				return true;
+			default:
+				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You cannot buy this!!\n" );
+				return false;
+			}
+		}
+	}
+	else
+	{
+		if ( pPlayer->m_iTeam == TEAM_CT )
+		{
+			switch ( iWeapon )
+			{
+			case WEAPON_SCOUT:
+			case WEAPON_XM1014:
+			case WEAPON_AUG:
+			case WEAPON_AWP:
+			case WEAPON_MP5N:
+			case WEAPON_M249:
+			case WEAPON_M3:
+			case WEAPON_M4A1:
+			case WEAPON_TMP:
+			case WEAPON_G3SG1:
+			case WEAPON_P90:
+				return true;
+			default:
+				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You cannot buy this!!\n" );
+				return false;
+			}
+		}
+		else if ( pPlayer->m_iTeam == TEAM_TERRORIST )
+		{
+			switch ( iWeapon )
+			{
+			case WEAPON_SCOUT:
+			case WEAPON_XM1014:
+			case WEAPON_MAC10:
+			case WEAPON_AWP:
+			case WEAPON_MP5N:
+			case WEAPON_M249:
+			case WEAPON_M3:
+			case WEAPON_G3SG1:
+			case WEAPON_SG552:
+			case WEAPON_AK47:
+			case WEAPON_P90:
+				return true;
+			default:
+				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You cannot buy this!!\n" );
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+//=========================================================
 // The buy menus. Beta 5.0 (leak): only in a buy zone (the
 // player's signals); the old weapon of the slot is dropped;
 // the money blinks twice when it does not suffice.
 //=========================================================
 void BuyPistol( CBasePlayer *pPlayer, int iSlot )
 {
+	if ( !pPlayer->CanPlayerBuy( true ) )	// Beta 6.0
+		return;
+
 	if ( !( pPlayer->m_signals.GetState() & 1 ) )	// not in a buy zone
 		return;
 
@@ -681,12 +862,18 @@ void BuyPistol( CBasePlayer *pPlayer, int iSlot )
 
 void BuyShotgun( CBasePlayer *pPlayer, int iSlot )
 {
+	if ( !pPlayer->CanPlayerBuy( true ) )
+		return;
+
 	if ( !( pPlayer->m_signals.GetState() & 1 ) )
 		return;
 
 	switch ( iSlot )
 	{
 	case 1:		// M3, 1,700
+		if ( !CanBuyThis( pPlayer, WEAPON_M3 ) )
+			return;
+
 		if ( pPlayer->m_iAccount >= 1700 )
 		{
 			DropPrimary( pPlayer );
@@ -700,6 +887,9 @@ void BuyShotgun( CBasePlayer *pPlayer, int iSlot )
 		}
 		break;
 	case 2:		// Beta 5.0 (leak): the XM1014, 3,000
+		if ( !CanBuyThis( pPlayer, WEAPON_XM1014 ) )
+			return;
+
 		if ( pPlayer->m_iAccount >= 3000 )
 		{
 			DropPrimary( pPlayer );
@@ -717,12 +907,18 @@ void BuyShotgun( CBasePlayer *pPlayer, int iSlot )
 
 void BuySubMachineGun( CBasePlayer *pPlayer, int iSlot )
 {
+	if ( !pPlayer->CanPlayerBuy( true ) )
+		return;
+
 	if ( !( pPlayer->m_signals.GetState() & 1 ) )
 		return;
 
 	switch ( iSlot )
 	{
 	case 1:		// MP5 Navy, 1,500
+		if ( !CanBuyThis( pPlayer, WEAPON_MP5N ) )
+			return;
+
 		if ( pPlayer->m_iAccount >= 1500 )
 		{
 			DropPrimary( pPlayer );
@@ -736,6 +932,9 @@ void BuySubMachineGun( CBasePlayer *pPlayer, int iSlot )
 		}
 		break;
 	case 2:		// TMP, 1,250
+		if ( !CanBuyThis( pPlayer, WEAPON_TMP ) )
+			return;
+
 		if ( pPlayer->m_iAccount >= 1250 )
 		{
 			DropPrimary( pPlayer );
@@ -748,12 +947,31 @@ void BuySubMachineGun( CBasePlayer *pPlayer, int iSlot )
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
-	case 3:		// P90, 2,450 (Beta 5.0; the leak 2,250)
-		if ( pPlayer->m_iAccount >= 2450 )
+	case 3:		// P90, 2,750 (Beta 6.0; Beta 5.0 2,450, the leak 2,250)
+		if ( !CanBuyThis( pPlayer, WEAPON_P90 ) )
+			return;
+
+		if ( pPlayer->m_iAccount >= 2750 )
 		{
 			DropPrimary( pPlayer );
 			pPlayer->GiveNamedItem( "weapon_p90" );
-			pPlayer->AddAccount( -2450, true );
+			pPlayer->AddAccount( -2750, true );
+		}
+		else
+		{
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			BlinkAccount( pPlayer, 2 );
+		}
+		break;
+	case 4:		// Beta 6.0: the MAC-10, 1,400
+		if ( !CanBuyThis( pPlayer, WEAPON_MAC10 ) )
+			return;
+
+		if ( pPlayer->m_iAccount >= 1400 )
+		{
+			DropPrimary( pPlayer );
+			pPlayer->GiveNamedItem( "weapon_mac10" );
+			pPlayer->AddAccount( -1400, true );
 		}
 		else
 		{
@@ -766,12 +984,19 @@ void BuySubMachineGun( CBasePlayer *pPlayer, int iSlot )
 
 void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 {
+	if ( !pPlayer->CanPlayerBuy( true ) )
+		return;
+
 	if ( !( pPlayer->m_signals.GetState() & 1 ) )
 		return;
 
+	// Beta 6.0: the AUG; the menu is AK-47, SG-552, M4A1, AUG, Scout, AWP, G3/SG-1
 	switch ( iSlot )
 	{
 	case 1:		// AK-47, 2,500, terrorists only
+		if ( !CanBuyThis( pPlayer, WEAPON_AK47 ) )
+			return;
+
 		if ( pPlayer->m_iTeam == TEAM_CT )
 		{
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Weapon not available" );
@@ -789,7 +1014,26 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
-	case 2:		// M4A1, 3,100 (Beta 5.0; the leak 2,950), counter-terrorists only
+	case 2:		// SG-552, 3,500
+		if ( !CanBuyThis( pPlayer, WEAPON_SG552 ) )
+			return;
+
+		if ( pPlayer->m_iAccount >= 3500 )
+		{
+			DropPrimary( pPlayer );
+			pPlayer->GiveNamedItem( "weapon_sg552" );
+			pPlayer->AddAccount( -3500, true );
+		}
+		else
+		{
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			BlinkAccount( pPlayer, 2 );
+		}
+		break;
+	case 3:		// M4A1, 3,100, counter-terrorists only
+		if ( !CanBuyThis( pPlayer, WEAPON_M4A1 ) )
+			return;
+
 		if ( pPlayer->m_iTeam == TEAM_TERRORIST )
 		{
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Weapon not available" );
@@ -807,11 +1051,19 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
-	case 3:		// SG-552, 3,500
+	case 4:		// Beta 6.0: the AUG, 3,500, counter-terrorists only
+		if ( !CanBuyThis( pPlayer, WEAPON_AUG ) )
+			return;
+
+		if ( pPlayer->m_iTeam == TEAM_TERRORIST )
+		{
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Weapon not available" );
+			return;
+		}
 		if ( pPlayer->m_iAccount >= 3500 )
 		{
 			DropPrimary( pPlayer );
-			pPlayer->GiveNamedItem( "weapon_sg552" );
+			pPlayer->GiveNamedItem( "weapon_aug" );
 			pPlayer->AddAccount( -3500, true );
 		}
 		else
@@ -820,7 +1072,10 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
-	case 4:		// Scout, 2,750
+	case 5:		// Scout, 2,750
+		if ( !CanBuyThis( pPlayer, WEAPON_SCOUT ) )
+			return;
+
 		if ( pPlayer->m_iAccount >= 2750 )
 		{
 			DropPrimary( pPlayer );
@@ -833,7 +1088,10 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
-	case 5:		// AWP, 4,750
+	case 6:		// AWP, 4,750
+		if ( !CanBuyThis( pPlayer, WEAPON_AWP ) )
+			return;
+
 		if ( pPlayer->m_iAccount >= 4750 )
 		{
 			DropPrimary( pPlayer );
@@ -846,7 +1104,10 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
-	case 6:		// G3/SG-1, 5,000
+	case 7:		// G3/SG-1, 5,000
+		if ( !CanBuyThis( pPlayer, WEAPON_G3SG1 ) )
+			return;
+
 		if ( pPlayer->m_iAccount >= 5000 )
 		{
 			DropPrimary( pPlayer );
@@ -864,12 +1125,18 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 
 void BuyMachineGun( CBasePlayer *pPlayer, int iSlot )
 {
+	if ( !pPlayer->CanPlayerBuy( true ) )
+		return;
+
 	if ( !( pPlayer->m_signals.GetState() & 1 ) )
 		return;
 
 	switch ( iSlot )
 	{
 	case 1:		// M249, 5,750
+		if ( !CanBuyThis( pPlayer, WEAPON_M249 ) )
+			return;
+
 		if ( pPlayer->m_iAccount >= 5750 )
 		{
 			DropPrimary( pPlayer );
@@ -887,6 +1154,9 @@ void BuyMachineGun( CBasePlayer *pPlayer, int iSlot )
 
 void BuyItem( CBasePlayer *pPlayer, int iSlot )
 {
+	if ( !pPlayer->CanPlayerBuy( true ) )
+		return;
+
 	if ( !( pPlayer->m_signals.GetState() & 1 ) )
 		return;
 
@@ -904,6 +1174,7 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 			BlinkAccount( pPlayer, 2 );
 			return;
 		}
+		EMIT_SOUND( pPlayer->edict(), CHAN_ITEM, "items/kevlar.wav", 1, 0.8 );	// Beta 6.0
 		pPlayer->GiveNamedItem( "item_kevlar" );
 		pPlayer->AddAccount( -650, true );
 		break;
@@ -919,6 +1190,7 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 			BlinkAccount( pPlayer, 2 );
 			return;
 		}
+		EMIT_SOUND( pPlayer->edict(), CHAN_ITEM, "items/kevlar.wav", 1, 0.8 );	// Beta 6.0
 		pPlayer->GiveNamedItem( "item_assaultsuit" );
 		pPlayer->AddAccount( -1000, true );
 		break;
@@ -987,6 +1259,30 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 			}
 		}
 		break;
+	case 6:		// Beta 6.0: night vision goggles, 1,250
+		if ( pPlayer->m_bHasNightVision == true )
+		{
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You already have NVG" );
+			return;
+		}
+		if ( pPlayer->m_iAccount >= 1250 )
+		{
+			if ( !( pPlayer->m_flDisplayHistory & 0x100000 ) )
+			{
+				pPlayer->HintMessage( "Press the NIGHTVISION key to turn on/off nightvision goggles.\n Nightvision can be adjusted by typing:\n +nvgadjust\n-nvgadjust\nat the console.", FALSE, FALSE );
+				pPlayer->m_flDisplayHistory |= 0x100000;
+			}
+
+			EMIT_SOUND( pPlayer->edict(), CHAN_ITEM, "items/equip_nvg.wav", 1, 0.8 );
+			pPlayer->m_bHasNightVision = true;
+			pPlayer->AddAccount( -1250, true );
+		}
+		else
+		{
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			BlinkAccount( pPlayer, 2 );
+		}
+		break;
 	}
 }
 
@@ -1016,11 +1312,14 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// name ours
 	appearance_t appearance;	// name ours
 
+	// Beta 6.0: the terrorists' arctic (key 3) and the counter-terrorists'
+	// GIGN (key 4); the appearance numbers are 1 urban, 2 terror, 3 arab,
+	// 4 arctic, 5 gsg9, 6 gign, 7 sas
 	switch ( player->m_iTeam )
 	{
 	case TEAM_TERRORIST:
-		if ( slot > 2 )
-			slot = RANDOM_LONG( 1, 2 );
+		if ( slot > 3 )
+			slot = RANDOM_LONG( 1, 3 );
 
 		switch ( slot )
 		{
@@ -1034,12 +1333,17 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 			appearance.pszCommand = "model arab\n";
 			appearance.pszModel = "arab";
 			break;
+		case 3:
+			appearance.iModel = 4;
+			appearance.pszCommand = "model arctic\n";
+			appearance.pszModel = "arctic";
+			break;
 		}
 		break;
 
 	case TEAM_CT:
-		if ( slot > 3 )
-			slot = RANDOM_LONG( 1, 3 );
+		if ( slot > 4 )
+			slot = RANDOM_LONG( 1, 4 );
 
 		switch ( slot )
 		{
@@ -1049,14 +1353,19 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 			appearance.pszModel = "urban";
 			break;
 		case 2:
-			appearance.iModel = 4;
+			appearance.iModel = 5;
 			appearance.pszCommand = "model gsg9\n";
 			appearance.pszModel = "gsg9";
 			break;
 		case 3:
-			appearance.iModel = 5;
+			appearance.iModel = 7;
 			appearance.pszCommand = "model sas\n";
 			appearance.pszModel = "sas";
+			break;
+		case 4:
+			appearance.iModel = 6;
+			appearance.pszCommand = "model gign\n";
+			appearance.pszModel = "gign";
 			break;
 		}
 		break;
@@ -1079,6 +1388,14 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 	g_engfuncs.pfnSetClientKeyValue( player->entindex(), g_engfuncs.pfnGetInfoKeyBuffer( player->edict() ), "model", appearance.pszModel );
 
 	// Beta 5.0: no TeamInfo here any more (HandleMenu_ChooseTeam sends the team at once)
+
+	// Beta 6.0: on an assassination map the first counter-terrorist in
+	// becomes the VIP when there is none
+	if ( mp->m_iMapHasVIPSafetyZone == 0 )
+		mp->m_iMapHasVIPSafetyZone = ( UTIL_FindEntityByClassname( NULL, "func_vip_safetyzone" ) != NULL ) ? 1 : 2;
+
+	if ( mp->m_iMapHasVIPSafetyZone == 1 && mp->m_pVIP == NULL && player->m_iTeam == TEAM_CT )
+		player->MakeVIP();
 }
 
 //=========================================================
@@ -1098,6 +1415,26 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// name ours
 	int team;	// name ours
 
+	// Beta 6.0: the VIP stays a counter-terrorist while alive, and when dead
+	// as long as nobody waits to be the VIP
+	if ( player->m_bIsVIP == true )
+	{
+		if ( player->pev->deadflag == DEAD_NO )
+		{
+			ClientPrint( player->pev, HUD_PRINTCENTER, "You are the VIP! You can't change roles\n while you're alive" );
+			player->m_iTeam = TEAM_CT;
+			CLIENT_COMMAND( player->edict(), "slot10\n" );
+			return FALSE;
+		}
+		else if ( mp->IsVIPQueueEmpty() == true )
+		{
+			ClientPrint( player->pev, HUD_PRINTCENTER, "You are the VIP!\n You can't change roles now\n because no one else wants to be\n the VIP" );
+			player->m_iTeam = TEAM_CT;
+			CLIENT_COMMAND( player->edict(), "slot10\n" );
+			return FALSE;
+		}
+	}
+
 	switch ( slot )
 	{
 	case 1:
@@ -1106,6 +1443,11 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 	case 2:
 		team = TEAM_CT;
 		break;
+	case 3:		// Beta 6.0: wait in line to be the VIP, as a counter-terrorist
+		player->m_iTeam = TEAM_CT;
+		mp->AddToVIPQueue( player );
+		CLIENT_COMMAND( player->edict(), "slot10\n" );
+		return FALSE;
 	case 5:
 		team = SelectDefaultTeam();
 
@@ -1139,10 +1481,10 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 	switch ( team )
 	{
 	case TEAM_TERRORIST:
-		ShowMenu( player, 0x13, -1, FALSE, "#Terrorist_Select" );	// keys 1, 2 and 5
+		ShowMenu( player, 0x17, -1, FALSE, "#Terrorist_Select" );	// keys 1, 2, 3 and 5 (Beta 6.0: the arctic)
 		break;
 	case TEAM_CT:
-		ShowMenu( player, 0x17, -1, FALSE, "#CT_Select" );	// keys 1, 2, 3 and 5
+		ShowMenu( player, 0x1f, -1, FALSE, "#CT_Select" );	// keys 1 to 5 (Beta 6.0: the GIGN)
 		break;
 	}
 
@@ -1185,14 +1527,14 @@ void Radio1( CBasePlayer *player, int slot )
 		case 3:
 			player->Radio( "%!MRAD_POSITION", "Hold This Position.\n" );
 			break;
-		case 4:
-			player->Radio( "%!MRAD_CIRCLEBACK", "Circle Around Back.\n" );
+		case 4:		// Beta 6.0 (was "Circle Around Back.")
+			player->Radio( "%!MRAD_REGROUP", "Regroup Team.\n" );
 			break;
 		case 5:
 			player->Radio( "%!MRAD_FOLLOWME", "Follow Me.\n" );
 			break;
-		case 6:
-			player->Radio( "%!MRAD_MEETME", "Meet at the Rendezvous Point.\n" );
+		case 6:		// Beta 6.0 (was "Meet at the Rendezvous Point.")
+			player->Radio( "%!MRAD_HITASSIST", "Taking Fire.. Need Assistance!.\n" );
 			break;
 		}
 	}
@@ -1265,6 +1607,9 @@ void Radio3( CBasePlayer *player, int slot )
 		case 8:
 			player->Radio( "%!MRAD_NEGATIVE", "Negative.\n" );
 			break;
+		case 9:		// Beta 6.0
+			player->Radio( "%!MRAD_ENEMYDOWN", "Enemy down.\n" );
+			break;
 		}
 	}
 }
@@ -1279,6 +1624,10 @@ bool BuyGunAmmo( CBasePlayer &player, CBasePlayerItem &weapon, bool bBlinkMoney 
 {
 	int cost;
 	const char *classname;
+
+	// Beta 6.0
+	if ( !player.CanPlayerBuy( true ) )
+		return false;
 
 	// the weapon must use ammunition
 	int nAmmo = weapon.PrimaryAmmoIndex();
@@ -1304,6 +1653,7 @@ bool BuyGunAmmo( CBasePlayer &player, CBasePlayerItem &weapon, bool bBlinkMoney 
 		cost = 50;
 		classname = "ammo_57mm";
 		break;
+	case WEAPON_AUG:	// Beta 6.0
 	case WEAPON_M249:
 	case WEAPON_M4A1:
 	case WEAPON_SG552:
@@ -1316,6 +1666,7 @@ bool BuyGunAmmo( CBasePlayer &player, CBasePlayerItem &weapon, bool bBlinkMoney 
 		cost = 80;
 		classname = "ammo_762nato";
 		break;
+	case WEAPON_MAC10:	// Beta 6.0
 	case WEAPON_USP:
 		cost = 25;
 		classname = "ammo_45acp";
@@ -1366,6 +1717,9 @@ bool BuyGunAmmo( CBasePlayer &player, CBasePlayerItem &weapon, bool bBlinkMoney 
 //=========================================================
 bool BuyAmmo( CBasePlayer *player, int nSlot, bool bBlinkMoney )
 {
+	if ( !player->CanPlayerBuy( true ) )	// Beta 6.0
+		return false;
+
 	if ( !( player->m_signals.GetState() & 1 ) )
 		return false;
 
@@ -1388,6 +1742,16 @@ bool BuyAmmo( CBasePlayer *player, int nSlot, bool bBlinkMoney )
 	return true;
 }
 
+// Counter-Strike Beta 6.0: eight globals no function of the DLL refers to. Names
+// from the Linux libraries, where seven are initialised data right after cbase.cpp's
+// and alpha is the uninitialised data in front of combat.cpp's. Retail has their 32
+// bytes at the end of client.obj's, in front of FireBullets' tracer count.
+// Counter-Strike 1.6's debug information declares them here, after BuyAmmo, on
+// four lines with these types.
+float PosX = 0, PosY = 0, PosZ = 0;
+float r = 0, g = 0, b = 0;
+int alpha;
+bool nvg = false;
 
 /*
 ===========
@@ -1403,6 +1767,7 @@ void ClientCommand( edict_t *pEntity )
 {
 	const char *pcmd = CMD_ARGV(0);
 	const char *pstr;
+	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// name ours
 
 	// Is the client spawned yet?
 	if ( !pEntity->pvPrivateData )
@@ -1423,13 +1788,79 @@ void ClientCommand( edict_t *pEntity )
 	{
 		Host_Say( pEntity, 1 );
 	}
-	else if ( FStrEq(pcmd, "give" ) )
+	else if ( FStrEq(pcmd, "vote" ) )
 	{
-		// Beta 5.0 (leak): the SDK's cheat is back
-		if ( g_flWeaponCheat != 0.0)
+		// Beta 6.0: Beta 4.0's vote kick again (gone in Beta 5.0; give is gone
+		// now): a vote every 3 seconds at most, silently. A vote is against
+		// player #n (ListPlayers' numbers); KickPlayer counts it with the team
+		// mates' votes against the same number and kicks him with more than 65
+		// percent of the team
+		if ( pPlayer->m_flNextVoteTime > gpGlobals->time )
+			return;
+
+		pPlayer->m_flNextVoteTime = gpGlobals->time + 3;
+
+		if ( strlen( CMD_ARGV(1) ) <= 3 )
 		{
-			int iszItem = ALLOC_STRING( CMD_ARGV(1) );	// Make a copy of the classname
-			GetClassPtr((CBasePlayer *)pev)->GiveNamedItem( STRING(iszItem) );
+			int iVote = atoi( CMD_ARGV(1) );
+			char szText[100];
+			char szNumber[4];
+
+			strcpy( szText, "Vote casted against player #" );
+			itoa( iVote, szNumber, 10 );
+			strcat( szText, szNumber );
+			UTIL_ClientPrintAll( HUD_PRINTCENTER, szText );
+
+			pPlayer->m_iCurrentKickVote = iVote;
+
+			int iVotes = 0;					// name ours
+			CBaseEntity *pVoter = NULL;		// name ours
+
+			pVoter = UTIL_FindEntityByClassname( pVoter, "player" );
+			while ( pVoter != NULL && !FNullEnt( pVoter->edict() ) )
+			{
+				if ( pVoter->IsPlayer() )
+				{
+					CBasePlayer *player = GetClassPtr( (CBasePlayer *)pVoter->pev );
+
+					if ( player->m_iTeam == pPlayer->m_iTeam && player->m_iCurrentKickVote == pPlayer->m_iCurrentKickVote )
+						iVotes++;
+				}
+				pVoter = UTIL_FindEntityByClassname( pVoter, "player" );
+			}
+
+			KickPlayer( iVote, iVotes, pPlayer->m_iTeam );
+		}
+	}
+	else if ( FStrEq(pcmd, "listplayers" ) )
+	{
+		ListPlayers( pPlayer );
+	}
+	else if ( FStrEq(pcmd, "nightvision" ) )
+	{
+		// Beta 6.0: the goggles on and off, if bought
+		if ( !pPlayer->m_bHasNightVision )
+			return;
+
+		if ( !pPlayer->m_bNightVisionOn )
+		{
+			EMIT_SOUND( ENT(pPlayer->pev), CHAN_ITEM, "items/nvg_on.wav", RANDOM_FLOAT( 0.92, 1 ), 0.8 );
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgNVGToggle, NULL, pPlayer->pev );
+				WRITE_BYTE( 1 );
+			MESSAGE_END();
+
+			pPlayer->m_bNightVisionOn = true;
+		}
+		else
+		{
+			EMIT_SOUND( ENT(pPlayer->pev), CHAN_ITEM, "items/nvg_off.wav", RANDOM_FLOAT( 0.92, 1 ), 0.8 );
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgNVGToggle, NULL, pPlayer->pev );
+				WRITE_BYTE( 0 );
+			MESSAGE_END();
+
+			pPlayer->m_bNightVisionOn = false;
 		}
 	}
 	else if ( FStrEq(pcmd, "menuselect" ) )
@@ -1474,22 +1905,53 @@ void ClientCommand( edict_t *pEntity )
 				pPlayer->m_iMenu = Menu_BuyPistol;
 				break;
 			case 2:
-				ShowMenu( pPlayer, 0x203, -1, FALSE, "#BuyShotgun" );
+				// Beta 6.0: an assassination map's menus leave out what the
+				// team may not buy (CanBuyThis)
+				if ( mp->m_iMapHasVIPSafetyZone == 1 && pPlayer->m_iTeam == TEAM_TERRORIST )
+					ShowMenu( pPlayer, 0x200, -1, FALSE, "#AS_BuyShotgun" );
+				else
+					ShowMenu( pPlayer, 0x203, -1, FALSE, "#BuyShotgun" );
 				pPlayer->m_iMenu = Menu_BuyShotgun;
 				break;
 			case 3:
-				ShowMenu( pPlayer, 0x207, -1, FALSE, "#BuySubMachineGun" );
+				if ( mp->m_iMapHasVIPSafetyZone == 1 )
+				{
+					if ( pPlayer->m_iTeam == TEAM_CT )
+						ShowMenu( pPlayer, 0x207, -1, FALSE, "#AS_CT_BuySubMachineGun" );
+					else
+						ShowMenu( pPlayer, 0x208, -1, FALSE, "#AS_T_BuySubMachineGun" );
+				}
+				else
+				{
+					if ( pPlayer->m_iTeam == TEAM_CT )
+						ShowMenu( pPlayer, 0x207, -1, FALSE, "#CT_BuySubMachineGun" );
+					else
+						ShowMenu( pPlayer, 0x20d, -1, FALSE, "#T_BuySubMachineGun" );
+				}
 				pPlayer->m_iMenu = Menu_BuySubMachineGun;
 				break;
 			case 4:
-				if ( pPlayer->m_iTeam == TEAM_CT )
-					ShowMenu( pPlayer, 0x23e, -1, FALSE, "#CT_BuyRifle" );
+				if ( mp->m_iMapHasVIPSafetyZone == 1 )
+				{
+					if ( pPlayer->m_iTeam == TEAM_CT )
+						ShowMenu( pPlayer, 0x24c, -1, FALSE, "#AS_CT_BuyRifle" );
+					else
+						ShowMenu( pPlayer, 0x271, -1, FALSE, "#AS_T_BuyRifle" );
+				}
 				else
-					ShowMenu( pPlayer, 0x23d, -1, FALSE, "#T_BuyRifle" );
+				{
+					if ( pPlayer->m_iTeam == TEAM_CT )
+						ShowMenu( pPlayer, 0x27c, -1, FALSE, "#CT_BuyRifle" );
+					else
+						ShowMenu( pPlayer, 0x273, -1, FALSE, "#T_BuyRifle" );
+				}
 				pPlayer->m_iMenu = Menu_BuyRifle;
 				break;
 			case 5:
-				ShowMenu( pPlayer, 0x201, -1, FALSE, "#BuyMachineGun" );
+				if ( mp->m_iMapHasVIPSafetyZone == 1 && pPlayer->m_iTeam == TEAM_TERRORIST )
+					ShowMenu( pPlayer, 0x200, -1, FALSE, "#AS_T_BuyMachineGun" );
+				else
+					ShowMenu( pPlayer, 0x201, -1, FALSE, "#BuyMachineGun" );
 				pPlayer->m_iMenu = Menu_BuyMachineGun;
 				break;
 			case 6:
@@ -1519,16 +1981,16 @@ void ClientCommand( edict_t *pEntity )
 				if ( pPlayer->m_signals.GetState() & 1 )
 				{
 					// Beta 5.0: on a bomb map both teams get a menu of their own
-					// (the CTs' with the defuse kit)
-					if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_fMapHasBombTarget == true )
+					// (the CTs' with the defuse kit); Beta 6.0: key 6, the goggles
+					if ( mp->m_fMapHasBombTarget == true )
 					{
 						if ( pPlayer->m_iTeam == TEAM_CT )
-							ShowMenu( pPlayer, 0x21f, -1, FALSE, "#DCT_BuyItem" );
+							ShowMenu( pPlayer, 0x23f, -1, FALSE, "#DCT_BuyItem" );
 						else
-							ShowMenu( pPlayer, 0x21f, -1, FALSE, "#DT_BuyItem" );
+							ShowMenu( pPlayer, 0x23f, -1, FALSE, "#DT_BuyItem" );
 					}
 					else
-						ShowMenu( pPlayer, 0x20f, -1, FALSE, "#BuyItem" );
+						ShowMenu( pPlayer, 0x22f, -1, FALSE, "#BuyItem" );
 					pPlayer->m_iMenu = Menu_BuyItem;
 				}
 				break;
@@ -1589,6 +2051,15 @@ void ClientCommand( edict_t *pEntity )
 				return;
 			}
 
+			// Beta 6.0: a counter-terrorist on an assassination map may queue
+			// to be the VIP (key 3)
+			if ( mp->m_iMapHasVIPSafetyZone == 1 && pPlayer->m_iTeam == TEAM_CT )
+			{
+				ShowMenu( pPlayer, 0x217, -1, FALSE, "#IG_VIP_Team_Select" );
+				pPlayer->m_iMenu = Menu_ChooseTeam;
+				return;
+			}
+
 			ShowMenu( pPlayer, 0x213, -1, FALSE, "#IG_Team_Select" );
 			pPlayer->m_iMenu = Menu_ChooseTeam;
 		}
@@ -1604,6 +2075,7 @@ void ClientCommand( edict_t *pEntity )
 	}
 	else if ( FStrEq(pcmd, "listplayers" ) )
 	{
+		// sic: Beta 6.0's new test of listplayers, after vote, answers it first
 		ListPlayers( pPlayer );
 	}
 	else if ( FStrEq(pcmd, "ignoremsg" ) )
@@ -1640,6 +2112,14 @@ void ClientCommand( edict_t *pEntity )
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Now ACCEPTING radio messages\n" );
 		}
 	}
+	else if ( FStrEq(pcmd, "become_vip" ) )
+	{
+		// Beta 6.0: a counter-terrorist in the game queues to be the VIP
+		if ( pPlayer->m_iJoiningState == JOIN_DONE && pPlayer->m_iTeam == TEAM_CT )
+			mp->AddToVIPQueue( pPlayer );
+		else
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "This command not available\n" );
+	}
 	else if ( pPlayer->pev->deadflag != DEAD_NO )
 	{
 		// the dead have no other command
@@ -1657,7 +2137,7 @@ void ClientCommand( edict_t *pEntity )
 	}
 	else if ( FStrEq(pcmd, "radio3" ) )
 	{
-		ShowMenu( pPlayer, 0x2ff, -1, FALSE, "#RadioC" );
+		ShowMenu( pPlayer, 0x3ff, -1, FALSE, "#RadioC" );	// Beta 6.0: key 9
 		pPlayer->m_iMenu = Menu_Radio3;
 	}
 	else if ( FStrEq(pcmd, "drop" ) )
@@ -1702,14 +2182,16 @@ void ClientCommand( edict_t *pEntity )
 	}
 	else if ( FStrEq(pcmd, "buyequip" ) )
 	{
+		// Beta 6.0: key 6 (the goggles) on a bomb map only (sic: the plain
+		// menu keeps keys 1 to 4; menuselect's has 6)
 		if ( pPlayer->m_signals.GetState() & 1 )
 		{
-			if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_fMapHasBombTarget == true )
+			if ( mp->m_fMapHasBombTarget == true )
 			{
 				if ( pPlayer->m_iTeam == TEAM_CT )
-					ShowMenu( pPlayer, 0x21f, -1, FALSE, "#DCT_BuyItem" );
+					ShowMenu( pPlayer, 0x23f, -1, FALSE, "#DCT_BuyItem" );
 				else
-					ShowMenu( pPlayer, 0x21f, -1, FALSE, "#DT_BuyItem" );
+					ShowMenu( pPlayer, 0x23f, -1, FALSE, "#DT_BuyItem" );
 			}
 			else
 				ShowMenu( pPlayer, 0x20f, -1, FALSE, "#BuyItem" );
@@ -1754,7 +2236,8 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 	CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE( pEntity );	// name ours
 
 	// the model is the one chosen in the menu (m_iAppearance), whatever the
-	// client sets; Beta 5.0 (leak): 1 urban, 2 terror, 3 arab, 4 gsg9, 5 sas
+	// client sets; Beta 5.0 (leak): 1 urban, 2 terror, 3 arab, 4 gsg9, 5 sas;
+	// Beta 6.0: 4 arctic, 5 gsg9, 6 gign, 7 sas, 8 vip
 	switch ( pPlayer->m_iAppearance )
 	{
 	case 2:
@@ -1765,13 +2248,25 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 		CLIENT_COMMAND( pEntity, "model arab\n" );
 		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "arab" );
 		break;
-	case 4:
+	case 4:		// Beta 6.0: the arctic, the GIGN and the VIP; gsg9 and sas renumbered
+		CLIENT_COMMAND( pEntity, "model arctic\n" );
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "arctic" );
+		break;
+	case 5:
 		CLIENT_COMMAND( pEntity, "model gsg9\n" );
 		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "gsg9" );
 		break;
-	case 5:
+	case 6:
+		CLIENT_COMMAND( pEntity, "model gign\n" );
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "gign" );
+		break;
+	case 7:
 		CLIENT_COMMAND( pEntity, "model sas\n" );
 		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "sas" );
+		break;
+	case 8:
+		CLIENT_COMMAND( pEntity, "model vip\n" );
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "vip" );
 		break;
 	case 1:
 		CLIENT_COMMAND( pEntity, "model urban\n" );
@@ -1797,13 +2292,20 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 
 		char text[256];
 		sprintf( text, "* %s changed name to %s\n", STRING(pEntity->v.netname), g_engfuncs.pfnInfoKeyValue( infobuffer, "name" ) );
-		MESSAGE_BEGIN( MSG_ALL, gmsgSayText, NULL );
+		MESSAGE_BEGIN( MSG_BROADCAST, gmsgSayText, NULL );	// Beta 6.0: unreliable (was MSG_ALL)
 			WRITE_BYTE( ENTINDEX(pEntity) );
 			WRITE_STRING( text );
 		MESSAGE_END();
 
 		UTIL_LogPrintf( "\"%s<%i>\" changed name to \"%s<%i>\"\n", STRING( pEntity->v.netname ), GETPLAYERUSERID( pEntity ), g_engfuncs.pfnInfoKeyValue( infobuffer, "name" ), GETPLAYERUSERID( pEntity ) );
 	}
+
+	// Beta 6.0: the lefthand key picks the view models
+	char *value = g_engfuncs.pfnInfoKeyValue( infobuffer, "lefthand" );	// name ours
+	if ( value && value[0] != '0' )
+		pPlayer->m_bLeftHanded = true;
+	else
+		pPlayer->m_bLeftHanded = false;
 
 	g_pGameRules->ClientUserInfoChanged( GetClassPtr((CBasePlayer *)&pEntity->v), infobuffer );
 }
@@ -1951,6 +2453,14 @@ void ClientPrecache( void )
 	PRECACHE_SOUND("player/pl_fallpain2.wav");		
 	PRECACHE_SOUND("player/pl_fallpain3.wav");		
 	
+	// Beta 6.0: footsteps on snow
+	PRECACHE_SOUND("player/pl_snow1.wav");
+	PRECACHE_SOUND("player/pl_snow2.wav");
+	PRECACHE_SOUND("player/pl_snow3.wav");
+	PRECACHE_SOUND("player/pl_snow4.wav");
+	PRECACHE_SOUND("player/pl_snow5.wav");
+	PRECACHE_SOUND("player/pl_snow6.wav");
+
 	PRECACHE_SOUND("player/pl_step1.wav");		// walk on concrete
 	PRECACHE_SOUND("player/pl_step2.wav");
 	PRECACHE_SOUND("player/pl_step3.wav");

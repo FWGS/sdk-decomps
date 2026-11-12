@@ -38,10 +38,51 @@ extern int gmsgSendAudio;
 extern int gmsgTeamInfo;
 extern int gmsgStatusIcon;
 extern void ShowMenu( CBasePlayer *pPlayer, int bitsValidSlots, int nDisplayTime, BOOL fNeedMore, char *pszText );
+extern int CountTeamPlayers( int iTeam );	// Beta 6.0 (client.cpp)
 
 #define ITEM_RESPAWN_TIME	30
 #define WEAPON_RESPAWN_TIME	20
 #define AMMO_RESPAWN_TIME	20
+
+//=========================================================
+// CMapInfo - Beta 6.0 (Linux symbols): info_map_parameters,
+// the map's rules: "buying" (0 both teams may buy, 1 only the
+// counter-terrorists, 2 only the terrorists, 3 nobody;
+// RestartRound) and "bombradius" (at most 2048; 500 when the
+// map has none). Member names ours
+//=========================================================
+class CMapInfo : public CPointEntity
+{
+public:
+	void KeyValue( KeyValueData *pkvd )
+	{
+		if ( FStrEq( pkvd->szKeyName, "buying" ) )
+		{
+			m_iBuyingStatus = atoi( pkvd->szValue );
+			pkvd->fHandled = TRUE;
+		}
+		else if ( FStrEq( pkvd->szKeyName, "bombradius" ) )
+		{
+			m_flBombRadius = atoi( pkvd->szValue );
+
+			if ( m_flBombRadius > 2048 )
+				m_flBombRadius = 2048;
+
+			pkvd->fHandled = TRUE;
+		}
+	}
+	void Spawn( void )
+	{
+		pev->movetype = MOVETYPE_NONE;
+		pev->solid = SOLID_NOT;
+		pev->effects |= EF_NODRAW;
+	}
+
+	int m_iBuyingStatus;	// 0x20
+	float m_flBombRadius;	// 0x24
+};
+
+LINK_ENTITY_TO_CLASS( info_map_parameters, CMapInfo );
 
 //=========================================================
 // Broadcast - Beta 3.0: the radio sentence !MRAD_<sentence>
@@ -58,7 +99,7 @@ void Broadcast( const char *sentence )
 	strcpy( text, "%!MRAD_" );
 	strcat( text, UTIL_VarArgs( "%s", sentence ) );
 
-	MESSAGE_BEGIN( MSG_ALL, gmsgSendAudio );
+	MESSAGE_BEGIN( MSG_BROADCAST, gmsgSendAudio );	// Beta 6.0: unreliable (was MSG_ALL)
 		WRITE_BYTE( 0 );
 		WRITE_STRING( text );
 	MESSAGE_END();
@@ -69,7 +110,7 @@ void Broadcast( const char *sentence )
 // of everybody's screen, red fading to green, for four
 // seconds (Linux symbol; the text parameters' name ours)
 //=========================================================
-static hudtextparms_t g_textParmsEndRound = { -1, 0.4, 2, 255, 20, 20, 200, 0, 255, 0, 200, 0.01, 0.7, 4.0, 0.07, 1 };	// name ours
+static hudtextparms_t g_textParmsEndRound = { -1, 0.4, 2, 20, 255, 20, 200, 0, 255, 0, 200, 0.01, 0.7, 4.0, 0.07, 1 };	// name ours; Beta 6.0: green (was red, 255 20 20)
 
 void EndRoundMessage( const char *sentence )
 {
@@ -155,6 +196,7 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 	m_iNumTerroristWins = 0;
 	m_pCTCommander = NULL;
 	m_pTerroristCommander = NULL;
+	m_pVIP = NULL;	// Beta 6.0
 	m_iNumCT = 0;
 	m_iNumTerrorist = 0;
 	m_iNumSpawnableCT = 0;
@@ -172,6 +214,25 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 	m_flNextRestartCheck = 0;
 	m_fGameCommenced = false;
 	m_fCompleteReset = true;
+
+	// Beta 6.0: escape and assassination maps, info_map_parameters
+	m_flRequiredEscapeRatio = 0.5;
+	m_iNumEscapers = 0;
+	m_bCTCantBuy = false;
+	m_bTCantBuy = false;
+	m_flBombRadius = 500;
+	m_iTotalGunCount = 0;
+	m_iTotalGrenadeCount = 0;
+	m_iTotalArmourCount = 0;
+	m_iConsecutiveVIP = 0;
+	m_iUnBalancedRounds = 0;
+	m_iNumEscapeRounds = 0;
+	m_bMapHasEscapeZone = false;
+	m_iMapHasVIPSafetyZone = 0;
+	m_fMapHasBombZone = false;
+	m_fMapHasRescueZone = false;
+
+	m_pVIPQueue[0] = m_pVIPQueue[1] = m_pVIPQueue[2] = m_pVIPQueue[3] = m_pVIPQueue[4] = NULL;
 
 	// Beta 4.0: no high-detail player models
 	CVAR_SET_FLOAT( "cl_himodels", 0 );
@@ -202,7 +263,7 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 		{
 			char szCommand[256];
 			
-			ALERT( at_console, "Executing dedicated server config file\n" );
+			// Beta 6.0: the dedicated server says nothing (the listen server still does)
 			sprintf( szCommand, "exec %s\n", servercfgfile );
 			SERVER_COMMAND( szCommand );
 		}
@@ -328,12 +389,45 @@ void CHalfLifeMultiplay::CleanUpMap( void )
 		torestart = UTIL_FindEntityByClassname( torestart, "func_door" );
 	}
 
+	// Beta 6.0: func_water too (a door), trains, the armouries
+	torestart = UTIL_FindEntityByClassname( NULL, "func_water" );
+
+	while ( torestart )
+	{
+		torestart->Restart();
+		torestart = UTIL_FindEntityByClassname( torestart, "func_water" );
+	}
+
 	torestart = UTIL_FindEntityByClassname( NULL, "func_door_rotating" );
 
 	while ( torestart )
 	{
 		torestart->Restart();
 		torestart = UTIL_FindEntityByClassname( torestart, "func_door_rotating" );
+	}
+
+	torestart = UTIL_FindEntityByClassname( NULL, "func_tracktrain" );
+
+	while ( torestart )
+	{
+		torestart->Restart();
+		torestart = UTIL_FindEntityByClassname( torestart, "func_tracktrain" );
+	}
+
+	torestart = UTIL_FindEntityByClassname( NULL, "func_train" );
+
+	while ( torestart )
+	{
+		torestart->Restart();
+		torestart = UTIL_FindEntityByClassname( torestart, "func_train" );
+	}
+
+	torestart = UTIL_FindEntityByClassname( NULL, "armoury_entity" );
+
+	while ( torestart )
+	{
+		torestart->Restart();
+		torestart = UTIL_FindEntityByClassname( torestart, "armoury_entity" );
 	}
 
 	// only the first one (sic)
@@ -346,8 +440,7 @@ void CHalfLifeMultiplay::CleanUpMap( void )
 
 	while ( toremove && iLeft > 0 )
 	{
-		ALERT( at_console, "Removing a Bomb Defuser pack\n" );
-		iLeft--;
+		iLeft--;	// Beta 6.0: no console line
 		UTIL_Remove( toremove );
 		toremove = UTIL_FindEntityByClassname( toremove, "item_thighpack" );
 	}
@@ -487,6 +580,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 	m_iNumSpawnableTerrorist = 0;
 	m_iNumCT = 0;
 	m_iNumTerrorist = 0;
+	m_iHaveEscaped = 0;	// Beta 6.0
 
 	pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
 	while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
@@ -506,6 +600,10 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 					NumDeadTerrorist++;
 				else
 					NumAliveTerrorist++;
+
+				// Beta 6.0: the escape maps
+				if ( player->m_bEscaped == true )
+					m_iHaveEscaped++;
 				break;
 
 			case TEAM_CT:
@@ -535,6 +633,92 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 		}
 
 		bNeededPlayers = TRUE;
+	}
+
+	// Beta 6.0: an assassination map is won by the VIP's escape (2,750 to
+	// the CTs) or death (2,750 to the terrorists)
+	if ( m_iMapHasVIPSafetyZone == 1 && m_pVIP )
+	{
+		if ( m_pVIP->m_bEscaped == true )
+		{
+			EndRoundMessage( "VIP has escaped!" );
+			Broadcast( "ctwin" );
+			m_iAccountCT += 2750;
+
+			if ( !bNeededPlayers )
+			{
+				m_iNumCTWins++;
+				MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
+					WRITE_BYTE( TEAM_CT );
+					WRITE_SHORT( m_iNumCTWins );
+				MESSAGE_END();
+			}
+
+			TerminateRound( 5, 1 );
+			return;
+		}
+		else if ( m_pVIP->pev->deadflag != DEAD_NO )
+		{
+			EndRoundMessage( "VIP has been assassinated!" );
+			Broadcast( "terwin" );
+			m_iAccountTerrorist += 2750;
+
+			if ( !bNeededPlayers )
+			{
+				m_iNumTerroristWins++;
+				MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
+					WRITE_BYTE( TEAM_TERRORIST );
+					WRITE_SHORT( m_iNumTerroristWins );
+				MESSAGE_END();
+			}
+
+			TerminateRound( 5, 2 );
+			return;
+		}
+	}
+
+	// Beta 6.0: an escape map is won by the terrorists when half of them
+	// (m_flRequiredEscapeRatio) escaped, by the CTs when none of the rest
+	// lives; the CTs get 3,500 times the share that did not escape
+	if ( m_bMapHasEscapeZone == true )
+	{
+		float flEscapeRatio = (float)m_iHaveEscaped / m_iNumEscapers;	// name ours
+
+		if ( flEscapeRatio >= m_flRequiredEscapeRatio )
+		{
+			EndRoundMessage( "Terrorists have escaped!" );
+			Broadcast( "terwin" );
+
+			if ( !bNeededPlayers )
+			{
+				m_iNumTerroristWins++;
+				MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
+					WRITE_BYTE( TEAM_TERRORIST );
+					WRITE_SHORT( m_iNumTerroristWins );
+				MESSAGE_END();
+			}
+
+			TerminateRound( 5, 2 );
+			return;
+		}
+		else if ( NumAliveTerrorist == 0 )
+		{
+			EndRoundMessage( "CTs have stopped most of the Ts from escaping!" );
+			Broadcast( "ctwin" );
+			m_iAccountCT += ( 1 - flEscapeRatio ) * 3500;
+
+			if ( !bNeededPlayers )
+			{
+				m_iNumCTWins++;
+				MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
+					WRITE_BYTE( TEAM_CT );
+					WRITE_SHORT( m_iNumCTWins );
+				MESSAGE_END();
+			}
+
+			TerminateRound( 5, 1 );
+			return;
+		}
 	}
 
 	if ( m_fTargetBombed == true && m_fMapHasBombTarget == true )
@@ -612,7 +796,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 	}
 	else if ( NumAliveCT == 0 && NumDeadCT != 0 && m_iNumSpawnableTerrorist > 0 )
 	{
-		ALERT( at_console, "Wincondition ONE\n" );
+		ALERT( at_console, "Terrorists win by virtue of elimination!\n" );	// Beta 6.0 (was "Wincondition ONE")
 		EndRoundMessage( "Terrorists WIN" );
 		Broadcast( "terwin" );
 
@@ -693,6 +877,94 @@ inline void TerminateRound( float tmDelay, int iWinStatus )
 }
 
 //=========================================================
+// SwapAllPlayers - Beta 6.0 (Linux symbol): every player
+// changes sides (CBasePlayer::SwitchTeam), and the team
+// scores with them (the escape maps, every eighth round)
+//=========================================================
+void CHalfLifeMultiplay::SwapAllPlayers( void )
+{
+	CBaseEntity *pPlayer = NULL;
+
+	pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
+	{
+		if ( pPlayer->pev->flags != FL_DORMANT )
+		{
+			CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+			player->SwitchTeam();
+		}
+		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	}
+
+	int iTemp = m_iNumCTWins;	// name ours
+	m_iNumCTWins = m_iNumTerroristWins;
+	m_iNumTerroristWins = iTemp;
+
+	MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
+		WRITE_BYTE( TEAM_CT );
+		WRITE_SHORT( m_iNumCTWins );
+	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
+		WRITE_BYTE( TEAM_TERRORIST );
+		WRITE_SHORT( m_iNumTerroristWins );
+	MESSAGE_END();
+}
+
+//=========================================================
+// BalanceTeams - Beta 6.0 (Linux symbol): the bigger team
+// gives half the difference (at most four) to the other,
+// each time its player with the most frags
+//=========================================================
+void CHalfLifeMultiplay::BalanceTeams( void )
+{
+	int iTeamToSwap;	// names ours
+	int iNumToSwap;
+
+	if ( m_iNumCT > m_iNumTerrorist )
+	{
+		iTeamToSwap = TEAM_CT;
+		iNumToSwap = ( m_iNumCT - m_iNumTerrorist ) / 2;
+	}
+	else if ( m_iNumTerrorist > m_iNumCT )
+	{
+		iTeamToSwap = TEAM_TERRORIST;
+		iNumToSwap = ( m_iNumTerrorist - m_iNumCT ) / 2;
+	}
+	else
+		return;
+
+	if ( iNumToSwap > 4 )
+		iNumToSwap = 4;
+
+	for ( int i = 1; i <= iNumToSwap; i++ )
+	{
+		int iHighestFrags = -100;
+		CBasePlayer *pPlayerToSwap = NULL;
+		CBaseEntity *pPlayer = NULL;
+
+		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+		while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
+		{
+			if ( pPlayer->pev->flags != FL_DORMANT )
+			{
+				CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+
+				if ( player->m_iTeam == iTeamToSwap && player->pev->frags >= iHighestFrags )
+				{
+					iHighestFrags = player->pev->frags;
+					pPlayerToSwap = player;
+				}
+			}
+			pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+		}
+
+		if ( pPlayerToSwap )
+			pPlayerToSwap->SwitchTeam();
+	}
+}
+
+//=========================================================
 // RestartRound - Beta 5.0 (leak): the scores start afresh
 // after sv_restartround (and at the first round); the round,
 // freeze and C4 times are read again and the freeze period
@@ -707,6 +979,27 @@ inline void TerminateRound( float tmDelay, int iWinStatus )
 //=========================================================
 void CHalfLifeMultiplay::RestartRound( void )
 {
+	// Beta 6.0: the movement settings, every round
+	CVAR_SET_FLOAT( "sv_accelerate", 5 );
+	CVAR_SET_FLOAT( "sv_friction", 4 );
+	CVAR_SET_FLOAT( "sv_stopspeed", 75 );
+
+	// Beta 6.0: mp_autoteambalance moves players when the teams have been two
+	// or more apart for more than two rounds (announced a round ahead)
+	m_iNumCT = CountTeamPlayers( TEAM_CT );
+	m_iNumTerrorist = CountTeamPlayers( TEAM_TERRORIST );
+
+	if ( CVAR_GET_FLOAT( "mp_autoteambalance" ) != 0 && m_iUnBalancedRounds > 2 )
+		BalanceTeams();
+
+	if ( CVAR_GET_FLOAT( "mp_autoteambalance" ) != 0 && m_iUnBalancedRounds == 2 )
+		UTIL_ClientPrintAll( HUD_PRINTCENTER, "Teams will be automatically balanced next round...\n" );
+
+	if ( m_iNumCT - m_iNumTerrorist >= 2 || m_iNumTerrorist - m_iNumCT >= 2 )
+		m_iUnBalancedRounds++;
+	else
+		m_iUnBalancedRounds = 0;
+
 	if ( m_fCompleteReset )
 	{
 		m_iNumTerroristWins = 0;
@@ -743,6 +1036,45 @@ void CHalfLifeMultiplay::RestartRound( void )
 	m_flMaxIdlePeriod = m_iRoundTime * 120;
 	m_iRoundTimeSecs = m_iFreezeTime;
 
+	// Beta 6.0: the map's info_map_parameters say who may buy and the bomb radius
+	CMapInfo *mi = (CMapInfo *)UTIL_FindEntityByClassname( NULL, "info_map_parameters" );	// name ours
+
+	if ( mi )
+	{
+		ALERT( at_console, "*****Checking Mi*****\n" );
+
+		switch ( mi->m_iBuyingStatus )
+		{
+		case 0:
+			m_bCTCantBuy = false;
+			m_bTCantBuy = false;
+			ALERT( at_console, "EVERYONE CAN BUY!\n" );
+			break;
+		case 1:
+			m_bCTCantBuy = false;
+			m_bTCantBuy = true;
+			ALERT( at_console, "Only CT's can buy!!\n" );
+			break;
+		case 2:
+			m_bCTCantBuy = true;
+			m_bTCantBuy = false;
+			ALERT( at_console, "Only T's can buy!!\n" );
+			break;
+		case 3:
+			m_bCTCantBuy = true;
+			m_bTCantBuy = true;
+			ALERT( at_console, "No one can buy!!\n" );
+			break;
+		default:
+			m_bCTCantBuy = false;
+			m_bTCantBuy = false;
+			break;
+		}
+
+		m_flBombRadius = mi->m_flBombRadius;
+		ALERT( at_console, "Bomb Radius is : %f\n", m_flBombRadius );
+	}
+
 	if ( UTIL_FindEntityByClassname( NULL, "func_bomb_target" ) )
 	{
 		m_fMapHasBombTarget = true;
@@ -767,6 +1099,35 @@ void CHalfLifeMultiplay::RestartRound( void )
 		m_fMapHasBuyZone = true;
 	else
 		m_fMapHasBuyZone = false;
+
+	// Beta 6.0: an escape map counts its escapers afresh; the teams swap
+	// every eight rounds
+	if ( UTIL_FindEntityByClassname( NULL, "func_escapezone" ) )
+	{
+		m_bMapHasEscapeZone = true;
+		m_iHaveEscaped = 0;
+		m_iNumEscapers = 0;
+
+		if ( m_iNumEscapeRounds >= 8 )
+		{
+			SwapAllPlayers();
+			m_iNumEscapeRounds = 0;
+		}
+
+		m_iNumEscapeRounds++;
+	}
+	else
+		m_bMapHasEscapeZone = false;
+
+	// Beta 6.0: an assassination map gets its VIP
+	if ( UTIL_FindEntityByClassname( NULL, "func_vip_safetyzone" ) )
+	{
+		PickNextVIP();
+		m_iConsecutiveVIP++;
+		m_iMapHasVIPSafetyZone = 1;
+	}
+	else
+		m_iMapHasVIPSafetyZone = 2;
 
 	CBaseEntity *pHostage = UTIL_FindEntityByClassname( NULL, "hostage_entity" );
 	int iHostageBonus = 0;	// name ours
@@ -814,7 +1175,10 @@ void CHalfLifeMultiplay::RestartRound( void )
 	else if ( m_iRoundWinStatus == 1 )
 	{
 		m_iAccountCT += iHostageBonus;
-		m_iAccountTerrorist += m_iLoserBonus;
+
+		// Beta 6.0: no loser bonus for the terrorists of an escape map
+		if ( m_bMapHasEscapeZone == false )
+			m_iAccountTerrorist += m_iLoserBonus;
 	}
 
 	m_iAccountCT += m_iHostagesRescued * 250;	// Beta 5.0: 250 a rescued hostage (the leak 150)
@@ -850,7 +1214,15 @@ void CHalfLifeMultiplay::RestartRound( void )
 			if ( player->m_iTeam == TEAM_CT )
 				player->AddAccount( m_iAccountCT, true );
 			else if ( player->m_iTeam == TEAM_TERRORIST )
+			{
+				// Beta 6.0: the escapers are counted; on an escape map the
+				// terrorists start with the starting weapons every round
+				m_iNumEscapers++;
 				player->AddAccount( m_iAccountTerrorist, true );
+
+				if ( m_bMapHasEscapeZone == true )
+					player->GiveDefaultItems();
+			}
 		}
 		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
 	}
@@ -924,6 +1296,216 @@ BOOL CHalfLifeMultiplay::TeamStacked( int newTeam_id, int curTeam_id )
 	return FALSE;
 }
 
+//=========================================================
+// The VIP of an assassination map (Beta 6.0, Linux symbols):
+// counter-terrorists queue to be the VIP (five places; the
+// VIP queue key of the team menu, become_vip); a new round
+// takes the first in line, else after three rounds a random
+// counter-terrorist, else (no VIP yet) the first one.
+//
+// StackVIPQueue - closes the gaps in the queue (one pass from
+// the back)
+//=========================================================
+void CHalfLifeMultiplay::StackVIPQueue( void )
+{
+	for ( int i = 3; i > 0; i-- )
+	{
+		if ( m_pVIPQueue[i - 1] == NULL )
+		{
+			m_pVIPQueue[i - 1] = m_pVIPQueue[i];
+			m_pVIPQueue[i] = m_pVIPQueue[i + 1];
+			m_pVIPQueue[i + 1] = NULL;
+		}
+		else if ( m_pVIPQueue[i] == NULL )
+		{
+			m_pVIPQueue[i] = m_pVIPQueue[i + 1];
+			m_pVIPQueue[i + 1] = NULL;
+		}
+	}
+}
+
+//=========================================================
+// IsVIPQueueEmpty - terrorists leave the queue first
+//=========================================================
+bool CHalfLifeMultiplay::IsVIPQueueEmpty( void )
+{
+	for ( int i = 0; i < 5; i++ )
+	{
+		CBasePlayer *toCheck = m_pVIPQueue[i];	// name ours
+
+		if ( toCheck && toCheck->m_iTeam == TEAM_TERRORIST )
+			m_pVIPQueue[i] = NULL;
+	}
+
+	StackVIPQueue();
+
+	if ( m_pVIPQueue[0] == NULL && m_pVIPQueue[1] == NULL && m_pVIPQueue[2] == NULL && m_pVIPQueue[3] == NULL && m_pVIPQueue[4] == NULL )
+		return true;
+
+	return false;
+}
+
+//=========================================================
+// AddToVIPQueue - a counter-terrorist takes the first free
+// place, and is told which
+//=========================================================
+bool CHalfLifeMultiplay::AddToVIPQueue( CBasePlayer *toAdd )
+{
+	char text[256];	// name ours
+	int i;
+
+	IsVIPQueueEmpty();
+
+	if ( toAdd->m_iTeam != TEAM_CT )
+		return false;
+
+	for ( i = 0; i <= 4; i++ )
+	{
+		if ( m_pVIPQueue[i] == toAdd )
+		{
+			sprintf( text, "You are already in position %i of 5\n", i + 1 );
+			ClientPrint( toAdd->pev, HUD_PRINTCENTER, text );
+			return false;
+		}
+	}
+
+	for ( i = 0; i <= 4; i++ )
+	{
+		if ( m_pVIPQueue[i] == NULL )
+		{
+			m_pVIPQueue[i] = toAdd;
+			StackVIPQueue();
+
+			sprintf( text, "You have been added to position %i of 5\n", i + 1 );
+			ClientPrint( toAdd->pev, HUD_PRINTCENTER, text );
+			return true;
+		}
+	}
+
+	ClientPrint( toAdd->pev, HUD_PRINTCENTER, "All 5 slots of the queue have been filled up!\n" );
+	return false;
+}
+
+//=========================================================
+// ResetCurrentVIP - the VIP becomes an ordinary counter-
+// terrorist with a random model (urban twice as likely as
+// gsg9 or gign) and loses what he carried over
+//=========================================================
+void CHalfLifeMultiplay::ResetCurrentVIP( void )
+{
+	switch ( RANDOM_LONG( 0, 3 ) )
+	{
+	case 0:
+		m_pVIP->m_iAppearance = 1;
+		CLIENT_COMMAND( m_pVIP->edict(), "model urban\n" );
+		g_engfuncs.pfnSetClientKeyValue( m_pVIP->entindex(), g_engfuncs.pfnGetInfoKeyBuffer( m_pVIP->edict() ), "model", "urban" );
+		break;
+	case 1:
+		m_pVIP->m_iAppearance = 5;
+		CLIENT_COMMAND( m_pVIP->edict(), "model gsg9\n" );
+		g_engfuncs.pfnSetClientKeyValue( m_pVIP->entindex(), g_engfuncs.pfnGetInfoKeyBuffer( m_pVIP->edict() ), "model", "gsg9" );
+		break;
+	case 2:
+		m_pVIP->m_iAppearance = 1;
+		CLIENT_COMMAND( m_pVIP->edict(), "model urban\n" );
+		g_engfuncs.pfnSetClientKeyValue( m_pVIP->entindex(), g_engfuncs.pfnGetInfoKeyBuffer( m_pVIP->edict() ), "model", "urban" );
+		break;
+	case 3:
+		m_pVIP->m_iAppearance = 6;
+		CLIENT_COMMAND( m_pVIP->edict(), "model gign\n" );
+		g_engfuncs.pfnSetClientKeyValue( m_pVIP->entindex(), g_engfuncs.pfnGetInfoKeyBuffer( m_pVIP->edict() ), "model", "gign" );
+		break;
+	}
+
+	m_pVIP->m_bIsVIP = false;
+	m_pVIP->m_fNotKilled = false;
+}
+
+//=========================================================
+// PickNextVIP - the round's VIP
+//=========================================================
+void CHalfLifeMultiplay::PickNextVIP( void )
+{
+	if ( IsVIPQueueEmpty() != true )
+	{
+		// the first in line
+		if ( m_pVIP )
+			ResetCurrentVIP();
+
+		for ( int i = 0; i <= 4; i++ )
+		{
+			if ( m_pVIPQueue[i] )
+			{
+				m_pVIP = m_pVIPQueue[i];
+				m_pVIP->MakeVIP();
+				m_pVIPQueue[i] = NULL;
+				StackVIPQueue();
+				m_iConsecutiveVIP = 0;
+				return;
+			}
+		}
+	}
+	else if ( m_iConsecutiveVIP >= 3 )
+	{
+		// after three rounds a random counter-terrorist (not the VIP)
+		int iRandom = RANDOM_LONG( 1, m_iNumCT );	// names ours
+
+		if ( m_pVIP && iRandom == m_pVIP->entindex() )
+			iRandom++;
+
+		if ( iRandom > m_iNumCT )
+			iRandom = 1;
+
+		int iCount = 1;
+
+		CBaseEntity *pPlayer = NULL;
+
+		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+		while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
+		{
+			if ( pPlayer->pev->flags != FL_DORMANT )
+			{
+				CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+
+				if ( player->m_iTeam == TEAM_CT && iCount == iRandom )
+				{
+					if ( m_pVIP )
+						ResetCurrentVIP();
+
+					player->MakeVIP();
+					m_iConsecutiveVIP = 0;
+					return;
+				}
+				else if ( player->m_iTeam == TEAM_CT )
+					iCount++;
+			}
+			pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+		}
+	}
+	else if ( m_pVIP == NULL )
+	{
+		// the first counter-terrorist
+		CBaseEntity *pPlayer = NULL;
+
+		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+		while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
+		{
+			if ( pPlayer->pev->flags != FL_DORMANT )
+			{
+				CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+
+				if ( player->m_iTeam == TEAM_CT )
+				{
+					player->MakeVIP();
+					m_iConsecutiveVIP = 0;
+					return;
+				}
+			}
+			pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+		}
+	}
+}
+
 void CHalfLifeMultiplay :: Think ( void )
 {
 	// Beta 5.0 (leak): the first think starts the clock
@@ -955,31 +1537,51 @@ void CHalfLifeMultiplay :: Think ( void )
 	{
 		// Beta 5.0 (leak): the freeze time is over: the round's clock
 		// starts, with one of four radio calls (Beta 3.0 to 4.1 played it at
-		// RestartRound)
+		// RestartRound). Beta 6.0: a radio message from one player of each
+		// team (heard by his team), the escape and assassination maps' own
 		if ( TimeRemaining() <= 0 )
 		{
-			const char *szSound;	// name ours
+			char CT_sentence[40];	// names ours
+			char T_sentence[40];
 
 			m_bFreezePeriod = FALSE;
 
 			switch ( RANDOM_LONG( 0, 3 ) )
 			{
 			case 0:
-				szSound = "radio/moveout.wav";
+				strcpy( CT_sentence, "%!MRAD_MOVEOUT" );
+				strcpy( T_sentence, "%!MRAD_MOVEOUT" );
 				break;
 			case 1:
-				szSound = "radio/letsgo.wav";
+				strcpy( CT_sentence, "%!MRAD_LETSGO" );
+				strcpy( T_sentence, "%!MRAD_LETSGO" );
 				break;
 			case 2:
-				szSound = "radio/locknload.wav";
+				strcpy( CT_sentence, "%!MRAD_LOCKNLOAD" );
+				strcpy( T_sentence, "%!MRAD_LOCKNLOAD" );
 				break;
 			default:
-				szSound = "radio/com_go.wav";
+				strcpy( CT_sentence, "%!MRAD_GO" );
+				strcpy( T_sentence, "%!MRAD_GO" );
 				break;
+			}
+
+			if ( m_bMapHasEscapeZone == true )
+			{
+				strcpy( CT_sentence, "%!MRAD_ELIM" );
+				strcpy( T_sentence, "%!MRAD_GETOUT" );
+			}
+			else if ( m_iMapHasVIPSafetyZone == 1 )
+			{
+				strcpy( CT_sentence, "%!MRAD_VIP" );
+				strcpy( T_sentence, "%!MRAD_LOCKNLOAD" );
 			}
 
 			m_flRoundStartTime = gpGlobals->time;
 			m_iRoundTimeSecs = m_iRoundTime * 60;
+
+			bool bCTPlayed = false;	// names ours
+			bool bTPlayed = false;
 
 			for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 			{
@@ -987,7 +1589,17 @@ void CHalfLifeMultiplay :: Think ( void )
 
 				if ( plr && plr->pev->flags != FL_DORMANT && plr->m_iJoiningState == JOIN_DONE )
 				{
-					EMIT_SOUND( ENT(plr->pev), CHAN_VOICE, szSound, 1, 0.8 );
+					if ( plr->m_iTeam == TEAM_CT && !bCTPlayed )
+					{
+						plr->Radio( CT_sentence, NULL );
+						bCTPlayed = true;
+					}
+					else if ( plr->m_iTeam == TEAM_TERRORIST && !bTPlayed )
+					{
+						plr->Radio( T_sentence, NULL );
+						bTPlayed = true;
+					}
+
 					plr->SyncRoundTimer();
 					plr->ResetMaxSpeed();
 				}
@@ -1293,6 +1905,10 @@ void CHalfLifeMultiplay :: ClientDisconnected( edict_t *pClient )
 			if ( pPlayer->m_fHasDefuser == true )
 				pPlayer->GiveNamedItem( "item_thighpack" );
 
+			// Beta 6.0: a VIP leaving leaves no VIP
+			if ( pPlayer->m_bIsVIP == true )
+				m_pVIP = NULL;
+
 			FireTargets( "game_playerleave", pPlayer, pPlayer, USE_TOGGLE, 0 );
 			UTIL_LogPrintf( "\"%s<%i>\" disconnected\n",  STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ) );
 
@@ -1512,7 +2128,7 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 
 	// update the scores
 	// killed scores
-	MESSAGE_BEGIN( MSG_ALL, gmsgScoreInfo );
+	MESSAGE_BEGIN( MSG_BROADCAST, gmsgScoreInfo );	// Beta 6.0: unreliable (was MSG_ALL)
 		WRITE_BYTE( ENTINDEX(pVictim->edict()) );
 		WRITE_SHORT( pVictim->pev->frags );
 		WRITE_SHORT( pVictim->m_iDeaths );
@@ -1524,7 +2140,7 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 	{
 		CBasePlayer *PK = (CBasePlayer*)ep;
 
-		MESSAGE_BEGIN( MSG_ALL, gmsgScoreInfo );
+		MESSAGE_BEGIN( MSG_ALL, gmsgScoreInfo );	// (still reliable, sic)
 			WRITE_BYTE( ENTINDEX(PK->edict()) );
 			WRITE_SHORT( PK->pev->frags );
 			WRITE_SHORT( PK->m_iDeaths );
@@ -1894,7 +2510,7 @@ BOOL CHalfLifeMultiplay :: PlayFootstepSounds( CBasePlayer *pl, float fvol )
 	if ( CVAR_GET_FLOAT( "mp_footsteps" ) == 0 )
 		return FALSE;
 
-	if ( pl->IsOnLadder() || pl->pev->velocity.Length2D() > 220 )
+	if ( pl->IsOnLadder() || pl->pev->velocity.Length2D() > 190 )	// Beta 6.0: 190 (220)
 		return TRUE;  // only make step sounds in multiplayer if the player is moving fast enough
 
 	return FALSE;
@@ -2044,5 +2660,3 @@ void CHalfLifeMultiplay :: SendMOTDToClient( edict_t *client )
 
 	FREE_FILE( aFileList );
 }
-	
-

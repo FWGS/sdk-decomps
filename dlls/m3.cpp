@@ -51,7 +51,7 @@ public:
 	BOOL Deploy( );
 	void Reload( void );
 	void WeaponIdle( void );
-	float GetMaxSpeed( void ) { return 240; }	// Beta 5.0 (leak): Linux symbol
+	float GetMaxSpeed( void ) { return 230; }	// Beta 5.0 (leak): Linux symbol
 	int m_fInReload;
 	float m_flNextReload;
 	int m_iShell;
@@ -88,6 +88,7 @@ void CM3::Spawn( )
 void CM3::Precache( void )
 {
 	PRECACHE_MODEL("models/v_m3.mdl");
+	PRECACHE_MODEL("models/v_m3_r.mdl");	// Beta 6.0: the right-handed view model
 	PRECACHE_MODEL("models/w_m3.mdl");
 	PRECACHE_MODEL("models/p_m3.mdl");
 
@@ -121,7 +122,11 @@ int CM3::GetItemInfo(ItemInfo *p)
 
 BOOL CM3::Deploy( )
 {
-	return DefaultDeploy( "models/v_m3.mdl", "models/p_m3.mdl", M3_DRAW, "mp5" );
+	// Beta 6.0: v_m3.mdl holds the gun in the left hand, v_m3_r.mdl in the right
+	if ( m_pPlayer->m_bLeftHanded == true )
+		return DefaultDeploy( "models/v_m3.mdl", "models/p_m3.mdl", M3_DRAW, "mp5" );
+
+	return DefaultDeploy( "models/v_m3_r.mdl", "models/p_m3.mdl", M3_DRAW, "mp5" );
 }
 
 
@@ -159,30 +164,12 @@ void CM3::PrimaryAttack()
 
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
-	Vector	vecShellVelocity = m_pPlayer->pev->velocity
-							 + gpGlobals->v_right * RANDOM_FLOAT(50,70)
-							 + gpGlobals->v_up * RANDOM_FLOAT(100,150)
-							 + gpGlobals->v_forward * 25;
-
-	// the shell comes out with the pump: EjectBrassLate, from ItemPostFrame
-	m_pPlayer->m_flEjectBrass = gpGlobals->time + 0.45;
+	// Beta 6.0: no shell velocity computed here any more (Beta 5.2 computed one
+	// and used it nowhere)
 
 	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m3-1.wav", RANDOM_FLOAT(0.95, 1.0), 0.4);
 
-
-	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_5DEGREES );
-
-	if ( g_pGameRules->IsDeathmatch() )
-	{
-		// altered deathmatch spread
-		m_pPlayer->FireBullets( 8, vecSrc, vecAiming, VECTOR_CONE_DM_SHOTGUN, 2048, BULLET_PLAYER_BUCKSHOT, 0 );
-	}
-	else
-	{
-		// regular old, untouched spread.
-		m_pPlayer->FireBullets( 8, vecSrc, vecAiming, VECTOR_CONE_10DEGREES, 2048, BULLET_PLAYER_BUCKSHOT, 0 );
-	}
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
 		// HEV suit - indicate out of ammo condition
@@ -200,6 +187,24 @@ void CM3::PrimaryAttack()
 	m_fInReload = 0;
 
 	m_pPlayer->pev->punchangle.x -= RANDOM_LONG( 4, 6 );
+
+	// Beta 6.0: the pellets leave 5 units to the side of the hand that holds
+	// the gun; one spread, 0.0675 sideways and up, 3000 units far
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+
+	// the shell comes out with the pump: EjectBrassLate, from ItemPostFrame
+	if ( m_pPlayer->m_bLeftHanded == true )
+	{
+		vecSrc = vecSrc - gpGlobals->v_right * 5;
+		m_pPlayer->m_flEjectBrass = gpGlobals->time + 0.45;
+	}
+	else
+	{
+		vecSrc = vecSrc + gpGlobals->v_right * 5;
+		m_pPlayer->m_flEjectBrass = gpGlobals->time + 0.45;
+	}
+
+	m_pPlayer->FireBullets( 8, vecSrc, vecAiming, Vector( 0.0675, 0.0675, 0 ), 3000, BULLET_PLAYER_BUCKSHOT, 0 );
 }
 
 

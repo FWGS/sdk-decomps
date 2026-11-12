@@ -1727,6 +1727,14 @@ float TEXTURETYPE_PlaySound(TraceResult *ptr,  Vector vecSrc, Vector vecEnd, int
 		rgsz[3] = "player/pl_slosh4.wav";
 		cnt = 4;
 		break;
+	case CHAR_TEX_SNOW:	// Counter-Strike Beta 6.0
+		fvol = 0.7; fvolbar = 0.4;
+		rgsz[0] = "debris/pl_snow1.wav";
+		rgsz[1] = "debris/pl_snow2.wav";
+		rgsz[2] = "debris/pl_snow3.wav";
+		rgsz[3] = "debris/pl_snow4.wav";
+		cnt = 4;
+		break;
 	case CHAR_TEX_WOOD: fvol = 0.9; fvolbar = 0.2;
 		rgsz[0] = "debris/wood1.wav";
 		rgsz[1] = "debris/wood2.wav";

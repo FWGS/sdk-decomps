@@ -70,6 +70,7 @@ void CHEGrenade::Spawn( )
 void CHEGrenade::Precache( void )
 {
 	PRECACHE_MODEL("models/w_hegrenade.mdl");
+	PRECACHE_MODEL("models/v_hegrenade_r.mdl");	// Beta 6.0: the right-handed view model
 	PRECACHE_MODEL("models/v_hegrenade.mdl");
 	PRECACHE_MODEL("models/p_hegrenade.mdl");
 
@@ -100,7 +101,12 @@ int CHEGrenade::GetItemInfo(ItemInfo *p)
 BOOL CHEGrenade::Deploy( )
 {
 	m_flReleaseThrow = -1;
-	return DefaultDeploy( "models/v_hegrenade.mdl", "models/p_hegrenade.mdl", HEGRENADE_DEPLOY, "crowbar" );
+
+	// Beta 6.0: the left-handed model is the old one, the right-handed one is new
+	if ( m_pPlayer->m_bLeftHanded == true )
+		return DefaultDeploy( "models/v_hegrenade.mdl", "models/p_hegrenade.mdl", HEGRENADE_DEPLOY, "crowbar" );
+
+	return DefaultDeploy( "models/v_hegrenade_r.mdl", "models/p_hegrenade.mdl", HEGRENADE_DEPLOY, "crowbar" );
 }
 
 BOOL CHEGrenade::CanHolster( void )
@@ -164,13 +170,20 @@ void CHEGrenade::WeaponIdle( void )
 
 		UTIL_MakeVectors( angThrow );
 
-		Vector vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16 - gpGlobals->v_right * 12;
+		// Beta 6.0: from the hand that throws
+		Vector vecSrc;
+
+		if ( m_pPlayer->m_bLeftHanded == true )
+			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16 - gpGlobals->v_right * 12;
+		else
+			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16 + gpGlobals->v_right * 12;
 
 		Vector vecThrow = gpGlobals->v_forward * flVel + m_pPlayer->pev->velocity;
 
 		// two seconds after the throw, whenever the pin was pulled; the
-		// thrower's team mates are spared (CBasePlayer::TakeDamage)
-		CGrenade::ShootTimed2( m_pPlayer->pev, vecSrc, vecThrow, 2, m_pPlayer->m_iTeam );
+		// thrower's team mates are spared (CBasePlayer::TakeDamage). Beta 6.0:
+		// a second and a half
+		CGrenade::ShootTimed2( m_pPlayer->pev, vecSrc, vecThrow, 1.5, m_pPlayer->m_iTeam );
 
 		SendWeaponAnim( HEGRENADE_THROW );
 

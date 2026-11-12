@@ -201,58 +201,9 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 
 	int iContents = UTIL_PointContents ( pev->origin );
 
-	// Beta 3.0: the concussion grenade throws seven pieces of shrapnel
-	// (CDebris) around the horizon: ahead, behind, right, left, ahead,
-	// behind, right of its own angles, each a little off at random.
-	// Beta 3.1: five (ahead, behind, right, left, ahead)
-	UTIL_MakeVectors( pev->angles );
+	// Counter-Strike Beta 6.0: no more shrapnel (Beta 3.0 to 5.2: five or
+	// seven CDebris thrown around the horizon)
 
-	Vector vecForward = gpGlobals->v_forward;		// names ours
-	Vector vecBack = gpGlobals->v_forward * -1;
-	Vector vecLeft = gpGlobals->v_right * -1;
-	Vector vecRight = gpGlobals->v_right;
-	Vector vecDir;
-
-	for ( int i = 1; i <= 5; i++ )
-	{
-		switch ( i )
-		{
-		case 1:
-			vecDir = vecForward;
-			break;
-		case 2:
-			vecDir = vecBack;
-			break;
-		case 3:
-			vecDir = vecRight;
-			break;
-		case 4:
-			vecDir = vecLeft;
-			break;
-		case 5:
-			vecDir = vecForward;
-			break;
-		}
-
-		float x, y, z;
-		do {
-			x = RANDOM_FLOAT( -10, 16 ) + RANDOM_FLOAT( -10, 16 );
-			y = RANDOM_FLOAT( -16, 10 ) + RANDOM_FLOAT( -16, 10 );
-			z = x*x+y*y;
-		} while ( z > 1 );
-
-		Vector vecSpread = Vector( 1, 1, 1 );
-		vecDir = vecDir + x * vecSpread.x * vecRight + y * vecSpread.y * gpGlobals->v_up;
-
-		CDebris *pDebris = CDebris::BoltCreate();
-		pDebris->pev->owner = ENT( pev->owner );	// Beta 5.0 (leak): the thrower owns the shrapnel (was the grenade)
-		pDebris->pev->origin = pev->origin + vecDir * 5;
-		pDebris->pev->angles = pev->angles;
-		pDebris->pev->velocity = vecDir * RANDOM_LONG( 800, 1100 );
-		pDebris->pev->velocity.z = RANDOM_LONG( 150, 550 );
-		pDebris->pev->speed = 950;
-	}
-	
 /*
 	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_EXPLOSION );		// This makes a dynamic light and the explosion sprites/sound
@@ -324,6 +275,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 void CGrenade::Explode2( TraceResult *pTrace, int bitsDamageType )
 {
 	float		flRndSound;// sound randomizer
+	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// Beta 6.0 (name ours)
 
 	pev->model = iStringNull;//invisible
 	pev->solid = SOLID_NOT;// intangible
@@ -334,10 +286,10 @@ void CGrenade::Explode2( TraceResult *pTrace, int bitsDamageType )
 
 	// Beta 5.0 (leak): a C4 is planted only at a bomb target, so it always counts
 	// (Beta 4.0 and 4.1: within 256 units of an info_bomb_target)
-	((CHalfLifeMultiplay *)g_pGameRules)->m_fTargetBombed = true;
+	mp->m_fTargetBombed = true;
 
 	m_fC4Done = TRUE;
-	((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
+	mp->CheckWinConditions();
 
 	// Pull out of the wall a bit
 	if ( pTrace->flFraction != 1.0 )
@@ -398,7 +350,7 @@ void CGrenade::Explode2( TraceResult *pTrace, int bitsDamageType )
 
 	pev->owner = NULL; // can't traceline attack owner if this is set
 
-	RadiusDamage ( pev, pevOwner, pev->dmg * 5, CLASS_NONE, bitsDamageType );
+	RadiusDamage ( pev, pevOwner, mp->m_flBombRadius, CLASS_NONE, bitsDamageType );	// Beta 6.0: the map's bomb radius (info_map_parameters; 500 by default) (was pev->dmg x 5)
 
 	if ( RANDOM_FLOAT( 0 , 1 ) < 0.5 )
 	{
@@ -730,6 +682,14 @@ void CGrenade::BounceTouch( CBaseEntity *pOther )
 	// don't hit the guy that launched this grenade
 	if ( pOther->edict() == pev->owner )
 		return;
+
+	// Counter-Strike Beta 6.0: off see-through breakables (glass, which the
+	// grenade's touch breaks: CBreakable::BreakTouch) it flies back twice as fast
+	if ( !strcmp( STRING( pOther->pev->classname ), "func_breakable" ) && pOther->pev->rendermode != kRenderNormal )
+	{
+		pev->velocity = pev->velocity * -2;
+		return;
+	}
 
 /*
 	// only do damage if we're moving fairly fast
@@ -1155,7 +1115,7 @@ void CGrenade::C4Think( void )
 	{
 		m_flNextBlink = gpGlobals->time + 2.0;
 
-		MESSAGE_BEGIN( MSG_ALL, SVC_TEMPENTITY );
+		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );	// Beta 6.0: to those who can see it (was every client)
 			WRITE_BYTE( TE_GLOWSPRITE );
 			WRITE_COORD( pev->origin.x );
 			WRITE_COORD( pev->origin.y );

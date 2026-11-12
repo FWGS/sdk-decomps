@@ -191,7 +191,7 @@ public:
 	bool				m_fNotKilled;			// 0x14c set at the end of Spawn, cleared by Killed and ClientPutInServer: a player who lived through the round keeps armor, kevlar and ammunition
 	int					m_iTeam;				// 0x150 TEAM_TERRORIST or TEAM_CT
 	int					m_iAccount;				// 0x154 money
-	int					m_iUnused158;			// 0x158 no function refers to it
+	bool				m_bHasPrimary;			// 0x158 an unused int until Beta 5.2; Beta 6.0: he carries a primary weapon (AddPlayerItem sets, DropPlayerItem, Spawn, GiveDefaultItems clear; CArmoury::ArmouryTouch gives none to him; name ours)
 	int					m_iUnused15C;			// 0x15c only written: SetAnimation zeroes it when the death animation starts
 	int					m_iDeathThrow;			// 0x160 how Killed throws the body: 0 not, 1 forwards, 2 backwards, 3 away from the attacker
 	float				m_flLastSay;			// 0x164 time of the last chat line (Host_Say lets one through a second)
@@ -208,7 +208,8 @@ public:
 	bool				m_fKicked;				// 0x188 [0x178] sent away (team killer): ClientCommand ignores him, Spawn kills him
 	int					m_iTeamKills;			// 0x18c [0x184] team mates killed; the third kicks the killer (PlayerKilled)
 	int					m_iIgnoreMessages;		// 0x190 [0x188] ignoremsg: 0 all, 1 no broadcast messages, 2 no team messages either
-	int					m_iNightVisionAlpha;	// 0x194 [0x198] only written in the leak: ClientPutInServer and JoiningThink set 60 (no night vision any more)
+	bool				m_bHasNightVision;		// 0x194 Beta 6.0: bought night vision goggles (BuyItem; ClientPutInServer, Spawn clear it; the leak's and Beta 5.0's int m_iNightVisionAlpha, set to 60 and read by nothing, was here; name ours)
+	bool				m_bNightVisionOn;		// 0x195 Beta 6.0: the goggles are on (the nightvision command; Spawn clears it; name ours)
 	Vector				m_vecOldOrigins[20];	// 0x198 [0x19c] the trail a hostage follows; PreThink pushes pev->origin in front every 0.2 seconds
 	float				m_flNextOldOrigin;		// 0x288 [0x28c] when PreThink records the next position
 	float				m_flNextRadio;			// 0x28c [0x290] no radio message before this time (1.5 seconds after the last)
@@ -228,9 +229,19 @@ public:
 	int					m_iChaseNext;			// 0x2e4 the player index GetPlayerToChase tries first (Spawn: 1)
 	CBaseEntity			*m_pChaseTarget;		// 0x2e8 the player watched (GetPlayerToChase), NULL when there is none
 	float				m_flNextObserverInput;	// 0x2ec JUMP and ATTACK act again from this time (half a second; Spawn: 0)
-	float				m_flNextZoneCheck;		// 0x2e0 [0x2e4] PostThink checks the zones the player stands in every 0.2 seconds (Spawn: 0)
-	CSignals			m_signals;				// 0x2e4 [0x2e8] the zones' signals: buy zone 1, bomb target 2 (the buy commands, CC4::PrimaryAttack, CBuyZone, CBombTarget)
-	edict_t				*m_pentBombTarget;		// 0x2ec [0x2f0] the bomb target the player is in (CBombTarget::BombTargetTouch); the planted C4 keeps it (ShootSatchelCharge)
+	// Beta 6.0: 48 bytes (every member after them is 0x30 later than in Beta 5.2; names ours)
+	bool				m_bLeadsHostage;		// 0x2f0 a hostage follows him (CHostage::Use); PreThink records his path (UpdatePath); Spawn, Killed, Disappear clear it
+	Vector				m_vecLastPathPos;		// 0x2f4 where UpdatePath last saw him; a way-point is inserted when the hull trace from there is blocked
+	bool				m_bEscaped;				// 0x300 a terrorist who reached a func_escapezone (CEscapeZone::EscapeTouch); Spawn clears it
+	bool				m_bIsVIP;				// 0x301 the VIP of an assassination map (MakeVIP, ResetCurrentVIP)
+	float				m_flNextRadarUpdate;	// 0x304 UpdateClientData sends the team mates his radar position every so often
+	Vector				m_vecLastRadarOrigin;	// 0x308 the position last sent (UpdateClientData)
+	bool				m_bLeftHanded;			// 0x314 the client's "lefthand" key is set (ClientUserInfoChanged): the weapons deploy the v_*.mdl models, else v_*_r.mdl
+	int					m_iCurrentKickVote;		// 0x318 the user id he voted to kick (vote; KickPlayer, Spawn clear it)
+	float				m_flNextVoteTime;		// 0x31c no vote before this time (3 seconds after the last)
+	float				m_flNextZoneCheck;		// 0x320 PostThink checks the zones the player stands in every 0.2 seconds (Spawn: 0)
+	CSignals			m_signals;				// 0x324 the zones' signals: buy zone 1, bomb target 2 (the buy commands, CC4::PrimaryAttack, CBuyZone, CBombTarget)
+	edict_t				*m_pentBombTarget;		// 0x32c the bomb target the player is in (CBombTarget::BombTargetTouch); the planted C4 keeps it (ShootSatchelCharge)
 
 	int					m_iPlayerSound;// the index of the sound list slot reserved for this player
 	int					m_iTargetVolume;// ideal sound volume. 
@@ -307,9 +318,9 @@ public:
 	int			m_iFOV;			// field of view
 	int			m_iClientFOV;	// client's known FOV
 	// Beta 5.0 (leak), names ours (Beta 5.2's offsets, 0x10 more than Beta 5.0's):
-	BOOL		m_fHasAssaultSuit;	// 0x500 GiveNamedItem: TRUE for item_assaultsuit, FALSE for item_kevlar; HasAssaultSuit wants it and armor
-	int			m_iNumSpawns;		// 0x504 spawns since the player joined (Spawn counts, JoiningThink clears; FPlayerCanRespawn)
-	CObserver	*m_pObserver;		// 0x508 Beta 5.0's observer entity; from Beta 5.2 on nothing sets it, ClientDisconnected still removes it (sic)
+	BOOL		m_fHasAssaultSuit;	// 0x530 (Beta 5.2: 0x500) GiveNamedItem: TRUE for item_assaultsuit, FALSE for item_kevlar; HasAssaultSuit wants it and armor
+	int			m_iNumSpawns;		// 0x534 spawns since the player joined (Spawn counts, JoiningThink clears; FPlayerCanRespawn)
+	CObserver	*m_pObserver;		// 0x538 Beta 5.0's observer entity; from Beta 5.2 on nothing sets it, ClientDisconnected still removes it (sic)
 	// usable player items 
 	CBasePlayerItem	*m_rgpPlayerItems[MAX_ITEM_TYPES];
 	CBasePlayerItem *m_pActiveItem;
@@ -420,6 +431,12 @@ public:
 	void SetPlayerModel( BOOL HasC4 );
 	void SetBombIcon( BOOL bFlash );
 	BOOL IsCommander( void );
+	// Beta 6.0 (Linux symbols)
+	bool CanPlayerBuy( bool display );	// parameter name ours
+	void Disappear( void );
+	void MakeVIP( void );
+	void SwitchTeam( void );
+	void UpdatePath( void );
 	void SyncRoundTimer( void );
 	void MenuPrint( CBasePlayer *pPlayer, const char *msg );
 	void RoundRespawn( void );

@@ -192,11 +192,7 @@ void CBaseMonster :: Look ( int iDistance )
 				case	R_FR:
 					iSighted |= bits_COND_SEE_FEAR;
 					break;
-				case    R_AL:
-					break;
-				default:
-					ALERT ( at_aiconsole, "%s can't assess %s\n", STRING(pev->classname), STRING(pSightEnt->pev->classname ) );
-					break;
+				// Counter-Strike Beta 6.0: no R_AL case and no console line for the rest
 				}
 			}
 		}

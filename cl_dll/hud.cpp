@@ -100,6 +100,7 @@ void CHud :: Init( void )
 	// In case we get messages before the first update -- time will be valid
 	m_flTime = 1.0;
 
+	m_NVG.Init();
 	m_Ammo.Init();
 	m_Health.Init();
 	m_Geiger.Init();
@@ -233,6 +234,7 @@ void CHud :: VidInit( void )
 
 	m_iFontHeight = m_rgrcRects[m_HUD_number_0].bottom - m_rgrcRects[m_HUD_number_0].top;
 
+	m_NVG.VidInit();
 	m_Ammo.VidInit();
 	m_Health.VidInit();
 	m_Geiger.VidInit();
@@ -252,6 +254,8 @@ void CHud :: VidInit( void )
 	m_Money.VidInit();
 	m_RoundTimer.VidInit();
 	m_ProgressBar.VidInit();
+
+	m_flCvarCheckTime = -1;
 }
 
 int CHud::MsgFunc_Logo(const char *pszName,  int iSize, void *pbuf)

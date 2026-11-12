@@ -27,11 +27,14 @@
 
 DECLARE_COMMAND( m_Scoreboard, ShowScores );
 DECLARE_COMMAND( m_Scoreboard, HideScores );
+DECLARE_COMMAND( m_Scoreboard, ShowRadar );
+DECLARE_COMMAND( m_Scoreboard, HideRadar );
 
 DECLARE_MESSAGE( m_Scoreboard, ScoreAttrib );
 DECLARE_MESSAGE( m_Scoreboard, ScoreInfo );
 DECLARE_MESSAGE( m_Scoreboard, TeamInfo );
 DECLARE_MESSAGE( m_Scoreboard, TeamScore );
+DECLARE_MESSAGE( m_Scoreboard, Radar );
 
 char *sTeamNames[] =	// name ours
 {
@@ -47,17 +50,21 @@ int CHudScoreboard :: Init( void )
 	// Hook messages & commands here
 	HOOK_COMMAND( "+showscores", ShowScores );
 	HOOK_COMMAND( "-showscores", HideScores );
+	HOOK_COMMAND( "+showradar", ShowRadar );
+	HOOK_COMMAND( "-showradar", HideRadar );
 
 	HOOK_MESSAGE( ScoreAttrib );
 	HOOK_MESSAGE( ScoreInfo );
 	HOOK_MESSAGE( TeamScore );
 	HOOK_MESSAGE( TeamInfo );
+	HOOK_MESSAGE( Radar );
 
 	CVAR_CREATE( "cl_hidefrags", "1", 0 );
 
 	InitHUDData();
 
 	m_flNextCvarCheck = 0;
+	m_bDrawRadar = true;
 
 	return 1;
 }
@@ -68,6 +75,15 @@ int CHudScoreboard :: VidInit( void )
 	// Load sprites here
 	m_HUD_smallskull = gHUD.GetSpriteIndex( "smallskull" );
 	m_HUD_smallc4 = gHUD.GetSpriteIndex( "smallc4" );
+	m_HUD_smallvip = gHUD.GetSpriteIndex( "smallvip" );
+
+	int i = gHUD.GetSpriteIndex( "radar" );	// name ours
+	m_prcRadar = &gHUD.GetSpriteRect( i );
+	m_hRadar = gHUD.GetSprite( i );
+
+	i = gHUD.GetSpriteIndex( "radarback" );
+	m_prcRadarBg = &gHUD.GetSpriteRect( i );
+	m_hRadarBg = gHUD.GetSprite( i );
 
 	return 1;
 }
@@ -83,6 +99,12 @@ void CHudScoreboard :: InitHUDData( void )
 	m_iFlags &= ~HUD_ACTIVE;  // starts out inactive
 
 	m_iFlags |= HUD_INTERMISSION; // is always drawn during an intermission
+
+	for ( int i = 1; i <= MAX_PLAYERS; i++ )
+	{
+		m_PlayerInfoList[i].dead = true;
+		m_PlayerExtraInfo[i].flash_next = -1;
+	}
 }
 
 /* The scoreboard
@@ -117,6 +139,9 @@ int CHudScoreboard :: Draw( float fTime )
 		m_flHideFrags = CVAR_GET_FLOAT( "cl_hidefrags" );
 		m_flNextCvarCheck = fTime + 1;
 	}
+
+	if ( !gHUD.m_fPlayerDead )
+		DrawRadar( fTime );
 
 	if ( !m_iShowscoresHeld && !gHUD.m_iIntermission )
 		return 1;
@@ -359,6 +384,11 @@ int CHudScoreboard :: DrawPlayers( int xpos_rel, float list_slot, int nameoffset
 				SPR_Set( gHUD.GetSprite( m_HUD_smallc4 ), 0, 160, 0 );
 				SPR_DrawAdditive( 0, xpos_rel + 1, ypos, &gHUD.GetSpriteRect( m_HUD_smallc4 ) );
 			}
+			else if ( m_PlayerExtraInfo[best_player].is_vip )
+			{
+				SPR_Set( gHUD.GetSprite( m_HUD_smallvip ), 0, 160, 0 );
+				SPR_DrawAdditive( 0, xpos_rel + 1, ypos, &gHUD.GetSpriteRect( m_HUD_smallvip ) );
+			}
 		}
 
 		pl_info->name = NULL;  // set the name to be NULL, so this client won't get drawn again
@@ -368,6 +398,122 @@ int CHudScoreboard :: DrawPlayers( int xpos_rel, float list_slot, int nameoffset
 	return list_slot;
 }
 
+
+// the radar: team mates as dots around the player, top left (locals: names ours)
+void CHudScoreboard :: DrawRadar( float flTime )
+{
+	Vector origin;
+	origin = gHUD.m_vecOrigin;
+	int team = m_PlayerExtraInfo[m_iPlayerNum].teamnumber;
+
+	if ( m_PlayerInfoList[m_iPlayerNum].dead == true || !m_bDrawRadar )
+		return;
+
+	SPR_Set( m_hRadar, 25, 75, 25 );
+	SPR_DrawAdditive( 0, 0, 0, m_prcRadar );
+
+	for ( int i = 1; i <= MAX_PLAYERS; i++ )
+	{
+		if ( i == m_iPlayerNum || m_PlayerExtraInfo[i].teamnumber != team || m_PlayerInfoList[i].dead )
+			continue;
+
+		float dx = m_PlayerExtraInfo[i].radar_pos.x - origin.x;
+		float dy = m_PlayerExtraInfo[i].radar_pos.y - origin.y;
+		float dz = m_PlayerExtraInfo[i].radar_pos.z - origin.z;
+
+		// the bearing of the team mate, in degrees from 0 to 360
+		float angle = atan( dy / dx );
+		angle = angle * 180 / 3.141592654;
+		if ( dx < 0 && dy < 0 )
+			angle += 180;
+		else if ( dx < 0 && dy >= 0 )
+			angle += 180;
+		else if ( dx >= 0 && dy < 0 )
+			angle += 360;
+
+		dy = sqrt( dx * dx + dy * dy ) * -1;	// the distance, negative
+
+		// relative to the view, in radians: turn ( 0, distance ) by it
+		angle = ( gHUD.m_vecAngles.y - angle ) * 3.141592654;
+		angle = angle / 180;
+		float x0 = 0, y0 = dy;	// names ours
+		float x = x0 * cos( angle ) - y0 * sin( angle );
+		float y = x0 * sin( angle ) + y0 * cos( angle );
+
+		float range;
+		int size, dot;
+		if ( ScreenWidth < 640 )
+		{
+			range = 1024;
+			size = 64;
+			dot = 1;
+		}
+		else
+		{
+			range = 2048;
+			size = 128;
+			dot = 2;
+		}
+
+		if ( dy * -1 > range )
+		{
+			float k = dy * -1 / range;
+			x = x / k;
+			y = y / k;
+		}
+
+		int px = size / 2 + (int)( x / 32 );
+		int py = size / 2 + (int)( y / 32 );
+
+		if ( px < 0 || py < 0 || px > size || py > size )
+			continue;
+
+		int r, g, b;
+		if ( !m_PlayerExtraInfo[i].has_c4 && !m_PlayerExtraInfo[i].is_vip )
+		{
+			r = 120;
+			g = 20;
+			b = 250;
+		}
+		else
+		{
+			r = 220;
+			g = 0;
+			b = 0;
+		}
+
+		if ( dz < -128 )
+		{
+			float h = dz * -1;
+			if ( h > 3096 )
+				h = 3096;
+			int len = (int)( h / 400 );
+			FillRGBA( px, py, 1, len + dot * 2, r, g, b, 235 );
+			FillRGBA( px - 2, py + len + dot * 2, 5, 1, r, g, b, 235 );
+		}
+		else if ( dz > 128 )
+		{
+			if ( dz > 3096 )
+				dz = 3096;
+			FillRGBA( px - 2, py, 5, 1, r, g, b, 235 );
+			FillRGBA( px, py + 1, 1, (int)( dz / 400 ) + dot * 2 - 1, r, g, b, 235 );
+		}
+		else
+		{
+			FillRGBA( px, py, dot, dot, r, g, b, 235 );
+		}
+
+		if ( m_PlayerExtraInfo[i].flash_next != -1 && flTime > m_PlayerExtraInfo[i].flash_next && m_PlayerExtraInfo[i].flash_left > 0 )
+		{
+			m_PlayerExtraInfo[i].flash_next = flTime + 0.15;
+			m_PlayerExtraInfo[i].flash_on = 1 - m_PlayerExtraInfo[i].flash_on;
+			m_PlayerExtraInfo[i].flash_left--;
+		}
+
+		if ( m_PlayerExtraInfo[i].flash_on == 1 && m_PlayerExtraInfo[i].flash_left > 0 )
+			FillRGBA( px - 3, py - 3, dot + 3, dot + 3, 230, 110, 25, 245 );
+	}
+}
 
 void CHudScoreboard :: GetAllPlayersInfo( void )
 {
@@ -394,6 +540,7 @@ int CHudScoreboard :: MsgFunc_ScoreAttrib( const char *pszName, int iSize, void 
 	{
 		m_PlayerInfoList[cl].dead = flags & 1;
 		m_PlayerExtraInfo[cl].has_c4 = ( flags & 2 ) ? 1 : 0;
+		m_PlayerExtraInfo[cl].is_vip = ( flags & 4 ) ? 1 : 0;
 	}
 
 	return 1;
@@ -502,4 +649,31 @@ void CHudScoreboard :: UserCmd_ShowScores( void )
 void CHudScoreboard :: UserCmd_HideScores( void )
 {
 	m_iShowscoresHeld = FALSE;
+}
+
+void CHudScoreboard :: UserCmd_ShowRadar( void )
+{
+	m_bDrawRadar = true;
+}
+
+void CHudScoreboard :: UserCmd_HideRadar( void )
+{
+	m_bDrawRadar = false;
+}
+
+// Message handler for Radar message
+// accepts four values:
+//		byte: client number
+//		coord, coord, coord: the client's origin
+int CHudScoreboard :: MsgFunc_Radar( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+	int cl = READ_BYTE();
+	float x = READ_COORD();	// names ours
+	float y = READ_COORD();
+	float z = READ_COORD();
+
+	m_PlayerExtraInfo[cl].radar_pos = Vector( x, y, z );
+
+	return 1;
 }

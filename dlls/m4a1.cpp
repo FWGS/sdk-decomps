@@ -42,7 +42,7 @@ public:
 	BOOL Deploy( void );
 	void Reload( void );
 	void WeaponIdle( void );
-	float GetMaxSpeed( void ) { if ( m_pPlayer->m_iFOV != 90 ) return 200; return 240; }	// Beta 5.0 (leak): Linux symbol
+	float GetMaxSpeed( void ) { if ( m_pPlayer->m_iFOV != 90 ) return 200; return 230; }	// Beta 5.0 (leak): Linux symbol; Beta 6.0: 230 (was 240)
 	int m_iShell;
 	BOOL m_fEjectShell;		// the shot throws a shell; flips with every shot
 };
@@ -65,13 +65,14 @@ void CM4A1::Spawn( )
 void CM4A1::Precache( void )
 {
 	PRECACHE_MODEL("models/v_m4a1.mdl");
+	PRECACHE_MODEL("models/v_m4a1_r.mdl");	// Beta 6.0: the right-handed view model
 	PRECACHE_MODEL("models/w_m4a1.mdl");
 	PRECACHE_MODEL("models/p_m4a1.mdl");
 
 	PRECACHE_SOUND("weapons/m4a1-1.wav");
 	PRECACHE_SOUND("weapons/m4a1-2.wav");
 
-	m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shell
+	m_iShell = PRECACHE_MODEL ("models/rshell.mdl");// brass shell (Beta 6.0: the rifle shell)
 }
 
 int CM4A1::GetItemInfo(ItemInfo *p)
@@ -96,7 +97,12 @@ BOOL CM4A1::Deploy( )
 	m_pPlayer->m_flAccuracy = 0;
 	m_fDelayFire = true;
 	m_fEjectShell = 1;
-	return DefaultDeploy( "models/v_m4a1.mdl", "models/p_m4a1.mdl", M4A1_DRAW, "silenced_rifle" );
+
+	// Beta 6.0: v_m4a1.mdl holds the gun in the left hand, v_m4a1_r.mdl in the right
+	if ( m_pPlayer->m_bLeftHanded == true )
+		return DefaultDeploy( "models/v_m4a1.mdl", "models/p_m4a1.mdl", M4A1_DRAW, "silenced_rifle" );
+
+	return DefaultDeploy( "models/v_m4a1_r.mdl", "models/p_m4a1.mdl", M4A1_DRAW, "silenced_rifle" );
 }
 
 void CM4A1::SecondaryAttack( void )
@@ -113,22 +119,15 @@ void CM4A1::SecondaryAttack( void )
 
 void CM4A1::PrimaryAttack( void )
 {
-	float flSpread;
+	// Beta 6.0: off the ground the spread is 0.25 times the accuracy; no else
+	// (sic): the gun then fires a second shot as below
+	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
+		M4A1Fire( m_pPlayer->m_flAccuracy * 0.25, 0.0875, FALSE );
 
-	// Beta 4.0: the same spread however the player moves (the product
-	// written in the call: retail's code loads the accuracy, compares the
-	// FOV and multiplies, in that order)
 	if (m_pPlayer->m_iFOV == 90)
-	{
-		flSpread = m_pPlayer->m_flAccuracy;
-		M4A1Fire( flSpread * 0.02, 0.0875, FALSE );
-	}
+		M4A1Fire( m_pPlayer->m_flAccuracy * 0.02, 0.0875, FALSE );
 	else
-	{
-		// zoomed in: a slower cycle
-		flSpread = m_pPlayer->m_flAccuracy;
-		M4A1Fire( flSpread * 0.02, 0.165, FALSE );
-	}
+		M4A1Fire( m_pPlayer->m_flAccuracy * 0.02, 0.165, FALSE );	// zoomed in: a slower cycle
 }
 
 void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
@@ -176,14 +175,6 @@ void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
-	Vector	vecShellVelocity = m_pPlayer->pev->velocity
-							 + gpGlobals->v_right * RANDOM_FLOAT(100,120)
-							 + gpGlobals->v_up * RANDOM_FLOAT(35,55)
-							 + gpGlobals->v_forward * RANDOM_FLOAT(40,55);
-	if (m_fEjectShell)
-		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs - gpGlobals->v_up * 8 + gpGlobals->v_forward * 20 - gpGlobals->v_right * 10, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
-	m_fEjectShell = 1 - m_fEjectShell;
-
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
 
 	if (RANDOM_LONG(0,1))
@@ -191,7 +182,6 @@ void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	else
 		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m4a1-2.wav", RANDOM_FLOAT(0.92, 1.0), 1.28);
 
-	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
 
 	if ( fUseAutoAim )
@@ -203,7 +193,6 @@ void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		vecAiming = gpGlobals->v_forward;
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 32, 0.97 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -218,9 +207,39 @@ void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
 		KickBack( 1.2, 0.45, 0.23, 0.15, 5.5, 3.5, 6 );
 	else if ( FBitSet(m_pPlayer->pev->flags, FL_DUCKING) )
-		KickBack( 0.55, 0.3, 0.12, 0.0125, 4.5, 1.5, 10 );
+		KickBack( 0.55, 0.3, 0.2, 0.0125, 4.5, 1.5, 10 );
 	else
-		KickBack( 0.6, 0.35, 0.12, 0.015, 4.5, 1.5, 10 );
+		KickBack( 0.6, 0.35, 0.25, 0.015, 4.5, 1.5, 10 );
+
+	// Beta 6.0: the bullets leave 5 units to the side of the hand that holds
+	// the gun, the shell flies out of the other side
+	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
+
+	if ( m_pPlayer->m_bLeftHanded == true )
+	{
+		vecSrc = vecSrc - gpGlobals->v_right * 5;
+
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity
+								 + gpGlobals->v_right * RANDOM_FLOAT(100,120)
+								 + gpGlobals->v_up * RANDOM_FLOAT(35,55)
+								 + gpGlobals->v_forward * RANDOM_FLOAT(40,55);
+		if (m_fEjectShell)
+			EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs - gpGlobals->v_up * 8 + gpGlobals->v_forward * 20 - gpGlobals->v_right * 10, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+	}
+	else
+	{
+		vecSrc = vecSrc + gpGlobals->v_right * 5;
+
+		Vector	vecShellVelocity = m_pPlayer->pev->velocity
+								 - gpGlobals->v_right * RANDOM_FLOAT(100,120)
+								 + gpGlobals->v_up * RANDOM_FLOAT(35,55)
+								 + gpGlobals->v_forward * RANDOM_FLOAT(40,55);
+		if (m_fEjectShell)
+			EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs - gpGlobals->v_up * 8 + gpGlobals->v_forward * 20 + gpGlobals->v_right * 10, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
+	}
+	m_fEjectShell = 1 - m_fEjectShell;
+
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 32, 0.97 );
 }
 
 

@@ -105,6 +105,42 @@ int CHud :: Redraw( float flTime, int intermission )
 		SPR_DrawAdditive(i, x, y, NULL);
 	}
 
+	// twice a second, hold the cvars that matter for fair play at their values
+	if ( flTime > m_flCvarCheckTime || m_flCvarCheckTime == -1 )
+	{
+		if ( CVAR_GET_FLOAT( "cl_pitchup" ) != 89 )
+		{
+			ClientCmd( "cl_pitchup 89\n" );
+			ClientCmd( "kill\n" );
+			ClientCmd( "disconnect\n" );
+		}
+
+		if ( CVAR_GET_FLOAT( "cl_pitchdown" ) != 89 )
+		{
+			ClientCmd( "cl_pitchdown 89\n" );
+			ClientCmd( "kill\n" );
+			ClientCmd( "disconnect\n" );
+		}
+
+		if ( CVAR_GET_FLOAT( "cl_rollangle" ) != 2 )
+			ClientCmd( "cl_rollangle 2\n" );
+
+		if ( CVAR_GET_FLOAT( "r_drawentities" ) >= 2 )
+		{
+			ClientCmd( "r_drawentites 1\n" );	// the image spells it so
+			ClientCmd( "kill\n" );
+			ClientCmd( "disconnect\n" );
+		}
+
+		if ( CVAR_GET_FLOAT( "gl_monolights" ) != 0 )
+		{
+			ClientCmd( "gl_monolights 0\n" );
+			ClientCmd( "restart\n" );
+		}
+
+		m_flCvarCheckTime = flTime + 0.5;
+	}
+
 	return 1;
 }
 
