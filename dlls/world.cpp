@@ -486,6 +486,7 @@ void CWorld :: Precache( void )
 	
 #if 1
 	CVAR_SET_STRING("sv_gravity", "800"); // 67ft/sec
+	CVAR_SET_STRING("sv_maxspeed", "320");	// Counter-Strike Beta 3.0
 	CVAR_SET_STRING("sv_stepsize", "18");
 #else
 	CVAR_SET_STRING("sv_gravity", "384"); // 32ft/sec

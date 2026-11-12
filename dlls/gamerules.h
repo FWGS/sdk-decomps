@@ -353,6 +353,7 @@ public:
 	virtual void CleanUpMap( void );
 	virtual void RestartRound( void );
 	virtual void CheckWinConditions( void );
+	virtual void PickNewCommander( int iTeam );
 
 	// member names ours; the offsets are retail's
 	float m_flRestartRoundTime;		// 0x04 Think calls RestartRound at this time; 0 = no restart pending
@@ -370,6 +371,8 @@ public:
 	int m_iKickVotes[20];			// 0x34 kick votes against players 1 to 20 (ClientCommand's vote, at m_iKickVotes[n - 1]); RestartRound clears them
 	short m_iNumCTWins;				// 0x84 rounds won (TeamScore)
 	short m_iNumTerroristWins;		// 0x86
+	CBasePlayer *m_pCTCommander;	// 0x88 new in Beta 3.0: the counter-terrorists' commander (PickNewCommander)
+	CBasePlayer *m_pTerroristCommander;	// 0x8c the terrorists'
 
 protected:
 	virtual void ChangeLevel( void );

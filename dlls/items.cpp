@@ -349,7 +349,7 @@ class CItemKevlar : public CItem
 	}
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{
-		pPlayer->m_fHasKevlar = TRUE;
+		pPlayer->m_iKevlar = 1;
 		pPlayer->pev->armorvalue = 100;
 		EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/kevlar.wav", 1, ATTN_NORM );
 
@@ -362,3 +362,34 @@ class CItemKevlar : public CItem
 };
 
 LINK_ENTITY_TO_CLASS( item_kevlar, CItemKevlar );
+
+
+// Counter-Strike Beta 3.0: kevlar and helmet (bought for 1000), item_kevlar
+// with m_iKevlar 2: the armour covers the head too (CBasePlayer::TakeDamage)
+class CItemAssaultSuit : public CItem
+{
+	void Spawn( void )
+	{ 
+		Precache( );
+		SET_MODEL(ENT(pev), "models/w_longjump.mdl");
+		CItem::Spawn( );
+	}
+	void Precache( void )
+	{
+		PRECACHE_MODEL ("models/w_longjump.mdl");
+	}
+	BOOL MyTouch( CBasePlayer *pPlayer )
+	{
+		pPlayer->m_iKevlar = 2;
+		pPlayer->pev->armorvalue = 100;
+		EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/kevlar.wav", 1, ATTN_NORM );
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
+			WRITE_STRING( STRING(pev->classname) );
+		MESSAGE_END();
+
+		return TRUE;		
+	}
+};
+
+LINK_ENTITY_TO_CLASS( item_assaultsuit, CItemAssaultSuit );

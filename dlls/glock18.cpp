@@ -111,6 +111,7 @@ int CGLOCK18::GetItemInfo(ItemInfo *p)
 BOOL CGLOCK18::Deploy( )
 {
 	m_fBurstMode = false;
+	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 260 );
 
 	if (RANDOM_LONG(0,1))
 		return DefaultDeploy( "models/v_glock18.mdl", "models/p_glock18.mdl", GLOCK18_DRAW, "onehanded" );
@@ -204,9 +205,9 @@ void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseBurstMo
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
 	Vector	vecShellVelocity = m_pPlayer->pev->velocity
-							 + gpGlobals->v_right * RANDOM_FLOAT(40,50)
-							 + gpGlobals->v_up * RANDOM_FLOAT(100,160)
-							 + gpGlobals->v_forward * 15;
+							 + gpGlobals->v_right * RANDOM_FLOAT(40,150)
+							 + gpGlobals->v_up * RANDOM_FLOAT(100,360)
+							 + gpGlobals->v_forward * RANDOM_FLOAT(25,200);
 	EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -20 + gpGlobals->v_forward * 32 - gpGlobals->v_right * 20 , vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
 
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
@@ -214,16 +215,16 @@ void CGLOCK18::GLOCK18Fire( float flSpread , float flCycleTime, BOOL fUseBurstMo
 
 	// one sound for the burst, the other for the single shot
 	if (fUseBurstMode == TRUE)
-		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/glock18-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/glock18-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
 	else
-		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/glock18-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/glock18-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
 
 	vecAiming = gpGlobals->v_forward;
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 23, 0.9, NULL, true );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 24, 0.87, NULL, true );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)

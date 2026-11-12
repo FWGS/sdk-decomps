@@ -85,7 +85,7 @@ int CM249::GetItemInfo(ItemInfo *p)
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = M249_MAX_CLIP;
 	p->iSlot = 4;
-	p->iPosition = 2;
+	p->iPosition = 5;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_M249;
 	p->iWeight = M249_WEIGHT;
@@ -95,6 +95,9 @@ int CM249::GetItemInfo(ItemInfo *p)
 
 BOOL CM249::Deploy( )
 {
+	m_pPlayer->m_flAccuracy = 0.95;
+	m_fEjectShell = 1;
+	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 210 );
 	return DefaultDeploy( "models/v_m249.mdl", "models/p_m249.mdl", M249_DRAW, "m249" );
 }
 
@@ -104,12 +107,12 @@ void CM249::SecondaryAttack( void )
 
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.085;
+		flSpread = m_pPlayer->m_flAccuracy * 0.12;
 		M249Fire( flSpread, 0.1, FALSE );
 	}
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.1;
+		flSpread = m_pPlayer->m_flAccuracy * 0.15;
 		M249Fire( flSpread, 0.1, FALSE );
 	}
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
@@ -130,12 +133,12 @@ void CM249::PrimaryAttack( void )
 
 	if (m_pPlayer->pev->velocity.Length2D() > 170)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.085;
+		flSpread = m_pPlayer->m_flAccuracy * 0.12;
 		M249Fire( flSpread, 0.1, FALSE );
 	}
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.1;
+		flSpread = m_pPlayer->m_flAccuracy * 0.15;
 		M249Fire( flSpread, 0.1, FALSE );
 	}
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
@@ -153,11 +156,12 @@ void CM249::PrimaryAttack( void )
 void CM249::M249Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 {
 	// the spread grows with the cube of the shots fired
+	m_fDelayFire = true;
 	m_pPlayer->m_iShotsFired++;
 	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.65;
 
-	if (m_pPlayer->m_flAccuracy > 2.25)
-		m_pPlayer->m_flAccuracy = 2.25;
+	if (m_pPlayer->m_flAccuracy > 2)
+		m_pPlayer->m_flAccuracy = 2;
 
 	if (m_iClip <= 0)
 	{
@@ -203,9 +207,9 @@ void CM249::M249Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	m_pPlayer->m_iWeaponFlash = BRIGHT_GUN_FLASH;
 
 	if (RANDOM_LONG(0,1))
-		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m249-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m249-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
 	else
-		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m249-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m249-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
@@ -219,7 +223,7 @@ void CM249::M249Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		vecAiming = gpGlobals->v_forward;
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 35, 0.95 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 35, 0.97 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -234,12 +238,17 @@ void CM249::M249Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 void CM249::Reload( void )
 {
-	if (DefaultReload( M249_MAX_CLIP, M249_RELOAD, 4.6 ))
+	int iResult;
+
+	iResult = DefaultReload( M249_MAX_CLIP, M249_RELOAD, 4.6 );
+	if (iResult)
 	{
 		m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
 	}
 
 	m_pPlayer->m_flAccuracy = 0;
+	m_fDelayFire = false;
+	m_pPlayer->m_iShotsFired = 0;
 }
 
 
@@ -253,6 +262,6 @@ void CM249::WeaponIdle( void )
 	if (m_flTimeWeaponIdle > gpGlobals->time)
 		return;
 
-	// sic: m_flTimeWeaponIdle is not renewed, so once it has passed every call sends the idle animation again
+	m_flTimeWeaponIdle = gpGlobals->time + 20;
 	SendWeaponAnim( M249_IDLE1 );
 }

@@ -186,37 +186,119 @@ int gmsgSayText = 0;
 int gmsgTextMsg = 0;
 int gmsgSetFOV = 0;
 int gmsgShowMenu = 0;
-// Never registered; the name is from Beta 3.1's Linux symbols, which have it in
-// player.cpp's data after the last message and before PlayStepSound's iSkipStep.
-// VC5 lays out zero-initialised data in definition order; retail has 4
-// unreferenced bytes here from Beta 2.0 to 3.1.
+int gmsgSendAudio = 0;	// Beta 3.0's radio: a sentence and the entity it comes from (client.dll plays it)
+// Never registered; the name is from Beta 3.1's Linux symbols, which have it here,
+// after gmsgSendAudio. It gives retail's .bss: VC5 lays out zero-initialised data
+// in definition order, and retail has 4 unreferenced bytes between gmsgSendAudio
+// and PlayStepSound's iSkipStep (Betas 2.0 and 2.1 the same after gmsgShowMenu).
 //
 int gmsgRoundTime = 0;
 
 LINK_ENTITY_TO_CLASS( player, CBasePlayer );
 
+//=========================================================
+// Radio - Beta 3.0's radio (name from the later versions'
+// Linux symbols): "**RADIO** <name> : <msg_id>" in the chat of
+// every team mate who is not dying and has not turned the
+// radio off (ignoremessages 3), and the sentence !MRAD_<msg_id>
+// sent to him with his own entity index (sic). A player in
+// noclip (observing) has no radio.
+//=========================================================
+void CBasePlayer::Radio( const char *msg_id )
+{
+	char szSentence[32];
+	char szMessage[128];
+
+	if ( !msg_id )
+		return;
+
+	if ( pev->movetype == MOVETYPE_NOCLIP )
+		return;
+
+	strcpy( szMessage, "**RADIO** " );
+	strcat( szMessage, STRING( pev->netname ) );
+	strcat( szMessage, " : " );
+	strcat( szMessage, msg_id );
+
+	strcpy( szSentence, "%!MRAD_" );
+	strcat( szSentence, UTIL_VarArgs( "%s", msg_id ) );
+
+	CBaseEntity *pPlayer = NULL;
+	pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
+	{
+		if ( pPlayer->IsPlayer() && pPlayer->pev->flags != FL_DORMANT )
+		{
+			CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+
+			if ( player->pev->deadflag != DEAD_DYING && player->m_iTeam == m_iTeam && player->m_iIgnoreMessages != 3 )
+			{
+				ClientPrint( pPlayer->pev, HUD_PRINTTALK, szMessage );
+
+				MESSAGE_BEGIN( MSG_ONE, gmsgSendAudio, NULL, pPlayer->pev );
+					WRITE_BYTE( ENTINDEX( player->edict() ) );
+					WRITE_STRING( szSentence );
+				MESSAGE_END();
+			}
+		}
+		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	}
+}
 
 
-void CBasePlayer :: Pain( void )
+
+// Beta 3.0: the sound of the hit, by where it struck: a helmet or kevlar
+// sound where armour took it (not on the legs), else one of three flesh or
+// head-shot sounds
+void CBasePlayer :: Pain( int iLastHitGroup, bool bHasArmour )
 {
 	ALERT( at_console, "CBasePlayer::Pain\n" );
 
-	switch (RANDOM_LONG(1,5))
+	int temp = RANDOM_LONG( 0, 2 );
+
+	switch ( iLastHitGroup )
 	{
-	case 1:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain2.wav", 1, ATTN_NORM);
+	case HITGROUP_HEAD:
+		if ( !bHasArmour )
+		{
+			if ( temp == 0 )
+				EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/headshot1.wav", 1, ATTN_NORM );
+			else if ( temp == 1 )
+				EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/headshot2.wav", 1, ATTN_NORM );
+			else
+				EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/headshot3.wav", 1, ATTN_NORM );
+		}
+		else
+			EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/bhit_helmet-1.wav", 1, ATTN_NORM );
 		break;
-	case 2:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain4.wav", 1, ATTN_NORM);
+	case HITGROUP_LEFTLEG:
+		if ( temp == 0 )
+			EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/bhit_flesh-1.wav", 1, ATTN_NORM );
+		else if ( temp == 1 )
+			EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/bhit_flesh-2.wav", 1, ATTN_NORM );
+		else
+			EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/bhit_flesh-3.wav", 1, ATTN_NORM );
 		break;
-	case 3:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain5.wav", 1, ATTN_NORM);
+	case HITGROUP_RIGHTLEG:
+		if ( temp == 0 )
+			EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/bhit_flesh-1.wav", 1, ATTN_NORM );
+		else if ( temp == 1 )
+			EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/bhit_flesh-2.wav", 1, ATTN_NORM );
+		else
+			EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/bhit_flesh-3.wav", 1, ATTN_NORM );
 		break;
-	case 4:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain6.wav", 1, ATTN_NORM);
-		break;
-	case 5:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain7.wav", 1, ATTN_NORM);
+	default:
+		if ( !bHasArmour )
+		{
+			if ( temp == 0 )
+				EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/bhit_flesh-1.wav", 1, ATTN_NORM );
+			else if ( temp == 1 )
+				EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/bhit_flesh-2.wav", 1, ATTN_NORM );
+			else
+				EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/bhit_flesh-3.wav", 1, ATTN_NORM );
+		}
+		else
+			EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/bhit_kevlar-1.wav", 1, ATTN_NORM );
 		break;
 	}
 }
@@ -319,28 +401,18 @@ void CBasePlayer :: DeathSound( void )
 
 	ALERT( at_console, "CBasePlayer::DeathSound\n" );
 
-	// temporarily using pain sounds for death sounds
-	switch (RANDOM_LONG(1,5))
+	switch (RANDOM_LONG(1,3))
 	{
 	case 1:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain2.wav", 1, ATTN_NORM);
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/die1.wav", 1, ATTN_NORM);
 		break;
 	case 2:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain4.wav", 1, ATTN_NORM);
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/die2.wav", 1, ATTN_NORM);
 		break;
 	case 3:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain5.wav", 1, ATTN_NORM);
-		break;
-	case 4:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain6.wav", 1, ATTN_NORM);
-		break;
-	case 5:
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_pain7.wav", 1, ATTN_NORM);
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/die3.wav", 1, ATTN_NORM);
 		break;
 	}
-
-	// play one of the suit death alarms
-	EMIT_GROUPNAME_SUIT(ENT(pev), "HEV_DEAD");
 }
 
 // override takehealth
@@ -364,37 +436,80 @@ Vector CBasePlayer :: GetGunPosition( )
 //=========================================================
 void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType)
 {
-	ALERT( at_console, "CBasePlayer::TraceAttack\n" );
+	bool bShouldBleed = true;	// name ours
 
 	if ( pev->takedamage )
 	{
 		m_LastHitGroup = ptr->iHitgroup;
 
+		// Beta 3.0: the hit kicks the view by the damage, by where it struck;
+		// a hit where the kevlar is (head, body, arms) draws no blood
 		switch ( ptr->iHitgroup )
 		{
 		case HITGROUP_GENERIC:
 			break;
 		case HITGROUP_HEAD:
+			if ( m_iKevlar )
+				bShouldBleed = false;
 			flDamage *= 4;
+			pev->punchangle.x = flDamage * -0.5;
+			if ( pev->punchangle.x < -25 )
+				pev->punchangle.x = -25;
+			pev->punchangle.z = flDamage * RANDOM_FLOAT( -1, 1 );
+			if ( pev->punchangle.z < -20 )
+				pev->punchangle.z = -20;
+			else if ( pev->punchangle.z > 20 )
+				pev->punchangle.z = 20;
 			break;
 		case HITGROUP_CHEST:
+			if ( m_iKevlar )
+				bShouldBleed = false;
+			pev->punchangle.x = flDamage * -0.5;
+			if ( pev->punchangle.x < -10 )
+				pev->punchangle.x = -10;
 			break;
 		case HITGROUP_STOMACH:
+			if ( m_iKevlar )
+				bShouldBleed = false;
 			flDamage *= 1.25;
+			pev->punchangle.x = flDamage * -0.5;
+			if ( pev->punchangle.x < -10 )
+				pev->punchangle.x = -10;
 			break;
 		case HITGROUP_LEFTARM:
+			if ( m_iKevlar )
+				bShouldBleed = false;
+			pev->punchangle.z = flDamage * -0.5;
+			if ( pev->punchangle.z < -10 )
+				pev->punchangle.z = -10;
+			break;
 		case HITGROUP_RIGHTARM:
+			if ( m_iKevlar )
+				bShouldBleed = false;
+			pev->punchangle.z = flDamage * 0.5;
+			if ( pev->punchangle.z > 10 )
+				pev->punchangle.z = 10;
 			break;
 		case HITGROUP_LEFTLEG:
+			pev->punchangle.z = flDamage * -0.5;
+			if ( pev->punchangle.z < -10 )
+				pev->punchangle.z = -10;
+			break;
 		case HITGROUP_RIGHTLEG:
-			flDamage *= 0.75;
+			flDamage *= 0.75;	// sic: the left leg takes full damage
+			pev->punchangle.z = flDamage * 0.5;
+			if ( pev->punchangle.z > 15 )
+				pev->punchangle.z = 15;
 			break;
 		default:
 			break;
 		}
 
-		SpawnBlood(ptr->vecEndPos, BloodColor(), flDamage);// a little surface blood.
-		TraceBleed( flDamage, vecDir, ptr, bitsDamageType );
+		if ( bShouldBleed == true )
+		{
+			SpawnBlood(ptr->vecEndPos, BloodColor(), flDamage);// a little surface blood.
+			TraceBleed( flDamage, vecDir, ptr, bitsDamageType );
+		}
 		AddMultiDamage( pevAttacker, this, flDamage, bitsDamageType );
 	}
 }
@@ -406,12 +521,12 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 	etc are implemented with subsequent calls to TakeDamage using DMG_GENERIC.
 */
 
-#define ARMOR_RATIO	 0.4	// Armor Takes 80% of the damage (Counter-Strike Beta 2.0: 60%)
+#define ARMOR_RATIO	 0.5	// Armor Takes 80% of the damage (Counter-Strike Beta 2.0: 60%, 3.0: 50% unless the attacker's weapon says otherwise)
 #define ARMOR_BONUS  0.5	// Each Point of Armor is work 1/x points of health
 
 int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
 {
-	ALERT( at_console, "CBasePlayer::TakeDamage\n" );
+	ALERT( at_console, "%s\n", STRING( pevAttacker->classname ) );
 
 	// have suit diagnose the problem - ie: report damage type
 	int bitsDamage = bitsDamageType;
@@ -420,8 +535,8 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	int fcritical;
 	int fTookDamage;
 	int ftrivial;
-	float flRatio;
 	float flBonus;
+	float flRatio;
 	float flHealthPrev = pev->health;
 
 	flBonus = ARMOR_BONUS;
@@ -434,8 +549,6 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		// Refuse the damage
 		return 0;
 	}
-
-	Pain();
 
 	// slow the player down
 	m_flVelocityModifier = 0.35;
@@ -470,36 +583,100 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 
 		if ( pAttacker != this && pAttacker->m_iTeam != m_iTeam )
 			pAttacker->AddAccount( 10 );
+
+		// Beta 3.0: how much of the damage the armour lets through depends
+		// on the attacker's weapon, a multiple of ARMOR_RATIO
+		// (the multipliers are what the constant pool shows: VC5 folds
+		// 0.5 * 1.4 itself and keys the product at double precision, so
+		// the float 0.7 of PlayerUse's VIEW_FIELD_NARROW later gets an
+		// unreferenced pool entry of its own, as in retail; a literal
+		// flRatio = 0.7 shares one with it)
+		// (one case per weapon: the object's constants come in the order of
+		// their first use, M4A1's 0.775 first, the code in the order of the
+		// cases kept after VC5 merges equal ones, the later copy of each)
+		switch ( pAttacker->m_pActiveItem->m_iId )
+		{
+		case WEAPON_USP:	// the jump table starts at the USP: a case of its own, with nothing to change
+			break;
+		case WEAPON_M4A1:
+			flRatio *= 1.55;
+			break;
+		case WEAPON_AWP:
+			flRatio *= 1.95;
+			break;
+		case WEAPON_G3SG1:
+			flRatio *= 1.65;
+			break;
+		case WEAPON_M249:
+			flRatio *= 1.5;
+			break;
+		case WEAPON_DEAGLE:
+			flRatio *= 1.5;
+			break;
+		case WEAPON_AK47:
+			flRatio *= 1.65;
+			break;
+		case WEAPON_SG552:
+			flRatio *= 1.55;
+			break;
+		case WEAPON_GLOCK18:
+			flRatio *= 1.05;
+			break;
+		case WEAPON_M3:
+			flRatio *= 0.8;
+			break;
+		case WEAPON_P90:
+			flRatio *= 1.4;
+			break;
+		}
 	}
 
 	// keep track of amount of damage last sustained
 	m_lastDamageAmount = flDamage;
 
-	// Armor.
-	if (pev->armorvalue && !(bitsDamageType & (DMG_FALL | DMG_DROWN)) && ( m_LastHitGroup == HITGROUP_CHEST || m_LastHitGroup == HITGROUP_STOMACH || m_LastHitGroup == HITGROUP_GENERIC || m_LastHitGroup == HITGROUP_LEFTARM || m_LastHitGroup == HITGROUP_RIGHTARM ) )// armor doesn't protect against fall or drown damage!
+	// Armor: kevlar covers the body and the arms, kevlar and helmet the head too;
+	// a hit anywhere sounds like armour while there is armour left
+	if (pev->armorvalue && !(bitsDamageType & (DMG_FALL | DMG_DROWN)) )// armor doesn't protect against fall or drown damage!
 	{
-		float flNew = flDamage * flRatio;
-
-		float flArmor;
-
-		flArmor = (flDamage - flNew) * flBonus;
-
-		// Does this use more armor than we have?
-		if (flArmor > pev->armorvalue)
+		if ( ( m_iKevlar == 1 && ( m_LastHitGroup == HITGROUP_CHEST || m_LastHitGroup == HITGROUP_STOMACH || m_LastHitGroup == HITGROUP_GENERIC || m_LastHitGroup == HITGROUP_LEFTARM || m_LastHitGroup == HITGROUP_RIGHTARM ) ) ||
+			 ( m_iKevlar == 2 && ( m_LastHitGroup == HITGROUP_CHEST || m_LastHitGroup == HITGROUP_STOMACH || m_LastHitGroup == HITGROUP_GENERIC || m_LastHitGroup == HITGROUP_LEFTARM || m_LastHitGroup == HITGROUP_RIGHTARM || m_LastHitGroup == HITGROUP_HEAD ) ) )
 		{
-			flArmor = pev->armorvalue;
-			flArmor *= (1/flBonus);
-			flNew = flDamage - flArmor;
-			pev->armorvalue = 0;
+			float flNew = flDamage * flRatio;
+
+			float flArmor;
+
+			flArmor = (flDamage - flNew) * flBonus;
+
+			// Does this use more armor than we have?
+			if (flArmor > pev->armorvalue)
+			{
+				flArmor = pev->armorvalue;
+				flArmor *= (1/flBonus);
+				flNew = flDamage - flArmor;
+				pev->armorvalue = 0;
+			}
+			else
+				pev->armorvalue -= flArmor;
+
+			flDamage = flNew;
+
+			if ( pev->armorvalue <= 0.0 )
+				m_iKevlar = 0;
 		}
-		else
-			pev->armorvalue -= flArmor;
 
-		flDamage = flNew;
+		Pain( m_LastHitGroup, true );
 
-		if ( pev->armorvalue <= 0.0 )
-			m_fHasKevlar = FALSE;
+		// the attacker hears where he hit
+		if ( pevAttacker && !strcmp( STRING( pevAttacker->classname ), "player" ) )
+		{
+			if ( m_LastHitGroup == HITGROUP_HEAD )
+				ClientPrint( pevAttacker, HUD_PRINTTALK, "You hit a kevlar helmet" );
+			else
+				ClientPrint( pevAttacker, HUD_PRINTTALK, "You hit a kevlar vest" );
+		}
 	}
+	else
+		Pain( m_LastHitGroup, false );
 
 	// this cast to INT is critical!!! If a player ends up with 0.5 health, the engine will get that
 	// as an int (zero) and think the player is dead! (this will incite a clientside screentilt, etc)
@@ -620,8 +797,6 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 			ffound = TRUE;
 		}
 	}
-
-	pev->punchangle.x = -2;
 
 	if (fTookDamage && !ftrivial && fmajor && flHealthPrev >= 75) 
 	{
@@ -770,7 +945,7 @@ void CBasePlayer::PackDeadPlayerItems( void )
 	pWeaponBox->pev->angles.z = 0;
 
 	pWeaponBox->SetThink( CWeaponBox::Kill );
-	pWeaponBox->pev->nextthink = gpGlobals->time + 150;	// Beta 2.1 (2.0: 30)
+	pWeaponBox->pev->nextthink = gpGlobals->time + 300;	// Beta 3.0 (2.0: 30, 2.1: 150)
 
 	// the box shows the last weapon of the list (sic: not necessarily one that is packed)
 	switch ( iWeaponID )
@@ -810,6 +985,12 @@ void CBasePlayer::PackDeadPlayerItems( void )
 		break;
 	case WEAPON_USP:
 		SET_MODEL( ENT(pWeaponBox->pev), "models/w_usp.mdl" );
+		break;
+	case WEAPON_P90:
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_p90.mdl" );
+		break;
+	case WEAPON_KNIFE:
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_knife.mdl" );
 		break;
 	}
 
@@ -940,10 +1121,13 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 			pev->velocity = gpGlobals->v_forward * RANDOM_FLOAT( -100, -200 );
 			pev->velocity.z = RANDOM_FLOAT( 50, 100 );
 			break;
-		case 3:		// away from the attacker
-			UTIL_MakeVectors( pevAttacker->angles );
-			pev->velocity = gpGlobals->v_forward * RANDOM_FLOAT( 200, 300 );
-			pev->velocity.z = RANDOM_FLOAT( 200, 300 );
+		case 3:		// away from the attacker (Beta 3.0: only a player attacker)
+			if ( !strcmp( STRING( pevAttacker->classname ), "player" ) )
+			{
+				UTIL_MakeVectors( pevAttacker->angles );
+				pev->velocity = gpGlobals->v_forward * RANDOM_FLOAT( 200, 300 );
+				pev->velocity.z = RANDOM_FLOAT( 200, 300 );
+			}
 			break;
 		}
 
@@ -1148,19 +1332,6 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		switch ( m_LastHitGroup )
 		{
 		case HITGROUP_HEAD:
-			switch ( RANDOM_LONG( 0, 2 ) )
-			{
-			case 0:
-				EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/headshot1.wav", 1, ATTN_NORM);
-				break;
-			case 1:
-				EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/headshot2.wav", 1, ATTN_NORM);
-				break;
-			case 2:
-				EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/headshot3.wav", 1, ATTN_NORM);
-				break;
-			}
-
 			if ( m_fHeavyDamage == TRUE )
 				animDesired = LookupSequence( "flinch_head1" );
 			else
@@ -1245,13 +1416,39 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 			return;
 		m_Activity = m_IdealActivity;
 
-		m_iUnused158 = 0;
+		m_iUnused15C = 0;
 		m_iDeathThrow = 0;
 
 		// the death animation goes by where the last hit was
 		switch ( m_LastHitGroup )
 		{
 		case HITGROUP_GENERIC:
+			// Beta 3.0: one of five deaths at random
+			switch ( RANDOM_LONG( 0, 4 ) )
+			{
+			case 0:
+				animDesired = LookupSequence( "die_head1" );
+				m_iDeathThrow = 2;
+				break;
+			case 1:
+				m_iDeathThrow = 3;
+				animDesired = LookupSequence( "die_rightarm1" );
+				break;
+			case 2:
+				animDesired = LookupSequence( "die_legs1" );
+				break;
+			case 3:
+				animDesired = LookupSequence( "die_legs2" );
+				break;
+			case 4:
+				animDesired = LookupSequence( "die_backwards" );
+				m_iDeathThrow = 3;
+				break;
+			default:
+				animDesired = LookupSequence( "die_backwards" );
+				m_iDeathThrow = 3;
+				break;
+			}
 			break;
 
 		case HITGROUP_HEAD:
@@ -1628,6 +1825,7 @@ void CBasePlayer::ThrowPrimary( void )
 	ThrowWeapon( "weapon_awp" );
 	ThrowWeapon( "weapon_mp5navy" );
 	ThrowWeapon( "weapon_tmp" );
+	ThrowWeapon( "weapon_p90" );
 	ThrowWeapon( "weapon_m4a1" );
 	ThrowWeapon( "weapon_m3" );
 	ThrowWeapon( "weapon_sg552" );	// sic: not the AK-47
@@ -2586,6 +2784,17 @@ void CBasePlayer::PreThink(void)
 
 	if ( m_flVelocityModifier > 1.0 )
 		m_flVelocityModifier = 1;
+
+	// Beta 3.0: the trail the hostages follow, the position every 0.2 seconds
+	if ( m_flNextOldOrigin <= gpGlobals->time || m_flNextOldOrigin == 0.0 )
+	{
+		m_flNextOldOrigin = gpGlobals->time + 0.2;
+
+		for ( int i = 19; i > 0; i-- )
+			m_vecOldOrigins[i] = m_vecOldOrigins[i - 1];
+
+		m_vecOldOrigins[0] = pev->origin;
+	}
 
 	if ( g_pGameRules && g_pGameRules->FAllowFlashlight() )
 		m_iHideHUD &= ~HIDEHUD_FLASHLIGHT;
@@ -3645,7 +3854,7 @@ void CBasePlayer::Spawn( void )
 	if ( !m_fNotKilled )
 	{
 		pev->armorvalue		= 0;
-		m_fHasKevlar		= false;
+		m_iKevlar			= 0;
 		m_fHasNightVision	= false;
 	}
 
@@ -3671,8 +3880,16 @@ void CBasePlayer::Spawn( void )
 	m_flLastFired		= 0;
 	m_flAccuracy		= 0.8;
 	m_flNextBurstShot	= 0;
+	m_iLastZoom			= 90;	// here, after m_flNextBurstShot: retail's store order in Beta 2.0 (where after m_flLastSay gives the same code) and 3.0 (where it does not); next to m_iFOV, Beta 1.1's place, schedules the night vision test differently
 	m_flLastSay			= 0;
-	m_iLastZoom			= 90;	// Beta 2.0: here (after m_flNextBurstShot gives the same code; next to m_iFOV, Beta 1.1's place, schedules the night vision test differently)
+
+	// Beta 3.0: the hostages' trail starts afresh, and 60 radio messages a life
+	m_flNextOldOrigin	= 0;
+	m_flNextRadio		= 0;
+	m_iRadioMessages	= 60;
+
+	for ( int i = 0; i < 20; i++ )
+		m_vecOldOrigins[i] = Vector( 0, 0, 0 );
 
 	// the night vision goes off
 	if ( m_fNightVisionOn == true )
@@ -3792,6 +4009,11 @@ void CBasePlayer::Spawn( void )
 	}
 
 	g_engfuncs.pfnSetClientMaxspeed( ENT(pev), 260 );
+
+	// Beta 3.0: the AWP, the M249 and the G3/SG-1 slow their carrier down
+	// (sic: the active item is not checked for NULL)
+	if ( m_pActiveItem->m_iId == WEAPON_AWP || m_pActiveItem->m_iId == WEAPON_M249 || m_pActiveItem->m_iId == WEAPON_G3SG1 )
+		g_engfuncs.pfnSetClientMaxspeed( ENT(pev), 220 );
 }
 
 
@@ -3860,6 +4082,7 @@ void CBasePlayer :: Precache( void )
 	gmsgShake = REG_USER_MSG("ScreenShake", sizeof(ScreenShake));
 	gmsgFade = REG_USER_MSG("ScreenFade", sizeof(ScreenFade));
 	gmsgAmmoX = REG_USER_MSG("AmmoX", 2);
+	gmsgSendAudio = REG_USER_MSG( "SendAudio", -1 );
 
 	m_iUpdateTime = 5;  // won't update for 1/2 a second
 
@@ -4071,10 +4294,11 @@ BOOL CBasePlayer::HasWeapons( void )
 }
 
 //
-// HasPrimaryWeapon - does the player carry a weapon in one of the item slots 3
-// to 5 (the rifles, submachine guns, shotgun and machine gun)? (name ours)
+// HasPrimaryWeapons - does the player carry a weapon in one of the item slots 3
+// to 5 (the rifles, submachine guns, shotgun and machine gun)? (name from Beta
+// 3.1's Linux symbols, whose code is this one's)
 //
-bool CBasePlayer::HasPrimaryWeapon( void )
+bool CBasePlayer::HasPrimaryWeapons( void )
 {
 	for ( int i = 3 ; i <= 5 ; i++ )
 	{
@@ -5401,7 +5625,7 @@ void CBasePlayer::DropPlayerItem ( char *pszItemName )
 			pWeaponBox->pev->angles.x = 0;
 			pWeaponBox->pev->angles.z = 0;
 			pWeaponBox->SetThink( CWeaponBox::Kill );
-			pWeaponBox->pev->nextthink = gpGlobals->time + 30;
+			pWeaponBox->pev->nextthink = gpGlobals->time + 300;	// Beta 3.0 (2.0: 30)
 			pWeaponBox->PackWeapon( pWeapon );
 			pWeaponBox->pev->velocity = gpGlobals->v_forward * 300 + gpGlobals->v_forward * 100;
 
@@ -5438,11 +5662,17 @@ void CBasePlayer::DropPlayerItem ( char *pszItemName )
 			case WEAPON_SG552:
 				SET_MODEL( ENT(pWeaponBox->pev), "models/w_sg552.mdl" );
 				break;
+			case WEAPON_P90:
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_p90.mdl" );
+				break;
 			case WEAPON_TMP:
 				SET_MODEL( ENT(pWeaponBox->pev), "models/w_tmp.mdl" );
 				break;
 			case WEAPON_USP:
 				SET_MODEL( ENT(pWeaponBox->pev), "models/w_usp.mdl" );
+				break;
+			case WEAPON_KNIFE:
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_knife.mdl" );
 				break;
 			}
 			

@@ -95,6 +95,7 @@ int CDEAGLE::GetItemInfo(ItemInfo *p)
 BOOL CDEAGLE::Deploy( )
 {
 	m_pPlayer->m_flAccuracy = 0.875;
+	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 260 );
 
 	return DefaultDeploy( "models/v_deagle.mdl", "models/p_deagle.mdl", DEAGLE_DRAW, "onehanded" );
 }
@@ -212,7 +213,7 @@ void CDEAGLE::DEAGLEFire( float flSpread , float flCycleTime, BOOL fUseSemi )
 
 	vecAiming = gpGlobals->v_forward;
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 2, BULLET_PLAYER_50AE, 60, 0.8, NULL, true );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 2, BULLET_PLAYER_50AE, 54, 0.8, NULL, true );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)

@@ -104,6 +104,7 @@ int CUSP::GetItemInfo(ItemInfo *p)
 BOOL CUSP::Deploy( )
 {
 	m_pPlayer->m_flAccuracy = 0.98;
+	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 260 );
 
 	if (RANDOM_LONG(0,1))
 		return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_DRAW, "tmp" );
@@ -187,9 +188,9 @@ void CUSP::USPFire( float flSpread , float flCycleTime, BOOL fUseSemi )
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
 	Vector	vecShellVelocity = m_pPlayer->pev->velocity
-							 + gpGlobals->v_right * RANDOM_FLOAT(50,70)
-							 + gpGlobals->v_up * RANDOM_FLOAT(100,150)
-							 + gpGlobals->v_forward * 25;
+							 + gpGlobals->v_right * RANDOM_FLOAT(40,150)
+							 + gpGlobals->v_up * RANDOM_FLOAT(100,260)
+							 + gpGlobals->v_forward * RANDOM_FLOAT(-100,100);
 	EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 32 - gpGlobals->v_right * 12 , vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
 
 	// silenced
@@ -201,10 +202,10 @@ void CUSP::USPFire( float flSpread , float flCycleTime, BOOL fUseSemi )
 		switch(RANDOM_LONG(0,1))
 		{
 		case 0:
-			EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/usp1.wav", RANDOM_FLOAT(0.9, 1.0), ATTN_NORM);
+			EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/usp1.wav", RANDOM_FLOAT(0.5, 0.6), ATTN_NORM);
 			break;
 		case 1:
-			EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/usp2.wav", RANDOM_FLOAT(0.9, 1.0), ATTN_NORM);
+			EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/usp2.wav", RANDOM_FLOAT(0.5, 0.6), ATTN_NORM);
 			break;
 		}
 	}

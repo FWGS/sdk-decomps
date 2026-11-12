@@ -94,6 +94,10 @@
 // with one more function than the image holds, which nothing called.
 int b20_unknown( int a, float b );
 
+// sic: a stand-in, name ours.  Beta 3.0's headers declared one
+// symbol more ahead of class CHud than Beta 2.0's and the code in the image account for.
+extern int b30_unknown;
+
 typedef struct
 {
 	float fExpire;

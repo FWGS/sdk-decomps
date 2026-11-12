@@ -98,6 +98,7 @@ int CFlashbang::GetItemInfo(ItemInfo *p)
 BOOL CFlashbang::Deploy( )
 {
 	m_flReleaseThrow = -1;
+	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 260 );
 	return DefaultDeploy( "models/v_flashbang.mdl", "models/p_flashbang.mdl", FLASHBANG_DEPLOY, "crowbar" );
 }
 
@@ -167,6 +168,7 @@ void CFlashbang::WeaponIdle( void )
 		if (time < 0)
 			time = 0;
 
+		m_pPlayer->Radio( "fireinhole" );
 		CGrenade::ShootTimed( m_pPlayer->pev, vecSrc, vecThrow, time );
 
 		SendWeaponAnim( FLASHBANG_THROW );

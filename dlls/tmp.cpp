@@ -89,6 +89,10 @@ int CTMP::GetItemInfo(ItemInfo *p)
 
 BOOL CTMP::Deploy( )
 {
+	m_pPlayer->m_flAccuracy = 0.95;
+	m_fEjectShell = 1;
+	m_fDelayFire = false;
+	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 260 );
 	return DefaultDeploy( "models/v_tmp.mdl", "models/p_tmp.mdl", TMP_DRAW, "tmp" );
 }
 
@@ -98,23 +102,23 @@ void CTMP::SecondaryAttack( void )
 
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.05;
-		TMPFire( flSpread, 0.075, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.11;
+		TMPFire( flSpread, 0.07, FALSE );
 	}
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.12;
-		TMPFire( flSpread, 0.075, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.16;
+		TMPFire( flSpread, 0.07, FALSE );
 	}
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
 	{
 		flSpread = m_pPlayer->m_flAccuracy * 0.03;
-		TMPFire( flSpread, 0.075, FALSE );
+		TMPFire( flSpread, 0.07, FALSE );
 	}
 	else
 	{
 		flSpread = m_pPlayer->m_flAccuracy * 0.035;
-		TMPFire( flSpread, 0.075, FALSE );
+		TMPFire( flSpread, 0.07, FALSE );
 	}
 }
 
@@ -124,23 +128,23 @@ void CTMP::PrimaryAttack( void )
 
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.05;
-		TMPFire( flSpread, 0.075, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.11;
+		TMPFire( flSpread, 0.07, FALSE );
 	}
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.12;
-		TMPFire( flSpread, 0.075, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.16;
+		TMPFire( flSpread, 0.07, FALSE );
 	}
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
 	{
 		flSpread = m_pPlayer->m_flAccuracy * 0.03;
-		TMPFire( flSpread, 0.075, FALSE );
+		TMPFire( flSpread, 0.07, FALSE );
 	}
 	else
 	{
 		flSpread = m_pPlayer->m_flAccuracy * 0.035;
-		TMPFire( flSpread, 0.075, FALSE );
+		TMPFire( flSpread, 0.075, FALSE );	// sic: standing, the primary keeps Beta 2.1's 0.075 s
 	}
 }
 
@@ -148,10 +152,10 @@ void CTMP::TMPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 {
 	// the spread grows with the cube of the shots fired
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.55;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 175) + 0.55;
 
-	if (m_pPlayer->m_flAccuracy > 2)
-		m_pPlayer->m_flAccuracy = 2;
+	if (m_pPlayer->m_flAccuracy > 1.8)
+		m_pPlayer->m_flAccuracy = 1.8;
 
 	if (m_iClip <= 0)
 	{
@@ -196,9 +200,9 @@ void CTMP::TMPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
 
 	if (RANDOM_LONG(0,1))
-		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/tmp-1.wav", 0.6, ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/tmp-1.wav", 0.6, ATTN_NORM);
 	else
-		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/tmp-2.wav", 0.6, ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/tmp-2.wav", 0.6, ATTN_NORM);
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
@@ -246,6 +250,6 @@ void CTMP::WeaponIdle( void )
 	if (m_flTimeWeaponIdle > gpGlobals->time)
 		return;
 
-	// sic: m_flTimeWeaponIdle is not renewed, so once it has passed every call sends the idle animation again
+	m_flTimeWeaponIdle = gpGlobals->time + 20;
 	SendWeaponAnim( TMP_IDLE1 );
 }

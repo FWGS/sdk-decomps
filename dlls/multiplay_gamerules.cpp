@@ -33,20 +33,32 @@ extern int gmsgDeathMsg;	// client dll messages
 extern int gmsgScoreInfo;
 extern int gmsgMOTD;
 extern int gmsgTeamScore;
-
-// sic: a stand-in for declarations retail had between the headers and
-// GetNextBestWeapon (locals, externs, prototypes: the image cannot say which).
-// VC5 orders the two iWeight() calls there by the number of declarations
-// seen. Beta 1.0 and 1.1:
-// a typedef (1 to 13 more give retail's order). Beta 2.0, with its known text
-// (extern gmsgTeamScore, RestartRound's loop counter) and the 6 numbers of
-// cbase.h's sic_declcount_b20: 2 to 4 (or 6 to 8, 10 to 12, ...) more than
-// the typedef here give retail's order; this enum is 3 (tag, two enumerators).
-enum sic_declcount_multiplay { SIC_DECLCOUNT_MULTIPLAY_0, SIC_DECLCOUNT_MULTIPLAY_1 };
+extern int gmsgSendAudio;
 
 #define ITEM_RESPAWN_TIME	30
 #define WEAPON_RESPAWN_TIME	20
 #define AMMO_RESPAWN_TIME	20
+
+//=========================================================
+// Broadcast - Beta 3.0: the radio sentence !MRAD_<sentence>
+// to every client (name from the later versions' Linux
+// symbols)
+//=========================================================
+void Broadcast( const char *sentence )
+{
+	char text[32];
+
+	if ( !sentence )
+		return;
+
+	strcpy( text, "%!MRAD_" );
+	strcat( text, UTIL_VarArgs( "%s", sentence ) );
+
+	MESSAGE_BEGIN( MSG_ALL, gmsgSendAudio );
+		WRITE_BYTE( 0 );
+		WRITE_STRING( text );
+	MESSAGE_END();
+}
 
 //*********************************************************
 // Rules for the half-life multiplayer game.
@@ -66,6 +78,8 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 	m_iRoundWinStatus = 0;
 	m_iNumCTWins = 0;
 	m_iNumTerroristWins = 0;
+	m_pCTCommander = NULL;
+	m_pTerroristCommander = NULL;
 	
 	// 11/8/98
 	// Modified by YWB:  Server .cfg file is now a cvar, so that 
@@ -174,6 +188,61 @@ void CHalfLifeMultiplay::CleanUpMap( void )
 }
 
 //=========================================================
+// PickNewCommander - the team's players in turn are
+// made its commander, each kept with a chance of one in
+// three; the one kept is told (name from the later versions'
+// Linux symbols). With no one kept, the last one tried stays
+// commander without being told.
+//=========================================================
+void CHalfLifeMultiplay::PickNewCommander( int iTeam )
+{
+	CBaseEntity *pPlayer = NULL;
+
+	if ( iTeam == TEAM_CT )
+		m_pCTCommander = NULL;
+	else
+		m_pTerroristCommander = NULL;
+
+	pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
+	{
+		if ( pPlayer->IsPlayer() && pPlayer->pev->flags != FL_DORMANT )
+		{
+			CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+
+			if ( pPlayer )
+			{
+				if ( iTeam == TEAM_TERRORIST )
+				{
+					if ( player->m_iTeam == TEAM_TERRORIST )
+					{
+						m_pTerroristCommander = player;
+						if ( RANDOM_LONG( 0, 2 ) == 0 )
+						{
+							ClientPrint( player->pev, HUD_PRINTCENTER, "You are the new commander\n" );
+							return;
+						}
+					}
+				}
+				else if ( iTeam == TEAM_CT )
+				{
+					if ( player->m_iTeam == TEAM_CT )
+					{
+						m_pCTCommander = player;
+						if ( RANDOM_LONG( 0, 2 ) == 0 )
+						{
+							ClientPrint( player->pev, HUD_PRINTCENTER, "You are the new commander\n" );
+							return;
+						}
+					}
+				}
+			}
+		}
+		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	}
+}
+
+//=========================================================
 // CheckWinConditions - counts the living and the dead of both
 // teams; a team with nobody left alive loses the round, and
 // the next one starts five seconds later.
@@ -233,6 +302,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 		m_iRoundWinStatus = 1;
 		m_iAccountCT = 500;
 		UTIL_ClientPrintAll( HUD_PRINTCENTER, "Counter-Terrorists Won!\n" );
+		Broadcast( "ctwin" );
 
 		m_iNumCTWins++;
 		MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
@@ -245,6 +315,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 		m_iRoundWinStatus = 2;
 		m_iAccountTerrorist = 500;
 		UTIL_ClientPrintAll( HUD_PRINTCENTER, "Terrorists Won!\n" );
+		Broadcast( "terwin" );
 
 		m_iNumTerroristWins++;
 		MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
@@ -281,6 +352,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 void CHalfLifeMultiplay::RestartRound( void )
 {
 	CBaseEntity *pHostage = NULL;
+	char szSound[32];	// name ours
 
 	// the kick votes start afresh
 	for ( int i = 0; i < 20; i++ )
@@ -311,6 +383,20 @@ void CHalfLifeMultiplay::RestartRound( void )
 		m_iAccountTerrorist += 800;
 
 	m_iAccountCT += m_iHostagesRescued * 350;
+
+	// Beta 3.0: the round starts with one of three radio calls (was radio/go.wav)
+	switch ( RANDOM_LONG( 0, 2 ) )
+	{
+	case 0:
+		strcpy( szSound, "radio/moveout.wav" );
+		break;
+	case 1:
+		strcpy( szSound, "radio/letsgo.wav" );
+		break;
+	case 2:
+		strcpy( szSound, "radio/locknload.wav" );
+		break;
+	}
 
 	CBaseEntity *pPlayer = NULL;
 
@@ -343,10 +429,14 @@ void CHalfLifeMultiplay::RestartRound( void )
 				respawn( pPlayer->pev, FALSE );
 			}
 
-			EMIT_SOUND( ENT(player->pev), CHAN_VOICE, "radio/go.wav", 1, ATTN_NORM );
+			EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, szSound, 1, ATTN_NORM );
 		}
 		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
 	}
+
+	// Beta 3.0: both teams get a new commander
+	PickNewCommander( TEAM_TERRORIST );
+	PickNewCommander( TEAM_CT );
 
 	m_flIntermissionEndTime = 0;
 	m_flRestartRoundTime = 0;
@@ -388,8 +478,8 @@ void CHalfLifeMultiplay :: Think ( void )
 		return;
 	}
 
-	// a round lasts 385 seconds at most (the client's timer counts down 390)
-	if ( gpGlobals->time > m_flRoundStartTime + 385.0 )
+	// a round lasts 294 seconds at most (Beta 2.0 and 2.1: 385, the client's timer counting down 390)
+	if ( gpGlobals->time > m_flRoundStartTime + 294.0 )
 	{
 		m_iRoundWinStatus = 3;
 		m_flRestartRoundTime = gpGlobals->time + 5.0;
@@ -602,6 +692,11 @@ void CHalfLifeMultiplay :: ClientDisconnected( edict_t *pClient )
 			UTIL_LogPrintf( "\"%s<%i>\" disconnected\n",  STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ) );
 
 			pPlayer->RemoveAllItems( TRUE );// destroy all of the players weapons and items
+
+			// Beta 3.0: a counter-terrorist leaving makes the CTs pick a new
+			// commander (sic: whoever he was, and not so for a terrorist)
+			if ( pPlayer->m_iTeam == TEAM_CT )
+				PickNewCommander( TEAM_CT );
 		}
 	}
 
@@ -612,10 +707,11 @@ void CHalfLifeMultiplay :: ClientDisconnected( edict_t *pClient )
 //=========================================================
 float CHalfLifeMultiplay :: FlPlayerFallDamage( CBasePlayer *pPlayer )
 {
-	// always progressive now, at twice the single-player rate; mp_falldamage is no longer read
+	// always progressive now, at 1.25 times the single-player rate (Beta 1.1 to 2.1:
+	// twice); mp_falldamage is no longer read
 	pPlayer->m_flFallVelocity -= PLAYER_MAX_SAFE_FALL_SPEED;
 	ALERT( at_console, "speed = %f\n", pPlayer->m_flFallVelocity );
-	return pPlayer->m_flFallVelocity * DAMAGE_FOR_FALL_SPEED * 2;
+	return pPlayer->m_flFallVelocity * DAMAGE_FOR_FALL_SPEED * 1.25;
 } 
 
 //=========================================================
@@ -670,13 +766,19 @@ void CHalfLifeMultiplay :: PlayerSpawn( CBasePlayer *pPlayer )
 		addDefault = FALSE;
 	}
 
+	// Beta 3.0: a survivor of the last round keeps what he has
+	if ( pPlayer->m_fNotKilled == true )
+		addDefault = FALSE;
+
 	if ( pPlayer->m_iTeam == TEAM_CT && addDefault )
 	{
+		pPlayer->GiveNamedItem( "weapon_knife" );
 		pPlayer->GiveNamedItem( "weapon_usp" );
 		pPlayer->GiveAmmo( 12, "45acp", USP_MAX_CARRY );
 	}
 	else if ( pPlayer->m_iTeam == TEAM_TERRORIST && addDefault )
 	{
+		pPlayer->GiveNamedItem( "weapon_knife" );
 		pPlayer->GiveNamedItem( "weapon_glock18" );
 		pPlayer->GiveAmmo( 20, "9mm", GLOCK18_MAX_CARRY );
 	}
@@ -697,6 +799,10 @@ void CHalfLifeMultiplay :: PlayerSpawn( CBasePlayer *pPlayer )
 	case 2:
 		CLIENT_COMMAND( pPlayer->edict(), "model arab\n" );
 		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "model", "arab" );
+		break;
+	case 3:
+		CLIENT_COMMAND( pPlayer->edict(), "model gsg9\n" );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "model", "gsg9" );
 		break;
 	default:
 		CLIENT_COMMAND( pPlayer->edict(), "model urban\n" );
@@ -744,11 +850,21 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 	pVictim->m_iDeaths += 1;
 	pVictim->m_fNotKilled = false;
 
+	// Beta 3.0: the victim's team mates hear it on the radio; a dead
+	// counter-terrorist makes the CTs pick a new commander (sic: whoever
+	// he was, and not so for a terrorist)
+	pVictim->Radio( "MATEDOWN" );
+	if ( pVictim->m_iTeam == TEAM_CT )
+		PickNewCommander( TEAM_CT );
+
 	FireTargets( "game_playerdie", pVictim, pVictim, USE_TOGGLE, 0 );
 	CBasePlayer *peKiller = NULL;
 	CBaseEntity *ktmp = CBaseEntity::Instance( pKiller );
 	if ( ktmp && (ktmp->Classify() == CLASS_PLAYER) )
+	{
 		peKiller = (CBasePlayer*)ktmp;
+		peKiller->Radio( "ENEMYDOWN" );	// Beta 3.0: and the killer's
+	}
 
 	if ( pVictim->pev == pKiller )  
 	{  // killed self

@@ -223,7 +223,7 @@ int CHudHealth::Draw(float flTime)
 		x = CrossWidth + HealthWidth / 2;
 
 		// round timer
-		int iTimeLeft = 390 - (int)(flTime - m_flRoundStart);
+		int iTimeLeft = 300 - (int)(flTime - m_flRoundStart);
 		if ( iTimeLeft < 0 )
 			iTimeLeft = 0;
 

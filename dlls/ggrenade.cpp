@@ -28,6 +28,167 @@
 #include "decals.h"
 
 
+//===================debris
+
+// Counter-Strike Beta 3.0: the concussion grenade's shrapnel, the SDK's
+// crossbow bolt (crossbow.cpp) made into a bouncing fragment. Beta 3.1's
+// Linux library has these functions in this file (and an empty debris.cpp).
+// Member names after m_iTrail are ours.
+class CDebris : public CBaseEntity
+{
+	void Spawn( void );
+	void Precache( void );
+	int  Classify ( void );
+	void EXPORT BubbleThink( void );
+	void EXPORT BoltTouch( CBaseEntity *pOther );
+
+	int m_iTrail;
+	int m_iBounces;		// times it hit something that takes no damage; it stops making sparks and sounds at the fourth
+	float m_flDamage;	// 30 at first, three quarters of it after each bounce
+
+public:
+	static CDebris *BoltCreate( void );
+};
+LINK_ENTITY_TO_CLASS( debris, CDebris );
+
+CDebris *CDebris::BoltCreate( void )
+{
+	// Create a new entity with CDebris private data
+	CDebris *pBolt = GetClassPtr( (CDebris *)NULL );
+	pBolt->pev->classname = MAKE_STRING("debris");
+	pBolt->Spawn();
+
+	return pBolt;
+}
+
+void CDebris::Spawn( )
+{
+	Precache( );
+	pev->movetype = MOVETYPE_BOUNCE;
+	pev->solid = SOLID_BBOX;
+
+	pev->gravity = 0.5;
+	m_flDamage = 30;
+	m_iBounces = 0;
+
+	SET_MODEL(ENT(pev), "models/shrapnel.mdl");
+
+	UTIL_SetOrigin( pev, pev->origin );
+	UTIL_SetSize(pev, Vector(0, 0, 0), Vector(0, 0, 0));
+
+	SetTouch( BoltTouch );
+	SetThink( SUB_Remove );
+	pev->nextthink = gpGlobals->time + 2;
+}
+
+
+void CDebris::Precache( )
+{
+	PRECACHE_MODEL ("models/shrapnel.mdl");
+	PRECACHE_SOUND("weapons/xbow_hitbod1.wav");
+	PRECACHE_SOUND("weapons/xbow_hitbod2.wav");
+	PRECACHE_SOUND("weapons/xbow_fly1.wav");
+	PRECACHE_SOUND("weapons/xbow_hit1.wav");
+	PRECACHE_SOUND("weapons/ric1.wav");
+	PRECACHE_SOUND("weapons/ric2.wav");
+	PRECACHE_SOUND("weapons/ric3.wav");
+	PRECACHE_SOUND("weapons/ric4.wav");
+	PRECACHE_SOUND("weapons/ric5.wav");
+	PRECACHE_SOUND("fvox/beep.wav");
+	m_iTrail = PRECACHE_MODEL("sprites/streak.spr");
+}
+
+
+int	CDebris :: Classify ( void )
+{
+	return	CLASS_NONE;
+}
+
+void CDebris::BoltTouch( CBaseEntity *pOther )
+{
+	if (pOther->pev->takedamage)
+	{
+		ALERT( at_console, "1\n" );
+		TraceResult tr = UTIL_GetGlobalTrace( );
+		entvars_t	*pevOwner;
+
+		pevOwner = VARS( pev->owner );
+		ALERT( at_console, "2\n" );
+
+		// UNDONE: this needs to call TraceAttack instead
+		ClearMultiDamage( );
+
+		if ( pOther->IsPlayer() )
+		{
+			ALERT( at_console, "3\n" );
+			pOther->TraceAttack(pevOwner, m_flDamage, pev->velocity.Normalize(), &tr, DMG_BULLET | DMG_NEVERGIB ); 
+		}
+		else
+		{
+			ALERT( at_console, "4\n" );
+			pOther->TraceAttack(pevOwner, m_flDamage, pev->velocity.Normalize(), &tr, DMG_BULLET | DMG_NEVERGIB ); 
+		}
+
+		ApplyMultiDamage( pev, pevOwner );
+
+		pev->velocity = Vector( 0, 0, 0 );
+		// play body "thwack" sound
+		switch( RANDOM_LONG(0,1) )
+		{
+		case 0:
+			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/xbow_hitbod1.wav", 1, ATTN_NORM); break;
+		case 1:
+			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/xbow_hitbod2.wav", 1, ATTN_NORM); break;
+		}
+
+		Killed( pev, GIB_NEVER );
+	}
+	else
+	{
+		m_iBounces++;
+		if ( m_iBounces < 4 )
+		{
+			switch ( RANDOM_LONG( 0, 4 ) )
+			{
+			case 0:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, "weapons/ric1.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,7));
+				break;
+			case 1:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, "weapons/ric2.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,7));
+				break;
+			case 2:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, "weapons/ric3.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,7));
+				break;
+			case 3:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, "weapons/ric4.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,7));
+				break;
+			case 4:
+				EMIT_SOUND_DYN(ENT(pev), CHAN_WEAPON, "weapons/ric5.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,7));
+				break;
+			}
+
+			pev->velocity = pev->velocity * 0.75;
+			m_flDamage *= 0.75;
+
+			if (UTIL_PointContents(pev->origin) != CONTENTS_WATER)
+			{
+				UTIL_Sparks( pev->origin );
+			}
+		}
+	}
+}
+
+void CDebris::BubbleThink( void )
+{
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	if (pev->waterlevel == 0)
+		return;
+
+	UTIL_BubbleTrail( pev->origin - pev->velocity * 0.1, pev->origin, 1 );
+}
+
+
 //===================grenade
 
 
@@ -64,6 +225,63 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 	}
 
 	int iContents = UTIL_PointContents ( pev->origin );
+
+	// Beta 3.0: the concussion grenade throws seven pieces of shrapnel
+	// (CDebris) around the horizon: ahead, behind, right, left, ahead,
+	// behind, right of its own angles, each a little off at random
+	UTIL_MakeVectors( pev->angles );
+
+	Vector vecForward = gpGlobals->v_forward;		// names ours
+	Vector vecBack = gpGlobals->v_forward * -1;
+	Vector vecLeft = gpGlobals->v_right * -1;
+	Vector vecRight = gpGlobals->v_right;
+	Vector vecDir;
+
+	for ( int i = 1; i <= 7; i++ )
+	{
+		switch ( i )
+		{
+		case 1:
+			vecDir = vecForward;
+			break;
+		case 2:
+			vecDir = vecBack;
+			break;
+		case 3:
+			vecDir = vecRight;
+			break;
+		case 4:
+			vecDir = vecLeft;
+			break;
+		case 5:
+			vecDir = vecForward;
+			break;
+		case 6:
+			vecDir = vecBack;
+			break;
+		case 7:
+			vecDir = vecRight;
+			break;
+		}
+
+		float x, y, z;
+		do {
+			x = RANDOM_FLOAT( -10, 16 ) + RANDOM_FLOAT( -10, 16 );
+			y = RANDOM_FLOAT( -16, 10 ) + RANDOM_FLOAT( -16, 10 );
+			z = x*x+y*y;
+		} while ( z > 1 );
+
+		Vector vecSpread = Vector( 1, 1, 1 );
+		vecDir = vecDir + x * vecSpread.x * vecRight + y * vecSpread.y * gpGlobals->v_up;
+
+		CDebris *pDebris = CDebris::BoltCreate();
+		pDebris->pev->owner = ENT( pev );
+		pDebris->pev->origin = pev->origin + vecDir * 5;
+		pDebris->pev->angles = pev->angles;
+		pDebris->pev->velocity = vecDir * RANDOM_LONG( 800, 1100 );
+		pDebris->pev->velocity.z = RANDOM_LONG( 150, 550 );
+		pDebris->pev->speed = 950;
+	}
 	
 /*
 	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
@@ -141,7 +359,7 @@ void CGrenade::Smoke( void )
 			WRITE_COORD( pev->origin.y );
 			WRITE_COORD( pev->origin.z );
 			WRITE_SHORT( g_sModelIndexSmoke );
-			WRITE_BYTE( (pev->dmg - 50) * 0.80 ); // scale * 10
+			WRITE_BYTE( 25 ); // scale * 10 (Beta 3.0; was (pev->dmg - 50) * 0.80)
 			WRITE_BYTE( 6  ); // framerate
 		MESSAGE_END();
 	}
@@ -354,7 +572,7 @@ void CGrenade:: Spawn( void )
 	SET_MODEL(ENT(pev), "models/grenade.mdl");
 	UTIL_SetSize(pev, Vector( 0, 0, 0), Vector(0, 0, 0));
 
-	pev->dmg = 100;
+	pev->dmg = 30;	// Beta 3.0 (was 100)
 	m_fRegisteredSound = FALSE;
 }
 
@@ -392,7 +610,7 @@ CGrenade * CGrenade:: ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector v
 	pGrenade->Spawn();
 	UTIL_SetOrigin( pGrenade->pev, vecStart );
 	pGrenade->pev->velocity = vecVelocity;
-	pGrenade->pev->angles = UTIL_VecToAngles(pGrenade->pev->velocity);
+	pGrenade->pev->angles = pevOwner->angles;	// Beta 3.0: the thrower's angles (was the flight direction)
 	pGrenade->pev->owner = ENT(pevOwner);
 	
 	pGrenade->SetTouch( BounceTouch );	// Bounce if touched
@@ -420,7 +638,7 @@ CGrenade * CGrenade:: ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector v
 	pGrenade->pev->friction = 0.8;
 
 	SET_MODEL(ENT(pGrenade->pev), "models/w_flashbang.mdl");
-	pGrenade->pev->dmg = 100;
+	pGrenade->pev->dmg = 35;	// Beta 3.0 (was 100)
 
 	return pGrenade;
 }

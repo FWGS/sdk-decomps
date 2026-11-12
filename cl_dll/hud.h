@@ -340,7 +340,9 @@ public:
 	int VidInit( void );
 	int Draw( float flTime );
 	int MsgFunc_SayText( const char *pszName, int iSize, void *pbuf );
+	int MsgFunc_SendAudio( const char *pszName, int iSize, void *pbuf );
 	void SayTextPrint( const char *pszBuf, int iBufSize );
+	void SendAudioPlay( const char *pszBuf, int iBufSize );	// name ours
 	void EnsureTextFitsInOneLineAndWrapIfHaveTo( int line );
 };
 

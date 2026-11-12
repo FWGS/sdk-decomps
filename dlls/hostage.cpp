@@ -54,6 +54,7 @@ void CHostage::Spawn( void )
 	m_hTargetEnt = NULL;
 	m_flFollowDistance = 128;
 	m_flFlinchTime = 0;
+	m_vecPath[0] = Vector( 0, 0, 0 );	// Beta 3.0
 
 	UTIL_SetSize( pev, Vector( -16, -16, 0 ), Vector( 16, 16, 72 ) );
 	UTIL_MakeVectors( pev->v_angle );
@@ -85,7 +86,7 @@ void CHostage::SetActivity( int activity )
 {
 	int iSequence = LookupActivity( activity );
 
-	if ( pev->sequence != iSequence )
+	if ( iSequence != -1 && pev->sequence != iSequence )	// Beta 3.0: a missing activity changes nothing
 	{
 		pev->gaitsequence = iSequence;
 		pev->sequence = iSequence;
@@ -122,7 +123,10 @@ void CHostage::IdleThink( void )
 	{
 		// the leader is dead: nobody to follow
 		if ( m_hTargetEnt != NULL && m_hTargetEnt->pev->deadflag != DEAD_NO )
+		{
+			m_fStopped = 2;
 			m_hTargetEnt = NULL;
+		}
 
 		if ( m_hTargetEnt != NULL && ( pev->origin - m_hTargetEnt->pev->origin ).Length() < 1024 && m_fStopped == FALSE )
 		{
@@ -134,10 +138,18 @@ void CHostage::IdleThink( void )
 			pev->angles.x = 0;
 			pev->angles.z = 0;
 
+			// Beta 3.0: with a wall between, follow the leader's trail (m_fStopped 6)
+			UTIL_TraceLine( pev->origin + gpGlobals->v_up * 25, pev->origin + vecDir * 2048 + gpGlobals->v_up * 25, dont_ignore_monsters, ENT( pev ), &tr );
+			if ( VARS( tr.pHit )->solid == SOLID_BSP )
+			{
+				m_fStopped = 6;
+				return;
+			}
+
 			if ( vecDir.Length() > m_flFollowDistance )
 			{
-				pev->velocity = vecDir / vecDir.Length() * 340;
-				pev->velocity.z -= 50;
+				pev->velocity = vecDir / vecDir.Length() * 310;
+				pev->velocity.z -= 40;
 			}
 
 			// blocked at the feet but free higher up: jump
@@ -147,10 +159,7 @@ void CHostage::IdleThink( void )
 			{
 				UTIL_TraceLine( pev->origin + gpGlobals->v_up * 25 - gpGlobals->v_forward * 32, pev->origin + gpGlobals->v_forward * 100 + gpGlobals->v_up * 25, ignore_monsters, ENT( pev ), &tr );
 				if ( tr.flFraction == 1.0 )
-				{
-					ALERT( at_console, "There's something at my feet!\n" );
 					pev->velocity.z = 150;
-				}
 			}
 		}
 		else if ( m_hTargetEnt != NULL && ( pev->origin - m_hTargetEnt->pev->origin ).Length() < 200 && m_fStopped == TRUE )
@@ -166,7 +175,7 @@ void CHostage::IdleThink( void )
 			if ( vecDir.Length() > m_flFollowDistance )
 			{
 				pev->velocity = vecDir / vecDir.Length() * 110;
-				pev->velocity.z -= 50;
+				pev->velocity.z -= 40;
 			}
 
 			UTIL_MakeVectors( pev->angles );
@@ -175,9 +184,87 @@ void CHostage::IdleThink( void )
 			{
 				UTIL_TraceLine( pev->origin + gpGlobals->v_up * 25 - gpGlobals->v_forward * 32, pev->origin + gpGlobals->v_forward * 100 + gpGlobals->v_up * 25, ignore_monsters, ENT( pev ), &tr );
 				if ( tr.flFraction == 1.0 )
-				{
-					ALERT( at_console, "There's something at my feet!\n" );
 					pev->velocity.z = 150;
+			}
+		}
+		else if ( m_fStopped == 6 && m_hTargetEnt != NULL )
+		{
+			// Beta 3.0: the leader is out of sight; walk along his trail
+			if ( m_hTargetEnt->IsPlayer() && m_vecPath[0] == Vector( 0, 0, 0 ) )
+			{
+				// take over the leader's last 20 positions and start at the nearest
+				CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)m_hTargetEnt->pev );
+
+				for ( int i = 0; i < 20; i++ )
+					m_vecPath[i] = pPlayer->m_vecOldOrigins[i];
+
+				TraceResult tr;
+				Vector vecDir;
+				float flNearest = 99999;	// name ours
+
+				for ( i = 0; i <= 19; i++ )	// "<= 19": retail compares with 19 here, with 20 in the loop above
+				{
+					vecDir = m_vecPath[i] - pev->origin;
+					if ( vecDir.Length() < flNearest )
+					{
+						flNearest = vecDir.Length();
+						m_iPathIndex = i;
+					}
+				}
+			}
+			else
+			{
+				if ( !m_hTargetEnt->IsPlayer() )
+				{
+					m_fStopped = 2;
+					return;
+				}
+
+				UTIL_MakeVectors( pev->angles );
+
+				Vector vecDir = m_vecPath[ m_iPathIndex ] + gpGlobals->v_up * -15 - pev->origin;
+				Vector vecLeader = m_hTargetEnt->pev->origin - pev->origin;	// name ours
+				TraceResult tr;
+
+				// the leader in sight again: follow him
+				UTIL_TraceLine( pev->origin + gpGlobals->v_up * 25, pev->origin + vecLeader * 2048 + gpGlobals->v_up * 25, dont_ignore_monsters, ENT( pev ), &tr );
+				if ( VARS( tr.pHit )->solid != SOLID_BSP )
+				{
+					m_fStopped = FALSE;
+					m_vecPath[0] = Vector( 0, 0, 0 );
+					return;
+				}
+
+				if ( vecDir.Length() > 32 )
+				{
+					pev->angles = UTIL_VecToAngles( vecDir );
+					pev->angles.x = 0;
+					pev->angles.z = 0;
+					pev->velocity = vecDir / vecDir.Length() * 310;
+					pev->velocity.z -= 40;
+				}
+				else
+				{
+					// this point reached: on to the next (newer) one
+					m_iPathIndex--;
+					if ( m_iPathIndex < 0 )
+					{
+						// the end of the trail: take the leader's trail afresh
+						m_vecPath[0] = Vector( 0, 0, 0 );
+						m_fStopped = 6;
+						return;
+					}
+				}
+
+				UTIL_TraceLine( pev->origin + gpGlobals->v_up * 2 - gpGlobals->v_forward * 32, pev->origin + gpGlobals->v_forward * 100 + gpGlobals->v_up * 2, ignore_monsters, ENT( pev ), &tr );
+				if ( tr.flFraction != 1.0 )
+				{
+					UTIL_TraceLine( pev->origin + gpGlobals->v_up * 25 - gpGlobals->v_forward * 32, pev->origin + gpGlobals->v_forward * 100 + gpGlobals->v_up * 25, ignore_monsters, ENT( pev ), &tr );
+					if ( tr.flFraction == 1.0 )
+					{
+						ALERT( at_console, "There's something at my feet!\n" );
+						pev->velocity.z = 150;
+					}
 				}
 			}
 		}
@@ -224,18 +311,24 @@ void CHostage::RePosition( void )
 	UTIL_SetOrigin( pev, m_vecStart );
 	UTIL_SetSize( pev, Vector( -16, -16, 0 ), Vector( 16, 16, 72 ) );
 
-	pev->velocity.z = 50;
+	pev->velocity.z = -80;	// Beta 3.0 (was 50: up)
 	pev->nextthink = 0.1;	// sic: not gpGlobals->time + 0.1
 	SetThink( IdleThink );
 }
 
 int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType )
 {
-	int iForce;	// how hard the body is thrown; not set for HITGROUP_GENERIC (sic)
+	int iForce;	// how hard the body is thrown
 
+	// Beta 3.0: a hit of no particular group counts as a stomach hit, and
+	// any other as a chest hit (each written as a case of its own: the
+	// object's constants come in the order of first use, 1.75 before 2.5,
+	// the code in the order of the later copy of equal cases)
 	switch ( m_LastHitGroup )
 	{
 	case HITGROUP_GENERIC:
+		SetActivity( ACT_SMALL_FLINCH );
+		flDamage *= 1.75;
 		break;
 	case HITGROUP_HEAD:
 		if ( RANDOM_LONG( 0, 1 ) )
@@ -269,6 +362,10 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 		SetActivity( ACT_FLINCH_RIGHTLEG );
 		flDamage *= 0.6;
 		break;
+	default:
+		SetActivity( ACT_SMALL_FLINCH );
+		flDamage *= 1.5;
+		break;
 	}
 
 	m_flFlinchTime = gpGlobals->time + 0.75;
@@ -280,14 +377,13 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 		pev->movetype = MOVETYPE_TOSS;
 		pev->flags &= ~FL_ONGROUND;
 
+		// Beta 3.0: the counter-terrorists' commander radios it
+		if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander != NULL )
+			((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander->Radio( "hosdown" );
+
+		// Beta 3.0: a hit of no particular group, and any other, dies as from a head shot
 		switch ( m_LastHitGroup )
 		{
-		case HITGROUP_GENERIC:
-			break;
-		case HITGROUP_HEAD:
-			SetActivity( ACT_DIE_HEADSHOT );
-			iForce = 2;
-			break;
 		case HITGROUP_CHEST:
 			SetActivity( ACT_DIESIMPLE );
 			iForce = 2;
@@ -311,6 +407,15 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 		case HITGROUP_RIGHTLEG:
 			SetActivity( ACT_DIEFORWARD );
 			iForce = 1;
+			break;
+		case HITGROUP_GENERIC:
+		case HITGROUP_HEAD:
+			SetActivity( ACT_DIE_HEADSHOT );
+			iForce = 2;
+			break;
+		default:	// written apart, as the jump table shows (a shared label drops cases 0 and 1 from it)
+			SetActivity( ACT_DIE_HEADSHOT );
+			iForce = 2;
 			break;
 		}
 
@@ -349,28 +454,15 @@ void CHostage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 	if ( pev->takedamage == DAMAGE_NO )
 		return;
 
-	// the third state (2, IdleThink: no leader near) is treated as TRUE; retail's
-	// code keeps the test against TRUE without a jump, the two branches being the same
-	if ( m_fStopped == FALSE )
-	{
-		m_flNextUse = gpGlobals->time + 1;
-		m_fStopped = TRUE;
-	}
-	else if ( m_fStopped == TRUE )
-	{
-		m_flNextUse = gpGlobals->time + 1;
-		m_fStopped = FALSE;
-	}
-	else
-	{
-		m_flNextUse = gpGlobals->time + 1;
-		m_fStopped = FALSE;
-	}
+	m_flNextUse = gpGlobals->time + 1;
 
 	if ( pActivator->IsPlayer() )
 	{
-		// a new leader is followed at once
-		if ( pActivator != m_hTargetEnt )
+		// Beta 3.0: the leader's use makes a following hostage stay; any
+		// other use, or a new leader, makes it follow
+		if ( pActivator == m_hTargetEnt && m_fStopped == FALSE )
+			m_fStopped = TRUE;
+		else
 			m_fStopped = FALSE;
 
 		if ( ((CBasePlayer *)pActivator)->m_iTeam == TEAM_TERRORIST )

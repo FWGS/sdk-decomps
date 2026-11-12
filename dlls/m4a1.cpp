@@ -92,6 +92,10 @@ int CM4A1::GetItemInfo(ItemInfo *p)
 
 BOOL CM4A1::Deploy( )
 {
+	m_pPlayer->m_flAccuracy = 0;
+	m_fDelayFire = true;
+	m_fEjectShell = 1;
+	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 240 );
 	return DefaultDeploy( "models/v_m4a1.mdl", "models/p_m4a1.mdl", M4A1_DRAW, "silenced_rifle" );
 }
 
@@ -115,7 +119,7 @@ void CM4A1::PrimaryAttack( void )
 	{
 		if (m_pPlayer->pev->velocity.Length2D() > 0)
 		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.13;
+			flSpread = m_pPlayer->m_flAccuracy * 0.14;
 			M4A1Fire( flSpread, 0.0875, FALSE );
 		}
 		else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
@@ -125,12 +129,12 @@ void CM4A1::PrimaryAttack( void )
 		}
 		else if (m_pPlayer->pev->flags & FL_DUCKING)
 		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.0325;
+			flSpread = m_pPlayer->m_flAccuracy * 0.02;
 			M4A1Fire( flSpread, 0.0875, FALSE );
 		}
 		else
 		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.055;
+			flSpread = m_pPlayer->m_flAccuracy * 0.035;
 			M4A1Fire( flSpread, 0.0875, FALSE );
 		}
 	}
@@ -139,7 +143,7 @@ void CM4A1::PrimaryAttack( void )
 		// zoomed in: a slower cycle
 		if (m_pPlayer->pev->velocity.Length2D() > 0)
 		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.13;
+			flSpread = m_pPlayer->m_flAccuracy * 0.14;
 			M4A1Fire( flSpread, 0.165, FALSE );
 		}
 		else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
@@ -149,12 +153,12 @@ void CM4A1::PrimaryAttack( void )
 		}
 		else if (m_pPlayer->pev->flags & FL_DUCKING)
 		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.0325;
+			flSpread = m_pPlayer->m_flAccuracy * 0.02;
 			M4A1Fire( flSpread, 0.165, FALSE );
 		}
 		else
 		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.055;
+			flSpread = m_pPlayer->m_flAccuracy * 0.035;
 			M4A1Fire( flSpread, 0.165, FALSE );
 		}
 	}
@@ -163,11 +167,12 @@ void CM4A1::PrimaryAttack( void )
 void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 {
 	// the spread grows with the cube of the shots fired
+	m_fDelayFire = true;
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.375;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 150) + 0.375;
 
-	if (m_pPlayer->m_flAccuracy > 2.5)
-		m_pPlayer->m_flAccuracy = 2.5;
+	if (m_pPlayer->m_flAccuracy > 1.7)
+		m_pPlayer->m_flAccuracy = 1.7;
 
 	if (m_iClip <= 0)
 	{
@@ -213,9 +218,9 @@ void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
 
 	if (RANDOM_LONG(0,1))
-		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m4a1-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m4a1-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
 	else
-		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m4a1-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m4a1-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
@@ -229,7 +234,7 @@ void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		vecAiming = gpGlobals->v_forward;
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 33, 0.94 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 32, 0.97 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -245,12 +250,17 @@ void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 void CM4A1::Reload( void )
 {
-	if (DefaultReload( M4A1_MAX_CLIP, M4A1_RELOAD, 2.2 ))
+	int iResult;
+
+	iResult = DefaultReload( M4A1_MAX_CLIP, M4A1_RELOAD, 2.2 );
+	if (iResult)
 	{
 		m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
 	}
 
 	m_pPlayer->m_flAccuracy = 0;
+	m_pPlayer->m_iShotsFired = 0;
+	m_fDelayFire = false;
 }
 
 
@@ -264,6 +274,6 @@ void CM4A1::WeaponIdle( void )
 	if (m_flTimeWeaponIdle > gpGlobals->time)
 		return;
 
-	// sic: m_flTimeWeaponIdle is not renewed, so once it has passed every call sends the idle animation again
+	m_flTimeWeaponIdle = gpGlobals->time + 20;
 	SendWeaponAnim( M4A1_IDLE1 );
 }

@@ -1186,7 +1186,7 @@ void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacke
 
 void CBaseMonster :: RadiusDamage(entvars_t* pevInflictor, entvars_t*	pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType )
 {
-	::RadiusDamage( pev->origin, pevInflictor, pevAttacker, flDamage, flDamage * 2.5, iClassIgnore, bitsDamageType );
+	::RadiusDamage( pev->origin, pevInflictor, pevAttacker, flDamage, flDamage * 15, iClassIgnore, bitsDamageType );	// Beta 3.0: radius 15 times the damage (was 2.5)
 }
 
 
@@ -1640,27 +1640,37 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 	Vector vecRight = gpGlobals->v_right;
 	Vector vecUp = gpGlobals->v_up;
 
-	// sic: no breaks; every case falls through to the last one's values
+	// Beta 3.0: the penetration of each bullet, the values Beta 3.1 has; and
+	// sic: still no breaks, and now a default, so that every bullet falls
+	// through to 0 and 0: no bullet goes through anything (the compiled
+	// code keeps nothing of the switch but the zeros). Beta 3.1's "bullet
+	// penetration bug fixed" adds the breaks.
 	switch ( iBulletType )
 	{
 	case BULLET_PLAYER_9MM:
-		iPenetrationPower = 32;
-		flPenetrationDistance = 8000;
+		iPenetrationPower = 14;
+		flPenetrationDistance = 800;
 	case BULLET_PLAYER_45ACP:
-		iPenetrationPower = 32;
-		flPenetrationDistance = 8000;
-	case BULLET_PLAYER_338MAG:
-		iPenetrationPower = 32;
-		flPenetrationDistance = 8000;
+		iPenetrationPower = 10;
+		flPenetrationDistance = 500;
+	case BULLET_PLAYER_50AE:
+		iPenetrationPower = 20;
+		flPenetrationDistance = 1000;
 	case BULLET_PLAYER_762MM:
-		iPenetrationPower = 32;
-		flPenetrationDistance = 8000;
+		iPenetrationPower = 24;
+		flPenetrationDistance = 5000;
 	case BULLET_PLAYER_556MM:
-		iPenetrationPower = 16;	// Beta 1.1
+		iPenetrationPower = 20;
+		flPenetrationDistance = 4000;
+	case BULLET_PLAYER_338MAG:
+		iPenetrationPower = 30;
 		flPenetrationDistance = 8000;
-	case BULLET_PLAYER_50AE:	// Beta 2.0; its values here are a guess: only the last case's reach the code
-		iPenetrationPower = 16;
-		flPenetrationDistance = 8000;
+	case BULLET_PLAYER_57MM:
+		iPenetrationPower = 20;
+		flPenetrationDistance = 2500;
+	default:
+		iPenetrationPower = 0;
+		flPenetrationDistance = 0;
 	}
 
 	if ( pevAttacker == NULL )
@@ -1699,6 +1709,8 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 
 			if ( flCurrentDistance > flPenetrationDistance )
 				iPenetration = 0;
+
+			ALERT( at_console, "Damage = %i \n", iCurrentDamage );	// Beta 3.0
 
 			if ( VARS(tr.pHit)->solid == SOLID_BSP && iPenetration != 0 )
 			{

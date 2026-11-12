@@ -405,12 +405,17 @@ void W_Precache(void)
 	UTIL_PrecacheOtherWeapon( "weapon_usp" );
 	UTIL_PrecacheOther( "ammo_45acp" );
 
+	// 5.7mm
+	UTIL_PrecacheOtherWeapon( "weapon_p90" );
+	UTIL_PrecacheOther( "ammo_57mm" );
+
 	// .50
 	UTIL_PrecacheOtherWeapon( "weapon_deagle" );
 	UTIL_PrecacheOther( "ammo_50ae" );
 
 	// crowbar
 	UTIL_PrecacheOtherWeapon( "weapon_crowbar" );
+	UTIL_PrecacheOtherWeapon( "weapon_knife" );
 
 	// glock
 	UTIL_PrecacheOtherWeapon( "weapon_9mmhandgun" );
@@ -427,6 +432,7 @@ void W_Precache(void)
 	// flashbang
 	UTIL_PrecacheOtherWeapon( "weapon_flashbang" );
 	UTIL_PrecacheOther( "ammo_flashbang" );
+	UTIL_PrecacheOther( "debris" );
 
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 	// python
@@ -618,7 +624,7 @@ void CBasePlayerItem::Materialize( void )
 	UTIL_SetOrigin( pev, pev->origin );// link into world.
 	SetTouch (DefaultTouch);
 	SetThink (SUB_Remove);
-	pev->nextthink = gpGlobals->time + 20;	// a weapon nobody picks up is gone after 20 seconds
+	pev->nextthink = gpGlobals->time + 1;	// a weapon nobody picks up is gone after a second (Beta 2.0 and 2.1: 20)
 }
 
 //=========================================================
@@ -694,7 +700,7 @@ void CBasePlayerItem::DefaultTouch( CBaseEntity *pOther )
 	CBasePlayer *pPlayer = (CBasePlayer *)pOther;
 
 	// one primary weapon at a time; the pistols, the flashbang and the crowbar go with it
-	if ( pPlayer->HasPrimaryWeapon() && m_iId != WEAPON_FLASHBANG && m_iId != WEAPON_USP && m_iId != WEAPON_GLOCK18 && m_iId != WEAPON_CROWBAR && m_iId != WEAPON_DEAGLE && pPlayer->pev->flags != FL_SPECTATOR )
+	if ( pPlayer->HasPrimaryWeapons() && m_iId != WEAPON_FLASHBANG && m_iId != WEAPON_USP && m_iId != WEAPON_GLOCK18 && m_iId != WEAPON_CROWBAR && m_iId != WEAPON_DEAGLE && pPlayer->pev->flags != FL_SPECTATOR )
 		return;
 
 	// can I have this?
@@ -749,9 +755,9 @@ void CBasePlayerWeapon::FireRemaining( void )
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
 	Vector	vecShellVelocity = m_pPlayer->pev->velocity 
-							 + gpGlobals->v_right * RANDOM_FLOAT(50,70) 
-							 + gpGlobals->v_up * RANDOM_FLOAT(100,150) 
-							 + gpGlobals->v_forward * 25;
+							 + gpGlobals->v_right * RANDOM_FLOAT(40,150) 
+							 + gpGlobals->v_up * RANDOM_FLOAT(100,260) 
+							 + gpGlobals->v_forward * RANDOM_FLOAT(-100,100);
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecDir;
@@ -795,8 +801,6 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 			m_pPlayer->m_iFOV = m_pPlayer->m_iLastZoom;
 			if ( m_pPlayer->m_iFOV == m_pPlayer->m_iLastZoom )
 			{
-				if ( m_iId == WEAPON_G3SG1 )
-					UTIL_ScreenFade( m_pPlayer, Vector(10,180,10), 1.5, 9999, 80, 1 );
 				m_pPlayer->pev->viewmodel = 0;
 				m_pPlayer->m_fResumeZoom = FALSE;
 			}
@@ -849,8 +853,21 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 	{
 		// no fire buttons down
 
+		// Beta 3.0: after a shot the count of shots fired is set to 20 and
+		// then runs down by one a frame (the accuracy of the next shot)
+		if ( m_fDelayFire == true )
+		{
+			m_fDelayFire = false;
+			m_pPlayer->m_iShotsFired = 20;
+		}
+
 		m_fFireOnEmpty = FALSE;
-		m_pPlayer->m_iShotsFired = 0;
+
+		if ( m_pPlayer->m_iShotsFired > 0 )
+		{
+			ALERT( at_console, "Accuracy = %i \n", m_pPlayer->m_iShotsFired );
+			m_pPlayer->m_iShotsFired--;
+		}
 
 		if ( !IsUseable() && m_flNextPrimaryAttack < gpGlobals->time ) 
 		{
@@ -1183,8 +1200,8 @@ int CBasePlayerWeapon::SecondaryAmmoIndex( void )
 
 void CBasePlayerWeapon::Holster( void )
 { 
-	// the scopes: clear the screen
-	if ( m_iId == WEAPON_AWP || m_iId == WEAPON_G3SG1 )
+	// the G3/SG-1's scope: clear the screen (Beta 2.0 and 2.1: the AWP's too)
+	if ( m_iId == WEAPON_G3SG1 )
 		UTIL_ScreenFade( m_pPlayer, Vector(20,20,20), 0.5, 0.1, 0, 0 );
 
 	m_fInReload = FALSE; // cancel any reload in progress.
@@ -1427,7 +1444,7 @@ void CWeaponBox::Touch( CBaseEntity *pOther )
 	CBasePlayer *pPlayer = (CBasePlayer *)pOther;
 	int i;
 
-	if ( pPlayer->HasPrimaryWeapon() )
+	if ( pPlayer->HasPrimaryWeapons() )
 	{
 		// the box of a dead player is for those who have no primary weapon
 		return;

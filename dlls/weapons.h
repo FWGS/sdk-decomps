@@ -95,6 +95,8 @@ public:
 #define WEAPON_DEAGLE			26
 #define WEAPON_SG552			27
 #define WEAPON_AK47				28
+#define WEAPON_KNIFE			29
+#define WEAPON_P90				30
 
 #define WEAPON_ALLWEAPONS		(~(1<<WEAPON_SUIT))
 
@@ -135,6 +137,8 @@ public:
 #define DEAGLE_WEIGHT		7
 #define SG552_WEIGHT		25
 #define AK47_WEIGHT			25
+#define P90_WEIGHT			26
+#define KNIFE_WEIGHT		2
 
 
 // weapon clip/carry ammo capacities
@@ -166,6 +170,7 @@ public:
 #define DEAGLE_MAX_CARRY		35		// "50AE"
 #define SG552_MAX_CARRY			90		// "556Nato"
 #define AK47_MAX_CARRY			90		// "762Nato"
+#define P90_MAX_CARRY			150		// "57mm"
 
 // the maximum amount of ammo each weapon's clip can hold
 #define WEAPON_NOCLIP			-1
@@ -199,6 +204,7 @@ public:
 #define DEAGLE_MAX_CLIP			7
 #define SG552_MAX_CLIP			30
 #define AK47_MAX_CLIP			30
+#define P90_MAX_CLIP			50
 
 
 // the default amount of ammo that comes with each gun when it spawns
@@ -232,6 +238,7 @@ public:
 #define DEAGLE_DEFAULT_GIVE			7
 #define SG552_DEFAULT_GIVE			30
 #define AK47_DEFAULT_GIVE			30
+#define P90_DEFAULT_GIVE			50
 
 // The amount of ammo given to a player by an ammo item.
 #define AMMO_URANIUMBOX_GIVE	20
@@ -259,6 +266,8 @@ public:
 #define AMMO_50AEBOX_MAX		35
 #define AMMO_FLASHBANGBOX_GIVE	1
 #define AMMO_FLASHBANGBOX_MAX	3
+#define AMMO_57MMBOX_GIVE		50
+#define AMMO_57MMBOX_MAX		150
 
 // bullet types
 typedef	enum
@@ -280,6 +289,7 @@ typedef	enum
 	BULLET_PLAYER_762MM,	// G3SG1
 	BULLET_PLAYER_556MM,	// M249, M4A1
 	BULLET_PLAYER_50AE,		// Desert Eagle (Beta 2.0; 13, as DEAGLEFire passes it)
+	BULLET_PLAYER_57MM,		// P90 (Beta 3.0; 14, as P90Fire passes it; name ours)
 } Bullet;
 
 
@@ -319,12 +329,15 @@ typedef struct
 // USENTENCEG_Pick, FShouldSwitchWeapon and GetNextBestWeapon need more than Beta
 // 1.0's text gives, CFuncTank::TankTrace and the rest must keep theirs. effects.h,
 // included above, is most of it (295 numbers; func_tank.cpp includes it itself,
-// before weapons.h); this enum's tag and ten enumerators are the rest, 11 numbers. Of
-// 0 to 32 here 11 to 15 and 19 keep every object retail's in Beta 1.1, 6, 7, 10, 11,
-// 28 and 30 in Beta 2.0 with its cbase.h and multiplay_gamerules.cpp
-// stand-ins. Before effects.h was found
+// before weapons.h); this enum's tag and ten enumerators are the rest, 11 numbers.
+// These counts here keep every object retail's: Beta 1.1 11 to 15 and 19 (of 0 to
+// 32); Beta 2.0, with its cbase.h and multiplay_gamerules.cpp stand-ins, 6, 7, 10,
+// 11, 28 and 30 (of 0 to 32); Beta 3.0, whose files compile as without /YX
+// (debris.cpp), 11, 12, 16 and 17
+// (of 0 to 24). Before effects.h was found
 // this place held an enum of 303 numbers and an unused inline function of 159
-// statement lines standing for its intermediate code.
+// statement lines standing for its intermediate code (Beta 3.0 had the enum of
+// 306 alone).
 enum sic_declcount_b11
 {
 	SIC_DECLCOUNT_B11_BASE, SIC_DECLCOUNT_B11_0, SIC_DECLCOUNT_B11_1, SIC_DECLCOUNT_B11_2, SIC_DECLCOUNT_B11_3, SIC_DECLCOUNT_B11_4, SIC_DECLCOUNT_B11_5, SIC_DECLCOUNT_B11_6,
@@ -464,6 +477,8 @@ public:
 
 	// Counter-Strike (names ours)
 	int		m_iShellLate;										// model index of the shell EjectBrassLate and FireRemaining throw
+	int		m_iUnused7C;										// 0x7c new in Beta 3.0; no function refers to it
+	bool	m_fDelayFire;										// 0x80 new in Beta 3.0: set by a shot, cleared by Reload; ItemPostFrame lets m_iShotsFired run down once the trigger is released
 };
 
 

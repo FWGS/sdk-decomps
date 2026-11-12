@@ -486,8 +486,12 @@ void CBaseDoor::DoorTouch( CBaseEntity *pOther )
 {
 	entvars_t*	pevToucher = pOther->pev;
 	
-	// Ignore touches by anything but players
-	if (!FClassnameIs(pevToucher, "player"))
+	// Ignore touches by anything but players (Counter-Strike Beta 3.0: and hostages,
+	// not dead ones)
+	if (!FClassnameIs(pevToucher, "player") && !FClassnameIs(pevToucher, "hostage_entity"))
+		return;
+
+	if (pevToucher->deadflag == DEAD_RESPAWNABLE)
 		return;
 
 	// If door has master, and it's not ready to trigger, 

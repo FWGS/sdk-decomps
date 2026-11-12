@@ -44,6 +44,7 @@ extern void CopyToBodyQue(entvars_t* pev);
 extern int giPrecacheGrunt;
 extern int gmsgSayText;
 extern int gmsgShowMenu;
+extern void Broadcast( const char *sentence );	// multiplay_gamerules.cpp (Beta 3.0)
 
 
 /*
@@ -385,13 +386,30 @@ void ClientPutInServer( edict_t *pEntity )
 	pPlayer->SetCustomDecalFrames(-1); // Assume none;
 
 	pPlayer->m_iTeam = SelectDefaultTeam();
+	// Beta 3.0: the first player of a team is its commander; the model is
+	// one of the team's two at random
 	if ( pPlayer->m_iTeam == TEAM_CT )
-		pPlayer->m_iAppearance = 0;		// urban
+	{
+		if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander == NULL )
+			((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander = pPlayer;
+		if ( RANDOM_LONG( 0, 1 ) )
+			pPlayer->m_iAppearance = 0;		// urban
+		else
+			pPlayer->m_iAppearance = 3;		// gsg9
+	}
 	else
-		pPlayer->m_iAppearance = 1;		// terror
-	pPlayer->m_fJustConnected = true;
+	{
+		if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_pTerroristCommander == NULL )
+			((CHalfLifeMultiplay *)g_pGameRules)->m_pTerroristCommander = pPlayer;
+		if ( RANDOM_LONG( 0, 1 ) )
+			pPlayer->m_iAppearance = 1;		// terror
+		else
+			pPlayer->m_iAppearance = 2;		// arab
+	}
 	pPlayer->m_fNotKilled = false;
+	pPlayer->m_fJustConnected = true;
 	pPlayer->m_iAccount = 0;
+	pPlayer->m_iNightVisionAlpha = 60;
 	pPlayer->m_fKicked = false;
 	pPlayer->m_iIgnoreMessages = 0;
 
@@ -555,32 +573,6 @@ void Host_Say( edict_t *pEntity, int teamonly )
 
 
 
-// sic: a stand-in for text Beta 2.0's client.cpp has before the buy menus and
-// ours has not; what it was the image cannot say.
-// VC5 emits a header inline once the IL of the file's own functions passes the
-// inline's IL offset in the headers. Retail's client.obj has MESSAGE_BEGIN( ...,
-// edict_t * ) after DropPrimary, ENTINDEX and MESSAGE_BEGIN( ..., entvars_t * )
-// after BuyShotgun and CBaseEntity::entindex after ClientCommand: in the state the
-// release build compiles it in (it writes its own .pch) that takes more IL ahead of
-// DropPrimary than our text has. This function, never called, is that IL. Beta
-// 2.0: eight statement lines and two empty statements (with 8 lines entindex
-// follows ClientCommand but MESSAGE_BEGIN( ..., entvars_t * ) comes one function
-// late, with 8 and three empty statements entindex comes one function early; one
-// empty statement, int i, return, two blocks and other forms tried miss as well).
-// Beta 2.1: retail has MESSAGE_BEGIN( ..., edict_t * ) after IsCloseToBase, ENTINDEX
-// and MESSAGE_BEGIN( ..., entvars_t * ) after BuyPistol, entindex after
-// ChooseTerrorist: client.cpp's last compile reuses the .pch its compile in the
-// build before wrote, and that order takes less IL than Beta 2.0's: 4 to 6 statement
-// lines (3 and 7 miss). So Beta 2.1's text has less of it; five lines.
-inline void sic_il_client( int *p )
-{
-	p[0] = 0;
-	p[1] = 0;
-	p[2] = 0;
-	p[3] = 0;
-	p[4] = 0;
-}
-
 // within 512 units of one of the team's spawn points (counter-terrorists:
 // info_player_start, terrorists: info_player_deathmatch); the buy menus
 // open only there
@@ -646,6 +638,7 @@ void DropPrimary( CBasePlayer *pPlayer )
 	pPlayer->DropPlayerItem( "weapon_m3" );
 	pPlayer->DropPlayerItem( "weapon_mp5navy" );
 	pPlayer->DropPlayerItem( "weapon_tmp" );
+	pPlayer->DropPlayerItem( "weapon_p90" );
 	pPlayer->DropPlayerItem( "weapon_m4a1" );
 	pPlayer->DropPlayerItem( "weapon_m249" );
 	pPlayer->DropPlayerItem( "weapon_sg552" );
@@ -684,12 +677,12 @@ void BuyPistol( CBasePlayer *pPlayer, int iSlot )
 		else
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
 		break;
-	case 3:	// the menu says 800 (sic)
-		if ( pPlayer->m_iAccount >= 850 )
+	case 3:
+		if ( pPlayer->m_iAccount >= 650 )
 		{
 			DropSecondary( pPlayer );
 			pPlayer->GiveNamedItem( "weapon_deagle" );
-			pPlayer->m_iAccount -= 850;
+			pPlayer->m_iAccount -= 650;
 		}
 		else
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
@@ -740,6 +733,16 @@ void BuySubMachineGun( CBasePlayer *pPlayer, int iSlot )
 			DropPrimary( pPlayer );
 			pPlayer->GiveNamedItem( "weapon_tmp" );
 			pPlayer->m_iAccount -= 1250;
+		}
+		else
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+		break;
+	case 3:
+		if ( pPlayer->m_iAccount >= 2250 )
+		{
+			DropPrimary( pPlayer );
+			pPlayer->GiveNamedItem( "weapon_p90" );
+			pPlayer->m_iAccount -= 2250;
 		}
 		else
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
@@ -825,11 +828,11 @@ void BuyMachineGun( CBasePlayer *pPlayer, int iSlot )
 	switch ( iSlot )
 	{
 	case 1:
-		if ( pPlayer->m_iAccount >= 5500 )
+		if ( pPlayer->m_iAccount >= 5750 )
 		{
 			DropPrimary( pPlayer );
 			pPlayer->GiveNamedItem( "weapon_m249" );
-			pPlayer->m_iAccount -= 5500;
+			pPlayer->m_iAccount -= 5750;
 		}
 		else
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
@@ -894,6 +897,13 @@ void BuyAmmo( CBasePlayer *pPlayer, int iSlot )
 			pPlayer->m_iAccount -= 40;
 		}
 		break;
+	case 8:
+		if ( pPlayer->m_iAccount >= 50 )
+		{
+			pPlayer->GiveNamedItem( "ammo_57mm" );
+			pPlayer->m_iAccount -= 50;
+		}
+		break;
 	}
 }
 
@@ -916,17 +926,17 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
 		}
 		break;
-	case 2:		// three flashbangs a life at most
+	case 2:		// three grenades a life at most (the menu's concussion grenades)
 		if ( pPlayer->m_iFlashBangs >= 3 )
 		{
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Carrying too many" );
 			return;
 		}
-		if ( pPlayer->m_iAccount >= 150 )
+		if ( pPlayer->m_iAccount >= 200 )
 		{
 			pPlayer->GiveNamedItem( "weapon_flashbang" );
 			pPlayer->m_iFlashBangs++;
-			pPlayer->m_iAccount -= 150;
+			pPlayer->m_iAccount -= 200;
 		}
 		else
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
@@ -940,6 +950,18 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 				pPlayer->m_fNightVisionOn = false;
 				EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/equip_nvg.wav", 1, ATTN_NORM );
 				pPlayer->m_iAccount -= 1250;
+			}
+			else
+				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+		}
+		break;
+	case 4:		// kevlar and helmet, only below 50 armor
+		if ( pPlayer->pev->armorvalue < 50 )
+		{
+			if ( pPlayer->m_iAccount >= 1000 )
+			{
+				pPlayer->GiveNamedItem( "item_assaultsuit" );
+				pPlayer->m_iAccount -= 1000;
 			}
 			else
 				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
@@ -959,7 +981,7 @@ void ChooseCT( edict_t *pEntity, CBasePlayer *pPlayer, int iSlot )
 {
 	int iIndex = pPlayer->entindex();
 
-	if ( CountTeams() >= 1 && CVAR_GET_FLOAT( "mp_limitteams" ) == 1 )
+	if ( CountTeams() >= 1 && CVAR_GET_FLOAT( "mp_limitteams" ) == 1 && pPlayer->m_iTeam != TEAM_CT )
 	{
 		ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Sorry! Cannot join... too many CT's" );
 		return;
@@ -976,6 +998,15 @@ void ChooseCT( edict_t *pEntity, CBasePlayer *pPlayer, int iSlot )
 		if ( pPlayer->pev->deadflag == DEAD_NO )
 			ClientKill( pEntity );
 		break;
+	case 2:
+		pPlayer->m_iAppearance = 3;
+		CLIENT_COMMAND( pEntity, "model gsg9\n" );
+		g_engfuncs.pfnSetClientKeyValue( iIndex, g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "model", "gsg9" );
+		pPlayer->m_iTeam = TEAM_CT;
+		((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
+		if ( pPlayer->pev->deadflag == DEAD_NO )
+			ClientKill( pEntity );
+		break;
 	}
 }
 
@@ -983,18 +1014,33 @@ void ChooseTerrorist( edict_t *pEntity, CBasePlayer *pPlayer, int iSlot )
 {
 	int iIndex = pPlayer->entindex();
 
-	if ( CountTeams() <= -1 && CVAR_GET_FLOAT( "mp_limitteams" ) == 1 )
+	if ( CountTeams() <= -1 && CVAR_GET_FLOAT( "mp_limitteams" ) == 1 && pPlayer->m_iTeam != TEAM_TERRORIST )
 	{
 		ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Sorry! Cannot join... too many Terrorists" );
 		return;
 	}
 
+	// a commander who changes sides leaves his team a new one (only the
+	// counter-terrorists' is looked after here, sic)
 	switch ( iSlot )
 	{
 	case 1:
+		if ( pPlayer->m_iTeam == TEAM_CT && ((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander == pPlayer )
+			((CHalfLifeMultiplay *)g_pGameRules)->PickNewCommander( TEAM_CT );
 		pPlayer->m_iAppearance = 1;
 		CLIENT_COMMAND( pEntity, "model terror\n" );
 		g_engfuncs.pfnSetClientKeyValue( iIndex, g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "model", "terror" );
+		pPlayer->m_iTeam = TEAM_TERRORIST;
+		((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
+		if ( pPlayer->pev->deadflag == DEAD_NO )
+			ClientKill( pEntity );
+		break;
+	case 2:
+		if ( pPlayer->m_iTeam == TEAM_CT && ((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander == pPlayer )
+			((CHalfLifeMultiplay *)g_pGameRules)->PickNewCommander( TEAM_CT );
+		pPlayer->m_iAppearance = 2;
+		CLIENT_COMMAND( pEntity, "model arab\n" );
+		g_engfuncs.pfnSetClientKeyValue( iIndex, g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "model", "arab" );
 		pPlayer->m_iTeam = TEAM_TERRORIST;
 		((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
 		if ( pPlayer->pev->deadflag == DEAD_NO )
@@ -1022,6 +1068,80 @@ void AutoChooseTeam( CBasePlayer *pPlayer )
 	}
 	else
 		ALERT( at_console, "Invalid team for this player\n" );
+}
+
+//=========================================================
+// CommanderRadio, Radio - Beta 3.0's radio menus (names from
+// the later versions' Linux symbols): a message every 1.5
+// seconds at most while the player has messages left; the
+// commander's three only for a team's commander.
+//=========================================================
+void CommanderRadio( CBasePlayer *pPlayer, int iSlot )
+{
+	if ( pPlayer->m_flNextRadio < gpGlobals->time && pPlayer->m_iRadioMessages > 0 )
+	{
+		pPlayer->m_iRadioMessages--;
+		pPlayer->m_flNextRadio = gpGlobals->time + 1.5;
+
+		if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander == pPlayer || ((CHalfLifeMultiplay *)g_pGameRules)->m_pTerroristCommander == pPlayer )
+		{
+			switch ( iSlot )
+			{
+			case 1:
+				pPlayer->Radio( "GETINPOS" );
+				break;
+			case 2:
+				pPlayer->Radio( "GO" );
+				break;
+			case 3:
+				pPlayer->Radio( "FOLLOWCOM" );
+				break;
+			}
+		}
+	}
+}
+
+void Radio( CBasePlayer *pPlayer, int iSlot )
+{
+	if ( pPlayer->m_flNextRadio < gpGlobals->time && pPlayer->m_iRadioMessages > 0 )
+	{
+		pPlayer->m_iRadioMessages--;
+		pPlayer->m_flNextRadio = gpGlobals->time + 1.5;
+
+		switch ( iSlot )
+		{
+		case 1:
+			if ( RANDOM_LONG( 0, 1 ) )
+				pPlayer->Radio( "AFFIRM" );
+			else
+				pPlayer->Radio( "ROGER" );
+			break;
+		case 2:
+			pPlayer->Radio( "BACKUP" );
+			break;
+		case 3:
+			pPlayer->Radio( "COVERME" );
+			break;
+		case 4:
+			pPlayer->Radio( "ENEMYSPOTTED" );
+			break;
+		case 5:
+			pPlayer->Radio( "IMHIT" );
+			break;
+		case 6:
+			pPlayer->Radio( "INPOS" );
+			break;
+		case 7:
+			pPlayer->Radio( "POINT" );
+			break;
+		case 8:
+			pPlayer->Radio( "REPORTIN" );
+			break;
+		case 9:
+			pPlayer->Radio( "REPORTINGIN" );
+			break;
+		}
+	}
 }
 
 
@@ -1066,10 +1186,23 @@ void ClientCommand( edict_t *pEntity )
 
 		itoa( pPlayer->m_iAccount, szText, 10 );
 		strcat( szText, " dollars\n" );
-		if ( pPlayer->m_iTeam == TEAM_CT )
-			strcat( szText, "Counterterrorist\n" );
-		else
-			strcat( szText, "Terrorist\n" );
+		switch ( pPlayer->m_iAppearance )
+		{
+		case 0:
+			strcat( szText, "Counterterrorist : Seal TEAM 6\n" );
+			break;
+		case 3:
+			strcat( szText, "Counterterrorist : German GSG9\n" );
+			break;
+		case 1:
+			strcat( szText, "Terrorist : Pheonix Faction\n" );	// sic
+			break;
+		case 2:
+			strcat( szText, "Terrorist : Durah Cell\n" );
+			break;
+		}
+		if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander == pPlayer || ((CHalfLifeMultiplay *)g_pGameRules)->m_pTerroristCommander == pPlayer )
+			strcat( szText, "Commander\n" );
 		itoa( pPlayer->m_iKickVote, szKickVote, 10 );
 		strcat( szText, "Kick Vote = " );
 		strcat( szText, szKickVote );
@@ -1079,6 +1212,12 @@ void ClientCommand( edict_t *pEntity )
 	{
 		// Beta 1.x's round restart for anyone: now it throws out whoever tries it
 		CLIENT_COMMAND( pEntity, "disconnect\n" );
+	}
+	else if ( FStrEq(pcmd, "a12" ) )
+	{
+		// Beta 3.0: 50,000 dollars, for the player named REAL_Gooseman only
+		if ( !strcmp( STRING(pPlayer->pev->netname), "REAL_Gooseman" ) )
+			pPlayer->AddAccount( 50000 );
 	}
 	else if ( FStrEq(pcmd, "vote" ) )
 	{
@@ -1145,12 +1284,12 @@ void ClientCommand( edict_t *pEntity )
 		case Menu_TeamSelect:
 			if ( iSlot == 1 )
 			{
-				ShowMenu( pPlayer, 1, 20, FALSE, "#Terrorist_Select" );
+				ShowMenu( pPlayer, 3, 20, FALSE, "#Terrorist_Select" );
 				pPlayer->m_iMenu = Menu_TerroristSelect;
 			}
 			else if ( iSlot == 2 )
 			{
-				ShowMenu( pPlayer, 1, 20, FALSE, "#CT_Select" );
+				ShowMenu( pPlayer, 3, 20, FALSE, "#CT_Select" );
 				pPlayer->m_iMenu = Menu_CTSelect;
 			}
 			else if ( iSlot == 3 )
@@ -1180,7 +1319,7 @@ void ClientCommand( edict_t *pEntity )
 			}
 			else if ( iSlot == 3 )
 			{
-				ShowMenu( pPlayer, 3, 127, FALSE, "#BuySubMachineGun" );
+				ShowMenu( pPlayer, 7, 127, FALSE, "#BuySubMachineGun" );
 				pPlayer->m_iMenu = Menu_BuySubMachineGun;
 			}
 			else if ( iSlot == 4 )
@@ -1223,6 +1362,14 @@ void ClientCommand( edict_t *pEntity )
 			BuyAmmo( pPlayer, iSlot );
 			break;
 
+		case Menu_Radio:
+			Radio( pPlayer, iSlot );
+			break;
+
+		case Menu_CommanderRadio:
+			CommanderRadio( pPlayer, iSlot );
+			break;
+
 		default:
 			ALERT( at_console, "invalid menu" );
 			break;
@@ -1239,7 +1386,7 @@ void ClientCommand( edict_t *pEntity )
 	}
 	else if ( FStrEq(pcmd, "ignoremessages" ) )
 	{
-		// 0 -> 1 -> 2 -> 0 (Host_Say)
+		// 0 -> 1 -> 2 -> 3 -> 0 (Host_Say; 3 also turns the radio off, CBasePlayer::Radio)
 		if ( pPlayer->m_iIgnoreMessages == 0 )
 		{
 			pPlayer->m_iIgnoreMessages = 1;
@@ -1248,7 +1395,12 @@ void ClientCommand( edict_t *pEntity )
 		else if ( pPlayer->m_iIgnoreMessages == 1 )
 		{
 			pPlayer->m_iIgnoreMessages = 2;
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Ignoring TEAM messages" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Ignoring TEAM/BROADCAST messages" );
+		}
+		else if ( pPlayer->m_iIgnoreMessages == 2 )
+		{
+			pPlayer->m_iIgnoreMessages = 3;
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Ignoring TEAM/BROADCAST/RADIO messages" );
 		}
 		else
 		{
@@ -1260,6 +1412,16 @@ void ClientCommand( edict_t *pEntity )
 	{
 		// the dead have no other command
 	}
+	else if ( FStrEq(pcmd, "commanderradio" ) )
+	{
+		ShowMenu( pPlayer, 0xff, 10, FALSE, "#CommanderRadio" );
+		pPlayer->m_iMenu = Menu_CommanderRadio;
+	}
+	else if ( FStrEq(pcmd, "radio" ) )
+	{
+		ShowMenu( pPlayer, 0x1ff, 10, FALSE, "#Radio" );
+		pPlayer->m_iMenu = Menu_Radio;
+	}
 	else if ( FStrEq(pcmd, "nightvision" ) )
 	{
 		// the goggles: a green screen fade that stays, or back to normal
@@ -1267,7 +1429,7 @@ void ClientCommand( edict_t *pEntity )
 		{
 			if ( !pPlayer->m_fNightVisionOn )
 			{
-				UTIL_ScreenFade( pPlayer, Vector(20,200,20), 0.75, 1024, 60, 5 );	// FFADE_OUT | FFADE_STAYOUT
+				UTIL_ScreenFade( pPlayer, Vector(20,200,20), 0.75, 1024, pPlayer->m_iNightVisionAlpha, 5 );	// FFADE_OUT | FFADE_STAYOUT
 				EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/nvg_on.wav", 1, ATTN_NORM );
 				pPlayer->m_fNightVisionOn = true;
 			}
@@ -1279,10 +1441,16 @@ void ClientCommand( edict_t *pEntity )
 			}
 		}
 	}
-	else if ( FStrEq(pcmd, "drop" ) )
+	else if ( FStrEq(pcmd, "adjustnvg" ) )
 	{
-		// player is dropping an item.
-		GetClassPtr((CBasePlayer *)pev)->DropPlayerItem((char *)CMD_ARGV(1));
+		// Beta 3.0: the goggles' brightness, in steps of 5 (back to 0 at 150)
+		if ( pPlayer->m_fHasNightVision == true && pPlayer->m_fNightVisionOn == true )
+		{
+			pPlayer->m_iNightVisionAlpha = (pPlayer->m_iNightVisionAlpha + 5) % 150;
+			ALERT( at_console, "NVG = %i \n", pPlayer->m_iNightVisionAlpha );
+			UTIL_ScreenFade( pPlayer, Vector(20,200,20), 0.75, 1024, pPlayer->m_iNightVisionAlpha, 5 );	// FFADE_OUT | FFADE_STAYOUT
+			EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/nvg_on.wav", 1, ATTN_NORM );
+		}
 	}
 	else if ( FStrEq(pcmd, "fov" ) )
 	{
@@ -1393,7 +1561,7 @@ void ClientCommand( edict_t *pEntity )
 				}
 
 				if ( iRescued > 0 )
-					RescueNotify();
+					Broadcast( "rescued" );
 
 				char szText[100];
 
@@ -1436,10 +1604,6 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 	// client sets
 	switch ( pPlayer->m_iAppearance )
 	{
-	case 0:
-		CLIENT_COMMAND( pEntity, "model urban\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "urban" );
-		break;
 	case 1:
 		CLIENT_COMMAND( pEntity, "model terror\n" );
 		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "terror" );
@@ -1448,12 +1612,31 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 		CLIENT_COMMAND( pEntity, "model arab\n" );
 		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "arab" );
 		break;
+	case 3:
+		CLIENT_COMMAND( pEntity, "model gsg9\n" );
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "gsg9" );
+		break;
+	case 0:
+		CLIENT_COMMAND( pEntity, "model urban\n" );
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "urban" );
+		break;
+	default:	// the same as case 0 (VC5 merges the two)
+		CLIENT_COMMAND( pEntity, "model urban\n" );
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "urban" );
+		break;
 	}
 
 	// msg everyone if someone changes their name,  and it isn't the first time (changing no name to current name)
 	if ( pEntity->v.netname && STRING(pEntity->v.netname)[0] != 0 && !FStrEq( STRING(pEntity->v.netname), g_engfuncs.pfnInfoKeyValue( infobuffer, "name" )) )
 	{
+		char szName[256];	// name ours
 		char text[256];
+
+		// Beta 3.0: a dead player keeps his name (but the change is announced, sic)
+		strcpy( szName, STRING(pEntity->v.netname) );
+		if ( pPlayer->pev->deadflag == DEAD_RESPAWNABLE )
+			g_engfuncs.pfnSetClientKeyValue( pPlayer->entindex(), g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "name", szName );
+
 		sprintf( text, "* %s changed name to %s\n", STRING(pEntity->v.netname), g_engfuncs.pfnInfoKeyValue( infobuffer, "name" ) );
 		MESSAGE_BEGIN( MSG_ALL, gmsgSayText, NULL );
 			WRITE_BYTE( ENTINDEX(pEntity) );
@@ -1570,7 +1753,17 @@ void ClientPrecache( void )
 	PRECACHE_SOUND("player/headshot1.wav");
 	PRECACHE_SOUND("player/headshot2.wav");
 	PRECACHE_SOUND("player/headshot3.wav");
-	PRECACHE_SOUND("radio/go.wav");
+	PRECACHE_SOUND("player/bhit_flesh-1.wav");
+	PRECACHE_SOUND("player/bhit_flesh-2.wav");
+	PRECACHE_SOUND("player/bhit_flesh-3.wav");
+	PRECACHE_SOUND("player/bhit_kevlar-1.wav");
+	PRECACHE_SOUND("player/bhit_helmet-1.wav");
+	PRECACHE_SOUND("player/die1.wav");
+	PRECACHE_SOUND("player/die2.wav");
+	PRECACHE_SOUND("player/die3.wav");
+	PRECACHE_SOUND("radio/locknload.wav");
+	PRECACHE_SOUND("radio/letsgo.wav");
+	PRECACHE_SOUND("radio/moveout.wav");
 	PRECACHE_SOUND("radio/rescued.wav");
 	PRECACHE_SOUND("items/kevlar.wav");
 	PRECACHE_SOUND("items/nvg_on.wav");

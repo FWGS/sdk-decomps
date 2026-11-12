@@ -93,6 +93,7 @@ int CG3SG1::GetItemInfo(ItemInfo *p)
 
 BOOL CG3SG1::Deploy( )
 {
+	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 220 );
 	return DefaultDeploy( "models/v_g3sg1.mdl", "models/p_g3sg1.mdl", G3SG1_DRAW, "mp5" );
 }
 
@@ -100,18 +101,16 @@ void CG3SG1::SecondaryAttack( void )
 {
 	m_pPlayer->pev->viewmodel = 0;
 
+	// Beta 3.0: no green tint any more (Beta 2.0 and 2.1 faded the screen
+	// green going in and back coming out)
 	if (m_pPlayer->m_iFOV == 90)
 	{
-		// the scope's green tint: fade out to green (FFADE_OUT), held until the fade in
-		UTIL_ScreenFade( m_pPlayer, Vector(20,200,20), 0.75, 1024, 60, 5 );	// Beta 2.1: FFADE_OUT | FFADE_STAYOUT (was FFADE_OUT)
 		m_pPlayer->m_iFOV = 40;
 	}
 	else if (m_pPlayer->m_iFOV == 40)
 		m_pPlayer->m_iFOV = 15;
 	else if (m_pPlayer->m_iFOV == 15)
 	{
-		// FFADE_IN
-		UTIL_ScreenFade( m_pPlayer, Vector(20,20,20), 0.5, 0.1, 10, 0 );
 		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_g3sg1.mdl");
 		m_pPlayer->m_iFOV = 90;
 	}
@@ -185,7 +184,7 @@ void CG3SG1::G3SG1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	m_pPlayer->m_iWeaponVolume = BIG_EXPLOSION_VOLUME;
 	m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
-	EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/g3sg1-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/g3sg1-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
@@ -193,7 +192,7 @@ void CG3SG1::G3SG1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	// sic: fUseAutoAim is not tested, the auto-aim vector is always used
 	vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_10DEGREES );
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 3, BULLET_PLAYER_762MM, 65, 0.95, NULL, true );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 3, BULLET_PLAYER_762MM, 60, 0.98, NULL, true );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -214,8 +213,6 @@ void CG3SG1::Reload( void )
 
 	if (m_pPlayer->m_iFOV != 90)
 	{
-		// FFADE_IN
-		UTIL_ScreenFade( m_pPlayer, Vector(20,20,20), 0.5, 0.1, 250, 0 );
 		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_g3sg1.mdl");
 		m_pPlayer->m_fResumeZoom = TRUE;
 		m_pPlayer->m_iLastZoom = m_pPlayer->m_iFOV;

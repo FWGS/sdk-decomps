@@ -85,7 +85,7 @@ int CMP5N::GetItemInfo(ItemInfo *p)
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = MP5N_MAX_CLIP;
 	p->iSlot = 3;
-	p->iPosition = 2;
+	p->iPosition = 4;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_MP5N;
 	p->iWeight = MP5N_WEIGHT;
@@ -95,6 +95,10 @@ int CMP5N::GetItemInfo(ItemInfo *p)
 
 BOOL CMP5N::Deploy( )
 {
+	m_pPlayer->m_flAccuracy = 0;
+	m_fEjectShell = 1;
+	m_fDelayFire = false;
+	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 260 );
 	return DefaultDeploy( "models/v_mp5.mdl", "models/p_mp5.mdl", MP5N_DRAW, "mp5" );
 }
 
@@ -104,23 +108,24 @@ void CMP5N::SecondaryAttack( void )
 
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.12;
+		// sic: moving and in the air the secondary keeps Beta 2.1's 0.08 s (the primary: 0.075)
+		flSpread = m_pPlayer->m_flAccuracy * 0.08;
 		MP5NFire( flSpread, 0.08, FALSE );
 	}
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.15;
+		flSpread = m_pPlayer->m_flAccuracy * 0.12;
 		MP5NFire( flSpread, 0.08, FALSE );
 	}
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
 	{
 		flSpread = m_pPlayer->m_flAccuracy * 0.04;
-		MP5NFire( flSpread, 0.08, FALSE );
+		MP5NFire( flSpread, 0.075, FALSE );
 	}
 	else
 	{
 		flSpread = m_pPlayer->m_flAccuracy * 0.055;
-		MP5NFire( flSpread, 0.08, FALSE );
+		MP5NFire( flSpread, 0.075, FALSE );
 	}
 }
 
@@ -130,23 +135,23 @@ void CMP5N::PrimaryAttack( void )
 
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.12;
-		MP5NFire( flSpread, 0.08, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.08;
+		MP5NFire( flSpread, 0.075, FALSE );
 	}
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.15;
-		MP5NFire( flSpread, 0.08, FALSE );
+		flSpread = m_pPlayer->m_flAccuracy * 0.12;
+		MP5NFire( flSpread, 0.075, FALSE );
 	}
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
 	{
 		flSpread = m_pPlayer->m_flAccuracy * 0.04;
-		MP5NFire( flSpread, 0.08, FALSE );
+		MP5NFire( flSpread, 0.075, FALSE );
 	}
 	else
 	{
 		flSpread = m_pPlayer->m_flAccuracy * 0.055;
-		MP5NFire( flSpread, 0.08, FALSE );
+		MP5NFire( flSpread, 0.075, FALSE );
 	}
 }
 
@@ -154,10 +159,10 @@ void CMP5N::MP5NFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 {
 	// the spread grows with the square of the shots fired
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.45;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 175) + 0.45;
 
-	if (m_pPlayer->m_flAccuracy > 2.5)
-		m_pPlayer->m_flAccuracy = 2.5;
+	if (m_pPlayer->m_flAccuracy > 1.75)
+		m_pPlayer->m_flAccuracy = 1.75;
 
 	if (m_iClip <= 0)
 	{
@@ -192,9 +197,9 @@ void CMP5N::MP5NFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
 	Vector	vecShellVelocity = m_pPlayer->pev->velocity
-							 + gpGlobals->v_right * RANDOM_FLOAT(150,200)
-							 + gpGlobals->v_up * RANDOM_FLOAT(25,55)
-							 + gpGlobals->v_forward * 25;
+							 + gpGlobals->v_right * RANDOM_FLOAT(40,150)
+							 + gpGlobals->v_up * RANDOM_FLOAT(-100,150)
+							 + gpGlobals->v_forward * RANDOM_FLOAT(-100,100);
 	if (m_fEjectShell)
 		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -11 + gpGlobals->v_forward * 32 - gpGlobals->v_right * 7, vecShellVelocity, pev->angles.y, m_iShell, TE_BOUNCE_SHELL, m_pPlayer->pev );
 	m_fEjectShell = 1 - m_fEjectShell;
@@ -203,9 +208,9 @@ void CMP5N::MP5NFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	m_pPlayer->m_iWeaponFlash = DIM_GUN_FLASH;
 
 	if (RANDOM_LONG(0,1))
-		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/mp5-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/mp5-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
 	else
-		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/mp5-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/mp5-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
@@ -219,7 +224,7 @@ void CMP5N::MP5NFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		vecAiming = gpGlobals->v_forward;
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 24, 0.92 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 26, 0.87 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -253,6 +258,6 @@ void CMP5N::WeaponIdle( void )
 	if (m_flTimeWeaponIdle > gpGlobals->time)
 		return;
 
-	// sic: m_flTimeWeaponIdle is not renewed, so once it has passed every call sends the idle animation again
+	m_flTimeWeaponIdle = gpGlobals->time + 20;
 	SendWeaponAnim( MP5N_IDLE1 );
 }

@@ -85,7 +85,7 @@ int CSG552::GetItemInfo(ItemInfo *p)
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = SG552_MAX_CLIP;
 	p->iSlot = 2;
-	p->iPosition = 2;
+	p->iPosition = 5;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_SG552;
 	p->iWeight = SG552_WEIGHT;
@@ -95,6 +95,9 @@ int CSG552::GetItemInfo(ItemInfo *p)
 
 BOOL CSG552::Deploy( )
 {
+	m_pPlayer->m_flAccuracy = 0;
+	m_fEjectShell = 1;
+	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 240 );
 	return DefaultDeploy( "models/v_sg552.mdl", "models/p_sg552.mdl", SG552_DRAW, "mp5" );
 }
 
@@ -128,12 +131,12 @@ void CSG552::PrimaryAttack( void )
 		}
 		else if (m_pPlayer->pev->flags & FL_DUCKING)
 		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.0325;
+			flSpread = m_pPlayer->m_flAccuracy * 0.0225;
 			SG552Fire( flSpread, 0.0825, FALSE );
 		}
 		else
 		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.055;
+			flSpread = m_pPlayer->m_flAccuracy * 0.04;
 			SG552Fire( flSpread, 0.0825, FALSE );
 		}
 	}
@@ -152,12 +155,12 @@ void CSG552::PrimaryAttack( void )
 		}
 		else if (m_pPlayer->pev->flags & FL_DUCKING)
 		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.0325;
+			flSpread = m_pPlayer->m_flAccuracy * 0.0225;
 			SG552Fire( flSpread, 0.135, FALSE );
 		}
 		else
 		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.055;
+			flSpread = m_pPlayer->m_flAccuracy * 0.04;
 			SG552Fire( flSpread, 0.135, FALSE );
 		}
 	}
@@ -166,11 +169,12 @@ void CSG552::PrimaryAttack( void )
 void CSG552::SG552Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 {
 	// the spread grows with the cube of the shots fired
+	m_fDelayFire = true;
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.425;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 150) + 0.415;
 
-	if (m_pPlayer->m_flAccuracy > 2.75)
-		m_pPlayer->m_flAccuracy = 2.75;
+	if (m_pPlayer->m_flAccuracy > 1.9)
+		m_pPlayer->m_flAccuracy = 1.9;
 
 	if (m_iClip <= 0)
 	{
@@ -218,9 +222,9 @@ void CSG552::SG552Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	m_pPlayer->m_iWeaponFlash = BRIGHT_GUN_FLASH;
 
 	if (RANDOM_LONG(0,1))
-		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/sg552-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/sg552-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
 	else
-		EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/sg552-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/sg552-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
@@ -234,7 +238,7 @@ void CSG552::SG552Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		vecAiming = gpGlobals->v_forward;
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 33, 0.9 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 33, 0.955 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -250,12 +254,17 @@ void CSG552::SG552Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 void CSG552::Reload( void )
 {
-	if (DefaultReload( SG552_MAX_CLIP, SG552_RELOAD, 3.0 ))
+	int iResult;
+
+	iResult = DefaultReload( SG552_MAX_CLIP, SG552_RELOAD, 2.5 );
+	if (iResult)
 	{
 		m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
 	}
 
 	m_pPlayer->m_flAccuracy = 0;
+	m_pPlayer->m_iShotsFired = 0;
+	m_fDelayFire = false;
 }
 
 
@@ -269,6 +278,6 @@ void CSG552::WeaponIdle( void )
 	if (m_flTimeWeaponIdle > gpGlobals->time)
 		return;
 
-	// sic: m_flTimeWeaponIdle is not renewed, so once it has passed every call sends the idle animation again
+	m_flTimeWeaponIdle = gpGlobals->time + 20;
 	SendWeaponAnim( SG552_IDLE1 );
 }

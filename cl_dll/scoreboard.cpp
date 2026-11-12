@@ -277,26 +277,40 @@ int CHudScoreboard :: Draw( float fTime )
 // returns the ypos where it finishes drawing
 int CHudScoreboard :: DrawPlayers( int xpos_rel, float list_slot, int nameoffset, char *team )
 {
+	int ct_frags = 0, t_frags = 0;	// name ours
+	int ct_pass = 1;	// name ours
+
 	// draw the players, in order,  and restricted to team if set
 	while ( 1 )
 	{
-		// Find the top ranking player
-		int highest_frags = -99999;	int lowest_deaths = 99999;
 		int best_player = 0;
 
-		for ( int i = 1; i < MAX_PLAYERS; i++ )
+		if ( ct_pass == 1 )
 		{
-			if ( m_PlayerInfoList[i].name && m_PlayerExtraInfo[i].frags >= highest_frags )
+			for ( int i = 1; i < MAX_PLAYERS; i++ )
 			{
-				if ( !(team && stricmp(m_PlayerExtraInfo[i].teamname, team)) )  // make sure it is the specified team
+				if ( m_PlayerInfoList[i].name && ( !strcmp( m_PlayerInfoList[i].model, "urban" ) || !strcmp( m_PlayerInfoList[i].model, "gsg9" ) ) )
 				{
-					extra_player_info_t *pl_info = &m_PlayerExtraInfo[i];
-					if ( pl_info->frags > highest_frags || pl_info->deaths < lowest_deaths )
-					{
+					if ( !(team && stricmp(m_PlayerExtraInfo[i].teamname, team)) )  // make sure it is the specified team
 						best_player = i;
-						lowest_deaths = pl_info->deaths;
-						highest_frags = pl_info->frags;
-					}
+				}
+			}
+
+			if ( !best_player )
+			{
+				list_slot++;
+				ct_pass = 0;
+			}
+		}
+
+		if ( ct_pass == 0 )
+		{
+			for ( int i = 1; i < MAX_PLAYERS; i++ )
+			{
+				if ( m_PlayerInfoList[i].name && ( !strcmp( m_PlayerInfoList[i].model, "terror" ) || !strcmp( m_PlayerInfoList[i].model, "arab" ) ) )
+				{
+					if ( !(team && stricmp(m_PlayerExtraInfo[i].teamname, team)) )  // make sure it is the specified team
+						best_player = i;
 				}
 			}
 		}
@@ -306,6 +320,18 @@ int CHudScoreboard :: DrawPlayers( int xpos_rel, float list_slot, int nameoffset
 
 		// draw out the best player
 		hud_player_info_t *pl_info = &m_PlayerInfoList[best_player];
+		extra_player_info_t *pl_extra;	// name ours
+
+		if ( ct_pass == 1 )
+		{
+			pl_extra = &m_PlayerExtraInfo[best_player];
+			ct_frags += pl_extra->frags;
+		}
+		else
+		{
+			pl_extra = &m_PlayerExtraInfo[best_player];
+			t_frags += pl_extra->frags;
+		}
 
 		int ypos = ROW_RANGE_MIN + (list_slot * ROW_GAP);
 
@@ -335,12 +361,13 @@ int CHudScoreboard :: DrawPlayers( int xpos_rel, float list_slot, int nameoffset
 		// draw their name (left to right)
 		if ( !strcmp( pl_info->model, "terror" ) || !strcmp( pl_info->model, "arab" ) )
 			gHUD.DrawHudString( xpos + nameoffset, ypos, NAME_RANGE_MAX + xpos_rel, pl_info->name, 255, 25, 25 );
-		else if ( !strcmp( pl_info->model, "urban" ) )
+		else if ( !strcmp( pl_info->model, "urban" ) || !strcmp( pl_info->model, "gsg9" ) )
 			gHUD.DrawHudString( xpos + nameoffset, ypos, NAME_RANGE_MAX + xpos_rel, pl_info->name, r, g, b );
 
 		// draw kills (right to left)
 		xpos = KILLS_RANGE_MAX + xpos_rel;
-		gHUD.DrawHudNumberString( xpos, ypos, KILLS_RANGE_MIN + xpos_rel, m_PlayerExtraInfo[best_player].frags, r, g, b );
+		if ( pl_info->thisplayer )
+			gHUD.DrawHudNumberString( xpos, ypos, KILLS_RANGE_MIN + xpos_rel, pl_extra->frags, r, g, b );
 
 		// draw divider
 		xpos = DIVIDER_POS + xpos_rel;
@@ -379,11 +406,11 @@ int CHudScoreboard :: DrawPlayers( int xpos_rel, float list_slot, int nameoffset
 	int xpos = NAME_RANGE_MIN + xpos_rel;
 
 	list_slot++;
-	sprintf( sz, "CT wins : %i", m_TeamInfo[0].frags );
+	sprintf( sz, "CT wins : %2i                   frags : %4i", m_TeamInfo[0].frags, ct_frags );
 	gHUD.DrawHudString( xpos, ROW_RANGE_MIN + (list_slot * ROW_GAP), xpos + xpos_rel, sz, 55, 55, 225 );
 
 	list_slot++;
-	sprintf( sz, "Terrorist wins : %i", m_TeamInfo[1].frags );
+	sprintf( sz, "Terrorist wins : %2i         frags : %4i", m_TeamInfo[1].frags, t_frags );
 	gHUD.DrawHudString( xpos, ROW_RANGE_MIN + (list_slot * ROW_GAP), xpos + xpos_rel, sz, 225, 225, 55 );
 
 	return list_slot;

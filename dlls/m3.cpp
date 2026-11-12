@@ -134,6 +134,7 @@ int CM3::GetItemInfo(ItemInfo *p)
 
 BOOL CM3::Deploy( )
 {
+	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 240 );
 	return DefaultDeploy( "models/v_m3.mdl", "models/p_m3.mdl", M3_DRAW, "mp5" );
 }
 
@@ -180,7 +181,7 @@ void CM3::PrimaryAttack()
 	// the shell comes out with the pump: EjectBrassLate, from ItemPostFrame
 	m_pPlayer->m_flEjectBrass = gpGlobals->time + 0.45;
 
-	EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m3-1.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m3-1.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM);
 
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
@@ -204,8 +205,8 @@ void CM3::PrimaryAttack()
 	if (m_iClip != 0)
 		m_flPumpTime = gpGlobals->time + 0.5;
 
-	m_flNextPrimaryAttack = gpGlobals->time + 0.75;
-	m_flNextSecondaryAttack = gpGlobals->time + 0.75;
+	m_flNextPrimaryAttack = gpGlobals->time + 0.675;
+	m_flNextSecondaryAttack = gpGlobals->time + 0.675;
 	if (m_iClip != 0)
 		m_flTimeWeaponIdle = gpGlobals->time + 5.0;
 	else

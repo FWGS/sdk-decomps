@@ -215,6 +215,10 @@ SOURCE=.\deagle.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\debris.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\doors.cpp
 # End Source File
 # Begin Source File
@@ -315,6 +319,10 @@ SOURCE=.\items.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\knife.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\lights.cpp
 # End Source File
 # Begin Source File
@@ -352,6 +360,10 @@ SOURCE=.\mpstubb.cpp
 # Begin Source File
 
 SOURCE=.\multiplay_gamerules.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\p90.cpp
 # End Source File
 # Begin Source File
 

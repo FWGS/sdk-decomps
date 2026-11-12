@@ -40,12 +40,14 @@ static int Y_START = 0;
 static int line_height = 0;
 
 DECLARE_MESSAGE( m_SayText, SayText );
+DECLARE_MESSAGE( m_SayText, SendAudio );
 
 int CHudSayText :: Init( void )
 {
 	gHUD.AddHudElem( this );
 
 	HOOK_MESSAGE( SayText );
+	HOOK_MESSAGE( SendAudio );
 
 	InitHUDData();
 
@@ -152,7 +154,6 @@ void CHudSayText :: SayTextPrint( const char *pszBuf, int iBufSize )
 	}
 
 	m_iFlags |= HUD_ACTIVE;
-	PlaySound( "misc/talk.wav", 1 );
 
 	if ( ScreenHeight >= 480 )
 		Y_START = ScreenHeight - 45;
@@ -228,4 +229,35 @@ void CHudSayText :: EnsureTextFitsInOneLineAndWrapIfHaveTo( int line )
 			}
 		}
 	}
+}
+void CHudSayText :: SendAudioPlay( const char *pszBuf, int iBufSize )	// name ours
+{
+	char szSound[32];
+	char *dst = szSound;
+
+	strcpy( szSound, "misc/talk.wav" );
+
+	char *pszSound = strstr( pszBuf, "%!" );
+	if ( pszSound )
+	{
+		char *src = pszSound + 1;
+
+		while ( *src > ' ' && *src < 'z' )
+			*dst++ = *src++;
+		*dst = 0;
+
+		strcpy( pszSound, src );
+	}
+
+	PlaySound( szSound, 1 );
+}
+
+int CHudSayText :: MsgFunc_SendAudio( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+
+	int client_index = READ_BYTE();
+	SendAudioPlay( READ_STRING(), iSize - 1 );
+
+	return 1;
 }
