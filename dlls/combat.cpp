@@ -1052,10 +1052,11 @@ void RadiusFlash( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker
 		pevAttacker = pevInflictor;
 
 	// iterate on all entities in the vicinity.
-	// sic: IsPlayer is not called; its address is never NULL
-	while ((pEntity = UTIL_FindEntityInSphere( pEntity, vecSrc, flRadius )) != NULL && pEntity->IsPlayer)
+	// Beta 5.0: IsPlayer is called (Beta 3.0 to the leak tested its address,
+	// never NULL, sic), and the dead are not blinded any more
+	while ((pEntity = UTIL_FindEntityInSphere( pEntity, vecSrc, flRadius )) != NULL && pEntity->IsPlayer())
 	{
-		if ( pEntity->pev->takedamage != DAMAGE_NO )
+		if ( pEntity->pev->takedamage != DAMAGE_NO && pEntity->pev->deadflag == DEAD_NO )
 		{
 			// blast's don't tavel into or out of water
 			if (bInWater && pEntity->pev->waterlevel == 0)
@@ -1796,13 +1797,12 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 				// AWP and the G3/SG-1 pass it) every bullet marks the wall; the other guns'
 				// bullets do so one in four with mp_lowlag 1, and every time with
 				// mp_lowlag 0 (Beta 5.0 leak: with sv_sendvelocity 0, which the engine
-				// registers; mp_lowlag is not registered any more, game.cpp)
+				// registers; mp_lowlag is not registered any more, game.cpp; Beta 5.0:
+				// sv_sendvelocity alone decides, mp_lowlag is not read)
 				// (Beta 4.0: one in three where the bullet goes through)
 				if ( !bPistol )
 				{
-					if ( RANDOM_LONG( 0, 3 ) == 0 && CVAR_GET_FLOAT( "mp_lowlag" ) == 1 )
-						DecalGunshot( &tr, iBulletType, false, pev );
-					else if ( CVAR_GET_FLOAT( "sv_sendvelocity" ) == 0 )
+					if ( CVAR_GET_FLOAT( "sv_sendvelocity" ) == 0 )
 						DecalGunshot( &tr, iBulletType, false, pev );
 					else
 						DecalGunshot( &tr, iBulletType, true, pev );
@@ -1821,9 +1821,7 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 			{
 				if ( !bPistol )
 				{
-					if ( RANDOM_LONG( 0, 3 ) == 0 && CVAR_GET_FLOAT( "mp_lowlag" ) == 1 )
-						DecalGunshot( &tr, iBulletType, false, pev );
-					else if ( CVAR_GET_FLOAT( "sv_sendvelocity" ) == 0 )
+					if ( CVAR_GET_FLOAT( "sv_sendvelocity" ) == 0 )
 						DecalGunshot( &tr, iBulletType, false, pev );
 					else
 						DecalGunshot( &tr, iBulletType, true, pev );

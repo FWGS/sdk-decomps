@@ -47,13 +47,14 @@ public:
 	float m_flReleaseThrow;
 	float GetMaxSpeed( void ) { return 260; }	// Beta 5.0 (leak): Linux symbol
 	BOOL CanDrop( void ) { return FALSE; }		// Beta 5.0 (leak): Linux symbol
+	BOOL CanDeploy( void ) { return m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]; }	// Beta 5.0 (Linux symbol): only with a grenade left
 };
 LINK_ENTITY_TO_CLASS( weapon_hegrenade, CHEGrenade );
 
 
 void CHEGrenade::Spawn( )
 {
-	pev->classname = MAKE_STRING("weapon_hegrenade");
+	// Beta 5.0: the classname is left as the map or the factory gave it
 	Precache( );
 	m_iId = WEAPON_HEGRENADE;
 	SET_MODEL(ENT(pev), "models/w_hegrenade.mdl");
@@ -115,9 +116,12 @@ void CHEGrenade::Holster( )
 	{
 		// no more grenades!
 		m_pPlayer->pev->weapons &= ~(1<<WEAPON_HEGRENADE);
-		SetThink( DestroyItem );
-		pev->nextthink = gpGlobals->time + 0.1;
+		DestroyItem();	// Beta 5.0: at once (the leak: a tenth of a second later)
 	}
+
+	// Beta 5.0: the pin goes back in
+	m_flReleaseThrow = 0;
+	m_flStartThrow = 0;
 
 	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "common/null.wav", 1.0, ATTN_NORM);
 }
@@ -210,20 +214,9 @@ void CHEGrenade::WeaponIdle( void )
 
 	if (m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType])
 	{
-		int iAnim;
-		float flRand = RANDOM_FLOAT(0, 1);
-		if (flRand <= 0.75)
-		{
-			iAnim = HEGRENADE_IDLE;
-			m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );// how long till we do this again.
-		}
-		else
-		{
-			// sic: iAnim unset here, as the flashbang's (Beta 4.0 set HEGRENADE_IDLE);
-			// retail sends whatever its stack slot holds
-			m_flTimeWeaponIdle = gpGlobals->time + 75.0 / 30.0;
-		}
-
-		SendWeaponAnim( iAnim );
+		// Beta 5.0: always the idle animation (the leak: a quarter of the
+		// time an unset one, sic, for 2.5 seconds)
+		SendWeaponAnim( HEGRENADE_IDLE );
+		m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );// how long till we do this again.
 	}
 }

@@ -234,6 +234,7 @@ DECLARE_MESSAGE(m_Ammo, AmmoPickup);	// flashes an ammo pickup record
 DECLARE_MESSAGE(m_Ammo, WeapPickup);    // flashes a weapon pickup record
 DECLARE_MESSAGE(m_Ammo, HideWeapon);	// hides the weapon, ammo, and crosshair displays temporarily
 DECLARE_MESSAGE(m_Ammo, ItemPickup);
+DECLARE_MESSAGE(m_Ammo, Crosshair);	// shows or hides the observer's crosshair
 
 DECLARE_COMMAND(m_Ammo, Slot1);
 DECLARE_COMMAND(m_Ammo, Slot2);
@@ -266,6 +267,7 @@ int CHudAmmo::Init(void)
 	HOOK_MESSAGE(ItemPickup);
 	HOOK_MESSAGE(HideWeapon);
 	HOOK_MESSAGE(AmmoX);
+	HOOK_MESSAGE(Crosshair);
 
 	HOOK_COMMAND("slot1", Slot1);
 	HOOK_COMMAND("slot2", Slot2);
@@ -285,8 +287,10 @@ int CHudAmmo::Init(void)
 
 	CVAR_CREATE( "hud_drawhistory_time", HISTORY_DRAW_TIME, 0 );
 	CVAR_CREATE( "hud_fastswitch", "0", FCVAR_ARCHIVE );		// controls whether or not weapons can be selected in one keypress
+	CVAR_CREATE( "cl_observercrosshair", "1", 0 );
 
 	m_iFlags |= HUD_ACTIVE; //!!!
+	m_bObserverCrosshair = 0;
 
 	gWR.Init();
 	gHR.Init();
@@ -333,6 +337,24 @@ int CHudAmmo::VidInit(void)
 	{
 		giABWidth = 10;
 		giABHeight = 2;
+	}
+
+	// the crosshair an observer sees (names ours)
+	int iCount;
+	client_sprite_t *pList = SPR_GetList( "sprites/observer.txt", &iCount );
+	int iRes = ScreenWidth < 640 ? 320 : 640;
+	if ( pList )
+	{
+		client_sprite_t *p = GetSpriteList( pList, "crosshair", iRes, iCount );
+		if ( p )
+		{
+			char sz[32];
+			sprintf( sz, "sprites/%s.spr", p->szSprite );
+			m_hObserverCrosshair = SPR_Load( sz );
+			m_rcObserverCrosshair = p->rc;
+		}
+		else
+			m_hObserverCrosshair = 0;
 	}
 
 	return 1;
@@ -527,14 +549,43 @@ int CHudAmmo::MsgFunc_HideWeapon( const char *pszName, int iSize, void *pbuf )
 
 	if ( gHUD.m_iHideHUDDisplay & ( HIDEHUD_WEAPONS | HIDEHUD_ALL ) )
 	{
-		static wrect_t nullrc;
-		gpActiveSel = NULL;
-		SetCrosshair( 0, nullrc, 0, 0, 0 );
+		if ( !m_bObserverCrosshair )
+		{
+			static wrect_t nullrc;
+			gpActiveSel = NULL;
+			SetCrosshair( 0, nullrc, 0, 0, 0 );
+		}
 	}
 	else
 	{
 		if ( m_pWeapon )
 			SetCrosshair( m_pWeapon->hCrosshair, m_pWeapon->rcCrosshair, 255, 255, 255 );
+
+		m_bObserverCrosshair = 0;
+	}
+
+	return 1;
+}
+
+// Message handler for Crosshair message: a byte, show (1) or hide (0) the observer's crosshair
+int CHudAmmo::MsgFunc_Crosshair( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+	int iOn = READ_BYTE();	// name ours
+
+	if ( CVAR_GET_FLOAT( "cl_observercrosshair" ) != 0 )
+	{
+		if ( iOn )
+		{
+			SetCrosshair( m_hObserverCrosshair, m_rcObserverCrosshair, 255, 255, 255 );
+		}
+		else
+		{
+			static wrect_t nullrc;
+			SetCrosshair( 0, nullrc, 0, 0, 0 );
+		}
+
+		m_bObserverCrosshair = 1;
 	}
 
 	return 1;
@@ -562,7 +613,7 @@ int CHudAmmo::MsgFunc_CurWeapon(const char *pszName, int iSize, void *pbuf )
 		fOnTarget = TRUE;
 	}
 
-	if ( iId < 1 )
+	if ( iId < 1 && !m_bObserverCrosshair )
 	{
 		SetCrosshair(0, nullrc, 0, 0, 0);
 		return 0;
@@ -609,6 +660,8 @@ int CHudAmmo::MsgFunc_CurWeapon(const char *pszName, int iSize, void *pbuf )
 			else
 				SetCrosshair(m_pWeapon->hZoomedCrosshair, m_pWeapon->rcZoomedCrosshair, 255, 255, 255);
 		}
+
+		m_bObserverCrosshair = 0;
 	}
 
 	m_fFade = 200.0f; //!!!

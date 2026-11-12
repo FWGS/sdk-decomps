@@ -53,7 +53,11 @@ int CHudScoreboard :: Init( void )
 	HOOK_MESSAGE( TeamScore );
 	HOOK_MESSAGE( TeamInfo );
 
+	CVAR_CREATE( "cl_hidefrags", "1", 0 );
+
 	InitHUDData();
+
+	m_flNextCvarCheck = 0;
 
 	return 1;
 }
@@ -107,6 +111,13 @@ We have a minimum width of 1-320 - we could have the field widths scale with it?
 
 int CHudScoreboard :: Draw( float fTime )
 {
+	// check the cvar once a second
+	if ( fTime > m_flNextCvarCheck )
+	{
+		m_flHideFrags = CVAR_GET_FLOAT( "cl_hidefrags" );
+		m_flNextCvarCheck = fTime + 1;
+	}
+
 	if ( !m_iShowscoresHeld )
 		return 1;
 
@@ -298,17 +309,21 @@ int CHudScoreboard :: DrawPlayers( int xpos_rel, float list_slot, int nameoffset
 		// draw their name (left to right)
 		gHUD.DrawHudString( xpos + nameoffset, ypos, NAME_RANGE_MAX + xpos_rel, pl_info->name, r, g, b );
 
-		// draw kills (right to left)
-		xpos = KILLS_RANGE_MAX + xpos_rel;
-		gHUD.DrawHudNumberString( xpos, ypos, KILLS_RANGE_MIN + xpos_rel, m_PlayerExtraInfo[best_player].frags, r, g, b );
+		// with cl_hidefrags, only the player's own score is shown
+		if ( m_flHideFrags == 0 || pl_info->thisplayer )
+		{
+			// draw kills (right to left)
+			xpos = KILLS_RANGE_MAX + xpos_rel;
+			gHUD.DrawHudNumberString( xpos, ypos, KILLS_RANGE_MIN + xpos_rel, m_PlayerExtraInfo[best_player].frags, r, g, b );
 
-		// draw divider
-		xpos = DIVIDER_POS + xpos_rel;
-		gHUD.DrawHudString( xpos, ypos, xpos + 20, "/", r, g, b );
+			// draw divider
+			xpos = DIVIDER_POS + xpos_rel;
+			gHUD.DrawHudString( xpos, ypos, xpos + 20, "/", r, g, b );
 
-		// draw deaths
-		xpos = DEATHS_RANGE_MAX + xpos_rel;
-		gHUD.DrawHudNumberString( xpos, ypos, DEATHS_RANGE_MIN + xpos_rel, m_PlayerExtraInfo[best_player].deaths, r, g, b );
+			// draw deaths
+			xpos = DEATHS_RANGE_MAX + xpos_rel;
+			gHUD.DrawHudNumberString( xpos, ypos, DEATHS_RANGE_MIN + xpos_rel, m_PlayerExtraInfo[best_player].deaths, r, g, b );
+		}
 
 		// draw ping & packetloss
 		static char buf[64];
@@ -341,7 +356,7 @@ int CHudScoreboard :: DrawPlayers( int xpos_rel, float list_slot, int nameoffset
 			}
 			else if ( m_PlayerExtraInfo[best_player].has_c4 )
 			{
-				SPR_Set( gHUD.GetSprite( m_HUD_smallc4 ), 15, 15, 200 );
+				SPR_Set( gHUD.GetSprite( m_HUD_smallc4 ), 0, 160, 0 );
 				SPR_DrawAdditive( 0, xpos_rel + 1, ypos, &gHUD.GetSpriteRect( m_HUD_smallc4 ) );
 			}
 		}

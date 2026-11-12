@@ -1605,6 +1605,10 @@ BOOL CWeaponBox::PackWeapon( CBasePlayerItem *pWeapon )
 
 	if ( pWeapon->m_pPlayer )
 	{
+		// Counter-Strike Beta 5.0: the player's weapon in hand is put away first
+		if ( pWeapon->m_pPlayer->m_pActiveItem == pWeapon )
+			pWeapon->Holster( );
+
 		if ( !pWeapon->m_pPlayer->RemovePlayerItem( pWeapon ) )
 		{
 			// failed to unhook the weapon from the player!

@@ -105,8 +105,8 @@ BOOL CFlashbang::Deploy( )
 
 BOOL CFlashbang::CanHolster( void )
 {
-	// can only holster hand grenades when not primed!
-	return ( m_flStartThrow == 0 );
+	// Beta 5.0: always (a primed grenade is put away unthrown: Holster)
+	return TRUE;
 }
 
 void CFlashbang::Holster( )
@@ -116,9 +116,12 @@ void CFlashbang::Holster( )
 	{
 		// no more grenades!
 		m_pPlayer->pev->weapons &= ~(1<<WEAPON_FLASHBANG);
-		SetThink( DestroyItem );
-		pev->nextthink = gpGlobals->time + 0.1;
+		DestroyItem();	// Beta 5.0: at once (the leak: a tenth of a second later)
 	}
+
+	// Beta 5.0: the pin goes back in
+	m_flReleaseThrow = 0;
+	m_flStartThrow = 0;
 
 	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "common/null.wav", 1.0, ATTN_NORM);
 }
@@ -165,13 +168,10 @@ void CFlashbang::WeaponIdle( void )
 
 		Vector vecThrow = gpGlobals->v_forward * flVel + m_pPlayer->pev->velocity;
 
-		// alway explode 3 seconds after the pin was pulled
-		float time = m_flStartThrow - gpGlobals->time + 3.0;
-		if (time < 0)
-			time = 0;
-
 		// (Beta 3.0 radioed "fireinhole" here)
-		CGrenade::ShootTimed( m_pPlayer->pev, vecSrc, vecThrow, time );
+		// Beta 5.0: it goes off 2 seconds after the throw (the leak: 3 seconds
+		// after the pin was pulled)
+		CGrenade::ShootTimed( m_pPlayer->pev, vecSrc, vecThrow, 2.0 );
 
 		SendWeaponAnim( FLASHBANG_THROW );
 

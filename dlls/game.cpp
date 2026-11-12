@@ -28,7 +28,8 @@ cvar_t  lservercfgfile = {"lservercfgfile","listenserver.cfg"};
 // mp_weaponstay, mp_forcerespawn, mp_autocrosshair, mp_teamlist,
 // mp_teamoverride, mp_defaultteam and mp_friendly_grenade_damage are no longer
 // registered (FireBullets3 and AllowAutoTargetCrosshair still read mp_lowlag
-// and mp_autocrosshair by name)
+// and mp_autocrosshair by name); Beta 5.0 registers mp_limitteams again, and
+// FireBullets3 no longer reads mp_lowlag
 cvar_t	timelimit	= {"mp_timelimit","0", FCVAR_SERVER };
 cvar_t	friendlyfire= {"mp_friendlyfire","0", FCVAR_SERVER };
 cvar_t	footsteps	= {"mp_footsteps","1", FCVAR_SERVER };
@@ -43,6 +44,7 @@ cvar_t	ghostfrequency = {"mp_ghostfrequency","0.1", FCVAR_SERVER };	// Beta 5.0 
 cvar_t	chasecam	= {"mp_chasecam","0", FCVAR_SERVER };			// Beta 5.0 (leak): the observer modes allowed (CObserver)
 cvar_t	autokick	= {"mp_autokick","1", FCVAR_SERVER };			// Beta 5.0 (leak): kick idle players and team killers
 cvar_t	restartround = {"sv_restartround","0", FCVAR_SERVER };		// Beta 5.0 (leak): restart the round in so many seconds (Think)
+cvar_t	limitteams	= {"mp_limitteams","2", FCVAR_SERVER };			// Beta 5.0: how many players one team may have more than the other, 0 (no limit) to 20 (ReadMultiplayCvars, TeamStacked)
 
 //CVARS FOR SKILL LEVEL SETTINGS
 // Agrunt
@@ -471,6 +473,7 @@ void GameDLLInit( void )
 	CVAR_REGISTER (&chasecam);
 	CVAR_REGISTER (&autokick);
 	CVAR_REGISTER (&restartround);
+	CVAR_REGISTER (&limitteams);
 
 // REGISTER CVARS FOR SKILL LEVEL STUFF
 	// Agrunt

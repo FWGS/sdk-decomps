@@ -52,7 +52,11 @@ void CHostage::Spawn( void )
 	pev->health		= pev->max_health;
 	pev->gravity	= 1.0;
 
-	SET_MODEL( ENT(pev), "models/scientist.mdl" );
+	// Beta 5.0: the map may give the hostage a model and a skin
+	if ( pev->skin < 0 )
+		pev->skin = 0;
+
+	SET_MODEL( ENT(pev), STRING( pev->model ) );
 	SetActivity( ACT_IDLE );
 	SetSequenceBox();
 
@@ -81,7 +85,11 @@ void CHostage::Spawn( void )
 
 void CHostage::Precache( void )
 {
-	PRECACHE_MODEL( "models/scientist.mdl" );
+	// Beta 5.0: the scientist unless the map names another model
+	if ( !pev->model )
+		pev->model = MAKE_STRING( "models/scientist.mdl" );
+
+	PRECACHE_MODEL( (char *)STRING( pev->model ) );
 	PRECACHE_SOUND( "hostage/hos1.wav" );
 	PRECACHE_SOUND( "hostage/hos2.wav" );
 	PRECACHE_SOUND( "hostage/hos3.wav" );
@@ -150,10 +158,14 @@ void CHostage::IdleThink( void )
 			// every think, worth 1000 dollars to him (Beta 4.1: once a second, 200 units, 900)
 			CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)m_hTargetEnt->pev );	// names ours
 
+			// Beta 5.0: only while a counter-terrorist leads it; anybody else (or
+			// nobody) leading it clears the rescue (names ours)
 			if ( pPlayer )
 			{
-				if ( !((CHalfLifeMultiplay *)g_pGameRules)->m_fMapHasRescueZone && pPlayer->m_iTeam == TEAM_CT )
+				if ( !((CHalfLifeMultiplay *)g_pGameRules)->m_fMapHasRescueZone )
 				{
+					if ( pPlayer->m_iTeam == TEAM_CT )
+					{
 					BOOL fRescueSpots = FALSE;
 					if ( UTIL_FindEntityByClassname( NULL, "info_hostage_rescue" ) )
 						fRescueSpots = TRUE;
@@ -181,9 +193,13 @@ void CHostage::IdleThink( void )
 							}
 						}
 					}
+					}
+					else
+						m_fRescued = FALSE;
 				}
 
-				if ( m_fRescued )
+				// Beta 5.0: no "Hostage rescued." on the leader's screen any more
+				if ( m_fRescued && pPlayer->m_iTeam == TEAM_CT )
 				{
 					pev->deadflag = DEAD_RESPAWNABLE;	// rescued
 					pPlayer->AddAccount( 1000, true );
@@ -191,9 +207,10 @@ void CHostage::IdleThink( void )
 					((CHalfLifeMultiplay *)g_pGameRules)->m_iHostagesRescued++;
 					((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
 					Broadcast( "rescued" );
-					ShowMenu( pPlayer, 0, 2, FALSE, "Hostage rescued." );
 				}
 			}
+			else
+				m_fRescued = FALSE;
 
 			// follow: turn to the leader and run to him
 			Vector vecDir = m_hTargetEnt->pev->origin - pev->origin;
@@ -377,6 +394,7 @@ void CHostage::RePosition( void )
 
 	m_hTargetEnt = NULL;
 	m_fTouched = FALSE;
+	m_fRescued = FALSE;	// Beta 5.0: a rescued hostage is back in play at a new round
 
 	UTIL_SetOrigin( pev, m_vecStart );
 	UTIL_SetSize( pev, Vector( -16, -16, 0 ), Vector( 16, 16, 72 ) );
@@ -494,7 +512,7 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You killed a hostage!" );	// Beta 5.0 (leak)
 			if ( !(pPlayer->m_flDisplayHistory & 0x40) )	// hostage killed
 			{
-				pPlayer->HintMessage( "You have lost money for killing a hostage.", FALSE );
+				pPlayer->HintMessage( "You have lost money for killing a hostage.", FALSE, FALSE );
 				pPlayer->m_flDisplayHistory |= 0x40;
 			}
 		}
@@ -532,7 +550,7 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 		ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You injured a hostage!" );
 		if ( !(pPlayer->m_flDisplayHistory & 0x20) )	// hostage injured
 		{
-			pPlayer->HintMessage( "Be careful around hostages.\nYou will lose money if you kill a hostage.", FALSE );
+			pPlayer->HintMessage( "Be careful around hostages.\nYou will lose money if you kill a hostage.", FALSE, FALSE );
 			pPlayer->m_flDisplayHistory |= 0x20;
 		}
 	}

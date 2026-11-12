@@ -37,7 +37,7 @@ void CHintMessageQueue::Update( CBaseEntity &player )
 		m_rgpszMessages[ m_iShown ] = NULL;
 		m_iMessages--;
 		m_iShown = ( m_iShown + 1 ) % 8;
-		m_flNextMessage = gpGlobals->time + 5;
+		m_flNextMessage = gpGlobals->time + 6;	// Beta 5.0 (the leak: 5)
 
 		if ( m_rgpszMessages[ m_iShown ] )
 			UTIL_HudMessage( &player, tp, m_rgpszMessages[ m_iShown ] );

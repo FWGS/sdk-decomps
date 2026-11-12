@@ -31,6 +31,7 @@
 
 extern int gmsgItemPickup;
 extern int gmsgArmorType;	// Beta 5.0 (leak) (player.cpp; Linux symbol)
+extern int gmsgStatusIcon;	// Beta 5.0 (leak) (player.cpp; Linux symbol)
 
 class CWorldItem : public CBaseEntity
 {
@@ -429,17 +430,22 @@ class CItemThighPack : public CItem
 	}
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{
-		if ( pPlayer->m_iTeam == TEAM_CT )
+		// Beta 5.0: only a CT without a defuse kit takes it, and the HUD
+		// shows the kit's icon (green), as when one is bought
+		if ( pPlayer->m_iTeam == TEAM_CT && !pPlayer->m_fHasDefuser )
 		{
 			pPlayer->m_fHasDefuser = true;
-			pPlayer->SetBombIcon( FALSE );
-
 			pPlayer->pev->body = 1;
-			EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/kevlar.wav", 1, ATTN_NORM );
 
-			MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
-				WRITE_STRING( STRING(pev->classname) );
+			MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, pPlayer->pev );
+				WRITE_BYTE( 1 );
+				WRITE_STRING( "defuser" );
+				WRITE_BYTE( 0 );
+				WRITE_BYTE( 160 );
+				WRITE_BYTE( 0 );
 			MESSAGE_END();
+
+			EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/kevlar.wav", 1, ATTN_NORM );
 
 			return TRUE;
 		}

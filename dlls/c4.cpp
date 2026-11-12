@@ -34,7 +34,7 @@ class CC4 : public CBasePlayerWeapon
 public:
 	void Spawn( void );
 	void Precache( void );
-	int iItemSlot( void ) { return 4; }
+	int iItemSlot( void ) { return 5; }	// Beta 5.0: the bomb's own item slot (the leak: 4)
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
@@ -87,7 +87,7 @@ int CC4::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
-	p->iSlot = 3;
+	p->iSlot = 4;	// Beta 5.0: the fifth HUD slot is the bomb's (the leak: the grenades', 3)
 	p->iPosition = 3;
 	p->iId = m_iId = WEAPON_C4;
 	p->iWeight = C4_WEIGHT;
@@ -114,8 +114,7 @@ void CC4::Holster( )
 	{
 		// no more bombs
 		m_pPlayer->pev->weapons &= ~(1<<WEAPON_C4);
-		SetThink( DestroyItem );
-		pev->nextthink = gpGlobals->time + 0.1;
+		DestroyItem();	// Beta 5.0: at once (the leak: a tenth of a second later)
 	}
 
 	SendWeaponAnim( C4_DRAW );
@@ -196,16 +195,17 @@ void CC4::PrimaryAttack( void )
 
 				vecEnd = UTIL_GetAimVector( m_pPlayer->edict(), 0 );
 				vecEnd = vecEnd.Normalize();
-				vecEnd = vecEnd * 15;
+				vecEnd = vecEnd * 12;
 				vecEnd.z = -10;
 				vecEnd = vecEnd + m_pPlayer->pev->origin;
 
-				UTIL_TraceLine( vecEnd, m_pPlayer->pev->origin, ignore_monsters, ENT(pev), &tr );
+				// Beta 5.0: traced from the player out, and kept 5 units off what it hits
+				UTIL_TraceLine( m_pPlayer->pev->origin, vecEnd, ignore_monsters, ENT(pev), &tr );
 
 				if (tr.flFraction == 1.0)
 					CGrenade::ShootSatchelCharge( m_pPlayer->pev, vecEnd, Vector( 0, 0, 0 ) );
 				else
-					CGrenade::ShootSatchelCharge( m_pPlayer->pev, tr.vecEndPos, Vector( 0, 0, 0 ) );
+					CGrenade::ShootSatchelCharge( m_pPlayer->pev, tr.vecEndPos + tr.vecPlaneNormal * 5, Vector( 0, 0, 0 ) );
 
 				UTIL_ClientPrintAll( HUD_PRINTCENTER, "The bomb has been planted!" );
 				EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/c4_plant.wav", 1.0, ATTN_NORM );

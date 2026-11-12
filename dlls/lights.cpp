@@ -31,6 +31,7 @@ class CLight : public CPointEntity
 public:
 	virtual void	KeyValue( KeyValueData* pkvd ); 
 	virtual void	Spawn( void );
+	virtual void	Restart( void );	// Counter-Strike Beta 5.0 (Linux symbol): a new round puts the light back as the map had it
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	virtual int		Save( CSave &save );
@@ -41,6 +42,7 @@ public:
 private:
 	int		m_iStyle;
 	int		m_iszPattern;
+	int		m_iStartedOn;	// Beta 5.0: the light was on when it spawned (not saved; name ours)
 };
 LINK_ENTITY_TO_CLASS( light, CLight );
 
@@ -93,10 +95,32 @@ void CLight :: Spawn( void )
 		REMOVE_ENTITY(ENT(pev));
 		return;
 	}
+
+	m_iStartedOn = !FBitSet(pev->spawnflags, SF_LIGHT_START_OFF);
 	
 	if (m_iStyle >= 32)
 	{
 //		CHANGE_METHOD(ENT(pev), em_use, light_use);
+		if (FBitSet(pev->spawnflags, SF_LIGHT_START_OFF))
+			LIGHT_STYLE(m_iStyle, "a");
+		else if (m_iszPattern)
+			LIGHT_STYLE(m_iStyle, (char *)STRING( m_iszPattern ));
+		else
+			LIGHT_STYLE(m_iStyle, "m");
+	}
+}
+
+
+// Counter-Strike Beta 5.0: back to the state the map gave it
+void CLight :: Restart( void )
+{
+	if (m_iStartedOn)
+		ClearBits(pev->spawnflags, SF_LIGHT_START_OFF);
+	else
+		SetBits(pev->spawnflags, SF_LIGHT_START_OFF);
+
+	if (m_iStyle >= 32)
+	{
 		if (FBitSet(pev->spawnflags, SF_LIGHT_START_OFF))
 			LIGHT_STYLE(m_iStyle, "a");
 		else if (m_iszPattern)

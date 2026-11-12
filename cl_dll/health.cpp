@@ -583,8 +583,12 @@ int CHudRoundTimer::Draw( float flTime )
 	x = ( ScreenWidth - gHUD.GetSpriteWidth( gHUD.m_HUD_number_0 ) * ( ScreenWidth < 640 ? 5 : 4 ) ) / 2;
 	y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 
-	SPR_Set( gHUD.GetSprite( m_HUD_timer ), r, g, b );
-	SPR_DrawAdditive( 0, x - gHUD.GetSpriteWidth( m_HUD_timer ), y, &gHUD.GetSpriteRect( m_HUD_timer ) );
+	// the stopwatch only when there is room for it
+	if ( ScreenWidth >= 400 )
+	{
+		SPR_Set( gHUD.GetSprite( m_HUD_timer ), r, g, b );
+		SPR_DrawAdditive( 0, x - gHUD.GetSpriteWidth( m_HUD_timer ), y, &gHUD.GetSpriteRect( m_HUD_timer ) );
+	}
 
 	x = gHUD.DrawHudNumber( x, y, DHN_2DIGITS | DHN_DRAWZERO, iMinutes, r, g, b );
 	x = gHUD.DrawHudString( x, y + ( ScreenWidth < 640 ? 1 : 4 ), ScreenWidth - 1, ":", r, g, b );

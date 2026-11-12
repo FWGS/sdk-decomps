@@ -198,7 +198,7 @@ void CXM1014::PrimaryAttack()
 		m_flTimeWeaponIdle = 0.75;	// sic: an absolute time, as in CShotgun's
 	m_fInReload = 0;
 
-	m_pPlayer->pev->punchangle.x -= RANDOM_LONG( 4, 6 );
+	m_pPlayer->pev->punchangle.x -= RANDOM_LONG( 3, 5 );	// Beta 5.0 (the leak: 4 to 6)
 }
 
 

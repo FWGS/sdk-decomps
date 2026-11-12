@@ -1059,8 +1059,14 @@ CGrenade * CGrenade :: ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart,
 
 	pGrenade->pev->nextthink = gpGlobals->time + 0.1;
 	pGrenade->m_flC4Blow = gpGlobals->time + ((CHalfLifeMultiplay *)g_pGameRules)->m_iC4Timer;
-	pGrenade->m_flBeepInterval = ((CHalfLifeMultiplay *)g_pGameRules)->m_iC4Timer / 8;
-	pGrenade->m_flNextBeep = gpGlobals->time + pGrenade->m_flBeepInterval;
+	// Beta 5.0: five beeps in turn, each lasting 10 % less than the last,
+	// the first a quarter of the timer (the leak: one beep, faster and faster)
+	pGrenade->m_flBeepInterval = ((CHalfLifeMultiplay *)g_pGameRules)->m_iC4Timer / 4;
+	pGrenade->m_flNextBeepChange = gpGlobals->time;
+	pGrenade->m_flNextBeep = gpGlobals->time + 0.5;
+	pGrenade->m_iBeepStep = 0;
+	pGrenade->m_flBeepAttenuation = 0;
+	pGrenade->m_pszBeepSound = NULL;
 	pGrenade->m_flNextBlink = gpGlobals->time + 2.0;
 	pGrenade->m_fPlantedC4 = true;
 	pGrenade->m_flNextDefuseCheck = 0;
@@ -1099,18 +1105,45 @@ void CGrenade::C4Think( void )
 
 	pev->nextthink = gpGlobals->time + 0.12;	// Beta 5.0 (leak) (was 0.1)
 
-	m_flBeepInterval *= 0.99;
-	if ( m_flBeepInterval < 0.12 )
-		m_flBeepInterval = 0.12;
+	// Beta 5.0: five beeps, each carrying farther (a smaller attenuation)
+	// than the last, each lasting 10 % less; a beep every 1.4 seconds (the
+	// leak: one beep, faster and louder at every think)
+	if ( gpGlobals->time >= m_flNextBeepChange )
+	{
+		m_flNextBeepChange = gpGlobals->time + m_flBeepInterval;
+		m_flBeepInterval *= 0.9;
 
-	float flAttenuation = m_flBeepInterval - 0.1;	// name ours
-	if ( flAttenuation > 2 )
-		flAttenuation = 2;
+		switch ( m_iBeepStep )
+		{
+		case 0:
+			m_pszBeepSound = "weapons/c4_beep1.wav";
+			m_flBeepAttenuation = 1.5;
+			break;
+		case 1:
+			m_pszBeepSound = "weapons/c4_beep2.wav";
+			m_flBeepAttenuation = 1.0;
+			break;
+		case 2:
+			m_pszBeepSound = "weapons/c4_beep3.wav";
+			m_flBeepAttenuation = 0.8;
+			break;
+		case 3:
+			m_pszBeepSound = "weapons/c4_beep4.wav";
+			m_flBeepAttenuation = 0.5;
+			break;
+		case 4:
+			m_pszBeepSound = "weapons/c4_beep5.wav";
+			m_flBeepAttenuation = 0.2;
+			break;
+		}
+
+		m_iBeepStep++;
+	}
 
 	if ( gpGlobals->time >= m_flNextBeep )
 	{
-		m_flNextBeep = gpGlobals->time + m_flBeepInterval;
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/c4_beep.wav", 1.0, flAttenuation);
+		m_flNextBeep = gpGlobals->time + 1.4;
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, m_pszBeepSound, 1.0, m_flBeepAttenuation);
 	}
 
 	// Beta 5.0 (leak): the C4 glows every two seconds
@@ -1164,16 +1197,27 @@ void CGrenade::C4Think( void )
 				m_flDefuseDone = 0;
 			}
 		}
-		else if ( m_pDefuser->pev->deadflag == DEAD_NO )
+		else
 		{
-			Broadcast( "BOMBDEF" );
-			EMIT_SOUND(ENT(m_pDefuser->pev), CHAN_WEAPON, "weapons/c4_disarmed.wav", 1.0, ATTN_NORM);
-			UTIL_Remove( this );
-			m_fC4Done = TRUE;
-			((CHalfLifeMultiplay *)g_pGameRules)->m_fBombDefused = true;
-			((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
-			m_pDefuser = NULL;
+			if ( m_pDefuser->pev->deadflag == DEAD_NO )
+			{
+				Broadcast( "BOMBDEF" );
+				// Beta 5.0: the last beep, still sounding, is stopped
+				UTIL_EmitAmbientSound( ENT(pev), pev->origin, "weapons/c4_beep5.wav", 0, ATTN_NONE, SND_STOP, 0 );
+				EMIT_SOUND(ENT(m_pDefuser->pev), CHAN_WEAPON, "weapons/c4_disarmed.wav", 1.0, ATTN_NORM);
+				UTIL_Remove( this );
+				m_fC4Done = TRUE;
+				((CHalfLifeMultiplay *)g_pGameRules)->m_fBombDefused = true;
+				((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
+				m_pDefuser = NULL;
+				m_fStartDefuse = false;
+				return;
+			}
+
+			// Beta 5.0: a defuser who died at the end lets the next one start
+			// afresh (the leak left the defuse running)
 			m_fStartDefuse = false;
+			m_pDefuser = NULL;
 		}
 	}
 }

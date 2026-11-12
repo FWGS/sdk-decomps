@@ -74,13 +74,17 @@ public:
 	CBaseEntity *m_pDefuser;		// 0x11c the one defusing
 	float m_flDefuseDone;			// 0x120 when the defusing is done (5 seconds after it starts with a defuse kit, 10 without)
 	float m_flC4Blow;				// 0x124 when the C4 goes off
-	float m_flBeepInterval;			// 0x128 between two beeps; shrinks by 1 % at every think
-	float m_flNextBeep;				// 0x12c when C4Think beeps next
-	float m_flNextBlink;			// 0x130 [new in 5.0] when C4Think shows the C4's glow sprite next (every 2 seconds)
-	float m_flNextDefuseCheck;		// 0x134 [new in 5.0] the defuser must use the C4 again before this time (half a second), or the defusing stops
-	bool m_fC4Done;					// 0x138 [0x130] false only while a planted C4 ticks (ShootSatchelCharge); every other grenade has it set, and the C4 sets it when it goes off or is defused (CheckWinConditions waits for it)
-	int m_iTeam;					// 0x13c [0x134] the thrower's team: an HE grenade does not hurt his team mates (CBasePlayer::TakeDamage)
-	edict_t *m_pentBombTarget;		// 0x140 [new in 5.0] the bomb target the planter stood in (his own member); when the C4 goes off, it is used
+	float m_flBeepInterval;			// 0x128 Beta 5.0: the time between two changes of the beep; ShootSatchelCharge sets a quarter of mp_c4timer, each change makes it 10 % shorter
+	float m_flNextBeep;				// 0x12c when C4Think beeps next (1.4 seconds after the last beep)
+	float m_flNextBeepChange;		// 0x130 [new in 5.0] when C4Think takes the next of the five beeps (name ours)
+	const char *m_pszBeepSound;		// 0x134 [new in 5.0] the beep it plays, weapons/c4_beep1.wav to c4_beep5.wav (name ours)
+	float m_flBeepAttenuation;		// 0x138 [new in 5.0] the beep's attenuation, smaller with each beep (name ours)
+	float m_flNextBlink;			// 0x13c [0x130] when C4Think shows the C4's glow sprite next (every 2 seconds)
+	float m_flNextDefuseCheck;		// 0x140 [0x134] the defuser must use the C4 again before this time (half a second), or the defusing stops
+	bool m_fC4Done;					// 0x144 [0x138] false only while a planted C4 ticks (ShootSatchelCharge); every other grenade has it set, and the C4 sets it when it goes off or is defused (CheckWinConditions waits for it)
+	int m_iTeam;					// 0x148 [0x13c] the thrower's team: an HE grenade does not hurt his team mates (CBasePlayer::TakeDamage)
+	int m_iBeepStep;				// 0x14c [new in 5.0] which beep C4Think takes next, 0 to 4 (name ours)
+	edict_t *m_pentBombTarget;		// 0x150 [0x140] the bomb target the planter stood in (his own member); when the C4 goes off, it is used
 
 	BOOL m_fRegisteredSound;// whether or not this grenade has issued its DANGER sound to the world sound list yet.
 };
@@ -164,17 +168,17 @@ public:
 #define M4A1_WEIGHT			25
 #define TMP_WEIGHT			25
 #define G3SG1_WEIGHT		20
-#define FLASHBANG_WEIGHT	3
+#define FLASHBANG_WEIGHT	1	// Beta 5.0 (the leak: 3)
 #define DEAGLE_WEIGHT		7
 #define SG552_WEIGHT		25
 #define AK47_WEIGHT			25
 #define P90_WEIGHT			26
-#define KNIFE_WEIGHT		2
+#define KNIFE_WEIGHT		0	// Beta 5.0 (the leak: 2)
 #define C4_WEIGHT			3		// Beta 5.0 (leak)
 // Beta 4.0
 #define P228_WEIGHT			5
 #define SCOUT_WEIGHT		30
-#define HEGRENADE_WEIGHT	3
+#define HEGRENADE_WEIGHT	2	// Beta 5.0 (the leak: 3)
 // Beta 5.0 (leak)
 #define XM1014_WEIGHT		20
 #define SHIELD_WEIGHT		2
@@ -290,7 +294,7 @@ public:
 #define AK47_DEFAULT_GIVE			30
 #define P90_DEFAULT_GIVE			50
 #define C4_DEFAULT_GIVE				1	// Beta 5.0 (leak)
-#define P228_DEFAULT_GIVE			12	// Beta 4.0 and 5.0 (leak): 12, one short of its magazine (Beta 4.1: 13)
+#define P228_DEFAULT_GIVE			13	// Beta 4.1 and 5.0: 13 (Beta 4.0 and 5.0 leak: 12, one short of its magazine)
 #define SCOUT_DEFAULT_GIVE			10
 #define HEGRENADE_DEFAULT_GIVE		1
 #define XM1014_DEFAULT_GIVE			7	// Beta 5.0 (leak)

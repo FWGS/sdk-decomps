@@ -1220,7 +1220,7 @@ void CBombGlow::Think( void )
 		if ( m_tmBeepPeriod < 0.1 )
 			m_tmBeepPeriod = 0.1;
 		pev->effects = 0;
-		EMIT_SOUND( ENT(pev), CHAN_VOICE, "weapons/c4_beep.wav", 1.0, 1.0 );
+		EMIT_SOUND( ENT(pev), CHAN_VOICE, "weapons/c4_beep1.wav", 1.0, 1.0 );	// Beta 5.0 (the leak: c4_beep.wav)
 	}
 
 	pev->nextthink = gpGlobals->time + 0.05;

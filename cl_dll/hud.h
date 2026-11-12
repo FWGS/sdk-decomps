@@ -98,6 +98,7 @@ public:
 	int MsgFunc_WeapPickup( const char *pszName, int iSize, void *pbuf );
 	int MsgFunc_ItemPickup( const char *pszName, int iSize, void *pbuf );
 	int MsgFunc_HideWeapon( const char *pszName, int iSize, void *pbuf );
+	int MsgFunc_Crosshair( const char *pszName, int iSize, void *pbuf );
 
 	void _cdecl UserCmd_Slot1( void );
 	void _cdecl UserCmd_Slot2( void );
@@ -119,6 +120,9 @@ private:
 	WEAPON *m_pWeapon;
 	int	m_HUD_bucket0;
 	int m_HUD_selection;
+	HSPRITE m_hObserverCrosshair;		// name ours
+	wrect_t m_rcObserverCrosshair;		// name ours
+	int m_bObserverCrosshair;			// name ours
 
 };
 
@@ -293,6 +297,8 @@ public:
 	int m_iShowscoresHeld;
 	int m_HUD_smallskull;	// name ours
 	int m_HUD_smallc4;		// name ours
+	float m_flNextCvarCheck;	// name ours
+	float m_flHideFrags;		// name ours: cl_hidefrags
 
 	void GetAllPlayersInfo( void );
 };
@@ -705,30 +711,13 @@ public:
 
 extern CHud gHUD;
 
-// sic: a stand-in, name ours.  The
-// leak's headers held 213 to 243 bytes more intermediate code between class CHud's inline
+// sic: a stand-in, name ours.
+// The headers held more intermediate code between class CHud's inline
 // functions and util.h's CVAR_GET_FLOAT than ours: ammo.obj and health.obj place their header
-// inline functions by it.  Which text it was, the image does not say; nothing calls this.
+// inline functions by it.  The leak needs 213 to 243 bytes more, Beta 5.0 83 to 188 (or its .cpp
+// files that much more of their own); which text it was, the image does not say.  Nothing calls this.
 inline void b50leak_unknown( void )
 {
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
 	;
 	;
 	;

@@ -358,18 +358,18 @@ public:
 	// and the C4, the round's starting weapons
 	virtual void RemoveGuns( void );
 	virtual void GiveC4( void );
-	virtual void GiveWeapons( void );
 
 	// Beta 5.0 (leak) (Linux symbols): a team is full when it has as many
 	// players as the map has spawn points for it; the round's freeze period
 	// and the seconds left in it or in the round
 	BOOL TeamFull( int team_id );
+	BOOL TeamStacked( int newTeam_id, int curTeam_id );	// Beta 5.0 (Linux symbol)
 	BOOL IsFreezePeriod( void ) { return m_bFreezePeriod; }
 	float TimeRemaining( void ) { return m_iRoundTimeSecs - gpGlobals->time + m_flRoundStartTime; }
 
 	// member names ours; the offsets are retail's
 	float m_flRestartRoundTime;		// 0x04 Think calls RestartRound at this time; 0 = no restart pending
-	// (Beta 5.0 leak's offsets; Beta 4.1's in brackets where a member moved)
+	// (Beta 5.0's offsets; the leak's in brackets where a member moved)
 	int m_iUnused08;				// 0x08 no function refers to it
 	float m_flRoundStartTime;		// 0x0c RestartRound sets it, and Think when the freeze period ends; TimeRemaining counts from it; FPlayerCanRespawn: no spawning more than 20 seconds after it
 	int m_iRoundTime;				// 0x10 [0x90] mp_roundtime, in minutes, 3 to 9
@@ -387,41 +387,41 @@ public:
 	int m_iHostagesRescued;			// 0x40 [0x28] this round; each is worth 150 to the CT account
 	int m_iUnused2C;				// 0x44 [0x2c] new in Beta 1.1: only RestartRound refers to it (zeroes it)
 	int m_iRoundWinStatus;			// 0x48 [0x30] 0 round running, 1 CTs won, 2 terrorists won, 3 nobody
-	int m_iKickVotes[20];			// 0x4c [0x34] kick votes against players 1 to 20 (ClientCommand's vote, at m_iKickVotes[n - 1]); RestartRound clears them
-	short m_iNumCTWins;				// 0x9c [0x84] rounds won (TeamScore)
-	short m_iNumTerroristWins;		// 0x9e [0x86]
-	int m_iUnused88;				// 0xa0 [0x88] new in Beta 4.0: only RestartRound refers to it (sets 2)
-	bool m_fTargetBombed;			// 0xa4 [0x8c] new in Beta 4.0: the C4 went off near a bomb target this round (Explode2)
-	bool m_fBombDefused;			// 0xa5 new: the planted C4 was defused (C4Think)
-	bool m_fMapHasBombTarget;		// 0xa6 [0x8d] the map has a func_bomb_target or an info_bomb_target (RestartRound looks)
-	bool m_fMapHasBombZone;			// 0xa7 new: it has a func_bomb_target
-	bool m_fMapHasBuyZone;			// 0xa8 new: it has a func_buyzone
-	bool m_fMapHasRescueZone;		// 0xa9 new: it has a func_hostage_rescue
-	int m_iMapHasCameras;			// 0xac new: 2 not known yet (the constructor), else whether a trigger_camera exists (ClientPutInServer: the joining player's view)
-	int m_iC4Timer;					// 0xb0 [0x94] mp_c4timer, in seconds, 10 to 90
-	int m_iC4Turn;					// 0xb4 [0x98] GiveC4's count through the terrorists
-	int m_iLoserBonus;				// 0xb8 new: the losing team's round money: 1400, 500 more after each third loss in a row up to 3400
-	int m_iNumConsecutiveCTLoses;	// 0xbc new: rounds lost in a row (RestartRound)
-	int m_iNumConsecutiveTerroristLoses;	// 0xc0 new
-	float m_flMaxIdlePeriod;		// 0xc4 new: mp_roundtime times 120 (the constructor and RestartRound, before the clamp); CBasePlayer::PreThink kicks a player idle longer when mp_autokick is set (name ours)
-	bool m_fCountedSpawnPoints;		// 0xc8 new: Think has counted the spawn points this round (RestartRound and GoToIntermission clear it)
-	bool m_fRoundTerminating;		// 0xc9 new: the round is decided and the next one is due (RestartRound clears it)
-	bool m_fCompleteReset;			// 0xca new: the next RestartRound zeroes the team scores too (the first round, sv_restartround)
-	CBasePlayer *m_pCTCommander;	// 0xcc [0x9c] new in Beta 3.0: the counter-terrorists' commander (PickNewCommander)
-	CBasePlayer *m_pTerroristCommander;	// 0xd0 [0xa0] the terrorists'
+	short m_iNumCTWins;				// 0x4c [0x9c] rounds won (TeamScore)
+	short m_iNumTerroristWins;		// 0x4e [0x9e]
+	int m_iUnused88;				// 0x50 [0xa0] new in Beta 4.0: only RestartRound refers to it (sets 2)
+	bool m_fTargetBombed;			// 0x54 [0xa4] new in Beta 4.0: the C4 went off near a bomb target this round (Explode2)
+	bool m_fBombDefused;			// 0x55 [0xa5] new in the leak: the planted C4 was defused (C4Think)
+	bool m_fMapHasBombTarget;		// 0x56 [0xa6] the map has a func_bomb_target or an info_bomb_target (RestartRound looks)
+	bool m_fMapHasBombZone;			// 0x57 [0xa7] new in the leak: it has a func_bomb_target
+	bool m_fMapHasBuyZone;			// 0x58 [0xa8] new in the leak: it has a func_buyzone
+	bool m_fMapHasRescueZone;		// 0x59 [0xa9] new in the leak: it has a func_hostage_rescue
+	int m_iMapHasCameras;			// 0x5c [0xac] new in the leak: 2 not known yet (the constructor), else whether a trigger_camera exists (ClientPutInServer: the joining player's view)
+	int m_iC4Timer;					// 0x60 [0xb0] mp_c4timer, in seconds, 10 to 90
+	int m_iC4Turn;					// 0x64 [0xb4] GiveC4's count through the terrorists
+	int m_iLoserBonus;				// 0x68 [0xb8] new in the leak: the losing team's round money: 1400, 500 more after each third loss in a row up to 3400
+	int m_iNumConsecutiveCTLoses;	// 0x6c [0xbc] new in the leak: rounds lost in a row (RestartRound)
+	int m_iNumConsecutiveTerroristLoses;	// 0x70 [0xc0] new
+	float m_flMaxIdlePeriod;		// 0x74 [0xc4] new in the leak: mp_roundtime times 120 (the constructor and RestartRound, before the clamp); CBasePlayer::PreThink kicks a player idle longer when mp_autokick is set (name ours)
+	int m_iLimitTeams;				// 0x78 new in Beta 5.0: mp_limitteams, 0 to 20 (ReadMultiplayCvars); TeamStacked lets a team have that many players more than the other
+	bool m_fCountedSpawnPoints;		// 0x7c [0xc8] new in the leak: Think has counted the spawn points this round (RestartRound and GoToIntermission clear it)
+	bool m_fRoundTerminating;		// 0x7d [0xc9] new in the leak: the round is decided and the next one is due (RestartRound clears it)
+	bool m_fCompleteReset;			// 0x7e [0xca] new in the leak: the next RestartRound zeroes the team scores too (the first round, sv_restartround)
+	CBasePlayer *m_pCTCommander;	// 0x80 [0xcc] new in Beta 3.0: the counter-terrorists' commander (PickNewCommander)
+	CBasePlayer *m_pTerroristCommander;	// 0x84 [0xd0] the terrorists'
 
 protected:
 	virtual void ChangeLevel( void );
 	virtual void GoToIntermission( void );
-	float m_flIntermissionEndTime;	// 0xd4 [0xa4]
-	BOOL m_iEndIntermissionButtonHit;	// 0xd8 [0xa8]
+	float m_flIntermissionEndTime;	// 0x88 [0xd4]
+	BOOL m_iEndIntermissionButtonHit;	// 0x8c [0xd8]
 	void SendMOTDToClient( edict_t *client );
 
 public:
 	// Beta 5.0 (leak), after the SDK's members (names ours)
-	BOOL m_bFreezePeriod;			// 0xdc TRUE from RestartRound until Think sees the freeze time run out (IsFreezePeriod)
-	float m_flNextRestartCheck;		// 0xe0 when Think reads sv_restartround next (every half second)
-	bool m_fGameCommenced;			// 0xe4 both teams have had spawnable players (CheckWinConditions; until then a round ends at once)
+	BOOL m_bFreezePeriod;			// 0x90 [0xdc] TRUE from RestartRound until Think sees the freeze time run out (IsFreezePeriod)
+	float m_flNextRestartCheck;		// 0x94 [0xe0] when Think reads sv_restartround next (every half second)
+	bool m_fGameCommenced;			// 0x98 [0xe4] both teams have had spawnable players (CheckWinConditions; until then a round ends at once)
 };
 
 extern DLL_GLOBAL CGameRules*	g_pGameRules;

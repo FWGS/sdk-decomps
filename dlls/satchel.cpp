@@ -358,8 +358,7 @@ void CSatchel::Holster( )
 	if ( !m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] && !m_chargeReady )
 	{
 		m_pPlayer->pev->weapons &= ~(1<<WEAPON_SATCHEL);
-		SetThink( DestroyItem );
-		pev->nextthink = gpGlobals->time + 0.1;
+		DestroyItem();	// Counter-Strike Beta 5.0: at once (the SDK: a tenth of a second later)
 	}
 }
 

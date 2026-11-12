@@ -39,13 +39,6 @@ extern int gmsgTeamInfo;
 extern int gmsgStatusIcon;
 extern void ShowMenu( CBasePlayer *pPlayer, int bitsValidSlots, int nDisplayTime, BOOL fNeedMore, char *pszText );
 
-inline void sic_il_multiplay( void )	// sic: intermediate code the image shows only through header inlines' places
-{
-	;
-	;
-	;
-}
-
 #define ITEM_RESPAWN_TIME	30
 #define WEAPON_RESPAWN_TIME	20
 #define AMMO_RESPAWN_TIME	20
@@ -76,11 +69,71 @@ void Broadcast( const char *sentence )
 // of everybody's screen, red fading to green, for four
 // seconds (Linux symbol; the text parameters' name ours)
 //=========================================================
-hudtextparms_t g_textParmsEndRound = { -1, 0.4, 2, 255, 20, 20, 200, 0, 255, 0, 200, 0.01, 0.7, 4.0, 0.07, 1 };	// name ours
+static hudtextparms_t g_textParmsEndRound = { -1, 0.4, 2, 255, 20, 20, 200, 0, 255, 0, 200, 0.01, 0.7, 4.0, 0.07, 1 };	// name ours
 
 void EndRoundMessage( const char *sentence )
 {
 	UTIL_HudMessageAll( g_textParmsEndRound, sentence );
+}
+
+//=========================================================
+// ReadMultiplayCvars - Beta 5.0 (Linux symbol): the round
+// time, C4 timer, freeze time and team limit from their
+// cvars, each clamped and the cvar set back to the clamp.
+// sic: a round time under 3 minutes becomes 1, a freeze
+// time over 15 seconds sets mp_roundtime to 9; a team limit
+// under 1 (the cvar set to 0) means 20, no limit
+//=========================================================
+static void ReadMultiplayCvars( CHalfLifeMultiplay *mp )
+{
+	mp->m_iRoundTime = (int)CVAR_GET_FLOAT( "mp_roundtime" );
+	mp->m_iC4Timer = (int)CVAR_GET_FLOAT( "mp_c4timer" );
+	mp->m_iFreezeTime = (int)CVAR_GET_FLOAT( "mp_freezetime" );
+	mp->m_iLimitTeams = (int)CVAR_GET_FLOAT( "mp_limitteams" );
+
+	if ( mp->m_iRoundTime > 9 )
+	{
+		CVAR_SET_FLOAT( "mp_roundtime", 9 );
+		mp->m_iRoundTime = 9;
+	}
+	else if ( mp->m_iRoundTime < 3 )
+	{
+		CVAR_SET_FLOAT( "mp_roundtime", 1 );
+		mp->m_iRoundTime = 1;
+	}
+
+	if ( mp->m_iFreezeTime > 15 )
+	{
+		CVAR_SET_FLOAT( "mp_roundtime", 9 );
+		mp->m_iFreezeTime = 15;
+	}
+	else if ( mp->m_iFreezeTime < 0 )
+	{
+		CVAR_SET_FLOAT( "mp_freezetime", 0 );
+		mp->m_iFreezeTime = 0;
+	}
+
+	if ( mp->m_iC4Timer > 90 )
+	{
+		CVAR_SET_FLOAT( "mp_c4timer", 90 );
+		mp->m_iC4Timer = 90;
+	}
+	else if ( mp->m_iC4Timer < 10 )
+	{
+		CVAR_SET_FLOAT( "mp_c4timer", 10 );
+		mp->m_iC4Timer = 10;
+	}
+
+	if ( mp->m_iLimitTeams > 20 )
+	{
+		CVAR_SET_FLOAT( "mp_limitteams", 20 );
+		mp->m_iLimitTeams = 20;
+	}
+	else if ( mp->m_iLimitTeams < 1 )
+	{
+		CVAR_SET_FLOAT( "mp_limitteams", 0 );
+		mp->m_iLimitTeams = 20;
+	}
 }
 
 void TerminateRound( float tmDelay, int iWinStatus );
@@ -92,7 +145,6 @@ void TerminateRound( float tmDelay, int iWinStatus );
 CHalfLifeMultiplay :: CHalfLifeMultiplay()
 {
 	RefreshSkillData();
-	m_iMapHasCameras = 2;
 	m_flIntermissionEndTime = 0;
 	m_flRestartRoundTime = 0;
 	m_iAccountCT = 0;
@@ -107,6 +159,7 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 	m_iNumTerrorist = 0;
 	m_iNumSpawnableCT = 0;
 	m_iNumSpawnableTerrorist = 0;
+	m_iMapHasCameras = 2;
 	g_fGameOver = FALSE;
 	m_iLoserBonus = 1400;
 	m_iNumConsecutiveCTLoses = 0;
@@ -120,29 +173,15 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 	m_fGameCommenced = false;
 	m_fCompleteReset = true;
 
-	// Beta 4.0: no high-detail player models; the round and C4 times as RestartRound reads them
+	// Beta 4.0: no high-detail player models
 	CVAR_SET_FLOAT( "cl_himodels", 0 );
 
-	m_iRoundTime = (int)CVAR_GET_FLOAT( "mp_roundtime" );
-	m_iC4Timer = (int)CVAR_GET_FLOAT( "mp_c4timer" );
-	m_iFreezeTime = (int)CVAR_GET_FLOAT( "mp_freezetime" ) + 2;	// Beta 5.0 (leak): the first round's freeze time is 2 seconds longer
+	// Beta 5.0: the cvars are read (and clamped) as RestartRound reads them; the first
+	// round's freeze time is 2 seconds longer, after the clamp
+	ReadMultiplayCvars( this );
+
+	m_iFreezeTime += 2;
 	m_flMaxIdlePeriod = m_iRoundTime * 120;
-
-	if ( m_iFreezeTime > 15 )
-		m_iFreezeTime = 15;
-	else if ( m_iFreezeTime < 0 )
-		m_iFreezeTime = 0;
-
-	if ( m_iRoundTime > 9 )
-		m_iRoundTime = 9;
-	else if ( m_iRoundTime < 3 )
-		m_iRoundTime = 3;
-
-	if ( m_iC4Timer > 90 )
-		m_iC4Timer = 90;
-	else if ( m_iC4Timer < 10 )
-		m_iC4Timer = 10;
-
 	m_iRoundTimeSecs = m_iFreezeTime;
 	
 	// 11/8/98
@@ -260,11 +299,20 @@ void CHalfLifeMultiplay::RemoveGuns( void )
 // CleanUpMap - Beta 4.0: breakables and doors are put back
 // (Restart), a C4 goes, and up to four defusers; then the
 // weapon boxes. Beta 5.0 (leak): no backpack any more, and the
-// console says so for each defuser.
+// console says so for each defuser. Beta 5.0: the lights are
+// put back first.
 //=========================================================
 void CHalfLifeMultiplay::CleanUpMap( void )
 {
-	CBaseEntity *torestart = UTIL_FindEntityByClassname( NULL, "func_breakable" );
+	CBaseEntity *torestart = UTIL_FindEntityByClassname( NULL, "light" );
+
+	while ( torestart )
+	{
+		torestart->Restart();
+		torestart = UTIL_FindEntityByClassname( torestart, "light" );
+	}
+
+	torestart = UTIL_FindEntityByClassname( NULL, "func_breakable" );
 
 	while ( torestart )
 	{
@@ -527,7 +575,8 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 		return;
 	}
 
-	if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && m_iNumCT > 0 )
+	// Beta 5.0: only against a team with players past the appearance menu
+	if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && m_iNumSpawnableCT > 0 )
 	{
 		ALERT( at_console, "The CTs win by elimination!!...\n" );
 
@@ -543,10 +592,11 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 		EndRoundMessage( "Counter-Terrorists WIN" );
 		Broadcast( "ctwin" );
 
-		if ( m_fTargetBombed == false && m_fMapHasBombTarget == true )
-			m_iAccountCT = 2750;
+		// Beta 5.0: added to the account (the leak set it), 2500 on a bomb map
+		if ( m_fMapHasBombTarget )
+			m_iAccountCT += 2500;
 		else
-			m_iAccountCT = 2000;
+			m_iAccountCT += 2000;
 
 		if ( !bNeededPlayers )
 		{
@@ -560,12 +610,16 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 		TerminateRound( 5, 1 );
 		return;
 	}
-	else if ( NumAliveCT == 0 && NumDeadCT != 0 && m_iNumTerrorist > 0 )
+	else if ( NumAliveCT == 0 && NumDeadCT != 0 && m_iNumSpawnableTerrorist > 0 )
 	{
 		ALERT( at_console, "Wincondition ONE\n" );
 		EndRoundMessage( "Terrorists WIN" );
 		Broadcast( "terwin" );
-		m_iAccountTerrorist = 2000;
+
+		if ( m_fMapHasBombTarget )
+			m_iAccountTerrorist += 2500;
+		else
+			m_iAccountTerrorist += 2000;
 
 		if ( !bNeededPlayers )
 		{
@@ -608,7 +662,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 		{
 			EndRoundMessage( "All hostages rescued!\nCounter-Terrorists WIN" );
 			Broadcast( "ctwin" );
-			m_iAccountCT += 1000;
+			m_iAccountCT += 2000;	// Beta 5.0 (the leak: 1000)
 
 			if ( !bNeededPlayers )
 			{
@@ -670,31 +724,23 @@ void CHalfLifeMultiplay::RestartRound( void )
 			WRITE_SHORT( 0 );
 		MESSAGE_END();
 
-		m_fCompleteReset = false;
+		// Beta 5.0: and every player starts afresh (money, score, items: CBasePlayer::Reset)
+		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+		{
+			CBasePlayer *plr = (CBasePlayer *)UTIL_PlayerByIndex( i );	// name ours
+
+			if ( plr && !FNullEnt( plr->pev ) )
+				plr->Reset();
+		}
 	}
 
-	m_iRoundTime = (int)CVAR_GET_FLOAT( "mp_roundtime" );
-	m_iC4Timer = (int)CVAR_GET_FLOAT( "mp_c4timer" );
-	m_iFreezeTime = (int)CVAR_GET_FLOAT( "mp_freezetime" );
 	m_bFreezePeriod = TRUE;
 	m_fRoundTerminating = false;
+
+	// Beta 5.0: the cvars as the constructor reads them; the idle limit from the clamped round time
+	ReadMultiplayCvars( this );
+
 	m_flMaxIdlePeriod = m_iRoundTime * 120;
-
-	if ( m_iRoundTime > 9 )
-		m_iRoundTime = 9;
-	else if ( m_iRoundTime < 3 )
-		m_iRoundTime = 3;
-
-	if ( m_iFreezeTime > 15 )
-		m_iFreezeTime = 15;
-	else if ( m_iFreezeTime < 0 )
-		m_iFreezeTime = 0;
-
-	if ( m_iC4Timer > 90 )
-		m_iC4Timer = 90;
-	else if ( m_iC4Timer < 10 )
-		m_iC4Timer = 10;
-
 	m_iRoundTimeSecs = m_iFreezeTime;
 
 	if ( UTIL_FindEntityByClassname( NULL, "func_bomb_target" ) )
@@ -722,10 +768,6 @@ void CHalfLifeMultiplay::RestartRound( void )
 	else
 		m_fMapHasBuyZone = false;
 
-	// the kick votes start afresh
-	for ( int i = 0; i < 20; i++ )
-		m_iKickVotes[i] = 0;
-
 	CBaseEntity *pHostage = UTIL_FindEntityByClassname( NULL, "hostage_entity" );
 	int iHostageBonus = 0;	// name ours
 
@@ -733,8 +775,8 @@ void CHalfLifeMultiplay::RestartRound( void )
 	{
 		if ( pHostage->pev->solid != SOLID_NOT )
 		{
-			// a hostage still standing in the map
-			iHostageBonus += 250;
+			// a hostage still standing in the map (Beta 5.0: 150, the leak 250)
+			iHostageBonus += 150;
 
 			if ( pHostage->pev->deadflag == DEAD_DEAD )
 				pHostage->pev->deadflag = DEAD_RESPAWNABLE;
@@ -775,7 +817,7 @@ void CHalfLifeMultiplay::RestartRound( void )
 		m_iAccountTerrorist += m_iLoserBonus;
 	}
 
-	m_iAccountCT += m_iHostagesRescued * 150;
+	m_iAccountCT += m_iHostagesRescued * 250;	// Beta 5.0: 250 a rescued hostage (the leak 150)
 
 	m_flRoundStartTime2 = m_flRoundStartTime = gpGlobals->time;
 
@@ -799,6 +841,10 @@ void CHalfLifeMultiplay::RestartRound( void )
 					player->DropPlayerItem( "weapon_c4" );
 
 				player->RoundRespawn();
+
+				// Beta 5.0: after a complete reset everybody gets the starting weapons again
+				if ( m_fCompleteReset )
+					player->GiveDefaultItems();
 			}
 
 			if ( player->m_iTeam == TEAM_CT )
@@ -824,40 +870,11 @@ void CHalfLifeMultiplay::RestartRound( void )
 	m_fBombDefused = false;
 	m_fTargetBombed = false;
 	m_fCountedSpawnPoints = false;
+	m_fCompleteReset = false;
 }
 
 // longest the intermission can last, in seconds
 #define MAX_INTERMISSION_TIME		120
-
-//=========================================================
-// GiveWeapons - Beta 4.0: everybody gets a knife and a
-// pistol with ammunition. Beta 5.0 (leak): the CTs a USP (48
-// rounds), the terrorists a Glock 18 (120); commanders get
-// nothing better any more (nothing calls it).
-//=========================================================
-void CHalfLifeMultiplay::GiveWeapons( void )
-{
-	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-	{
-		CBasePlayer *player = (CBasePlayer *)UTIL_PlayerByIndex( i );
-
-		if ( player && player->IsPlayer() )
-		{
-			if ( player->m_iTeam == TEAM_CT )
-			{
-				player->GiveNamedItem( "weapon_knife" );
-				player->GiveNamedItem( "weapon_usp" );
-				player->GiveAmmo( 24, "45acp", 48 );
-			}
-			else if ( player->m_iTeam == TEAM_TERRORIST )
-			{
-				player->GiveNamedItem( "weapon_knife" );
-				player->GiveNamedItem( "weapon_glock18" );
-				player->GiveAmmo( 40, "9mm", 120 );
-			}
-		}
-	}
-}
 
 //=========================================================
 // TeamFull - Beta 5.0 (leak): a team has as many players as
@@ -872,6 +889,36 @@ BOOL CHalfLifeMultiplay::TeamFull( int team_id )
 
 	case TEAM_CT:
 		return ( m_iNumCT >= m_iSpawnPointCount_CT );
+	}
+
+	return FALSE;
+}
+
+//=========================================================
+// TeamStacked - Beta 5.0 (Linux symbol): joining newTeam_id
+// would leave it more than mp_limitteams players ahead of
+// the other team (a player changing teams leaves the other
+// one, so one fewer is allowed)
+//=========================================================
+BOOL CHalfLifeMultiplay::TeamStacked( int newTeam_id, int curTeam_id )
+{
+	// already in that team
+	if ( newTeam_id == curTeam_id )
+		return FALSE;
+
+	switch ( newTeam_id )
+	{
+	case TEAM_TERRORIST:
+		if ( curTeam_id != TEAM_UNASSIGNED )
+			return ( m_iNumTerrorist + 1 ) > ( m_iLimitTeams + m_iNumCT - 1 );
+		else
+			return ( m_iNumTerrorist + 1 ) > ( m_iLimitTeams + m_iNumCT );
+
+	case TEAM_CT:
+		if ( curTeam_id != TEAM_UNASSIGNED )
+			return ( m_iNumCT + 1 ) > ( m_iLimitTeams + m_iNumTerrorist - 1 );
+		else
+			return ( m_iNumCT + 1 ) > ( m_iLimitTeams + m_iNumTerrorist );
 	}
 
 	return FALSE;
@@ -949,25 +996,14 @@ void CHalfLifeMultiplay :: Think ( void )
 	}
 	else if ( TimeRemaining() <= 0 )
 	{
-		// the round's time is up: a draw; a ticking C4 ends it when it goes
-		// off. The restart time passed on is already a time, and TerminateRound
-		// adds the current time to it (sic)
-		float flEndRoundTime;	// name ours
+		// the round's time is up: a draw. Beta 5.0: a ticking C4 no longer
+		// holds the round (the leak let it end the round when it went off; the
+		// grenade is still looked for, and nothing done with it)
 		CBaseEntity *pC4 = UTIL_FindEntityByClassname( NULL, "grenade" );
-
-		if ( pC4 )
-		{
-			if ( !((CGrenade *)pC4)->m_fC4Done )
-				flEndRoundTime = ((CGrenade *)pC4)->m_flC4Blow;
-			else
-				flEndRoundTime = gpGlobals->time + 5.0;
-		}
-		else
-			flEndRoundTime = gpGlobals->time + 5.0;
 
 		EndRoundMessage( "Round DRAW" );
 		Broadcast( "rounddraw" );
-		TerminateRound( flEndRoundTime, 3 );
+		TerminateRound( 5, 3 );
 		m_flRoundStartTime = gpGlobals->time + 60;
 	}
 
@@ -1000,17 +1036,28 @@ void CHalfLifeMultiplay :: Think ( void )
 	}
 
 	// Beta 5.0 (leak): sv_restartround N restarts the round in N seconds
-	// (at most 10), the scores zeroed
+	// (at most 10), the scores zeroed. Beta 5.0: "The game will restart in N
+	// SECOND(S)", on the screen and in every console
 	if ( gpGlobals->time > m_flNextRestartCheck )
 	{
 		int iRestartDelay = (int)CVAR_GET_FLOAT( "sv_restartround" );	// name ours
 
 		if ( iRestartDelay > 0 )
 		{
+			const char *szUnit;	// name ours
+			char *szMessage;	// name ours
+
 			if ( iRestartDelay > 10 )
 				iRestartDelay = 10;
 
-			EndRoundMessage( UTIL_VarArgs( "The round will restart in\n%i SECONDS", iRestartDelay ) );
+			if ( iRestartDelay == 1 )
+				szUnit = "SECOND";
+			else
+				szUnit = "SECONDS";
+
+			szMessage = UTIL_VarArgs( "The game will restart in %i %s\n", iRestartDelay, szUnit );
+			EndRoundMessage( szMessage );
+			UTIL_ClientPrintAll( HUD_PRINTCONSOLE, szMessage );
 			m_flRestartRoundTime = gpGlobals->time + iRestartDelay;
 			m_fCompleteReset = true;
 			CVAR_SET_FLOAT( "sv_restartround", 0 );
@@ -1313,7 +1360,7 @@ void CHalfLifeMultiplay :: PlayerThink( CBasePlayer *pPlayer )
 	// Beta 5.0 (leak): a joining player gets the team menu
 	if ( pPlayer->m_iMenu != Menu_ChooseTeam && pPlayer->m_iJoiningState == JOIN_TEAM_MENU )
 	{
-		ShowMenu( pPlayer, 7, -1, FALSE, "#Team_Select" );	// keys 1 to 3
+		ShowMenu( pPlayer, 0x13, -1, FALSE, "#Team_Select" );	// Beta 5.0: keys 1, 2 and 5 (the leak: 1 to 3)
 		pPlayer->m_iMenu = Menu_ChooseTeam;
 		pPlayer->m_iJoiningState = JOIN_CHOOSING;
 	}
@@ -1340,24 +1387,11 @@ void CHalfLifeMultiplay :: PlayerSpawn( CBasePlayer *pPlayer )
 		addDefault = FALSE;
 	}
 
-	// Beta 3.0: a survivor of the last round keeps what he has
-	if ( pPlayer->m_fNotKilled == true )
-		addDefault = FALSE;
-
-	// Beta 5.0 (leak): a knife and the team's pistol for everybody, commander
-	// or not: the CTs a USP (48 rounds), the terrorists a Glock 18 (120)
-	if ( pPlayer->m_iTeam == TEAM_CT && addDefault )
-	{
-		pPlayer->GiveNamedItem( "weapon_knife" );
-		pPlayer->GiveNamedItem( "weapon_usp" );
-		pPlayer->GiveAmmo( 24, "45acp", 48 );
-	}
-	else if ( pPlayer->m_iTeam == TEAM_TERRORIST && addDefault )
-	{
-		pPlayer->GiveNamedItem( "weapon_knife" );
-		pPlayer->GiveNamedItem( "weapon_glock18" );
-		pPlayer->GiveAmmo( 40, "9mm", 120 );
-	}
+	// Beta 3.0: a survivor of the last round keeps what he has. Beta 5.0: the
+	// starting weapons are the player's (GiveDefaultItems; the leak gave the
+	// knife and the team's pistol here)
+	if ( pPlayer->m_fNotKilled != true && addDefault )
+		pPlayer->GiveDefaultItems();
 
 	// Beta 5.0 (leak): the model the player chose (SetPlayerModel)
 	pPlayer->SetPlayerModel( FALSE );
@@ -1454,20 +1488,18 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 			if ( !( pKillerPlayer->m_flDisplayHistory & ( 1 << 10 ) ) )	// the team kill hint
 			{
 				pKillerPlayer->m_flDisplayHistory |= ( 1 << 10 );
-				pKillerPlayer->HintMessage( "Careful!\nKilling teammates will not be tolerated!", FALSE );
+				pKillerPlayer->HintMessage( "Careful!\nKilling teammates will not be tolerated!", FALSE, FALSE );
 			}
 		}
 		else
 		{
+			// Beta 5.0: no "You killed an enemy" in the middle of the screen any more
 			pKillerPlayer->AddAccount( 300, true );
-
-			if ( m_flRestartRoundTime == 0 )
-				ClientPrint( pKillerPlayer->pev, HUD_PRINTCENTER, "You killed an enemy" );
 
 			if ( !( pKillerPlayer->m_flDisplayHistory & ( 1 << 11 ) ) )	// the enemy kill hint
 			{
 				pKillerPlayer->m_flDisplayHistory |= ( 1 << 11 );
-				pKillerPlayer->HintMessage( "You killed an Enemy!\nWin the round by eliminating the opposing force.", FALSE );
+				pKillerPlayer->HintMessage( "You killed an Enemy!\nWin the round by eliminating\nthe opposing force.", FALSE, FALSE );
 			}
 		}
 		

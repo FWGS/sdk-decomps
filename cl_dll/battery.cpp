@@ -137,7 +137,7 @@ int CHudBattery::Draw(float flTime)
 	
 	int iOffset = gHUD.GetSpriteHeight( iEmpty ) / 6;
 
-	y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2 + 4;
+	y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2 + ( ScreenWidth < 640 ? 1 : 4 );
 	x = ScreenWidth/5;
 
 	SPR_Set( gHUD.GetSprite( iEmpty ), r, g, b );
@@ -149,8 +149,13 @@ int CHudBattery::Draw(float flTime)
 		SPR_DrawAdditive( 0, x, y - iOffset + (rc.top - gHUD.GetSpriteRect( iFull ).top), &rc );
 	}
 
+	if ( ScreenWidth < 640 )
+		y -= 1;
+	else
+		y -= 4;
+
 	x += gHUD.GetSpriteWidth( iEmpty );
-	x = gHUD.DrawHudNumber(x, y - 4, DHN_3DIGITS | DHN_DRAWZERO, m_iBat, r, g, b);
+	x = gHUD.DrawHudNumber(x, y, DHN_3DIGITS | DHN_DRAWZERO, m_iBat, r, g, b);
 
 	return 1;
 }

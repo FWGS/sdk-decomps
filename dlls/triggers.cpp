@@ -2016,17 +2016,9 @@ void CBombTarget::BombTargetTouch( CBaseEntity *pOther )
 
 void CBombTarget::BombTargetUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	if ( FStringNull( pev->target ) )
-		return;
-
-	edict_t *pentTarget = FIND_ENTITY_BY_TARGETNAME( NULL, STRING( pev->target ) );	// name ours
-	while ( !FNullEnt( pentTarget ) )
-	{
-		CBaseEntity *pTarget = CBaseEntity::Instance( pentTarget );	// name ours
-		if ( pTarget )
-			pTarget->Use( pActivator, this, USE_TOGGLE, 0 );
-		pentTarget = FIND_ENTITY_BY_TARGETNAME( pentTarget, STRING( pev->target ) );
-	}
+	// Beta 5.0: the delay entity's own way (the leak walked the targets itself,
+	// passing on the activator)
+	SUB_UseTargets( NULL, USE_TOGGLE, 0 );
 }
 
 // func_hostage_rescue: a hostage that walks into it is rescued (CHostage::IdleThink)
@@ -2047,6 +2039,10 @@ void CHostageRescue::Spawn( void )
 
 void CHostageRescue::HostageRescueTouch( CBaseEntity *pOther )
 {
+	// Beta 5.0: a player in the zone is signalled (bit 4: the rescue zone)
+	if ( pOther->IsPlayer() )
+		((CBasePlayer *)pOther)->m_signals.Signal( 4 );
+
 	if ( !strcmp( STRING( pOther->pev->classname ), "hostage_entity" ) )
 		((CHostage *)pOther)->m_fRescued = TRUE;
 }

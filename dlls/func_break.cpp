@@ -160,7 +160,7 @@ void CBreakable::Spawn( void )
 	else
 		pev->takedamage	= DAMAGE_YES;
   
-	m_flHealth		= pev->health * 2;	// Beta 4.0: what Restart gives back (sic: twice the map's)
+	m_flHealth		= pev->health;	// what Restart gives back (Beta 4.0 to 5.0 leak: twice the map's, sic)
 	pev->solid		= SOLID_BSP;
     pev->movetype	= MOVETYPE_PUSH;
     m_angle			= pev->angles.y;
@@ -181,13 +181,21 @@ void CBreakable::Spawn( void )
 
 //
 // Counter-Strike Beta 4.0: a new round puts the breakable back, whole and
-// visible (Spawn's text; it takes damage whatever its flags say)
+// visible (Spawn's text). Beta 5.0: one that breaks only on a trigger
+// takes no damage again (Beta 4.0 to the leak: damage whatever its flags
+// said); the dead flag is cleared twice (sic)
 //
 void CBreakable::Restart( void )
 {
 	pev->solid		= SOLID_BSP;
     pev->movetype	= MOVETYPE_PUSH;
-	pev->takedamage	= DAMAGE_YES;
+	pev->deadflag	= DEAD_NO;
+
+	if ( FBitSet( pev->spawnflags, SF_BREAK_TRIGGER_ONLY ) )
+		pev->takedamage	= DAMAGE_NO;
+	else
+		pev->takedamage	= DAMAGE_YES;
+
 	pev->deadflag	= DEAD_NO;
 	pev->health		= m_flHealth;
 	pev->effects	&= ~EF_NODRAW;
@@ -519,6 +527,11 @@ void CBreakable::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE us
 		UTIL_MakeVectors(pev->angles);
 		g_vecAttackDir = gpGlobals->v_forward;
 
+		// Counter-Strike Beta 5.0: dead and hidden before it breaks
+		pev->takedamage = DAMAGE_NO;
+		pev->deadflag = DEAD_DEAD;
+		pev->effects = EF_NODRAW;
+
 		Die();
 	}
 }
@@ -772,7 +785,9 @@ void CBreakable::Die( void )
 	}
 
 	// Don't fire something that could fire myself
-	pev->targetname = 0;
+	// (Counter-Strike Beta 5.0: the name stays, so that a trigger can break
+	// it again after Restart)
+//	pev->targetname = 0;
 
 	pev->solid = SOLID_NOT;
 	// Fire targets on break

@@ -15,8 +15,8 @@
 //
 // observer.h: Counter-Strike Beta 5.0 (leak)'s observer (observer.cpp). The
 // class, its nested CGhosts and their methods are Beta 5.0's Linux symbols
-// (Beta 5.0's GetChaseOrigin takes a third parameter, the leak's returns a
-// static Vector); the exports give ChaseMoveThink, ChaseMoveDelayThink and
+// (Beta 5.0's SetChaseMode takes a char, its GetChaseOrigin a third parameter;
+// both return a static Vector); the exports give ChaseMoveThink, ChaseMoveDelayThink and
 // FreeMoveThink as protected, Spawn as public. The file name of the header
 // and every member name are ours. CObserver is 0x40 bytes (GetClassPtr).
 //
@@ -58,16 +58,17 @@ protected:
 	void EXPORT FreeMoveThink( void );
 	int FindNextClient( int iStart, BOOL bSameTeam );
 	void HandleButtons( void );
-	void SetChaseMode( void );
+	void SetChaseMode( char cMode );	// Beta 5.0: 0 free look, 1 locked (Linux symbol: a char)
 	void SetFreeMode( void );
-	const Vector &GetChaseOrigin( const Vector &angles, entvars_t *pevTarget );
+	const Vector &GetChaseOrigin( const Vector &angles, entvars_t *pevTarget, Vector &vecOffset );	// Beta 5.0: the offset (Linux symbol)
 
 	int			m_iTarget;			// 0x20 the client index of the player chased (0: none)
 	CBasePlayer	*m_pOwner;			// 0x24 the dead player this observer is (SetOwner)
 	CBaseEntity	*m_pLastTarget;		// 0x28 the player whose view the owner last got (ChaseMoveThink)
 	int			m_iLastButtons;		// 0x2c the owner's buttons at the last HandleButtons
 	float		m_flNextChase;		// 0x30 ChaseMoveDelayThink looks for a new player from then on
-	CGhosts		m_ghosts;			// 0x34
+	char		m_cChaseMode;		// 0x34 Beta 5.0: SetChaseMode's mode, 0 free look (behind the target, the observer's own view), 1 locked (behind the target, looking his way); HandleButtons, ChaseMoveThink (name ours)
+	CGhosts		m_ghosts;			// 0x38 [0x34]
 };
 
 #endif // OBSERVER_H

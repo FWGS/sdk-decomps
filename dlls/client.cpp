@@ -336,7 +336,9 @@ called each time a player is spawned
 */
 void ClientPutInServer( edict_t *pEntity )
 {
+	Vector vecAngles;	// Beta 5.0: the intro camera's view (name ours)
 	CBasePlayer *pPlayer;
+	CBaseEntity *pTarget;	// name ours
 
 	entvars_t *pev = &pEntity->v;
 
@@ -360,26 +362,23 @@ void ClientPutInServer( edict_t *pEntity )
 	pPlayer->m_fGameHUDInitialized = FALSE;
 	pPlayer->m_flDisplayHistory &= ~( 1 << 1 );
 
-	pPlayer->pev->flags = FL_SPECTATOR;
-	pPlayer->pev->takedamage = DAMAGE_NO;
+	// Beta 5.0: the spectator flag is added to the player's flags; the health,
+	// classname and buttons are left as Spawn set them
+	pPlayer->pev->flags |= FL_SPECTATOR;
 	pPlayer->pev->solid = SOLID_NOT;
 	pPlayer->pev->movetype = MOVETYPE_NOCLIP;
 	pPlayer->pev->modelindex = 0;
 	pPlayer->pev->effects = EF_NODRAW;
-	pPlayer->pev->max_health = 1;
 	pPlayer->pev->takedamage = DAMAGE_NO;
-	pPlayer->pev->health = pev->max_health;
+	pPlayer->pev->deadflag = DEAD_DEAD;
 	pPlayer->pev->velocity = g_vecZero;
 	pPlayer->pev->punchangle = g_vecZero;
-	pPlayer->pev->deadflag = DEAD_DEAD;
 	pPlayer->m_iJoiningState = JOIN_READING_TEXT;
-	pPlayer->pev->classname = MAKE_STRING( "player" );
-	pPlayer->pev->button = 0;
-	g_engfuncs.pfnSetClientMaxspeed( ENT(pPlayer->pev), 0.001 );
 	pPlayer->m_iTeam = TEAM_UNASSIGNED;
 	pPlayer->pev->fixangle = 1;
-	pPlayer->m_fUnused169 = true;
 	pPlayer->m_iAppearance = 1;
+	pPlayer->m_fUnused169 = true;
+	g_engfuncs.pfnSetClientMaxspeed( ENT(pPlayer->pev), 0.001 );
 	SET_MODEL( ENT(pPlayer->pev), "models/player.mdl" );
 	pPlayer->SetThink( NULL );
 
@@ -387,16 +386,26 @@ void ClientPutInServer( edict_t *pEntity )
 
 	pPlayer->m_pIntroCamera = UTIL_FindEntityByClassname( NULL, "trigger_camera" );
 
-	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// name ours
-	if ( mp->m_iMapHasCameras == 2 )
-		mp->m_iMapHasCameras = ( pPlayer->m_pIntroCamera != NULL );
+	if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_iMapHasCameras == 2 )
+		((CHalfLifeMultiplay *)g_pGameRules)->m_iMapHasCameras = ( pPlayer->m_pIntroCamera != NULL );
 
-	if ( pPlayer->m_pIntroCamera && pPlayer->m_pIntroCamera->pev->target )
+	// Beta 5.0: the camera looks at its target (the leak took the camera's angles)
+
+	if ( pPlayer->m_pIntroCamera )
+		pTarget = UTIL_FindEntityByTargetname( NULL, STRING( pPlayer->m_pIntroCamera->pev->target ) );
+
+	if ( pPlayer->m_pIntroCamera && pTarget )
 	{
+		vecAngles = pTarget->pev->origin - pPlayer->m_pIntroCamera->pev->origin;
+		vecAngles = vecAngles.Normalize();
+		vecAngles = UTIL_VecToAngles( vecAngles );
+		vecAngles.x = -vecAngles.x;
+
 		UTIL_SetOrigin( pPlayer->pev, pPlayer->m_pIntroCamera->pev->origin );
-		pPlayer->pev->angles = pPlayer->m_pIntroCamera->pev->angles;
+		pPlayer->pev->angles = vecAngles;
 		pPlayer->pev->v_angle = pPlayer->pev->angles;
 		pPlayer->m_flIntroCameraTime = gpGlobals->time + 6;
+		pev->view_ofs = g_vecZero;
 	}
 	else
 	{
@@ -576,29 +585,7 @@ void Host_Say( edict_t *pEntity, int teamonly )
 }
 
 
-
-// takes the named weapon away from the player (it is not thrown into the
-// world); Beta 1.x's purchases used it, Beta 2.0 calls it no more. Beta 5.0
-// (leak): the slots 0 to 4
-void DropItem( CBasePlayer *pPlayer, char *pszItemName )
-{
-	for ( int i = 0; i <= 4; i++ )
-	{
-		CBasePlayerItem *pItem = pPlayer->m_rgpPlayerItems[ i ];
-
-		while ( pItem != NULL )
-		{
-			if ( !strcmp( pszItemName, STRING( pItem->pev->classname ) ) )
-			{
-				pPlayer->pev->weapons &= ~(1<<pItem->m_iId);
-				pPlayer->RemovePlayerItem( pItem );
-				return;
-			}
-
-			pItem = pItem->m_pNext;
-		}
-	}
-}
+// Beta 5.0: DropItem (Beta 1.x's, unused since Beta 2.0) is gone
 
 //=========================================================
 // BlinkAccount - Beta 5.0 (leak): the money on the player's
@@ -679,12 +666,12 @@ void BuyPistol( CBasePlayer *pPlayer, int iSlot )
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
-	case 4:		// P228, 650
-		if ( pPlayer->m_iAccount >= 650 )
+	case 4:		// P228, 600 (Beta 5.0; the leak 650)
+		if ( pPlayer->m_iAccount >= 600 )
 		{
 			DropSecondary( pPlayer );
 			pPlayer->GiveNamedItem( "weapon_p228" );
-			pPlayer->AddAccount( -650, true );
+			pPlayer->AddAccount( -600, true );
 		}
 		else
 		{
@@ -764,12 +751,12 @@ void BuySubMachineGun( CBasePlayer *pPlayer, int iSlot )
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
-	case 3:		// P90, 2,250
-		if ( pPlayer->m_iAccount >= 2250 )
+	case 3:		// P90, 2,450 (Beta 5.0; the leak 2,250)
+		if ( pPlayer->m_iAccount >= 2450 )
 		{
 			DropPrimary( pPlayer );
 			pPlayer->GiveNamedItem( "weapon_p90" );
-			pPlayer->AddAccount( -2250, true );
+			pPlayer->AddAccount( -2450, true );
 		}
 		else
 		{
@@ -805,17 +792,17 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
-	case 2:		// M4A1, 2,950, counter-terrorists only
+	case 2:		// M4A1, 3,100 (Beta 5.0; the leak 2,950), counter-terrorists only
 		if ( pPlayer->m_iTeam == TEAM_TERRORIST )
 		{
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Weapon not available" );
 			return;
 		}
-		if ( pPlayer->m_iAccount >= 2950 )
+		if ( pPlayer->m_iAccount >= 3100 )
 		{
 			DropPrimary( pPlayer );
 			pPlayer->GiveNamedItem( "weapon_m4a1" );
-			pPlayer->AddAccount( -2950, true );
+			pPlayer->AddAccount( -3100, true );
 		}
 		else
 		{
@@ -972,7 +959,7 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
-	case 5:		// Beta 5.0 (leak): the defuse kit, 350, for a CT on a bomb map
+	case 5:		// Beta 5.0 (leak): the defuse kit, 350, for a CT on a bomb map; Beta 5.0: 200, a green icon, a sound
 		if ( pPlayer->m_iTeam == TEAM_CT && ((CHalfLifeMultiplay *)g_pGameRules)->m_fMapHasBombTarget == true )
 		{
 			if ( pPlayer->m_fHasDefuser == true )
@@ -980,20 +967,21 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You already have one" );
 				return;
 			}
-			if ( pPlayer->m_iAccount >= 350 )
+			if ( pPlayer->m_iAccount >= 200 )
 			{
 				pPlayer->m_fHasDefuser = true;
 
 				MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, pPlayer->pev );
 					WRITE_BYTE( 1 );
 					WRITE_STRING( "defuser" );
-					WRITE_BYTE( 15 );
-					WRITE_BYTE( 15 );
-					WRITE_BYTE( 200 );
+					WRITE_BYTE( 0 );
+					WRITE_BYTE( 160 );
+					WRITE_BYTE( 0 );
 				MESSAGE_END();
 
 				pPlayer->pev->body = 1;
-				pPlayer->AddAccount( -350, true );
+				pPlayer->AddAccount( -200, true );
+				EMIT_SOUND( pPlayer->edict(), CHAN_ITEM, "items/kevlar.wav", 1, 0.8 );
 			}
 			else
 			{
@@ -1023,6 +1011,8 @@ typedef struct
 // 2 gsg9, 3 sas; a higher key picks one at random (Linux
 // symbol). A joining player is then let in; a player
 // changing teams makes the round's result looked at again.
+// Beta 5.0: the terrorists' menu takes keys 1, 2 and 5, the
+// CTs' 1, 2, 3 and 5: the 5 picks at random.
 //=========================================================
 void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 {
@@ -1091,7 +1081,7 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 	CLIENT_COMMAND( player->edict(), appearance.pszCommand );
 	g_engfuncs.pfnSetClientKeyValue( player->entindex(), g_engfuncs.pfnGetInfoKeyBuffer( player->edict() ), "model", appearance.pszModel );
 
-	UpdateTeamInfo( player, -1 );
+	// Beta 5.0: no TeamInfo here any more (HandleMenu_ChooseTeam sends the team at once)
 }
 
 //=========================================================
@@ -1099,15 +1089,17 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 // counter-terrorists, 3 (or 0) the smaller team; a full team
 // is refused. A commander leaving makes his team pick another;
 // the player is killed if alive, joins the team and gets the
-// appearance menu; everybody is told (Linux symbol)
+// appearance menu; everybody is told (Linux symbol). Beta 5.0:
+// 5 picks the smaller team, other keys do nothing; a team more
+// than mp_limitteams ahead is refused too (TeamStacked); a dead
+// player is marked as having changed teams; the joining is
+// announced as it happens ("is joining"), and the team is shown
+// at once
 //=========================================================
 BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 {
 	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// name ours
-	int team = TEAM_UNASSIGNED;	// name ours
-
-	if ( slot > 3 )
-		return FALSE;
+	int team;	// name ours
 
 	switch ( slot )
 	{
@@ -1117,10 +1109,7 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 	case 2:
 		team = TEAM_CT;
 		break;
-	}
-
-	if ( team == TEAM_UNASSIGNED )
-	{
+	case 5:
 		team = SelectDefaultTeam();
 
 		if ( team == TEAM_UNASSIGNED )
@@ -1128,6 +1117,9 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 			ClientPrint( player->pev, HUD_PRINTCENTER, "All teams are full" );
 			return FALSE;
 		}
+		break;
+	default:
+		return FALSE;
 	}
 
 	if ( mp->TeamFull( team ) )
@@ -1136,22 +1128,38 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 		return FALSE;
 	}
 
+	if ( mp->TeamStacked( team, player->m_iTeam ) )
+	{
+		ClientPrint( player->pev, HUD_PRINTCENTER, ( team == TEAM_TERRORIST ) ? "Too many Terrorist!" : "Too many Counter-Terrorist!" );
+		return FALSE;
+	}
+
 	if ( player->IsCommander() )
 		mp->PickNewCommander( player->m_iTeam );
 
 	player->m_iTeam = team;
-	ShowMenu( player, 0xf, -1, FALSE, ( team == TEAM_TERRORIST ) ? "#Terrorist_Select" : "#CT_Select" );	// keys 1 to 4
+
+	switch ( team )
+	{
+	case TEAM_TERRORIST:
+		ShowMenu( player, 0x13, -1, FALSE, "#Terrorist_Select" );	// keys 1, 2 and 5
+		break;
+	case TEAM_CT:
+		ShowMenu( player, 0x17, -1, FALSE, "#CT_Select" );	// keys 1, 2, 3 and 5
+		break;
+	}
+
 	player->m_iMenu = Menu_ChooseAppearance;
 
 	if ( player->pev->deadflag == DEAD_NO )
 		ClientKill( player->edict() );
+	else
+		player->m_fTeamChanged = true;
 
 	UpdateTeamInfo( player, -1 );
 
-	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, UTIL_VarArgs( ( team == TEAM_TERRORIST ) ? "%s has joined the Terrorist force\n" : "%s has joined the Counter-Terrorist force\n",
+	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, UTIL_VarArgs( ( team == TEAM_TERRORIST ) ? "%s is joining the Terrorist force\n" : "%s is joining the Counter-Terrorist force\n",
 		( player->pev->netname && STRING(player->pev->netname)[0] != 0 ) ? STRING(player->pev->netname) : "unconnected" ) );
-
-	UpdateTeamInfo( player, TEAM_UNASSIGNED );	// shown without a team until he picks his appearance
 
 	return TRUE;
 }
@@ -1443,7 +1451,12 @@ void ClientCommand( edict_t *pEntity )
 		case Menu_ChooseTeam:
 			if ( !HandleMenu_ChooseTeam( pPlayer, iSlot ) )
 			{
-				ShowMenu( pPlayer, 7, -1, FALSE, "#Team_Select" );
+				// Beta 5.0: the menu again, keys 1, 2 and 5; in the game with
+				// 0 to close it (the leak: 1 to 3 either way)
+				if ( pPlayer->m_iJoiningState != JOIN_DONE )
+					ShowMenu( pPlayer, 0x13, -1, FALSE, "#Team_Select" );
+				else
+					ShowMenu( pPlayer, 0x213, -1, FALSE, "#IG_Team_Select" );
 				pPlayer->m_iMenu = Menu_ChooseTeam;
 			}
 			break;
@@ -1508,8 +1521,15 @@ void ClientCommand( edict_t *pEntity )
 				// equipment (with the defuse kit for a CT on a bomb map)
 				if ( pPlayer->m_signals.GetState() & 1 )
 				{
-					if ( pPlayer->m_iTeam == TEAM_CT && ((CHalfLifeMultiplay *)g_pGameRules)->m_fMapHasBombTarget == true )
-						ShowMenu( pPlayer, 0x21f, -1, FALSE, "#D_BuyItem" );
+					// Beta 5.0: on a bomb map both teams get a menu of their own
+					// (the CTs' with the defuse kit)
+					if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_fMapHasBombTarget == true )
+					{
+						if ( pPlayer->m_iTeam == TEAM_CT )
+							ShowMenu( pPlayer, 0x21f, -1, FALSE, "#DCT_BuyItem" );
+						else
+							ShowMenu( pPlayer, 0x21f, -1, FALSE, "#DT_BuyItem" );
+					}
 					else
 						ShowMenu( pPlayer, 0x20f, -1, FALSE, "#BuyItem" );
 					pPlayer->m_iMenu = Menu_BuyItem;
@@ -1562,17 +1582,24 @@ void ClientCommand( edict_t *pEntity )
 	else if ( FStrEq(pcmd, "chooseteam" ) )
 	{
 		// Beta 5.0 (leak): only in the game, not while choosing an
-		// appearance, not at a round's end
-		if ( pPlayer->m_iJoiningState == JOIN_DONE && pPlayer->m_iMenu != Menu_ChooseAppearance && !((CHalfLifeMultiplay *)g_pGameRules)->m_fRoundTerminating )
+		// appearance, not at a round's end. Beta 5.0: also at a round's end,
+		// but a dead player changes teams once a death; keys 1, 2, 5 and 0
+		if ( pPlayer->m_iJoiningState == JOIN_DONE && pPlayer->m_iMenu != Menu_ChooseAppearance )
 		{
-			ShowMenu( pPlayer, 0x207, -1, FALSE, "#IG_Team_Select" );
+			if ( pPlayer->m_fTeamChanged && pPlayer->pev->deadflag != DEAD_NO )
+			{
+				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Only 1 team change per death for Observers" );
+				return;
+			}
+
+			ShowMenu( pPlayer, 0x213, -1, FALSE, "#IG_Team_Select" );
 			pPlayer->m_iMenu = Menu_ChooseTeam;
 		}
 	}
 	else if ( FStrEq(pcmd, "showbriefing" ) )
 	{
-		// Beta 5.0 (leak): the map's briefing again
-		if ( g_szMapBriefingText[0] )
+		// Beta 5.0 (leak): the map's briefing again; Beta 5.0: for a player in a team
+		if ( g_szMapBriefingText[0] && pPlayer->m_iTeam != TEAM_UNASSIGNED )
 		{
 			pPlayer->MenuPrint( pPlayer, g_szMapBriefingText );
 			pPlayer->m_fShowingLevelText = true;
@@ -1680,8 +1707,13 @@ void ClientCommand( edict_t *pEntity )
 	{
 		if ( pPlayer->m_signals.GetState() & 1 )
 		{
-			if ( pPlayer->m_iTeam == TEAM_CT && ((CHalfLifeMultiplay *)g_pGameRules)->m_fMapHasBombTarget == true )
-				ShowMenu( pPlayer, 0x21f, -1, FALSE, "#D_BuyItem" );
+			if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_fMapHasBombTarget == true )
+			{
+				if ( pPlayer->m_iTeam == TEAM_CT )
+					ShowMenu( pPlayer, 0x21f, -1, FALSE, "#DCT_BuyItem" );
+				else
+					ShowMenu( pPlayer, 0x21f, -1, FALSE, "#DT_BuyItem" );
+			}
 			else
 				ShowMenu( pPlayer, 0x20f, -1, FALSE, "#BuyItem" );
 			pPlayer->m_iMenu = Menu_BuyItem;
@@ -1892,7 +1924,11 @@ void ClientPrecache( void )
 	PRECACHE_SOUND("items/nvg_on.wav");
 	PRECACHE_SOUND("items/nvg_off.wav");
 	PRECACHE_SOUND("items/equip_nvg.wav");
-	PRECACHE_SOUND("weapons/c4_beep.wav");		// Beta 4.0: the bomb
+	PRECACHE_SOUND("weapons/c4_beep1.wav");		// Beta 4.0: the bomb; Beta 5.0: five beeps in turn (C4Think)
+	PRECACHE_SOUND("weapons/c4_beep2.wav");
+	PRECACHE_SOUND("weapons/c4_beep3.wav");
+	PRECACHE_SOUND("weapons/c4_beep4.wav");
+	PRECACHE_SOUND("weapons/c4_beep5.wav");
 	PRECACHE_SOUND("weapons/c4_explode1.wav");
 	PRECACHE_SOUND("weapons/c4_plant.wav");
 	PRECACHE_SOUND("weapons/c4_disarm.wav");

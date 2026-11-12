@@ -207,6 +207,7 @@ int gmsgStatusText = 0;
 int gmsgStatusIcon = 0;
 int gmsgBarTime = 0;
 int gmsgReloadSound = 0;
+int gmsgCrosshair = 0;	// Beta 5.0 (Linux symbol): the observers' crosshair on and off (CObserver)
 
 LINK_ENTITY_TO_CLASS( player, CBasePlayer );
 
@@ -639,7 +640,8 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 
 			if ( !strcmp( STRING( pInflictor->pev->classname ), "grenade" ) )
 			{
-				if ( GetClassPtr( (CGrenade *)pevInflictor )->m_iTeam == m_iTeam )
+				// Beta 5.0: the thrower's own grenade hurts him
+				if ( GetClassPtr( (CGrenade *)pevInflictor )->m_iTeam == m_iTeam && &edict()->v != pevAttacker )
 					return 0;
 			}
 		}
@@ -746,7 +748,7 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 			if ( !( m_flDisplayHistory & 0x200 ) )
 			{
 				m_flDisplayHistory |= 0x200;
-				pAttacker->HintMessage( "Try not to injure your teammates.\n", FALSE );
+				pAttacker->HintMessage( "Try not to injure your teammates.\n", FALSE, FALSE );
 			}
 		}
 
@@ -1083,8 +1085,66 @@ void CBasePlayer::PackDeadPlayerItems( void )
 	RemoveAllItems( TRUE );// now strip off everything that wasn't handled by the code above.
 }
 
+// Beta 5.0 (Linux symbol): everything goes, and the player gets his team's
+// knife and pistol with ammunition (CHalfLifeMultiplay::PlayerSpawn for a
+// player who did not live through the round, and a complete reset)
+void CBasePlayer::GiveDefaultItems( void )
+{
+	RemoveAllItems( FALSE );
+
+	if ( m_iTeam == TEAM_CT )
+	{
+		GiveNamedItem( "weapon_knife" );
+		GiveNamedItem( "weapon_usp" );
+		GiveAmmo( 24, "45acp", 48 );
+	}
+	else if ( m_iTeam == TEAM_TERRORIST )
+	{
+		GiveNamedItem( "weapon_knife" );
+		GiveNamedItem( "weapon_glock18" );
+		GiveAmmo( 40, "9mm", 120 );
+	}
+}
+
 void CBasePlayer::RemoveAllItems( BOOL removeSuit )
 {
+	// Counter-Strike Beta 5.0: the defuse kit and the C4 go too, with their
+	// icons and the model's pack, and a progress bar running stops
+	BOOL bKillProgBar = FALSE;	// name ours
+
+	if ( m_fHasDefuser )
+	{
+		m_fHasDefuser = false;
+		pev->body = 0;
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, pev );
+			WRITE_BYTE( 0 );
+			WRITE_STRING( "defuser" );
+		MESSAGE_END();
+
+		bKillProgBar = TRUE;
+	}
+
+	if ( m_fHasC4 )
+	{
+		m_fHasC4 = false;
+		pev->body = 0;
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, pev );
+			WRITE_BYTE( 0 );
+			WRITE_STRING( "c4" );
+		MESSAGE_END();
+
+		bKillProgBar = TRUE;
+	}
+
+	if ( bKillProgBar )
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, pev );
+			WRITE_SHORT( 0 );
+		MESSAGE_END();
+	}
+
 	if (m_pActiveItem)
 	{
 		ResetAutoaim( );
@@ -1146,12 +1206,13 @@ void CBasePlayer::SetBombIcon( BOOL bFlash )
 {
 	if ( m_fHasC4 )
 	{
+		// Beta 5.0: green (the leak: blue, 15 15 200)
 		MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, pev );
 			WRITE_BYTE( bFlash ? 2 : 1 );
 			WRITE_STRING( "c4" );
-			WRITE_BYTE( 15 );
-			WRITE_BYTE( 15 );
-			WRITE_BYTE( 200 );
+			WRITE_BYTE( 0 );
+			WRITE_BYTE( 160 );
+			WRITE_BYTE( 0 );
 		MESSAGE_END();
 	}
 	else
@@ -1330,6 +1391,9 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	
 	pev->angles.x = 0;
 	pev->angles.z = 0;
+
+	// Beta 5.0: a dead player may change teams once (chooseteam)
+	m_fTeamChanged = false;
 }
 
 // Beta 5.0 (leak) (Linux symbol): whether the player is his team's commander
@@ -2109,8 +2173,8 @@ void CBasePlayer::MenuPrint( CBasePlayer *pl, const char *msg )
 //  start: the map's briefing (g_szMapBriefingText) in the
 //   menu space with the screen faded out and the HUD hidden,
 //   unless the map has none or the client's "dm" key is 0 or
-//   off; the defuser icon cleared; his "ignoreghosts" key
-//   (sic: 0 or off sets the flag);
+//   off; the defuser icon cleared; his "ghosts" key (Beta 5.0;
+//   the leak read "ignoreghosts", sic: 0 or off set the flag);
 //  reading the text: fire, jump or attack 2 ends it;
 //  the team and appearance menus (PlayerThink, client.cpp);
 //  spawn: the per-player state reset, then spawned, or an
@@ -2167,10 +2231,10 @@ void CBasePlayer::JoiningThink( void )
 		m_fShowingLevelText = false;
 		m_iIgnoreGhosts = 0;
 
-		value = g_engfuncs.pfnInfoKeyValue( infobuffer, "ignoreghosts" );
+		value = g_engfuncs.pfnInfoKeyValue( infobuffer, "ghosts" );	// Beta 5.0 (the leak: "ignoreghosts")
 		if ( value && *value )
 		{
-			if ( !strcmp( value, "0" ) || !strcmp( value, "off" ) )	// sic
+			if ( !strcmp( value, "0" ) || !strcmp( value, "off" ) )
 				m_iIgnoreGhosts = 1;
 		}
 		break;
@@ -2210,6 +2274,7 @@ void CBasePlayer::JoiningThink( void )
 			pev->deadflag = DEAD_RESPAWNABLE;
 			pev->classname = MAKE_STRING( "player" );
 			pev->flags = FL_SPECTATOR | FL_CLIENT;
+			m_fTeamChanged = false;	// Beta 5.0
 			StartObserver( pev->origin, VARS( mp->GetPlayerSpawnSpot( this ) )->angles );
 			mp->CheckWinConditions();
 			return;
@@ -2243,16 +2308,33 @@ void CBasePlayer::JoiningThink( void )
 	// the intro cameras
 	if ( m_pIntroCamera && gpGlobals->time >= m_flIntroCameraTime )
 	{
+		Vector vecAngles;	// names ours
+
 		m_pIntroCamera = UTIL_FindEntityByClassname( m_pIntroCamera, "trigger_camera" );
 		if ( !m_pIntroCamera )
 			m_pIntroCamera = UTIL_FindEntityByClassname( NULL, "trigger_camera" );
 
+		// Beta 5.0: the camera looks at its target (the leak took the camera's
+		// angles); one without a target ends the tour
+		CBaseEntity *pTarget = UTIL_FindEntityByTargetname( NULL, STRING( m_pIntroCamera->pev->target ) );
+		if ( !pTarget )
+		{
+			m_pIntroCamera = NULL;
+			return;
+		}
+
+		vecAngles = pTarget->pev->origin - m_pIntroCamera->pev->origin;
+		vecAngles = vecAngles.Normalize();
+		vecAngles = UTIL_VecToAngles( vecAngles );
+		vecAngles.x = -vecAngles.x;
+
 		UTIL_SetOrigin( pev, m_pIntroCamera->pev->origin );
-		pev->angles = m_pIntroCamera->pev->angles;
+		pev->angles = vecAngles;
 		pev->v_angle = pev->angles;
 		pev->velocity = g_vecZero;
 		pev->punchangle = g_vecZero;
 		pev->fixangle = TRUE;
+		pev->view_ofs = g_vecZero;
 		m_flIntroCameraTime = gpGlobals->time + 6;
 	}
 }
@@ -2555,10 +2637,10 @@ void CBasePlayer::HostageUsed( void )
 	switch ( m_iTeam )
 	{
 	case TEAM_TERRORIST:
-		HintMessage( "You may USE the hostage again to\nstop him from following.", FALSE );
+		HintMessage( "You may USE the hostage again to\nstop him from following.", FALSE, FALSE );
 		break;
 	case TEAM_CT:
-		HintMessage( "Lead the hostage to the rescue point!\nYou may USE the hostage again to\nstop him from following.", FALSE );
+		HintMessage( "Lead the hostage to the rescue point!\nYou may USE the hostage again to\nstop him from following.", FALSE, FALSE );
 		break;
 	}
 
@@ -3365,14 +3447,14 @@ void CBasePlayer::PreThink(void)
 
 	if ( !( m_flDisplayHistory & 0x2 ) )	// buy key
 	{
-		HintMessage( "Press the BUY key to purchase items.", FALSE );
+		HintMessage( "Press the BUY key to purchase items.", FALSE, FALSE );
 		m_flDisplayHistory |= 0x2;
 	}
 
 	if ( m_fHasC4 && !( m_flDisplayHistory & 0x1000 ) )	// have the bomb
 	{
 		m_flDisplayHistory |= 0x1000;
-		HintMessage( "You have the bomb!\nFind the target zone or DROP\nthe bomb for another Terrorist.", FALSE );
+		HintMessage( "You have the bomb!\nFind the target zone or DROP\nthe bomb for another Terrorist.", FALSE, FALSE );
 	}
 }
 /* Time based Damage works as follows: 
@@ -4094,12 +4176,7 @@ void CBasePlayer::PostThink()
 
 	UpdatePlayerSound();
 
-	// Beta 5.0 (leak): the zones the player stands in, every 0.2 seconds
-	if ( gpGlobals->time > m_flNextZoneCheck )
-	{
-		m_flNextZoneCheck = gpGlobals->time + 0.2;
-		HandleSignals();
-	}
+	// (Beta 5.0 (leak) checked the zones here; Beta 5.0: UpdateClientData)
 
 	// Track button info so we can detect 'pressed' and 'released' buttons next frame
 	m_afButtonLast = pev->button;
@@ -4196,11 +4273,11 @@ edict_t *EntSelectSpawnPoint( CBaseEntity *pPlayer )
 		if ( !FNullEnt( pSpot ) )
 		{
 			CBaseEntity *ent = NULL;
-			while ( (ent = UTIL_FindEntityInSphere( ent, pSpot->pev->origin, 128 )) != NULL )
+			while ( (ent = UTIL_FindEntityInSphere( ent, pSpot->pev->origin, 64 )) != NULL )	// Beta 5.0 (the leak: 128)
 			{
 				// if ent is a client, kill em (unless they are ourselves)
 				if ( ent->IsPlayer() && !(ent->edict() == player) )
-					ent->TakeDamage( VARS(INDEXENT(0)), VARS(INDEXENT(0)), 300, DMG_GENERIC );
+					ent->TakeDamage( VARS(INDEXENT(0)), VARS(INDEXENT(0)), 200, DMG_GENERIC );	// Beta 5.0 (the leak: 300)
 			}
 			goto ReturnSpot;
 		}
@@ -4239,11 +4316,11 @@ edict_t *EntSelectSpawnPoint( CBaseEntity *pPlayer )
 		if ( !FNullEnt( pSpot ) )
 		{
 			CBaseEntity *ent = NULL;
-			while ( (ent = UTIL_FindEntityInSphere( ent, pSpot->pev->origin, 128 )) != NULL )
+			while ( (ent = UTIL_FindEntityInSphere( ent, pSpot->pev->origin, 64 )) != NULL )	// Beta 5.0 (the leak: 128)
 			{
 				// if ent is a client, kill em (unless they are ourselves)
 				if ( ent->IsPlayer() && !(ent->edict() == player) )
-					ent->TakeDamage( VARS(INDEXENT(0)), VARS(INDEXENT(0)), 300, DMG_GENERIC );
+					ent->TakeDamage( VARS(INDEXENT(0)), VARS(INDEXENT(0)), 200, DMG_GENERIC );	// Beta 5.0 (the leak: 300)
 			}
 			goto ReturnSpot;
 		}
@@ -4421,7 +4498,6 @@ void CBasePlayer::Spawn( void )
 	m_fWeapon = FALSE;
 	m_pClientActiveItem = NULL;
 	m_iClientBattery = -1;
-	m_fSendResetHUD = true;
 	m_fInitHUD = TRUE;
 	m_iHideHUD &= ~( HIDEHUD_WEAPONS | HIDEHUD_HEALTH | HIDEHUD_TIMER | HIDEHUD_MONEY );
 
@@ -4533,6 +4609,7 @@ void CBasePlayer :: Precache( void )
 	gmsgStatusIcon = REG_USER_MSG( "StatusIcon", -1 );
 	gmsgBarTime = REG_USER_MSG( "BarTime", -1 );
 	gmsgReloadSound = REG_USER_MSG( "ReloadSound", 2 );
+	gmsgCrosshair = REG_USER_MSG( "Crosshair", 1 );	// Beta 5.0
 
 	m_iUpdateTime = 5;  // won't update for 1/2 a second
 
@@ -4578,7 +4655,8 @@ void CBasePlayer::SetScoreboardAttributes( CBasePlayer *destination )
 	{
 		CBasePlayer *pPlayer = (CBasePlayer *)UTIL_PlayerByIndex( i );
 
-		if ( pPlayer && !FNullEnt( pPlayer->edict() ) && pPlayer->IsPlayer() )
+		// Beta 5.0: joining players too (the leak: IsPlayer only)
+		if ( pPlayer && !FNullEnt( pPlayer->edict() ) )
 			SetScoreAttrib( pPlayer, this );
 	}
 }
@@ -4634,12 +4712,28 @@ int CBasePlayer::Restore( CRestore &restore )
 	RenewItems();
 
 	// Beta 5.0 (leak): after a saved game most hints come again
-	m_flDisplayHistory &= ~( 0x4 | 0x8 | 0x10 | 0x20 | 0x80 | 0x100 | 0x200 | 0x800 | 0x8000 | 0x10000 | 0x20000 | 0x40000 );
+	m_flDisplayHistory &= ~( 0x4 | 0x8 | 0x10 | 0x20 | 0x80 | 0x100 | 0x200 | 0x800 | 0x8000 | 0x10000 | 0x20000 );	// Beta 5.0: 0x40000 stays
 	SetScoreboardAttributes();
 
 	return status;
 }
 
+// Beta 5.0 (Linux symbol): a complete reset (sv_restartround) takes the
+// player's score and deaths to 0 and his money to the start's $800
+void CBasePlayer::Reset( void )
+{
+	pev->frags = 0;
+	m_iDeaths = 0;
+	m_iAccount = 0;
+	AddAccount( -16000, false );
+	AddAccount( 800, true );
+
+	MESSAGE_BEGIN( MSG_ALL, gmsgScoreInfo );
+		WRITE_BYTE( ENTINDEX(edict()) );
+		WRITE_SHORT( 0 );
+		WRITE_SHORT( 0 );
+	MESSAGE_END();
+}
 
 
 void CBasePlayer::SelectNextItem( int iItem )
@@ -5253,6 +5347,15 @@ inline void BuyZoneIcon_Set( CBasePlayer *player )
 	MESSAGE_END();
 }
 
+// Beta 5.0 (leak): the zones' signals since the last update are the new state
+inline int CSignals::Update( void )
+{
+	int iOldState = m_iState;
+	m_iState = m_iSignals;
+	m_iSignals = 0;
+	return iOldState ^ m_iState;	// the bits that changed
+}
+
 // Beta 5.0 (leak): at a bomb target the C4 icon flashes, and the carrier is
 // told once how to plant (name ours)
 inline void BombTargetFlash_Set( CBasePlayer *player )
@@ -5260,7 +5363,7 @@ inline void BombTargetFlash_Set( CBasePlayer *player )
 	if ( player->m_fHasC4 && !( player->m_flDisplayHistory & 0x10000 ) )	// in the target zone
 	{
 		player->m_flDisplayHistory |= 0x10000;
-		player->HintMessage( "You are in the target zone.\nSelect the bomb in your inventory\nand plant it by holding FIRE!", FALSE );
+		player->HintMessage( "You are in the target zone.\nSelect the bomb in your inventory\nand plant it by holding FIRE!", FALSE, FALSE );
 	}
 
 	player->SetBombIcon( TRUE );
@@ -5272,13 +5375,36 @@ inline void BombTargetFlash_Clear( CBasePlayer *player )
 	player->SetBombIcon( FALSE );
 }
 
-// Beta 5.0 (leak): the zones' signals since the last update are the new state
-inline int CSignals::Update( void )
+// Beta 5.0: the rescue zone's icon comes up, and a CT is told once what it
+// is for (name ours)
+inline void RescueZoneIcon_Set( CBasePlayer *player )
 {
-	int iOldState = m_iState;
-	m_iState = m_iSignals;
-	m_iSignals = 0;
-	return iOldState ^ m_iState;	// the bits that changed
+	MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, player->pev );
+		WRITE_BYTE( 1 );
+		WRITE_STRING( "rescue" );
+		WRITE_BYTE( 0 );
+		WRITE_BYTE( 160 );
+		WRITE_BYTE( 0 );
+	MESSAGE_END();
+
+	if ( player->m_iTeam == TEAM_CT && !( player->m_flDisplayHistory & 0x20000 ) )	// in a rescue zone
+	{
+		player->m_flDisplayHistory |= 0x20000;
+		player->HintMessage( "You are in a hostage rescue zone.\nFind the hostages and bring them here!", FALSE, FALSE );
+	}
+}
+
+// Beta 5.0: the rescue zone's icon goes, and with it an open buy menu (sic:
+// BuyZoneIcon_Clear's text; name ours)
+inline void RescueZoneIcon_Clear( CBasePlayer *player )
+{
+	MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, player->pev );
+		WRITE_BYTE( 0 );
+		WRITE_STRING( "rescue" );
+	MESSAGE_END();
+
+	if ( player->m_iMenu >= Menu_Buy && player->m_iMenu <= Menu_BuyItem )
+		CLIENT_COMMAND( player->edict(), "slot10\n" );
 }
 
 // Beta 5.0 (leak): a map without buy zones has one within 512 units of each
@@ -5328,6 +5454,24 @@ static void OLD_CheckBombTarget( CBasePlayer *player )
 	}
 }
 
+// Beta 5.0 (Linux symbol): a map without func_hostage_rescue has a rescue
+// zone within 256 units of each info_hostage_rescue
+static void OLD_CheckRescueZone( CBasePlayer *player )
+{
+	CBaseEntity *pSpot = UTIL_FindEntityByClassname( NULL, "info_hostage_rescue" );
+
+	while ( pSpot )
+	{
+		if ( ( pSpot->pev->origin - player->pev->origin ).Length() <= 256 )
+		{
+			player->m_signals.Signal( 4 );	// in a rescue zone
+			break;
+		}
+
+		pSpot = UTIL_FindEntityByClassname( pSpot, "info_hostage_rescue" );
+	}
+}
+
 // Beta 5.0 (leak): PostThink's zone check: what the zones signalled since the
 // last check is the new state; the icons follow what changed
 void CBasePlayer::HandleSignals( void )
@@ -5341,6 +5485,9 @@ void CBasePlayer::HandleSignals( void )
 
 		if ( !mp->m_fMapHasBombZone )
 			OLD_CheckBombTarget( this );
+
+		if ( !mp->m_fMapHasRescueZone )	// Beta 5.0
+			OLD_CheckRescueZone( this );
 	}
 
 	int changed = m_signals.Update();
@@ -5360,6 +5507,14 @@ void CBasePlayer::HandleSignals( void )
 			BombTargetFlash_Set( this );
 		else
 			BombTargetFlash_Clear( this );
+	}
+
+	if ( changed & 4 )	// rescue zone (Beta 5.0)
+	{
+		if ( state & 4 )
+			RescueZoneIcon_Set( this );
+		else
+			RescueZoneIcon_Clear( this );
 	}
 }
 
@@ -5430,7 +5585,8 @@ int CBasePlayer::RemovePlayerItem( CBasePlayerItem *pItem )
 	if (m_pActiveItem == pItem)
 	{
 		ResetAutoaim( );
-		pItem->Holster( );
+		// Counter-Strike Beta 5.0: no Holster here (CWeaponBox::PackWeapon holsters
+		// the weapon in hand before it takes it)
 		pItem->pev->nextthink = 0;// crowbar may be trying to swing again, etc.
 		pItem->SetThink( NULL );
 		m_pActiveItem = NULL;
@@ -5626,6 +5782,7 @@ void CBasePlayer :: UpdateClientData( void )
 	{
 		m_fInitHUD = FALSE;
 		gInitHUD = FALSE;
+		m_signals.Update();	// Beta 5.0: the zones start afresh (their icons come again)
 
 		MESSAGE_BEGIN( MSG_ONE, gmsgResetHUD, NULL, pev );
 		MESSAGE_END();
@@ -5654,12 +5811,13 @@ void CBasePlayer :: UpdateClientData( void )
 
 		if ( m_fHasDefuser == true )
 		{
+			// Beta 5.0: green (the leak: blue, 15 15 200)
 			MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, pev );
 				WRITE_BYTE( 1 );
 				WRITE_STRING( "defuser" );
-				WRITE_BYTE( 15 );
-				WRITE_BYTE( 15 );
-				WRITE_BYTE( 200 );
+				WRITE_BYTE( 0 );
+				WRITE_BYTE( 160 );
+				WRITE_BYTE( 0 );
 			MESSAGE_END();
 		}
 
@@ -5875,8 +6033,16 @@ void CBasePlayer :: UpdateClientData( void )
 		if ( ( pWeapon->iFlags() & ITEM_FLAG_EXHAUSTIBLE ) && !AmmoInventory( pWeapon->m_iPrimaryAmmoType ) && !pWeapon->m_iClip )
 		{
 			m_flDisplayHistory |= 0x8000;	// out of ammunition
-			HintMessage( "You are out of ammunition.\nReturn to a buy zone to purchase more.\n", FALSE );
+			HintMessage( "You are out of ammunition.\nReturn to a buy zone to purchase more.\n", FALSE, FALSE );
 		}
+	}
+
+	// Beta 5.0: the zones the player stands in, every 0.2 seconds (the leak:
+	// PostThink)
+	if ( gpGlobals->time > m_flNextZoneCheck )
+	{
+		m_flNextZoneCheck = gpGlobals->time + 0.2;
+		HandleSignals();
 	}
 }
 
@@ -5963,13 +6129,18 @@ void CBasePlayer::ResetMaxSpeed( void )
 // With the client's "ah" (auto help) key 0 or missing, the
 // hint counts as shown
 //=========================================================
-bool CBasePlayer::HintMessage( const char *pMessage, BOOL bDisplayIfPlayerDead )
+bool CBasePlayer::HintMessage( const char *pMessage, BOOL bDisplayIfPlayerDead, BOOL bForce )
 {
+	// Beta 5.0: IsAlive (the leak: the dead flag), and a forced hint is
+	// queued whatever the client's autohelp key says
+	if ( !bDisplayIfPlayerDead && !IsAlive() )
+		return false;
+
+	if ( bForce )
+		return m_hintMessageQueue.AddMessage( pMessage );
+
 	char *infobuffer = g_engfuncs.pfnGetInfoKeyBuffer( edict() );	// names ours
 	const char *autohelp = g_engfuncs.pfnInfoKeyValue( infobuffer, "ah" );
-
-	if ( !bDisplayIfPlayerDead && pev->deadflag != DEAD_NO )
-		return false;
 
 	if ( !autohelp || *autohelp == '0' )
 		return true;
@@ -6278,6 +6449,17 @@ void CBasePlayer::UpdateStatusBar()
 			newSBarState[ SBAR_ID_TARGETTYPE ] = ( pTarget->m_iTeam == m_iTeam ) ? SBAR_TARGETTYPE_TEAMMATE : SBAR_TARGETTYPE_ENEMY;
 			newSBarState[ SBAR_ID_TARGETHEALTH ] = pTarget->pev->health * 100 / pTarget->pev->max_health;
 		}
+		else if ( m_flStatusBarDisappearDelay > gpGlobals->time )
+		{
+			// Beta 5.0: hold the previous target (SDK 2.3's text)
+			newSBarState[ SBAR_ID_TARGETTYPE ] = m_izSBarState[ SBAR_ID_TARGETTYPE ];
+			newSBarState[ SBAR_ID_TARGETNAME ] = m_izSBarState[ SBAR_ID_TARGETNAME ];
+			newSBarState[ SBAR_ID_TARGETHEALTH ] = m_izSBarState[ SBAR_ID_TARGETHEALTH ];
+		}
+
+		// Beta 5.0: every update in chase mode (sic: so the previous target is
+		// held as long as the observer chases)
+		m_flStatusBarDisappearDelay = gpGlobals->time + 10.0;
 	}
 	else
 	{
@@ -6308,7 +6490,7 @@ void CBasePlayer::UpdateStatusBar()
 						if ( !( m_flDisplayHistory & 0x100 ) )	// enemy spotted
 						{
 							m_flDisplayHistory |= 0x100;
-							HintMessage( "You have spotted an enemy.", FALSE );
+							HintMessage( "You have spotted an enemy.", FALSE, FALSE );
 						}
 					}
 					else
@@ -6320,7 +6502,7 @@ void CBasePlayer::UpdateStatusBar()
 						if ( !( m_flDisplayHistory & 0x80 ) && !( pev->flags & FL_SPECTATOR ) )	// friend spotted
 						{
 							m_flDisplayHistory |= 0x80;
-							HintMessage( "You have spotted a friend.", FALSE );
+							HintMessage( "You have spotted a friend.", FALSE, FALSE );
 						}
 					}
 				}
@@ -6338,21 +6520,21 @@ void CBasePlayer::UpdateStatusBar()
 						switch ( m_iTeam )
 						{
 						case TEAM_TERRORIST:
-							HintMessage( "Prevent the Counter-terrorists from\nrescuing the hostages!", TRUE );
+							HintMessage( "Prevent the Counter-terrorists from\nrescuing the hostages!", TRUE, FALSE );
 							break;
 						case TEAM_CT:
-							HintMessage( "Rescue the hostages for money!", TRUE );
+							HintMessage( "Rescue the hostages for money!", TRUE, FALSE );
 							break;
 						}
 					}
 					else if ( !( m_flDisplayHistory & 0x8 ) && tr.flFraction <= 0.1 )
 					{
 						m_flDisplayHistory |= 0x4 | 0x8;
-						HintMessage( "Press USE to get the hostage to follow you.", FALSE );
+						HintMessage( "Press USE to get the hostage to follow you.", FALSE, FALSE );
 					}
 				}
 
-				m_flStatusBarDisappearDelay = gpGlobals->time + 1.0;
+				m_flStatusBarDisappearDelay = gpGlobals->time + 10.0;	// Beta 5.0 (the leak: 1)
 			}
 		}
 		else if ( m_flStatusBarDisappearDelay > gpGlobals->time )
@@ -6479,8 +6661,13 @@ void CBasePlayer::DropPlayerItem( const char *pszItemName )
 				pev->body = 0;
 				SetBombIcon( FALSE );
 
+				// Beta 5.0: an arming bomb's progress bar goes
+				MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, pWeapon->m_pPlayer->pev );
+					WRITE_SHORT( 0 );
+				MESSAGE_END();
+
 				if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_flRestartRoundTime == 0 )
-					UTIL_ClientPrintAll( HUD_PRINTCENTER, "The bomb was dropped by %s\n", STRING( pev->netname ) );
+					UTIL_ClientPrintAll( HUD_PRINTCENTER, "%s dropped the bomb\n", STRING( pev->netname ) );	// Beta 5.0 (the leak: "The bomb was dropped by %s")
 			}
 
 			CWeaponBox *pWeaponBox = (CWeaponBox *)CBaseEntity::Create( "weaponbox", pev->origin + gpGlobals->v_forward * 10, pev->angles, edict() );
@@ -6813,3 +7000,4 @@ void CInfoIntermission::Think ( void )
 }
 
 LINK_ENTITY_TO_CLASS( info_intermission, CInfoIntermission );
+

@@ -41,6 +41,8 @@ public:
 	float	m_flNextUse;		// 0x128 Use answers once a second
 	float	m_flNextRescueCheck;	// 0x12c Beta 4.1: IdleThink looks for a rescue point once a second (Spawn: 0; Beta 1.1 to 4.0 nothing else referred to it)
 	float	m_flFollowRange;	// 0x130 only written: Spawn 1024, Use 300 when told to stay, 1024 when following
+	int		m_iUnused138;		// 0x138 new in Beta 5.0: no function refers to it or to the next (CHostage is 0x248 bytes,
+	int		m_iUnused13C;		// 0x13c GetClassPtr<CHostage>; m_fStopped moves from 0x138 to 0x140, m_vecStart from 0x13c to 0x144; names ours)
 	BOOL	m_fStopped;			// 0x134 TRUE: stays where it is (Spawn); FALSE: follows m_hTargetEnt (Use toggles it); 2 (Beta 2.0's IdleThink): no leader within reach
 	Vector	m_vecStart;			// 0x138 where Spawn stood; RePosition moves the hostage back there (Beta 3.0 drops the unused Vector before it)
 	Vector	m_vecPath[20];		// 0x144 new in Beta 3.0: the positions of the leader's trail the hostage walks along (IdleThink)
