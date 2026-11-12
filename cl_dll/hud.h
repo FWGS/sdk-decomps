@@ -261,7 +261,7 @@ public:
 	void DeathMsg( int killer, int victim );
 
 	enum { 
-		MAX_PLAYERS = 20,
+		MAX_PLAYERS = 64,
 		MAX_TEAMS = 3,
 	};
 

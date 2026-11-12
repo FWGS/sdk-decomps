@@ -121,28 +121,32 @@ void CDebris::BoltTouch( CBaseEntity *pOther )
 
 		pevOwner = VARS( pev->owner );
 
-		// UNDONE: this needs to call TraceAttack instead
-		ClearMultiDamage( );
-
-		if ( pOther->IsPlayer() )
+		// Beta 5.2: a fragment whose owner is gone hurts nobody (it is only removed)
+		if ( pevOwner )
 		{
-			pOther->TraceAttack(pevOwner, m_flDamage, pev->velocity.Normalize(), &tr, DMG_BULLET | DMG_NEVERGIB ); 
-		}
-		else
-		{
-			pOther->TraceAttack(pevOwner, m_flDamage, pev->velocity.Normalize(), &tr, DMG_BULLET | DMG_NEVERGIB ); 
-		}
+			// UNDONE: this needs to call TraceAttack instead
+			ClearMultiDamage( );
 
-		ApplyMultiDamage( pev, pevOwner );
+			if ( pOther->IsPlayer() )
+			{
+				pOther->TraceAttack(pevOwner, m_flDamage, pev->velocity.Normalize(), &tr, DMG_BULLET | DMG_NEVERGIB ); 
+			}
+			else
+			{
+				pOther->TraceAttack(pevOwner, m_flDamage, pev->velocity.Normalize(), &tr, DMG_BULLET | DMG_NEVERGIB ); 
+			}
 
-		pev->velocity = Vector( 0, 0, 0 );
-		// play body "thwack" sound
-		switch( RANDOM_LONG(0,1) )
-		{
-		case 0:
-			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/xbow_hitbod1.wav", 1, ATTN_NORM); break;
-		case 1:
-			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/xbow_hitbod2.wav", 1, ATTN_NORM); break;
+			ApplyMultiDamage( pev, pevOwner );
+
+			pev->velocity = Vector( 0, 0, 0 );
+			// play body "thwack" sound
+			switch( RANDOM_LONG(0,1) )
+			{
+			case 0:
+				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/xbow_hitbod1.wav", 1, ATTN_NORM); break;
+			case 1:
+				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/xbow_hitbod2.wav", 1, ATTN_NORM); break;
+			}
 		}
 
 		Killed( pev, GIB_NEVER );

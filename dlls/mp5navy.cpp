@@ -136,9 +136,10 @@ void CMP5N::MP5NFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		{
 		case 0:
 			SendWeaponAnim( MP5N_SHOOT1 );
-			// no break (sic): case 0 sends both animations
+			break;	// Beta 5.2: the breaks (Beta 5.0 sent both for case 0)
 		case 1:
 			SendWeaponAnim( MP5N_SHOOT2 );
+			break;
 		}
 	}
 

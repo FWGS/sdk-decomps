@@ -134,9 +134,10 @@ void CP90::P90Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		{
 		case 0:
 			SendWeaponAnim( P90_SHOOT1 );
-			// no break (sic): both animations are sent
+			break;	// Beta 5.2: the breaks (Beta 5.0 sent both for case 0)
 		case 1:
 			SendWeaponAnim( P90_SHOOT2 );
+			break;
 		}
 	}
 

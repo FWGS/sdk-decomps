@@ -339,10 +339,6 @@ SOURCE=.\multiplay_gamerules.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\observer.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\p228.cpp
 # End Source File
 # Begin Source File

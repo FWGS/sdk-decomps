@@ -190,28 +190,27 @@ void CBaseEntity :: SUB_UseTargets( CBaseEntity *pActivator, USE_TYPE useType, f
 
 void FireTargets( const char *targetName, CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
+	edict_t *pentTarget = NULL;
 	if ( !targetName )
 		return;
 
 	ALERT( at_aiconsole, "Firing: (%s)\n", targetName );
 
-	// Counter-Strike Beta 5.0: the search goes round until it comes back to
-	// the first target (names ours)
-	edict_t *pentStart = FIND_ENTITY_BY_TARGETNAME(NULL, targetName);
-	edict_t *pentTarget = pentStart;
-	do
+	// Counter-Strike Beta 5.2: the SDK's search again (Beta 5.0 went round
+	// until it came back to the first target)
+	for (;;)
 	{
-		if (!FNullEnt(pentTarget))
-		{
-			CBaseEntity *pTarget = CBaseEntity::Instance( pentTarget );
-			if ( pTarget && !(pTarget->pev->flags & FL_KILLME) )	// Don't use dying ents
-			{
-				ALERT( at_aiconsole, "Found: %s, firing (%s)\n", STRING(pTarget->pev->classname), targetName );
-				pTarget->Use( pActivator, pCaller, useType, value );
-			}
-		}
 		pentTarget = FIND_ENTITY_BY_TARGETNAME(pentTarget, targetName);
-	} while ( pentTarget != pentStart );
+		if (FNullEnt(pentTarget))
+			break;
+
+		CBaseEntity *pTarget = CBaseEntity::Instance( pentTarget );
+		if ( pTarget && !(pTarget->pev->flags & FL_KILLME) )	// Don't use dying ents
+		{
+			ALERT( at_aiconsole, "Found: %s, firing (%s)\n", STRING(pTarget->pev->classname), targetName );
+			pTarget->Use( pActivator, pCaller, useType, value );
+		}
+	}
 }
 
 LINK_ENTITY_TO_CLASS( DelayedUse, CBaseDelay );

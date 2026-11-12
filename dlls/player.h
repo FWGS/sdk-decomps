@@ -222,6 +222,12 @@ public:
 	CHintMessageQueue	m_hintMessageQueue;		// 0x2a8 [0x2ac] the hints waiting (HintMessage adds, PreThink shows, Spawn empties)
 	int					m_flDisplayHistory;		// 0x2d8 [0x2dc] retail's save-table name (FIELD_INTEGER): a bit per hint the player has seen (PreThink, Spawn, HostageUsed, TakeDamage, multiplay's PlayerKilled, ...)
 	int					m_iMenu;				// 0x2dc [0x2e0] the menu the client has open (client.cpp)
+	// Beta 5.2: the dead player's camera, which replaces the observer entity
+	// (16 bytes; every member after them is 0x10 later than in Beta 5.0)
+	char				m_cObserverMode;		// 0x2e0 0 the free camera (GhostMode), 1 the chase camera following m_pChaseTarget (ChaseCamMode); Spawn: 1 when mp_chasecam is 1; JUMP switches
+	int					m_iChaseNext;			// 0x2e4 the player index GetPlayerToChase tries first (Spawn: 1)
+	CBaseEntity			*m_pChaseTarget;		// 0x2e8 the player watched (GetPlayerToChase), NULL when there is none
+	float				m_flNextObserverInput;	// 0x2ec JUMP and ATTACK act again from this time (half a second; Spawn: 0)
 	float				m_flNextZoneCheck;		// 0x2e0 [0x2e4] PostThink checks the zones the player stands in every 0.2 seconds (Spawn: 0)
 	CSignals			m_signals;				// 0x2e4 [0x2e8] the zones' signals: buy zone 1, bomb target 2 (the buy commands, CC4::PrimaryAttack, CBuyZone, CBombTarget)
 	edict_t				*m_pentBombTarget;		// 0x2ec [0x2f0] the bomb target the player is in (CBombTarget::BombTargetTouch); the planted C4 keeps it (ShootSatchelCharge)
@@ -300,10 +306,10 @@ public:
 	int			m_iClientHideHUD;
 	int			m_iFOV;			// field of view
 	int			m_iClientFOV;	// client's known FOV
-	// Beta 5.0 (leak), names ours:
-	BOOL		m_fHasAssaultSuit;	// 0x4f0 [0x4f4] GiveNamedItem: TRUE for item_assaultsuit, FALSE for item_kevlar; HasAssaultSuit wants it and armor
-	int			m_iNumSpawns;		// 0x4f4 [0x4f8] spawns since the player joined (Spawn counts, JoiningThink clears; FPlayerCanRespawn)
-	CObserver	*m_pObserver;		// 0x4f8 [0x4fc] the player's observer entity (Spawn creates it, StartObserver hands it the player, ClientDisconnected removes it)
+	// Beta 5.0 (leak), names ours (Beta 5.2's offsets, 0x10 more than Beta 5.0's):
+	BOOL		m_fHasAssaultSuit;	// 0x500 GiveNamedItem: TRUE for item_assaultsuit, FALSE for item_kevlar; HasAssaultSuit wants it and armor
+	int			m_iNumSpawns;		// 0x504 spawns since the player joined (Spawn counts, JoiningThink clears; FPlayerCanRespawn)
+	CObserver	*m_pObserver;		// 0x508 Beta 5.0's observer entity; from Beta 5.2 on nothing sets it, ClientDisconnected still removes it (sic)
 	// usable player items 
 	CBasePlayerItem	*m_rgpPlayerItems[MAX_ITEM_TYPES];
 	CBasePlayerItem *m_pActiveItem;
@@ -394,6 +400,10 @@ public:
 
 	void StartDeathCam( void );
 	void StartObserver( Vector vecPosition, Vector vecViewAngle );
+	// Beta 5.2 (Linux symbols): the chase camera
+	CBaseEntity *GetPlayerToChase( void );
+	void GhostMode( void );
+	void ChaseCamMode( void );
 
 	void AddPoints( int score, BOOL bAllowNegativeScore );
 	void AddPointsToTeam( int score, BOOL bAllowNegativeScore );

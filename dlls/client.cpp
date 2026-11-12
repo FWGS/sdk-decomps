@@ -175,8 +175,6 @@ void ClientKill( edict_t *pEntity )
 	pev->health = 0;
 	pl->Killed( pev, GIB_NEVER );
 
-	((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
-
 //	pev->modelindex = g_ulModelIndexPlayer;
 //	pev->frags -= 2;		// extra penalty
 //	respawn( pev );
@@ -367,7 +365,6 @@ void ClientPutInServer( edict_t *pEntity )
 	pPlayer->pev->flags |= FL_SPECTATOR;
 	pPlayer->pev->solid = SOLID_NOT;
 	pPlayer->pev->movetype = MOVETYPE_NOCLIP;
-	pPlayer->pev->modelindex = 0;
 	pPlayer->pev->effects = EF_NODRAW;
 	pPlayer->pev->takedamage = DAMAGE_NO;
 	pPlayer->pev->deadflag = DEAD_DEAD;
@@ -1754,9 +1751,11 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 	if ( !pEntity->pvPrivateData )
 		return;
 
+	CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE( pEntity );	// name ours
+
 	// the model is the one chosen in the menu (m_iAppearance), whatever the
 	// client sets; Beta 5.0 (leak): 1 urban, 2 terror, 3 arab, 4 gsg9, 5 sas
-	switch ( ((CBasePlayer *)GET_PRIVATE( pEntity ))->m_iAppearance )
+	switch ( pPlayer->m_iAppearance )
 	{
 	case 2:
 		CLIENT_COMMAND( pEntity, "model terror\n" );
@@ -1785,9 +1784,17 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 	}
 
 	// msg everyone if someone changes their name,  and it isn't the first time (changing no name to current name)
-	// Beta 5.0 (leak): a dead player may change his name again
 	if ( pEntity->v.netname && STRING(pEntity->v.netname)[0] != 0 && !FStrEq( STRING(pEntity->v.netname), g_engfuncs.pfnInfoKeyValue( infobuffer, "name" )) )
 	{
+		// Beta 5.2: a dead player keeps his name (it is put back)
+		if ( pPlayer->pev->deadflag != DEAD_NO )
+		{
+			char szName[256];	// name ours
+			strcpy( szName, STRING( pEntity->v.netname ) );
+			g_engfuncs.pfnSetClientKeyValue( pPlayer->entindex(), g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "name", szName );
+			return;
+		}
+
 		char text[256];
 		sprintf( text, "* %s changed name to %s\n", STRING(pEntity->v.netname), g_engfuncs.pfnInfoKeyValue( infobuffer, "name" ) );
 		MESSAGE_BEGIN( MSG_ALL, gmsgSayText, NULL );

@@ -118,7 +118,7 @@ int CHudScoreboard :: Draw( float fTime )
 		m_flNextCvarCheck = fTime + 1;
 	}
 
-	if ( !m_iShowscoresHeld )
+	if ( !m_iShowscoresHeld && !gHUD.m_iIntermission )
 		return 1;
 
 	GetAllPlayersInfo();

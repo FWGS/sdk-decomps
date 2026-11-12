@@ -33,7 +33,6 @@
 #include "../engine/shake.h"
 #include "decals.h"
 #include "gamerules.h"
-#include "observer.h"	// Beta 5.0 (leak)
 
 // #define DUCKFIX
 
@@ -2348,6 +2347,12 @@ void CBasePlayer::PlayerDeathThink(void)
 	if ( m_iJoiningState != JOIN_DONE )
 		return;
 
+	// Beta 5.2: an observing player's camera
+	if ( ( m_afPhysicsFlags & PFLAG_OBSERVER ) && m_cObserverMode == 0 )
+		GhostMode();
+	else if ( ( m_afPhysicsFlags & PFLAG_OBSERVER ) && m_cObserverMode == 1 )
+		ChaseCamMode();
+
 	if (FBitSet(pev->flags, FL_ONGROUND))
 	{
 		flForward = pev->velocity.Length() - 20;
@@ -2396,6 +2401,22 @@ void CBasePlayer::PlayerDeathThink(void)
 		// go to dead camera. 
 		pev->flags |= FL_SPECTATOR;
 		StartDeathCam();
+
+		// Beta 5.2: how to work the camera
+		if ( m_cObserverMode == 1 )
+		{
+			if ( CVAR_GET_FLOAT( "mp_chasecam" ) == 2 )
+				HintMessage( "You are in ChaseCam Mode. \nPress JUMP to switch back to FreeLook mode.\n Press ATTACK to toggle teammate views.", TRUE, FALSE );
+			else
+				HintMessage( "You are in ChaseCam Mode. \n Press ATTACK to toggle teammate views.", TRUE, FALSE );
+		}
+		else if ( m_cObserverMode == 0 )
+		{
+			if ( CVAR_GET_FLOAT( "mp_chasecam" ) == 2 )
+				HintMessage( "You are in FreeLook Mode. \nPress JUMP to switch back to ChaseCam mode.\n Press ATTACK to toggle teammate views.", TRUE, FALSE );
+			else
+				HintMessage( "You are in FreeLook Mode. \n Press ATTACK to toggle teammate views.", TRUE, FALSE );
+		}
 	}
 
 	// wait for all buttons released
@@ -2423,6 +2444,209 @@ void CBasePlayer::PlayerDeathThink(void)
 		pev->button = 0;
 		m_iRespawnFrames = 0;
 		pev->nextthink = -1;
+	}
+}
+
+//=========================================================
+// GetPlayerToChase - Beta 5.2 (Linux symbol): the next
+// living player from m_iChaseNext on (a team mate in the
+// chase camera), round from 1 again, then anybody living;
+// it becomes m_pChaseTarget (NULL when there is none)
+//=========================================================
+CBaseEntity *CBasePlayer::GetPlayerToChase( void )
+{
+	int iMyIndex = entindex();	// name ours
+	int i;
+
+	if ( m_iChaseNext > gpGlobals->maxClients )
+		m_iChaseNext = 1;
+
+	for ( i = m_iChaseNext; i <= gpGlobals->maxClients; i++ )
+	{
+		CBaseEntity *pEntity = UTIL_PlayerByIndex( i );
+
+		if ( pEntity && i != iMyIndex && pEntity->IsPlayer() )
+		{
+			CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pEntity->pev );
+
+			if ( m_cObserverMode == 1 )
+			{
+				if ( pPlayer->pev->deadflag == DEAD_NO && pPlayer->m_iTeam == m_iTeam )
+				{
+					m_pChaseTarget = pEntity;
+					m_iChaseNext = i + 1;
+					return pEntity;
+				}
+			}
+			else if ( m_cObserverMode == 0 )
+			{
+				if ( pPlayer->pev->deadflag == DEAD_NO )
+				{
+					m_pChaseTarget = pEntity;
+					m_iChaseNext = i + 1;
+					return pEntity;
+				}
+			}
+		}
+	}
+
+	m_iChaseNext = 1;
+
+	for ( i = 1; i <= gpGlobals->maxClients; i++ )
+	{
+		CBaseEntity *pEntity = UTIL_PlayerByIndex( i );
+
+		if ( pEntity && i != iMyIndex && pEntity->IsPlayer() )
+		{
+			CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pEntity->pev );
+
+			if ( m_cObserverMode == 1 )
+			{
+				if ( pPlayer->pev->deadflag == DEAD_NO && pPlayer->m_iTeam == m_iTeam )
+				{
+					m_pChaseTarget = pEntity;
+					m_iChaseNext = i + 1;
+					return pEntity;
+				}
+			}
+			else if ( m_cObserverMode == 0 )
+			{
+				if ( pPlayer->pev->deadflag == DEAD_NO )
+				{
+					m_pChaseTarget = pEntity;
+					m_iChaseNext = i + 1;
+					return pEntity;
+				}
+			}
+		}
+	}
+
+	m_iChaseNext = 1;
+
+	for ( i = 1; i <= gpGlobals->maxClients; i++ )
+	{
+		CBaseEntity *pEntity = UTIL_PlayerByIndex( i );
+
+		if ( pEntity && i != iMyIndex && pEntity->IsPlayer() )
+		{
+			CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pEntity->pev );
+
+			if ( pPlayer->pev->deadflag == DEAD_NO )
+			{
+				m_pChaseTarget = pEntity;
+				m_iChaseNext = i + 1;
+				return pEntity;
+			}
+		}
+	}
+
+	m_pChaseTarget = NULL;
+	m_iChaseNext = 1;
+	return NULL;
+}
+
+//=========================================================
+// GhostMode - Beta 5.2 (Linux symbol): the free camera.
+// JUMP goes to the chase camera (mp_chasecam 1 or 2),
+// ATTACK jumps to the next living player
+//=========================================================
+void CBasePlayer::GhostMode( void )
+{
+	int iButtons = pev->button;	// name ours
+	int iChaseCam = (int)CVAR_GET_FLOAT( "mp_chasecam" );	// name ours
+	CBaseEntity *pTarget;	// name ours
+
+	if ( ( iButtons & IN_JUMP ) && m_flNextObserverInput < gpGlobals->time && ( iChaseCam == 1 || iChaseCam == 2 ) )
+	{
+		m_flNextObserverInput = gpGlobals->time + 0.5;
+		m_cObserverMode = 1;
+
+		pTarget = GetPlayerToChase();
+
+		if ( pTarget )
+		{
+			if ( iChaseCam == 2 )
+				HintMessage( "You are in ChaseCam Mode. \nPress JUMP to switch back to FreeLook mode.\n Press ATTACK to toggle teammate views.", TRUE, FALSE );
+			else
+				HintMessage( "You are in ChaseCam Mode. \n Press ATTACK to toggle teammate views.", TRUE, FALSE );
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pev );
+				WRITE_BYTE( 0 );
+			MESSAGE_END();
+
+			SET_ORIGIN( edict(), pTarget->pev->origin + Vector( 0, 0, 48 ) );
+		}
+		else
+			m_cObserverMode = 0;
+	}
+	else if ( ( iButtons & IN_ATTACK ) && m_flNextObserverInput < gpGlobals->time )
+	{
+		m_flNextObserverInput = gpGlobals->time + 0.5;
+
+		pTarget = GetPlayerToChase();
+
+		if ( pTarget )
+			SET_ORIGIN( edict(), pTarget->pev->origin + Vector( 0, 0, 48 ) );
+	}
+
+	if ( m_flNextSBarUpdateTime < gpGlobals->time )
+	{
+		UpdateStatusBar();
+		m_flNextSBarUpdateTime = gpGlobals->time + 0.25;
+	}
+}
+
+//=========================================================
+// ChaseCamMode - Beta 5.2 (Linux symbol): the chase camera,
+// 48 units above the target's origin and 20 behind it.
+// JUMP goes back to the free camera (mp_chasecam 0 or 2),
+// ATTACK takes the next team mate
+//=========================================================
+void CBasePlayer::ChaseCamMode( void )
+{
+	int iButtons = pev->button;	// name ours
+	int iChaseCam = (int)CVAR_GET_FLOAT( "mp_chasecam" );	// name ours
+
+	if ( ( iButtons & IN_JUMP ) && m_flNextObserverInput < gpGlobals->time && ( iChaseCam == 0 || iChaseCam == 2 ) )
+	{
+		if ( iChaseCam == 2 )
+			HintMessage( "You are in FreeLook Mode. \nPress JUMP to switch back to ChaseCam mode.\n Press ATTACK to toggle teammate views.", TRUE, FALSE );
+		else
+			HintMessage( "You are in FreeLook Mode. \n Press ATTACK to toggle teammate views.", TRUE, FALSE );
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pev );
+			WRITE_BYTE( 1 );
+		MESSAGE_END();
+
+		m_flNextObserverInput = gpGlobals->time + 0.5;
+		m_cObserverMode = 0;
+		return;
+	}
+
+	if ( ( iButtons & IN_ATTACK ) && m_flNextObserverInput < gpGlobals->time )
+	{
+		m_flNextObserverInput = gpGlobals->time + 0.5;
+
+		if ( GetPlayerToChase() )
+		{
+			UTIL_MakeVectors( m_pChaseTarget->pev->angles );
+			pev->origin = m_pChaseTarget->pev->origin + Vector( 0, 0, 48 ) - gpGlobals->v_forward * 20;
+		}
+	}
+
+	if ( m_pChaseTarget == NULL )
+	{
+		m_cObserverMode = 0;
+		HintMessage( "You are in FreeLook Mode. \nPress JUMP to switch back to ChaseCam mode.\n Press ATTACK to toggle teammate views.", TRUE, FALSE );
+		return;
+	}
+
+	if ( m_pChaseTarget->pev->deadflag != DEAD_NO )
+		GetPlayerToChase();
+	else
+	{
+		UTIL_MakeVectors( m_pChaseTarget->pev->angles );
+		pev->origin = m_pChaseTarget->pev->origin + Vector( 0, 0, 48 ) - gpGlobals->v_forward * 20;
 	}
 }
 
@@ -2489,7 +2713,8 @@ void CBasePlayer::StartDeathCam( void )
 }
 
 // Beta 5.0 (leak): the observer flies (noclip), unseen, without weapons
-// and health on the HUD; his observer entity takes him; no longer ducking
+// and health on the HUD; no longer ducking. Beta 5.2: he keeps his model
+// index, has a 2-unit box, and the free camera shows the crosshair
 void CBasePlayer::StartObserver( Vector vecPosition, Vector vecViewAngle )
 {
 	m_iHideHUD |= HIDEHUD_WEAPONS | HIDEHUD_HEALTH;
@@ -2501,16 +2726,20 @@ void CBasePlayer::StartObserver( Vector vecPosition, Vector vecViewAngle )
 	pev->solid = SOLID_NOT;
 	pev->movetype = MOVETYPE_NOCLIP;
 	pev->takedamage = DAMAGE_NO;
-	pev->modelindex = 0;
 	pev->effects = EF_NODRAW;
 	UTIL_SetOrigin( pev, vecPosition );
-
-	if ( m_pObserver )
-		m_pObserver->SetOwner( this );
+	UTIL_SetSize( pev, Vector( -1, -1, -1 ), Vector( 1, 1, 1 ) );
 
 	ClearBits( m_afPhysicsFlags, PFLAG_DUCKING );
 	ClearBits( pev->flags, FL_DUCKING );
 	ResetMaxSpeed();
+
+	if ( m_cObserverMode == 0 )
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pev );
+			WRITE_BYTE( 1 );
+		MESSAGE_END();
+	}
 }
 
 // 
@@ -4387,18 +4616,6 @@ void CBasePlayer::Spawn( void )
 	m_fHasAssaultSuit	= FALSE;
 	m_pentBombTarget	= NULL;
 
-	// Beta 5.0 (leak): each player has an observer entity for his time dead
-	if ( m_pObserver == NULL )
-	{
-		m_pObserver = CObserver::Create();
-
-		if ( m_pObserver == NULL )
-			ALERT( at_console, UTIL_VarArgs( "Could not create observer for %s\n", STRING( pev->netname ) ) );
-	}
-
-	if ( m_pObserver != NULL )
-		m_pObserver->Spawn();
-
 	m_hintMessageQueue.Reset();
 
 	m_flVelocityModifier = 1.0;
@@ -4422,6 +4639,18 @@ void CBasePlayer::Spawn( void )
 	// PlayerKilled), being killed by a teammate and carrying the bomb come again
 	m_flDisplayHistory	&= ~( 0x2 | 0x40 | 0x400 | 0x1000 );
 	m_flNextZoneCheck	= 0;
+
+	// Beta 5.2: the dead camera starts as mp_chasecam 1 asks (chase), else free
+	m_flNextObserverInput = 0;
+	m_iChaseNext		= 1;
+	int iChaseCam = (int)CVAR_GET_FLOAT( "mp_chasecam" );	// name ours
+	if ( iChaseCam == 0 )
+		m_cObserverMode = 0;
+	else if ( iChaseCam == 1 )
+		m_cObserverMode = 1;
+	else
+		m_cObserverMode = 0;
+
 	m_SbarString0[0]	= 0;
 	m_SbarString1[0]	= 0;
 	m_iNumSpawns++;
@@ -6436,11 +6665,13 @@ void CBasePlayer::UpdateStatusBar()
 	strcpy( sbuf0, m_SbarString0 );
 	strcpy( sbuf1, m_SbarString1 );
 
-	CObserver *pObserver = m_pObserver;
-
-	if ( ( m_afPhysicsFlags & PFLAG_OBSERVER ) && pObserver && pObserver->IsChasing() )
+	// Beta 5.2: the chase camera's target
+	if ( ( m_afPhysicsFlags & PFLAG_OBSERVER ) && m_cObserverMode == 1 )
 	{
-		CBasePlayer *pTarget = pObserver->GetTarget();
+		CBasePlayer *pTarget = NULL;
+
+		if ( m_pChaseTarget )
+			pTarget = GetClassPtr( (CBasePlayer *)m_pChaseTarget->pev );
 
 		if ( !FNullEnt( pTarget ) )
 		{

@@ -136,9 +136,10 @@ void CM249::M249Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		{
 		case 0:
 			SendWeaponAnim( M249_SHOOT1 );
-			// no break (sic): both animations are sent
+			break;	// Beta 5.2: the breaks (Beta 5.0 sent both for case 0)
 		case 1:
 			SendWeaponAnim( M249_SHOOT2 );
+			break;
 		}
 	}
 

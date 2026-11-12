@@ -499,7 +499,7 @@ void CBreakable::BreakTouch( CBaseEntity *pOther )
 		// play creaking sound here.
 		DamageSound();
 
-		Die();	// Beta 5.0 (leak): it breaks at once (was SetThink( Die ))
+		SetThink( Die );	// Beta 5.2: the SDK's think again (Beta 5.0 broke it at once)
 		SetTouch( NULL );
 		
 		if ( m_flDelay == 0 )
@@ -532,7 +532,13 @@ void CBreakable::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE us
 		pev->deadflag = DEAD_DEAD;
 		pev->effects = EF_NODRAW;
 
-		Die();
+		// Beta 5.2: it breaks at its next think, after the delay (as when stood upon)
+		SetThink( Die );
+
+		if ( m_flDelay == 0 )
+			m_flDelay = 0.1;
+
+		pev->nextthink = pev->ltime + m_flDelay;
 	}
 }
 
@@ -614,7 +620,14 @@ int CBreakable :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, f
 		pev->takedamage = DAMAGE_NO;
 		pev->deadflag = DEAD_DEAD;
 		pev->effects = EF_NODRAW;
-		Die();
+
+		// Beta 5.2: it breaks at its next think, after the delay
+		SetThink( Die );
+
+		if ( m_flDelay == 0 )
+			m_flDelay = 0.1;
+
+		pev->nextthink = pev->ltime + m_flDelay;
 		return 0;
 	}
 
@@ -793,7 +806,9 @@ void CBreakable::Die( void )
 	// Fire targets on break
 	SUB_UseTargets( NULL, USE_TOGGLE, 0 );
 
-	// Beta 4.0: no longer removed (Restart brings it back); the think time stays (sic)
+	// Beta 4.0: no longer removed (Restart brings it back); the think time stays (sic).
+	// Beta 5.2: Die is a think again, so it stops thinking
+	SetThink( NULL );
 	pev->nextthink = pev->ltime + 0.1;
 	if ( m_iszSpawnObject )
 		CBaseEntity::Create( (char *)STRING(m_iszSpawnObject), VecBModelOrigin(pev), pev->angles, edict() );

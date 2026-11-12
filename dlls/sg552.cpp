@@ -164,11 +164,13 @@ void CSG552::SG552Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		{
 		case 0:
 			SendWeaponAnim( SG552_SHOOT1 );
-			// no breaks (sic): case 0 sends all three animations, case 1 the last two
+			break;	// Beta 5.2: the breaks (Beta 5.0 sent all three for case 0)
 		case 1:
 			SendWeaponAnim( SG552_SHOOT2 );
+			break;
 		case 2:
 			SendWeaponAnim( SG552_SHOOT3 );
+			break;
 		}
 	}
 
