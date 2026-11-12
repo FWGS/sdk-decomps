@@ -103,7 +103,7 @@ void CG3SG1::SecondaryAttack( void )
 	if (m_pPlayer->m_iFOV == 90)
 	{
 		// the scope's green tint: fade out to green (FFADE_OUT), held until the fade in
-		UTIL_ScreenFade( m_pPlayer, Vector(20,200,20), 0.75, 1024, 60, 1 );
+		UTIL_ScreenFade( m_pPlayer, Vector(20,200,20), 0.75, 1024, 60, 5 );	// Beta 2.1: FFADE_OUT | FFADE_STAYOUT (was FFADE_OUT)
 		m_pPlayer->m_iFOV = 40;
 	}
 	else if (m_pPlayer->m_iFOV == 40)

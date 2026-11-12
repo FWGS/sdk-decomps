@@ -770,7 +770,7 @@ void CBasePlayer::PackDeadPlayerItems( void )
 	pWeaponBox->pev->angles.z = 0;
 
 	pWeaponBox->SetThink( CWeaponBox::Kill );
-	pWeaponBox->pev->nextthink = gpGlobals->time + 30;
+	pWeaponBox->pev->nextthink = gpGlobals->time + 150;	// Beta 2.1 (2.0: 30)
 
 	// the box shows the last weapon of the list (sic: not necessarily one that is packed)
 	switch ( iWeaponID )
@@ -3474,8 +3474,10 @@ BOOL IsSpawnPointValid( CBaseEntity *pPlayer, CBaseEntity *pSpot )
 	while ( (ent = UTIL_FindEntityInSphere( ent, pSpot->pev->origin, 64 )) != NULL )
 	{
 		// if ent is a client, don't spawn on 'em
+		// (sic: Beta 2.1 returns TRUE here too, so every spot whose master allows it is
+		// valid, occupied or not; the readme calls this the telefragging fix)
 		if ( ent->IsPlayer() && ent != pPlayer )
-			return FALSE;
+			return TRUE;
 	}
 
 	return TRUE;
@@ -4819,8 +4821,6 @@ void CBasePlayer :: UpdateClientData( void )
 		MESSAGE_BEGIN( MSG_ONE, gmsgResetHUD, NULL, pev );
 			WRITE_BYTE( 1 );
 		MESSAGE_END();
-
-		g_pGameRules->InitHUD( this );
 	}
 
 	if ( m_iHideHUD != m_iClientHideHUD )
@@ -5344,7 +5344,7 @@ void CBasePlayer::DropPlayerItem ( char *pszItemName )
 	if ( !g_pGameRules->IsMultiplayer() || (CVAR_GET_FLOAT("mp_weaponstay") > 0) )
 	{
 		// no dropping in single player.
-		return;
+		// Beta 2.1: no longer refused (the test is still made, its result unused)
 	}
 
 	if ( !strlen( pszItemName ) )

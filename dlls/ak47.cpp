@@ -103,7 +103,7 @@ void CAK47::SecondaryAttack( void )
 
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.14;
+		flSpread = m_pPlayer->m_flAccuracy * 0.15;
 		AK47Fire( flSpread, 0.0955, FALSE );
 	}
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
@@ -113,12 +113,12 @@ void CAK47::SecondaryAttack( void )
 	}
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.0375;
+		flSpread = m_pPlayer->m_flAccuracy * 0.0475;
 		AK47Fire( flSpread, 0.0955, FALSE );
 	}
 	else
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.065;
+		flSpread = m_pPlayer->m_flAccuracy * 0.07;
 		AK47Fire( flSpread, 0.0955, FALSE );
 	}
 }
@@ -129,7 +129,7 @@ void CAK47::PrimaryAttack( void )
 
 	if (m_pPlayer->pev->velocity.Length2D() > 0)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.14;
+		flSpread = m_pPlayer->m_flAccuracy * 0.15;
 		AK47Fire( flSpread, 0.0955, FALSE );
 	}
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
@@ -139,12 +139,12 @@ void CAK47::PrimaryAttack( void )
 	}
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.0375;
+		flSpread = m_pPlayer->m_flAccuracy * 0.0475;
 		AK47Fire( flSpread, 0.0955, FALSE );
 	}
 	else
 	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.065;
+		flSpread = m_pPlayer->m_flAccuracy * 0.07;
 		AK47Fire( flSpread, 0.0955, FALSE );
 	}
 }
@@ -153,7 +153,7 @@ void CAK47::AK47Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 {
 	// the spread grows with the cube of the shots fired
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.625;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.6;
 
 	if (m_pPlayer->m_flAccuracy > 3)
 		m_pPlayer->m_flAccuracy = 3;
@@ -220,7 +220,7 @@ void CAK47::AK47Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		vecAiming = gpGlobals->v_forward;
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_762MM, 40, 0.925 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_762MM, 37, 0.925 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)

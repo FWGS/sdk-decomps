@@ -562,11 +562,16 @@ void Host_Say( edict_t *pEntity, int teamonly )
 // edict_t * ) after DropPrimary, ENTINDEX and MESSAGE_BEGIN( ..., entvars_t * )
 // after BuyShotgun and CBaseEntity::entindex after ClientCommand: in the state the
 // release build compiles it in (it writes its own .pch) that takes more IL ahead of
-// DropPrimary than our text has. This function, never called, is that IL: eight
-// statement lines and two empty statements (with 8 lines entindex follows
-// ClientCommand but MESSAGE_BEGIN( ..., entvars_t * ) comes one function late, with
-// 8 and three empty statements entindex comes one function early; one empty
-// statement, int i, return, two blocks and other forms tried miss as well).
+// DropPrimary than our text has. This function, never called, is that IL. Beta
+// 2.0: eight statement lines and two empty statements (with 8 lines entindex
+// follows ClientCommand but MESSAGE_BEGIN( ..., entvars_t * ) comes one function
+// late, with 8 and three empty statements entindex comes one function early; one
+// empty statement, int i, return, two blocks and other forms tried miss as well).
+// Beta 2.1: retail has MESSAGE_BEGIN( ..., edict_t * ) after IsCloseToBase, ENTINDEX
+// and MESSAGE_BEGIN( ..., entvars_t * ) after BuyPistol, entindex after
+// ChooseTerrorist: client.cpp's last compile reuses the .pch its compile in the
+// build before wrote, and that order takes less IL than Beta 2.0's: 4 to 6 statement
+// lines (3 and 7 miss). So Beta 2.1's text has less of it; five lines.
 inline void sic_il_client( int *p )
 {
 	p[0] = 0;
@@ -574,11 +579,6 @@ inline void sic_il_client( int *p )
 	p[2] = 0;
 	p[3] = 0;
 	p[4] = 0;
-	p[5] = 0;
-	p[6] = 0;
-	p[7] = 0;
-	;
-	;
 }
 
 // within 512 units of one of the team's spawn points (counter-terrorists:
@@ -805,11 +805,11 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Weapon not available" );
 			return;
 		}
-		if ( pPlayer->m_iAccount >= 2250 )
+		if ( pPlayer->m_iAccount >= 2500 )
 		{
 			DropPrimary( pPlayer );
 			pPlayer->GiveNamedItem( "weapon_ak47" );
-			pPlayer->m_iAccount -= 2250;
+			pPlayer->m_iAccount -= 2500;
 		}
 		else
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
@@ -950,16 +950,16 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 
 
 // The team menus: the player joins the team, takes its model and dies, to
-// be respawned on its side. With limitteams 1 nobody may join the team that
-// already has more players (sic: GameDLLInit registers the cvar as
-// mp_limitteams, so "limitteams" reads 0 and the limit never applies). (Names
-// from the later versions' Linux symbols.)
+// be respawned on its side. With mp_limitteams 1 nobody may join the team that
+// already has more players (Beta 2.0 read "limitteams", which does not exist, so
+// the limit never applied; Beta 2.1 reads the registered name). (Names from the
+// later versions' Linux symbols.)
 
 void ChooseCT( edict_t *pEntity, CBasePlayer *pPlayer, int iSlot )
 {
 	int iIndex = pPlayer->entindex();
 
-	if ( CountTeams() >= 1 && CVAR_GET_FLOAT( "limitteams" ) == 1 )
+	if ( CountTeams() >= 1 && CVAR_GET_FLOAT( "mp_limitteams" ) == 1 )
 	{
 		ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Sorry! Cannot join... too many CT's" );
 		return;
@@ -983,7 +983,7 @@ void ChooseTerrorist( edict_t *pEntity, CBasePlayer *pPlayer, int iSlot )
 {
 	int iIndex = pPlayer->entindex();
 
-	if ( CountTeams() <= -1 && CVAR_GET_FLOAT( "limitteams" ) == 1 )
+	if ( CountTeams() <= -1 && CVAR_GET_FLOAT( "mp_limitteams" ) == 1 )
 	{
 		ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Sorry! Cannot join... too many Terrorists" );
 		return;

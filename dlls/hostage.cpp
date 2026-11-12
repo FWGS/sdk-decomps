@@ -136,7 +136,7 @@ void CHostage::IdleThink( void )
 
 			if ( vecDir.Length() > m_flFollowDistance )
 			{
-				pev->velocity = vecDir / vecDir.Length() * 265;
+				pev->velocity = vecDir / vecDir.Length() * 340;
 				pev->velocity.z -= 50;
 			}
 
@@ -165,7 +165,7 @@ void CHostage::IdleThink( void )
 
 			if ( vecDir.Length() > m_flFollowDistance )
 			{
-				pev->velocity = vecDir / vecDir.Length() * 145;
+				pev->velocity = vecDir / vecDir.Length() * 110;
 				pev->velocity.z -= 50;
 			}
 
@@ -410,7 +410,7 @@ void CHostage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 	}
 	else if ( m_fStopped == FALSE )
 	{
-		m_flFollowDistance = 82;
+		m_flFollowDistance = 128;
 		m_flFollowRange = 1024;
 	}
 }
