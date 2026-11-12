@@ -25,13 +25,11 @@
 #include <string.h>
 #include <stdio.h>
 
-// sic: these two definitions stand ahead of ammohistory.h, which ends the
-// automatic precompiled header before it.
+#include "ammohistory.h"
+
 WEAPON *gpActiveSel;	// NULL means off, 1 means just the menu bar, otherwise
 						// this points to the active weapon menu item
 WEAPON *gpLastSel;		// Last weapon menu selection 
-
-#include "ammohistory.h"
 
 client_sprite_t *GetSpriteList(client_sprite_t *pList, const char *psz, int iRes, int iCount);
 

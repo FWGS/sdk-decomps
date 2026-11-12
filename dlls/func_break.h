@@ -26,6 +26,7 @@ public:
 	// basic functions
 	void Spawn( void );
 	void Precache( void );
+	void Restart( void );	// Beta 4.0 (Linux symbol)
 	void KeyValue( KeyValueData* pkvd);
 	void EXPORT BreakTouch( CBaseEntity *pOther );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
@@ -69,6 +70,7 @@ public:
 	float		m_angle;
 	int			m_iszGibModel;
 	int			m_iszSpawnObject;
+	float		m_flHealth;		// 0x40 new in Beta 4.0: the health Restart gives back (Spawn sets it); name ours
 };
 
 #endif	// FUNC_BREAK_H

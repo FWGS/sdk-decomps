@@ -104,65 +104,22 @@ BOOL CMP5N::Deploy( )
 
 void CMP5N::SecondaryAttack( void )
 {
-	float flSpread;
-
-	if (m_pPlayer->pev->velocity.Length2D() > 0)
-	{
-		// sic: moving and in the air the secondary keeps Beta 2.1's 0.08 s (the primary: 0.075)
-		flSpread = m_pPlayer->m_flAccuracy * 0.08;
-		MP5NFire( flSpread, 0.08, FALSE );
-	}
-	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.12;
-		MP5NFire( flSpread, 0.08, FALSE );
-	}
-	else if (m_pPlayer->pev->flags & FL_DUCKING)
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.04;
-		MP5NFire( flSpread, 0.075, FALSE );
-	}
-	else
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.055;
-		MP5NFire( flSpread, 0.075, FALSE );
-	}
+	MP5NFire( m_pPlayer->m_flAccuracy * 0.04, 0.075, FALSE );
 }
 
 void CMP5N::PrimaryAttack( void )
 {
-	float flSpread;
-
-	if (m_pPlayer->pev->velocity.Length2D() > 0)
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.08;
-		MP5NFire( flSpread, 0.075, FALSE );
-	}
-	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.12;
-		MP5NFire( flSpread, 0.075, FALSE );
-	}
-	else if (m_pPlayer->pev->flags & FL_DUCKING)
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.04;
-		MP5NFire( flSpread, 0.075, FALSE );
-	}
-	else
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.055;
-		MP5NFire( flSpread, 0.075, FALSE );
-	}
+	MP5NFire( m_pPlayer->m_flAccuracy * 0.04, 0.075, FALSE );
 }
 
 void CMP5N::MP5NFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 {
 	// the spread grows with the square of the shots fired
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 175) + 0.45;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 250) + 0.4;
 
-	if (m_pPlayer->m_flAccuracy > 1.75)
-		m_pPlayer->m_flAccuracy = 1.75;
+	if (m_pPlayer->m_flAccuracy > 0.8)
+		m_pPlayer->m_flAccuracy = 0.8;
 
 	if (m_iClip <= 0)
 	{
@@ -224,7 +181,7 @@ void CMP5N::MP5NFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 		vecAiming = gpGlobals->v_forward;
 	}
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 26, 0.87 );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 26, 0.8 );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -233,7 +190,15 @@ void CMP5N::MP5NFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
 
-	m_pPlayer->pev->punchangle.x = RANDOM_FLOAT( -1.5, 1.5 );
+	// Beta 4.0: the recoil by how the player stands
+	if (m_pPlayer->pev->velocity.Length2D() > 0)
+		KickBack( 0.65, 0.3, 0.2, 0.03, 3.5, 2, 5 );
+	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+		KickBack( 0.7, 0.375, 0.25, 0.0325, 4, 2, 5 );
+	else if ( FBitSet(m_pPlayer->pev->flags, FL_DUCKING) )
+		KickBack( 0.5, 0.2, 0.1, 0.015, 3, 1, 5 );
+	else
+		KickBack( 0.525, 0.225, 0.125, 0.02, 3.25, 1.25, 5 );
 }
 
 

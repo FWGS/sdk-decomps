@@ -40,6 +40,10 @@ cvar_t	teamlist = {"mp_teamlist","hgrunt;scientist", FCVAR_SERVER };
 cvar_t	teamoverride = {"mp_teamoverride","1" };
 cvar_t	defaultteam = {"mp_defaultteam","0" };
 cvar_t	allowmonsters={"mp_allowmonsters","0", FCVAR_SERVER };
+// Counter-Strike Beta 4.0 (names from the Linux symbols)
+cvar_t	roundtime	= {"mp_roundtime","5", FCVAR_SERVER };			// minutes, 3 to 9 (CHalfLifeMultiplay)
+cvar_t	c4timer		= {"mp_c4timer","30", FCVAR_SERVER };			// seconds, 10 to 90
+cvar_t	friendlygrenadedamage = {"mp_friendly_grenade_damage","1", FCVAR_SERVER };
 
 //CVARS FOR SKILL LEVEL SETTINGS
 // Agrunt
@@ -471,6 +475,9 @@ void GameDLLInit( void )
 	CVAR_REGISTER (&teamoverride);
 	CVAR_REGISTER (&defaultteam);
 	CVAR_REGISTER (&allowmonsters);
+	CVAR_REGISTER (&roundtime);
+	CVAR_REGISTER (&c4timer);
+	CVAR_REGISTER (&friendlygrenadedamage);
 
 // REGISTER CVARS FOR SKILL LEVEL STUFF
 	// Agrunt

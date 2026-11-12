@@ -34,13 +34,20 @@ public:
 	typedef enum { SATCHEL_DETONATE = 0, SATCHEL_RELEASE } SATCHELCODE;
 
 	static CGrenade *ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );
+	static CGrenade *ShootTimed2( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time, int iTeam );	// Beta 4.0: the HE grenade (parameter names ours)
 	static CGrenade *ShootContact( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
 	static CGrenade *ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
 	static void UseSatchelCharges( entvars_t *pevOwner, SATCHELCODE code );
 
 	void Explode( Vector vecSrc, Vector vecAim );
 	void Explode( TraceResult *pTrace, int bitsDamageType );
+	void Explode2( TraceResult *pTrace, int bitsDamageType );	// Beta 4.0: the C4's explosion
+	void Explode3( TraceResult *pTrace, int bitsDamageType );	// Beta 4.0: the HE grenade's explosion
 	void EXPORT Smoke( void );
+	void EXPORT Smoke2( void );
+	void EXPORT Smoke3_A( void );
+	void EXPORT Smoke3_B( void );
+	void EXPORT Smoke3_C( void );
 
 	void EXPORT BounceTouch( CBaseEntity *pOther );
 	void EXPORT SlideTouch( CBaseEntity *pOther );
@@ -48,12 +55,26 @@ public:
 	void EXPORT DangerSoundThink( void );
 	void EXPORT PreDetonate( void );
 	void EXPORT Detonate( void );
+	void EXPORT Detonate2( void );
+	void EXPORT Detonate3( void );
 	void EXPORT DetonateUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT TumbleThink( void );
+	void EXPORT C4Think( void );
+	void EXPORT C4Touch( CBaseEntity *pOther );
 
 	virtual void BounceSound( void );
 	virtual int	BloodColor( void ) { return DONT_BLEED; }
 	virtual void Killed( entvars_t *pevAttacker, int iGib );
+
+	// Counter-Strike Beta 4.0 (names ours; offsets retail's)
+	bool m_fStartDefuse;			// 0x118 a CT with a defuser is defusing the planted C4 (C4Touch)
+	CBaseEntity *m_pDefuser;		// 0x11c the one defusing
+	float m_flDefuseDone;			// 0x120 when the defusing is done (5 seconds after it starts)
+	float m_flC4Blow;				// 0x124 when the C4 goes off
+	float m_flBeepInterval;			// 0x128 between two beeps; shrinks by 1 % a tenth of a second
+	float m_flNextBeep;				// 0x12c when C4Think beeps next
+	bool m_fC4Done;					// 0x130 false only while a planted C4 ticks (ShootSatchelCharge); every other grenade has it set, and the C4 sets it when it goes off or is defused (CheckWinConditions waits for it)
+	int m_iTeam;					// 0x134 the thrower's team: an HE grenade does not hurt his team mates (CBasePlayer::TakeDamage)
 
 	BOOL m_fRegisteredSound;// whether or not this grenade has issued its DANGER sound to the world sound list yet.
 };
@@ -66,10 +87,12 @@ public:
 #define ITEM_BATTERY		4
 
 #define WEAPON_NONE				0
-#define WEAPON_CROWBAR			1
-#define	WEAPON_GLOCK			2
-#define WEAPON_PYTHON			3
-#define WEAPON_MP5				4
+// Beta 4.0: the new weapons take the ids of Half-Life's first four (retail's
+// GetItemInfo values; names ours)
+#define WEAPON_P228				1
+#define	WEAPON_SHIELD			2
+#define WEAPON_SCOUT			3
+#define WEAPON_HEGRENADE		4
 #define WEAPON_CHAINGUN			5
 #define WEAPON_CROSSBOW			6
 #define WEAPON_SHOTGUN			7
@@ -79,7 +102,7 @@ public:
 #define WEAPON_HORNETGUN		11
 #define WEAPON_HANDGRENADE		12
 #define WEAPON_TRIPMINE			13
-#define	WEAPON_SATCHEL			14
+#define	WEAPON_SATCHEL			15		// Beta 4.0: 15 (was 14)
 #define	WEAPON_SNARK			15
 // Counter-Strike's weapons (ids are retail's GetItemInfo values; the macro names are ours)
 #define WEAPON_USP				16
@@ -139,6 +162,11 @@ public:
 #define AK47_WEIGHT			25
 #define P90_WEIGHT			26
 #define KNIFE_WEIGHT		2
+// Beta 4.0
+#define P228_WEIGHT			5
+#define SCOUT_WEIGHT		30
+#define HEGRENADE_WEIGHT	3
+#define SHIELD_WEIGHT		2
 
 
 // weapon clip/carry ammo capacities
@@ -171,6 +199,10 @@ public:
 #define SG552_MAX_CARRY			90		// "556Nato"
 #define AK47_MAX_CARRY			90		// "762Nato"
 #define P90_MAX_CARRY			150		// "57mm"
+// Beta 4.0
+#define P228_MAX_CARRY			52		// "357SIG"
+#define SCOUT_MAX_CARRY			30		// "762Nato"
+#define HEGRENADE_MAX_CARRY		3		// "HEGrenade"
 
 // the maximum amount of ammo each weapon's clip can hold
 #define WEAPON_NOCLIP			-1
@@ -205,6 +237,10 @@ public:
 #define SG552_MAX_CLIP			30
 #define AK47_MAX_CLIP			30
 #define P90_MAX_CLIP			50
+// Beta 4.0
+#define P228_MAX_CLIP			13
+#define SCOUT_MAX_CLIP			10
+#define HEGRENADE_MAX_CLIP		WEAPON_NOCLIP
 
 
 // the default amount of ammo that comes with each gun when it spawns
@@ -239,6 +275,10 @@ public:
 #define SG552_DEFAULT_GIVE			30
 #define AK47_DEFAULT_GIVE			30
 #define P90_DEFAULT_GIVE			50
+// Beta 4.0 (the P228's is 12, one short of its magazine)
+#define P228_DEFAULT_GIVE			12
+#define SCOUT_DEFAULT_GIVE			10
+#define HEGRENADE_DEFAULT_GIVE		1
 
 // The amount of ammo given to a player by an ammo item.
 #define AMMO_URANIUMBOX_GIVE	20
@@ -247,7 +287,7 @@ public:
 #define AMMO_MP5CLIP_GIVE		MP5_MAX_CLIP
 #define AMMO_CHAINBOX_GIVE		200
 #define AMMO_M203BOX_GIVE		2
-#define AMMO_BUCKSHOTBOX_GIVE	12
+#define AMMO_BUCKSHOTBOX_GIVE	8		// Beta 4.0: 8 (SDK: 12), ammo.cpp's CBuckShotAmmo
 #define AMMO_CROSSBOWCLIP_GIVE	CROSSBOW_MAX_CLIP
 #define AMMO_RPGCLIP_GIVE		RPG_MAX_CLIP
 #define AMMO_URANIUMBOX_GIVE	20
@@ -268,6 +308,13 @@ public:
 #define AMMO_FLASHBANGBOX_MAX	3
 #define AMMO_57MMBOX_GIVE		50
 #define AMMO_57MMBOX_MAX		150
+// Beta 4.0: ammo_9mm (Glock 18, MP5 Navy, TMP), ammo_buckshot (the M3; the
+// SDK's box, now ammo.cpp's), ammo_357sig (P228)
+#define AMMO_9MMBOX_GIVE		30
+#define AMMO_9MMBOX_MAX			120
+#define AMMO_BUCKSHOTBOX_MAX	48
+#define AMMO_357SIGBOX_GIVE		13
+#define AMMO_357SIGBOX_MAX		52
 
 // bullet types
 typedef	enum
@@ -290,6 +337,7 @@ typedef	enum
 	BULLET_PLAYER_556MM,	// M249, M4A1
 	BULLET_PLAYER_50AE,		// Desert Eagle (Beta 2.0; 13, as DEAGLEFire passes it)
 	BULLET_PLAYER_57MM,		// P90 (Beta 3.0; 14, as P90Fire passes it; name ours)
+	BULLET_PLAYER_357SIG,	// P228 (Beta 4.0; 15, as P228Fire passes it; name ours)
 } Bullet;
 
 
@@ -334,10 +382,10 @@ typedef struct
 // 32); Beta 2.0, with its cbase.h and multiplay_gamerules.cpp stand-ins, 6, 7, 10,
 // 11, 28 and 30 (of 0 to 32); Beta 3.0, whose files compile as without /YX
 // (debris.cpp), 11, 12, 16 and 17
-// (of 0 to 24). Before effects.h was found
-// this place held an enum of 303 numbers and an unused inline function of 159
-// statement lines standing for its intermediate code (Beta 3.0 had the enum of
-// 306 alone).
+// (of 0 to 24); Betas 4.0 and 4.1, 11 (the
+// one count tried here; at the end of gamerules.h 4.0 takes 11 and 12, 4.1 11).
+// Before effects.h was found this place held an enum of 303
+// numbers and an unused inline function of 159 statement lines (Beta 3.0: 306).
 enum sic_declcount_b11
 {
 	SIC_DECLCOUNT_B11_BASE, SIC_DECLCOUNT_B11_0, SIC_DECLCOUNT_B11_1, SIC_DECLCOUNT_B11_2, SIC_DECLCOUNT_B11_3, SIC_DECLCOUNT_B11_4, SIC_DECLCOUNT_B11_5, SIC_DECLCOUNT_B11_6,
@@ -448,6 +496,7 @@ public:
 	int DefaultReload( int iClipSize, int iAnim, float fDelay );
 	void EjectBrassLate( void );	// the shell of a bolt or pump action, m_pPlayer->m_flEjectBrass after the shot
 	void FireRemaining( void );		// the second and third shot of a burst (Glock 18, M4A1)
+	void KickBack( float up_base, float lateral_base, float up_modifier, float lateral_modifier, float up_max, float lateral_max, int direction_change );	// Beta 4.0's recoil (Linux symbol; parameter names ours)
 
 	virtual void ItemPostFrame( void );	// called each frame by the player PostThink
 	// called by CBasePlayerWeapons ItemPostFrame()
@@ -479,6 +528,7 @@ public:
 	int		m_iShellLate;										// model index of the shell EjectBrassLate and FireRemaining throw
 	int		m_iUnused7C;										// 0x7c new in Beta 3.0; no function refers to it
 	bool	m_fDelayFire;										// 0x80 new in Beta 3.0: set by a shot, cleared by Reload; ItemPostFrame lets m_iShotsFired run down once the trigger is released
+	int		m_iDirection;										// 0x84 new in Beta 4.0: the side KickBack pushes the view to (1 or 0); name ours
 };
 
 
@@ -504,6 +554,12 @@ extern DLL_GLOBAL	short	g_sModelIndexWExplosion;// holds the index for the under
 extern DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 extern DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for blood drops
 extern DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for blood spray (bigger)
+// Beta 4.0 (Linux symbols): sprites/smokepuff.spr, eexplo.spr, fexplo.spr, fexplo1.spr, radio.spr
+extern DLL_GLOBAL	short	g_sModelIndexSmokePuff;
+extern DLL_GLOBAL	short	g_sModelIndexFireball2;
+extern DLL_GLOBAL	short	g_sModelIndexFireball3;
+extern DLL_GLOBAL	short	g_sModelIndexFireball4;
+extern DLL_GLOBAL	short	g_sModelIndexRadio;
 
 extern void ClearMultiDamage(void);
 extern void ApplyMultiDamage(entvars_t* pevInflictor, entvars_t* pevAttacker );

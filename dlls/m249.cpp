@@ -97,60 +97,18 @@ BOOL CM249::Deploy( )
 {
 	m_pPlayer->m_flAccuracy = 0.95;
 	m_fEjectShell = 1;
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 210 );
+	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 200 );
 	return DefaultDeploy( "models/v_m249.mdl", "models/p_m249.mdl", M249_DRAW, "m249" );
 }
 
 void CM249::SecondaryAttack( void )
 {
-	float flSpread;
-
-	if (m_pPlayer->pev->velocity.Length2D() > 0)
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.12;
-		M249Fire( flSpread, 0.1, FALSE );
-	}
-	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.15;
-		M249Fire( flSpread, 0.1, FALSE );
-	}
-	else if (m_pPlayer->pev->flags & FL_DUCKING)
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.03;
-		M249Fire( flSpread, 0.1, FALSE );
-	}
-	else
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.05;
-		M249Fire( flSpread, 0.1, FALSE );
-	}
+	M249Fire( m_pPlayer->m_flAccuracy * 0.03, 0.1, FALSE );
 }
 
 void CM249::PrimaryAttack( void )
 {
-	float flSpread;
-
-	if (m_pPlayer->pev->velocity.Length2D() > 170)
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.12;
-		M249Fire( flSpread, 0.1, FALSE );
-	}
-	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.15;
-		M249Fire( flSpread, 0.1, FALSE );
-	}
-	else if (m_pPlayer->pev->flags & FL_DUCKING)
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.03;
-		M249Fire( flSpread, 0.1, FALSE );
-	}
-	else
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.05;
-		M249Fire( flSpread, 0.1, FALSE );
-	}
+	M249Fire( m_pPlayer->m_flAccuracy * 0.03, 0.1, FALSE );
 }
 
 void CM249::M249Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
@@ -158,10 +116,10 @@ void CM249::M249Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	// the spread grows with the cube of the shots fired
 	m_fDelayFire = true;
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.65;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 150) + 0.45;
 
-	if (m_pPlayer->m_flAccuracy > 2)
-		m_pPlayer->m_flAccuracy = 2;
+	if (m_pPlayer->m_flAccuracy > 1.4)
+		m_pPlayer->m_flAccuracy = 1.4;
 
 	if (m_iClip <= 0)
 	{
@@ -207,9 +165,9 @@ void CM249::M249Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	m_pPlayer->m_iWeaponFlash = BRIGHT_GUN_FLASH;
 
 	if (RANDOM_LONG(0,1))
-		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m249-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m249-1.wav", RANDOM_FLOAT(0.92, 1.0), 0.52);
 	else
-		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m249-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m249-2.wav", RANDOM_FLOAT(0.92, 1.0), 0.52);
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
@@ -232,7 +190,15 @@ void CM249::M249Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
 
-	m_pPlayer->pev->punchangle.x = RANDOM_FLOAT( -1.5, 1.5 );
+	// Beta 4.0: the recoil by how the player stands
+	if (m_pPlayer->pev->velocity.Length2D() > 0)
+		KickBack( 1.8, 0.55, 0.35, 0.1, 5, 3, 8 );
+	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+		KickBack( 1.8, 0.65, 0.45, 0.125, 5, 3.5, 8 );
+	else if ( FBitSet(m_pPlayer->pev->flags, FL_DUCKING) )
+		KickBack( 1.1, 0.4, 0.25, 0.0375, 4, 2.5, 8 );
+	else
+		KickBack( 1.3, 0.5, 0.3, 0.04, 4.5, 3, 8 );
 }
 
 

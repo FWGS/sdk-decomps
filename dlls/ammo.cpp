@@ -2,7 +2,8 @@
 *
 *	Counter-Strike Beta 2.0, ammo.cpp: the ammunition boxes of the new
 *	guns (ammo_556nato, ammo_762nato, ammo_45acp, ammo_50ae,
-*	ammo_338magnum, ammo_flashbang).
+*	ammo_338magnum, ammo_flashbang; Beta 3.0 ammo_57mm; Beta 4.0
+*	ammo_9mm, ammo_buckshot, ammo_357sig).
 *
 *	Six copies of SDK 1.0's CGlockAmmo (glock.cpp), class-body methods
 *	and all, each with its own ammo type, amount and limit; all six still
@@ -19,6 +20,63 @@
 #include "weapons.h"
 #include "nodes.h"
 #include "player.h"
+
+// Beta 4.0: the 9mm box (the Glock 18's, MP5 Navy's and TMP's, which used
+// Half-Life's 9mm boxes before) and the buckshot box (the SDK's CShotgunAmmo
+// of shotgun.cpp, which Beta 4.0 removed; Linux name CBuckShotAmmo) come
+// first, the P228's .357 SIG box last (class names from Beta 4.0's Linux
+// symbols)
+class C9MMAmmo : public CBasePlayerAmmo
+{
+	void Spawn( void )
+	{
+		Precache( );
+		SET_MODEL(ENT(pev), "models/w_9mmclip.mdl");
+		CBasePlayerAmmo::Spawn( );
+	}
+	void Precache( void )
+	{
+		PRECACHE_MODEL ("models/w_9mmclip.mdl");
+		PRECACHE_SOUND("items/9mmclip1.wav");
+	}
+	BOOL AddAmmo( CBaseEntity *pOther )
+	{
+		if (pOther->GiveAmmo( AMMO_9MMBOX_GIVE, "9mm", AMMO_9MMBOX_MAX ) != -1)
+		{
+			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
+			return TRUE;
+		}
+		return FALSE;
+	}
+};
+LINK_ENTITY_TO_CLASS( ammo_9mm, C9MMAmmo );
+
+
+class CBuckShotAmmo : public CBasePlayerAmmo
+{
+	void Spawn( void )
+	{
+		Precache( );
+		SET_MODEL(ENT(pev), "models/w_shotbox.mdl");
+		CBasePlayerAmmo::Spawn( );
+	}
+	void Precache( void )
+	{
+		PRECACHE_MODEL ("models/w_shotbox.mdl");
+		PRECACHE_SOUND("items/9mmclip1.wav");
+	}
+	BOOL AddAmmo( CBaseEntity *pOther )
+	{
+		if (pOther->GiveAmmo( AMMO_BUCKSHOTBOX_GIVE, "buckshot", AMMO_BUCKSHOTBOX_MAX ) != -1)
+		{
+			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
+			return TRUE;
+		}
+		return FALSE;
+	}
+};
+LINK_ENTITY_TO_CLASS( ammo_buckshot, CBuckShotAmmo );
+
 
 class C556NatoAmmo : public CBasePlayerAmmo
 {
@@ -201,3 +259,29 @@ class C57MMAmmo : public CBasePlayerAmmo
 	}
 };
 LINK_ENTITY_TO_CLASS( ammo_57mm, C57MMAmmo );
+
+
+class C357SIGAmmo : public CBasePlayerAmmo
+{
+	void Spawn( void )
+	{
+		Precache( );
+		SET_MODEL(ENT(pev), "models/w_9mmclip.mdl");
+		CBasePlayerAmmo::Spawn( );
+	}
+	void Precache( void )
+	{
+		PRECACHE_MODEL ("models/w_9mmclip.mdl");
+		PRECACHE_SOUND("items/9mmclip1.wav");
+	}
+	BOOL AddAmmo( CBaseEntity *pOther )
+	{
+		if (pOther->GiveAmmo( AMMO_357SIGBOX_GIVE, "357SIG", AMMO_357SIGBOX_MAX ) != -1)
+		{
+			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
+			return TRUE;
+		}
+		return FALSE;
+	}
+};
+LINK_ENTITY_TO_CLASS( ammo_357sig, C357SIGAmmo );

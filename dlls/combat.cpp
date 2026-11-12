@@ -12,6 +12,9 @@
 *   without written permission from Valve LLC.
 *
 ****/
+// sic: these lines stand for lines retail has ahead of the first functions: with
+// 1 to 20 more (VC5 spends two bytes more on a statement from line 128 on), Beta
+// 4.0's object places CBaseMonster::Remember as retail.
 /*
 
 ===== combat.cpp ========================================================
@@ -1106,10 +1109,67 @@ void RadiusFlash( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker
 //
 // RadiusDamage - this entity is exploding, or otherwise needs to inflict damage upon entities within a certain range.
 // 
-// only damage ents that can clearly be seen by the explosion!
+// Counter-Strike Beta 4.0: no trace, so walls do not shield, and the damage
+// falls off with the distance to the entity's origin; the other text is the
+// SDK's (tr and vecSpot are left, unused). The SDK's version is RadiusDamage2.
 
-	
 void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType )
+{
+	CBaseEntity *pEntity = NULL;
+	TraceResult	tr;
+	float		flAdjustedDamage, falloff;
+	Vector		vecSpot;
+
+	if ( flRadius )
+		falloff = flDamage / flRadius;
+	else
+		falloff = 1.0;
+
+	int bInWater = (UTIL_PointContents ( vecSrc ) == CONTENTS_WATER);
+
+	vecSrc.z += 1;// in case grenade is lying on the ground
+
+	if ( !pevAttacker )
+		pevAttacker = pevInflictor;
+
+	// iterate on all entities in the vicinity.
+	while ((pEntity = UTIL_FindEntityInSphere( pEntity, vecSrc, flRadius )) != NULL)
+	{
+		if ( pEntity->pev->takedamage != DAMAGE_NO )
+		{
+			// UNDONE: this should check a damage mask, not an ignore
+			if ( iClassIgnore != CLASS_NONE && pEntity->Classify() == iClassIgnore )
+			{// houndeyes don't hurt other houndeyes with their attack
+				continue;
+			}
+
+			// blast's don't tavel into or out of water
+			if (bInWater && pEntity->pev->waterlevel == 0)
+				continue;
+			if (!bInWater && pEntity->pev->waterlevel == 3)
+				continue;
+
+			// decrease damage for an ent that's farther from the bomb.
+			flAdjustedDamage = ( vecSrc - pEntity->pev->origin ).Length() * falloff;
+			flAdjustedDamage = flDamage - flAdjustedDamage;
+		
+			if ( flAdjustedDamage < 0 )
+			{
+				flAdjustedDamage = 0;
+			}
+
+			pEntity->TakeDamage ( pevInflictor, pevAttacker, flAdjustedDamage, bitsDamageType );
+		}
+	}
+}
+
+
+//
+// RadiusDamage2 - Beta 3.1's RadiusDamage (name from Beta 4.0's Linux symbols):
+// only damage ents that can clearly be seen by the explosion! Beta 4.0 takes
+// the distance to the entity's origin and caps the damage at 75.
+//
+void RadiusDamage2( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType )
 {
 	CBaseEntity *pEntity = NULL;
 	TraceResult	tr;
@@ -1159,13 +1219,16 @@ void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacke
 				}
 				
 				// decrease damage for an ent that's farther from the bomb.
-				flAdjustedDamage = ( vecSrc - tr.vecEndPos ).Length() * falloff;
+				flAdjustedDamage = ( vecSrc - pEntity->pev->origin ).Length() * falloff;
 				flAdjustedDamage = flDamage - flAdjustedDamage;
 			
 				if ( flAdjustedDamage < 0 )
 				{
 					flAdjustedDamage = 0;
 				}
+
+				if ( flAdjustedDamage > 75 )
+					flAdjustedDamage = 75;
 			
 				// ALERT( at_console, "hit %s\n", STRING( pEntity->pev->classname ) );
 				if (tr.flFraction != 1.0)
@@ -1184,15 +1247,25 @@ void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacke
 }
 
 
+// Beta 4.0: more than 80 damage (the C4) reaches 3.5 times the damage, through
+// walls (RadiusDamage); less (the HE grenade) 3.5 to 4.5 times it at random,
+// only what the blast can see, at most 75 (RadiusDamage2)
 void CBaseMonster :: RadiusDamage(entvars_t* pevInflictor, entvars_t*	pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType )
 {
-	::RadiusDamage( pev->origin, pevInflictor, pevAttacker, flDamage, flDamage * 15, iClassIgnore, bitsDamageType );	// Beta 3.0: radius 15 times the damage (was 2.5)
+	if ( flDamage > 80 )
+		::RadiusDamage( pev->origin, pevInflictor, pevAttacker, flDamage, flDamage * 3.5, iClassIgnore, bitsDamageType );
+	else
+		RadiusDamage2( pev->origin, pevInflictor, pevAttacker, flDamage, flDamage * ( RANDOM_FLOAT( 0.5, 1.5 ) + 3 ), iClassIgnore, bitsDamageType );
 }
 
 
+// Beta 4.0: the same text as the overload above, pev->origin and all (sic: vecSrc is not used)
 void CBaseMonster :: RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType )
 {
-	::RadiusDamage( vecSrc, pevInflictor, pevAttacker, flDamage, flDamage * 2.5, iClassIgnore, bitsDamageType );
+	if ( flDamage > 80 )
+		::RadiusDamage( pev->origin, pevInflictor, pevAttacker, flDamage, flDamage * 3.5, iClassIgnore, bitsDamageType );
+	else
+		RadiusDamage2( pev->origin, pevInflictor, pevAttacker, flDamage, flDamage * ( RANDOM_FLOAT( 0.5, 1.5 ) + 3 ), iClassIgnore, bitsDamageType );
 }
 
 
@@ -1673,6 +1746,10 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 		iPenetrationPower = 20;
 		flPenetrationDistance = 2500;
 		break;
+	case BULLET_PLAYER_357SIG:	// Beta 4.0: the P228's
+		iPenetrationPower = 20;
+		flPenetrationDistance = 800;
+		break;
 	default:
 		iPenetrationPower = 0;
 		flPenetrationDistance = 0;
@@ -1721,9 +1798,10 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 				// Counter-Strike Beta 2.0: with bPistol (name ours: the pistols, but also the
 				// AWP and the G3/SG-1 pass it) every bullet marks the wall; the other guns'
 				// bullets do so every time with mp_lowlag 0, one in four with mp_lowlag 1
+				// (Beta 4.0: one in three where the bullet goes through)
 				if ( !bPistol )
 				{
-					if ( RANDOM_LONG( 0, 3 ) == 0 && CVAR_GET_FLOAT( "mp_lowlag" ) == 1 )
+					if ( RANDOM_LONG( 0, 2 ) == 0 && CVAR_GET_FLOAT( "mp_lowlag" ) == 1 )
 						DecalGunshot( &tr, iBulletType );
 					else if ( CVAR_GET_FLOAT( "mp_lowlag" ) == 0 )
 						DecalGunshot( &tr, iBulletType );

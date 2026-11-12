@@ -249,6 +249,8 @@ public:
 	int DrawPlayers( int xoffset, float listslot, int nameoffset = 0, char *team = NULL ); // returns the ypos where it finishes drawing
 	void UserCmd_ShowScores( void );
 	void UserCmd_HideScores( void );
+	void UserCmd_ShowFrags( void );
+	void UserCmd_HideFrags( void );
 	int MsgFunc_ScoreInfo( const char *pszName, int iSize, void *pbuf );
 	int MsgFunc_TeamInfo( const char *pszName, int iSize, void *pbuf );
 	int MsgFunc_TeamScore( const char *pszName, int iSize, void *pbuf );
@@ -288,6 +290,7 @@ public:
 	int m_fLastKillTime;
 	int m_iPlayerNum;
 	int m_iShowscoresHeld;
+	bool m_bShowFrags;		// name ours
 
 	void GetAllPlayersInfo( void );
 };

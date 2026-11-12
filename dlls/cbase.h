@@ -141,6 +141,7 @@ public:
 	// initialization functions
 	virtual void	Spawn( void ) { return; }
 	virtual void	Precache( void ) { return; }
+	virtual void	Restart( void ) { return; }	// Counter-Strike Beta 4.0: puts the entity back as the map had it, at a new round (Linux symbol; body ours)
 	virtual void	KeyValue( KeyValueData* pkvd) { pkvd->fHandled = FALSE; }
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
@@ -601,6 +602,7 @@ public:
 #define DMG_SLOWBURN		(1 << 21)	// in an oven
 #define DMG_SLOWFREEZE		(1 << 22)	// in a subzero freezer
 #define DMG_MORTAR			(1 << 23)	// Hit by air raid (done to distinguish grenade from mortar)
+#define DMG_HEGRENADE		(1 << 24)	// Counter-Strike Beta 4.0: an HE grenade's blast (Detonate3); name ours
 
 // these are the damage types that are allowed to gib corpses
 #define DMG_GIB_CORPSE		( DMG_CRUSH | DMG_FALL | DMG_BLAST | DMG_SONIC | DMG_CLUB )
@@ -793,5 +795,10 @@ public:
 // CRestore::ReadFields and CBaseAnimating::SetSequenceBox are retail's together only
 // with 6 more numbers in a header all files include (N = 6 of 0 to 31 with a ruler
 // in this file; every other function of the project stays retail's there). The
-// enum's tag and five enumerators are those 6.
-enum sic_declcount_b20 { SIC_DECLCOUNT_B20_0, SIC_DECLCOUNT_B20_1, SIC_DECLCOUNT_B20_2, SIC_DECLCOUNT_B20_3, SIC_DECLCOUNT_B20_4 };
+// enum's tag and five enumerators are those 6. Beta 4.0 (Rebuild All's .pch, the
+// count split below in weapons.h and gamerules.h): CBaseAnimating::SetSequenceBox,
+// CFuncTrackTrain::Use and CGameCounter::HitLimit, which see neither weapons.h nor
+// (but HitLimit) gamerules.h, are retail's together with 9 numbers here (8 and 10
+// fail; of 0 to 31 more only 3 and 7 serve them, and 7 breaks UTIL_TraceLine,
+// CRestore::ReadFields and CFuncTank::TankTrace).
+enum sic_declcount_b20 { SIC_DECLCOUNT_B20_0, SIC_DECLCOUNT_B20_1, SIC_DECLCOUNT_B20_2, SIC_DECLCOUNT_B20_3, SIC_DECLCOUNT_B20_4, SIC_DECLCOUNT_B20_5, SIC_DECLCOUNT_B20_6, SIC_DECLCOUNT_B20_7 };

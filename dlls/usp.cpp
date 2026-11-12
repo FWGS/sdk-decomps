@@ -215,9 +215,9 @@ void CUSP::USPFire( float flSpread , float flCycleTime, BOOL fUseSemi )
 		m_pPlayer->m_iWeaponVolume = BIG_EXPLOSION_VOLUME;
 		m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
 		if (RANDOM_LONG(0,1))
-			EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/usp1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+			EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/usp1.wav", RANDOM_FLOAT(0.92, 1.0), 1.6);
 		else
-			EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/usp2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM, 0, 98 + RANDOM_LONG(0,3));
+			EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/usp2.wav", RANDOM_FLOAT(0.92, 1.0), 1.6);
 	}
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
@@ -225,7 +225,7 @@ void CUSP::USPFire( float flSpread , float flCycleTime, BOOL fUseSemi )
 
 	vecAiming = gpGlobals->v_forward;
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_45ACP, 34, 0.85, NULL, true );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_45ACP, 34, 0.83, NULL, true );
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + flCycleTime;
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)

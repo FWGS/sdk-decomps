@@ -34,6 +34,7 @@ class CBaseDoor : public CBaseToggle
 public:
 	void Spawn( void );
 	void Precache( void );
+	virtual void Restart( void );	// Beta 4.0 (Linux symbol)
 	virtual void KeyValue( KeyValueData *pkvd );
 	virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	virtual void Blocked( CBaseEntity *pOther );
@@ -314,6 +315,26 @@ void CBaseDoor::Spawn( )
 
 	m_toggle_state = TS_AT_BOTTOM;
 	
+	// if the door is flagged for USE button activation only, use NULL touch function
+	if ( FBitSet ( pev->spawnflags, SF_DOOR_USE_ONLY ) )
+	{
+		SetTouch ( NULL );
+	}
+	else // touchable button
+		SetTouch( DoorTouch );
+}
+
+
+//
+// Counter-Strike Beta 4.0: a new round closes the door again (the end of
+// Spawn, without the model and the positions)
+//
+void CBaseDoor::Restart( void )
+{
+	SetMovedir (pev);
+	m_toggle_state = TS_AT_BOTTOM;
+	DoorGoDown();
+
 	// if the door is flagged for USE button activation only, use NULL touch function
 	if ( FBitSet ( pev->spawnflags, SF_DOOR_USE_ONLY ) )
 	{
@@ -812,10 +833,43 @@ class CRotDoor : public CBaseDoor
 {
 public:
 	void Spawn( void );
+	virtual void Restart( void );	// Beta 4.0 (Linux symbol)
 	virtual void SetToggleState( int state );
 };
 
 LINK_ENTITY_TO_CLASS( func_door_rotating, CRotDoor );
+
+
+//
+// Counter-Strike Beta 4.0: Spawn's axis, speed and start-open swap again, then
+// the door closes (sic: the axis is taken again from the angles, which the
+// door has moved, and the swap repeats Spawn's, which leaves m_vecAngle1 as it
+// was)
+//
+void CRotDoor::Restart( void )
+{
+	// set the axis of rotation
+	CBaseToggle::AxisDir( pev );
+
+	// check for clockwise rotation
+	if ( FBitSet (pev->spawnflags, SF_DOOR_ROTATE_BACKWARDS) )
+		pev->movedir = pev->movedir * -1;
+
+	if (pev->speed == 0)
+		pev->speed = 100;
+
+	if ( FBitSet (pev->spawnflags, SF_DOOR_START_OPEN) )
+	{	// swap pos1 and pos2, put door at pos2, invert movement direction
+		pev->angles = m_vecAngle2;
+		Vector vecSav = m_vecAngle1;
+		m_vecAngle2 = m_vecAngle1;
+		m_vecAngle1 = vecSav;
+		pev->movedir = pev->movedir * -1;
+	}
+
+	m_toggle_state = TS_AT_BOTTOM;
+	DoorGoDown();
+}
 
 
 void CRotDoor::Spawn( void )

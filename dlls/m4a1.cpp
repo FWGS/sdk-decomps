@@ -115,52 +115,19 @@ void CM4A1::PrimaryAttack( void )
 {
 	float flSpread;
 
+	// Beta 4.0: the same spread however the player moves (the product
+	// written in the call: retail's code loads the accuracy, compares the
+	// FOV and multiplies, in that order)
 	if (m_pPlayer->m_iFOV == 90)
 	{
-		if (m_pPlayer->pev->velocity.Length2D() > 0)
-		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.14;
-			M4A1Fire( flSpread, 0.0875, FALSE );
-		}
-		else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.18;
-			M4A1Fire( flSpread, 0.0875, FALSE );
-		}
-		else if (m_pPlayer->pev->flags & FL_DUCKING)
-		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.02;
-			M4A1Fire( flSpread, 0.0875, FALSE );
-		}
-		else
-		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.035;
-			M4A1Fire( flSpread, 0.0875, FALSE );
-		}
+		flSpread = m_pPlayer->m_flAccuracy;
+		M4A1Fire( flSpread * 0.02, 0.0875, FALSE );
 	}
 	else
 	{
 		// zoomed in: a slower cycle
-		if (m_pPlayer->pev->velocity.Length2D() > 0)
-		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.14;
-			M4A1Fire( flSpread, 0.165, FALSE );
-		}
-		else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.18;
-			M4A1Fire( flSpread, 0.165, FALSE );
-		}
-		else if (m_pPlayer->pev->flags & FL_DUCKING)
-		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.02;
-			M4A1Fire( flSpread, 0.165, FALSE );
-		}
-		else
-		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.035;
-			M4A1Fire( flSpread, 0.165, FALSE );
-		}
+		flSpread = m_pPlayer->m_flAccuracy;
+		M4A1Fire( flSpread * 0.02, 0.165, FALSE );
 	}
 }
 
@@ -169,10 +136,10 @@ void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	// the spread grows with the cube of the shots fired
 	m_fDelayFire = true;
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 150) + 0.375;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 250) + 0.3;
 
-	if (m_pPlayer->m_flAccuracy > 1.7)
-		m_pPlayer->m_flAccuracy = 1.7;
+	if (m_pPlayer->m_flAccuracy > 0.5)
+		m_pPlayer->m_flAccuracy = 0.5;
 
 	if (m_iClip <= 0)
 	{
@@ -218,9 +185,9 @@ void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
 
 	if (RANDOM_LONG(0,1))
-		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m4a1-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m4a1-1.wav", RANDOM_FLOAT(0.92, 1.0), 1.28);
 	else
-		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m4a1-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m4a1-2.wav", RANDOM_FLOAT(0.92, 1.0), 1.28);
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
@@ -243,8 +210,15 @@ void CM4A1::M4A1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
 
-	m_pPlayer->pev->punchangle.x += RANDOM_FLOAT( -2, 2 );
-	m_pPlayer->pev->punchangle.y += RANDOM_FLOAT( -1, 1 );
+	// Beta 4.0: the recoil by how the player stands
+	if (m_pPlayer->pev->velocity.Length2D() > 0)
+		KickBack( 1, 0.4, 0.23, 0.15, 8, 5, 5 );
+	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+		KickBack( 1.2, 0.45, 0.23, 0.15, 8.5, 5.5, 3 );
+	else if ( FBitSet(m_pPlayer->pev->flags, FL_DUCKING) )
+		KickBack( 0.55, 0.3, 0.12, 0.0125, 4.5, 1.5, 10 );
+	else
+		KickBack( 0.6, 0.35, 0.12, 0.015, 4.5, 1.5, 10 );
 }
 
 

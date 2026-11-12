@@ -23,7 +23,7 @@
 #include "gamerules.h"
 
 // special deathmatch shotgun spreads
-#define VECTOR_CONE_DM_SHOTGUN	Vector( 0.0775, 0.0775, 0.00  )
+#define VECTOR_CONE_DM_SHOTGUN	Vector( 0.0675, 0.0675, 0.00  )
 
 enum m3_e {
 	M3_IDLE = 0,
@@ -181,7 +181,7 @@ void CM3::PrimaryAttack()
 	// the shell comes out with the pump: EjectBrassLate, from ItemPostFrame
 	m_pPlayer->m_flEjectBrass = gpGlobals->time + 0.45;
 
-	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m3-1.wav", RANDOM_FLOAT(0.95, 1.0), ATTN_NORM);
+	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/m3-1.wav", RANDOM_FLOAT(0.95, 1.0), 0.4);
 
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );

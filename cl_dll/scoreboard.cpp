@@ -27,6 +27,8 @@
 
 DECLARE_COMMAND( m_Scoreboard, ShowScores );
 DECLARE_COMMAND( m_Scoreboard, HideScores );
+DECLARE_COMMAND( m_Scoreboard, ShowFrags );
+DECLARE_COMMAND( m_Scoreboard, HideFrags );
 
 DECLARE_MESSAGE( m_Scoreboard, ScoreInfo );
 DECLARE_MESSAGE( m_Scoreboard, TeamInfo );
@@ -39,6 +41,8 @@ int CHudScoreboard :: Init( void )
 	// Hook messages & commands here
 	HOOK_COMMAND( "+showscores", ShowScores );
 	HOOK_COMMAND( "-showscores", HideScores );
+	HOOK_COMMAND( "+showfrags", ShowFrags );
+	HOOK_COMMAND( "-showfrags", HideFrags );
 
 	HOOK_MESSAGE( ScoreInfo );
 	HOOK_MESSAGE( TeamScore );
@@ -366,7 +370,11 @@ int CHudScoreboard :: DrawPlayers( int xpos_rel, float list_slot, int nameoffset
 
 		// draw kills (right to left)
 		xpos = KILLS_RANGE_MAX + xpos_rel;
-		if ( pl_info->thisplayer )
+		if ( m_bShowFrags == true )
+		{
+			gHUD.DrawHudNumberString( xpos, ypos, KILLS_RANGE_MIN + xpos_rel, pl_extra->frags, r, g, b );
+		}
+		else if ( m_bShowFrags == false && pl_info->thisplayer )
 			gHUD.DrawHudNumberString( xpos, ypos, KILLS_RANGE_MIN + xpos_rel, pl_extra->frags, r, g, b );
 
 		// draw divider
@@ -557,4 +565,14 @@ void CHudScoreboard :: UserCmd_ShowScores( void )
 void CHudScoreboard :: UserCmd_HideScores( void )
 {
 	m_iShowscoresHeld = FALSE;
+}
+
+void CHudScoreboard :: UserCmd_ShowFrags( void )
+{
+	m_bShowFrags = true;
+}
+
+void CHudScoreboard :: UserCmd_HideFrags( void )
+{
+	m_bShowFrags = false;
 }

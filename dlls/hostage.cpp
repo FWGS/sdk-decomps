@@ -148,7 +148,7 @@ void CHostage::IdleThink( void )
 
 			if ( vecDir.Length() > m_flFollowDistance )
 			{
-				pev->velocity = vecDir / vecDir.Length() * 310;
+				pev->velocity = vecDir / vecDir.Length() * 370;	// Beta 4.0 (was 310)
 				pev->velocity.z -= 40;
 			}
 
@@ -227,7 +227,7 @@ void CHostage::IdleThink( void )
 				TraceResult tr;
 
 				// the leader in sight again: follow him
-				UTIL_TraceLine( pev->origin + gpGlobals->v_up * 25, pev->origin + vecLeader * 2048 + gpGlobals->v_up * 25, dont_ignore_monsters, ENT( pev ), &tr );
+				UTIL_TraceLine( pev->origin + gpGlobals->v_up * 25, pev->origin + vecLeader * 4096 + gpGlobals->v_up * 25, dont_ignore_monsters, ENT( pev ), &tr );	// Beta 4.0: 4096 (was 2048)
 				if ( VARS( tr.pHit )->solid != SOLID_BSP )
 				{
 					m_fStopped = FALSE;
@@ -240,7 +240,7 @@ void CHostage::IdleThink( void )
 					pev->angles = UTIL_VecToAngles( vecDir );
 					pev->angles.x = 0;
 					pev->angles.z = 0;
-					pev->velocity = vecDir / vecDir.Length() * 310;
+					pev->velocity = vecDir / vecDir.Length() * 380;	// Beta 4.0 (was 310)
 					pev->velocity.z -= 40;
 				}
 				else
@@ -262,7 +262,6 @@ void CHostage::IdleThink( void )
 					UTIL_TraceLine( pev->origin + gpGlobals->v_up * 25 - gpGlobals->v_forward * 32, pev->origin + gpGlobals->v_forward * 100 + gpGlobals->v_up * 25, ignore_monsters, ENT( pev ), &tr );
 					if ( tr.flFraction == 1.0 )
 					{
-						ALERT( at_console, "There's something at my feet!\n" );
 						pev->velocity.z = 150;
 					}
 				}
@@ -377,10 +376,6 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 		pev->movetype = MOVETYPE_TOSS;
 		pev->flags &= ~FL_ONGROUND;
 
-		// Beta 3.0: the counter-terrorists' commander radios it
-		if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander != NULL )
-			((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander->Radio( "hosdown" );
-
 		// Beta 3.0: a hit of no particular group, and any other, dies as from a head shot
 		switch ( m_LastHitGroup )
 		{
@@ -419,12 +414,12 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 			break;
 		}
 
-		// killing a hostage costs the killer 850 dollars
+		// killing a hostage costs the killer 1500 dollars (Beta 3.1: 850)
 		if ( GetClassPtr( (CBaseEntity *)pevAttacker )->IsPlayer() )
 		{
 			CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pevAttacker );
 
-			pPlayer->AddAccount( -850 );
+			pPlayer->AddAccount( -1500 );
 		}
 
 		// the body flies away from the killer
@@ -440,6 +435,14 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 		pev->deadflag = DEAD_DEAD;
 		pev->nextthink = gpGlobals->time + 3;
 		SetThink( Remove );
+
+		// Beta 4.0: a dead hostage may decide the round; then the counter-terrorists'
+		// commander radios it (Beta 3.0: before the death animation)
+		((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
+
+		if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander != NULL )
+			((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander->Radio( "hosdown" );
+
 		return 0;
 	}
 
@@ -486,11 +489,12 @@ void CHostage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 			}
 
 			// the first counter-terrorist to lead it pays himself and his team
+			// (Beta 4.0: 500 each, was 150)
 			if ( !m_fTouched )
 			{
 				m_fTouched = TRUE;
-				((CHalfLifeMultiplay *)g_pGameRules)->m_iAccountCT += 150;
-				((CBasePlayer *)pActivator)->AddAccount( 150 );
+				((CHalfLifeMultiplay *)g_pGameRules)->m_iAccountCT += 500;
+				((CBasePlayer *)pActivator)->AddAccount( 500 );
 			}
 		}
 	}

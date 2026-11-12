@@ -46,6 +46,12 @@ DLL_GLOBAL	short	g_sModelIndexWExplosion;// holds the index for the underwater e
 DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for the initial blood
 DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for splattered blood
+// Beta 4.0 (Linux symbols)
+DLL_GLOBAL	short	g_sModelIndexSmokePuff;
+DLL_GLOBAL	short	g_sModelIndexFireball2;
+DLL_GLOBAL	short	g_sModelIndexFireball3;
+DLL_GLOBAL	short	g_sModelIndexFireball4;
+DLL_GLOBAL	short	g_sModelIndexRadio;
 
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
 AmmoInfo CBasePlayerItem::AmmoInfoArray[MAX_AMMO_SLOTS];
@@ -378,9 +384,14 @@ void W_Precache(void)
 	UTIL_PrecacheOther( "item_antidote" );
 	UTIL_PrecacheOther( "item_security" );
 	UTIL_PrecacheOther( "item_longjump" );
+	// Counter-Strike: armour, Beta 4.0's backpack and thigh pack
+	UTIL_PrecacheOther( "item_kevlar" );
+	UTIL_PrecacheOther( "item_assaultsuit" );
+	UTIL_PrecacheOther( "item_backpack" );
+	UTIL_PrecacheOther( "item_thighpack" );
 
-	// Counter-Strike: each gun with its ammunition, the Half-Life guns
-	// that share it among them
+	// Counter-Strike: each gun with its ammunition (Beta 4.0: Half-Life's
+	// guns are gone)
 	// .338
 	UTIL_PrecacheOtherWeapon( "weapon_awp" );
 	UTIL_PrecacheOther( "ammo_338magnum" );
@@ -388,6 +399,7 @@ void W_Precache(void)
 	// 7.62
 	UTIL_PrecacheOtherWeapon( "weapon_g3sg1" );
 	UTIL_PrecacheOtherWeapon( "weapon_ak47" );
+	UTIL_PrecacheOtherWeapon( "weapon_scout" );
 	UTIL_PrecacheOther( "ammo_762nato" );
 
 	// 5.56
@@ -398,7 +410,6 @@ void W_Precache(void)
 
 	// shotgun
 	UTIL_PrecacheOtherWeapon( "weapon_m3" );
-	UTIL_PrecacheOtherWeapon( "weapon_shotgun" );
 	UTIL_PrecacheOther( "ammo_buckshot" );
 
 	// .45
@@ -413,75 +424,30 @@ void W_Precache(void)
 	UTIL_PrecacheOtherWeapon( "weapon_deagle" );
 	UTIL_PrecacheOther( "ammo_50ae" );
 
-	// crowbar
-	UTIL_PrecacheOtherWeapon( "weapon_crowbar" );
+	// .357 SIG
+	UTIL_PrecacheOtherWeapon( "weapon_p228" );
+	UTIL_PrecacheOther( "ammo_357sig" );
+
+	// knife
 	UTIL_PrecacheOtherWeapon( "weapon_knife" );
 
-	// glock
-	UTIL_PrecacheOtherWeapon( "weapon_9mmhandgun" );
-	UTIL_PrecacheOther( "ammo_9mmclip" );
-
-	// mp5
-	UTIL_PrecacheOtherWeapon( "weapon_9mmAR" );
+	// 9mm
 	UTIL_PrecacheOtherWeapon( "weapon_glock18" );
 	UTIL_PrecacheOtherWeapon( "weapon_mp5navy" );
 	UTIL_PrecacheOtherWeapon( "weapon_tmp" );
-	UTIL_PrecacheOther( "ammo_9mmAR" );
-	UTIL_PrecacheOther( "ammo_ARgrenades" );
+	UTIL_PrecacheOther( "ammo_9mm" );
 
 	// flashbang
 	UTIL_PrecacheOtherWeapon( "weapon_flashbang" );
 	UTIL_PrecacheOther( "ammo_flashbang" );
+
+	// HE grenade
+	UTIL_PrecacheOtherWeapon( "weapon_hegrenade" );
 	UTIL_PrecacheOther( "debris" );
-
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// python
-	UTIL_PrecacheOtherWeapon( "weapon_357" );
-	UTIL_PrecacheOther( "ammo_357" );
-#endif
-	
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// gauss
-	UTIL_PrecacheOtherWeapon( "weapon_gauss" );
-	UTIL_PrecacheOther( "ammo_gaussclip" );
-#endif
-
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// rpg
-	UTIL_PrecacheOtherWeapon( "weapon_rpg" );
-	UTIL_PrecacheOther( "ammo_rpgclip" );
-#endif
-
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// crossbow
-	UTIL_PrecacheOtherWeapon( "weapon_crossbow" );
-	UTIL_PrecacheOther( "ammo_crossbow" );
-#endif
-
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// egon
-	UTIL_PrecacheOtherWeapon( "weapon_egon" );
-#endif
-
-	// tripmine
-	UTIL_PrecacheOtherWeapon( "weapon_tripmine" );
 
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 	// satchel charge
 	UTIL_PrecacheOtherWeapon( "weapon_satchel" );
-#endif
-
-	// hand grenade
-	UTIL_PrecacheOtherWeapon("weapon_handgrenade");
-
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// squeak grenade
-	UTIL_PrecacheOtherWeapon( "weapon_snark" );
-#endif
-
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// hornetgun
-	UTIL_PrecacheOtherWeapon( "weapon_hornetgun" );
 #endif
 
 
@@ -498,6 +464,12 @@ void W_Precache(void)
 	g_sModelIndexBubbles = PRECACHE_MODEL ("sprites/bubble.spr");//bubbles
 	g_sModelIndexBloodSpray = PRECACHE_MODEL ("sprites/bloodspray.spr"); // initial blood
 	g_sModelIndexBloodDrop = PRECACHE_MODEL ("sprites/blood.spr"); // splattered blood 
+	// Beta 4.0: the HE grenade's and the C4's explosions, the radio icon
+	g_sModelIndexSmokePuff = PRECACHE_MODEL ("sprites/smokepuff.spr");
+	g_sModelIndexFireball2 = PRECACHE_MODEL ("sprites/eexplo.spr");
+	g_sModelIndexFireball3 = PRECACHE_MODEL ("sprites/fexplo.spr");
+	g_sModelIndexFireball4 = PRECACHE_MODEL ("sprites/fexplo1.spr");
+	g_sModelIndexRadio = PRECACHE_MODEL ("sprites/radio.spr");
 
 	g_sModelIndexLaser = PRECACHE_MODEL( (char *)g_pModelNameLaser );
 	g_sModelIndexLaserDot = PRECACHE_MODEL("sprites/laserdot.spr");
@@ -505,6 +477,7 @@ void W_Precache(void)
 
 	// used by explosions
 	PRECACHE_MODEL ("models/grenade.mdl");
+	PRECACHE_MODEL ("models/w_c4.mdl");		// Beta 4.0: the planted C4
 	PRECACHE_MODEL ("sprites/explode1.spr");
 
 	PRECACHE_SOUND ("weapons/debris1.wav");// explosion aftermaths
@@ -699,8 +672,9 @@ void CBasePlayerItem::DefaultTouch( CBaseEntity *pOther )
 
 	CBasePlayer *pPlayer = (CBasePlayer *)pOther;
 
-	// one primary weapon at a time; the pistols, the flashbang and the crowbar go with it
-	if ( pPlayer->HasPrimaryWeapons() && m_iId != WEAPON_FLASHBANG && m_iId != WEAPON_USP && m_iId != WEAPON_GLOCK18 && m_iId != WEAPON_CROWBAR && m_iId != WEAPON_DEAGLE && pPlayer->pev->flags != FL_SPECTATOR )
+	// one primary weapon at a time; the pistols and the grenades go with it
+	// (Beta 3.1 had the crowbar where the P228, id 1, is now; Beta 4.0 adds the HE grenade)
+	if ( pPlayer->HasPrimaryWeapons() && m_iId != WEAPON_FLASHBANG && m_iId != WEAPON_USP && m_iId != WEAPON_GLOCK18 && m_iId != WEAPON_P228 && m_iId != WEAPON_DEAGLE && m_iId != WEAPON_HEGRENADE && pPlayer->pev->flags != FL_SPECTATOR )
 		return;
 
 	// can I have this?
@@ -739,6 +713,52 @@ void CBasePlayerWeapon::EjectBrassLate( void )
 }
 
 //=========================================================
+// KickBack - Beta 4.0's recoil (Linux symbol; parameter and
+// local names ours): every shot pushes the view up by
+// up_base (the first) or up_base plus up_modifier for each
+// shot fired, to up_max at most, and sideways by the
+// lateral values to the side m_iDirection says, to
+// lateral_max; one shot in direction_change + 1 turns the
+// side over.
+//=========================================================
+void CBasePlayerWeapon::KickBack( float up_base, float lateral_base, float up_modifier, float lateral_modifier, float up_max, float lateral_max, int direction_change )
+{
+	float flKickUp;
+	float flKickLateral;
+
+	if ( m_pPlayer->m_iShotsFired == 1 )
+	{
+		flKickUp = up_base;
+		flKickLateral = lateral_base;
+	}
+	else
+	{
+		flKickUp = up_base + m_pPlayer->m_iShotsFired * up_modifier;
+		flKickLateral = lateral_base + m_pPlayer->m_iShotsFired * lateral_modifier;
+	}
+
+	m_pPlayer->pev->punchangle.x -= flKickUp;
+	if ( m_pPlayer->pev->punchangle.x < up_max * -1 )
+		m_pPlayer->pev->punchangle.x = up_max * -1;
+
+	if ( m_iDirection == 1 )
+	{
+		m_pPlayer->pev->punchangle.y += flKickLateral;
+		if ( m_pPlayer->pev->punchangle.y > lateral_max )
+			m_pPlayer->pev->punchangle.y = lateral_max;
+	}
+	else
+	{
+		m_pPlayer->pev->punchangle.y -= flKickLateral;
+		if ( m_pPlayer->pev->punchangle.y < lateral_max * -1 )
+			m_pPlayer->pev->punchangle.y = lateral_max * -1;
+	}
+
+	if ( !RANDOM_LONG( 0, direction_change ) )
+		m_iDirection = 1 - m_iDirection;
+}
+
+//=========================================================
 // FireRemaining - the second and third shot of a burst.
 // The weapon fires the first one and sets
 // m_pPlayer->m_flNextBurstShot; ItemPostFrame calls this
@@ -772,7 +792,6 @@ void CBasePlayerWeapon::FireRemaining( void )
 	}
 	else if ( m_iId == WEAPON_M4A1 )
 	{
-		ALERT( at_console, " I'm here!\n" );
 		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs - gpGlobals->v_up * 8 + gpGlobals->v_forward * 20 - gpGlobals->v_right * 10 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL, m_pPlayer->pev ); 
 		m_pPlayer->FireBullets3( vecSrc, vecDir, Vector( 0.015, 0.015, 0.015 ), 8192, 1, BULLET_PLAYER_556MM, 26, 0.94, 0 );
 		flDelay = 0.075;

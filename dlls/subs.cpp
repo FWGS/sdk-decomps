@@ -70,6 +70,7 @@ LINK_ENTITY_TO_CLASS(info_player_deathmatch,CBaseDMStart);
 LINK_ENTITY_TO_CLASS(info_player_start,CPointEntity);
 LINK_ENTITY_TO_CLASS(info_landmark,CPointEntity);
 LINK_ENTITY_TO_CLASS(info_hostage_rescue,CPointEntity);	// Counter-Strike: where the counter-terrorists bring the hostages
+LINK_ENTITY_TO_CLASS(info_bomb_target,CPointEntity);	// Counter-Strike Beta 4.0: where the terrorists bomb (the C4 within 256 units)
 
 void CBaseDMStart::KeyValue( KeyValueData *pkvd )
 {

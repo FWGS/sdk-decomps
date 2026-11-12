@@ -34,6 +34,68 @@ extern int gmsgScoreInfo;
 extern int gmsgMOTD;
 extern int gmsgTeamScore;
 extern int gmsgSendAudio;
+extern int gmsgGiveItem;
+extern int gmsgRemoveItem;
+extern int CountTeamPlayers( int iTeam );
+
+// sic: intermediate code retail has between the headers and the round code,
+// which the image shows only through VC5's placement of header inline
+// functions. With this unused
+// function's statements the class-body inlines of CGameRules and
+// CBasePlayerItem land where retail has them, in Beta 4.0's object (which
+// reuses the .pch it wrote itself) and in Beta 4.1's (which writes its own)
+// alike: 42 lines, of 36 to 46 tried, serve both. VC5 also spends two bytes
+// more on a statement from line 128 on, so this comment's length is part of
+// the stand-in: comments of 11 to 15 lines here serve both versions (Beta 4.0
+// also 10; more not tried), of 5 to 15 tried; 43 statement lines serve Beta
+// 4.0 only. What the text was the image cannot say.
+//
+//
+inline void sic_il_multiplay( int *p )
+{
+	p[0] = 0;
+	p[1] = 0;
+	p[2] = 0;
+	p[3] = 0;
+	p[4] = 0;
+	p[5] = 0;
+	p[6] = 0;
+	p[7] = 0;
+	p[8] = 0;
+	p[9] = 0;
+	p[10] = 0;
+	p[11] = 0;
+	p[12] = 0;
+	p[13] = 0;
+	p[14] = 0;
+	p[15] = 0;
+	p[16] = 0;
+	p[17] = 0;
+	p[18] = 0;
+	p[19] = 0;
+	p[20] = 0;
+	p[21] = 0;
+	p[22] = 0;
+	p[23] = 0;
+	p[24] = 0;
+	p[25] = 0;
+	p[26] = 0;
+	p[27] = 0;
+	p[28] = 0;
+	p[29] = 0;
+	p[30] = 0;
+	p[31] = 0;
+	p[32] = 0;
+	p[33] = 0;
+	p[34] = 0;
+	p[35] = 0;
+	p[36] = 0;
+	p[37] = 0;
+	p[38] = 0;
+	p[39] = 0;
+	p[40] = 0;
+	p[41] = 0;
+}
 
 #define ITEM_RESPAWN_TIME	30
 #define WEAPON_RESPAWN_TIME	20
@@ -80,6 +142,22 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 	m_iNumTerroristWins = 0;
 	m_pCTCommander = NULL;
 	m_pTerroristCommander = NULL;
+
+	// Beta 4.0: no high-detail player models; the round and C4 times as RestartRound reads them
+	CVAR_SET_FLOAT( "cl_himodels", 0 );
+
+	m_iRoundTime = (int)CVAR_GET_FLOAT( "mp_roundtime" );
+	m_iC4Timer = (int)CVAR_GET_FLOAT( "mp_c4timer" );
+
+	if ( m_iRoundTime > 9 )
+		m_iRoundTime = 9;
+	else if ( m_iRoundTime < 3 )
+		m_iRoundTime = 3;
+
+	if ( m_iC4Timer > 90 )
+		m_iC4Timer = 90;
+	else if ( m_iC4Timer < 10 )
+		m_iC4Timer = 10;
 	
 	// 11/8/98
 	// Modified by YWB:  Server .cfg file is now a cvar, so that 
@@ -174,41 +252,212 @@ void CHalfLifeMultiplay::RefreshSkillData( void )
 }
 
 //=========================================================
-// CleanUpMap - takes the crowbars out of the map
+// RemoveGuns - Beta 4.0: every weapon box (dropped guns)
+// goes at a new round ("no more gun running")
 //=========================================================
-void CHalfLifeMultiplay::CleanUpMap( void )
+void CHalfLifeMultiplay::RemoveGuns( void )
 {
-	CBaseEntity *pCrowbar = UTIL_FindEntityByClassname( NULL, "weapon_crowbar" );
+	CBaseEntity *toremove = UTIL_FindEntityByClassname( NULL, "weaponbox" );
 
-	while ( pCrowbar )
+	while ( toremove )
 	{
-		pCrowbar->SUB_Remove();
-		pCrowbar = UTIL_FindEntityByClassname( NULL, "weapon_crowbar" );	// sic: from the start again
+		((CWeaponBox *)toremove)->Kill();
+		toremove = UTIL_FindEntityByClassname( toremove, "weaponbox" );
 	}
 }
 
 //=========================================================
-// PickNewCommander - the team's players in turn are
-// made its commander, each kept with a chance of one in
-// three; the one kept is told (name from the later versions'
-// Linux symbols). With no one kept, the last one tried stays
-// commander without being told.
+// CleanUpMap - Beta 4.0: breakables and doors are put back
+// (Restart), a C4 and the backpack go, and up to four
+// defusers; then the weapon boxes (Beta 3.1's CleanUpMap took
+// the crowbars out)
+//=========================================================
+void CHalfLifeMultiplay::CleanUpMap( void )
+{
+	CBaseEntity *torestart = UTIL_FindEntityByClassname( NULL, "func_breakable" );
+
+	while ( torestart )
+	{
+		torestart->Restart();
+		torestart = UTIL_FindEntityByClassname( torestart, "func_breakable" );
+	}
+
+	torestart = UTIL_FindEntityByClassname( NULL, "func_door" );
+
+	while ( torestart )
+	{
+		torestart->Restart();
+		torestart = UTIL_FindEntityByClassname( torestart, "func_door" );
+	}
+
+	torestart = UTIL_FindEntityByClassname( NULL, "func_door_rotating" );
+
+	while ( torestart )
+	{
+		torestart->Restart();
+		torestart = UTIL_FindEntityByClassname( torestart, "func_door_rotating" );
+	}
+
+	// only the first of each (sic)
+	CBaseEntity *toremove = UTIL_FindEntityByClassname( NULL, "grenade" );
+	if ( toremove )
+		UTIL_Remove( toremove );
+
+	toremove = UTIL_FindEntityByClassname( NULL, "item_backpack" );
+	if ( toremove )
+		UTIL_Remove( toremove );
+
+	int iLeft = 4;
+	toremove = UTIL_FindEntityByClassname( NULL, "item_thighpack" );
+
+	while ( toremove && iLeft > 0 )
+	{
+		iLeft--;
+		UTIL_Remove( toremove );
+		toremove = UTIL_FindEntityByClassname( toremove, "item_thighpack" );
+	}
+
+	RemoveGuns();
+}
+
+//=========================================================
+// GiveDefusers - Beta 4.0: every second counter-terrorist
+// gets a bomb defuser, starting with the first or the second
+// by GiveC4's turn; if that passes the last one, the last one
+// gets it and the commander too
+//=========================================================
+void CHalfLifeMultiplay::GiveDefusers( void )
+{
+	bool bLast = false;
+	int i = 1;
+	int iStart = m_iC4Turn % 2;
+	int iNumCT = CountTeamPlayers( TEAM_CT );
+	int iDefuser = iStart + 1;
+
+	do
+	{
+		if ( iDefuser > iNumCT && i > iNumCT )
+			return;
+
+		if ( iDefuser > iNumCT && i <= iNumCT )
+		{
+			iDefuser = iNumCT;
+			bLast = true;
+		}
+		else
+			i += 2;
+
+		CBaseEntity *pPlayer = UTIL_FindEntityByClassname( NULL, "player" );
+		int iCount = 0;
+
+		while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
+		{
+			if ( pPlayer->IsPlayer() && pPlayer->pev->flags != FL_DORMANT )
+			{
+				CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+				entvars_t *pevPlayer = player->pev;
+
+				if ( player->m_iTeam == TEAM_CT && ++iCount == iDefuser )
+				{
+					player->m_fHasDefuser = true;
+					MESSAGE_BEGIN( MSG_ONE, gmsgGiveItem, NULL, pevPlayer );
+						WRITE_BYTE( 1 );
+					MESSAGE_END();
+					player->pev->body = 1;
+				}
+			}
+			pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+		}
+
+		iDefuser = iStart + i;
+	}
+	while ( !bLast );
+
+	if ( m_pCTCommander )
+	{
+		m_pCTCommander->m_fHasDefuser = true;
+		MESSAGE_BEGIN( MSG_ONE, gmsgGiveItem, NULL, m_pCTCommander->pev );
+			WRITE_BYTE( 1 );
+		MESSAGE_END();
+		m_pCTCommander->pev->body = 1;
+	}
+}
+
+//=========================================================
+// GiveC4 - Beta 4.0: the terrorists take turns with the C4
+// (one more each round); its carrier becomes the commander
+//=========================================================
+void CHalfLifeMultiplay::GiveC4( void )
+{
+	int iNumTerrorist = CountTeamPlayers( TEAM_TERRORIST );
+
+	if ( ++m_iC4Turn > iNumTerrorist )
+		m_iC4Turn = 1;
+
+	CBaseEntity *pPlayer = UTIL_FindEntityByClassname( NULL, "player" );
+	int iCount = 0;
+
+	while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
+	{
+		if ( pPlayer->IsPlayer() && pPlayer->pev->flags != FL_DORMANT )
+		{
+			CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+			entvars_t *pevPlayer = player->pev;
+
+			if ( player->m_iTeam == TEAM_TERRORIST && ++iCount == m_iC4Turn )
+			{
+				player->m_fHasC4 = true;
+				MESSAGE_BEGIN( MSG_ONE, gmsgGiveItem, NULL, pevPlayer );
+					WRITE_BYTE( 0 );
+				MESSAGE_END();
+				player->pev->body = 1;
+				m_pTerroristCommander = player;
+			}
+		}
+		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	}
+}
+
+//=========================================================
+// PickNewCommander - Beta 4.0: one of the team's players,
+// picked at random, becomes its commander (name from the
+// later versions' Linux symbols). Beta 3.0 and 3.1 tried each
+// in turn with a chance of one in three and told the one kept;
+// nobody is told now.
 //=========================================================
 void CHalfLifeMultiplay::PickNewCommander( int iTeam )
 {
 	CBaseEntity *pPlayer = NULL;
+	CBasePlayer *player;
 
 	if ( iTeam == TEAM_CT )
 		m_pCTCommander = NULL;
 	else
 		m_pTerroristCommander = NULL;
 
+	int iCount = 0;
+
+	// count the team (sic: without the checks of the second loop)
+	pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	while ( pPlayer != NULL )
+	{
+		player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+
+		if ( player->m_iTeam == iTeam && player->pev->flags != FL_DORMANT )
+			iCount++;
+
+		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	}
+
+	int iCommander = RANDOM_LONG( 1, iCount );
+	iCount = 0;
+
 	pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
 	while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
 	{
 		if ( pPlayer->IsPlayer() && pPlayer->pev->flags != FL_DORMANT )
 		{
-			CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+			player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
 
 			if ( pPlayer )
 			{
@@ -216,24 +465,20 @@ void CHalfLifeMultiplay::PickNewCommander( int iTeam )
 				{
 					if ( player->m_iTeam == TEAM_TERRORIST )
 					{
+						iCount++;
 						m_pTerroristCommander = player;
-						if ( RANDOM_LONG( 0, 2 ) == 0 )
-						{
-							ClientPrint( player->pev, HUD_PRINTCENTER, "You are the new commander\n" );
+						if ( iCount >= iCommander )
 							return;
-						}
 					}
 				}
 				else if ( iTeam == TEAM_CT )
 				{
 					if ( player->m_iTeam == TEAM_CT )
 					{
+						iCount++;
 						m_pCTCommander = player;
-						if ( RANDOM_LONG( 0, 2 ) == 0 )
-						{
-							ClientPrint( player->pev, HUD_PRINTCENTER, "You are the new commander\n" );
+						if ( iCount >= iCommander )
 							return;
-						}
 					}
 				}
 			}
@@ -243,13 +488,20 @@ void CHalfLifeMultiplay::PickNewCommander( int iTeam )
 }
 
 //=========================================================
-// CheckWinConditions - counts the living and the dead of both
-// teams; a team with nobody left alive loses the round, and
-// the next one starts five seconds later.
+// CheckWinConditions - Beta 4.0: once a round is decided
+// nothing changes it. A bombed target wins it for the
+// terrorists (3,500 each); a team with nobody left alive
+// loses it (the CTs win only when no C4 is ticking: 3,500
+// each on a bomb map, else 2,750; the terrorists 2,750);
+// nobody alive on either side is a draw; and with every
+// hostage rescued or dead and at least half of them rescued,
+// the CTs win (2,500 each). The next round starts five
+// seconds later. Beta 3.1's console lines are gone.
 //=========================================================
 void CHalfLifeMultiplay::CheckWinConditions( void )
 {
-	ALERT( at_console, "CHalfLifeMultiplay::CheckWinConditions\n" );
+	if ( m_iRoundWinStatus != 0 )
+		return;
 
 	CBaseEntity *pPlayer = NULL;
 	int NumDeadTerrorist = 0;
@@ -297,24 +549,11 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
 	}
 
-	if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && m_iNumCT > 0 )
-	{
-		m_iRoundWinStatus = 1;
-		m_iAccountCT = 500;
-		UTIL_ClientPrintAll( HUD_PRINTCENTER, "Counter-Terrorists Won!\n" );
-		Broadcast( "ctwin" );
-
-		m_iNumCTWins++;
-		MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
-			WRITE_SHORT( 0 );	// the client's team 0: the counter-terrorists
-			WRITE_SHORT( m_iNumCTWins );
-		MESSAGE_END();
-	}
-	else if ( NumAliveCT == 0 && NumDeadCT != 0 && m_iNumTerrorist > 0 )
+	if ( m_fTargetBombed == true && m_fMapHasBombTarget == true )
 	{
 		m_iRoundWinStatus = 2;
-		m_iAccountTerrorist = 500;
-		UTIL_ClientPrintAll( HUD_PRINTCENTER, "Terrorists Won!\n" );
+		m_iAccountTerrorist = 3500;
+		UTIL_ClientPrintAll( HUD_PRINTCENTER, "Target successfully bombed!" );
 		Broadcast( "terwin" );
 
 		m_iNumTerroristWins++;
@@ -322,25 +561,93 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 			WRITE_SHORT( 1 );
 			WRITE_SHORT( m_iNumTerroristWins );
 		MESSAGE_END();
+
+		m_flRestartRoundTime = gpGlobals->time + 5.0;
+		return;
+	}
+
+	if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && m_iNumCT > 0 )
+	{
+		// not while a C4 is ticking
+		CBaseEntity *pC4 = UTIL_FindEntityByClassname( NULL, "grenade" );
+
+		if ( pC4 == NULL || ((CGrenade *)pC4)->m_fC4Done )
+		{
+			m_iRoundWinStatus = 1;
+
+			if ( m_fTargetBombed == false && m_fMapHasBombTarget == true )
+				m_iAccountCT = 3500;
+			else
+				m_iAccountCT = 2750;
+
+			UTIL_ClientPrintAll( HUD_PRINTCENTER, "Terrorist Team EXTERMINATED" );
+			Broadcast( "ctwin" );
+
+			m_iNumCTWins++;
+			MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
+				WRITE_SHORT( 0 );	// the client's team 0: the counter-terrorists
+				WRITE_SHORT( m_iNumCTWins );
+			MESSAGE_END();
+
+			m_flRestartRoundTime = gpGlobals->time + 5.0;
+			return;
+		}
+	}
+	else if ( NumAliveCT == 0 && NumDeadCT != 0 && m_iNumTerrorist > 0 )
+	{
+		m_iRoundWinStatus = 2;
+		m_iAccountTerrorist = 2750;
+		UTIL_ClientPrintAll( HUD_PRINTCENTER, "Counter-Terrorists EXTERMINATED" );
+		Broadcast( "terwin" );
+
+		m_iNumTerroristWins++;
+		MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
+			WRITE_SHORT( 1 );
+			WRITE_SHORT( m_iNumTerroristWins );
+		MESSAGE_END();
+
+		m_flRestartRoundTime = gpGlobals->time + 5.0;
+		return;
 	}
 	else if ( NumAliveCT == 0 && NumAliveTerrorist == 0 )
 	{
+		UTIL_ClientPrintAll( HUD_PRINTCENTER, "** Round DRAW **" );
 		m_iRoundWinStatus = 3;
+		m_flRestartRoundTime = gpGlobals->time + 5.0;
+		return;
 	}
-
-	ALERT( at_console, "NumAliveCT = %i\n", NumAliveCT );
-	ALERT( at_console, "NumDeadCT = %i\n", NumDeadCT );
-	ALERT( at_console, "NumAliveTerrorist = %i\n", NumAliveTerrorist );
-	ALERT( at_console, "NumDeadTerrorist = %i\n", NumDeadTerrorist );
-
-	if ( m_iRoundWinStatus == 1 || m_iRoundWinStatus == 2 || m_iRoundWinStatus == 3 )
+	else
 	{
-		if ( m_flRestartRoundTime == 0.0 )
+		// the hostages: none left to rescue (rescued ones take no
+		// damage) and at least half of them rescued
+		int iHostages = 0;
+		bool bHostageLeft = false;
+		CBaseEntity *pHostage = UTIL_FindEntityByClassname( NULL, "hostage_entity" );
+
+		while ( pHostage != NULL )
 		{
-			ALERT( at_console, "Number of Terrorists = %i\n", m_iNumTerrorist );
-			ALERT( at_console, "Number of CT = %i\n", m_iNumCT );
+			iHostages++;
+
+			if ( pHostage->pev->takedamage == DAMAGE_YES )
+				bHostageLeft = true;
+
+			pHostage = UTIL_FindEntityByClassname( pHostage, "hostage_entity" );
+		}
+
+		if ( !bHostageLeft && iHostages > 0 && m_iHostagesRescued >= iHostages * 0.5 )
+		{
+			m_iRoundWinStatus = 1;
+			m_iAccountCT = 2500;
+			UTIL_ClientPrintAll( HUD_PRINTCENTER, "All hostages rescued!" );
+			Broadcast( "ctwin" );
+
+			m_iNumCTWins++;
+			MESSAGE_BEGIN( MSG_ALL, gmsgTeamScore );
+				WRITE_SHORT( 0 );
+				WRITE_SHORT( m_iNumCTWins );
+			MESSAGE_END();
+
 			m_flRestartRoundTime = gpGlobals->time + 5.0;
-			m_flRoundEndTime = gpGlobals->time + 5.0;
 		}
 	}
 }
@@ -354,6 +661,29 @@ void CHalfLifeMultiplay::RestartRound( void )
 	CBaseEntity *pHostage = NULL;
 	char szSound[32];	// name ours
 
+	// Beta 4.0: mp_roundtime (3 to 9 minutes) and mp_c4timer (10 to 90 seconds)
+	m_iRoundTime = (int)CVAR_GET_FLOAT( "mp_roundtime" );
+	m_iC4Timer = (int)CVAR_GET_FLOAT( "mp_c4timer" );
+
+	if ( m_iRoundTime > 9 )
+		m_iRoundTime = 9;
+	else if ( m_iRoundTime < 3 )
+		m_iRoundTime = 3;
+
+	if ( m_iC4Timer > 90 )
+		m_iC4Timer = 90;
+	else if ( m_iC4Timer < 10 )
+		m_iC4Timer = 10;
+
+	CBaseEntity *pTarget = UTIL_FindEntityByClassname( NULL, "info_bomb_target" );
+
+	if ( pTarget == NULL )
+		m_fMapHasBombTarget = false;
+	else
+		m_fMapHasBombTarget = true;
+
+	m_fTargetBombed = false;
+
 	// the kick votes start afresh
 	for ( int i = 0; i < 20; i++ )
 		m_iKickVotes[i] = 0;
@@ -363,11 +693,11 @@ void CHalfLifeMultiplay::RestartRound( void )
 	{
 		if ( pHostage->pev->solid != SOLID_NOT )
 		{
-			// a hostage still standing in the map
+			// a hostage still standing in the map (Beta 4.0: 200, was 400)
 			if ( m_iRoundWinStatus == 2 )
-				m_iAccountTerrorist += 400;
+				m_iAccountTerrorist += 200;
 			else if ( m_iRoundWinStatus == 1 )
-				m_iAccountCT += 400;
+				m_iAccountCT += 200;
 
 			if ( pHostage->pev->deadflag == DEAD_DEAD )
 				pHostage->pev->deadflag = DEAD_RESPAWNABLE;
@@ -376,16 +706,16 @@ void CHalfLifeMultiplay::RestartRound( void )
 		pHostage = UTIL_FindEntityByClassname( pHostage, "hostage_entity" );
 	}
 
-	// the losing team gets something too
+	// the losing team gets something too (Beta 4.0: 1,750, was 800)
 	if ( m_iRoundWinStatus == 2 )
-		m_iAccountCT += 800;
+		m_iAccountCT += 1750;
 	else if ( m_iRoundWinStatus == 1 )
-		m_iAccountTerrorist += 800;
+		m_iAccountTerrorist += 1750;
 
-	m_iAccountCT += m_iHostagesRescued * 350;
+	m_iAccountCT += m_iHostagesRescued * 500;	// Beta 4.0: 500 (was 350)
 
-	// Beta 3.0: the round starts with one of three radio calls (was radio/go.wav)
-	switch ( RANDOM_LONG( 0, 2 ) )
+	// Beta 3.0: the round starts with a radio call (was radio/go.wav); Beta 4.0 adds com_go
+	switch ( RANDOM_LONG( 0, 3 ) )
 	{
 	case 0:
 		strcpy( szSound, "radio/moveout.wav" );
@@ -396,7 +726,16 @@ void CHalfLifeMultiplay::RestartRound( void )
 	case 2:
 		strcpy( szSound, "radio/locknload.wav" );
 		break;
+	case 3:
+		strcpy( szSound, "radio/com_go.wav" );
+		break;
 	}
+
+	// Beta 3.0: both teams get a new commander
+	PickNewCommander( TEAM_TERRORIST );
+	PickNewCommander( TEAM_CT );
+
+	m_iUnused88 = 2;
 
 	CBaseEntity *pPlayer = NULL;
 
@@ -407,14 +746,11 @@ void CHalfLifeMultiplay::RestartRound( void )
 		{
 			CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
 
-			// nobody is paid while a team is empty
-			if ( m_iNumCT != 0 && m_iNumTerrorist != 0 )
-			{
-				if ( player->m_iTeam == TEAM_CT )
-					player->AddAccount( m_iAccountCT );
-				else if ( player->m_iTeam == TEAM_TERRORIST )
-					player->AddAccount( m_iAccountTerrorist );
-			}
+			// Beta 4.0: everybody is paid, empty team or not
+			if ( player->m_iTeam == TEAM_CT )
+				player->AddAccount( m_iAccountCT );
+			else if ( player->m_iTeam == TEAM_TERRORIST )
+				player->AddAccount( m_iAccountTerrorist );
 
 			if ( player->pev->deadflag == DEAD_DYING )
 			{
@@ -429,14 +765,39 @@ void CHalfLifeMultiplay::RestartRound( void )
 				respawn( pPlayer->pev, FALSE );
 			}
 
-			EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, szSound, 1, ATTN_NORM );
+			// Beta 4.0: last round's defusers and C4 go
+			if ( player->m_iTeam == TEAM_CT )
+			{
+				player->m_fHasDefuser = false;
+				MESSAGE_BEGIN( MSG_ONE, gmsgRemoveItem, NULL, player->pev );
+					WRITE_BYTE( 1 );
+				MESSAGE_END();
+				player->pev->body = 0;
+			}
+
+			if ( player->m_iTeam == TEAM_TERRORIST )
+			{
+				player->m_fHasC4 = false;
+				MESSAGE_BEGIN( MSG_ONE, gmsgRemoveItem, NULL, player->pev );
+					WRITE_BYTE( 0 );
+				MESSAGE_END();
+				player->pev->body = 0;
+			}
+
+			EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, szSound, 1, 0.8 );
 		}
 		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
 	}
 
-	// Beta 3.0: both teams get a new commander
-	PickNewCommander( TEAM_TERRORIST );
-	PickNewCommander( TEAM_CT );
+	// Beta 4.0: the map is put back; on a bomb map the C4 and the defusers
+	// are handed out (sic: the flag is read through g_pGameRules)
+	CleanUpMap();
+
+	if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_fMapHasBombTarget == true )
+	{
+		GiveDefusers();
+		GiveC4();
+	}
 
 	m_flIntermissionEndTime = 0;
 	m_flRestartRoundTime = 0;
@@ -455,6 +816,57 @@ void CHalfLifeMultiplay::RestartRound( void )
 
 //=========================================================
 //=========================================================
+//=========================================================
+// GiveWeapons - Beta 4.0: everybody gets a knife and a
+// pistol with ammunition: the commanders a P228 (CTs, 52
+// rounds) or a Desert Eagle (terrorists, 35), the others a
+// USP (48) or a Glock 18 (120)
+//=========================================================
+void CHalfLifeMultiplay::GiveWeapons( void )
+{
+	CBaseEntity *pPlayer = UTIL_FindEntityByClassname( NULL, "player" );
+
+	while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
+	{
+		if ( pPlayer->IsPlayer() && pPlayer->pev->flags != FL_DORMANT )
+		{
+			CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+
+			if ( player->m_iTeam == TEAM_CT )
+			{
+				if ( player == m_pCTCommander )
+				{
+					player->GiveNamedItem( "weapon_knife" );
+					player->GiveNamedItem( "weapon_p228" );
+					player->GiveAmmo( 26, "357sig", 52 );
+				}
+				else
+				{
+					player->GiveNamedItem( "weapon_knife" );
+					player->GiveNamedItem( "weapon_usp" );
+					player->GiveAmmo( 24, "45acp", 48 );
+				}
+			}
+			else if ( player->m_iTeam == TEAM_TERRORIST )
+			{
+				if ( player == m_pTerroristCommander )
+				{
+					player->GiveNamedItem( "weapon_knife" );
+					player->GiveNamedItem( "weapon_deagle" );
+					player->GiveAmmo( 14, "50ae", 35 );
+				}
+				else
+				{
+					player->GiveNamedItem( "weapon_knife" );
+					player->GiveNamedItem( "weapon_glock18" );
+					player->GiveAmmo( 40, "9mm", 120 );
+				}
+			}
+		}
+		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
+	}
+}
+
 void CHalfLifeMultiplay :: Think ( void )
 {
 	///// Check game rules /////
@@ -478,12 +890,17 @@ void CHalfLifeMultiplay :: Think ( void )
 		return;
 	}
 
-	// a round lasts 294 seconds at most (Beta 2.0 and 2.1: 385, the client's timer counting down 390)
-	if ( gpGlobals->time > m_flRoundStartTime + 294.0 )
+	// a round lasts mp_roundtime minutes less 5 seconds (Beta 2.0 and 2.1: 385 seconds,
+	// 3.0 and 3.1: 294); Beta 4.0: a ticking C4 ends it only when it goes off
+	if ( gpGlobals->time > m_flRoundStartTime + ( m_iRoundTime * 60 - 5 ) )
 	{
+		CBaseEntity *pC4 = UTIL_FindEntityByClassname( NULL, "grenade" );
+
+		m_flRoundEndTime = m_flRestartRoundTime = pC4 ?
+			( !((CGrenade *)pC4)->m_fC4Done ? ((CGrenade *)pC4)->m_flC4Blow : gpGlobals->time + 5.0 ) :
+			gpGlobals->time + 5.0;
+
 		m_iRoundWinStatus = 3;
-		m_flRestartRoundTime = gpGlobals->time + 5.0;
-		m_flRoundEndTime = gpGlobals->time + 5.0;
 		m_flRoundStartTime = gpGlobals->time + 60;
 	}
 
@@ -680,6 +1097,14 @@ void CHalfLifeMultiplay :: ClientDisconnected( edict_t *pClient )
 
 		if ( pPlayer )
 		{
+			// Beta 4.0: the C4 (item_backpack) and the defuser (item_thighpack)
+			// stay where he was
+			if ( pPlayer->m_fHasC4 == true )
+				pPlayer->GiveNamedItem( "item_backpack" );
+
+			if ( pPlayer->m_fHasDefuser == true )
+				pPlayer->GiveNamedItem( "item_thighpack" );
+
 			// his kick vote no longer counts
 			if ( pPlayer->m_iKickVote )
 			{
@@ -707,11 +1132,10 @@ void CHalfLifeMultiplay :: ClientDisconnected( edict_t *pClient )
 //=========================================================
 float CHalfLifeMultiplay :: FlPlayerFallDamage( CBasePlayer *pPlayer )
 {
-	// always progressive now, at 1.25 times the single-player rate (Beta 1.1 to 2.1:
-	// twice); mp_falldamage is no longer read
+	// always progressive now, at 1.75 times the single-player rate (Beta 1.1 to 2.1:
+	// twice; 3.0 and 3.1: 1.25, with a console line); mp_falldamage is no longer read
 	pPlayer->m_flFallVelocity -= PLAYER_MAX_SAFE_FALL_SPEED;
-	ALERT( at_console, "speed = %f\n", pPlayer->m_flFallVelocity );
-	return pPlayer->m_flFallVelocity * DAMAGE_FOR_FALL_SPEED * 1.25;
+	return pPlayer->m_flFallVelocity * DAMAGE_FOR_FALL_SPEED * 1.75;
 } 
 
 //=========================================================
@@ -770,17 +1194,37 @@ void CHalfLifeMultiplay :: PlayerSpawn( CBasePlayer *pPlayer )
 	if ( pPlayer->m_fNotKilled == true )
 		addDefault = FALSE;
 
+	// Beta 4.0: the commanders get a P228 (52 rounds) or a Desert Eagle (28);
+	// twice the ammunition for the others' USP and Glock 18
 	if ( pPlayer->m_iTeam == TEAM_CT && addDefault )
 	{
-		pPlayer->GiveNamedItem( "weapon_knife" );
-		pPlayer->GiveNamedItem( "weapon_usp" );
-		pPlayer->GiveAmmo( 12, "45acp", USP_MAX_CARRY );
+		if ( m_pCTCommander == pPlayer )
+		{
+			pPlayer->GiveNamedItem( "weapon_knife" );
+			pPlayer->GiveNamedItem( "weapon_p228" );
+			pPlayer->GiveAmmo( 26, "357sig", 52 );
+		}
+		else
+		{
+			pPlayer->GiveNamedItem( "weapon_knife" );
+			pPlayer->GiveNamedItem( "weapon_usp" );
+			pPlayer->GiveAmmo( 24, "45acp", USP_MAX_CARRY );
+		}
 	}
 	else if ( pPlayer->m_iTeam == TEAM_TERRORIST && addDefault )
 	{
-		pPlayer->GiveNamedItem( "weapon_knife" );
-		pPlayer->GiveNamedItem( "weapon_glock18" );
-		pPlayer->GiveAmmo( 20, "9mm", GLOCK18_MAX_CARRY );
+		if ( m_pTerroristCommander == pPlayer )
+		{
+			pPlayer->GiveNamedItem( "weapon_knife" );
+			pPlayer->GiveNamedItem( "weapon_deagle" );
+			pPlayer->GiveAmmo( 14, "50ae", 28 );
+		}
+		else
+		{
+			pPlayer->GiveNamedItem( "weapon_knife" );
+			pPlayer->GiveNamedItem( "weapon_glock18" );
+			pPlayer->GiveAmmo( 40, "9mm", GLOCK18_MAX_CARRY );
+		}
 	}
 
 	int clientIndex = pPlayer->entindex();
@@ -850,18 +1294,19 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 	pVictim->m_iDeaths += 1;
 	pVictim->m_fNotKilled = false;
 
-	// a dead counter-terrorist makes the CTs pick a new commander (sic:
-	// whoever he was, and not so for a terrorist); Beta 3.0's automatic
-	// radio messages, MATEDOWN from the victim and ENEMYDOWN from his
-	// killer, are gone in Beta 3.1 ("removed automatic .wav's")
-	if ( pVictim->m_iTeam == TEAM_CT )
-		PickNewCommander( TEAM_CT );
+	// Beta 4.0: a dead commander, of either team, gets a successor (Beta 3.0
+	// and 3.1: any dead counter-terrorist made the CTs pick one); Beta 3.0's
+	// automatic radio messages, MATEDOWN from the victim and ENEMYDOWN from
+	// his killer, are gone in Beta 3.1 ("removed automatic .wav's")
+	if ( ( pVictim->m_iTeam == TEAM_CT && m_pCTCommander == pVictim ) || ( pVictim->m_iTeam == TEAM_TERRORIST && m_pTerroristCommander == pVictim ) )
+		PickNewCommander( pVictim->m_iTeam );
 
-	FireTargets( "game_playerdie", pVictim, pVictim, USE_TOGGLE, 0 );
 	CBasePlayer *peKiller = NULL;
 	CBaseEntity *ktmp = CBaseEntity::Instance( pKiller );
 	if ( ktmp && (ktmp->Classify() == CLASS_PLAYER) )
 		peKiller = (CBasePlayer*)ktmp;
+
+	FireTargets( "game_playerdie", pVictim, pVictim, USE_TOGGLE, 0 );
 
 	if ( pVictim->pev == pKiller )  
 	{  // killed self
@@ -874,12 +1319,14 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 		// if a player dies in a deathmatch game and the killer is a client, award the killer some points
 		pKiller->frags += IPointsForKill( peKiller, pVictim );
 
-		// 300 for the kill; a team kill costs 1800, and the third one sends the killer away
+		// 300 for the kill; a team kill costs 3600 (Beta 3.1: 1800), and the third one
+		// sends the killer away (Beta 4.0: one killed by an HE grenade is not counted)
 		pKillerPlayer->AddAccount( 300 );
 		if ( pKillerPlayer->m_iTeam == pVictim->m_iTeam )
 		{
-			pKillerPlayer->AddAccount( -1800 );
-			pKillerPlayer->m_iTeamKills++;
+			pKillerPlayer->AddAccount( -3600 );
+			if ( !pVictim->m_fKilledByHEGrenade )
+				pKillerPlayer->m_iTeamKills++;
 
 			if ( pKillerPlayer->m_iTeamKills >= 3 )
 			{

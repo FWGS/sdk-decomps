@@ -91,17 +91,19 @@ enum
 	Menu_BuySubMachineGun,
 	Menu_BuyItem,
 	Menu_BuyAmmo,			// name ours
-	Menu_Radio,				// name ours (Beta 3.0's titles.txt: Radio)
+	Menu_Radio,				// name ours (Beta 3.0's titles.txt: Radio; Beta 4.0's RadioA)
+	Menu_Radio2,			// name ours (Beta 4.0's titles.txt: RadioB; ClientCommand's menu 12)
 	Menu_CommanderRadio		// name ours (Beta 3.0's titles.txt: CommanderRadio)
 };
 
 class CBasePlayer : public CBaseMonster
 {
 public:
-	// Counter-Strike's members: 380 bytes in front of the SDK's (Beta 1.0: 96, 1.1: 88,
-	// 2.0: 116, 3.0: 376). Beta 2.0 makes the two flags at 0x148 bools and adds the members from
+	// Counter-Strike's members: 412 bytes in front of the SDK's (Beta 1.0: 96, 1.1: 88,
+	// 2.0: 116, 3.0: 376, 3.1: 380). Beta 2.0 makes the two flags at 0x148 bools and adds the members from
 	// 0x168 on; Beta 3.0 makes the kevlar flag an int and adds 256 bytes before
-	// m_iMenu, which stays last. Every name here is ours; the offsets are retail's
+	// m_iMenu, which stays last; Beta 4.0 adds m_iHEGrenades before m_iFlashBangs and
+	// 28 bytes after m_fIgnoreRadio. Every name here is ours; the offsets are retail's
 	// (CBaseMonster ends at 0x118).
 	float				m_flFlinchTime;			// 0x118 the flinch animation plays until then: SetAnimation ignores everything but PLAYER_FLINCH meanwhile
 	float				m_flNextFlinchTime;		// 0x11c no new flinch animation before this time
@@ -128,19 +130,27 @@ public:
 	int					m_iAppearance;			// 0x170 the player model: 0 urban, 1 terror, 2 arab
 	int					m_iKickVote;			// 0x174 the player (entity index, 1 to 20) this one votes to kick; 0 = none
 	bool				m_fKicked;				// 0x178 sent away (team killer, kick vote): Spawn kills him
-	int					m_iFlashBangs;			// 0x17c flashbangs bought since the last death (three at most)
-	int					m_iTeamKills;			// 0x180 team mates killed; the third disconnects the killer
-	int					m_iIgnoreMessages;		// 0x184 ignoremessages: 0 all, 1 no broadcast messages, 2 no team messages either
-	bool				m_fHasNightVision;		// 0x188 night vision goggles bought
-	bool				m_fNightVisionOn;		// 0x189 the goggles are switched on
-	bool				m_fSendResetHUD;		// 0x18a Spawn sets it; UpdateClientData then sends ResetHUD (the client restarts its round timer) and clears it
-	int					m_iNightVisionAlpha;	// 0x18c new in Beta 3.0: the alpha of the night vision fade (ClientPutInServer: 60; adjustnvg)
-	Vector				m_vecOldOrigins[20];	// 0x190 new in Beta 3.0: the trail a hostage follows; PreThink pushes pev->origin in front every 0.2 seconds
-	float				m_flNextOldOrigin;		// 0x280 when PreThink records the next position
-	float				m_flNextRadio;			// 0x284 no radio message before this time (1.5 seconds after the last)
-	int					m_iRadioMessages;		// 0x288 radio messages left (Spawn sets the number)
-	bool				m_fIgnoreRadio;			// 0x28c new in Beta 3.1: the ignoreradio command; CBasePlayer::Radio sends such a player nothing
-	int					m_iMenu;				// 0x290 the menu the client has open (client.cpp)
+	int					m_iHEGrenades;			// 0x17c new in Beta 4.0: HE grenades bought since the last death
+	int					m_iFlashBangs;			// 0x180 flashbangs bought since the last death (three at most)
+	int					m_iTeamKills;			// 0x184 team mates killed; the third disconnects the killer
+	int					m_iIgnoreMessages;		// 0x188 ignoremessages: 0 all, 1 no broadcast messages, 2 no team messages either
+	bool				m_fHasNightVision;		// 0x18c night vision goggles bought
+	bool				m_fNightVisionOn;		// 0x18d the goggles are switched on
+	bool				m_fSendResetHUD;		// 0x18e Spawn sets it; UpdateClientData then sends ResetHUD (the client restarts its round timer) and clears it
+	int					m_iNightVisionAlpha;	// 0x190 new in Beta 3.0: the alpha of the night vision fade (ClientPutInServer: 60; adjustnvg)
+	Vector				m_vecOldOrigins[20];	// 0x194 new in Beta 3.0: the trail a hostage follows; PreThink pushes pev->origin in front every 0.2 seconds
+	float				m_flNextOldOrigin;		// 0x284 when PreThink records the next position
+	float				m_flNextRadio;			// 0x288 no radio message before this time (1.5 seconds after the last)
+	int					m_iRadioMessages;		// 0x28c radio messages left (Spawn sets the number)
+	bool				m_fIgnoreRadio;			// 0x290 new in Beta 3.1: the ignoreradio command; CBasePlayer::Radio sends such a player nothing
+	bool				m_fHasC4;				// 0x291 new in Beta 4.0: carries the C4 bomb (GiveC4, PlantC4)
+	bool				m_fHasDefuser;			// 0x292 new in Beta 4.0: carries a bomb defuser (GiveDefusers); only such a CT can defuse
+	CBasePlayer			*m_pIdTarget;			// 0x294 new in Beta 4.0: the player PostThink last named in the crosshair
+	float				m_flNextVote;			// 0x298 new in Beta 4.0: no vote before this time (3 seconds after the last)
+	bool				m_fKilledByBlast;		// 0x29c new in Beta 4.0: the last hit was a blast (DMG_BLAST); picks the death animation
+	Vector				m_vecBlastDir;			// 0x2a0 new in Beta 4.0: from the inflictor to the player, at the last hit (TakeDamage)
+	bool				m_fKilledByHEGrenade;	// 0x2ac new in Beta 4.0: the last hit was an HE grenade's (DMG_HEGRENADE); a team mate killed so is not counted
+	int					m_iMenu;				// 0x2b0 the menu the client has open (client.cpp)
 
 	int					m_iPlayerSound;// the index of the sound list slot reserved for this player
 	int					m_iTargetVolume;// ideal sound volume. 
@@ -307,6 +317,7 @@ public:
 	void AddAccount( int amount );
 	bool HasPrimaryWeapons( void );	// Beta 3.1's Linux symbol HasPrimaryWeapons__11CBasePlayer (Beta 2.0 to 2.1: our HasPrimaryWeapon)
 	void Radio( const char *msg_id );	// Beta 3.0's radio: plays %!MRAD_<msg_id> to the team (parameter name ours)
+	void PlantC4( void );	// Beta 4.0's plant_c4 command (Linux symbol PlantC4__11CBasePlayer)
 	BOOL HasPlayerItem( CBasePlayerItem *pCheckItem );
 	BOOL HasNamedPlayerItem( const char *pszItemName );
 	BOOL HasWeapons( void );// do I have ANY weapons?

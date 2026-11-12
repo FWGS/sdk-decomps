@@ -117,52 +117,19 @@ void CSG552::PrimaryAttack( void )
 {
 	float flSpread;
 
+	// Beta 4.0: the same spread however the player moves (the product
+	// written in the call: retail's code loads the accuracy, compares the
+	// FOV and multiplies, in that order)
 	if (m_pPlayer->m_iFOV == 90)
 	{
-		if (m_pPlayer->pev->velocity.Length2D() > 0)
-		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.13;
-			SG552Fire( flSpread, 0.0825, FALSE );
-		}
-		else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.16;
-			SG552Fire( flSpread, 0.0825, FALSE );
-		}
-		else if (m_pPlayer->pev->flags & FL_DUCKING)
-		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.0225;
-			SG552Fire( flSpread, 0.0825, FALSE );
-		}
-		else
-		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.04;
-			SG552Fire( flSpread, 0.0825, FALSE );
-		}
+		flSpread = m_pPlayer->m_flAccuracy;
+		SG552Fire( flSpread * 0.0225, 0.0825, FALSE );
 	}
 	else
 	{
 		// zoomed in: a slower cycle
-		if (m_pPlayer->pev->velocity.Length2D() > 0)
-		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.13;
-			SG552Fire( flSpread, 0.135, FALSE );
-		}
-		else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.16;
-			SG552Fire( flSpread, 0.135, FALSE );
-		}
-		else if (m_pPlayer->pev->flags & FL_DUCKING)
-		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.0225;
-			SG552Fire( flSpread, 0.135, FALSE );
-		}
-		else
-		{
-			flSpread = m_pPlayer->m_flAccuracy * 0.04;
-			SG552Fire( flSpread, 0.135, FALSE );
-		}
+		flSpread = m_pPlayer->m_flAccuracy;
+		SG552Fire( flSpread * 0.0225, 0.135, FALSE );
 	}
 }
 
@@ -171,10 +138,10 @@ void CSG552::SG552Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	// the spread grows with the cube of the shots fired
 	m_fDelayFire = true;
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 150) + 0.415;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.325;
 
-	if (m_pPlayer->m_flAccuracy > 1.9)
-		m_pPlayer->m_flAccuracy = 1.9;
+	if (m_pPlayer->m_flAccuracy > 0.55)
+		m_pPlayer->m_flAccuracy = 0.55;
 
 	if (m_iClip <= 0)
 	{
@@ -222,9 +189,9 @@ void CSG552::SG552Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	m_pPlayer->m_iWeaponFlash = BRIGHT_GUN_FLASH;
 
 	if (RANDOM_LONG(0,1))
-		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/sg552-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/sg552-1.wav", RANDOM_FLOAT(0.92, 1.0), 0.56);
 	else
-		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/sg552-2.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/sg552-2.wav", RANDOM_FLOAT(0.92, 1.0), 0.56);
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
@@ -247,8 +214,15 @@ void CSG552::SG552Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
 
-	m_pPlayer->pev->punchangle.y += RANDOM_FLOAT( -1, 1 );
-	m_pPlayer->pev->punchangle.x += RANDOM_FLOAT( 0.5, 1.5 );
+	// Beta 4.0: the recoil by how the player stands
+	if (m_pPlayer->pev->velocity.Length2D() > 0)
+		KickBack( 1.15, 0.45, 0.22, 0.18, 8, 6, 4 );
+	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+		KickBack( 1.25, 0.45, 0.22, 0.18, 8.5, 6.5, 3 );
+	else if ( FBitSet(m_pPlayer->pev->flags, FL_DUCKING) )
+		KickBack( 0.6, 0.35, 0.125, 0.0125, 4.75, 2, 10 );
+	else
+		KickBack( 0.625, 0.375, 0.135, 0.0125, 5, 2.25, 9 );
 }
 
 

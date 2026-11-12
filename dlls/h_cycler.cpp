@@ -206,7 +206,7 @@ int CCycler :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, floa
 		pev->framerate = 1.0;
 		StudioFrameAdvance ( 0.1 );
 		pev->framerate = 0;
-		ALERT( at_console, "sequence: %d, frame %.0f\n", pev->sequence, pev->frame );
+		//ALERT( at_console, "sequence: %d, frame %.0f\n", pev->sequence, pev->frame );	// Counter-Strike Beta 4.0: commented out
 	}
 
 	return 0;

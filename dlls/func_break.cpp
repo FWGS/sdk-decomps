@@ -160,12 +160,40 @@ void CBreakable::Spawn( void )
 	else
 		pev->takedamage	= DAMAGE_YES;
   
+	m_flHealth		= pev->health * 2;	// Beta 4.0: what Restart gives back (sic: twice the map's)
 	pev->solid		= SOLID_BSP;
     pev->movetype	= MOVETYPE_PUSH;
     m_angle			= pev->angles.y;
 	pev->angles.y	= 0;
 
 	
+	SET_MODEL(ENT(pev), STRING(pev->model) );//set size and link into world.
+
+	SetTouch( BreakTouch );
+	if ( FBitSet( pev->spawnflags, SF_BREAK_TRIGGER_ONLY ) )		// Only break on trigger
+		SetTouch( NULL );
+
+	// Flag unbreakable glass as "worldbrush" so it will block ALL tracelines
+	if ( !IsBreakable() && pev->rendermode != kRenderNormal )
+		pev->flags |= FL_WORLDBRUSH;
+}
+
+
+//
+// Counter-Strike Beta 4.0: a new round puts the breakable back, whole and
+// visible (Spawn's text; it takes damage whatever its flags say)
+//
+void CBreakable::Restart( void )
+{
+	pev->solid		= SOLID_BSP;
+    pev->movetype	= MOVETYPE_PUSH;
+	pev->takedamage	= DAMAGE_YES;
+	pev->deadflag	= DEAD_NO;
+	pev->health		= m_flHealth;
+	pev->effects	&= ~EF_NODRAW;
+    m_angle			= pev->angles.y;
+	pev->angles.y	= 0;
+
 	SET_MODEL(ENT(pev), STRING(pev->model) );//set size and link into world.
 
 	SetTouch( BreakTouch );
@@ -569,7 +597,10 @@ int CBreakable :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, f
 	pev->health -= flDamage;
 	if (pev->health <= 0)
 	{
-		Killed( pevAttacker, GIB_NORMAL );
+		// Beta 4.0: not killed but hidden, for Restart to bring back (was Killed())
+		pev->takedamage = DAMAGE_NO;
+		pev->deadflag = DEAD_DEAD;
+		pev->effects = EF_NODRAW;
 		Die();
 		return 0;
 	}
@@ -747,7 +778,7 @@ void CBreakable::Die( void )
 	// Fire targets on break
 	SUB_UseTargets( NULL, USE_TOGGLE, 0 );
 
-	SetThink( SUB_Remove );
+	// Beta 4.0: no longer removed (Restart brings it back); the think time stays (sic)
 	pev->nextthink = pev->ltime + 0.1;
 	if ( m_iszSpawnObject )
 		CBaseEntity::Create( (char *)STRING(m_iszSpawnObject), VecBModelOrigin(pev), pev->angles, edict() );

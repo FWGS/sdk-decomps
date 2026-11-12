@@ -187,12 +187,15 @@ int gmsgTextMsg = 0;
 int gmsgSetFOV = 0;
 int gmsgShowMenu = 0;
 int gmsgSendAudio = 0;	// Beta 3.0's radio: a sentence and the entity it comes from (client.dll plays it)
-// Never registered; the name is from Beta 3.1's Linux symbols, which have it here,
-// after gmsgSendAudio. It gives retail's .bss: VC5 lays out zero-initialised data
-// in definition order, and retail has 4 unreferenced bytes between gmsgSendAudio
-// and PlayStepSound's iSkipStep (Betas 2.0 and 2.1 the same after gmsgShowMenu).
+// Registered from Beta 4.0 on; before, never registered: the name is from Beta 3.1's
+// Linux symbols, which have it here, after gmsgSendAudio. It gives retail's .bss of
+// Betas 2.0 to 3.1: VC5 lays out zero-initialised data in definition order, and
+// retail has 4 unreferenced bytes between gmsgSendAudio and PlayStepSound's
+// iSkipStep (Betas 2.0 and 2.1 the same after gmsgShowMenu).
 //
 int gmsgRoundTime = 0;
+int gmsgGiveItem = 0;	// Beta 4.0: the client shows the C4 (0) or the defuser (1) its player got
+int gmsgRemoveItem = 0;	// Beta 4.0: ... and takes it off again
 
 LINK_ENTITY_TO_CLASS( player, CBasePlayer );
 
@@ -214,6 +217,15 @@ void CBasePlayer::Radio( const char *msg_id )
 
 	if ( pev->movetype == MOVETYPE_NOCLIP )
 		return;
+
+	// Beta 4.0: the radio sprite over the speaker's head for 1.5 seconds, for everybody
+	MESSAGE_BEGIN( MSG_ALL, SVC_TEMPENTITY );
+		WRITE_BYTE( TE_PLAYERATTACHMENT );
+		WRITE_BYTE( ENTINDEX( edict() ) );
+		WRITE_COORD( 35 );
+		WRITE_SHORT( g_sModelIndexRadio );
+		WRITE_SHORT( 15 );
+	MESSAGE_END();
 
 	strcpy( szMessage, "**RADIO** " );
 	strcat( szMessage, STRING( pev->netname ) );
@@ -252,8 +264,6 @@ void CBasePlayer::Radio( const char *msg_id )
 // head-shot sounds
 void CBasePlayer :: Pain( int iLastHitGroup, bool bHasArmour )
 {
-	ALERT( at_console, "CBasePlayer::Pain\n" );
-
 	int temp = RANDOM_LONG( 0, 2 );
 
 	switch ( iLastHitGroup )
@@ -399,9 +409,8 @@ void CBasePlayer :: DeathSound( void )
 	}
 	*/
 
-	ALERT( at_console, "CBasePlayer::DeathSound\n" );
-
-	switch (RANDOM_LONG(1,3))
+	// Beta 4.0: death6.wav added; the console line is gone
+	switch (RANDOM_LONG(1,4))
 	{
 	case 1:
 		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/die1.wav", 1, ATTN_NORM);
@@ -411,6 +420,9 @@ void CBasePlayer :: DeathSound( void )
 		break;
 	case 3:
 		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/die3.wav", 1, ATTN_NORM);
+		break;
+	case 4:
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/death6.wav", 1, ATTN_NORM);
 		break;
 	}
 }
@@ -464,9 +476,10 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 			else if ( pev->punchangle.z > 9 )
 				pev->punchangle.z = 9;
 			break;
-		case HITGROUP_CHEST:
+		case HITGROUP_CHEST:	// Beta 4.0: the chest takes 1.25 times the damage, the stomach no longer
 			if ( m_iKevlar )
 				bShouldBleed = false;
+			flDamage *= 1.25;
 			pev->punchangle.x = flDamage * -0.1;
 			if ( pev->punchangle.x < -4 )
 				pev->punchangle.x = -4;
@@ -474,7 +487,6 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 		case HITGROUP_STOMACH:
 			if ( m_iKevlar )
 				bShouldBleed = false;
-			flDamage *= 1.25;
 			pev->punchangle.x = flDamage * -0.1;
 			if ( pev->punchangle.x < -4 )
 				pev->punchangle.x = -4;
@@ -513,8 +525,6 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 
 int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
 {
-	ALERT( at_console, "%s\n", STRING( pevAttacker->classname ) );
-
 	// have suit diagnose the problem - ie: report damage type
 	int bitsDamage = bitsDamageType;
 	int ffound = TRUE;
@@ -529,9 +539,90 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	flBonus = ARMOR_BONUS;
 	flRatio = ARMOR_RATIO;
 
+	// Beta 4.0: a blast (the C4's, an HE grenade's) is taken apart from the rest:
+	// no flinch first, armour takes half of it at no extra cost, and a fatal one
+	// throws the body (SetAnimation, Killed)
+	if ( bitsDamageType & DMG_BLAST || bitsDamageType & DMG_HEGRENADE )
+	{
+		if ( !IsAlive() )
+			return 0;
+
+		// an HE grenade spares the thrower's team unless mp_friendly_grenade_damage
+		if ( CVAR_GET_FLOAT( "mp_friendly_grenade_damage" ) == 0 && ( bitsDamageType & DMG_HEGRENADE ) )
+		{
+			CBaseEntity *pInflictor = GetClassPtr( (CBaseEntity *)pevInflictor );	// name ours
+
+			if ( !strcmp( STRING( pInflictor->pev->classname ), "grenade" ) )
+			{
+				if ( GetClassPtr( (CGrenade *)pevInflictor )->m_iTeam == m_iTeam )
+					return 0;
+			}
+		}
+
+		if ( !FNullEnt( ENT( pevInflictor ) ) )
+			m_vecBlastDir = pev->origin - pevInflictor->origin;
+
+		if ( pev->armorvalue )
+		{
+			if ( ( m_iKevlar == 1 && ( m_LastHitGroup == HITGROUP_CHEST || m_LastHitGroup == HITGROUP_STOMACH || m_LastHitGroup == HITGROUP_GENERIC || m_LastHitGroup == HITGROUP_LEFTARM || m_LastHitGroup == HITGROUP_RIGHTARM ) ) ||
+				 ( m_iKevlar == 2 && ( m_LastHitGroup == HITGROUP_CHEST || m_LastHitGroup == HITGROUP_STOMACH || m_LastHitGroup == HITGROUP_GENERIC || m_LastHitGroup == HITGROUP_LEFTARM || m_LastHitGroup == HITGROUP_RIGHTARM || m_LastHitGroup == HITGROUP_HEAD ) ) )
+			{
+				float flNew = flDamage * flRatio;
+
+				float flArmor;
+
+				flArmor = flDamage - flNew;
+
+				// Does this use more armor than we have?
+				if (flArmor > pev->armorvalue)
+				{
+					flArmor = pev->armorvalue;
+					flNew = flDamage - flArmor;
+					pev->armorvalue = 0;
+				}
+				else
+					pev->armorvalue -= flArmor;
+
+				flDamage = flNew;
+
+				if ( pev->armorvalue <= 0.0 )
+					m_iKevlar = 0;
+			}
+
+			Pain( m_LastHitGroup, true );
+		}
+		else
+			Pain( m_LastHitGroup, false );
+
+		flDamage = m_lastDamageAmount = (int)flDamage;
+
+		if ( flDamage >= pev->health )
+		{
+			if ( bitsDamageType & DMG_BLAST )
+				m_fKilledByBlast = true;
+			else if ( bitsDamageType & DMG_HEGRENADE )
+				m_fKilledByHEGrenade = true;
+		}
+		else
+		{
+			SetAnimation( PLAYER_FLINCH );
+			Pain( m_LastHitGroup, false );
+		}
+
+		flDamage = CBaseMonster::TakeDamage( pevInflictor, pevAttacker, flDamage, bitsDamageType );
+
+		// reset damage time countdown for each type of time based damage player just sustained
+		for ( int i = 0; i < CDMG_TIMEBASED; i++ )
+			if ( bitsDamageType & ( DMG_PARALYZE << i ) )
+				m_rgbTimeBasedDamage[i] = 0;
+
+		return flDamage;
+	}
+
 	CBasePlayer *pAttacker = (CBasePlayer *)CBaseEntity::Instance( pevAttacker );
 
-	if ( !g_pGameRules->FPlayerCanTakeDamage( this, pAttacker ) )
+	// Beta 4.0: a grenade's damage is taken whatever the rules say
+	if ( !g_pGameRules->FPlayerCanTakeDamage( this, pAttacker ) && strcmp( "grenade", STRING( pevInflictor->classname ) ) )
 	{
 		// Refuse the damage
 		return 0;
@@ -548,19 +639,13 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 
 	SetAnimation( PLAYER_FLINCH );
 
-	if ( ( bitsDamageType & DMG_BLAST ) && g_pGameRules->IsMultiplayer() )
-	{
-		// blasts damage armor more.
-		flBonus *= 2;
-	}
-
 	// Already dead
 	if ( !IsAlive() )
 		return 0;
 	// go take the damage first
 
 
-	// a player's hits: half damage to a team mate (and to himself), 10 dollars for hitting an enemy
+	// a player's hits: half damage to a team mate (and to himself), 20 dollars for hitting an enemy (Beta 3.1: 10)
 	if ( GetClassPtr( (CBaseEntity *)pevAttacker )->IsPlayer() )
 	{
 		pAttacker = GetClassPtr( (CBasePlayer *)pevAttacker );
@@ -569,7 +654,7 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 			flDamage *= 0.5;
 
 		if ( pAttacker != this && pAttacker->m_iTeam != m_iTeam )
-			pAttacker->AddAccount( 10 );
+			pAttacker->AddAccount( 20 );	// Beta 4.0: 20 (was 10)
 
 		// Beta 3.0: how much of the damage the armour lets through depends
 		// on the attacker's weapon, a multiple of ARMOR_RATIO
@@ -583,13 +668,23 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		// cases kept after VC5 merges equal ones, the later copy of each)
 		switch ( pAttacker->m_pActiveItem->m_iId )
 		{
-		case WEAPON_USP:	// the jump table starts at the USP: a case of its own, with nothing to change
+		case WEAPON_USP:	// Beta 4.0: times 1, which VC5 folds away; the case keeps its jump-table slot, as retail's (an empty case gets none)
+			flRatio *= 1;
+			break;
+		case WEAPON_M3:
+			flRatio *= 1;
 			break;
 		case WEAPON_M4A1:
 			flRatio *= 1.55;
 			break;
 		case WEAPON_AWP:
 			flRatio *= 1.95;
+			break;
+		case WEAPON_MP5N:	// Beta 4.0
+			flRatio *= 0.9;
+			break;
+		case WEAPON_TMP:	// Beta 4.0
+			flRatio *= 0.9;
 			break;
 		case WEAPON_G3SG1:
 			flRatio *= 1.65;
@@ -614,6 +709,12 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 			break;
 		case WEAPON_KNIFE:	// Beta 3.1
 			flRatio *= 1.7;
+			break;
+		case WEAPON_P228:	// Beta 4.0
+			flRatio *= 1.4;
+			break;
+		case WEAPON_SCOUT:	// Beta 4.0
+			flRatio *= 1.6;
 			break;
 		}
 	}
@@ -979,8 +1080,17 @@ void CBasePlayer::PackDeadPlayerItems( void )
 	case WEAPON_KNIFE:
 		SET_MODEL( ENT(pWeaponBox->pev), "models/w_knife.mdl" );
 		break;
+	case WEAPON_P228:	// Beta 4.0
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_p228.mdl" );
+		break;
+	case WEAPON_SCOUT:	// Beta 4.0
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_scout.mdl" );
+		break;
 	case WEAPON_FLASHBANG:	// Beta 3.1
 		SET_MODEL( ENT(pWeaponBox->pev), "models/w_flashbang.mdl" );
+		break;
+	case WEAPON_HEGRENADE:	// Beta 4.0
+		SET_MODEL( ENT(pWeaponBox->pev), "models/w_hegrenade.mdl" );
 		break;
 	}
 
@@ -1004,7 +1114,7 @@ void CBasePlayer::PackDeadPlayerItems( void )
 		iPW++;
 	}
 
-	pWeaponBox->pev->velocity = pev->velocity * 1.2;// weaponbox has player's velocity, then some.
+	pWeaponBox->pev->velocity = pev->velocity * 0.75;// Beta 4.0: three quarters of the player's velocity (was 1.2)
 
 	RemoveAllItems( TRUE );// now strip off everything that wasn't handled by the code above.
 }
@@ -1067,7 +1177,9 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 {
 	CSound *pSound;
 
-	g_pGameRules->PlayerKilled( this, pevAttacker, g_pevLastInflictor );
+	// Beta 4.0: a blast death (the C4) is not reported to the rules
+	if ( m_fKilledByBlast == false )
+		g_pGameRules->PlayerKilled( this, pevAttacker, g_pevLastInflictor );
 
 	if ( m_pTank != NULL )
 	{
@@ -1119,6 +1231,14 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 				pev->velocity.z = RANDOM_FLOAT( 200, 300 );
 			}
 			break;
+		case 4:		// Beta 4.0: blown away by the C4, the harder the nearer
+			pev->velocity = ( m_vecBlastDir / m_vecBlastDir.Length() ) * ( 2300 - m_vecBlastDir.Length() ) / 4;
+			pev->velocity.z = ( 2300 - m_vecBlastDir.Length() ) / 2.75;
+			break;
+		case 5:		// Beta 4.0: blown away by an HE grenade
+			pev->velocity = ( m_vecBlastDir / m_vecBlastDir.Length() ) * ( 500 - m_vecBlastDir.Length() );
+			pev->velocity.z = ( 350 - m_vecBlastDir.Length() ) * 1.5;
+			break;
 		}
 
 		m_iDeathThrow = 0;
@@ -1151,7 +1271,8 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	// UNDONE: Put this in, but add FFADE_PERMANENT and make fade time 8.8 instead of 4.12
 	// UTIL_ScreenFade( edict(), Vector(128,0,0), 6, 15, 255, FFADE_OUT | FFADE_MODULATE );
 
-	if ( ( pev->health < -40 && iGib != GIB_NEVER ) || iGib == GIB_ALWAYS )
+	// Beta 4.0: gibbed only below -9000 health (was -40)
+	if ( ( pev->health < -9000 && iGib != GIB_NEVER ) || iGib == GIB_ALWAYS )
 	{
 		GibMonster();	// This clears pev->model
 		pev->effects |= EF_NODRAW;
@@ -1171,6 +1292,28 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 
 	// a dead player starts the next round with nothing
 	m_fNotKilled = FALSE;
+
+	// Beta 4.0: the C4 (item_backpack) or the defuser (item_thighpack) falls where he died
+	if ( m_fHasC4 == true )
+	{
+		m_fHasC4 = false;
+		pev->body = 0;
+		GiveNamedItem( "item_backpack" );
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgRemoveItem, NULL, pev );
+			WRITE_BYTE( 0 );
+		MESSAGE_END();
+	}
+	else if ( m_fHasDefuser == true )
+	{
+		m_fHasDefuser = false;
+		pev->body = 0;
+		GiveNamedItem( "item_thighpack" );
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgRemoveItem, NULL, pev );
+			WRITE_BYTE( 1 );
+		MESSAGE_END();
+	}
 }
 
 
@@ -1540,6 +1683,23 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 			animDesired = LookupSequence( "die_crouch1" );
 			m_iDeathThrow = 2;
 		}
+		else if ( m_fKilledByBlast == true || m_fKilledByHEGrenade == true )
+		{
+			// Beta 4.0: a blast throws the body (Killed: 4 the C4's, 5 an HE grenade's)
+			UTIL_MakeVectors( pev->angles );
+
+			if ( DotProduct( gpGlobals->v_forward, m_vecBlastDir ) > 0 )
+				animDesired = LookupSequence( "die_leftarm2" );
+			else if ( RANDOM_LONG( 0, 1 ) )
+				animDesired = LookupSequence( "die_crouch1" );
+			else
+				animDesired = LookupSequence( "die_head3" );
+
+			if ( m_fKilledByBlast == true )
+				m_iDeathThrow = 4;
+			else if ( m_fKilledByHEGrenade == true )
+				m_iDeathThrow = 5;
+		}
 
 		// Already using the desired animation?
 		if (pev->sequence == animDesired)
@@ -1780,6 +1940,26 @@ void CBasePlayer::CheckWaterJump( )
 }
 
 //
+// PlantC4 - Beta 4.0's plant_c4: the carrier radios BOMBPL and puts the C4
+// down where he stands, wherever that is (Linux symbol PlantC4__11CBasePlayer)
+//
+void CBasePlayer::PlantC4( void )
+{
+	if ( m_fHasC4 == true )
+	{
+		Radio( "BOMBPL" );
+		m_fHasC4 = false;
+		CGrenade::ShootSatchelCharge( pev, pev->origin, Vector( 0, 0, 20 ) );
+		EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/c4_plant.wav", 1, ATTN_NORM );
+		pev->body = 0;
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgRemoveItem, NULL, pev );
+			WRITE_BYTE( 0 );
+		MESSAGE_END();
+	}
+}
+
+//
 // ThrowWeapon - drop the named weapon, if the player has it
 //
 void CBasePlayer::ThrowWeapon( char *pszItemName )
@@ -1795,7 +1975,6 @@ void CBasePlayer::ThrowWeapon( char *pszItemName )
 		{
 			if ( !strcmp( pszItemName, STRING( pItem->pev->classname ) ) )
 			{
-				ALERT( at_console, "%i \n", pItem->m_iId );
 				pev->weapons &= ~(1<<pItem->m_iId);
 				DropPlayerItem( pszItemName );
 				return;
@@ -1819,6 +1998,7 @@ void CBasePlayer::ThrowPrimary( void )
 	ThrowWeapon( "weapon_m4a1" );
 	ThrowWeapon( "weapon_m3" );
 	ThrowWeapon( "weapon_sg552" );	// sic: not the AK-47
+	ThrowWeapon( "weapon_scout" );	// Beta 4.0
 }
 
 // AddAccount - money in and out, kept between 0 and 16000 (name from the
@@ -3508,37 +3688,45 @@ void CBasePlayer::PostThink()
 		}
 	}
 
-	// every two seconds, name the player in the crosshair
-	if ( m_flLastIdCheck + 2 <= gpGlobals->time )
+	// name the player in the crosshair (Beta 4.0: looked for every 0.3 seconds
+	// along the punched view from the eyes, 2048 units, and named once until the
+	// crosshair finds someone else; Beta 2.0 to 3.1: every two seconds, 8024 units)
+	if ( gpGlobals->time >= m_flLastIdCheck + 0.3 )
 	{
 		m_flLastIdCheck = gpGlobals->time;
 
-		UTIL_MakeVectors( pev->v_angle );
+		UTIL_MakeVectors( pev->v_angle + pev->punchangle );
 
 		TraceResult tr;
-		Vector vecAiming = gpGlobals->v_forward;
-		Vector vecSrc = pev->origin;
-		Vector vecEnd = vecSrc + vecAiming * 8024;	// Beta 2.0 (was 1024)
+		Vector vecSrc = EyePosition( );
+		Vector vecEnd = vecSrc + gpGlobals->v_forward * 2048;
 
-		UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, ENT( pev ), &tr );
+		UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, edict(), &tr );
 
 		if ( tr.flFraction != 1.0 )
 		{
-			CBaseEntity *pObject = CBaseEntity::Instance( tr.pHit );
-
-			if ( pObject->IsPlayer() )
+			if ( !FNullEnt( tr.pHit ) )
 			{
-				CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pObject->pev );
-				char szText[ 120 ];
+				CBaseEntity *pObject = CBaseEntity::Instance( tr.pHit );
 
-				if ( pPlayer->m_iTeam == TEAM_CT )
-					strcpy( szText, "(Counter-Terrorist)" );
-				else
-					strcpy( szText, "(Terrorist)" );
+				if ( pObject->IsPlayer() && GetClassPtr( (CBasePlayer *)pObject->pev ) != m_pIdTarget )
+				{
+					m_pIdTarget = GetClassPtr( (CBasePlayer *)pObject->pev );
 
-				strcat( szText, STRING( pPlayer->pev->netname ) );
-				ClientPrint( pev, HUD_PRINTTALK, szText );
+					CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pObject->pev );
+					char szText[ 120 ];
+
+					if ( pPlayer->m_iTeam == TEAM_CT )
+						strcpy( szText, "(COUNTER-TERRORIST)" );
+					else
+						strcpy( szText, "(TERRORIST)" );
+
+					strcat( szText, STRING( pPlayer->pev->netname ) );
+					ClientPrint( pev, HUD_PRINTTALK, szText );
+				}
 			}
+			else
+				m_pIdTarget = NULL;
 		}
 	}
 
@@ -3878,6 +4066,14 @@ void CBasePlayer::Spawn( void )
 	m_flNextRadio		= 0;
 	m_iRadioMessages	= 60;
 
+	// Beta 4.0: no C4, no defuser shown on the model, no vote pending, no blast death
+	m_fHasC4			= false;
+	m_fHasDefuser		= false;
+	pev->body			= 0;
+	m_flNextVote		= 0;
+	m_fKilledByBlast	= false;
+	m_fKilledByHEGrenade = false;
+
 	for ( int i = 0; i < 20; i++ )
 		m_vecOldOrigins[i] = Vector( 0, 0, 0 );
 
@@ -3949,6 +4145,7 @@ void CBasePlayer::Spawn( void )
 	if ( !m_fNotKilled )
 	{
 		m_fInitHUD = TRUE;
+		m_iHEGrenades = 0;
 		m_iFlashBangs = 0;
 		m_iClientHideHUD = -1;  // force this to be recalculated
 
@@ -4001,9 +4198,14 @@ void CBasePlayer::Spawn( void )
 	g_engfuncs.pfnSetClientMaxspeed( ENT(pev), 260 );
 
 	// Beta 3.0: the AWP, the M249 and the G3/SG-1 slow their carrier down
-	// (sic: the active item is not checked for NULL)
+	// (sic: the active item is not checked for NULL); Beta 4.0: to 200 (was 220)
 	if ( m_pActiveItem->m_iId == WEAPON_AWP || m_pActiveItem->m_iId == WEAPON_M249 || m_pActiveItem->m_iId == WEAPON_G3SG1 )
-		g_engfuncs.pfnSetClientMaxspeed( ENT(pev), 220 );
+		g_engfuncs.pfnSetClientMaxspeed( ENT(pev), 200 );
+
+	// Beta 4.0: the client's round timer gets mp_roundtime's minutes
+	MESSAGE_BEGIN( MSG_ONE, gmsgRoundTime, NULL, pev );
+		WRITE_BYTE( ((CHalfLifeMultiplay *)g_pGameRules)->m_iRoundTime );
+	MESSAGE_END();
 }
 
 
@@ -4073,6 +4275,9 @@ void CBasePlayer :: Precache( void )
 	gmsgFade = REG_USER_MSG("ScreenFade", sizeof(ScreenFade));
 	gmsgAmmoX = REG_USER_MSG("AmmoX", 2);
 	gmsgSendAudio = REG_USER_MSG( "SendAudio", -1 );
+	gmsgRoundTime = REG_USER_MSG( "RoundTime", 1 );	// Beta 4.0
+	gmsgGiveItem = REG_USER_MSG( "GiveItem", 1 );
+	gmsgRemoveItem = REG_USER_MSG( "RemoveItem", 1 );
 
 	m_iUpdateTime = 5;  // won't update for 1/2 a second
 
@@ -5664,8 +5869,17 @@ void CBasePlayer::DropPlayerItem ( char *pszItemName )
 			case WEAPON_KNIFE:
 				SET_MODEL( ENT(pWeaponBox->pev), "models/w_knife.mdl" );
 				break;
+			case WEAPON_P228:	// Beta 4.0
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_p228.mdl" );
+				break;
+			case WEAPON_SCOUT:	// Beta 4.0
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_scout.mdl" );
+				break;
 			case WEAPON_FLASHBANG:	// Beta 3.1
 				SET_MODEL( ENT(pWeaponBox->pev), "models/w_flashbang.mdl" );
+				break;
+			case WEAPON_HEGRENADE:	// Beta 4.0
+				SET_MODEL( ENT(pWeaponBox->pev), "models/w_hegrenade.mdl" );
 				break;
 			}
 			

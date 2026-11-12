@@ -93,7 +93,7 @@ int CG3SG1::GetItemInfo(ItemInfo *p)
 
 BOOL CG3SG1::Deploy( )
 {
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 220 );
+	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 200 );
 	return DefaultDeploy( "models/v_g3sg1.mdl", "models/p_g3sg1.mdl", G3SG1_DRAW, "mp5" );
 }
 
@@ -103,14 +103,20 @@ void CG3SG1::SecondaryAttack( void )
 
 	// Beta 3.0: no green tint any more (Beta 2.0 and 2.1 faded the screen
 	// green going in and back coming out)
+	// Beta 4.0: slower while zoomed in
 	if (m_pPlayer->m_iFOV == 90)
 	{
+		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 160 );
 		m_pPlayer->m_iFOV = 40;
 	}
 	else if (m_pPlayer->m_iFOV == 40)
+	{
+		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 160 );
 		m_pPlayer->m_iFOV = 15;
+	}
 	else if (m_pPlayer->m_iFOV == 15)
 	{
+		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 200 );
 		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_g3sg1.mdl");
 		m_pPlayer->m_iFOV = 90;
 	}
@@ -133,10 +139,7 @@ void CG3SG1::PrimaryAttack( void )
 
 void CG3SG1::G3SG1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 {
-	// semi-automatic: one shot per press (ItemPostFrame clears m_iShotsFired)
-	m_pPlayer->m_iShotsFired++;
-	if (m_pPlayer->m_iShotsFired > 1)
-		return;
+	// Beta 4.0: no longer one shot per press
 
 	// Beta 3.1: unscoped, the spread grows
 	if (m_pPlayer->m_iFOV == 90)
@@ -188,7 +191,7 @@ void CG3SG1::G3SG1Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	m_pPlayer->m_iWeaponVolume = BIG_EXPLOSION_VOLUME;
 	m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
-	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/g3sg1-1.wav", RANDOM_FLOAT(0.92, 1.0), ATTN_NORM);
+	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/g3sg1-1.wav", RANDOM_FLOAT(0.92, 1.0), 0.4);
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;

@@ -311,6 +311,11 @@ void CHudMessage::MessageDrawScan( client_textmessage_t *pMessage, float time )
 }
 
 
+// sic: a stand-in, names ours.  Beta 4.0's message.cpp declared
+// eight symbols more ahead of CHudMessage::Draw than ours.
+extern int b40_unknown8, b40_unknown9, b40_unknown10, b40_unknown11;
+extern int b40_unknown12, b40_unknown13, b40_unknown14, b40_unknown15;
+
 int CHudMessage::Draw( float fTime )
 {
 	int i, drawn;

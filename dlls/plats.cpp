@@ -630,6 +630,7 @@ class CFuncTrain : public CBasePlatTrain
 public:
 	void Spawn( void );
 	void Precache( void );
+	void Restart( void );	// Beta 4.0 (Linux symbol)
 	void Activate( void );
 	void OverrideReset( void );
 
@@ -644,6 +645,8 @@ public:
 	virtual int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
 
+	Vector		m_vStartPosition;		// 0xc4 new in Beta 4.0: where Restart puts the train back (Spawn); name ours
+	entvars_t	*m_pevFirstTarget;		// 0xd0 new in Beta 4.0: the path corner Restart starts from again; name ours
 	entvars_t	*m_pevCurrentTarget;
 	int			m_sounds;
 	BOOL		m_activated;
@@ -669,6 +672,28 @@ void CFuncTrain :: KeyValue( KeyValueData *pkvd )
 	}
 	else
 		CBasePlatTrain::KeyValue( pkvd );
+}
+
+
+//
+// Counter-Strike Beta 4.0: a new round puts the train back where Spawn found
+// it, at its first path corner
+//
+void CFuncTrain :: Restart( void )
+{
+	if (pev->speed == 0)
+		pev->speed = 100;
+
+	if (pev->dmg == 0)
+		pev->dmg = 2;
+
+	pev->movetype = MOVETYPE_PUSH;
+	m_pevCurrentTarget = m_pevFirstTarget;
+	UTIL_SetOrigin(pev, m_vStartPosition);
+	m_activated = FALSE;
+
+	if ( m_volume == 0 )
+		m_volume = 0.85;
 }
 
 
@@ -851,6 +876,10 @@ void CFuncTrain :: Spawn( void )
 	if ( FStringNull(pev->target) )
 		ALERT(at_console, "FuncTrain with no target");
 	
+	// Beta 4.0: kept for Restart
+	m_pevFirstTarget = m_pevCurrentTarget;
+	m_vStartPosition = pev->origin;
+
 	if (pev->dmg == 0)
 		pev->dmg = 2;
 	

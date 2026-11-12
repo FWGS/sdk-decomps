@@ -141,7 +141,7 @@ void CBaseAnimating :: DispatchAnimEvents ( float flInterval )
 
 	if ( !pmodel )
 	{
-		ALERT( at_aiconsole, "Gibbed monster is thinking!\n" );
+		//ALERT( at_aiconsole, "Gibbed monster is thinking!\n" );	// Counter-Strike Beta 4.0: commented out
 		return;
 	}
 

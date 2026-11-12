@@ -91,12 +91,17 @@
 // sic: a stand-in, name ours.
 // Beta 2.0's client was compiled from headers that declared three more symbols
 // ahead of class CHud than the code in the image accounts for, and it was linked
-// with one more function than the image holds, which nothing called.
+// with one more function than the image holds, which nothing called (Beta 3.0 too;
+// Beta 4.0 links no such function, its definition is gone).
 int b20_unknown( int a, float b );
 
 // sic: a stand-in, name ours.  Beta 3.0's headers declared one
 // symbol more ahead of class CHud than Beta 2.0's and the code in the image account for.
 extern int b30_unknown;
+
+// sic: a stand-in, names ours.  Beta 4.0's headers declared four
+// symbols more ahead of class CHud than Beta 3.0's and the code in the image account for.
+extern int b40_unknown1, b40_unknown2, b40_unknown3, b40_unknown4;
 
 typedef struct
 {
@@ -117,11 +122,19 @@ public:
 	virtual void Reset( void );
 	int MsgFunc_Health(const char *pszName,  int iSize, void *pbuf);
 	int MsgFunc_Damage(const char *pszName,  int iSize, void *pbuf);
+	int MsgFunc_RoundTime(const char *pszName,  int iSize, void *pbuf);
+	int MsgFunc_GiveItem(const char *pszName,  int iSize, void *pbuf);
+	int MsgFunc_RemoveItem(const char *pszName,  int iSize, void *pbuf);
 	int m_iHealth;
 	int m_HUD_dmg_bio;
 	int m_HUD_cross;
+	int m_HUD_c4;			// name ours
+	int m_HUD_defuser;		// name ours
+	int m_iRoundTime;		// name ours
 	float m_flRoundStart;	// name ours
 	float m_flDrawTime;		// name ours
+	bool m_bHasC4;			// name ours
+	bool m_bHasDefuser;		// name ours
 
 private:
 	HSPRITE m_hSprite;

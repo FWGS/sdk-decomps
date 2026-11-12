@@ -26,6 +26,10 @@
 #include "nodes.h"
 #include "soundent.h"
 #include "decals.h"
+#include "player.h"
+#include "gamerules.h"
+
+extern void Broadcast( const char *sentence );	// multiplay_gamerules.cpp (Beta 3.0)
 
 
 //===================debris
@@ -305,6 +309,305 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 }
 
 
+//
+// Counter-Strike Beta 4.0: the C4 goes off (Detonate2). Near an info_bomb_target
+// (256 units) the target counts as bombed; the round is checked at once.
+// Four sprites (one at the spot, three up to 512 units around it), the shake,
+// 5 times pev->dmg as radius damage, then Smoke2 0.85 seconds later.
+//
+void CGrenade::Explode2( TraceResult *pTrace, int bitsDamageType )
+{
+	float		flRndSound;// sound randomizer
+
+	pev->model = iStringNull;//invisible
+	pev->solid = SOLID_NOT;// intangible
+
+	pev->takedamage = DAMAGE_NO;
+
+	UTIL_ScreenShake( pTrace->vecEndPos, 25.0, 150.0, 1.0, 3000 );
+
+	CBaseEntity *pTarget = UTIL_FindEntityByClassname( NULL, "info_bomb_target" );	// name ours
+	while ( pTarget )
+	{
+		if ( (pTarget->pev->origin - pev->origin).Length() < 256 )
+		{
+			((CHalfLifeMultiplay *)g_pGameRules)->m_fTargetBombed = TRUE;
+			break;
+		}
+		pTarget = UTIL_FindEntityByClassname( pTarget, "info_bomb_target" );
+	}
+
+	m_fC4Done = TRUE;
+	((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
+
+	// Pull out of the wall a bit
+	if ( pTrace->flFraction != 1.0 )
+	{
+		pev->origin = pTrace->vecEndPos + (pTrace->vecPlaneNormal * (pev->dmg - 24) * 0.6);
+	}
+
+	int iContents = UTIL_PointContents ( pev->origin );
+
+	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_SPRITE );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z - 10 );
+		WRITE_SHORT( g_sModelIndexFireball3 );
+		WRITE_BYTE( (pev->dmg - 275) * 0.6 );	// scale
+		WRITE_BYTE( 150 );	// brightness
+	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_SPRITE );
+		WRITE_COORD( pev->origin.x + RANDOM_FLOAT( -512, 512 ) );
+		WRITE_COORD( pev->origin.y + RANDOM_FLOAT( -512, 512 ) );
+		WRITE_COORD( pev->origin.z + RANDOM_FLOAT( -10, 10 ) );
+		WRITE_SHORT( g_sModelIndexFireball2 );
+		WRITE_BYTE( (pev->dmg - 275) * 0.6 );
+		WRITE_BYTE( 150 );
+	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_SPRITE );
+		WRITE_COORD( pev->origin.x + RANDOM_FLOAT( -512, 512 ) );
+		WRITE_COORD( pev->origin.y + RANDOM_FLOAT( -512, 512 ) );
+		WRITE_COORD( pev->origin.z + RANDOM_FLOAT( -10, 10 ) );
+		WRITE_SHORT( g_sModelIndexFireball3 );
+		WRITE_BYTE( (pev->dmg - 275) * 0.6 );
+		WRITE_BYTE( 150 );
+	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_SPRITE );
+		WRITE_COORD( pev->origin.x + RANDOM_FLOAT( -512, 512 ) );
+		WRITE_COORD( pev->origin.y + RANDOM_FLOAT( -512, 512 ) );
+		WRITE_COORD( pev->origin.z + RANDOM_FLOAT( -10, 10 ) );
+		WRITE_SHORT( g_sModelIndexFireball );
+		WRITE_BYTE( (pev->dmg - 275) * 0.6 );
+		WRITE_BYTE( 17 );
+	MESSAGE_END();
+
+	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/c4_explode1.wav", 1.0, 0.25);
+
+	CSoundEnt::InsertSound ( bits_SOUND_COMBAT, pev->origin, NORMAL_EXPLOSION_VOLUME, 3.0 );
+	entvars_t *pevOwner;
+	if ( pev->owner )
+		pevOwner = VARS( pev->owner );
+	else
+		pevOwner = NULL;
+
+	pev->owner = NULL; // can't traceline attack owner if this is set
+
+	RadiusDamage ( pev, pevOwner, pev->dmg * 5, CLASS_NONE, bitsDamageType );
+
+	if ( RANDOM_FLOAT( 0 , 1 ) < 0.5 )
+	{
+		UTIL_DecalTrace( pTrace, DECAL_SCORCH1 );
+	}
+	else
+	{
+		UTIL_DecalTrace( pTrace, DECAL_SCORCH2 );
+	}
+
+	flRndSound = RANDOM_FLOAT( 0 , 1 );
+
+	switch ( RANDOM_LONG( 0, 2 ) )
+	{
+		case 0:	EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/debris1.wav", 0.55, ATTN_NORM);	break;
+		case 1:	EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/debris2.wav", 0.55, ATTN_NORM);	break;
+		case 2:	EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/debris3.wav", 0.55, ATTN_NORM);	break;
+	}
+
+	pev->effects |= EF_NODRAW;
+	SetThink( Smoke2 );
+	pev->velocity = g_vecZero;
+	pev->nextthink = gpGlobals->time + 0.85;
+
+	if (iContents != CONTENTS_WATER)
+	{
+		int sparkCount = RANDOM_LONG(0,3);
+		for ( int i = 0; i < sparkCount; i++ )
+			Create( "spark_shower", pev->origin, pTrace->vecPlaneNormal, NULL );
+	}
+}
+
+
+//
+// Counter-Strike Beta 4.0: the HE grenade goes off (Detonate3): two
+// explosions, the radius damage of pev->dmg, then Smoke3_C 0.55 seconds later
+//
+void CGrenade::Explode3( TraceResult *pTrace, int bitsDamageType )
+{
+	float		flRndSound;// sound randomizer
+
+	pev->model = iStringNull;//invisible
+	pev->solid = SOLID_NOT;// intangible
+
+	pev->takedamage = DAMAGE_NO;
+
+	// Pull out of the wall a bit
+	if ( pTrace->flFraction != 1.0 )
+	{
+		pev->origin = pTrace->vecEndPos + (pTrace->vecPlaneNormal * (pev->dmg - 24) * 0.6);
+	}
+
+	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_EXPLOSION );		// This makes a dynamic light and the explosion sprites/sound
+		WRITE_COORD( pev->origin.x );	// Send to PAS because of the sound
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z + 20 );
+		WRITE_SHORT( g_sModelIndexFireball3 );
+		WRITE_BYTE( 25 ); // scale * 10
+		WRITE_BYTE( 30  ); // framerate
+		WRITE_BYTE( TE_EXPLFLAG_NONE );
+	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_EXPLOSION );
+		WRITE_COORD( pev->origin.x + RANDOM_FLOAT( -64, 64 ) );
+		WRITE_COORD( pev->origin.y + RANDOM_FLOAT( -64, 64 ) );
+		WRITE_COORD( pev->origin.z + RANDOM_FLOAT( 30, 35 ) );
+		WRITE_SHORT( g_sModelIndexFireball2 );
+		WRITE_BYTE( 30 ); // scale * 10
+		WRITE_BYTE( 30  ); // framerate
+		WRITE_BYTE( TE_EXPLFLAG_NONE );
+	MESSAGE_END();
+
+	CSoundEnt::InsertSound ( bits_SOUND_COMBAT, pev->origin, NORMAL_EXPLOSION_VOLUME, 3.0 );
+	entvars_t *pevOwner;
+	if ( pev->owner )
+		pevOwner = VARS( pev->owner );
+	else
+		pevOwner = NULL;
+
+	pev->owner = NULL; // can't traceline attack owner if this is set
+
+	RadiusDamage ( pev, pevOwner, pev->dmg, CLASS_NONE, bitsDamageType );
+
+	if ( RANDOM_FLOAT( 0 , 1 ) < 0.5 )
+	{
+		UTIL_DecalTrace( pTrace, DECAL_SCORCH1 );
+	}
+	else
+	{
+		UTIL_DecalTrace( pTrace, DECAL_SCORCH2 );
+	}
+
+	flRndSound = RANDOM_FLOAT( 0 , 1 );
+
+	switch ( RANDOM_LONG( 0, 2 ) )
+	{
+		case 0:	EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/debris1.wav", 0.55, ATTN_NORM);	break;
+		case 1:	EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/debris2.wav", 0.55, ATTN_NORM);	break;
+		case 2:	EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/debris3.wav", 0.55, ATTN_NORM);	break;
+	}
+
+	pev->effects |= EF_NODRAW;
+	SetThink( Smoke3_C );
+	pev->velocity = g_vecZero;
+	pev->nextthink = gpGlobals->time + 0.55;
+
+	int sparkCount = RANDOM_LONG(0,3);
+	for ( int i = 0; i < sparkCount; i++ )
+		Create( "spark_shower", pev->origin, pTrace->vecPlaneNormal, NULL );
+}
+
+
+// Counter-Strike Beta 4.0: the HE grenade's smoke (Explode3 thinks it)
+void CGrenade::Smoke3_C( void )
+{
+	if (UTIL_PointContents ( pev->origin ) == CONTENTS_WATER)
+	{
+		UTIL_Bubbles( pev->origin - Vector( 64, 64, 64 ), pev->origin + Vector( 64, 64, 64 ), 100 );
+	}
+	else
+	{
+		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+			WRITE_BYTE( TE_SMOKE );
+			WRITE_COORD( pev->origin.x );
+			WRITE_COORD( pev->origin.y );
+			WRITE_COORD( pev->origin.z - 5 );
+			WRITE_SHORT( g_sModelIndexSmoke );
+			WRITE_BYTE( RANDOM_FLOAT( 0, 10 ) + 35 ); // scale * 10
+			WRITE_BYTE( 5  ); // framerate
+		MESSAGE_END();
+	}
+	UTIL_Remove( this );
+}
+
+
+// Counter-Strike Beta 4.0: a puff up to 128 units off, then Smoke3_A (nothing thinks it)
+void CGrenade::Smoke3_B( void )
+{
+	if (UTIL_PointContents ( pev->origin ) == CONTENTS_WATER)
+	{
+		UTIL_Bubbles( pev->origin - Vector( 64, 64, 64 ), pev->origin + Vector( 64, 64, 64 ), 100 );
+	}
+	else
+	{
+		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+			WRITE_BYTE( TE_SMOKE );
+			WRITE_COORD( pev->origin.x + RANDOM_FLOAT( -128, 128 ) );
+			WRITE_COORD( pev->origin.y + RANDOM_FLOAT( -128, 128 ) );
+			WRITE_COORD( pev->origin.z + RANDOM_FLOAT( -10, 10 ) );
+			WRITE_SHORT( g_sModelIndexSmoke );
+			WRITE_BYTE( RANDOM_FLOAT( 0, 10 ) + 15 ); // scale * 10
+			WRITE_BYTE( 10  ); // framerate
+		MESSAGE_END();
+	}
+
+	pev->nextthink = gpGlobals->time + 0.15;
+	SetThink( Smoke3_A );
+}
+
+
+// Counter-Strike Beta 4.0: a puff up to 128 units off (Smoke3_B thinks it)
+void CGrenade::Smoke3_A( void )
+{
+	if (UTIL_PointContents ( pev->origin ) == CONTENTS_WATER)
+	{
+		UTIL_Bubbles( pev->origin - Vector( 64, 64, 64 ), pev->origin + Vector( 64, 64, 64 ), 100 );
+	}
+	else
+	{
+		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+			WRITE_BYTE( TE_SMOKE );
+			WRITE_COORD( pev->origin.x + RANDOM_FLOAT( -128, 128 ) );
+			WRITE_COORD( pev->origin.y + RANDOM_FLOAT( -128, 128 ) );
+			WRITE_COORD( pev->origin.z + RANDOM_FLOAT( -10, 10 ) );
+			WRITE_SHORT( g_sModelIndexSmoke );
+			WRITE_BYTE( RANDOM_FLOAT( 0, 10 ) + 15 ); // scale * 10
+			WRITE_BYTE( 12  ); // framerate
+		MESSAGE_END();
+	}
+	UTIL_Remove( this );
+}
+
+
+// Counter-Strike Beta 4.0: the C4's smoke (Explode2 thinks it)
+void CGrenade::Smoke2( void )
+{
+	if (UTIL_PointContents ( pev->origin ) == CONTENTS_WATER)
+	{
+		UTIL_Bubbles( pev->origin - Vector( 64, 64, 64 ), pev->origin + Vector( 64, 64, 64 ), 100 );
+	}
+	else
+	{
+		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+			WRITE_BYTE( TE_SMOKE );
+			WRITE_COORD( pev->origin.x );
+			WRITE_COORD( pev->origin.y );
+			WRITE_COORD( pev->origin.z );
+			WRITE_SHORT( g_sModelIndexSmoke );
+			WRITE_BYTE( 150 ); // scale * 10
+			WRITE_BYTE( 8  ); // framerate
+		MESSAGE_END();
+	}
+	UTIL_Remove( this );
+}
+
+
 void CGrenade::Smoke( void )
 {
 	if (UTIL_PointContents ( pev->origin ) == CONTENTS_WATER)
@@ -357,6 +660,32 @@ void CGrenade::Detonate( void )
 	UTIL_TraceLine ( vecSpot, vecSpot + Vector ( 0, 0, -40 ),  ignore_monsters, ENT(pev), & tr);
 
 	Explode( &tr, DMG_BLAST );
+}
+
+
+// Counter-Strike Beta 4.0: the C4 (C4Think)
+void CGrenade::Detonate2( void )
+{
+	TraceResult tr;
+	Vector		vecSpot;// trace starts here!
+
+	vecSpot = pev->origin + Vector ( 0 , 0 , 8 );
+	UTIL_TraceLine ( vecSpot, vecSpot + Vector ( 0, 0, -40 ),  ignore_monsters, ENT(pev), & tr);
+
+	Explode2( &tr, DMG_BLAST );
+}
+
+
+// Counter-Strike Beta 4.0: the HE grenade (TumbleThink)
+void CGrenade::Detonate3( void )
+{
+	TraceResult tr;
+	Vector		vecSpot;// trace starts here!
+
+	vecSpot = pev->origin + Vector ( 0 , 0 , 8 );
+	UTIL_TraceLine ( vecSpot, vecSpot + Vector ( 0, 0, -40 ),  ignore_monsters, ENT(pev), & tr);
+
+	Explode3( &tr, DMG_HEGRENADE );
 }
 
 
@@ -424,7 +753,7 @@ void CGrenade::BounceTouch( CBaseEntity *pOther )
 	// or thrown very far tend to slow down too quickly for me to always catch just by testing velocity. 
 	// trimming the Z velocity a bit seems to help quite a bit.
 	vecTestVelocity = pev->velocity; 
-	vecTestVelocity.z *= 0.45;
+	vecTestVelocity.z *= 0.7;	// Beta 4.0 (was 0.45)
 
 	if ( !m_fRegisteredSound && vecTestVelocity.Length() <= 60 )
 	{
@@ -486,6 +815,13 @@ void CGrenade::SlideTouch( CBaseEntity *pOther )
 
 void CGrenade :: BounceSound( void )
 {
+	// Beta 4.0: a grenade of more than 50 damage (the HE grenade) has its own sound
+	if ( pev->dmg > 50 )
+	{
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/he_bounce-1.wav", 0.25, ATTN_NORM);
+		return;
+	}
+
 	switch ( RANDOM_LONG( 0, 2 ) )
 	{
 	case 0:	EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/grenade_hit1.wav", 0.25, ATTN_NORM);	break;
@@ -512,7 +848,11 @@ void CGrenade :: TumbleThink( void )
 
 	if (pev->dmgtime <= gpGlobals->time)
 	{
-		SetThink( Detonate );
+		// Beta 4.0: more than 40 damage (the HE grenade) explodes as one
+		if ( pev->dmg > 40 )
+			SetThink( Detonate3 );
+		else
+			SetThink( Detonate );
 	}
 	if (pev->waterlevel != 0)
 	{
@@ -559,6 +899,41 @@ CGrenade *CGrenade::ShootContact( entvars_t *pevOwner, Vector vecStart, Vector v
 	pGrenade->SetTouch( ExplodeTouch );
 
 	pGrenade->pev->dmg = gSkillData.plrDmgM203Grenade;
+	pGrenade->m_fC4Done = TRUE;	// Beta 4.0: no bomb
+
+	return pGrenade;
+}
+
+
+//
+// Counter-Strike Beta 4.0: the HE grenade, ShootTimed's text: 75 damage, the
+// thrower's team (an HE grenade does not hurt his team mates)
+//
+CGrenade * CGrenade:: ShootTimed2( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time, int iTeam )
+{
+	CGrenade *pGrenade = GetClassPtr( (CGrenade *)NULL );
+	pGrenade->Spawn();
+	UTIL_SetOrigin( pGrenade->pev, vecStart );
+	pGrenade->pev->velocity = vecVelocity * 1;
+	pGrenade->pev->angles = pevOwner->angles;
+	pGrenade->pev->owner = ENT(pevOwner);
+	
+	pGrenade->SetTouch( BounceTouch );	// Bounce if touched
+	
+	pGrenade->pev->dmgtime = gpGlobals->time + time;
+	pGrenade->SetThink( TumbleThink );
+	pGrenade->pev->nextthink = gpGlobals->time + 0.1;
+		
+	pGrenade->pev->sequence = RANDOM_LONG( 3, 6 );
+	pGrenade->pev->framerate = 1.0;
+	pGrenade->m_fC4Done = TRUE;
+
+	pGrenade->pev->gravity = 0.55;
+	pGrenade->pev->friction = 0.7;
+	pGrenade->m_iTeam = iTeam;
+
+	SET_MODEL(ENT(pGrenade->pev), "models/w_hegrenade.mdl");
+	pGrenade->pev->dmg = 75;
 
 	return pGrenade;
 }
@@ -590,6 +965,7 @@ CGrenade * CGrenade:: ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector v
 		
 	pGrenade->pev->sequence = RANDOM_LONG( 3, 6 );
 	pGrenade->pev->framerate = 1.0;
+	pGrenade->m_fC4Done = TRUE;	// Beta 4.0: no bomb
 
 	// Tumble through the air
 	// pGrenade->pev->avelocity.x = -400;
@@ -604,6 +980,12 @@ CGrenade * CGrenade:: ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector v
 }
 
 
+//
+// Counter-Strike Beta 4.0: the planted C4 (CBasePlayer::PlantC4). It goes off
+// mp_c4timer seconds later and beeps from the start every eighth of that
+// time, faster by 1 % every tenth of a second (never more often than ten
+// times a second); 100 damage, Explode2 makes it 500.
+//
 CGrenade * CGrenade :: ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity )
 {
 	CGrenade *pGrenade = GetClassPtr( (CGrenade *)NULL );
@@ -612,25 +994,118 @@ CGrenade * CGrenade :: ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart,
 	
 	pGrenade->pev->solid = SOLID_BBOX;
 
-	SET_MODEL(ENT(pGrenade->pev), "models/grenade.mdl");	// Change this to satchel charge model
+	SET_MODEL(ENT(pGrenade->pev), "models/w_c4.mdl");
 
-	UTIL_SetSize(pGrenade->pev, Vector( 0, 0, 0), Vector(0, 0, 0));
+	UTIL_SetSize(pGrenade->pev, Vector( 0, 0, 0), Vector(8, 8, 8));
 
-	pGrenade->pev->dmg = 200;
+	pGrenade->pev->dmg = 100;
 	UTIL_SetOrigin( pGrenade->pev, vecStart );
 	pGrenade->pev->velocity = vecVelocity;
 	pGrenade->pev->angles = g_vecZero;
 	pGrenade->pev->owner = ENT(pevOwner);
 	
 	// Detonate in "time" seconds
-	pGrenade->SetThink( SUB_DoNothing );
-	pGrenade->SetUse( DetonateUse );
-	pGrenade->SetTouch( SlideTouch );
+	pGrenade->SetThink( C4Think );
+	pGrenade->SetTouch( C4Touch );
 	pGrenade->pev->spawnflags = SF_DETONATE;
 
+	pGrenade->pev->nextthink = gpGlobals->time + 0.1;
+	pGrenade->m_flC4Blow = gpGlobals->time + ((CHalfLifeMultiplay *)g_pGameRules)->m_iC4Timer;
+	pGrenade->m_flBeepInterval = ((CHalfLifeMultiplay *)g_pGameRules)->m_iC4Timer / 8;
+	pGrenade->m_flNextBeep = gpGlobals->time + pGrenade->m_flBeepInterval;
+	pGrenade->m_fStartDefuse = false;
+
 	pGrenade->pev->friction = 0.9;
+	pGrenade->m_fC4Done = false;
 
 	return pGrenade;
+}
+
+
+//
+// Counter-Strike Beta 4.0: the planted C4 beeps, louder (smaller attenuation)
+// as the beeps come faster; at its time it explodes (Detonate2), in water it
+// is just removed. A defuse that has run 5 seconds succeeds if the defuser
+// is still within 64 units, alive and ducking: BOMBDEF to everyone, the
+// round is checked.
+//
+void CGrenade::C4Think( void )
+{
+	if (!IsInWorld())
+	{
+		UTIL_Remove( this );
+		return;
+	}
+
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	m_flBeepInterval *= 0.99;
+	if ( m_flBeepInterval < 0.1 )
+		m_flBeepInterval = 0.1;
+
+	float flAttenuation = m_flBeepInterval;	// name ours
+	if ( flAttenuation > 2 )
+		flAttenuation = 2;
+
+	if ( gpGlobals->time >= m_flNextBeep )
+	{
+		m_flNextBeep = gpGlobals->time + m_flBeepInterval;
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/c4_beep.wav", 1.0, flAttenuation);
+	}
+
+	if ( m_flC4Blow <= gpGlobals->time )
+	{
+		if ( pev->waterlevel == 0 )
+			SetThink( Detonate2 );
+		else
+			UTIL_Remove( this );
+	}
+
+	if ( m_fStartDefuse == TRUE && m_flDefuseDone <= gpGlobals->time )
+	{
+		if ( m_pDefuser )
+		{
+			Vector vecDist = pev->origin - m_pDefuser->pev->origin;	// name ours
+
+			if ( vecDist.Length() < 64 && m_pDefuser->pev->deadflag == DEAD_NO && FBitSet( m_pDefuser->pev->flags, FL_DUCKING ) )
+			{
+				Broadcast( "BOMBDEF" );
+				EMIT_SOUND(ENT(m_pDefuser->pev), CHAN_WEAPON, "weapons/c4_disarmed.wav", 1.0, ATTN_NORM);
+				UTIL_Remove( this );
+				m_fC4Done = TRUE;
+				((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
+			}
+		}
+
+		m_pDefuser = NULL;
+		m_fStartDefuse = false;
+	}
+}
+
+
+//
+// Counter-Strike Beta 4.0: a ducking counter-terrorist with a defuser who
+// touches the planted C4 starts defusing it (5 seconds)
+//
+void CGrenade::C4Touch( CBaseEntity *pOther )
+{
+	if ( pOther->edict() == pev->owner )
+		return;
+
+	if ( pOther && FBitSet( pOther->pev->flags, FL_DUCKING ) && pOther->IsPlayer() == TRUE )
+	{
+		CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pOther->pev );	// name ours
+
+		if ( pPlayer->m_iTeam != TEAM_TERRORIST && pPlayer->m_iTeam == TEAM_CT &&
+			pPlayer->m_fHasDefuser == TRUE && !m_fStartDefuse )
+		{
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Defusing bomb...<5 seconds>" );
+			EMIT_SOUND(ENT(pPlayer->pev), CHAN_ITEM, "weapons/c4_disarm.wav", 1.0, ATTN_NORM);
+			m_pDefuser = pOther;
+			m_fStartDefuse = TRUE;
+			m_flDefuseDone = gpGlobals->time + 5.0;
+		}
+	}
 }
 
 

@@ -354,6 +354,12 @@ public:
 	virtual void RestartRound( void );
 	virtual void CheckWinConditions( void );
 	virtual void PickNewCommander( int iTeam );
+	// Beta 4.0 (Linux symbols): weapon boxes cleared at a new round, the bomb defusers
+	// and the C4, the round's starting weapons
+	virtual void RemoveGuns( void );
+	virtual void GiveDefusers( void );
+	virtual void GiveC4( void );
+	virtual void GiveWeapons( void );
 
 	// member names ours; the offsets are retail's
 	float m_flRestartRoundTime;		// 0x04 Think calls RestartRound at this time; 0 = no restart pending
@@ -371,8 +377,14 @@ public:
 	int m_iKickVotes[20];			// 0x34 kick votes against players 1 to 20 (ClientCommand's vote, at m_iKickVotes[n - 1]); RestartRound clears them
 	short m_iNumCTWins;				// 0x84 rounds won (TeamScore)
 	short m_iNumTerroristWins;		// 0x86
-	CBasePlayer *m_pCTCommander;	// 0x88 new in Beta 3.0: the counter-terrorists' commander (PickNewCommander)
-	CBasePlayer *m_pTerroristCommander;	// 0x8c the terrorists'
+	int m_iUnused88;				// 0x88 new in Beta 4.0: only RestartRound refers to it (sets 2)
+	bool m_fTargetBombed;			// 0x8c new in Beta 4.0: the C4 went off near an info_bomb_target this round (Explode2)
+	bool m_fMapHasBombTarget;		// 0x8d an info_bomb_target exists (RestartRound looks)
+	int m_iRoundTime;				// 0x90 mp_roundtime, in minutes, 3 to 9
+	int m_iC4Timer;					// 0x94 mp_c4timer, in seconds, 10 to 90
+	int m_iC4Turn;					// 0x98 GiveC4's count through the terrorists; GiveDefusers takes its parity
+	CBasePlayer *m_pCTCommander;	// 0x9c new in Beta 3.0: the counter-terrorists' commander (PickNewCommander)
+	CBasePlayer *m_pTerroristCommander;	// 0xa0 the terrorists'
 
 protected:
 	virtual void ChangeLevel( void );

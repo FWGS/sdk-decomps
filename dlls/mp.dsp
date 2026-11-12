@@ -203,19 +203,7 @@ SOURCE=.\combat.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\crossbow.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\crowbar.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\deagle.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\debris.cpp
 # End Source File
 # Begin Source File
 
@@ -224,10 +212,6 @@ SOURCE=.\doors.cpp
 # Begin Source File
 
 SOURCE=.\effects.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\egon.cpp
 # End Source File
 # Begin Source File
 
@@ -259,19 +243,11 @@ SOURCE=.\gamerules.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\gauss.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\ggrenade.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\globals.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\glock.cpp
 # End Source File
 # Begin Source File
 
@@ -295,19 +271,15 @@ SOURCE=.\h_export.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\handgrenade.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\healthkit.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\hornet.cpp
+SOURCE=.\hegrenade.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\hornetgun.cpp
+SOURCE=.\hornet.cpp
 # End Source File
 # Begin Source File
 
@@ -347,10 +319,6 @@ SOURCE=.\mortar.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\mp5.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\mp5navy.cpp
 # End Source File
 # Begin Source File
@@ -360,6 +328,10 @@ SOURCE=.\mpstubb.cpp
 # Begin Source File
 
 SOURCE=.\multiplay_gamerules.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\p228.cpp
 # End Source File
 # Begin Source File
 
@@ -383,15 +355,11 @@ SOURCE=.\player.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\python.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\rpg.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\satchel.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\scout.cpp
 # End Source File
 # Begin Source File
 
@@ -399,7 +367,7 @@ SOURCE=.\sg552.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\shotgun.cpp
+SOURCE=.\shield.cpp
 # End Source File
 # Begin Source File
 
@@ -423,10 +391,6 @@ SOURCE=.\spectator.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\squeakgrenade.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\subs.cpp
 # End Source File
 # Begin Source File
@@ -440,10 +404,6 @@ SOURCE=.\tmp.cpp
 # Begin Source File
 
 SOURCE=.\triggers.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\tripmine.cpp
 # End Source File
 # Begin Source File
 

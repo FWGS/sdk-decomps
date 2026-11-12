@@ -37,7 +37,7 @@ class CFlashbang : public CBasePlayerWeapon
 public:
 	void Spawn( void );
 	void Precache( void );
-	int iItemSlot( void ) { return 2; }
+	int iItemSlot( void ) { return 1; }
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
@@ -85,8 +85,8 @@ int CFlashbang::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
-	p->iSlot = 1;
-	p->iPosition = 3;
+	p->iSlot = 0;
+	p->iPosition = 2;
 	p->iId = m_iId = WEAPON_FLASHBANG;
 	p->iWeight = FLASHBANG_WEIGHT;
 	p->iFlags = ITEM_FLAG_LIMITINWORLD | ITEM_FLAG_EXHAUSTIBLE;
@@ -146,6 +146,8 @@ void CFlashbang::WeaponIdle( void )
 
 	if (m_flStartThrow)
 	{
+		m_pPlayer->Radio( "FIREINHOLE" );	// Beta 4.0: back ("automatic flashbang .wav added back")
+
 		Vector angThrow = m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle;
 
 		if (angThrow.x < 0)
@@ -223,7 +225,7 @@ void CFlashbang::WeaponIdle( void )
 		}
 		else
 		{
-			// sic: the SDK's fidget animation is gone and iAnim is left unset here
+			iAnim = FLASHBANG_IDLE;	// Beta 4.0 (Beta 3.x left it unset here)
 			m_flTimeWeaponIdle = gpGlobals->time + 75.0 / 30.0;
 		}
 

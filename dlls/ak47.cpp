@@ -102,54 +102,12 @@ BOOL CAK47::Deploy( )
 
 void CAK47::SecondaryAttack( void )
 {
-	float flSpread;
-
-	if (m_pPlayer->pev->velocity.Length2D() > 0)
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.15;
-		AK47Fire( flSpread, 0.0955, FALSE );
-	}
-	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.19;
-		AK47Fire( flSpread, 0.0955, FALSE );
-	}
-	else if (m_pPlayer->pev->flags & FL_DUCKING)
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.0275;
-		AK47Fire( flSpread, 0.0955, FALSE );
-	}
-	else
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.045;
-		AK47Fire( flSpread, 0.0955, FALSE );
-	}
+	AK47Fire( m_pPlayer->m_flAccuracy * 0.0275, 0.0955, FALSE );
 }
 
 void CAK47::PrimaryAttack( void )
 {
-	float flSpread;
-
-	if (m_pPlayer->pev->velocity.Length2D() > 0)
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.15;
-		AK47Fire( flSpread, 0.0955, FALSE );
-	}
-	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.19;
-		AK47Fire( flSpread, 0.0955, FALSE );
-	}
-	else if (m_pPlayer->pev->flags & FL_DUCKING)
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.0275;
-		AK47Fire( flSpread, 0.0955, FALSE );
-	}
-	else
-	{
-		flSpread = m_pPlayer->m_flAccuracy * 0.045;
-		AK47Fire( flSpread, 0.0955, FALSE );
-	}
+	AK47Fire( m_pPlayer->m_flAccuracy * 0.0275, 0.0955, FALSE );
 }
 
 void CAK47::AK47Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
@@ -158,10 +116,10 @@ void CAK47::AK47Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	// the spread grows with the cube of the shots fired
 	m_pPlayer->m_iShotsFired++;
-	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 125) + 0.55;
+	m_pPlayer->m_flAccuracy = (m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired * m_pPlayer->m_iShotsFired / 200) + 0.35;
 
-	if (m_pPlayer->m_flAccuracy > 2)
-		m_pPlayer->m_flAccuracy = 2;
+	if (m_pPlayer->m_flAccuracy > 0.65)
+		m_pPlayer->m_flAccuracy = 0.65;
 
 	if (m_iClip <= 0)
 	{
@@ -209,9 +167,9 @@ void CAK47::AK47Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 	m_pPlayer->m_iWeaponFlash = BRIGHT_GUN_FLASH;
 
 	if (RANDOM_LONG(0,1))
-		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/ak47-1.wav", 1, ATTN_NORM);
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/ak47-1.wav", 1, 0.4);
 	else
-		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/ak47-2.wav", 1, ATTN_NORM);
+		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/ak47-2.wav", 1, 0.4);
 
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming;
@@ -234,8 +192,15 @@ void CAK47::AK47Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 
 	m_flTimeWeaponIdle = gpGlobals->time + RANDOM_FLOAT ( 10, 15 );
 
-	m_pPlayer->pev->punchangle.y += RANDOM_FLOAT( -1, 1 );
-	m_pPlayer->pev->punchangle.x += RANDOM_FLOAT( 0.5, 1.5 );
+	// Beta 4.0: the recoil by how the player stands
+	if (m_pPlayer->pev->velocity.Length2D() > 0)
+		KickBack( 1.5, 0.45, 0.25, 0.185, 9, 6, 4 );
+	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
+		KickBack( 1.75, 0.5, 0.25, 0.185, 9.5, 6.5, 3 );
+	else if ( FBitSet(m_pPlayer->pev->flags, FL_DUCKING) )
+		KickBack( 1, 0.35, 0.125, 0.025, 5.5, 1.5, 7 );
+	else
+		KickBack( 1.15, 0.375, 0.15, 0.0375, 5.75, 1.75, 6 );
 }
 
 

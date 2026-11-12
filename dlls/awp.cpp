@@ -91,7 +91,7 @@ int CAWP::GetItemInfo(ItemInfo *p)
 
 BOOL CAWP::Deploy( )
 {
-	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 220 );
+	g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 200 );
 	return DefaultDeploy( "models/v_awp.mdl", "models/p_awp.mdl", AWP_DRAW, "bow" );
 }
 
@@ -99,12 +99,20 @@ void CAWP::SecondaryAttack( void )
 {
 	m_pPlayer->pev->viewmodel = 0;
 
+	// Beta 4.0: slower while zoomed in
 	if (m_pPlayer->m_iFOV == 90)
+	{
+		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 160 );
 		m_pPlayer->m_iFOV = 45;
+	}
 	else if (m_pPlayer->m_iFOV == 45)
+	{
 		m_pPlayer->m_iFOV = 10;
+		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 160 );
+	}
 	else if (m_pPlayer->m_iFOV == 10)
 	{
+		g_engfuncs.pfnSetClientMaxspeed( ENT(m_pPlayer->pev), 200 );
 		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_awp.mdl");
 		m_pPlayer->m_iFOV = 90;
 	}
@@ -116,13 +124,13 @@ void CAWP::SecondaryAttack( void )
 void CAWP::PrimaryAttack( void )
 {
 	if (m_pPlayer->pev->velocity.Length2D() > 170)
-		AWPFire( 0.15, 1.25, FALSE );
+		AWPFire( 0.15, 1.45, FALSE );
 	else if ( !FBitSet(m_pPlayer->pev->flags, FL_ONGROUND) )
-		AWPFire( 0.2, 1.25, FALSE );
+		AWPFire( 0.2, 1.45, FALSE );
 	else if (m_pPlayer->pev->flags & FL_DUCKING)
-		AWPFire( 0, 1.25, FALSE );
+		AWPFire( 0, 1.45, FALSE );
 	else
-		AWPFire( 0.007, 1.25, FALSE );
+		AWPFire( 0.007, 1.45, FALSE );
 }
 
 void CAWP::AWPFire( float flSpread , float flCycleTime, BOOL fUseAutoAim )

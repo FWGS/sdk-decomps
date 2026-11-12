@@ -331,7 +331,7 @@ void CBeam::TriggerTouch( CBaseEntity *pOther )
 			CBaseEntity *pOwner = CBaseEntity::Instance(pev->owner);
 			pOwner->Use( pOther, this, USE_TOGGLE, 0 );
 		}
-		ALERT( at_console, "Firing targets!!!\n" );
+		//ALERT( at_console, "Firing targets!!!\n" );	// Counter-Strike Beta 4.0: commented out
 	}
 }
 

@@ -190,10 +190,10 @@ void CDEAGLE::DEAGLEFire( float flSpread , float flCycleTime, BOOL fUseSemi )
 		switch(RANDOM_LONG(0,1))
 		{
 		case 0:
-			EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/deagle-1.wav", RANDOM_FLOAT(0.9, 1.0), ATTN_NORM);
+			EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/deagle-1.wav", RANDOM_FLOAT(0.9, 1.0), 0.6);
 			break;
 		case 1:
-			EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/deagle-2.wav", RANDOM_FLOAT(0.9, 1.0), ATTN_NORM);
+			EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/deagle-2.wav", RANDOM_FLOAT(0.9, 1.0), 0.6);
 			break;
 		}
 	}

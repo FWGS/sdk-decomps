@@ -30,6 +30,7 @@
 #include "gamerules.h"
 
 extern int gmsgItemPickup;
+extern int gmsgGiveItem;	// Beta 4.0 (player.cpp; Linux symbol)
 
 class CWorldItem : public CBaseEntity
 {
@@ -114,6 +115,10 @@ void CItem::ItemTouch( CBaseEntity *pOther )
 	}
 
 	CBasePlayer *pPlayer = (CBasePlayer *)pOther;
+
+	// Beta 4.0: not when dead
+	if ( pPlayer->pev->deadflag != DEAD_NO )
+		return;
 
 	// ok, a player is touching this item, but can he have it?
 	if ( !g_pGameRules->CanHaveItem( pPlayer, this ) )
@@ -340,12 +345,12 @@ class CItemKevlar : public CItem
 	void Spawn( void )
 	{ 
 		Precache( );
-		SET_MODEL(ENT(pev), "models/w_longjump.mdl");
+		SET_MODEL(ENT(pev), "models/p_g3sg1.mdl");	// sic: Beta 4.0 (Beta 3.x: the long jump's model)
 		CItem::Spawn( );
 	}
 	void Precache( void )
 	{
-		PRECACHE_MODEL ("models/w_longjump.mdl");
+		PRECACHE_MODEL ("models/p_g3sg1.mdl");
 	}
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{
@@ -393,3 +398,83 @@ class CItemAssaultSuit : public CItem
 };
 
 LINK_ENTITY_TO_CLASS( item_assaultsuit, CItemAssaultSuit );
+
+
+// Counter-Strike Beta 4.0 (class names from the Linux symbols): the backpack
+// a terrorist carries the C4 in, the thigh pack a counter-terrorist carries
+// the defuser in. Picked up, each sets its flag, tells the client (GiveItem
+// 0 the C4, 1 the defuser) and shows on the player model (body 1).
+class CItemBackPack : public CItem
+{
+	void Spawn( void )
+	{ 
+		Precache( );
+		SET_MODEL(ENT(pev), "models/w_backpack.mdl");
+		CItem::Spawn( );
+	}
+	void Precache( void )
+	{
+		PRECACHE_MODEL ("models/w_backpack.mdl");
+	}
+	BOOL MyTouch( CBasePlayer *pPlayer )
+	{
+		if ( pPlayer->m_iTeam == TEAM_TERRORIST )
+		{
+			pPlayer->m_fHasC4 = true;
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgGiveItem, NULL, pPlayer->pev );
+				WRITE_BYTE( 0 );
+			MESSAGE_END();
+
+			pPlayer->pev->body = 1;
+			EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/kevlar.wav", 1, ATTN_NORM );
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
+				WRITE_STRING( STRING(pev->classname) );
+			MESSAGE_END();
+
+			return TRUE;
+		}
+		return FALSE;
+	}
+};
+
+LINK_ENTITY_TO_CLASS( item_backpack, CItemBackPack );
+
+
+class CItemThighPack : public CItem
+{
+	void Spawn( void )
+	{ 
+		Precache( );
+		SET_MODEL(ENT(pev), "models/w_thighpack.mdl");
+		CItem::Spawn( );
+	}
+	void Precache( void )
+	{
+		PRECACHE_MODEL ("models/w_thighpack.mdl");
+	}
+	BOOL MyTouch( CBasePlayer *pPlayer )
+	{
+		if ( pPlayer->m_iTeam == TEAM_CT )
+		{
+			pPlayer->m_fHasDefuser = true;
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgGiveItem, NULL, pPlayer->pev );
+				WRITE_BYTE( 1 );
+			MESSAGE_END();
+
+			pPlayer->pev->body = 1;
+			EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/kevlar.wav", 1, ATTN_NORM );
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
+				WRITE_STRING( STRING(pev->classname) );
+			MESSAGE_END();
+
+			return TRUE;
+		}
+		return FALSE;
+	}
+};
+
+LINK_ENTITY_TO_CLASS( item_thighpack, CItemThighPack );

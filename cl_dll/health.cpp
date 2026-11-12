@@ -30,6 +30,9 @@
 
 DECLARE_MESSAGE(m_Health, Health )
 DECLARE_MESSAGE(m_Health, Damage )
+DECLARE_MESSAGE(m_Health, RoundTime )
+DECLARE_MESSAGE(m_Health, GiveItem )
+DECLARE_MESSAGE(m_Health, RemoveItem )
 
 #define PAIN_NAME "sprites/%d_pain.spr"
 #define DAMAGE_NAME "sprites/%d_dmg.spr"
@@ -56,6 +59,9 @@ int CHudHealth::Init(void)
 {
 	HOOK_MESSAGE(Health);
 	HOOK_MESSAGE(Damage);
+	HOOK_MESSAGE(RoundTime);
+	HOOK_MESSAGE(GiveItem);
+	HOOK_MESSAGE(RemoveItem);
 	m_iHealth = 100;
 	m_fFade = 0;
 	m_iFlags = 0;
@@ -93,9 +99,50 @@ int CHudHealth::VidInit(void)
 
 	m_HUD_dmg_bio = gHUD.GetSpriteIndex( "dmg_bio" ) + 1;
 	m_HUD_cross = gHUD.GetSpriteIndex( "cross" );
+	m_HUD_c4 = gHUD.GetSpriteIndex( "c4" );
+	m_HUD_defuser = gHUD.GetSpriteIndex( "defuser" );
 
 	giDmgHeight = gHUD.GetSpriteRect(m_HUD_dmg_bio).right - gHUD.GetSpriteRect(m_HUD_dmg_bio).left;
 	giDmgWidth = gHUD.GetSpriteRect(m_HUD_dmg_bio).bottom - gHUD.GetSpriteRect(m_HUD_dmg_bio).top;
+	return 1;
+}
+
+// sic: a stand-in, names ours.  The text of Beta 4.0's health.cpp
+// declared three symbols more between VidInit and CalcDamageDirection than ours.
+extern int b40_unknown5, b40_unknown6, b40_unknown7;
+
+int CHudHealth:: MsgFunc_RoundTime(const char *pszName,  int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+	m_iRoundTime = READ_BYTE() * 60;
+	m_flRoundStart = m_flDrawTime;
+
+	return 1;
+}
+
+int CHudHealth:: MsgFunc_GiveItem(const char *pszName,  int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+	int item = READ_BYTE();	// name ours
+
+	if ( item == 0 )
+		m_bHasC4 = true;
+	else if ( item == 1 )
+		m_bHasDefuser = true;
+
+	return 1;
+}
+
+int CHudHealth:: MsgFunc_RemoveItem(const char *pszName,  int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+	int item = READ_BYTE();	// name ours
+
+	if ( item == 0 )
+		m_bHasC4 = false;
+	else if ( item == 1 )
+		m_bHasDefuser = false;
+
 	return 1;
 }
 
@@ -211,6 +258,26 @@ int CHudHealth::Draw(float flTime)
 	// Only draw health if we have the suit.
 	if (gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT)))
 	{
+		if ( m_bHasC4 == true )
+		{
+			int iWidth = gHUD.GetSpriteRect(m_HUD_c4).right - gHUD.GetSpriteRect(m_HUD_c4).left;
+			y = ScreenHeight * 2 / 3;
+			x = ScreenWidth - iWidth;
+
+			SPR_Set(gHUD.GetSprite(m_HUD_c4), 15, 15, 220);
+			SPR_DrawAdditive(0, x, y, &gHUD.GetSpriteRect(m_HUD_c4));
+		}
+
+		if ( m_bHasDefuser == true )
+		{
+			int iWidth = gHUD.GetSpriteRect(m_HUD_defuser).right - gHUD.GetSpriteRect(m_HUD_defuser).left;
+			y = ScreenHeight * 2 / 3;
+			x = ScreenWidth - iWidth;
+
+			SPR_Set(gHUD.GetSprite(m_HUD_defuser), 15, 15, 220);
+			SPR_DrawAdditive(0, x, y, &gHUD.GetSpriteRect(m_HUD_defuser));
+		}
+
 		HealthWidth = gHUD.GetSpriteRect(gHUD.m_HUD_number_0).right - gHUD.GetSpriteRect(gHUD.m_HUD_number_0).left;
 		int CrossWidth = gHUD.GetSpriteRect(m_HUD_cross).right - gHUD.GetSpriteRect(m_HUD_cross).left;
 
@@ -223,7 +290,7 @@ int CHudHealth::Draw(float flTime)
 		x = CrossWidth + HealthWidth / 2;
 
 		// round timer
-		int iTimeLeft = 300 - (int)(flTime - m_flRoundStart);
+		int iTimeLeft = m_iRoundTime - (int)(flTime - m_flRoundStart);
 		if ( iTimeLeft < 0 )
 			iTimeLeft = 0;
 
@@ -502,15 +569,4 @@ void CHudHealth::UpdateTiles(float flTime, long bitsDamage)
 
 	// damage bits are only turned on here;  they are turned off when the draw time has expired (in DrawDamage())
 	m_bitsDamage |= bitsDamage;
-}
-
-// sic: a stand-in, name and body ours (see health.h).  Nothing calls it; LINK drops it.
-int b20_unknown( int a, float b )
-{
-	int n = (int)( b * a );
-
-	if ( n > a )
-		n = a;
-
-	return n + READ_BYTE();
 }

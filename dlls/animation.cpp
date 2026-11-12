@@ -140,7 +140,7 @@ void GetEyePosition ( void *pmodel, float *vecEyePosition )
 
 	if ( !pstudiohdr )
 	{
-		ALERT ( at_console, "GetEyePosition() Can't get pstudiohdr ptr!\n" );
+		//ALERT ( at_console, "GetEyePosition() Can't get pstudiohdr ptr!\n" );	// Counter-Strike Beta 4.0: commented out
 		return;
 	}
 
@@ -206,7 +206,7 @@ void SequencePrecache( void *pmodel, const char *pSequenceName )
 			{
 				if ( !strlen(pevent[i].options) )
 				{
-					ALERT( at_error, "Bad sound event %d in sequence %s :: %s (sound is \"%s\")\n", pevent[i].event, pstudiohdr->name, pSequenceName, pevent[i].options );
+					//ALERT( at_error, "Bad sound event %d in sequence %s :: %s (sound is \"%s\")\n", pevent[i].event, pstudiohdr->name, pSequenceName, pevent[i].options );	// Counter-Strike Beta 4.0: commented out
 				}
 
 				PRECACHE_SOUND( (char *)(gpGlobals->pStringBase + ALLOC_STRING(pevent[i].options) ) );
@@ -473,7 +473,7 @@ int FindTransition( void *pmodel, int iEndingAnim, int iGoalAnim, int *piDir )
 		}
 	}
 
-	ALERT( at_console, "error in transition graph" );
+	//ALERT( at_console, "error in transition graph" );	// Counter-Strike Beta 4.0: commented out
 	return iGoalAnim;
 }
 
