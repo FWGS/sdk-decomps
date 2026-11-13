@@ -1262,6 +1262,22 @@ void CSprite::Spawn( void )
 }
 
 
+// Counter-Strike 1.0b: a new round turns the sprite on or off as the map had
+// it (Spawn's lines)
+void CSprite::Restart( void )
+{
+	pev->solid			= SOLID_NOT;
+	pev->movetype		= MOVETYPE_NONE;
+	pev->effects		= 0;
+	pev->frame			= 0;
+
+	if ( pev->targetname && !(pev->spawnflags & SF_SPRITE_STARTON) )
+		TurnOff();
+	else
+		TurnOn();
+}
+
+
 void CSprite::Precache( void )
 {
 	PRECACHE_MODEL( (char *)STRING(pev->model) );

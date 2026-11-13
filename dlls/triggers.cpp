@@ -266,6 +266,7 @@ class CMultiManager : public CBaseToggle
 public:
 	void KeyValue( KeyValueData *pkvd );
 	void Spawn ( void );
+	void Restart( void );	// Counter-Strike 1.0b
 	void EXPORT ManagerThink ( void );
 	void EXPORT ManagerUse   ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
@@ -370,6 +371,53 @@ void CMultiManager :: Spawn( void )
 			}
 		}
 	}
+}
+
+
+// Counter-Strike 1.0b: a new round restarts everything the manager fires and
+// makes the manager usable again (a clone is removed); pentTarget is not set
+// back between the names (sic). Locals: Counter-Strike 1.6's names
+void CMultiManager::Restart( void )
+{
+	int i = 0;
+	edict_t *pentTarget = NULL;
+	const char *name;
+
+	// a while loop that counts in two places, as the code's registers show (a
+	// for loop, or one i++ behind an if, keeps "this" in a register and
+	// spills the name's address; retail has it the other way round)
+	while ( i < m_cTargets )
+	{
+		name = STRING( m_iTargetName[ i ] );
+
+		if ( !name )
+		{
+			i++;
+			continue;
+		}
+
+		for (;;)
+		{
+			pentTarget = FIND_ENTITY_BY_TARGETNAME( pentTarget, name );
+			if ( FNullEnt( pentTarget ) )
+				break;
+
+			CBaseEntity *pTarget = CBaseEntity::Instance( pentTarget );
+			if ( pTarget && !( pTarget->pev->flags & FL_KILLME ) )
+				pTarget->Restart();
+		}
+
+		i++;
+	}
+
+	SetThink( NULL );
+	if ( IsClone() )
+	{
+		UTIL_Remove( this );
+		return;
+	}
+	SetUse( ManagerUse );// allow manager re-use 
+	m_index = 0;
 }
 
 

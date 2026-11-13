@@ -34,6 +34,7 @@ class CSprite : public CPointEntity
 {
 public:
 	void Spawn( void );
+	void Restart( void );	// Counter-Strike 1.0b
 	void Precache( void );
 
 	int		ObjectCaps( void )

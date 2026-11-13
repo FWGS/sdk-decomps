@@ -32,6 +32,7 @@ public:
 	virtual void	KeyValue( KeyValueData* pkvd ); 
 	virtual void	Spawn( void );
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	virtual void	Restart( void );	// Counter-Strike 1.0b
 
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
@@ -41,6 +42,7 @@ public:
 private:
 	int		m_iStyle;
 	int		m_iszPattern;
+	BOOL	m_iStartedOff;	// Counter-Strike 1.0b: the map's SF_LIGHT_START_OFF, for Restart (0x84; Counter-Strike 1.6's name; not saved)
 };
 LINK_ENTITY_TO_CLASS( light, CLight );
 
@@ -94,6 +96,12 @@ void CLight :: Spawn( void )
 		return;
 	}
 	
+	// Counter-Strike 1.0b: remember how the map had the light
+	if (FBitSet(pev->spawnflags, SF_LIGHT_START_OFF))
+		m_iStartedOff = TRUE;
+	else
+		m_iStartedOff = FALSE;
+
 	if (m_iStyle >= 32)
 	{
 //		CHANGE_METHOD(ENT(pev), em_use, light_use);
@@ -103,6 +111,30 @@ void CLight :: Spawn( void )
 			LIGHT_STYLE(m_iStyle, (char *)STRING( m_iszPattern ));
 		else
 			LIGHT_STYLE(m_iStyle, "m");
+	}
+}
+
+
+// Counter-Strike 1.0b: a new round puts a switchable light back to the map's
+// state (the function is in the Linux libraries of Betas 5.0 to 6.1 and of 1.1)
+void CLight :: Restart( void )
+{
+	if (m_iStyle >= 32)
+	{
+		if ( m_iStartedOff )
+		{
+			SetBits( pev->spawnflags, SF_LIGHT_START_OFF );
+			LIGHT_STYLE(m_iStyle, "a");
+		}
+		else
+		{
+			ClearBits( pev->spawnflags, SF_LIGHT_START_OFF );
+
+			if (m_iszPattern)
+				LIGHT_STYLE(m_iStyle, (char *)STRING( m_iszPattern ));
+			else
+				LIGHT_STYLE(m_iStyle, "m");
+		}
 	}
 }
 

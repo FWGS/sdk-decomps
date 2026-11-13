@@ -229,8 +229,7 @@ public:
 	int					m_iHostagesKilled;		// 0x37c new in Beta 6.5 (1.6's name, by its place)
 	int					m_iMapVote;				// 0x380 new in Beta 6.5 (1.6's name, by its place)
 	bool				m_bCanShoot;			// 0x384 cleared in the freeze time, set when the round starts (1.6's name)
-	bool				m_bVerifyModel;			// 0x385 Beta 6.6: ClientUserInfoChanged sets it, VerifyModel clears it (name ours)
-	bool				m_bVGUIMenus;			// 0x386 new in Beta 7.0: userinfo "vgui_menus", read with the model check in PreThink (1.6's name; it stands after the gait members there)
+	bool				m_bVGUIMenus;			// 0x385 (0x386 to Counter-Strike 1.0: 1.0b drops Beta 6.6's m_bVerifyModel, which stood here, with VerifyModel) new in Beta 7.0: userinfo "vgui_menus", read with the model check in PreThink (1.6's name; it stands after the gait members there)
 	float				m_flLastFired;			// 0x388 new in Beta 7.0: the time of the last shot (SetAnimation stamps it and plays the run animation four seconds later; Spawn: -15). 1.6's name: its Spawn stores the same -15 in the member after m_bCanShoot
 	float				m_flLastAttackedTeammate;	// 0x38c new in Beta 7.0: TakeDamage's "attacked a teammate" line, at most once in 0.6 s (1.6's name)
 	float				m_flTimeCheckAllowed;	// 0x390 new in Beta 7.0: PreThink checks the client's keys and model no sooner, every 3 s (1.6 has int m_iTimeCheckAllowed at this place, the timeleft command's; a float here, the prefix ours)
@@ -410,7 +409,6 @@ public:
 	void SetBombIcon( int bFlash );
 	void AddAccount( int amount, bool bTrackChange );
 	bool CanPlayerBuy( bool display );
-	void VerifyModel( void );				// Beta 6.6 (Linux symbol): the model the menu chose is set again
 	void WindowCheck( void );				// Beta 7.1 (Linux symbol): the client is told which windows to close (message WClose)
 	void Disappear( void );
 	void GiveDefaultItems( void );

@@ -348,6 +348,9 @@ public:
 	// Immediately end a multiplayer game
 	virtual void EndMultiplayerGame( void ) { GoToIntermission(); }
 
+	// Counter-Strike 1.0b: sets the player's model again (1.6 declares it at this place)
+	virtual void ClientUserInfoChanged( CBasePlayer *pPlayer, char *infobuffer );
+
 // Counter-Strike: the round. g_pGameRules is a CGameRules *: client.cpp and player.cpp
 // reach these through a cast, ((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions().
 	virtual void CleanUpMap( void );

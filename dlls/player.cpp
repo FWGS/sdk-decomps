@@ -274,14 +274,9 @@ void LinkUserMessages( void )
 
 LINK_ENTITY_TO_CLASS( player, CBasePlayer );
 
-// Beta 7.0: the 36 characters of client.cpp (Linux symbols). The model names
-// the server sends to a client ("model terror\n") and stores in his keys are
-// no longer string literals: each function that needs them allocates them and
-// writes them character by character from these globals, so that the names
-// cannot be found and changed in the DLL. The buffers are never freed.
-extern char g_a, g_b, g_c, g_d, g_e, g_f, g_g, g_h, g_i, g_j, g_k, g_l, g_m,
-	g_n, g_o, g_p, g_q, g_r, g_s, g_t, g_u, g_v, g_w, g_x, g_y, g_z,
-	g_1, g_2, g_3, g_4, g_5, g_6, g_7, g_8, g_9, g_0;	// client.cpp (Beta 7.0)
+// Counter-Strike 1.0b: the model names are string literals again (Beta 7.0 to
+// 1.0 wrote them character by character from client.cpp's 36 letter globals,
+// which this file no longer names; 1.0b's image does not have them)
 
 //=========================================================
 // TeamPrint - Beta 7.0 (Linux symbol): a chat line to every
@@ -354,228 +349,72 @@ static char *GetCSModelName( int item_id )
 // SetPlayerModel - Beta 5.0 (leak) (Linux symbol): the model
 // of the player's appearance (m_iAppearance; Beta 6.5: 1
 // urban, 2 terror, 3 leet, 4 arctic, 5 gsg9, 6 gign, 7 sas,
-// 8 guerilla, 9 vip; anything else urban). The C4 carrier's
-// flag picks between the same two models (sic); each arm of
-// that test holds both statements: with inline expansion on,
-// VC6 merges the arms (leaving retail's dead test) only then.
-// Beta 7.0: the names are no longer literals but buffers put
-// together character by character (see g_a above), all nine
-// pairs on every call and never freed; the guerilla with the
-// C4 still has the two literals. The buffers' names are ours.
+// 8 guerilla, 9 vip). Counter-Strike 1.0b: the names are
+// literals again (Beta 7.0 to 1.0 put them together from
+// letters at run time, eighteen buffers on every call), the
+// team decides first (a counter-terrorist can only have one
+// of his team's five models, a terrorist one of his four;
+// anyone else is urban), and the "model" key is written only
+// when it differs; no "model ..." command is sent to the
+// client any more. HasC4 is not read. The locals' names are
+// 1.6's.
 //=========================================================
 void CBasePlayer::SetPlayerModel( BOOL HasC4 )
 {
-	char *szModelTerror = new char[14];
-	char *szTerror = new char[7];
+	char *infobuffer = g_engfuncs.pfnGetInfoKeyBuffer( edict() );
+	char *model;
 
-	szModelTerror[0] = g_m;	szModelTerror[5] = ' ';	szModelTerror[10] = g_o;
-	szModelTerror[1] = g_o;	szModelTerror[6] = g_t;	szModelTerror[11] = g_r;
-	szModelTerror[2] = g_d;	szModelTerror[7] = g_e;	szModelTerror[12] = '\n';
-	szModelTerror[3] = g_e;	szModelTerror[8] = g_r;	szModelTerror[13] = '\0';
-	szModelTerror[4] = g_l;	szModelTerror[9] = g_r;
-
-	szTerror[0] = g_t;	szTerror[5] = g_r;
-	szTerror[1] = g_e;	szTerror[6] = '\0';
-	szTerror[2] = g_r;
-	szTerror[3] = g_r;
-	szTerror[4] = g_o;
-
-	char *szModelLeet = new char[12];
-	char *szLeet = new char[5];
-
-	szModelLeet[0] = g_m;	szModelLeet[5] = ' ';	szModelLeet[10] = '\n';
-	szModelLeet[1] = g_o;	szModelLeet[6] = g_l;	szModelLeet[11] = '\0';
-	szModelLeet[2] = g_d;	szModelLeet[7] = g_e;
-	szModelLeet[3] = g_e;	szModelLeet[8] = g_e;
-	szModelLeet[4] = g_l;	szModelLeet[9] = g_t;
-
-	szLeet[0] = g_l;
-	szLeet[1] = g_e;
-	szLeet[2] = g_e;
-	szLeet[3] = g_t;
-	szLeet[4] = '\0';
-
-	char *szModelArctic = new char[14];
-	char *szArctic = new char[7];
-
-	szModelArctic[0] = g_m;	szModelArctic[5] = ' ';	szModelArctic[10] = g_i;
-	szModelArctic[1] = g_o;	szModelArctic[6] = g_a;	szModelArctic[11] = g_c;
-	szModelArctic[2] = g_d;	szModelArctic[7] = g_r;	szModelArctic[12] = '\n';
-	szModelArctic[3] = g_e;	szModelArctic[8] = g_c;	szModelArctic[13] = '\0';
-	szModelArctic[4] = g_l;	szModelArctic[9] = g_t;
-
-	szArctic[0] = g_a;	szArctic[5] = g_c;
-	szArctic[1] = g_r;	szArctic[6] = '\0';
-	szArctic[2] = g_c;
-	szArctic[3] = g_t;
-	szArctic[4] = g_i;
-
-	char *szModelGuerilla = new char[16];
-	char *szGuerilla = new char[9];
-
-	szModelGuerilla[0] = g_m;	szModelGuerilla[5] = ' ';	szModelGuerilla[10] = g_i;	szModelGuerilla[15] = '\0';
-	szModelGuerilla[1] = g_o;	szModelGuerilla[6] = g_g;	szModelGuerilla[11] = g_l;
-	szModelGuerilla[2] = g_d;	szModelGuerilla[7] = g_u;	szModelGuerilla[12] = g_l;
-	szModelGuerilla[3] = g_e;	szModelGuerilla[8] = g_e;	szModelGuerilla[13] = g_a;
-	szModelGuerilla[4] = g_l;	szModelGuerilla[9] = g_r;	szModelGuerilla[14] = '\n';
-
-	szGuerilla[0] = g_g;	szGuerilla[5] = g_l;
-	szGuerilla[1] = g_u;	szGuerilla[6] = g_l;
-	szGuerilla[2] = g_e;	szGuerilla[7] = g_a;
-	szGuerilla[3] = g_r;	szGuerilla[8] = '\0';
-	szGuerilla[4] = g_i;
-
-	char *szModelUrban = new char[13];
-	char *szUrban = new char[6];
-
-	szModelUrban[0] = g_m;	szModelUrban[5] = ' ';	szModelUrban[10] = g_n;
-	szModelUrban[1] = g_o;	szModelUrban[6] = g_u;	szModelUrban[11] = '\n';
-	szModelUrban[2] = g_d;	szModelUrban[7] = g_r;	szModelUrban[12] = '\0';
-	szModelUrban[3] = g_e;	szModelUrban[8] = g_b;
-	szModelUrban[4] = g_l;	szModelUrban[9] = g_a;
-
-	szUrban[0] = g_u;	szUrban[5] = '\0';
-	szUrban[1] = g_r;
-	szUrban[2] = g_b;
-	szUrban[3] = g_a;
-	szUrban[4] = g_n;
-
-	char *szModelGSG9 = new char[12];
-	char *szGSG9 = new char[5];
-
-	szModelGSG9[0] = g_m;	szModelGSG9[5] = ' ';	szModelGSG9[10] = '\n';
-	szModelGSG9[1] = g_o;	szModelGSG9[6] = g_g;	szModelGSG9[11] = '\0';
-	szModelGSG9[2] = g_d;	szModelGSG9[7] = g_s;
-	szModelGSG9[3] = g_e;	szModelGSG9[8] = g_g;
-	szModelGSG9[4] = g_l;	szModelGSG9[9] = g_9;
-
-	szGSG9[0] = g_g;
-	szGSG9[1] = g_s;
-	szGSG9[2] = g_g;
-	szGSG9[3] = g_9;
-	szGSG9[4] = '\0';
-
-	char *szModelSAS = new char[11];
-	char *szSAS = new char[4];
-
-	szModelSAS[0] = g_m;	szModelSAS[5] = ' ';	szModelSAS[10] = '\0';
-	szModelSAS[1] = g_o;	szModelSAS[6] = g_s;
-	szModelSAS[2] = g_d;	szModelSAS[7] = g_a;
-	szModelSAS[3] = g_e;	szModelSAS[8] = g_s;
-	szModelSAS[4] = g_l;	szModelSAS[9] = '\n';
-
-	szSAS[0] = g_s;
-	szSAS[1] = g_a;
-	szSAS[2] = g_s;
-	szSAS[3] = '\0';
-
-	char *szModelGIGN = new char[12];
-	char *szGIGN = new char[5];
-
-	szModelGIGN[0] = g_m;	szModelGIGN[5] = ' ';	szModelGIGN[10] = '\n';
-	szModelGIGN[1] = g_o;	szModelGIGN[6] = g_g;	szModelGIGN[11] = '\0';
-	szModelGIGN[2] = g_d;	szModelGIGN[7] = g_i;
-	szModelGIGN[3] = g_e;	szModelGIGN[8] = g_g;
-	szModelGIGN[4] = g_l;	szModelGIGN[9] = g_n;
-
-	szGIGN[0] = g_g;
-	szGIGN[1] = g_i;
-	szGIGN[2] = g_g;
-	szGIGN[3] = g_n;
-	szGIGN[4] = '\0';
-
-	char *szModelVIP = new char[11];
-	char *szVIP = new char[4];
-
-	szModelVIP[0] = g_m;	szModelVIP[5] = ' ';	szModelVIP[10] = '\0';
-	szModelVIP[1] = g_o;	szModelVIP[6] = g_v;
-	szModelVIP[2] = g_d;	szModelVIP[7] = g_i;
-	szModelVIP[3] = g_e;	szModelVIP[8] = g_p;
-	szModelVIP[4] = g_l;	szModelVIP[9] = '\n';
-
-	szVIP[0] = g_v;
-	szVIP[1] = g_i;
-	szVIP[2] = g_p;
-	szVIP[3] = '\0';
-	int clientIndex = entindex();	// name ours
-
-	switch ( m_iAppearance )
+	if ( m_iTeam == TEAM_CT )
 	{
-	case 1:
-		CLIENT_COMMAND( edict(), szModelUrban );
-		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szUrban );
-		break;
-	case 2:
-		if ( HasC4 )
+		switch ( m_iAppearance )
 		{
-			CLIENT_COMMAND( edict(), szModelTerror );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szTerror );
+		case 1:
+			model = "urban";
+			break;
+		case 5:
+			model = "gsg9";
+			break;
+		case 7:
+			model = "sas";
+			break;
+		case 6:
+			model = "gign";
+			break;
+		case 9:
+			model = "vip";
+			break;
+		default:
+			model = "urban";
+			break;
 		}
-		else
+	}
+	else if ( m_iTeam == TEAM_TERRORIST )
+	{
+		switch ( m_iAppearance )
 		{
-			CLIENT_COMMAND( edict(), szModelTerror );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szTerror );
+		case 2:
+			model = "terror";
+			break;
+		case 3:
+			model = "leet";
+			break;
+		case 4:
+			model = "arctic";
+			break;
+		case 8:
+			model = "guerilla";
+			break;
+		default:
+			model = "terror";
+			break;
 		}
-		break;
-	case 3:
-		if ( HasC4 )
-		{
-			CLIENT_COMMAND( edict(), szModelLeet );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szLeet );
-		}
-		else
-		{
-			CLIENT_COMMAND( edict(), szModelLeet );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szLeet );
-		}
-		break;
-	// Beta 6.0: the arctic terrorists and the GIGN are new, the VIP has a model
-	// of his own. Beta 6.5: the guerilla is new, number 8, written after the
-	// arctic; the VIP is 9 (4 arctic, 5 gsg9, 6 gign, 7 sas, 8 guerilla, 9 vip)
-	case 4:
-		if ( HasC4 )
-		{
-			CLIENT_COMMAND( edict(), szModelArctic );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szArctic );
-		}
-		else
-		{
-			CLIENT_COMMAND( edict(), szModelArctic );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szArctic );
-		}
-		break;
-	case 8:
-		if ( HasC4 )
-		{
-			CLIENT_COMMAND( edict(), "model guerilla\n" );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "guerilla" );
-		}
-		else
-		{
-			CLIENT_COMMAND( edict(), szModelGuerilla );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szGuerilla );
-		}
-		break;
-	case 5:
-		CLIENT_COMMAND( edict(), szModelGSG9 );
-		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szGSG9 );
-		break;
-	case 6:
-		CLIENT_COMMAND( edict(), szModelGIGN );
-		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szGIGN );
-		break;
-	case 7:
-		CLIENT_COMMAND( edict(), szModelSAS );
-		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szSAS );
-		break;
-	case 9:
-		CLIENT_COMMAND( edict(), szModelVIP );
-		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szVIP );
-		break;
-	default:
-		CLIENT_COMMAND( edict(), szModelUrban );
-		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szUrban );
-		break;
+	}
+	else
+		model = "urban";
+
+	if ( strcmp( g_engfuncs.pfnInfoKeyValue( infobuffer, "model" ), model ) )
+	{
+		g_engfuncs.pfnSetClientKeyValue( entindex(), infobuffer, "model", model );
 	}
 }
 
@@ -1066,9 +905,21 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 
 			// Beta 7.0: the attacker's team reads it in the chat, at most once in
 			// 0.6 seconds (6.6: "You injured a teammate!" in the middle of the
-			// attacker's screen). The text is allocated at every such hit and
-			// never freed (sic)
-			char *szText = new char[255];	// name ours
+			// attacker's screen). Counter-Strike 1.0b: the text is written to a
+			// static buffer (7.0 to 1.0 allocated 255 bytes at every such hit
+			// and never freed them). .bss has 256 bytes for it (253 to 256 give
+			// that), between g_pLastCTSpawn and g_pLastTerroristSpawn: VC6 orders
+			// uninitialised data by a hash of the name, a function's static by
+			// its decorated name, so the name (ours) is one whose hash falls
+			// between those two (szText's does not).
+			// sic: the pointer is a stand-in. With the array used directly the
+			// code is retail's but for the order of the three squares in the
+			// Length() of the push below (z, x, y; retail and 1.0 have x, y, z):
+			// that order follows the number of locals the function has, and
+			// retail's needs one more than the array alone leaves (this pointer,
+			// or 1 to 9 unused initialised ints at the top, measured; none: not)
+			static char szBuf[255];	// name ours
+			char *szText = szBuf;	// name ours
 
 			sprintf( szText, "%s attacked a teammate\n", STRING( pAttacker->pev->netname ) );
 
@@ -2702,29 +2553,17 @@ void CBasePlayer::MenuPrint( CBasePlayer *pl, const char *msg )
 // MakeVIP - Beta 6.0 (Linux symbol): the player becomes the
 // VIP of an assassination map: a counter-terrorist with the
 // vip model (appearance 8), the C4 or kit off his model; the
-// game rules count his first round as VIP. Beta 7.0: the
-// model's name is put together at run time (see g_a)
+// game rules count his first round as VIP. Counter-Strike
+// 1.0b: the model's name is a literal again (Beta 7.0 to 1.0
+// put it together at run time) and no "model vip" command is
+// sent to the client
 //=========================================================
 void CBasePlayer::MakeVIP( void )
 {
-	char *szModelVIP = new char[11];
-	char *szVIP = new char[4];
-
-	szModelVIP[0] = g_m;	szModelVIP[5] = ' ';	szModelVIP[10] = '\0';
-	szModelVIP[1] = g_o;	szModelVIP[6] = g_v;
-	szModelVIP[2] = g_d;	szModelVIP[7] = g_i;
-	szModelVIP[3] = g_e;	szModelVIP[8] = g_p;
-	szModelVIP[4] = g_l;	szModelVIP[9] = '\n';
-
-	szVIP[0] = g_v;
-	szVIP[1] = g_i;
-	szVIP[2] = g_p;
-	szVIP[3] = '\0';
 	pev->body = 0;
 	m_iAppearance = 9;	// Beta 6.5 (the guerilla took 5)
 
-	CLIENT_COMMAND( edict(), szModelVIP );
-	g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szVIP );
+	g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "vip" );
 
 	m_iTeam = TEAM_CT;
 	m_bIsVIP = true;
@@ -3952,7 +3791,7 @@ void CBasePlayer::UpdatePath( void )
 //=========================================================
 bool CBasePlayer::CanPlayerBuy( bool display )
 {
-	char szMessage[60];	// name ours; 60 bytes, the longest message's length (the frame says so)
+	char szMessage[72];	// name ours; Counter-Strike 1.0b: the frame has 72 bytes for it (69 to 72 give the same frame; 1.0: 60, the longest message's length)
 	bool retval = true;	// name ours. Beta 6.5 sets it (Beta 6.1 left it unset when nothing forbade buying)
 
 	// 1.0: the training rules decide alone (the buy zone's signal)
@@ -3995,264 +3834,6 @@ bool CBasePlayer::CanPlayerBuy( bool display )
 	return true;
 }
 
-// Beta 6.6 (Linux symbol): the model is the one chosen in the menu
-// (m_iAppearance), whatever the client sets: his client is told to change
-// it and the server's key is set. Beta 6.5 did this in
-// ClientUserInfoChanged, which now only sets m_bVerifyModel; PreThink calls
-// this while the flag is set. 1 urban, 2 terror, 3 leet, 4 arctic, 5 gsg9,
-// 6 gign, 7 sas, 8 guerilla, 9 vip
-// Beta 7.0: the two strings of the player's appearance are put together at
-// run time (see g_a; the pointers of the other eight pairs stay unset), and
-// the model is set only when the client's "model" key is another (strcmp):
-// 6.6 sent the command at every call. The guerilla's pair is built and not
-// used: its case compares and sets the literals. The buffers are never freed.
-// case 1 stands second in retail's code; the default repeats it.
-void CBasePlayer::VerifyModel( void )
-{
-	char *szModelTerror, *szTerror;
-	char *szModelLeet, *szLeet;
-	char *szModelArctic, *szArctic;
-	char *szModelGuerilla, *szGuerilla;
-	char *szModelUrban, *szUrban;
-	char *szModelGSG9, *szGSG9;
-	char *szModelSAS, *szSAS;
-	char *szModelGIGN, *szGIGN;
-	char *szModelVIP, *szVIP;
-
-	if ( m_iAppearance == 2 )
-	{
-		szModelTerror = new char[14];
-		szTerror = new char[7];
-
-		szModelTerror[0] = g_m;	szModelTerror[5] = ' ';	szModelTerror[10] = g_o;
-		szModelTerror[1] = g_o;	szModelTerror[6] = g_t;	szModelTerror[11] = g_r;
-		szModelTerror[2] = g_d;	szModelTerror[7] = g_e;	szModelTerror[12] = '\n';
-		szModelTerror[3] = g_e;	szModelTerror[8] = g_r;	szModelTerror[13] = '\0';
-		szModelTerror[4] = g_l;	szModelTerror[9] = g_r;
-
-		szTerror[0] = g_t;	szTerror[5] = g_r;
-		szTerror[1] = g_e;	szTerror[6] = '\0';
-		szTerror[2] = g_r;
-		szTerror[3] = g_r;
-		szTerror[4] = g_o;
-	}
-	else if ( m_iAppearance == 3 )
-	{
-		szModelLeet = new char[12];
-		szLeet = new char[5];
-
-		szModelLeet[0] = g_m;	szModelLeet[5] = ' ';	szModelLeet[10] = '\n';
-		szModelLeet[1] = g_o;	szModelLeet[6] = g_l;	szModelLeet[11] = '\0';
-		szModelLeet[2] = g_d;	szModelLeet[7] = g_e;
-		szModelLeet[3] = g_e;	szModelLeet[8] = g_e;
-		szModelLeet[4] = g_l;	szModelLeet[9] = g_t;
-
-		szLeet[0] = g_l;
-		szLeet[1] = g_e;
-		szLeet[2] = g_e;
-		szLeet[3] = g_t;
-		szLeet[4] = '\0';
-	}
-	else if ( m_iAppearance == 4 )
-	{
-		szModelArctic = new char[14];
-		szArctic = new char[7];
-
-		szModelArctic[0] = g_m;	szModelArctic[5] = ' ';	szModelArctic[10] = g_i;
-		szModelArctic[1] = g_o;	szModelArctic[6] = g_a;	szModelArctic[11] = g_c;
-		szModelArctic[2] = g_d;	szModelArctic[7] = g_r;	szModelArctic[12] = '\n';
-		szModelArctic[3] = g_e;	szModelArctic[8] = g_c;	szModelArctic[13] = '\0';
-		szModelArctic[4] = g_l;	szModelArctic[9] = g_t;
-
-		szArctic[0] = g_a;	szArctic[5] = g_c;
-		szArctic[1] = g_r;	szArctic[6] = '\0';
-		szArctic[2] = g_c;
-		szArctic[3] = g_t;
-		szArctic[4] = g_i;
-	}
-	else if ( m_iAppearance == 8 )
-	{
-		szModelGuerilla = new char[16];
-		szGuerilla = new char[9];
-
-		szModelGuerilla[0] = g_m;	szModelGuerilla[5] = ' ';	szModelGuerilla[10] = g_i;	szModelGuerilla[15] = '\0';
-		szModelGuerilla[1] = g_o;	szModelGuerilla[6] = g_g;	szModelGuerilla[11] = g_l;
-		szModelGuerilla[2] = g_d;	szModelGuerilla[7] = g_u;	szModelGuerilla[12] = g_l;
-		szModelGuerilla[3] = g_e;	szModelGuerilla[8] = g_e;	szModelGuerilla[13] = g_a;
-		szModelGuerilla[4] = g_l;	szModelGuerilla[9] = g_r;	szModelGuerilla[14] = '\n';
-
-		szGuerilla[0] = g_g;	szGuerilla[5] = g_l;
-		szGuerilla[1] = g_u;	szGuerilla[6] = g_l;
-		szGuerilla[2] = g_e;	szGuerilla[7] = g_a;
-		szGuerilla[3] = g_r;	szGuerilla[8] = '\0';
-		szGuerilla[4] = g_i;
-	}
-	else if ( m_iAppearance == 1 )
-	{
-		szModelUrban = new char[13];
-		szUrban = new char[6];
-
-		szModelUrban[0] = g_m;	szModelUrban[5] = ' ';	szModelUrban[10] = g_n;
-		szModelUrban[1] = g_o;	szModelUrban[6] = g_u;	szModelUrban[11] = '\n';
-		szModelUrban[2] = g_d;	szModelUrban[7] = g_r;	szModelUrban[12] = '\0';
-		szModelUrban[3] = g_e;	szModelUrban[8] = g_b;
-		szModelUrban[4] = g_l;	szModelUrban[9] = g_a;
-
-		szUrban[0] = g_u;
-		szUrban[1] = g_r;
-		szUrban[2] = g_b;
-		szUrban[3] = g_a;
-		szUrban[4] = g_n;
-		szUrban[5] = '\0';
-	}
-	else if ( m_iAppearance == 5 )
-	{
-		szModelGSG9 = new char[12];
-		szGSG9 = new char[5];
-
-		szModelGSG9[0] = g_m;	szModelGSG9[5] = ' ';	szModelGSG9[10] = '\n';
-		szModelGSG9[1] = g_o;	szModelGSG9[6] = g_g;	szModelGSG9[11] = '\0';
-		szModelGSG9[2] = g_d;	szModelGSG9[7] = g_s;
-		szModelGSG9[3] = g_e;	szModelGSG9[8] = g_g;
-		szModelGSG9[4] = g_l;	szModelGSG9[9] = g_9;
-
-		szGSG9[0] = g_g;
-		szGSG9[1] = g_s;
-		szGSG9[2] = g_g;
-		szGSG9[3] = g_9;
-		szGSG9[4] = '\0';
-	}
-	else if ( m_iAppearance == 7 )
-	{
-		szModelSAS = new char[11];
-		szSAS = new char[4];
-
-		szModelSAS[0] = g_m;	szModelSAS[5] = ' ';	szModelSAS[10] = '\0';
-		szModelSAS[1] = g_o;	szModelSAS[6] = g_s;
-		szModelSAS[2] = g_d;	szModelSAS[7] = g_a;
-		szModelSAS[3] = g_e;	szModelSAS[8] = g_s;
-		szModelSAS[4] = g_l;	szModelSAS[9] = '\n';
-
-		szSAS[0] = g_s;
-		szSAS[1] = g_a;
-		szSAS[2] = g_s;
-		szSAS[3] = '\0';
-	}
-	else if ( m_iAppearance == 6 )
-	{
-		szModelGIGN = new char[12];
-		szGIGN = new char[5];
-
-		szModelGIGN[0] = g_m;	szModelGIGN[5] = ' ';	szModelGIGN[10] = '\n';
-		szModelGIGN[1] = g_o;	szModelGIGN[6] = g_g;	szModelGIGN[11] = '\0';
-		szModelGIGN[2] = g_d;	szModelGIGN[7] = g_i;
-		szModelGIGN[3] = g_e;	szModelGIGN[8] = g_g;
-		szModelGIGN[4] = g_l;	szModelGIGN[9] = g_n;
-
-		szGIGN[0] = g_g;
-		szGIGN[1] = g_i;
-		szGIGN[2] = g_g;
-		szGIGN[3] = g_n;
-		szGIGN[4] = '\0';
-	}
-	else if ( m_iAppearance == 9 )
-	{
-		szModelVIP = new char[11];
-		szVIP = new char[4];
-
-		szModelVIP[0] = g_m;	szModelVIP[5] = ' ';	szModelVIP[10] = '\0';
-		szModelVIP[1] = g_o;	szModelVIP[6] = g_v;
-		szModelVIP[2] = g_d;	szModelVIP[7] = g_i;
-		szModelVIP[3] = g_e;	szModelVIP[8] = g_p;
-		szModelVIP[4] = g_l;	szModelVIP[9] = '\n';
-
-		szVIP[0] = g_v;
-		szVIP[1] = g_i;
-		szVIP[2] = g_p;
-		szVIP[3] = '\0';
-	}
-
-	char *infobuffer = g_engfuncs.pfnGetInfoKeyBuffer( edict() );
-	char *model = g_engfuncs.pfnInfoKeyValue( infobuffer, "model" );
-	edict_t *pEntity = edict();		// name ours
-
-	switch ( m_iAppearance )
-	{
-	case 2:
-		if ( strcmp( model, szTerror ) )
-		{
-			CLIENT_COMMAND( pEntity, szModelTerror );
-			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szTerror );
-		}
-		break;
-	case 1:
-		if ( strcmp( model, szUrban ) )
-		{
-			CLIENT_COMMAND( pEntity, szModelUrban );
-			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szUrban );
-		}
-		break;
-	case 3:
-		if ( strcmp( model, szLeet ) )
-		{
-			CLIENT_COMMAND( pEntity, szModelLeet );
-			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szLeet );
-		}
-		break;
-	case 8:
-		if ( strcmp( model, "guerilla" ) )
-		{
-			CLIENT_COMMAND( pEntity, "model guerilla\n" );
-			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "guerilla" );
-		}
-		break;
-	case 4:
-		if ( strcmp( model, szArctic ) )
-		{
-			CLIENT_COMMAND( pEntity, szModelArctic );
-			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szArctic );
-		}
-		break;
-	case 5:
-		if ( strcmp( model, szGSG9 ) )
-		{
-			CLIENT_COMMAND( pEntity, szModelGSG9 );
-			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szGSG9 );
-		}
-		break;
-	case 6:
-		if ( strcmp( model, szGIGN ) )
-		{
-			CLIENT_COMMAND( pEntity, szModelGIGN );
-			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szGIGN );
-		}
-		break;
-	case 7:
-		if ( strcmp( model, szSAS ) )
-		{
-			CLIENT_COMMAND( pEntity, szModelSAS );
-			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szSAS );
-		}
-		break;
-	case 9:
-		if ( strcmp( model, szVIP ) )
-		{
-			CLIENT_COMMAND( pEntity, szModelVIP );
-			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szVIP );
-		}
-		break;
-	default:
-		if ( strcmp( model, szUrban ) )
-		{
-			CLIENT_COMMAND( pEntity, szModelUrban );
-			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szUrban );
-		}
-		break;
-	}
-
-	m_bVerifyModel = false;
-}
-
 void CBasePlayer::PreThink(void)
 {
 	int buttonsChanged = (m_afButtonLast ^ pev->button);	// These buttons have changed this frame
@@ -4275,8 +3856,11 @@ void CBasePlayer::PreThink(void)
 	// Beta 6.6: the model check, after a change of the client's keys.
 	// Beta 7.0: no more than once in three seconds, and with it the keys
 	// ClientUserInfoChanged reads are read again: lefthand, vgui_menus and
-	// the name, whose '%' become spaces
-	if ( m_bVerifyModel == true && m_flTimeCheckAllowed < gpGlobals->time )
+	// the name, whose '%' become spaces.
+	// Counter-Strike 1.0b: every three seconds whether the keys changed or
+	// not, and the model is no longer set here (VerifyModel is gone:
+	// SetPlayerModel compares the key itself)
+	if ( m_flTimeCheckAllowed < gpGlobals->time )
 	{
 		char szName[256];
 		char *infobuffer = g_engfuncs.pfnGetInfoKeyBuffer( edict() );	// names ours
@@ -4307,7 +3891,6 @@ void CBasePlayer::PreThink(void)
 		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( edict() ), infobuffer, "name", szName );
 
 		m_flTimeCheckAllowed = gpGlobals->time + 3.0;
-		VerifyModel();
 	}
 
 	// fire or secondary fire takes the map's text away (and does nothing else); Beta 6.5: no longer jump
@@ -5464,113 +5047,35 @@ ReturnSpot:
 
 //=========================================================
 // WindowCheck - Beta 7.1 (Linux symbol; reconstructed from the
-// binary, the locals' names are ours). Called at the end of
-// Spawn: the client is sent the class and title of the windows
-// of two cheat programs (message WClose; the strings are put
-// together at run time so that the file does not show them),
-// then up to five more pairs from proxycheck.txt in the game
-// folder, whose lines alternate class and title, each
-// character XORed with 15.
-// sic: the buffers are never freed, nor is the file; a line's
-// buffer is one byte short for strcpy's terminator, and the
-// line's last character (the carriage return) is cut.
+// binary). Called at the end of Spawn: the client is sent the
+// class and title of the windows of two cheat programs
+// (message WClose). Counter-Strike 1.0b: the four strings are
+// static arrays (Beta 7.1 and 1.0 put them together at run
+// time in buffers of operator new that were never freed),
+// the first title reads "Death-Adder's" (1.0: "Death_Adder's"),
+// and proxycheck.txt with its five more pairs is not read any
+// more. The arrays stand in .data in this order between the
+// player's save table and CDeadHEV::m_szPoses, not among the
+// string literals: initialised arrays, of 1.0's sizes (7, 21,
+// 7, 38). Their names are ours.
 //=========================================================
 void CBasePlayer::WindowCheck( void )
 {
-	char *szClass;
-	char *szTitle;
-
-	szClass = new char[7];	// "#32770"
-	szClass[0] = '#';	szClass[5] = '0';
-	szClass[1] = '3';	szClass[6] = '\0';
-	szClass[2] = '2';
-	szClass[3] = '7';
-	szClass[4] = '7';
-
-	szTitle = new char[21];	// "Death_Adder's AimBot"
-	szTitle[0] = 'D';	szTitle[6] = 'A';	szTitle[12] = 's';	szTitle[18] = 'o';
-	szTitle[1] = 'e';	szTitle[7] = 'd';	szTitle[13] = ' ';	szTitle[19] = 't';
-	szTitle[2] = 'a';	szTitle[8] = 'd';	szTitle[14] = 'A';	szTitle[20] = '\0';
-	szTitle[3] = 't';	szTitle[9] = 'e';	szTitle[15] = 'i';
-	szTitle[4] = 'h';	szTitle[10] = 'r';	szTitle[16] = 'm';
-	szTitle[5] = '_';	szTitle[11] = '\'';	szTitle[17] = 'B';
+	static char szClass1[] = "#32770";
+	static char szTitle1[] = "Death-Adder's AimBot";
 
 	MESSAGE_BEGIN( MSG_ONE, gmsgWClose, NULL, pev );
-		WRITE_STRING( szClass );
-		WRITE_STRING( szTitle );
+		WRITE_STRING( szClass1 );
+		WRITE_STRING( szTitle1 );
 	MESSAGE_END();
 
-	szClass = new char[7];	// "TForm1"
-	szClass[0] = 'T';	szClass[6] = '\0';
-	szClass[1] = 'F';
-	szClass[2] = 'o';
-	szClass[3] = 'r';
-	szClass[4] = 'm';
-	szClass[5] = '1';
-
-	szTitle = new char[38];	// "AutoShoot:  http://www.hlcheaters.com"
-	szTitle[0] = 'A';	szTitle[6] = 'o';	szTitle[12] = 'h';	szTitle[18] = '/';	szTitle[24] = 'l';	szTitle[30] = 'e';	szTitle[36] = 'm';
-	szTitle[1] = 'u';	szTitle[7] = 'o';	szTitle[13] = 't';	szTitle[19] = 'w';	szTitle[20] = 'w';	szTitle[21] = 'w';	szTitle[25] = 'c';	szTitle[31] = 'r';	szTitle[37] = '\0';
-	szTitle[2] = 't';	szTitle[8] = 't';	szTitle[14] = 't';	szTitle[26] = 'h';	szTitle[32] = 's';
-	szTitle[3] = 'o';	szTitle[9] = ':';	szTitle[15] = 'p';	szTitle[27] = 'e';	szTitle[33] = '.';
-	szTitle[4] = 'S';	szTitle[10] = ' ';	szTitle[16] = ':';	szTitle[22] = '.';	szTitle[28] = 'a';	szTitle[34] = 'c';
-	szTitle[5] = 'h';	szTitle[11] = ' ';	szTitle[17] = '/';	szTitle[23] = 'h';	szTitle[29] = 't';	szTitle[35] = 'o';
+	static char szClass2[] = "TForm1";
+	static char szTitle2[] = "AutoShoot:  http://www.hlcheaters.com";
 
 	MESSAGE_BEGIN( MSG_ONE, gmsgWClose, NULL, pev );
-		WRITE_STRING( szClass );
-		WRITE_STRING( szTitle );
+		WRITE_STRING( szClass2 );
+		WRITE_STRING( szTitle2 );
 	MESSAGE_END();
-
-	int length;
-	char *pFile = (char *)LOAD_FILE_FOR_ME( "proxycheck.txt", &length );
-
-	if ( pFile )
-	{
-		char *szFileClass;
-		char *szFileTitle;
-		int len, j;
-		int i = 1;
-		char *tok = strtok( pFile, "\n" );
-
-		while ( tok )
-		{
-			if ( i > 10 )
-				break;
-
-			if ( i % 2 == 1 )
-			{
-				len = strlen( tok );
-
-				szFileClass = new char[len];
-				strcpy( szFileClass, tok );
-
-				for ( j = 0; j < len - 1; j++ )
-					szFileClass[j] ^= 0xf;
-
-				szFileClass[len - 1] = '\0';
-			}
-			else if ( i % 2 == 0 )
-			{
-				len = strlen( tok );
-
-				szFileTitle = new char[len];
-				strcpy( szFileTitle, tok );
-
-				for ( j = 0; j < len - 1; j++ )
-					szFileTitle[j] ^= 0xf;
-
-				szFileTitle[len - 1] = '\0';
-
-				MESSAGE_BEGIN( MSG_ONE, gmsgWClose, NULL, pev );
-					WRITE_STRING( szFileClass );
-					WRITE_STRING( szFileTitle );
-				MESSAGE_END();
-			}
-
-			tok = strtok( NULL, "\n" );
-			i++;
-		}
-	}
 }
 
 
@@ -5815,7 +5320,7 @@ void CBasePlayer::Spawn( void )
 	{
 		m_iKevlar = 2;
 		pev->armorvalue = 200;
-		HintMessage( "You are the VIP\n Make your way to the safety zones!\n", TRUE, FALSE );
+		HintMessage( "You are the VIP\n Make your way to the safety zones!\n", TRUE, TRUE );	// Counter-Strike 1.0b: bOverride (1.0: FALSE)
 		RemoveAllItems( FALSE );
 		GiveNamedItem( "weapon_knife" );
 		// Beta 7.0: and a USP with one magazine
@@ -8200,150 +7705,14 @@ BOOL CBasePlayer::HasNamedPlayerItem( const char *pszItemName )
 // SwitchTeam - Beta 6.0 (Linux symbol): the player goes over
 // to the other team with a model of the other side (an
 // escape map's teams swap, SwapAllPlayers): urban becomes
-// leet, sas arctic, the rest terror; terror becomes gsg9,
-// arctic sas, the rest urban. Beta 7.0: the names are copied
-// from buffers put together at run time (see g_a), all nine
-// pairs built and none freed; the guerilla's two are still
-// literals. Each team's branch ends with its own two calls:
-// VC6 merges them, but the stack packer has counted both
-// (this gets the frame's first slot only so)
+// leet, sas arctic, gign guerilla, the rest terror; terror
+// becomes gsg9, arctic sas, guerilla gign, the rest urban.
+// Counter-Strike 1.0b: each case writes the model key from a
+// literal (Beta 7.0 to 1.0 copied the names from buffers put
+// together at run time and sent a "model ..." command too).
 //=========================================================
 void CBasePlayer::SwitchTeam( void )
 {
-	char *szModelTerror = new char[14];
-	char *szTerror = new char[7];
-
-	szModelTerror[0] = g_m;	szModelTerror[5] = ' ';	szModelTerror[10] = g_o;
-	szModelTerror[1] = g_o;	szModelTerror[6] = g_t;	szModelTerror[11] = g_r;
-	szModelTerror[2] = g_d;	szModelTerror[7] = g_e;	szModelTerror[12] = '\n';
-	szModelTerror[3] = g_e;	szModelTerror[8] = g_r;	szModelTerror[13] = '\0';
-	szModelTerror[4] = g_l;	szModelTerror[9] = g_r;
-
-	szTerror[0] = g_t;	szTerror[5] = g_r;
-	szTerror[1] = g_e;	szTerror[6] = '\0';
-	szTerror[2] = g_r;
-	szTerror[3] = g_r;
-	szTerror[4] = g_o;
-
-	char *szModelLeet = new char[12];
-	char *szLeet = new char[5];
-
-	szModelLeet[0] = g_m;	szModelLeet[5] = ' ';	szModelLeet[10] = '\n';
-	szModelLeet[1] = g_o;	szModelLeet[6] = g_l;	szModelLeet[11] = '\0';
-	szModelLeet[2] = g_d;	szModelLeet[7] = g_e;
-	szModelLeet[3] = g_e;	szModelLeet[8] = g_e;
-	szModelLeet[4] = g_l;	szModelLeet[9] = g_t;
-
-	szLeet[0] = g_l;
-	szLeet[1] = g_e;
-	szLeet[2] = g_e;
-	szLeet[3] = g_t;
-	szLeet[4] = '\0';
-
-	char *szModelArctic = new char[14];
-	char *szArctic = new char[7];
-
-	szModelArctic[0] = g_m;	szModelArctic[5] = ' ';	szModelArctic[10] = g_i;
-	szModelArctic[1] = g_o;	szModelArctic[6] = g_a;	szModelArctic[11] = g_c;
-	szModelArctic[2] = g_d;	szModelArctic[7] = g_r;	szModelArctic[12] = '\n';
-	szModelArctic[3] = g_e;	szModelArctic[8] = g_c;	szModelArctic[13] = '\0';
-	szModelArctic[4] = g_l;	szModelArctic[9] = g_t;
-
-	szArctic[0] = g_a;	szArctic[5] = g_c;
-	szArctic[1] = g_r;	szArctic[6] = '\0';
-	szArctic[2] = g_c;
-	szArctic[3] = g_t;
-	szArctic[4] = g_i;
-
-	char *szModelGuerilla = new char[16];
-	char *szGuerilla = new char[9];
-
-	szModelGuerilla[0] = g_m;	szModelGuerilla[5] = ' ';	szModelGuerilla[10] = g_i;	szModelGuerilla[15] = '\0';
-	szModelGuerilla[1] = g_o;	szModelGuerilla[6] = g_g;	szModelGuerilla[11] = g_l;
-	szModelGuerilla[2] = g_d;	szModelGuerilla[7] = g_u;	szModelGuerilla[12] = g_l;
-	szModelGuerilla[3] = g_e;	szModelGuerilla[8] = g_e;	szModelGuerilla[13] = g_a;
-	szModelGuerilla[4] = g_l;	szModelGuerilla[9] = g_r;	szModelGuerilla[14] = '\n';
-
-	szGuerilla[0] = g_g;	szGuerilla[5] = g_l;
-	szGuerilla[1] = g_u;	szGuerilla[6] = g_l;
-	szGuerilla[2] = g_e;	szGuerilla[7] = g_a;
-	szGuerilla[3] = g_r;	szGuerilla[8] = '\0';
-	szGuerilla[4] = g_i;
-
-	char *szModelUrban = new char[13];
-	char *szUrban = new char[6];
-
-	szModelUrban[0] = g_m;	szModelUrban[5] = ' ';	szModelUrban[10] = g_n;
-	szModelUrban[1] = g_o;	szModelUrban[6] = g_u;	szModelUrban[11] = '\n';
-	szModelUrban[2] = g_d;	szModelUrban[7] = g_r;	szModelUrban[12] = '\0';
-	szModelUrban[3] = g_e;	szModelUrban[8] = g_b;
-	szModelUrban[4] = g_l;	szModelUrban[9] = g_a;
-
-	szUrban[0] = g_u;	szUrban[5] = '\0';
-	szUrban[1] = g_r;
-	szUrban[2] = g_b;
-	szUrban[3] = g_a;
-	szUrban[4] = g_n;
-
-	char *szModelGSG9 = new char[12];
-	char *szGSG9 = new char[5];
-
-	szModelGSG9[0] = g_m;	szModelGSG9[5] = ' ';	szModelGSG9[10] = '\n';
-	szModelGSG9[1] = g_o;	szModelGSG9[6] = g_g;	szModelGSG9[11] = '\0';
-	szModelGSG9[2] = g_d;	szModelGSG9[7] = g_s;
-	szModelGSG9[3] = g_e;	szModelGSG9[8] = g_g;
-	szModelGSG9[4] = g_l;	szModelGSG9[9] = g_9;
-
-	szGSG9[0] = g_g;
-	szGSG9[1] = g_s;
-	szGSG9[2] = g_g;
-	szGSG9[3] = g_9;
-	szGSG9[4] = '\0';
-
-	char *szModelSAS = new char[11];
-	char *szSAS = new char[4];
-
-	szModelSAS[0] = g_m;	szModelSAS[5] = ' ';	szModelSAS[10] = '\0';
-	szModelSAS[1] = g_o;	szModelSAS[6] = g_s;
-	szModelSAS[2] = g_d;	szModelSAS[7] = g_a;
-	szModelSAS[3] = g_e;	szModelSAS[8] = g_s;
-	szModelSAS[4] = g_l;	szModelSAS[9] = '\n';
-
-	szSAS[0] = g_s;
-	szSAS[1] = g_a;
-	szSAS[2] = g_s;
-	szSAS[3] = '\0';
-
-	char *szModelGIGN = new char[12];
-	char *szGIGN = new char[5];
-
-	szModelGIGN[0] = g_m;	szModelGIGN[5] = ' ';	szModelGIGN[10] = '\n';
-	szModelGIGN[1] = g_o;	szModelGIGN[6] = g_g;	szModelGIGN[11] = '\0';
-	szModelGIGN[2] = g_d;	szModelGIGN[7] = g_i;
-	szModelGIGN[3] = g_e;	szModelGIGN[8] = g_g;
-	szModelGIGN[4] = g_l;	szModelGIGN[9] = g_n;
-
-	szGIGN[0] = g_g;	szGIGN[4] = '\0';
-	szGIGN[1] = g_i;
-	szGIGN[2] = g_g;
-	szGIGN[3] = g_n;
-
-	char *szModelVIP = new char[11];
-	char *szVIP = new char[4];
-
-	szModelVIP[0] = g_m;	szModelVIP[5] = ' ';	szModelVIP[10] = '\0';
-	szModelVIP[1] = g_o;	szModelVIP[6] = g_v;
-	szModelVIP[2] = g_d;	szModelVIP[7] = g_i;
-	szModelVIP[3] = g_e;	szModelVIP[8] = g_p;
-	szModelVIP[4] = g_l;	szModelVIP[9] = '\n';
-
-	szVIP[0] = g_v;
-	szVIP[1] = g_i;
-	szVIP[2] = g_p;
-	szVIP[3] = '\0';
-	char szCommand[32];	// names ours
-	char szModel[32];
-
 	if ( m_iTeam == TEAM_CT )
 	{
 		m_iTeam = TEAM_TERRORIST;
@@ -8352,33 +7721,25 @@ void CBasePlayer::SwitchTeam( void )
 		{
 		case 1:
 			m_iAppearance = 3;
-			strcpy( szCommand, szModelLeet );
-			strcpy( szModel, szLeet );
+			g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "leet" );
 			break;
 		case 5:
 			m_iAppearance = 2;
-			strcpy( szCommand, szModelTerror );
-			strcpy( szModel, szTerror );
+			g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "terror" );
 			break;
 		case 7:
 			m_iAppearance = 4;
-			strcpy( szCommand, szModelArctic );
-			strcpy( szModel, szArctic );
+			g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "arctic" );
 			break;
 		case 6:		// Beta 6.5: the GIGN becomes a guerilla
 			m_iAppearance = 8;
-			strcpy( szCommand, "model guerilla\n" );
-			strcpy( szModel, "guerilla" );
+			g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "guerilla" );
 			break;
 		default:
 			m_iAppearance = 2;
-			strcpy( szCommand, szModelTerror );
-			strcpy( szModel, szTerror );
+			g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "terror" );
 			break;
 		}
-
-		CLIENT_COMMAND( edict(), szCommand );
-		g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szModel );
 	}
 	else if ( m_iTeam == TEAM_TERRORIST )
 	{
@@ -8386,35 +7747,27 @@ void CBasePlayer::SwitchTeam( void )
 
 		switch ( m_iAppearance )
 		{
-		case 2:
-			m_iAppearance = 5;
-			strcpy( szCommand, szModelGSG9 );
-			strcpy( szModel, szGSG9 );
-			break;
 		case 3:
 			m_iAppearance = 1;
-			strcpy( szCommand, szModelUrban );
-			strcpy( szModel, szUrban );
+			g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "urban" );
+			break;
+		case 2:
+			m_iAppearance = 5;
+			g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "gsg9" );
 			break;
 		case 4:
 			m_iAppearance = 7;
-			strcpy( szCommand, szModelSAS );
-			strcpy( szModel, szSAS );
+			g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "sas" );
 			break;
 		case 8:		// Beta 6.5: the guerilla becomes GIGN
 			m_iAppearance = 6;
-			strcpy( szCommand, szModelGIGN );
-			strcpy( szModel, szGIGN );
+			g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "gign" );
 			break;
 		default:
 			m_iAppearance = 1;
-			strcpy( szCommand, szModelUrban );
-			strcpy( szModel, szUrban );
+			g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "urban" );
 			break;
 		}
-
-		CLIENT_COMMAND( edict(), szCommand );
-		g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szModel );
 	}
 }
 

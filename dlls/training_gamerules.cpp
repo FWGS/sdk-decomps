@@ -112,7 +112,6 @@ void CHalfLifeTraining::PlayerThink( CBasePlayer *pPlayer )
 
 	pPlayer->m_iTeam = TEAM_CT;
 	pPlayer->m_bCanShoot = true;
-	pPlayer->m_bVerifyModel = false;
 	pPlayer->m_flLastActivity = gpGlobals->time;
 
 	if ( pPlayer->m_pActiveItem )

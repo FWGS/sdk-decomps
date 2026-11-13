@@ -27,10 +27,6 @@
 #include	"items.h"
 #include	"hostage.h"
 
-extern char g_a, g_b, g_c, g_d, g_e, g_f, g_g, g_h, g_i, g_j, g_k, g_l, g_m,
-	g_n, g_o, g_p, g_q, g_r, g_s, g_t, g_u, g_v, g_w, g_x, g_y, g_z,
-	g_1, g_2, g_3, g_4, g_5, g_6, g_7, g_8, g_9, g_0;	// client.cpp (Beta 7.0)
-
 extern DLL_GLOBAL CGameRules	*g_pGameRules;
 extern DLL_GLOBAL BOOL	g_fGameOver;
 extern void respawn( entvars_t* pev, BOOL fCopyCorpse );
@@ -1089,8 +1085,10 @@ void CHalfLifeMultiplay::RestartRound( void )
 	{
 		// Beta 7.1: the minutes played so far are added to the time limit
 		// (Beta 7.0 set it back to m_iMaxMapTime, the map's first), the rounds
-		// are counted from zero and mp_maxrounds is read
-		timelimit.value += (int)( gpGlobals->time / 60 );
+		// are counted from zero and mp_maxrounds is read. Counter-Strike 1.0b:
+		// the cvar is read by name, and the time added to it is not cut to
+		// whole minutes (1.0: timelimit.value += (int)( gpGlobals->time / 60 ))
+		timelimit.value = ( CVAR_GET_FLOAT( "mp_timelimit" ) * 60 + gpGlobals->time ) / 60;
 		m_iTotalRoundsPlayed = 0;
 		m_iMaxRounds = (int)CVAR_GET_FLOAT( "mp_maxrounds" );
 
@@ -1471,92 +1469,39 @@ bool CHalfLifeMultiplay::AddToVIPQueue( CBasePlayer *toAdd )
 
 //=========================================================
 // ResetCurrentVIP - the VIP becomes an ordinary counter-
-// terrorist with a random model (urban twice as likely as
-// gsg9 or gign) and loses what he carried over
+// terrorist with a random model and loses what he carried
+// over. Counter-Strike 1.0b: the model names are literals
+// again (Beta 7.0 to 1.0 put them and four "model x"
+// commands together from the letters at every call), the
+// client is not sent a "model" command any more, and the
+// user info buffer is taken once (infobuffer is
+// Counter-Strike 1.6's name)
 //=========================================================
 void CHalfLifeMultiplay::ResetCurrentVIP( void )
 {
-	char *szModelUrban = new char[13];
-	char *szUrban = new char[6];
-
-	szModelUrban[0] = g_m;	szModelUrban[5] = ' ';	szModelUrban[10] = g_n;
-	szModelUrban[1] = g_o;	szModelUrban[6] = g_u;	szModelUrban[11] = '\n';
-	szModelUrban[2] = g_d;	szModelUrban[7] = g_r;	szModelUrban[12] = '\0';
-	szModelUrban[3] = g_e;	szModelUrban[8] = g_b;
-	szModelUrban[4] = g_l;	szModelUrban[9] = g_a;
-
-	szUrban[0] = g_u;
-	szUrban[1] = g_r;
-	szUrban[2] = g_b;
-	szUrban[3] = g_a;
-	szUrban[4] = g_n;
-	szUrban[5] = '\0';
-
-	char *szModelGSG9 = new char[12];
-	char *szGSG9 = new char[5];
-
-	szModelGSG9[0] = g_m;	szModelGSG9[5] = ' ';	szModelGSG9[10] = '\n';
-	szModelGSG9[1] = g_o;	szModelGSG9[6] = g_g;	szModelGSG9[11] = '\0';
-	szModelGSG9[2] = g_d;	szModelGSG9[7] = g_s;
-	szModelGSG9[3] = g_e;	szModelGSG9[8] = g_g;
-	szModelGSG9[4] = g_l;	szModelGSG9[9] = g_9;
-
-	szGSG9[0] = g_g;
-	szGSG9[1] = g_s;
-	szGSG9[2] = g_g;
-	szGSG9[3] = g_9;
-	szGSG9[4] = '\0';
-
-	char *szModelSAS = new char[11];
-	char *szSAS = new char[4];
-
-	szModelSAS[0] = g_m;	szModelSAS[5] = ' ';	szModelSAS[10] = '\0';
-	szModelSAS[1] = g_o;	szModelSAS[6] = g_s;
-	szModelSAS[2] = g_d;	szModelSAS[7] = g_a;
-	szModelSAS[3] = g_e;	szModelSAS[8] = g_s;
-	szModelSAS[4] = g_l;	szModelSAS[9] = '\n';
-
-	szSAS[0] = g_s;
-	szSAS[1] = g_a;
-	szSAS[2] = g_s;
-	szSAS[3] = '\0';
-
-	char *szModelGIGN = new char[12];
-	char *szGIGN = new char[5];
-
-	szModelGIGN[0] = g_m;	szModelGIGN[5] = ' ';	szModelGIGN[10] = '\n';
-	szModelGIGN[1] = g_o;	szModelGIGN[6] = g_g;	szModelGIGN[11] = '\0';
-	szModelGIGN[2] = g_d;	szModelGIGN[7] = g_i;
-	szModelGIGN[3] = g_e;	szModelGIGN[8] = g_g;
-	szModelGIGN[4] = g_l;	szModelGIGN[9] = g_n;
-
-	szGIGN[0] = g_g;
-	szGIGN[1] = g_i;
-	szGIGN[2] = g_g;
-	szGIGN[3] = g_n;
-	szGIGN[4] = '\0';
+	char *infobuffer = g_engfuncs.pfnGetInfoKeyBuffer( m_pVIP->edict() );
 
 	switch ( RANDOM_LONG( 0, 3 ) )
 	{
 	case 0:
 		m_pVIP->m_iAppearance = 1;
-		CLIENT_COMMAND( m_pVIP->edict(), szModelUrban );
-		g_engfuncs.pfnSetClientKeyValue( m_pVIP->entindex(), g_engfuncs.pfnGetInfoKeyBuffer( m_pVIP->edict() ), "model", szUrban );
+		g_engfuncs.pfnSetClientKeyValue( m_pVIP->entindex(), infobuffer, "model", "urban" );
 		break;
 	case 1:
 		m_pVIP->m_iAppearance = 5;
-		CLIENT_COMMAND( m_pVIP->edict(), szModelGSG9 );
-		g_engfuncs.pfnSetClientKeyValue( m_pVIP->entindex(), g_engfuncs.pfnGetInfoKeyBuffer( m_pVIP->edict() ), "model", szGSG9 );
+		g_engfuncs.pfnSetClientKeyValue( m_pVIP->entindex(), infobuffer, "model", "gsg9" );
 		break;
 	case 2:
 		m_pVIP->m_iAppearance = 7;
-		CLIENT_COMMAND( m_pVIP->edict(), szModelSAS );
-		g_engfuncs.pfnSetClientKeyValue( m_pVIP->entindex(), g_engfuncs.pfnGetInfoKeyBuffer( m_pVIP->edict() ), "model", szSAS );
+		g_engfuncs.pfnSetClientKeyValue( m_pVIP->entindex(), infobuffer, "model", "sas" );
 		break;
 	case 3:
 		m_pVIP->m_iAppearance = 6;
-		CLIENT_COMMAND( m_pVIP->edict(), szModelGIGN );
-		g_engfuncs.pfnSetClientKeyValue( m_pVIP->entindex(), g_engfuncs.pfnGetInfoKeyBuffer( m_pVIP->edict() ), "model", szGIGN );
+		g_engfuncs.pfnSetClientKeyValue( m_pVIP->entindex(), infobuffer, "model", "gign" );
+		break;
+	default:	// Counter-Strike 1.0b: the same as case 0 (VC6 merges the two)
+		m_pVIP->m_iAppearance = 1;
+		g_engfuncs.pfnSetClientKeyValue( m_pVIP->entindex(), infobuffer, "model", "urban" );
 		break;
 	}
 
@@ -3423,25 +3368,31 @@ void CHalfLifeMultiplay::DisplayMaps( CBasePlayer *player, int iVote )
 	DestroyMapCycle( &mapcycle2 );
 	ReloadMapCycleFile( mapcfile, &mapcycle2 );
 
+	// Counter-Strike 1.0b: the cycle's last map is listed too, and an empty
+	// cycle is no longer read through a null pointer (1.0: while
+	// ( item->next != mapcycle2.next_item ), with the test for item inside
+	// the loop). done is Counter-Strike 1.6's name
+	int done = 0;
+
 	item = mapcycle2.next_item;
 
-	while ( item->next != mapcycle2.next_item )
+	while ( item && !done )
 	{
-		if ( item )
-		{
-			iCount++;
+		if ( item->next == mapcycle2.next_item )
+			done = 1;
 
-			if ( m_iMapVotes[iCount - 1] == 1 )
-				sprintf( text, "%d :  %s (%i vote)\n", iCount, item->mapname, m_iMapVotes[iCount - 1] );
-			else
-				sprintf( text, "%d :  %s (%i votes)\n", iCount, item->mapname, m_iMapVotes[iCount - 1] );
+		iCount++;
 
-			if ( player )
-				ClientPrint( player->pev, HUD_PRINTCONSOLE, text );
+		if ( m_iMapVotes[iCount - 1] == 1 )
+			sprintf( text, "%d :  %s (%i vote)\n", iCount, item->mapname, m_iMapVotes[iCount - 1] );
+		else
+			sprintf( text, "%d :  %s (%i votes)\n", iCount, item->mapname, m_iMapVotes[iCount - 1] );
 
-			if ( iCount == iVote )
-				strcpy( szNewMap, item->mapname );
-		}
+		if ( player )
+			ClientPrint( player->pev, HUD_PRINTCONSOLE, text );
+
+		if ( iCount == iVote )
+			strcpy( szNewMap, item->mapname );
 
 		item = item->next;
 	}
@@ -3709,4 +3660,15 @@ void CHalfLifeMultiplay :: SendMOTDToClient( edict_t *client )
 	}
 
 	FREE_FILE( aFileList );
+}
+
+//=========================================================
+// ClientUserInfoChanged - Counter-Strike 1.0b: whenever a
+// client's user info changes, his model is set again from
+// the appearance he chose (to 1.0 CBasePlayer::VerifyModel
+// did that from PreThink)
+//=========================================================
+void CHalfLifeMultiplay :: ClientUserInfoChanged( CBasePlayer *pPlayer, char *infobuffer )
+{
+	pPlayer->SetPlayerModel( pPlayer->m_bHasC4 );
 }

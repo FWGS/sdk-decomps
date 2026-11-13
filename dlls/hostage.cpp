@@ -143,10 +143,10 @@ void CHostage::SetActivity( int activity )
 // overwritten at once (sic).
 void CHostage::SetCollisionBox( void )
 {
-	studiohdr_t *pstudiohdr = new studiohdr_t;
+	studiohdr_t *pstudiohdr;
 	pstudiohdr = (studiohdr_t *)GET_MODEL_PTR( ENT(pev) );
 
-	mstudioseqdesc_t *pseqdesc = new mstudioseqdesc_t;
+	mstudioseqdesc_t *pseqdesc;
 	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
 
 	Vector vecMins, vecMaxs;

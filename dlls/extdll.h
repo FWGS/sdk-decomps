@@ -51,7 +51,7 @@
 // hl_weapons.obj writes its own precompiled header and places the headers' inline functions by
 // that size.  With the client's own headers client.dll is retail's file with 8,020 to 8,044 more names
 // here (full builds).  The window moves by one for every name the headers before a file's
-// own code gain or lose: with the server's headers it is 7,888 to 7,902; 7,896 are declared.
+// own code gain or lose: with 1.0b's server headers it is 7,889 to 7,903 (1.0: 7,888 to 7,902); 7,896 are declared.
 #define R10_NAMES10( p )	p##0, p##1, p##2, p##3, p##4, p##5, p##6, p##7, p##8, p##9
 #define R10_NAMES100( p )	R10_NAMES10( p##0 ), R10_NAMES10( p##1 ), R10_NAMES10( p##2 ), R10_NAMES10( p##3 ), R10_NAMES10( p##4 ), R10_NAMES10( p##5 ), R10_NAMES10( p##6 ), R10_NAMES10( p##7 ), R10_NAMES10( p##8 ), R10_NAMES10( p##9 )
 #define R10_NAMES1000( p )	R10_NAMES100( p##0 ), R10_NAMES100( p##1 ), R10_NAMES100( p##2 ), R10_NAMES100( p##3 ), R10_NAMES100( p##4 ), R10_NAMES100( p##5 ), R10_NAMES100( p##6 ), R10_NAMES100( p##7 ), R10_NAMES100( p##8 ), R10_NAMES100( p##9 )

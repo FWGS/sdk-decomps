@@ -56,46 +56,10 @@ extern int gmsgVGUIMenu;	// Beta 7.0 (player.cpp)
 extern void Broadcast( const char *sentence );	// multiplay_gamerules.cpp (Beta 3.0)
 extern cvar_t timelimit;	// game.cpp (Beta 6.6: the timeleft command; CS 1.6 declares it here too)
 
-// Beta 7.0: the letters and digits the model names and commands are put
-// together from at run time, so that the DLL holds no "model urban" to find
-// (names from the Linux library; retail's .data has the 36 bytes in this
-// order in front of this file's tables)
-char g_a = 'a';
-char g_b = 'b';
-char g_c = 'c';
-char g_d = 'd';
-char g_e = 'e';
-char g_f = 'f';
-char g_g = 'g';
-char g_h = 'h';
-char g_i = 'i';
-char g_j = 'j';
-char g_k = 'k';
-char g_l = 'l';
-char g_m = 'm';
-char g_n = 'n';
-char g_o = 'o';
-char g_p = 'p';
-char g_q = 'q';
-char g_r = 'r';
-char g_s = 's';
-char g_t = 't';
-char g_u = 'u';
-char g_v = 'v';
-char g_w = 'w';
-char g_x = 'x';
-char g_y = 'y';
-char g_z = 'z';
-char g_1 = '1';
-char g_2 = '2';
-char g_3 = '3';
-char g_4 = '4';
-char g_5 = '5';
-char g_6 = '6';
-char g_7 = '7';
-char g_8 = '8';
-char g_9 = '9';
-char g_0 = '0';
+// (Counter-Strike 1.0b: the 36 letter and digit globals g_a to g_0 that stood
+// here from Beta 7.0 to 1.0, from which the model names and commands were put
+// together at run time, are gone: retail's .data has this file's tables
+// directly behind cbase.cpp's strings)
 
 void LinkUserMessages( void );
 /*
@@ -169,6 +133,12 @@ void ClientDisconnect( edict_t *pEntity )
 	pEntity->v.takedamage = DAMAGE_NO;// don't attract autoaim
 	pEntity->v.solid = SOLID_NOT;// nonsolid
 	pEntity->v.flags = FL_DORMANT;	// SelectDefaultTeam no longer counts it
+
+	// Counter-Strike 1.0b: the player thinks no more
+	CBasePlayer *pPlayer = (CBasePlayer *)CBaseEntity::Instance( pEntity );
+	if ( pPlayer )
+		pPlayer->SetThink( NULL );
+
 	UTIL_SetOrigin ( &pEntity->v, pEntity->v.origin );
 
 	g_pGameRules->ClientDisconnected( pEntity );
@@ -602,9 +572,10 @@ void ClientPutInServer( edict_t *pEntity )
 	pPlayer->m_iJoiningState = JOIN_START;
 
 	// Beta 5.0 (leak): everybody hears of him. Beta 7.0: his name with every
-	// '%' turned into a space, in a buffer that is never freed (retail's;
-	// the names are Counter-Strike 1.6's, where sName is an array)
-	char *sName = new char[128];
+	// '%' turned into a space (the names are Counter-Strike 1.6's, where sName
+	// is an array on the stack). Counter-Strike 1.0b: in a static buffer (to
+	// 1.0 one of operator new that was never freed)
+	static char sName[128];
 	strcpy( sName, STRING(pPlayer->pev->netname) );
 
 	for ( char *pApersand = sName; pApersand != NULL && *pApersand != 0; pApersand++ )
@@ -1511,13 +1482,14 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 
 
 // Beta 5.0 (leak): what an appearance key picks. The struct and its names are
-// ours: retail's frame keeps the three values together in this order (the
-// model number, the client command, the model name), and VC6 gives three
-// separate locals the dead slot parameter's stack slot instead
+// ours: retail's frame keeps the values together in this order (the model
+// number, the model name; to Counter-Strike 1.0 the client command between
+// them), and VC6 gives separate locals the dead slot parameter's stack slot
+// instead. Counter-Strike 1.6 has a struct of the function's own here
+// (model_id, model_name, model_name_index)
 typedef struct
 {
 	int		iModel;		// CBasePlayer::m_iAppearance
-	char	*pszCommand;	// the client command that sets the model
 	char	*pszModel;	// the model's name in the user info
 } appearance_t;
 
@@ -1535,129 +1507,6 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// name ours
 	appearance_t appearance;	// name ours
 
-	// Beta 7.0: the eight commands and model names are put together at run
-	// time from the letters (see g_a), all of them at every call, and never
-	// freed (retail's). The assignments stand in retail's order: columns of
-	// five rows
-	char *szModelTerror = new char[14];
-	char *szTerror = new char[7];
-
-	szModelTerror[0] = g_m;	szModelTerror[5] = ' ';	szModelTerror[10] = g_o;
-	szModelTerror[1] = g_o;	szModelTerror[6] = g_t;	szModelTerror[11] = g_r;
-	szModelTerror[2] = g_d;	szModelTerror[7] = g_e;	szModelTerror[12] = '\n';
-	szModelTerror[3] = g_e;	szModelTerror[8] = g_r;	szModelTerror[13] = '\0';
-	szModelTerror[4] = g_l;	szModelTerror[9] = g_r;
-
-	szTerror[0] = g_t;	szTerror[5] = g_r;
-	szTerror[1] = g_e;	szTerror[6] = '\0';
-	szTerror[2] = g_r;
-	szTerror[3] = g_r;
-	szTerror[4] = g_o;
-
-	char *szModelLeet = new char[12];
-	char *szLeet = new char[5];
-
-	szModelLeet[0] = g_m;	szModelLeet[5] = ' ';	szModelLeet[10] = '\n';
-	szModelLeet[1] = g_o;	szModelLeet[6] = g_l;	szModelLeet[11] = '\0';
-	szModelLeet[2] = g_d;	szModelLeet[7] = g_e;
-	szModelLeet[3] = g_e;	szModelLeet[8] = g_e;
-	szModelLeet[4] = g_l;	szModelLeet[9] = g_t;
-
-	szLeet[0] = g_l;
-	szLeet[1] = g_e;
-	szLeet[2] = g_e;
-	szLeet[3] = g_t;
-	szLeet[4] = '\0';
-
-	char *szModelArctic = new char[14];
-	char *szArctic = new char[7];
-
-	szModelArctic[0] = g_m;	szModelArctic[5] = ' ';	szModelArctic[10] = g_i;
-	szModelArctic[1] = g_o;	szModelArctic[6] = g_a;	szModelArctic[11] = g_c;
-	szModelArctic[2] = g_d;	szModelArctic[7] = g_r;	szModelArctic[12] = '\n';
-	szModelArctic[3] = g_e;	szModelArctic[8] = g_c;	szModelArctic[13] = '\0';
-	szModelArctic[4] = g_l;	szModelArctic[9] = g_t;
-
-	szArctic[0] = g_a;	szArctic[5] = g_c;
-	szArctic[1] = g_r;	szArctic[6] = '\0';
-	szArctic[2] = g_c;
-	szArctic[3] = g_t;
-	szArctic[4] = g_i;
-
-	char *szModelGuerilla = new char[16];
-	char *szGuerilla = new char[9];
-
-	szModelGuerilla[0] = g_m;	szModelGuerilla[5] = ' ';	szModelGuerilla[10] = g_i;	szModelGuerilla[15] = '\0';
-	szModelGuerilla[1] = g_o;	szModelGuerilla[6] = g_g;	szModelGuerilla[11] = g_l;
-	szModelGuerilla[2] = g_d;	szModelGuerilla[7] = g_u;	szModelGuerilla[12] = g_l;
-	szModelGuerilla[3] = g_e;	szModelGuerilla[8] = g_e;	szModelGuerilla[13] = g_a;
-	szModelGuerilla[4] = g_l;	szModelGuerilla[9] = g_r;	szModelGuerilla[14] = '\n';
-
-	szGuerilla[0] = g_g;	szGuerilla[5] = g_l;
-	szGuerilla[1] = g_u;	szGuerilla[6] = g_l;
-	szGuerilla[2] = g_e;	szGuerilla[7] = g_a;
-	szGuerilla[3] = g_r;	szGuerilla[8] = '\0';
-	szGuerilla[4] = g_i;
-
-	char *szModelUrban = new char[13];
-	char *szUrban = new char[6];
-
-	szModelUrban[0] = g_m;	szModelUrban[5] = ' ';	szModelUrban[10] = g_n;
-	szModelUrban[1] = g_o;	szModelUrban[6] = g_u;	szModelUrban[11] = '\n';
-	szModelUrban[2] = g_d;	szModelUrban[7] = g_r;	szModelUrban[12] = '\0';
-	szModelUrban[3] = g_e;	szModelUrban[8] = g_b;
-	szModelUrban[4] = g_l;	szModelUrban[9] = g_a;
-
-	szUrban[0] = g_u;	szUrban[5] = '\0';
-	szUrban[1] = g_r;
-	szUrban[2] = g_b;
-	szUrban[3] = g_a;
-	szUrban[4] = g_n;
-
-	char *szModelGSG9 = new char[12];
-	char *szGSG9 = new char[5];
-
-	szModelGSG9[0] = g_m;	szModelGSG9[5] = ' ';	szModelGSG9[10] = '\n';
-	szModelGSG9[1] = g_o;	szModelGSG9[6] = g_g;	szModelGSG9[11] = '\0';
-	szModelGSG9[2] = g_d;	szModelGSG9[7] = g_s;
-	szModelGSG9[3] = g_e;	szModelGSG9[8] = g_g;
-	szModelGSG9[4] = g_l;	szModelGSG9[9] = g_9;
-
-	szGSG9[0] = g_g;
-	szGSG9[1] = g_s;
-	szGSG9[2] = g_g;
-	szGSG9[3] = g_9;
-	szGSG9[4] = '\0';
-
-	char *szModelSAS = new char[11];
-	char *szSAS = new char[4];
-
-	szModelSAS[0] = g_m;	szModelSAS[5] = ' ';	szModelSAS[10] = '\0';
-	szModelSAS[1] = g_o;	szModelSAS[6] = g_s;
-	szModelSAS[2] = g_d;	szModelSAS[7] = g_a;
-	szModelSAS[3] = g_e;	szModelSAS[8] = g_s;
-	szModelSAS[4] = g_l;	szModelSAS[9] = '\n';
-
-	szSAS[0] = g_s;
-	szSAS[1] = g_a;
-	szSAS[2] = g_s;
-	szSAS[3] = '\0';
-
-	char *szModelGIGN = new char[12];
-	char *szGIGN = new char[5];
-
-	szModelGIGN[0] = g_m;	szModelGIGN[5] = ' ';	szModelGIGN[10] = '\n';
-	szModelGIGN[1] = g_o;	szModelGIGN[6] = g_g;	szModelGIGN[11] = '\0';
-	szModelGIGN[2] = g_d;	szModelGIGN[7] = g_i;
-	szModelGIGN[3] = g_e;	szModelGIGN[8] = g_g;
-	szModelGIGN[4] = g_l;	szModelGIGN[9] = g_n;
-
-	szGIGN[0] = g_g;
-	szGIGN[1] = g_i;
-	szGIGN[2] = g_g;
-	szGIGN[3] = g_n;
-	szGIGN[4] = '\0';
-
 	// Beta 6.0: the terrorists' arctic (key 3) and the counter-terrorists'
 	// GIGN (key 4); the appearance numbers are 1 urban, 2 terror, 3 leet,
 	// 4 arctic, 5 gsg9, 6 gign, 7 sas
@@ -1671,28 +1520,23 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 		{
 		case 1:
 			appearance.iModel = 2;
-			appearance.pszCommand = szModelTerror;
-			appearance.pszModel = szTerror;
+			appearance.pszModel = "terror";
 			break;
 		case 2:
 			appearance.iModel = 3;
-			appearance.pszCommand = szModelLeet;
-			appearance.pszModel = szLeet;
+			appearance.pszModel = "leet";
 			break;
 		case 3:
 			appearance.iModel = 4;
-			appearance.pszCommand = szModelArctic;
-			appearance.pszModel = szArctic;
+			appearance.pszModel = "arctic";
 			break;
-		case 4:		// Beta 6.5 (Beta 7.0: retail still passes the literals here; its run-time copies go unused)
+			case 4:		// Beta 6.5
 			appearance.iModel = 8;
-			appearance.pszCommand = "model guerilla\n";
 			appearance.pszModel = "guerilla";
 			break;
 		default:	// Beta 6.5: the same as case 1 (VC6 merges the two)
 			appearance.iModel = 2;
-			appearance.pszCommand = szModelTerror;
-			appearance.pszModel = szTerror;
+			appearance.pszModel = "terror";
 			break;
 		}
 		break;
@@ -1705,28 +1549,23 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 		{
 		case 1:
 			appearance.iModel = 1;
-			appearance.pszCommand = szModelUrban;
-			appearance.pszModel = szUrban;
+			appearance.pszModel = "urban";
 			break;
 		case 2:
 			appearance.iModel = 5;
-			appearance.pszCommand = szModelGSG9;
-			appearance.pszModel = szGSG9;
+			appearance.pszModel = "gsg9";
 			break;
 		case 3:
 			appearance.iModel = 7;
-			appearance.pszCommand = szModelSAS;
-			appearance.pszModel = szSAS;
+			appearance.pszModel = "sas";
 			break;
 		case 4:
 			appearance.iModel = 6;
-			appearance.pszCommand = szModelGIGN;
-			appearance.pszModel = szGIGN;
+			appearance.pszModel = "gign";
 			break;
 		default:	// Beta 6.5: the same as case 1
 			appearance.iModel = 1;
-			appearance.pszCommand = szModelUrban;
-			appearance.pszModel = szUrban;
+			appearance.pszModel = "urban";
 			break;
 		}
 		break;
@@ -1745,7 +1584,8 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 	player->pev->body = 0;
 	player->m_iAppearance = appearance.iModel;
 
-	CLIENT_COMMAND( player->edict(), appearance.pszCommand );
+	// Counter-Strike 1.0b: the model's name is set in the user info only (to
+	// 1.0 the client was sent a "model" command as well)
 	g_engfuncs.pfnSetClientKeyValue( player->entindex(), g_engfuncs.pfnGetInfoKeyBuffer( player->edict() ), "model", appearance.pszModel );
 
 	// Beta 5.0: no TeamInfo here any more (HandleMenu_ChooseTeam sends the team at once)
@@ -2289,7 +2129,7 @@ void ClientCommand( edict_t *pEntity )
 		int iSeconds = iTimeRemaining % 60;
 		char szText[100];	// name ours; the frame has one 100-byte slot for this and the two buffers above
 
-		sprintf( szText, "Time Remaining:  %i:%i\n", iMinutes, iSeconds );
+		sprintf( szText, "Time Remaining:  %i:%.2i\n", iMinutes, iSeconds );	// Counter-Strike 1.0b: the seconds with two digits (1.0: "%i:%i")
 		ClientPrint( pPlayer->pev, HUD_PRINTTALK, szText );
 	}
 	else if ( FStrEq(pcmd, "listplayers" ) )
@@ -2697,10 +2537,7 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 
 	CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE( pEntity );
 
-	// Beta 6.6: the model is checked in CBasePlayer::VerifyModel, from PreThink, once this flag is set
-	pPlayer->m_bVerifyModel = true;
-
-	// (Beta 7.0: Beta 6.6's '%' filter on the name is gone from here)
+	// (Counter-Strike 1.0b: Beta 6.6's flag for CBasePlayer::VerifyModel is gone with that function)
 
 	// msg everyone if someone changes their name,  and it isn't the first time (changing no name to current name)
 	if ( pEntity->v.netname && STRING(pEntity->v.netname)[0] != 0 && !FStrEq( STRING(pEntity->v.netname), g_engfuncs.pfnInfoKeyValue( infobuffer, "name" )) )
@@ -2713,6 +2550,23 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 			g_engfuncs.pfnSetClientKeyValue( pPlayer->entindex(), g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "name", szOldName );
 			return;
 		}
+
+		// Counter-Strike 1.0b: the new name with every '%' turned into a
+		// space, as in ClientPutInServer (Beta 6.6 had such a filter here,
+		// Beta 7.0 to 1.0 none); the names are ClientPutInServer's, and
+		// szBufferName Counter-Strike 1.6's (a local of the function there)
+		char sName[256];
+		const char *szBufferName = g_engfuncs.pfnInfoKeyValue( infobuffer, "name" );
+		strncpy( sName, szBufferName, 255 );
+		sName[255] = 0;
+
+		for ( char *pApersand = sName; pApersand != NULL && *pApersand != 0; pApersand++ )
+		{
+			if ( *pApersand == '%' )
+				*pApersand = ' ';
+		}
+
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX(pEntity), infobuffer, "name", sName );
 
 		char text[256];
 		sprintf( text, "* %s changed name to %s\n", STRING(pEntity->v.netname), g_engfuncs.pfnInfoKeyValue( infobuffer, "name" ) );
@@ -2987,8 +2841,9 @@ void ClientPrecache( void )
 	PRECACHE_SOUND("player/pl_pain7.wav");
 
 	// Beta 7.0: never true. The block only puts the model names, and
-	// scrambled copies of them, into the DLL for whoever searches it; the
-	// names that are used are put together at run time below
+	// scrambled copies of them, into the DLL for whoever searches it (to
+	// Counter-Strike 1.0 the names that were used were put together at run
+	// time below; 1.0b keeps the block)
 	if ( RANDOM_LONG( 10, 20 ) < 0 )
 	{
 		ALERT( at_console, "models/player/terror/terror.mdl" );
@@ -3046,91 +2901,18 @@ void ClientPrecache( void )
 		ALERT( at_console, "vpi" );
 	}
 
-	// Beta 7.0: the nine player models' file names, from the letters (see
-	// g_a); the assignments in retail's order, columns of five rows. The
-	// strings are never freed (retail's)
-	char *szLeetModel = new char[28];
-
-	szLeetModel[0] = g_m;	szLeetModel[5] = g_s;	szLeetModel[10] = g_y;	szLeetModel[15] = g_e;	szLeetModel[20] = g_e;	szLeetModel[25] = g_d;
-	szLeetModel[1] = g_o;	szLeetModel[6] = '/';	szLeetModel[11] = g_e;	szLeetModel[16] = g_e;	szLeetModel[21] = g_e;	szLeetModel[26] = g_l;
-	szLeetModel[2] = g_d;	szLeetModel[7] = g_p;	szLeetModel[12] = g_r;	szLeetModel[17] = g_t;	szLeetModel[22] = g_t;	szLeetModel[27] = '\0';
-	szLeetModel[3] = g_e;	szLeetModel[8] = g_l;	szLeetModel[13] = '/';	szLeetModel[18] = '/';	szLeetModel[23] = '.';
-	szLeetModel[4] = g_l;	szLeetModel[9] = g_a;	szLeetModel[14] = g_l;	szLeetModel[19] = g_l;	szLeetModel[24] = g_m;
-
-	char *szGIGNModel = new char[28];
-
-	szGIGNModel[0] = g_m;	szGIGNModel[5] = g_s;	szGIGNModel[10] = g_y;	szGIGNModel[15] = g_i;	szGIGNModel[20] = g_i;	szGIGNModel[25] = g_d;
-	szGIGNModel[1] = g_o;	szGIGNModel[6] = '/';	szGIGNModel[11] = g_e;	szGIGNModel[16] = g_g;	szGIGNModel[21] = g_g;	szGIGNModel[26] = g_l;
-	szGIGNModel[2] = g_d;	szGIGNModel[7] = g_p;	szGIGNModel[12] = g_r;	szGIGNModel[17] = g_n;	szGIGNModel[22] = g_n;	szGIGNModel[27] = '\0';
-	szGIGNModel[3] = g_e;	szGIGNModel[8] = g_l;	szGIGNModel[13] = '/';	szGIGNModel[18] = '/';	szGIGNModel[23] = '.';
-	szGIGNModel[4] = g_l;	szGIGNModel[9] = g_a;	szGIGNModel[14] = g_g;	szGIGNModel[19] = g_g;	szGIGNModel[24] = g_m;
-
-	char *szGSG9Model = new char[28];
-
-	szGSG9Model[0] = g_m;	szGSG9Model[5] = g_s;	szGSG9Model[10] = g_y;	szGSG9Model[15] = g_s;	szGSG9Model[20] = g_s;	szGSG9Model[25] = g_d;
-	szGSG9Model[1] = g_o;	szGSG9Model[6] = '/';	szGSG9Model[11] = g_e;	szGSG9Model[16] = g_g;	szGSG9Model[21] = g_g;	szGSG9Model[26] = g_l;
-	szGSG9Model[2] = g_d;	szGSG9Model[7] = g_p;	szGSG9Model[12] = g_r;	szGSG9Model[17] = g_9;	szGSG9Model[22] = g_9;	szGSG9Model[27] = '\0';
-	szGSG9Model[3] = g_e;	szGSG9Model[8] = g_l;	szGSG9Model[13] = '/';	szGSG9Model[18] = '/';	szGSG9Model[23] = '.';
-	szGSG9Model[4] = g_l;	szGSG9Model[9] = g_a;	szGSG9Model[14] = g_g;	szGSG9Model[19] = g_g;	szGSG9Model[24] = g_m;
-
-	char *szGuerillaModel = new char[36];
-
-	szGuerillaModel[0] = g_m;	szGuerillaModel[5] = g_s;	szGuerillaModel[10] = g_y;	szGuerillaModel[15] = g_u;	szGuerillaModel[20] = g_l;	szGuerillaModel[25] = g_e;	szGuerillaModel[30] = g_a;	szGuerillaModel[35] = '\0';
-	szGuerillaModel[1] = g_o;	szGuerillaModel[6] = '/';	szGuerillaModel[11] = g_e;	szGuerillaModel[16] = g_e;	szGuerillaModel[21] = g_a;	szGuerillaModel[26] = g_r;	szGuerillaModel[31] = '.';
-	szGuerillaModel[2] = g_d;	szGuerillaModel[7] = g_p;	szGuerillaModel[12] = g_r;	szGuerillaModel[17] = g_r;	szGuerillaModel[22] = '/';	szGuerillaModel[27] = g_i;	szGuerillaModel[32] = g_m;
-	szGuerillaModel[3] = g_e;	szGuerillaModel[8] = g_l;	szGuerillaModel[13] = '/';	szGuerillaModel[18] = g_i;	szGuerillaModel[23] = g_g;	szGuerillaModel[28] = g_l;	szGuerillaModel[33] = g_d;
-	szGuerillaModel[4] = g_l;	szGuerillaModel[9] = g_a;	szGuerillaModel[14] = g_g;	szGuerillaModel[19] = g_l;	szGuerillaModel[24] = g_u;	szGuerillaModel[29] = g_l;	szGuerillaModel[34] = g_l;
-
-	char *szArcticModel = new char[32];
-
-	szArcticModel[0] = g_m;	szArcticModel[5] = g_s;	szArcticModel[10] = g_y;	szArcticModel[15] = g_r;	szArcticModel[20] = '/';	szArcticModel[25] = g_i;	szArcticModel[30] = g_l;
-	szArcticModel[1] = g_o;	szArcticModel[6] = '/';	szArcticModel[11] = g_e;	szArcticModel[16] = g_c;	szArcticModel[21] = g_a;	szArcticModel[26] = g_c;	szArcticModel[31] = '\0';
-	szArcticModel[2] = g_d;	szArcticModel[7] = g_p;	szArcticModel[12] = g_r;	szArcticModel[17] = g_t;	szArcticModel[22] = g_r;	szArcticModel[27] = '.';
-	szArcticModel[3] = g_e;	szArcticModel[8] = g_l;	szArcticModel[13] = '/';	szArcticModel[18] = g_i;	szArcticModel[23] = g_c;	szArcticModel[28] = g_m;
-	szArcticModel[4] = g_l;	szArcticModel[9] = g_a;	szArcticModel[14] = g_a;	szArcticModel[19] = g_c;	szArcticModel[24] = g_t;	szArcticModel[29] = g_d;
-
-	char *szSASModel = new char[26];
-
-	szSASModel[0] = g_m;	szSASModel[5] = g_s;	szSASModel[10] = g_y;	szSASModel[15] = g_a;	szSASModel[20] = g_s;	szSASModel[25] = '\0';
-	szSASModel[1] = g_o;	szSASModel[6] = '/';	szSASModel[11] = g_e;	szSASModel[16] = g_s;	szSASModel[21] = '.';
-	szSASModel[2] = g_d;	szSASModel[7] = g_p;	szSASModel[12] = g_r;	szSASModel[17] = '/';	szSASModel[22] = g_m;
-	szSASModel[3] = g_e;	szSASModel[8] = g_l;	szSASModel[13] = '/';	szSASModel[18] = g_s;	szSASModel[23] = g_d;
-	szSASModel[4] = g_l;	szSASModel[9] = g_a;	szSASModel[14] = g_s;	szSASModel[19] = g_a;	szSASModel[24] = g_l;
-
-	char *szTerrorModel = new char[32];
-
-	szTerrorModel[0] = g_m;	szTerrorModel[5] = g_s;	szTerrorModel[10] = g_y;	szTerrorModel[15] = g_e;	szTerrorModel[20] = '/';	szTerrorModel[25] = g_o;	szTerrorModel[30] = g_l;
-	szTerrorModel[1] = g_o;	szTerrorModel[6] = '/';	szTerrorModel[11] = g_e;	szTerrorModel[16] = g_r;	szTerrorModel[21] = g_t;	szTerrorModel[26] = g_r;	szTerrorModel[31] = '\0';
-	szTerrorModel[2] = g_d;	szTerrorModel[7] = g_p;	szTerrorModel[12] = g_r;	szTerrorModel[17] = g_r;	szTerrorModel[22] = g_e;	szTerrorModel[27] = '.';
-	szTerrorModel[3] = g_e;	szTerrorModel[8] = g_l;	szTerrorModel[13] = '/';	szTerrorModel[18] = g_o;	szTerrorModel[23] = g_r;	szTerrorModel[28] = g_m;
-	szTerrorModel[4] = g_l;	szTerrorModel[9] = g_a;	szTerrorModel[14] = g_t;	szTerrorModel[19] = g_r;	szTerrorModel[24] = g_r;	szTerrorModel[29] = g_d;
-
-	char *szUrbanModel = new char[30];
-
-	szUrbanModel[0] = g_m;	szUrbanModel[5] = g_s;	szUrbanModel[10] = g_y;	szUrbanModel[15] = g_r;	szUrbanModel[20] = g_u;	szUrbanModel[25] = '.';
-	szUrbanModel[1] = g_o;	szUrbanModel[6] = '/';	szUrbanModel[11] = g_e;	szUrbanModel[16] = g_b;	szUrbanModel[21] = g_r;	szUrbanModel[26] = g_m;
-	szUrbanModel[2] = g_d;	szUrbanModel[7] = g_p;	szUrbanModel[12] = g_r;	szUrbanModel[17] = g_a;	szUrbanModel[22] = g_b;	szUrbanModel[27] = g_d;
-	szUrbanModel[3] = g_e;	szUrbanModel[8] = g_l;	szUrbanModel[13] = '/';	szUrbanModel[18] = g_n;	szUrbanModel[23] = g_a;	szUrbanModel[28] = g_l;
-	szUrbanModel[4] = g_l;	szUrbanModel[9] = g_a;	szUrbanModel[14] = g_u;	szUrbanModel[19] = '/';	szUrbanModel[24] = g_n;	szUrbanModel[29] = '\0';
-
-	char *szVIPModel = new char[26];
-
-	szVIPModel[0] = g_m;	szVIPModel[5] = g_s;	szVIPModel[10] = g_y;	szVIPModel[15] = g_i;	szVIPModel[20] = g_p;	szVIPModel[25] = '\0';
-	szVIPModel[1] = g_o;	szVIPModel[6] = '/';	szVIPModel[11] = g_e;	szVIPModel[16] = g_p;	szVIPModel[21] = '.';
-	szVIPModel[2] = g_d;	szVIPModel[7] = g_p;	szVIPModel[12] = g_r;	szVIPModel[17] = '/';	szVIPModel[22] = g_m;
-	szVIPModel[3] = g_e;	szVIPModel[8] = g_l;	szVIPModel[13] = '/';	szVIPModel[18] = g_v;	szVIPModel[23] = g_d;
-	szVIPModel[4] = g_l;	szVIPModel[9] = g_a;	szVIPModel[14] = g_v;	szVIPModel[19] = g_i;	szVIPModel[24] = g_l;
-
+	// Counter-Strike 1.0b: the nine player models' file names are literals
+	// again (Beta 7.0 to 1.0 put them together at run time from the letters)
 	PRECACHE_MODEL("models/player.mdl");
-	PRECACHE_MODEL( szLeetModel );
-	PRECACHE_MODEL( szGIGNModel );
-	PRECACHE_MODEL( szGSG9Model );
-	PRECACHE_MODEL( szGuerillaModel );
-	PRECACHE_MODEL( szArcticModel );
-	PRECACHE_MODEL( szSASModel );
-	PRECACHE_MODEL( szTerrorModel );
-	PRECACHE_MODEL( szUrbanModel );
-	PRECACHE_MODEL( szVIPModel );
+	PRECACHE_MODEL("models/player/leet/leet.mdl");
+	PRECACHE_MODEL("models/player/gign/gign.mdl");
+	PRECACHE_MODEL("models/player/gsg9/gsg9.mdl");
+	PRECACHE_MODEL("models/player/guerilla/guerilla.mdl");
+	PRECACHE_MODEL("models/player/arctic/arctic.mdl");
+	PRECACHE_MODEL("models/player/sas/sas.mdl");
+	PRECACHE_MODEL("models/player/terror/terror.mdl");
+	PRECACHE_MODEL("models/player/urban/urban.mdl");
+	PRECACHE_MODEL("models/player/vip/vip.mdl");
 
 	// Beta 6.6: the player models are precached here, and the client's files must
 	// keep within these bounds (vMin, vMax: Counter-Strike 1.6's names)
@@ -3138,15 +2920,15 @@ void ClientPrecache( void )
 	Vector vMax( 38, 22, 41 );
 
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player.mdl" );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szLeetModel );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szGIGNModel );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szGSG9Model );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szGuerillaModel );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szArcticModel );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szSASModel );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szTerrorModel );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szUrbanModel );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szVIPModel );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/leet/leet.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/gign/gign.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/gsg9/gsg9.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/guerilla/guerilla.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/arctic/arctic.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/sas/sas.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/terror/terror.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/urban/urban.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/vip/vip.mdl" );
 
 	// hud sounds
 
