@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
@@ -34,6 +34,8 @@ void Game_GetOrientation( float *o, float *a );
 float g_flStartScaleTime;
 int iPrevRenderState;
 int iRenderStateChanged;
+
+cvar_t *cl_minmodels;	// Counter-Strike 1.4 (1.6's name and place): CHud::Init creates it
 
 // Global engine <-> studio model rendering code interface
 extern engine_studio_api_t IEngineStudio;
@@ -136,7 +138,7 @@ void CGameStudioModelRenderer::StudioSetupBones ( void )
 	}
 
 	// Bound sequence number.
-	if ( m_pCurrentEntity->curstate.sequence >= m_pStudioHeader->numseq ) 
+	if ( m_pCurrentEntity->curstate.sequence >= m_pStudioHeader->numseq || m_pCurrentEntity->curstate.sequence < 0 ) 
 	{
 		m_pCurrentEntity->curstate.sequence = 0;
 	}
@@ -404,7 +406,7 @@ void CGameStudioModelRenderer::StudioSetupBones ( void )
 	{
 		int copy = 1;
 
-		if ( m_pPlayerInfo->gaitsequence >= m_pStudioHeader->numseq ) 
+		if ( m_pPlayerInfo->gaitsequence >= m_pStudioHeader->numseq || m_pPlayerInfo->gaitsequence < 0 ) 
 		{
 			m_pPlayerInfo->gaitsequence = 0;
 		}
@@ -729,7 +731,7 @@ void GetSequenceInfo( void *pmodel, client_anim_state_t *pev, float *pflFrameRat
 
 	mstudioseqdesc_t	*pseqdesc;
 
-	if (pev->sequence >= pstudiohdr->numseq)
+	if (pev->sequence >= pstudiohdr->numseq || pev->sequence < 0)
 	{
 		*pflFrameRate = 0.0;
 		*pflGroundSpeed = 0.0;
@@ -756,7 +758,7 @@ int GetSequenceFlags( void *pmodel, client_anim_state_t *pev )
 	studiohdr_t *pstudiohdr;
 	
 	pstudiohdr = (studiohdr_t *)pmodel;
-	if ( !pstudiohdr || pev->sequence >= pstudiohdr->numseq )
+	if ( !pstudiohdr || pev->sequence >= pstudiohdr->numseq || pev->sequence < 0 )
 		return 0;
 
 	mstudioseqdesc_t	*pseqdesc;
@@ -949,6 +951,9 @@ int CGameStudioModelRenderer::StudioDrawPlayer( int flags, entity_state_t *pplay
 	return iret;
 }
 
+extern bool g_bPlayerModelsFound;	// cdll_int.cpp
+extern char *sPlayerModelFiles[];
+
 /*
 ====================
 WeaponHasAttachments
@@ -979,6 +984,7 @@ int CGameStudioModelRenderer::_StudioDrawPlayer( int flags, entity_state_t *ppla
 {
 	alight_t lighting;
 	vec3_t dir;
+	int modelindex;
 
 	m_pCurrentEntity = IEngineStudio.GetCurrentEntity();
 	IEngineStudio.GetTimes( &m_nFrameCount, &m_clTime, &m_clOldTime );
@@ -990,7 +996,29 @@ int CGameStudioModelRenderer::_StudioDrawPlayer( int flags, entity_state_t *ppla
 	if (m_nPlayerIndex < 0 || m_nPlayerIndex >= gEngfuncs.GetMaxClients())
 		return 0;
 
-	m_pRenderModel = IEngineStudio.SetupPlayerModel( m_nPlayerIndex );
+	if ( g_bPlayerModelsFound && ( !cl_minmodels || !cl_minmodels->value ) )
+	{
+		m_pRenderModel = IEngineStudio.SetupPlayerModel( m_nPlayerIndex );
+	}
+	else
+	{
+		switch ( g_PlayerExtraInfo[ pplayer->number ].teamnumber )
+		{
+		case 1:
+			m_pRenderModel = gEngfuncs.CL_LoadModel( sPlayerModelFiles[ 1 ], &modelindex );
+			break;
+		case 2:
+			if ( g_PlayerExtraInfo[ pplayer->number ].is_vip )
+				m_pRenderModel = gEngfuncs.CL_LoadModel( sPlayerModelFiles[ 3 ], &modelindex );
+			else
+				m_pRenderModel = gEngfuncs.CL_LoadModel( sPlayerModelFiles[ 2 ], &modelindex );
+			break;
+		default:
+			m_pRenderModel = NULL;
+			break;
+		}
+	}
+
 	if (m_pRenderModel == NULL)
 		return 0;
 
@@ -999,22 +1027,22 @@ int CGameStudioModelRenderer::_StudioDrawPlayer( int flags, entity_state_t *ppla
 	IEngineStudio.SetRenderModel( m_pRenderModel );
 
 	// Bound the sequence numbers.
-	if ( m_pCurrentEntity->curstate.sequence >= m_pStudioHeader->numseq ) 
+	if ( m_pCurrentEntity->curstate.sequence >= m_pStudioHeader->numseq || m_pCurrentEntity->curstate.sequence < 0 ) 
 	{
 		m_pCurrentEntity->curstate.sequence = 0;
 	}
 
-	if ( pplayer->sequence >= m_pStudioHeader->numseq ) 
+	if ( pplayer->sequence >= m_pStudioHeader->numseq || pplayer->sequence < 0 ) 
 	{
 		pplayer->sequence = 0;
 	}
 
-	if ( m_pCurrentEntity->curstate.gaitsequence >= m_pStudioHeader->numseq ) 
+	if ( m_pCurrentEntity->curstate.gaitsequence >= m_pStudioHeader->numseq || m_pCurrentEntity->curstate.gaitsequence < 0 ) 
 	{
 		m_pCurrentEntity->curstate.gaitsequence = 0;
 	}
 
-	if ( pplayer->gaitsequence >= m_pStudioHeader->numseq ) 
+	if ( pplayer->gaitsequence >= m_pStudioHeader->numseq || pplayer->gaitsequence < 0 ) 
 	{
 		pplayer->gaitsequence = 0;
 	}
@@ -1277,9 +1305,11 @@ HUD_GetStudioModelInterface
 Export this function for the engine to use the studio renderer class to render objects.
 ====================
 */
-#define DLLEXPORT __declspec( dllexport )
+#define DLLEXPORT		// Counter-Strike 1.4: nothing is exported but F (cdll_int.cpp)
 extern "C" int DLLEXPORT HUD_GetStudioModelInterface( int version, struct r_studio_interface_s **ppinterface, struct engine_studio_api_s *pstudio )
 {
+	g_pcldstAddrs->pStudioInterface( &version, &ppinterface, &pstudio );
+
 	if ( version != STUDIO_INTERFACE_VERSION )
 		return 0;
 

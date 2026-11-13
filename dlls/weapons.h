@@ -189,22 +189,22 @@ public:
 // Counter-Strike: what each weapon's GetItemInfo gives as iMaxAmmo1 (names ours, as Beta
 // 1.0's: the limit goes with the weapon, not with the ammo)
 #define P228_MAX_CARRY			52		// "357SIG"
-#define GLOCK18_MAX_CARRY		90		// "9mm"
-#define SCOUT_MAX_CARRY			60		// "762Nato"
+#define GLOCK18_MAX_CARRY		120		// "9mm"
+#define SCOUT_MAX_CARRY			90		// "762Nato"
 #define HEGRENADE_MAX_CARRY		1
 #define XM1014_MAX_CARRY		32		// "buckshot"
 #define C4_MAX_CARRY			1
-#define MAC10_MAX_CARRY			90		// "45acp"
+#define MAC10_MAX_CARRY			100		// "45acp"
 #define AUG_MAX_CARRY			90		// "556Nato"
 #define SMOKEGRENADE_MAX_CARRY	1
-#define USP_MAX_CARRY			48		// "45acp"
+#define USP_MAX_CARRY			100		// "45acp"
 #define AWP_MAX_CARRY			30		// "338Magnum"
 #define MP5N_MAX_CARRY			120		// "9mm"
 #define M249_MAX_CARRY			200		// "556NatoBox"
 #define M3_MAX_CARRY			32		// "buckshot"
 #define M4A1_MAX_CARRY			90		// "556Nato"
 #define TMP_MAX_CARRY			120		// "9mm"
-#define G3SG1_MAX_CARRY			40		// "762Nato"
+#define G3SG1_MAX_CARRY			90		// "762Nato"
 #define FLASHBANG_MAX_CARRY		2
 #define DEAGLE_MAX_CARRY		35		// "50AE"
 #define ELITE_MAX_CARRY			120		// "9mm"
@@ -842,9 +842,6 @@ public:
 	float GetMaxSpeed( void ) { return 250; }
 	BOOL CanDrop( void ) { return FALSE; }
 	virtual BOOL UseDecrement( void ) { return TRUE; }
-
-	float m_flStartThrow;
-	float m_flReleaseThrow;
 };
 
 
@@ -912,9 +909,6 @@ public:
 	float GetMaxSpeed( void ) { return 260; }
 	BOOL CanDrop( void ) { return FALSE; }
 	virtual BOOL UseDecrement( void ) { return TRUE; }
-
-	float m_flStartThrow;
-	float m_flReleaseThrow;
 };
 
 
@@ -940,7 +934,6 @@ public:
 	BOOL CanDrop( void ) { return FALSE; }
 	virtual BOOL UseDecrement( void ) { return TRUE; }
 
-	int m_iSwing;
 	TraceResult m_trHit;
 	unsigned short m_usKnife;	// name ours
 };
@@ -1125,8 +1118,6 @@ public:
 	BOOL CanDrop( void ) { return FALSE; }
 	virtual BOOL UseDecrement( void ) { return TRUE; }
 
-	float m_flStartThrow;
-	float m_flReleaseThrow;
 	unsigned short m_usCreateSmoke;	// name ours
 };
 

@@ -29,21 +29,12 @@
 
 #ifdef CLIENT_DLL
 	// Spectator Mode
-	#include "..\common\hltv.h"
-	float	vecNewViewAngles[3];
-	float	vecNewViewOrigin[3];
-	int		iHasNewViewAngles;
-	int		iHasNewViewOrigin;
-	int		iIsSpectator;
-	unsigned int	uiDirectorFlags;
-
 	int		iJumpSpectator;
 	float	vJumpOrigin[3];
 	float	vJumpAngles[3];
 #endif
 
 static int pm_shared_initialized = 0;
-void InterpolateAngles( float *start, float *end, float *output, float frac );
 
 #pragma warning( disable : 4305 )
 
@@ -120,8 +111,8 @@ typedef struct hull_s
 #define PLAYER_FATAL_FALL_SPEED		1024// approx 60 feet
 #define PLAYER_MAX_SAFE_FALL_SPEED	580// approx 20 feet
 #define DAMAGE_FOR_FALL_SPEED		(float) 100 / ( PLAYER_FATAL_FALL_SPEED - PLAYER_MAX_SAFE_FALL_SPEED )// damage per unit per second.
-#define PLAYER_MIN_BOUNCE_SPEED		200
-#define PLAYER_FALL_PUNCH_THRESHHOLD (float)350 // won't punch player's screen/make scrape noise unless player falling at least this fast.
+#define PLAYER_MIN_BOUNCE_SPEED		350
+#define PLAYER_FALL_PUNCH_THRESHHOLD (float)250 // won't punch player's screen/make scrape noise unless player falling at least this fast.
 
 #define PLAYER_LONGJUMP_SPEED 350 // how fast we longjump
 
@@ -311,12 +302,6 @@ void PM_PlayStepSound( int step, float fvol )
 
 	// FIXME mp_footsteps needs to be a movevar
 	if ( pmove->multiplayer && !pmove->movevars->footsteps )
-		return;
-
-	VectorCopy( pmove->velocity, hvel );
-	hvel[2] = 0.0;
-
-	if ( pmove->multiplayer && ( !g_onladder && Length( hvel ) <= 220 ) )
 		return;
 
 	// irand - 0,1 for right foot, 2,3 for left foot
@@ -512,18 +497,15 @@ void PM_CatagorizeTextureType( void )
 
 void PM_UpdateStepSound( void )
 {
-	int	fWalking;
 	float fvol;
 	vec3_t knee;
 	vec3_t feet;
 	vec3_t center;
 	float height;
 	float speed;
-	float velrun;
-	float velwalk;
-	float flduck;
 	int	fLadder;
 	int step;
+	int onground;
 
 	if ( pmove->flTimeStepSound > 0 )
 		return;
@@ -531,111 +513,100 @@ void PM_UpdateStepSound( void )
 	if ( pmove->flags & FL_FROZEN )
 		return;
 
-	PM_CatagorizeTextureType();
-
 	speed = Length( pmove->velocity );
+
+	if ( speed <= 150 )
+	{
+		pmove->flTimeStepSound = 400;
+		return;
+	}
 
 	// determine if we are on a ladder
 	fLadder = ( pmove->movetype == MOVETYPE_FLY );// IsOnLadder();
+	onground = ( pmove->onground != -1 );
 
-	// UNDONE: need defined numbers for run, walk, crouch, crouch run velocities!!!!	
-	if ( ( pmove->flags & FL_DUCKING) || fLadder )
+	if ( !fLadder && !onground )
+		return;
+
+	PM_CatagorizeTextureType();
+
+	VectorCopy( pmove->origin, center );
+	VectorCopy( pmove->origin, knee );
+	VectorCopy( pmove->origin, feet );
+
+	height = pmove->player_maxs[ pmove->usehull ][ 2 ] - pmove->player_mins[ pmove->usehull ][ 2 ];
+
+	knee[2] = pmove->origin[2] - 0.3 * height;
+	feet[2] = pmove->origin[2] - 0.5 * height;
+
+	// find out what we're stepping in or on...
+	if (fLadder)
 	{
-		velwalk = 60;		// These constants should be based on cl_movespeedkey * cl_forwardspeed somehow
-		velrun = 80;		// UNDONE: Move walking to server
-		flduck = 100;
+		step = STEP_LADDER;
+		fvol = 0.35;
+		pmove->flTimeStepSound = 350;
+	}
+	else if ( pmove->PM_PointContents ( knee, NULL ) == CONTENTS_WATER )
+	{
+		step = STEP_WADE;
+		fvol = 0.65;
+		pmove->flTimeStepSound = 600;
+	}
+	else if ( pmove->PM_PointContents ( feet, NULL ) == CONTENTS_WATER )
+	{
+		step = STEP_SLOSH;
+		fvol = 0.5;
+		pmove->flTimeStepSound = 300;		
 	}
 	else
 	{
-		velwalk = 120;
-		velrun = 210;
-		flduck = 0;
+		// find texture under player, if different from current texture, 
+		// get material type
+		step = PM_MapTextureTypeStepType( pmove->chtexturetype );
+
+		switch ( pmove->chtexturetype )
+		{
+		default:
+		case CHAR_TEX_CONCRETE:						
+			fvol = 0.5;
+			pmove->flTimeStepSound = 300;
+			break;
+
+		case CHAR_TEX_METAL:	
+			fvol = 0.5;
+			pmove->flTimeStepSound = 300;
+			break;
+
+		case CHAR_TEX_DIRT:	
+			fvol = 0.55;
+			pmove->flTimeStepSound = 300;
+			break;
+
+		case CHAR_TEX_VENT:	
+			fvol = 0.7;
+			pmove->flTimeStepSound = 300;
+			break;
+
+		case CHAR_TEX_GRATE:
+			fvol = 0.5;
+			pmove->flTimeStepSound = 300;
+			break;
+
+		case CHAR_TEX_TILE:	
+			fvol = 0.5;
+			pmove->flTimeStepSound = 300;
+			break;
+
+		case CHAR_TEX_SLOSH:
+			fvol = 0.5;
+			pmove->flTimeStepSound = 300;
+			break;
+		}
 	}
-
-	// If we're on a ladder or on the ground, and we're moving fast enough,
-	//  play step sound.  Also, if pmove->flTimeStepSound is zero, get the new
-	//  sound right away - we just started moving in new level.
-	if ( (fLadder || ( pmove->onground != -1 ) ) &&
-		( Length( pmove->velocity ) > 0.0 ) &&
-		( speed >= velwalk || !pmove->flTimeStepSound ) )
+	
+	if ( ( pmove->flags & FL_DUCKING) || fLadder )
 	{
-		fWalking = speed < velrun;		
-
-		VectorCopy( pmove->origin, center );
-		VectorCopy( pmove->origin, knee );
-		VectorCopy( pmove->origin, feet );
-
-		height = pmove->player_maxs[ pmove->usehull ][ 2 ] - pmove->player_mins[ pmove->usehull ][ 2 ];
-
-		knee[2] = pmove->origin[2] - 0.3 * height;
-		feet[2] = pmove->origin[2] - 0.5 * height;
-
-		// find out what we're stepping in or on...
-		if (fLadder)
-		{
-			step = STEP_LADDER;
-			fvol = 0.35;
-			pmove->flTimeStepSound = 350;
-		}
-		else if ( pmove->PM_PointContents ( knee, NULL ) == CONTENTS_WATER )
-		{
-			step = STEP_WADE;
-			fvol = 0.65;
-			pmove->flTimeStepSound = 600;
-		}
-		else if ( pmove->PM_PointContents ( feet, NULL ) == CONTENTS_WATER )
-		{
-			step = STEP_SLOSH;
-			fvol = fWalking ? 0.2 : 0.5;
-			pmove->flTimeStepSound = fWalking ? 400 : 300;		
-		}
-		else
-		{
-			// find texture under player, if different from current texture, 
-			// get material type
-			step = PM_MapTextureTypeStepType( pmove->chtexturetype );
-
-			switch ( pmove->chtexturetype )
-			{
-			default:
-			case CHAR_TEX_CONCRETE:						
-				fvol = fWalking ? 0.2 : 0.5;
-				pmove->flTimeStepSound = fWalking ? 400 : 300;
-				break;
-
-			case CHAR_TEX_METAL:	
-				fvol = fWalking ? 0.2 : 0.5;
-				pmove->flTimeStepSound = fWalking ? 400 : 300;
-				break;
-
-			case CHAR_TEX_DIRT:	
-				fvol = fWalking ? 0.25 : 0.55;
-				pmove->flTimeStepSound = fWalking ? 400 : 300;
-				break;
-
-			case CHAR_TEX_VENT:	
-				fvol = fWalking ? 0.4 : 0.7;
-				pmove->flTimeStepSound = fWalking ? 400 : 300;
-				break;
-
-			case CHAR_TEX_GRATE:
-				fvol = fWalking ? 0.2 : 0.5;
-				pmove->flTimeStepSound = fWalking ? 400 : 300;
-				break;
-
-			case CHAR_TEX_TILE:	
-				fvol = fWalking ? 0.2 : 0.5;
-				pmove->flTimeStepSound = fWalking ? 400 : 300;
-				break;
-
-			case CHAR_TEX_SLOSH:
-				fvol = fWalking ? 0.2 : 0.5;
-				pmove->flTimeStepSound = fWalking ? 400 : 300;
-				break;
-			}
-		}
-		
-		pmove->flTimeStepSound += flduck; // slower step time if ducking
+		pmove->flTimeStepSound += 100; // slower step time if ducking
 
 		// play the sound
 		// 35% volume if ducking
@@ -643,9 +614,9 @@ void PM_UpdateStepSound( void )
 		{
 			fvol *= 0.35;
 		}
-
-		PM_PlayStepSound( step, fvol );
 	}
+
+	PM_PlayStepSound( step, fvol );
 }
 
 /*
@@ -1062,6 +1033,15 @@ void PM_WalkMove ()
 
 	pmtrace_t trace;
 	
+	// Counter-Strike: a tired player (fuser2 is the stamina, in milliseconds) walks slower
+	if ( pmove->fuser2 > 0 )
+	{
+		float flRatio = ( 100.0 - ( pmove->fuser2 / 1000.0 ) * 19.0 ) / 100.0;
+
+		pmove->velocity[0] *= flRatio;
+		pmove->velocity[1] *= flRatio;
+	}
+
 	// Copy movement amounts
 	fmove = pmove->cmd.forwardmove;
 	smove = pmove->cmd.sidemove;
@@ -1763,42 +1743,6 @@ int PM_CheckStuck (void)
 	return 1;
 }
 
-#define	CHASE_DISTANCE		112		// Desired distance from target
-#define CHASE_PADDING		4		// Minimum allowable distance between the view and a solid face
-
-// Get the origin of the Observer based around the target's position and angles
-void GetChaseOrigin( vec3_t targetangles, int iTargetIndex, vec3_t offset, vec3_t *returnvec )
-{
-	vec3_t forward;
-	vec3_t vecEnd;
-	vec3_t vecStart;
-	struct pmtrace_s *trace;
-	physent_t *target;
-
-	target = &(pmove->physents[ iTargetIndex ]);
-
-	// Trace back from the target using the player's view angles
-	AngleVectors(targetangles, forward, NULL, NULL);
-
-	// Without view_ofs, just guess at adding 28 (standing player) to the origin to get the eye-height
-	VectorCopy( target->origin, vecStart );
-	vecStart[2] += 28;
-	VectorMA(offset, CHASE_DISTANCE, forward, vecEnd);
-	VectorSubtract( vecStart, vecEnd, vecEnd );
-
-	trace = pmove->PM_TraceLine( vecStart, vecEnd, 0, 2, iTargetIndex );
-
-	// Return the position
-	VectorMA( trace->endpos, CHASE_PADDING, trace->plane.normal, *returnvec );
-
-#ifdef CLIENT_DLL
-	//	pmove->Con_NPrintf( 9, "vecStart %f %f %f.\n", vecStart[0], vecStart[1], vecStart[2] );
-	//	pmove->Con_NPrintf( 10, "  vecEnd %f %f %f.\n", vecEnd[0], vecEnd[1], vecEnd[2] );
-	//	pmove->Con_NPrintf( 11, "  EndPos %f %f %f.\n", trace->endpos[0], trace->endpos[1], trace->endpos[2] );
-#endif
-}
-
-
 /*
 ===============
 PM_SpectatorMove
@@ -1814,175 +1758,16 @@ void PM_SpectatorMove (void)
 	float		fmove, smove;
 	vec3_t		wishdir;
 	float		wishspeed;
-	static	vec3_t		lastAngle;
-
-#ifdef CLIENT_DLL
-	vec3_t tempVec;
-	pmtrace_t tr;
-
-	if ( pmove->runfuncs )
-	{
-		// Set spectator flag
-		iIsSpectator = SPEC_IS_SPECTATOR;
-	}
-#endif
-
-	// Are we not roaming and locked onto a target?
-	if ( (pmove->iuser1 != OBS_ROAMING) && pmove->iuser2 )
-	{
-		vec3_t vecViewAngle;
-		vec3_t vecNewOrg;
-		vec3_t vecOffset;
-		
-		int target1,target2 = 0;
-
-		// Find the client this player's targeting
-		for (target1 = 0; target1 < pmove->numphysent; target1++)
-		{
-			if ( pmove->physents[target1].info == pmove->iuser2 )
-				break;
-		}
-
-		if (target1 == pmove->numphysent)
-		{
-#ifdef CLIENT_DLL
-			if ( pmove->runfuncs )
-			{
-				// Force the client to keep last know view
-				VectorCopy( vecNewViewOrigin, pmove->origin );
-				VectorCopy( vecNewViewAngles, pmove->angles );
-				VectorCopy( vec3_origin, pmove->velocity );
-				iHasNewViewAngles = true;
-				iHasNewViewOrigin = true;
-			}
-#endif
-			return;	// if we don't find the observers primary target, stop whole function
-		}
-
-		VectorCopy( vec3_origin, vecOffset );
-
+	// this routine keeps track of the spectators psoition
+	// there a two different main move types : track player or moce freely (OBS_ROAMING)
+	// doesn't need excate track position, only to generate PVS, so just copy
+	// targets position and real view position is calculated on client (saves server CPU)
 	
-		if ( (pmove->iuser1 == OBS_DIRECTED) && pmove->iuser3 )
-		{
-			// find cameras seconds target
-			// Find the client this player's targeting
-			for (target2 = 0; target2 < pmove->numphysent; target2++)
-			{
-				if ( pmove->physents[target2].info == pmove->iuser3 )
-					break;
-			}
-
-			if (target2 == pmove->numphysent)
-			{
-				target2 = -1; // if we didn't found the second target
-			}
-		}
-
-		// Calculate a camera position based upon the target's origin and angles
-		if ( (pmove->iuser1 == OBS_CHASE_LOCKED) )
-		{
-			// use the targets directon as viewangles
-			VectorCopy( pmove->physents[target1].angles, vecViewAngle );
-			vecViewAngle[0] = 0;
-
-#ifdef CLIENT_DLL
-			if ( pmove->runfuncs )
-			{
-				// Force the client to start smoothing both the spectator's origin and angles
-				iIsSpectator |= (SPEC_SMOOTH_ANGLES | SPEC_SMOOTH_ORIGIN);
-			}
-#endif
-		}
-		else if ( pmove->iuser1 == OBS_DIRECTED )
-		{
-			// use angles between primary and second target as viewangle
-			// tracking also seconds target 
-#ifdef CLIENT_DLL
-			if ( target2 > 0 )
-			{
-				VectorSubtract( pmove->physents[target2].origin, pmove->physents[target1].origin, vecViewAngle );
-				VectorAngles(vecViewAngle, vecViewAngle );
-				vecViewAngle[0] = -vecViewAngle[0];
-
-				if ( uiDirectorFlags & DRC_FLAG_DRAMATIC )
-					vecViewAngle[0]-=12.5f;
-				else
-					vecViewAngle[0]+=12.5f;
-
-				if ( uiDirectorFlags & DRC_FLAG_SIDE )
-					vecViewAngle[1]+=22.5f;
-				else
-					vecViewAngle[1]-=22.5f;
-
-				GetChaseOrigin( vecViewAngle, target1, vecOffset, &tempVec);
-
-				tr = *(pmove->PM_TraceLine( (float *)&tempVec, (float *)&pmove->physents[target2].origin, PM_TRACELINE_PHYSENTSONLY, 2 /*point sized hull*/, -1 ));
-
-				// if second target isn't viewable from this side, choose the other side
-				if ( tr.fraction != 1.0 )
-				{
-					if ( uiDirectorFlags & DRC_FLAG_SIDE )
-						vecViewAngle[1]-=2.0f * 22.5f;
-					else
-						vecViewAngle[1]+=2.0f * 22.5f;
-				}
-			}
-			else
-			{
-				
-				if ( target2 == -1 )
-				{
-					// we had a second target but it disappeard, keep last known view angles
-					VectorCopy( vecNewViewAngles, vecViewAngle );
-
-				}
-				else
-				{	// we have no second target, choose view direction based on
-					// entity/player direction
-					VectorCopy( pmove->physents[target1].angles, vecViewAngle );
-					vecViewAngle[1] *= -0.5f;
-				}
-			}
-
-
-			if ( pmove->runfuncs )
-			{
-				// Force the client to start smoothing both the spectator's origin and angles
-				iIsSpectator |= (SPEC_SMOOTH_ANGLES | SPEC_SMOOTH_ORIGIN);
-				InterpolateAngles( lastAngle, vecViewAngle, vecViewAngle, 0.1f );
-				VectorCopy( vecViewAngle, lastAngle );
-			}
-#endif
-		}
-		else
-		{
-			// Freelooking around the target
-			VectorCopy( pmove->angles, vecViewAngle );
-		}
-
-		GetChaseOrigin( vecViewAngle, target1, vecOffset, &vecNewOrg);
-		VectorCopy( vecNewOrg, pmove->origin );
-		VectorCopy( vecViewAngle, pmove->angles );
-		VectorCopy( vec3_origin, pmove->velocity );
-
-#ifdef CLIENT_DLL
-		if ( pmove->runfuncs )
-		{
-			// Copy the desired angles into the client global var so we can force them to the player's view
-			VectorCopy( pmove->angles, vecNewViewAngles );
-			iHasNewViewAngles = true;
-			VectorCopy( pmove->origin, vecNewViewOrigin );
-			iHasNewViewOrigin = true;
-		}
-#endif
-	}
-	else
+	if ( pmove->iuser1 == OBS_ROAMING)
 	{
-		// Move around in normal spectator method
-		// friction
 
-		#ifdef CLIENT_DLL
-		// in free roam mode, spectator can jump within level
+#ifdef CLIENT_DLL
+		// jump only in roaming mode
 		if ( iJumpSpectator )
 		{
 			VectorCopy( vJumpOrigin, pmove->origin );
@@ -1992,6 +1777,7 @@ void PM_SpectatorMove (void)
 			return;
 		}
 		#endif
+		// Move around in normal spectator method
 
 		speed = Length (pmove->velocity);
 		if (speed < 1)
@@ -2054,7 +1840,33 @@ void PM_SpectatorMove (void)
 
 		// move
 		VectorMA (pmove->origin, pmove->frametime, pmove->velocity, pmove->origin);
+	}
+	else
+	{
+		// all other modes just track some kind of target, so spectator PVS = target PVS
 
+		int target;
+
+		// no valid target ?
+		if ( pmove->iuser2 <= 0)
+			return;
+
+		// Find the client this player's targeting
+		for (target = 0; target < pmove->numphysent; target++)
+		{
+			if ( pmove->physents[target].info == pmove->iuser2 )
+				break;
+		}
+
+		if (target == pmove->numphysent)
+			return;
+
+		// use targets position as own origin for PVS
+		VectorCopy( pmove->physents[target].angles, pmove->angles );
+		VectorCopy( pmove->physents[target].origin, pmove->origin );
+
+		// no velocity
+		VectorCopy( vec3_origin, pmove->velocity );
 	}
 }
 
@@ -2102,7 +1914,6 @@ void PM_FixPlayerCrouchStuck( int direction )
 void PM_Duck( void )
 {
 	int i;
-	float time;
 	float duckFraction;
 
 	int buttonsChanged	= ( pmove->oldbuttons ^ pmove->cmd.buttons );	// These buttons have changed this frame
@@ -2140,8 +1951,6 @@ void PM_Duck( void )
 				pmove->bInDuck    = true;
 			}
 
-			time = max( 0.0, ( 1.0 - (float)pmove->flDuckTime / 1000.0 ) );
-			
 			if ( pmove->bInDuck )
 			{
 				// Finish ducking immediately if duck time is over or not on ground
@@ -2170,6 +1979,7 @@ void PM_Duck( void )
 				else
 				{
 					float fMore = (VEC_DUCK_HULL_MIN - VEC_HULL_MIN);
+					float time = max( 0.0, ( 1.0 - (float)pmove->flDuckTime / 1000.0 ) );
 
 					// Calc parametric time
 					duckFraction = PM_SplineFraction( time, (1.0/TIME_TO_DUCK) );
@@ -2689,7 +2499,11 @@ void PM_Jump (void)
 
 	PM_PreventMegaBunnyJumping();
 
-	PM_PlayStepSound( PM_MapTextureTypeStepType( pmove->chtexturetype ), 1.0 );
+	if ( Length( pmove->velocity ) > 150 )
+	{
+		PM_PlayStepSound( PM_MapTextureTypeStepType( pmove->chtexturetype ), 1.0 );
+		pmove->flTimeStepSound = 300;
+	}
 
 	// See if user can super long jump?
 	cansuperjump = atoi( pmove->PM_Info_ValueForKey( pmove->physinfo, "slj" ) ) == 1 ? true : false;
@@ -2723,6 +2537,16 @@ void PM_Jump (void)
 	{
 		pmove->velocity[2] = sqrt(2 * 800 * 45.0);
 	}
+
+	// Counter-Strike: a tired player (fuser2 is the stamina, in milliseconds) jumps lower
+	if ( pmove->fuser2 > 0 )
+	{
+		float flRatio = ( 100.0 - ( pmove->fuser2 / 1000.0 ) * 19.0 ) / 100.0;
+
+		pmove->velocity[2] *= flRatio;
+	}
+
+	pmove->fuser2 = 1315.789429;
 
 	// Decay it for simulation
 	PM_FixupGravityVelocity();
@@ -2814,29 +2638,10 @@ void PM_CheckFalling( void )
 		}
 		else if ( pmove->flFallVelocity > PLAYER_MAX_SAFE_FALL_SPEED )
 		{
-			// NOTE:  In the original game dll , there were no breaks after these cases, causing the first one to 
-			// cascade into the second
-			//switch ( RandomLong(0,1) )
-			//{
-			//case 0:
-				//pmove->PM_PlaySound( CHAN_VOICE, "player/pl_fallpain2.wav", 1, ATTN_NORM, 0, PITCH_NORM );
-				//break;
-			//case 1:
-				pmove->PM_PlaySound( CHAN_VOICE, "player/pl_fallpain3.wav", 1, ATTN_NORM, 0, PITCH_NORM );
-			//	break;
-			//}
 			fvol = 1.0;
 		}
 		else if ( pmove->flFallVelocity > PLAYER_MAX_SAFE_FALL_SPEED / 2 )
 		{
-			qboolean tfc = false;
-			tfc = atoi( pmove->PM_Info_ValueForKey( pmove->physinfo, "tfc" ) ) == 1 ? true : false;
-
-			if ( tfc )
-			{
-				pmove->PM_PlaySound( CHAN_VOICE, "player/pl_fallpain3.wav", 1, ATTN_NORM, 0, PITCH_NORM );
-			}
-
 			fvol = 0.85;
 		}
 		else if ( pmove->flFallVelocity < PLAYER_MIN_BOUNCE_SPEED )
@@ -2846,13 +2651,10 @@ void PM_CheckFalling( void )
 
 		if ( fvol > 0.0 )
 		{
-			// Play landing step right away
-			pmove->flTimeStepSound = 0;
-			
-			PM_UpdateStepSound();
-			
 			// play step sound for current texture
 			PM_PlayStepSound( PM_MapTextureTypeStepType( pmove->chtexturetype ), fvol );
+
+			pmove->flTimeStepSound = 300;
 
 			// Knock the screen around a little bit, temporary effect
 			pmove->punchangle[ 2 ] = pmove->flFallVelocity * 0.013;	// punch z axis
@@ -3051,6 +2853,29 @@ void PM_ReduceTimers( void )
 			pmove->flSwimTime = 0;
 		}
 	}
+	// Counter-Strike: the jump's stamina
+	if ( pmove->fuser2 > 0 )
+	{
+		pmove->fuser2 -= pmove->cmd.msec;
+		if ( pmove->fuser2 < 0 )
+		{
+			pmove->fuser2 = 0;
+		}
+	}
+}
+
+// Counter-Strike 1.4 (the Linux library's name; inline on Windows): an observer moves as a spectator unless
+// iuser3 is set while he is not dead yet (the death camera)
+qboolean PM_ShouldDoSpectMode( void )
+{
+#ifdef CLIENT_DLL
+	return true;
+#else
+	if ( pmove->iuser3 <= 0 || pmove->deadflag == DEAD_DEAD )
+		return true;
+
+	return false;
+#endif
 }
 
 /*
@@ -3086,17 +2911,8 @@ void PM_PlayerMove ( qboolean server )
 
 	// PM_ShowClipBox();
 
-#ifdef CLIENT_DLL
-	if ( pmove->runfuncs )
-	{
-		iIsSpectator = false;
-		iHasNewViewAngles = false;
-		iHasNewViewOrigin = false;
-	}
-#endif
-
 	// Special handling for spectator and observers. (iuser1 is set if the player's in observer mode)
-	if ( pmove->spectator || pmove->iuser1 > 0 )
+	if ( ( pmove->spectator || pmove->iuser1 > 0 ) && PM_ShouldDoSpectMode() )
 	{
 		PM_SpectatorMove();
 		PM_CatagorizePosition();
@@ -3153,12 +2969,6 @@ void PM_PlayerMove ( qboolean server )
 			//  it will be set immediately again next frame if necessary
 			pmove->movetype = MOVETYPE_WALK;
 		}
-	}
-
-	// Slow down, I'm pulling it! (a box maybe) but only when I'm standing on ground
-	if ( ( pmove->onground != -1 ) && ( pmove->cmd.buttons & IN_USE) )
-	{
-		VectorScale( pmove->velocity, 0.3, pmove->velocity );
 	}
 
 	// Handle movement
@@ -3468,11 +3278,20 @@ void PM_Move ( struct playermove_s *ppmove, int server )
 	}
 }
 
-int PM_GetInfo( int ent )
+int PM_GetVisEntInfo( int ent )
 {
 	if ( ent >= 0 && ent <= pmove->numvisent )
 	{
 		return pmove->visents[ ent ].info;
+	}
+	return -1;
+}
+
+int PM_GetPhysEntInfo( int ent )
+{
+	if ( ent >= 0 && ent <= pmove->numphysent)
+	{
+		return pmove->physents[ ent ].info;
 	}
 	return -1;
 }

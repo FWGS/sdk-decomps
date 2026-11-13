@@ -42,6 +42,8 @@ void CMAC10::Spawn( )
 	SET_MODEL(ENT(pev), "models/w_mac10.mdl");
 
 	m_iDefaultAmmo = MAC10_DEFAULT_GIVE;
+	m_flAccuracy = 0.15;
+	m_bDelayFire = false;
 
 	FallInit();// get ready to fall down.
 }
@@ -50,7 +52,6 @@ void CMAC10::Spawn( )
 void CMAC10::Precache( void )
 {
 	PRECACHE_MODEL("models/v_mac10.mdl");
-	PRECACHE_MODEL("models/v_mac10_r.mdl");
 	PRECACHE_MODEL("models/w_mac10.mdl");
 
 	PRECACHE_SOUND("weapons/mac10-1.wav");
@@ -86,16 +87,13 @@ BOOL CMAC10::Deploy( )
 	m_iShellOn = 1;
 	m_bDelayFire = false;
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_mac10.mdl", "models/p_mac10.mdl", MAC10_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_mac10_r.mdl", "models/p_mac10.mdl", MAC10_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_mac10.mdl", "models/p_mac10.mdl", MAC10_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
 }
 
 void CMAC10::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		MAC10Fire( ( m_flAccuracy ) * 0.175, 0.07, FALSE );	// sic: the parentheses (the Processor Pack compiler's instruction order)
+		MAC10Fire( ( m_flAccuracy ) * 0.375, 0.07, FALSE );	// sic: the parentheses (the Processor Pack compiler's instruction order)
 	else
 		MAC10Fire( ( m_flAccuracy ) * 0.03, 0.07, FALSE );
 }
@@ -147,7 +145,7 @@ void CMAC10::MAC10Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	flag = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireMAC10, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), FALSE, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireMAC10, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.y * 100), FALSE, FALSE );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

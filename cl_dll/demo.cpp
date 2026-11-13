@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -18,7 +18,7 @@
 #include "demo_api.h"
 #include <memory.h>
 
-#define DLLEXPORT __declspec( dllexport )
+#define DLLEXPORT		// Counter-Strike 1.4: nothing is exported but F (cdll_int.cpp)
 
 int g_demosniper = 0;
 int g_demosniperdamage = 0;
@@ -62,6 +62,8 @@ Engine wants us to parse some data from the demo stream
 */
 void DLLEXPORT Demo_ReadBuffer( int size, unsigned char *buffer )
 {
+	g_pcldstAddrs->pReadDemoBuffer( &size, &buffer );
+
 	int type;
 	int i = 0;
 

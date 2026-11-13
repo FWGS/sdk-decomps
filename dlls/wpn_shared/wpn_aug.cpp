@@ -42,6 +42,8 @@ void CAUG::Spawn( )
 	SET_MODEL(ENT(pev), "models/w_aug.mdl");
 
 	m_iDefaultAmmo = AUG_DEFAULT_GIVE;
+	m_flAccuracy = 0.2;
+	m_iShotsFired = 0;
 
 	FallInit();// get ready to fall down.
 }
@@ -50,7 +52,6 @@ void CAUG::Spawn( )
 void CAUG::Precache( void )
 {
 	PRECACHE_MODEL("models/v_aug.mdl");
-	PRECACHE_MODEL("models/v_aug_r.mdl");
 	PRECACHE_MODEL("models/w_aug.mdl");
 
 	PRECACHE_SOUND("weapons/aug-1.wav");
@@ -88,10 +89,7 @@ BOOL CAUG::Deploy( )
 	m_iShotsFired = 0;
 	m_iShellOn = 1;
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_aug.mdl", "models/p_aug.mdl", AUG_DRAW, "carbine", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_aug_r.mdl", "models/p_aug.mdl", AUG_DRAW, "carbine", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_aug.mdl", "models/p_aug.mdl", AUG_DRAW, "carbine", UseDecrement() ? 1 : 0 );
 }
 
 void CAUG::SecondaryAttack( void )
@@ -109,7 +107,7 @@ void CAUG::SecondaryAttack( void )
 void CAUG::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		AUGFire( 0.035 + ( 0.3 * m_flAccuracy ), 0.0825, FALSE );
+		AUGFire( 0.035 + ( 0.4 * m_flAccuracy ), 0.0825, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
 		AUGFire( 0.035 + ( 0.07 * m_flAccuracy ), 0.0825, FALSE );
 	else if ( m_pPlayer->pev->fov == 90 )
@@ -165,7 +163,7 @@ void CAUG::AUGFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	flag = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireAUG, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), FALSE, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireAUG, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.y * 100), FALSE, FALSE );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

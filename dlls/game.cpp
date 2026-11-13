@@ -46,6 +46,7 @@ cvar_t	c4timer		= {"mp_c4timer","45", FCVAR_SERVER };			// seconds, 10 to 90 (Be
 cvar_t	ghostfrequency = {"mp_ghostfrequency","0.1", FCVAR_SERVER };	// Beta 5.0 (leak): how often an observer's view of the other ghosts is updated
 cvar_t	autokick	= {"mp_autokick","1", FCVAR_SERVER };			// Beta 5.0 (leak): kick idle players and team killers
 cvar_t	restartround = {"sv_restartround","0", FCVAR_SERVER };		// Beta 5.0 (leak): restart the round in so many seconds (Think)
+cvar_t	sv_restart	= {"sv_restart","0", FCVAR_SERVER };			// Counter-Strike 1.4 (Linux symbol): the same under a second name (Think reads it when sv_restartround is 0)
 cvar_t	limitteams	= {"mp_limitteams","2", FCVAR_SERVER };			// Beta 5.0: how many players one team may have more than the other, 0 (no limit) to 20 (ReadMultiplayCvars, TeamStacked)
 cvar_t	autoteambalance = {"mp_autoteambalance","1", FCVAR_SERVER };	// Beta 6.0 (Linux symbol): balance the teams at a new round when they stay uneven (RestartRound, BalanceTeams)
 // Beta 6.5 (Linux symbols); mp_chasecam is gone
@@ -53,20 +54,21 @@ cvar_t	tkpunish	= {"mp_tkpunish","0", FCVAR_SERVER };			// read by CBasePlayer::
 cvar_t	hostagepenalty = {"mp_hostagepenalty","13", FCVAR_SERVER };	// read by CHostage::TakeDamage
 cvar_t	mirrordamage = {"mp_mirrordamage","0", FCVAR_SERVER };		// registered only: nothing in the DLL reads it by name
 cvar_t	logmessages	= {"mp_logmessages","0", FCVAR_SERVER };		// read by Host_Say
+cvar_t	forcecamera	= {"mp_forcecamera","0", FCVAR_SERVER };		// Counter-Strike 1.4 (Linux symbol): read by name (observer.cpp's GetForceCamera)
 cvar_t	forcechasecam = {"mp_forcechasecam","0", FCVAR_SERVER };	// read by Observer_FindNextPlayer and Observer_SetMode
-cvar_t	mapvoteratio = {"mp_mapvoteratio","0.6", FCVAR_SERVER };	// the share of the players a map needs to be voted in, 0.35 to 1 (CHalfLifeMultiplay::VoteMap)
+cvar_t	mapvoteratio = {"mp_mapvoteratio","0.66", FCVAR_SERVER };	// the share of the players a map needs to be voted in (Counter-Strike 1.4: 0.66 by default, was 0.6)
 // Counter-Strike 1.3 (Linux symbols)
 cvar_t	logdetail	= {"mp_logdetail","0", FCVAR_SERVER };
 cvar_t	startmoney	= {"mp_startmoney","800", FCVAR_SERVER };
 // Beta 7.1 (Linux symbol)
 cvar_t	maxrounds	= {"mp_maxrounds","0", FCVAR_SERVER };			// the map changes after so many rounds, 0 = no limit (CHalfLifeMultiplay::RestartRound and Think read it by name)
-// Counter-Strike 1.1 (Linux symbols)
+// Counter-Strike 1.1 (Linux symbols; mp_fadetoblack, which stood behind mp_winlimit, is gone in 1.4)
 cvar_t	winlimit	= {"mp_winlimit","0", FCVAR_SERVER };			// the map changes when a team has won so many rounds, 0 = no limit
-cvar_t	fadetoblack	= {"mp_fadetoblack","0", FCVAR_SERVER };
 cvar_t	playerid	= {"mp_playerid","0", FCVAR_SERVER };
 cvar_t	allow_spectators = {"allow_spectators","1.0", FCVAR_SERVER };
 
 cvar_t  mp_chattime = {"mp_chattime","10", FCVAR_SERVER };	// SDK 2.2: seconds of the intermission, 10 to 120
+cvar_t	kick_percent = {"mp_kickpercent","0.66", FCVAR_SERVER };	// Counter-Strike 1.4 (Linux symbol): the share of a team a kick vote needs
 
 cvar_t 	*g_psv_gravity = NULL;
 cvar_t	*g_psv_aim = NULL;
@@ -505,22 +507,24 @@ void GameDLLInit( void )
 	CVAR_REGISTER (&ghostfrequency);
 	CVAR_REGISTER (&autokick);
 	CVAR_REGISTER (&restartround);
+	CVAR_REGISTER (&sv_restart);
 	CVAR_REGISTER (&limitteams);
 	CVAR_REGISTER (&autoteambalance);
 	CVAR_REGISTER (&tkpunish);
 	CVAR_REGISTER (&hostagepenalty);
 	CVAR_REGISTER (&mirrordamage);
 	CVAR_REGISTER (&logmessages);
+	CVAR_REGISTER (&forcecamera);
 	CVAR_REGISTER (&forcechasecam);
 	CVAR_REGISTER (&mapvoteratio);
 	CVAR_REGISTER (&maxrounds);
 	CVAR_REGISTER (&winlimit);
-	CVAR_REGISTER (&fadetoblack);
 	CVAR_REGISTER (&logdetail);
 	CVAR_REGISTER (&startmoney);
 	CVAR_REGISTER (&playerid);
 	CVAR_REGISTER (&allow_spectators);
 	CVAR_REGISTER (&mp_chattime);
+	CVAR_REGISTER (&kick_percent);
 
 	CVAR_REGISTER (&fragsleft);
 	CVAR_REGISTER (&timeleft);

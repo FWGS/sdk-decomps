@@ -49,6 +49,10 @@ void CGLOCK18::Spawn( )
 	SET_MODEL(ENT(pev), "models/w_glock18.mdl");
 
 	m_iDefaultAmmo = GLOCK18_DEFAULT_GIVE;
+	m_bBurstFire = false;
+	m_iBurstShotsFired = 0;
+	m_flNextBurstShot = 0;
+	m_flAccuracy = 0.9;
 
 	FallInit();// get ready to fall down.
 }
@@ -57,7 +61,6 @@ void CGLOCK18::Spawn( )
 void CGLOCK18::Precache( void )
 {
 	PRECACHE_MODEL("models/v_glock18.mdl");
-	PRECACHE_MODEL("models/v_glock18_r.mdl");
 	PRECACHE_MODEL("models/w_glock18.mdl");
 
 	PRECACHE_SOUND("weapons/glock18-1.wav");
@@ -99,20 +102,10 @@ BOOL CGLOCK18::Deploy( )
 	m_flNextBurstShot = 0;
 	m_flAccuracy = 0.9;
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-	{
-		if ( RANDOM_LONG( 0, 1 ) )
-			return DefaultDeploy( "models/v_glock18.mdl", "models/p_glock18.mdl", GLOCK18_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
-		else
-			return DefaultDeploy( "models/v_glock18.mdl", "models/p_glock18.mdl", GLOCK18_DRAW2, "onehanded", UseDecrement() ? 1 : 0 );
-	}
+	if ( RANDOM_LONG( 0, 1 ) )
+		return DefaultDeploy( "models/v_glock18.mdl", "models/p_glock18.mdl", GLOCK18_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
 	else
-	{
-		if ( RANDOM_LONG( 0, 1 ) )
-			return DefaultDeploy( "models/v_glock18_r.mdl", "models/p_glock18.mdl", GLOCK18_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
-		else
-			return DefaultDeploy( "models/v_glock18_r.mdl", "models/p_glock18.mdl", GLOCK18_DRAW2, "onehanded", UseDecrement() ? 1 : 0 );
-	}
+		return DefaultDeploy( "models/v_glock18.mdl", "models/p_glock18.mdl", GLOCK18_DRAW2, "onehanded", UseDecrement() ? 1 : 0 );
 }
 
 void CGLOCK18::SecondaryAttack( void )
@@ -134,15 +127,27 @@ void CGLOCK18::SecondaryAttack( void )
 void CGLOCK18::PrimaryAttack( void )
 {
 	if ( m_iWeaponState & WPNSTATE_GLOCK18_BURST_MODE )
-		GLOCK18Fire( 0.05, 0.5, TRUE );
-	else if ( m_pPlayer->pev->velocity.Length2D() > 0 )
-		GLOCK18Fire( ( 1 - m_flAccuracy ) * 0.165, 0.2, FALSE );
-	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		GLOCK18Fire( ( 1 - m_flAccuracy ) * 0.2, 0.2, FALSE );
-	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
-		GLOCK18Fire( ( 1 - m_flAccuracy ) * 0.075, 0.2, FALSE );
+	{
+		if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
+			GLOCK18Fire( ( 1 - m_flAccuracy ) * 1.2, 0.5, TRUE );
+		else if ( m_pPlayer->pev->velocity.Length2D() > 0 )
+			GLOCK18Fire( ( 1 - m_flAccuracy ) * 0.185, 0.5, TRUE );
+		else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
+			GLOCK18Fire( ( 1 - m_flAccuracy ) * 0.095, 0.5, TRUE );
+		else
+			GLOCK18Fire( ( 1 - m_flAccuracy ) * 0.3, 0.5, TRUE );
+	}
 	else
-		GLOCK18Fire( ( 1 - m_flAccuracy ) * 0.1, 0.2, FALSE );
+	{
+		if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
+			GLOCK18Fire( ( 1 - m_flAccuracy ) * 1.0, 0.2, FALSE );
+		else if ( m_pPlayer->pev->velocity.Length2D() > 0 )
+			GLOCK18Fire( ( 1 - m_flAccuracy ) * 0.165, 0.2, FALSE );
+		else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
+			GLOCK18Fire( ( 1 - m_flAccuracy ) * 0.075, 0.2, FALSE );
+		else
+			GLOCK18Fire( ( 1 - m_flAccuracy ) * 0.1, 0.2, FALSE );
+	}
 }
 
 void CGLOCK18::GLOCK18Fire( float flSpread, float flCycleTime, BOOL fUseBurstMode )
@@ -210,7 +215,7 @@ void CGLOCK18::GLOCK18Fire( float flSpread, float flCycleTime, BOOL fUseBurstMod
 	flag = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireGlock18, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), m_iClip == 0, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireGlock18, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.y * 100), m_iClip == 0, FALSE );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

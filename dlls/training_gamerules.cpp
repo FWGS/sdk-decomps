@@ -97,9 +97,8 @@ void CHalfLifeTraining::PlayerThink( CBasePlayer *pPlayer )
 	if ( pPlayer->m_iTeam == TEAM_UNASSIGNED )
 	{
 		// a saved game was loaded: no progress bar, the defuse kit back
-		MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, pPlayer->pev );
-			WRITE_BYTE( 0 );
-		MESSAGE_END();
+		// (Counter-Strike 1.4: through the player's SetProgressBarTime; to 1.3 a BarTime message here)
+		pPlayer->SetProgressBarTime( 0 );
 
 		pPlayer->m_fHasDefuser = ( pPlayer->pev->ideal_yaw != 0 );
 	}

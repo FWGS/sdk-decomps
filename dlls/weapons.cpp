@@ -169,11 +169,8 @@ int DamageDecal( CBaseEntity *pEntity, int bitsDamageType )
 
 void DecalGunshot( TraceResult *pTrace, int iBulletType, bool fShooterOnly, entvars_t *pevShooter, bool bHitMetal )
 {
-	// Is the entity valid
-	if ( !UTIL_IsValidEntity( pTrace->pHit ) )
-		return;
-
-	// Beta 6.5: nothing more; the client's events draw the decals
+	// Beta 6.5: the client's events draw the decals.
+	// Counter-Strike 1.4: nothing at all (every call goes to a function of one ret)
 }
 
 
@@ -709,27 +706,15 @@ void CBasePlayerItem::DefaultTouch( CBaseEntity *pOther )
 void CBasePlayerWeapon::EjectBrassLate( void )
 {
 	// Beta 6.0: the shell flies out on the side away from the gun hand
-	// (Beta 6.5: 9 units out and 9 down; Beta 6.0: 6 and 12)
-	if ( m_pPlayer->m_bLeftHanded == true )
-	{
-		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+	// (Beta 6.5: 9 units out and 9 down; Beta 6.0: 6 and 12).
+	// Counter-Strike 1.4: one side only (the server no longer knows the hand).
+	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
-		Vector	vecShellVelocity = m_pPlayer->pev->velocity 
-								 + gpGlobals->v_right * RANDOM_FLOAT(50,70) 
-								 + gpGlobals->v_up * RANDOM_FLOAT(100,150) 
-								 + gpGlobals->v_forward * 25;
-		EjectBrass ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -9 + gpGlobals->v_forward * 16 - gpGlobals->v_right * 9 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL); 
-	}
-	else
-	{
-		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
-
-		Vector	vecShellVelocity = m_pPlayer->pev->velocity 
-								 - gpGlobals->v_right * RANDOM_FLOAT(50,70) 
-								 + gpGlobals->v_up * RANDOM_FLOAT(100,150) 
-								 + gpGlobals->v_forward * 25;
-		EjectBrass ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -9 + gpGlobals->v_forward * 16 + gpGlobals->v_right * 9 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL); 
-	}
+	Vector	vecShellVelocity = m_pPlayer->pev->velocity 
+							 + gpGlobals->v_right * RANDOM_FLOAT(50,70) 
+							 + gpGlobals->v_up * RANDOM_FLOAT(100,150) 
+							 + gpGlobals->v_forward * 25;
+	EjectBrass ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -9 + gpGlobals->v_forward * 16 - gpGlobals->v_right * 9 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL); 
 }
 
 //=========================================================
@@ -811,7 +796,7 @@ void CBasePlayerWeapon::FireRemaining( void )
 	vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, 0.05, 8192, 1, BULLET_PLAYER_9MM, 18, 0.9, m_pPlayer->pev, true, m_pPlayer->random_seed );
 	m_pPlayer->ammo_9mm--;
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireGlock18, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000), (int)(m_pPlayer->pev->punchangle.y * 10000), (m_iClip == 0), m_pPlayer->m_bLeftHanded != false );	// 10000 here (the client's copy and the weapons multiply by 10000000)
+	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireGlock18, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.y * 100), (m_iClip == 0), FALSE );	// Counter-Strike 1.4: 100, as the weapons (1.3: 10000 here, 10000000 there)
 
 	m_pPlayer->pev->effects |= EF_MUZZLEFLASH;
 	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
@@ -900,7 +885,7 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		m_pPlayer->TabulateAmmo();
 
 		// Beta 5.0 (leak): no shooting in the freeze period at the start of a round
-		if ( ( g_pGameRules->IsMultiplayer() && !((CHalfLifeMultiplay *)g_pGameRules)->IsFreezePeriod() ) || !g_pGameRules->IsMultiplayer() )	// Counter-Strike 1.0: the training course has no freeze time
+		if ( ( g_pGameRules->IsMultiplayer() && !((CHalfLifeMultiplay *)g_pGameRules)->IsFreezePeriod() && !m_pPlayer->m_bIsDefusing ) || !g_pGameRules->IsMultiplayer() )	// Counter-Strike 1.0: the training course has no freeze time; 1.4: not while defusing
 			PrimaryAttack();
 	}
 	else if ( m_pPlayer->pev->button & IN_RELOAD && iMaxClip() != WEAPON_NOCLIP && !m_fInReload ) 
@@ -1230,8 +1215,8 @@ BOOL CBasePlayerWeapon :: DefaultDeploy( char *szViewModel, char *szWeaponModel,
 	strcpy( m_pPlayer->m_szAnimExtention, szAnimExt );
 	SendWeaponAnim( iAnim, skiplocal );
 
-	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
-	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.0;
+	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.75;	// Counter-Strike 1.4 (1.3: 0.5)
+	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.5;	// (1.3: 1.0)
 	m_flDecreaseShotsFired = gpGlobals->time;	// Beta 6.5
 
 	m_pPlayer->pev->fov = m_pPlayer->m_iFOV = 90;
@@ -1248,6 +1233,7 @@ BOOL CBasePlayerWeapon :: DefaultDeploy( char *szViewModel, char *szWeaponModel,
 // units, and 0 for a shotgun's shells, 1 for a magazine)
 //=========================================================
 extern int gmsgReloadSound;
+extern int gmsgBombPickup;
 
 void CBasePlayerWeapon::ReloadSound( void )
 {
@@ -1293,7 +1279,7 @@ BOOL CBasePlayerWeapon :: DefaultReload( int iClipSize, int iAnim, float fDelay 
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + fDelay;
 
 	ReloadSound();	// Beta 5.0 (leak): the others near him hear it
-	SendWeaponAnim( iAnim );
+	SendWeaponAnim( iAnim, UseDecrement() ? 1 : 0 );
 
 	m_fInReload = TRUE;
 
@@ -1608,29 +1594,65 @@ void CWeaponBox::Touch( CBaseEntity *pOther )
 		{
 			if ( !strcmp( STRING( pItem->pev->classname ), "weapon_c4" ) )
 			{
-				// Counter-Strike 1.1: the player's pointer is tested first (1.0b: last,
-				// after its uses), and the finder is told and the log written
-				if ( !pPlayer )
-					return;
+				// Counter-Strike 1.1: the finder is told and the log written.
+				// Counter-Strike 1.4: no test of the player's pointer; a hint the first time
+				// (for a player who wants hints), the director hears of player and box, and
+				// every living terrorist is told who has the bomb and gets the BombPickup message.
 				if ( pPlayer->m_iTeam != TEAM_TERRORIST )
 					return;
 				if ( pPlayer->pev->deadflag != DEAD_NO )
 					return;
 
-				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Got_bomb" );
-				UTIL_LogPrintf( "\"%s<%i><%u><TERRORIST>\" triggered \"Got_The_Bomb\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERWONID( pPlayer->edict() ) );
+				if ( pPlayer->m_bShowHints && !( pPlayer->m_flDisplayHistory & 0x1000 ) )
+				{
+					pPlayer->m_flDisplayHistory |= 0x1000;
+					pPlayer->HintMessage( "#Hint_you_have_the_bomb", FALSE, FALSE );
+				}
+				else
+				{
+					ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Got_bomb" );
+				}
+
+				UTIL_LogPrintf( "\"%s<%i><%s><TERRORIST>\" triggered \"Got_The_Bomb\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERAUTHID( pPlayer->edict() ) );
 
 				// Counter-Strike 1.3: tell director about it
-				MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
-					WRITE_BYTE ( DRC_EVENT );
+				MESSAGE_BEGIN( MSG_SPEC, SVC_DIRECTOR );
+					WRITE_BYTE ( 9 );	// command length in bytes
+					WRITE_BYTE ( DRC_CMD_EVENT );
 					WRITE_SHORT( ENTINDEX( pPlayer->edict() ) );
-					WRITE_SHORT( 0 );
+					WRITE_SHORT( ENTINDEX( edict() ) );
 					WRITE_LONG( 6 );
 				MESSAGE_END();
 
 				pPlayer->m_bHasC4 = true;
 				pPlayer->SetBombIcon( FALSE );
 				pPlayer->pev->body = 1;
+
+				CBaseEntity *pEntity = NULL;	// 1.6's two names
+				CBasePlayer *pTempPlayer;
+
+				while ( ( pEntity = UTIL_FindEntityByClassname( pEntity, "player" ) ) != NULL )
+				{
+					if ( FNullEnt( pEntity->edict() ) )
+						break;
+
+					if ( !pEntity->IsPlayer() )
+						continue;
+
+					if ( pEntity->pev->flags == FL_DORMANT )
+						continue;
+
+					pTempPlayer = GetClassPtr( (CBasePlayer *)pEntity->pev );
+
+					if ( pTempPlayer->pev->deadflag == DEAD_NO && pTempPlayer->m_iTeam == TEAM_TERRORIST )
+					{
+						if ( pTempPlayer != pPlayer )
+							ClientPrint( pTempPlayer->pev, HUD_PRINTCENTER, "#Game_bomb_pickup", STRING( pPlayer->pev->netname ) );
+
+						MESSAGE_BEGIN( MSG_ONE, gmsgBombPickup, NULL, pTempPlayer->pev );
+						MESSAGE_END();
+					}
+				}
 			}
 
 			if ( i > 0 && i < 3 && pPlayer->m_rgpPlayerItems[ i ] )
@@ -2111,35 +2133,35 @@ public:
 				break;
 			case 2:
 				pPlayer->GiveNamedItem( "weapon_p90" );
-				pPlayer->GiveAmmo( 50, "57mm", 150 );
+				pPlayer->GiveAmmo( 50, "57mm", 100 );
 				break;
 			case 3:
 				pPlayer->GiveNamedItem( "weapon_mac10" );
-				pPlayer->GiveAmmo( 60, "45acp", 120 );
+				pPlayer->GiveAmmo( 60, "45acp", 100 );
 				break;
 			case 4:
 				pPlayer->GiveNamedItem( "weapon_ak47" );
-				pPlayer->GiveAmmo( 60, "762Nato", 120 );
+				pPlayer->GiveAmmo( 60, "762Nato", 90 );
 				break;
 			case 5:
 				pPlayer->GiveNamedItem( "weapon_sg552" );
-				pPlayer->GiveAmmo( 60, "556Nato", 200 );
+				pPlayer->GiveAmmo( 60, "556Nato", 90 );
 				break;
 			case 6:
 				pPlayer->GiveNamedItem( "weapon_m4a1" );
-				pPlayer->GiveAmmo( 60, "556Nato", 200 );
+				pPlayer->GiveAmmo( 60, "556Nato", 90 );
 				break;
 			case 7:
 				pPlayer->GiveNamedItem( "weapon_aug" );
-				pPlayer->GiveAmmo( 60, "556Nato", 200 );
+				pPlayer->GiveAmmo( 60, "556Nato", 90 );
 				break;
 			case 8:
 				pPlayer->GiveNamedItem( "weapon_scout" );
-				pPlayer->GiveAmmo( 30, "762Nato", 120 );
+				pPlayer->GiveAmmo( 30, "762Nato", 90 );
 				break;
 			case 9:
 				pPlayer->GiveNamedItem( "weapon_g3sg1" );
-				pPlayer->GiveAmmo( 30, "762Nato", 120 );
+				pPlayer->GiveAmmo( 30, "762Nato", 90 );
 				break;
 			case 10:
 				pPlayer->GiveNamedItem( "weapon_awp" );
@@ -2147,11 +2169,11 @@ public:
 				break;
 			case 11:
 				pPlayer->GiveNamedItem( "weapon_m3" );
-				pPlayer->GiveAmmo( 24, "buckshot", 35 );
+				pPlayer->GiveAmmo( 24, "buckshot", 32 );
 				break;
 			case 12:
 				pPlayer->GiveNamedItem( "weapon_xm1014" );
-				pPlayer->GiveAmmo( 24, "buckshot", 35 );
+				pPlayer->GiveAmmo( 24, "buckshot", 32 );
 				break;
 			case 13:
 				pPlayer->GiveNamedItem( "weapon_m249" );

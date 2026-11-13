@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -26,6 +26,8 @@
 #include "cl_util.h"
 #include "parsemsg.h"
 #include <string.h>
+#include "vgui_TeamFortressViewport.h"
+#include "vgui_SpectatorPanel.h"
 
 
 DECLARE_COMMAND(m_Health, TrackPlayer )
@@ -36,6 +38,7 @@ DECLARE_MESSAGE(m_Health, Health )
 DECLARE_MESSAGE(m_Health, Damage )
 DECLARE_MESSAGE(m_Health, ScoreAttrib )
 DECLARE_MESSAGE(m_Health, Radar )
+DECLARE_MESSAGE(m_Health, ClCorpse )
 
 #define PAIN_NAME "sprites/%d_pain.spr"
 #define DAMAGE_NAME "sprites/%d_dmg.spr"
@@ -64,6 +67,7 @@ int CHudHealth::Init(void)
 	HOOK_MESSAGE(Damage);
 	HOOK_MESSAGE(Radar);
 	HOOK_MESSAGE(ScoreAttrib);
+	HOOK_MESSAGE(ClCorpse);
 	HOOK_COMMAND("trackplayer", TrackPlayer);
 	HOOK_COMMAND("clearplayers", ClearPlayers);
 	HOOK_COMMAND("drawradar", DrawRadar);
@@ -218,7 +222,7 @@ int CHudHealth::Draw(float flTime)
 
 	GetAllPlayersInfo();
 
-	if ( (gHUD.m_iHideHUDDisplay & HIDEHUD_HEALTH) || gEngfuncs.IsSpectateOnly() )
+	if ( (gHUD.m_iHideHUDDisplay & HIDEHUD_HEALTH) || g_iUser1 )	// Counter-Strike 1.4: g_iUser1 (1.3: IsSpectateOnly)
 		return 1;
 
 	if ( !gHUD.m_fPlayerDead && m_bDrawRadar == true )
@@ -561,7 +565,8 @@ int CHudRoundTimer::Draw( float flTime )
 		m_flRoundTime = 0;
 	}
 
-	if ( (gHUD.m_iHideHUDDisplay & HIDEHUD_TIMER) || gEngfuncs.IsSpectateOnly() == 2 )
+	// Counter-Strike 1.4: not while the spectator panel is up (1.3: IsSpectateOnly() == 2)
+	if ( (gHUD.m_iHideHUDDisplay & HIDEHUD_TIMER) || gViewPort->m_pSpectatorPanel->isVisible() )
 		return 1;
 
 	int iTimeLeft = m_flEndTime - flTime;	// name ours
@@ -629,7 +634,7 @@ int CHudRoundTimer::Draw( float flTime )
 
 	// without the suit the timer goes to the top of the screen
 	if ( !( gHUD.m_iWeaponBits & ( 1<<(WEAPON_SUIT) ) ) )
-		y = gHUD.m_iFontHeight;
+		y = YRES( 34 );	// Counter-Strike 1.4 (1.3: gHUD.m_iFontHeight)
 	else
 		y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 
@@ -706,7 +711,7 @@ int CHudProgressBar::Draw( float flTime )
 		m_flDuration = 0;
 	}
 
-	if ( flTime > m_flEndTime )
+	if ( flTime > m_flEndTime || flTime < m_flStartTime )	// Counter-Strike 1.4: the start too
 		return 1;
 
 	UnpackRGB( r, g, b, RGB_YELLOWISH );
@@ -755,7 +760,8 @@ void CHudHealth :: DrawRadar( float flTime )
 	SPR_Set( m_hRadar, 25, 75, 25 );
 	SPR_DrawAdditive( 0, 0, 0, m_prcRadar );
 
-	for ( int i = 0; i < 32; i++ )
+	// Counter-Strike 1.4: the bomb is entry 32 (BombDrop)
+	for ( int i = 0; i < 33; i++ )
 	{
 		if ( i == m_iPlayerNum || strcmp( szTeamName, g_PlayerExtraInfo[i].teamname ) || g_PlayerExtraInfo[i].dead )
 			continue;
@@ -812,7 +818,7 @@ void CHudHealth :: DrawRadar( float flTime )
 			continue;
 
 		int r, g, b;
-		if ( !g_PlayerExtraInfo[i].has_c4 && !g_PlayerExtraInfo[i].is_vip )
+		if ( !g_PlayerExtraInfo[i].has_c4 && !( g_PlayerExtraInfo[i].is_vip && ( g_iTeamNumber == 2 || g_iTeamNumber == 0 ) ) )
 		{
 			if ( m_bTrackArray[i - 1] == true )
 			{
@@ -835,25 +841,28 @@ void CHudHealth :: DrawRadar( float flTime )
 			b = 0;
 		}
 
-		if ( dz < -128 )
+		if ( i != 32 )
 		{
-			float h = dz * -1;
-			if ( h > 3096 )
-				h = 3096;
-			int len = (int)( h / 400 );
-			FillRGBA( px, py, 1, len + dot * 2, r, g, b, 235 );
-			FillRGBA( px - 2, py + len + dot * 2, 5, 1, r, g, b, 235 );
-		}
-		else if ( dz > 128 )
-		{
-			if ( dz > 3096 )
-				dz = 3096;
-			FillRGBA( px - 2, py, 5, 1, r, g, b, 235 );
-			FillRGBA( px, py + 1, 1, (int)( dz / 400 ) + dot * 2 - 1, r, g, b, 235 );
-		}
-		else
-		{
-			FillRGBA( px, py, dot, dot, r, g, b, 235 );
+			if ( dz < -128 )
+			{
+				float h = dz * -1;
+				if ( h > 3096 )
+					h = 3096;
+				int len = (int)( h / 400 );
+				FillRGBA( px, py, 1, len + dot * 2, r, g, b, 235 );
+				FillRGBA( px - 2, py + len + dot * 2, 5, 1, r, g, b, 235 );
+			}
+			else if ( dz > 128 )
+			{
+				if ( dz > 3096 )
+					dz = 3096;
+				FillRGBA( px - 2, py, 5, 1, r, g, b, 235 );
+				FillRGBA( px, py + 1, 1, (int)( dz / 400 ) + dot * 2 - 1, r, g, b, 235 );
+			}
+			else
+			{
+				FillRGBA( px, py, dot, dot, r, g, b, 235 );
+			}
 		}
 
 		if ( g_PlayerExtraInfo[i].flash_next != -1 && flTime > g_PlayerExtraInfo[i].flash_next && g_PlayerExtraInfo[i].flash_left > 0 )
@@ -864,7 +873,87 @@ void CHudHealth :: DrawRadar( float flTime )
 		}
 
 		if ( g_PlayerExtraInfo[i].flash_on == 1 && g_PlayerExtraInfo[i].flash_left > 0 )
-			FillRGBA( px - 3, py - 3, dot + 3, dot + 3, 230, 110, 25, 245 );
+		{
+			if ( i != 32 )
+				FillRGBA( px - 3, py - 3, dot + 3, dot + 3, 230, 110, 25, 245 );
+			else
+				FillRGBA( px - 1, py - 1, dot + 1, dot + 1, 250, 0, 0, 245 );
+		}
+	}
+
+	// Counter-Strike 1.4: the hostages (HostagePos, HostageK), shown while they flash; a dead one in red
+	for ( i = 0; i < MAX_HOSTAGES; i++ )
+	{
+		if ( ( strcmp( szTeamName, g_HostageInfo[i].teamname ) || g_HostageInfo[i].dead ) && ( g_HostageInfo[i].dead != true || g_HostageInfo[i].radarflash == -1 ) )
+			continue;
+
+		float dx = g_HostageInfo[i].origin.x - origin.x;
+		float dy = g_HostageInfo[i].origin.y - origin.y;
+
+		// the bearing of the hostage, in degrees from 0 to 360
+		float angle = atan( dy / dx );
+		angle = angle * 180 / 3.141592654;
+		if ( dx < 0 && dy >= 0 )
+			angle += 180;
+		else if ( dx < 0 && dy < 0 )
+			angle += 180;
+		else if ( dx >= 0 && dy < 0 )
+			angle += 360;
+
+		dy = sqrt( dx * dx + dy * dy ) * -1;	// the distance, negative
+
+		// relative to the view, in radians: turn ( 0, distance ) by it
+		angle = ( gHUD.m_vecAngles.y - angle ) * 3.141592654;
+		angle = angle / 180;
+		float x0 = 0, y0 = dy;
+		float x = x0 * cos( angle ) - y0 * sin( angle );
+		float y = x0 * sin( angle ) + y0 * cos( angle );
+
+		float range;
+		int size, dot;
+		if ( ScreenWidth < 640 )
+		{
+			range = 1024;
+			size = 64;
+			dot = 1;
+		}
+		else
+		{
+			range = 2048;
+			size = 128;
+			dot = 2;
+		}
+
+		if ( dy * -1 > range )
+		{
+			float k = dy * -1 / range;
+			x = x / k;
+			y = y / k;
+		}
+
+		int px = size / 2 + (int)( x / 32 );
+		int py = size / 2 + (int)( y / 32 );
+
+		if ( px < 0 || py < 0 || px > size || py > size )
+			continue;
+
+		if ( g_HostageInfo[i].radarflash != -1 && flTime > g_HostageInfo[i].radarflash && g_HostageInfo[i].radarflashes > 0 )
+		{
+			if ( !g_HostageInfo[i].dead )
+				g_HostageInfo[i].radarflash = flTime + 0.35;
+			else
+				g_HostageInfo[i].radarflash = flTime + 0.15;
+			g_HostageInfo[i].radarflashon = 1 - g_HostageInfo[i].radarflashon;
+			g_HostageInfo[i].radarflashes--;
+		}
+
+		if ( g_HostageInfo[i].radarflashon == 1 && g_HostageInfo[i].radarflashes > 0 )
+		{
+			if ( !g_HostageInfo[i].dead )
+				FillRGBA( px - 1, py - 1, dot + 1, dot + 1, 50, 50, 255, 245 );
+			else
+				FillRGBA( px - 1, py - 1, dot + 1, dot + 1, 250, 25, 25, 245 );
+		}
 	}
 }
 
@@ -934,6 +1023,39 @@ int CHudHealth :: MsgFunc_ScoreAttrib( const char *pszName, int iSize, void *pbu
 		g_PlayerExtraInfo[cl].has_c4 = ( flags & 2 ) ? 1 : 0;
 		g_PlayerExtraInfo[cl].is_vip = ( flags & 4 ) ? 1 : 0;
 	}
+
+	return 1;
+}
+
+void CreateCorpse( Vector vOrigin, Vector vAngles, const char *pModel, float flAnimTime, int iSequence, int iBody );	// ev_hldm.cpp
+
+// Counter-Strike 1.4 (names 1.6's): a dead player's body, made by the client
+int CHudHealth :: MsgFunc_ClCorpse( const char *pszName, int iSize, void *pbuf )
+{
+	char szModel[64];
+	Vector vOrigin, vAngles;
+	float flAnimTime;
+	int iSequence, iBody;
+
+	BEGIN_READ( pbuf, iSize );
+
+	char *pModel = READ_STRING();	// name ours
+	sprintf( szModel, "models/player/%s/%s.mdl", pModel, pModel );
+
+	vOrigin.x = READ_LONG() / 128.0f;
+	vOrigin.y = READ_LONG() / 128.0f;
+	vOrigin.z = READ_LONG() / 128.0f;
+
+	vAngles.x = READ_COORD();
+	vAngles.y = READ_COORD();
+	vAngles.z = READ_COORD();
+
+	flAnimTime = READ_LONG() / 100.0f + gEngfuncs.GetClientTime();
+
+	iSequence = READ_BYTE();
+	iBody = READ_BYTE();
+
+	CreateCorpse( vOrigin, vAngles, szModel, flAnimTime, iSequence, iBody );
 
 	return 1;
 }

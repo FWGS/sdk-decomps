@@ -215,7 +215,8 @@ static void InitBodyQue(void)
 	entvars_t *pev = VARS(g_pBodyQueueHead);
 	
 	// Reserve 3 more slots for dead bodies
-	for ( int i = 0; i < 3; i++ )
+	// (Counter-Strike 1.4: 31 more, a queue of 32)
+	for ( int i = 0; i < 31; i++ )
 	{
 		pev->owner = CREATE_NAMED_ENTITY( istrClassname );
 		pev = VARS(pev->owner);
@@ -262,9 +263,28 @@ void CopyToBodyQue(entvars_t *pev)
 	g_pBodyQueueHead = pevHead->owner;
 }
 
-// Counter-Strike Beta 7.0 (Linux symbol ClearQueue__Fv): an empty function, never called
-void ClearQueue( void )
+
+//
+// Counter-Strike 1.4: every body of the queue loses its model (the round's restart calls this;
+// the Linux library has the function, 1.6 at this place). The locals' names are ours.
+// It is Beta 7.0's empty ClearQueue (Linux symbol ClearQueue__Fv up to 1.3, never called)
+// under a new name and with a body: 1.4's Linux library has no ClearQueue.
+//
+void ClearBodyQue( void )
 {
+	entvars_t *pevHead = VARS( g_pBodyQueueHead );
+	entvars_t *pev = pevHead;
+
+	while ( pev )
+	{
+		pev->model = 0;
+		pev->modelindex = 0;
+
+		pev = VARS( pev->owner );
+
+		if ( pev == pevHead )
+			break;
+	}
 }
 
 

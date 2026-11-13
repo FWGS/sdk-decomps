@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
@@ -18,9 +18,9 @@
 #include "event_api.h"
 #include "pm_defs.h"
 #include "pmtrace.h"	
+#include "pm_shared.h"
 
-
-#define DLLEXPORT __declspec( dllexport )
+#define DLLEXPORT		// Counter-Strike 1.4: nothing is exported but F (cdll_int.cpp)
 
 void Game_AddObjects( void );
 
@@ -48,6 +48,8 @@ int g_iUser4[ 64 ];	// name ours: each player's iuser4 from the server (HUD_Proc
 
 int DLLEXPORT HUD_AddEntity( int type, struct cl_entity_s *ent, const char *modelname )
 {
+	g_pcldstAddrs->pAddEntity( &type, &ent, &modelname );
+
 	switch ( type )
 	{
 	case ET_NORMAL:
@@ -66,13 +68,16 @@ int DLLEXPORT HUD_AddEntity( int type, struct cl_entity_s *ent, const char *mode
 		break;
 	}
 	// each frame every entity passes this function, so the overview hooks it to filter the overview entities
-	if (gEngfuncs.IsSpectateOnly())
+	// in spectator mode:
+	// each frame every entity passes this function, so the overview hooks 
+	// it to filter the overview entities
+
+	if ( g_iUser1 )
 	{
 		gHUD.m_Spectator.AddOverviewEntity( type, ent, modelname );
 
-		if ( (	gHUD.m_Spectator.m_iMainMode == MAIN_IN_EYE ||
-				gHUD.m_Spectator.m_iInsetMode == INSET_IN_EYE ) &&
-				ent->index == gHUD.m_Spectator.m_iObserverTarget )
+		if ( (	g_iUser1 == OBS_IN_EYE || gHUD.m_Spectator.m_pip->value == INSET_IN_EYE ) &&
+				ent->index == g_iUser2 )
 			return 0;	// don't draw the player we are following in eye
 
 	}
@@ -91,6 +96,8 @@ structure, we need to copy them into the state structure at this point.
 */
 void DLLEXPORT HUD_TxferLocalOverrides( struct entity_state_s *state, const struct clientdata_s *client )
 {
+	g_pcldstAddrs->pTxferLocalOverrides( &state, &client );
+
 	VectorCopy( client->origin, state->origin );
 
 	// Spectator
@@ -114,6 +121,8 @@ playerstate structure
 */
 void DLLEXPORT HUD_ProcessPlayerState( struct entity_state_s *dst, const struct entity_state_s *src )
 {
+	g_pcldstAddrs->pProcessPlayerState( &dst, &src );
+
 	g_iUser4[ src->number ] = src->iuser4;
 
 	// Copy in network data
@@ -161,14 +170,14 @@ void DLLEXPORT HUD_ProcessPlayerState( struct entity_state_s *dst, const struct 
 	cl_entity_t *player = gEngfuncs.GetLocalPlayer();	// Get the local player's index
 	if ( dst->number == player->index )
 	{
-		g_iPlayerClass = dst->playerclass;
-		g_iTeamNumber = dst->team;
+		g_iTeamNumber = g_PlayerExtraInfo[ player->index ].teamnumber;
 
 		g_iUser1 = src->iuser1;
 		g_iUser2 = src->iuser2;
 		g_iUser3 = src->iuser3;
-
 	}
+
+	dst->fuser2 = src->fuser2;
 }
 
 /*
@@ -183,6 +192,8 @@ Because we can predict an arbitrary number of frames before the server responds 
 */
 void DLLEXPORT HUD_TxferPredictionData ( struct entity_state_s *ps, const struct entity_state_s *pps, struct clientdata_s *pcd, const struct clientdata_s *ppcd, struct weapon_data_s *wd, const struct weapon_data_s *pwd )
 {
+	g_pcldstAddrs->pTxferPredictionData( &ps, &pps, &pcd, &ppcd, &wd, &pwd );
+
 	ps->oldbuttons				= pps->oldbuttons;
 	ps->flFallVelocity			= pps->flFallVelocity;
 	ps->iStepLeft				= pps->iStepLeft;
@@ -512,6 +523,8 @@ Gives us a chance to add additional entities to the render this frame
 */
 void DLLEXPORT HUD_CreateEntities( void )
 {
+	g_pcldstAddrs->pCreateEntities();
+
 	// e.g., create a persistent cl_entity_t somewhere.
 	// Load an appropriate model into it ( gEngfuncs.CL_LoadModel )
 	// Call gEngfuncs.CL_CreateVisibleEntity to add it to the visedicts list
@@ -535,7 +548,6 @@ void DLLEXPORT HUD_CreateEntities( void )
 	Beams();
 #endif
 
-
 	// Add in any game specific objects
 	Game_AddObjects();
 
@@ -552,6 +564,8 @@ fired during this frame, handle the event by it's tag ( e.g., muzzleflash, sound
 */
 void DLLEXPORT HUD_StudioEvent( const struct mstudioevent_s *event, const struct cl_entity_s *entity )
 {
+	g_pcldstAddrs->pStudioEvent( &event, &entity );
+
 	switch( event->event )
 	{
 	case 5001:
@@ -594,6 +608,8 @@ void DLLEXPORT HUD_TempEntUpdate (
 	int		( *Callback_AddVisibleEntity )( cl_entity_t *pEntity ),
 	void	( *Callback_TempEntPlaySound )( TEMPENTITY *pTemp, float damp ) )
 {
+	g_pcldstAddrs->pTempEntUpdate( &frametime, &client_time, &cl_gravity, &ppTempEntFree, &ppTempEntActive, &Callback_AddVisibleEntity, &Callback_TempEntPlaySound );
+
 	static int gTempEntFrame = 0;
 	int			i;
 	TEMPENTITY	*pTemp, *pnext, *pprev;
@@ -744,6 +760,13 @@ void DLLEXPORT HUD_TempEntUpdate (
 				{
 					pTemp->entity.curstate.frame = pTemp->entity.curstate.frame - (int)(pTemp->entity.curstate.frame);
 
+					// Counter-Strike 1.4: a body whose animation wrapped is neither moved nor drawn this frame
+					if ( pTemp->flags & FTENT_CORPSE )
+					{
+						pTemp = pnext;
+						continue;
+					}
+
 					if ( !(pTemp->flags & FTENT_SPRANIMATELOOP) )
 					{
 						// this animating sprite isn't set to loop, so destroy it.
@@ -776,7 +799,7 @@ void DLLEXPORT HUD_TempEntUpdate (
 				VectorCopy( pTemp->entity.angles, pTemp->entity.latched.prevangles );
 			}
 
-			if ( pTemp->flags & (FTENT_COLLIDEALL | FTENT_COLLIDEWORLD) )
+			if ( ( pTemp->flags & (FTENT_COLLIDEALL | FTENT_COLLIDEWORLD) ) && !( pTemp->flags & FTENT_CORPSELANDED ) )
 			{
 				vec3_t	traceNormal;
 				float	traceFraction = 1;
@@ -813,7 +836,18 @@ void DLLEXPORT HUD_TempEntUpdate (
 					
 					gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
 
-					gEngfuncs.pEventAPI->EV_PlayerTrace( pTemp->entity.prevstate.origin, pTemp->entity.origin, PM_STUDIO_BOX | PM_WORLD_ONLY, -1, &pmtrace );					
+					if ( pTemp->flags & FTENT_CORPSE )
+					{
+						// a body traces 36 units ahead along its velocity
+						Vector vVel = pTemp->entity.baseline.origin;
+						VectorNormalize( vVel );
+
+						Vector vEndPos = pTemp->entity.prevstate.origin + vVel * 36;
+
+						gEngfuncs.pEventAPI->EV_PlayerTrace( pTemp->entity.prevstate.origin, vEndPos, PM_STUDIO_BOX | PM_WORLD_ONLY, -1, &pmtrace );
+					}
+					else
+						gEngfuncs.pEventAPI->EV_PlayerTrace( pTemp->entity.prevstate.origin, pTemp->entity.origin, PM_STUDIO_BOX | PM_WORLD_ONLY, -1, &pmtrace );
 
 					if ( pmtrace.fraction != 1 )
 					{
@@ -912,10 +946,13 @@ void DLLEXPORT HUD_TempEntUpdate (
 				gEngfuncs.pEfxAPI->R_RocketTrail (pTemp->entity.prevstate.origin, pTemp->entity.origin, 1);
 			}
 
-			if ( pTemp->flags & FTENT_GRAVITY )
-				pTemp->entity.baseline.origin[2] += gravity;
-			else if ( pTemp->flags & FTENT_SLOWGRAVITY )
-				pTemp->entity.baseline.origin[2] += gravitySlow;
+			if ( !( pTemp->flags & FTENT_CORPSELANDED ) )
+			{
+				if ( pTemp->flags & FTENT_GRAVITY )
+					pTemp->entity.baseline.origin[2] += gravity;
+				else if ( pTemp->flags & FTENT_SLOWGRAVITY )
+					pTemp->entity.baseline.origin[2] += gravitySlow;
+			}
 
 			if ( pTemp->flags & FTENT_CLIENTCUSTOM )
 			{
@@ -959,6 +996,8 @@ Indices must start at 1, not zero.
 */
 cl_entity_t DLLEXPORT *HUD_GetUserEntity( int index )
 {
+	g_pcldstAddrs->pGetUserEntity( &index );
+
 #if defined( BEAM_TEST )
 	// None by default, you would return a valic pointer if you create a client side
 	//  beam and attach it to a client side entity.

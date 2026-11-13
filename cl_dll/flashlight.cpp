@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -30,8 +30,6 @@
 
 DECLARE_MESSAGE(m_Flash, FlashBat)
 DECLARE_MESSAGE(m_Flash, Flashlight)
-DECLARE_MESSAGE(m_Flash, WClose)
-DECLARE_MESSAGE(m_Flash, WClose2)
 
 #define BAT_NAME "sprites/%d_Flashlight.spr"
 
@@ -42,8 +40,6 @@ int CHudFlashlight::Init(void)
 
 	HOOK_MESSAGE(Flashlight);
 	HOOK_MESSAGE(FlashBat);
-	HOOK_MESSAGE(WClose);
-	HOOK_MESSAGE(WClose2);
 
 	m_iFlags |= HUD_ACTIVE;
 
@@ -110,6 +106,10 @@ int CHudFlashlight::Draw(float flTime)
 	if (!(gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT)) ))
 		return 1;
 
+	// Counter-Strike 1.4: not for spectators
+	if ( g_iUser1 )
+		return 1;
+
 	if (m_fOn)
 		a = 225;
 	else
@@ -149,63 +149,6 @@ int CHudFlashlight::Draw(float flTime)
 		SPR_DrawAdditive( 0, x + iOffset, y, &rc);
 	}
 
-
-	return 1;
-}
-
-// the server names a window (a cheat proxy's) to close: the window class and its title
-int CHudFlashlight::MsgFunc_WClose( const char *pszName, int iSize, void *pbuf )
-{
-	char szName[100];		// names ours
-	char szTitle[256];
-	char szClass[256];
-	char szCommand[256];
-
-	BEGIN_READ( pbuf, iSize );
-	strcpy( szClass, READ_STRING() );
-	strcpy( szTitle, READ_STRING() );
-
-	HWND hWnd = FindWindow( szClass, szTitle );	// name ours
-	if ( hWnd )
-	{
-		SendMessage( hWnd, WM_CLOSE, 0, 0 );
-
-		for ( int i = 1; i < MAX_PLAYERS; i++ )
-		{
-			if ( g_PlayerInfoList[i].thisplayer )
-				strcpy( szName, g_PlayerInfoList[i].name );
-		}
-
-		sprintf( szCommand, "say *** %s was caught using a cheat proxy! ***", szName );
-		ServerCmd( szCommand );
-	}
-
-	return 1;
-}
-
-// the same with the window class alone
-int CHudFlashlight::MsgFunc_WClose2( const char *pszName, int iSize, void *pbuf )
-{
-	char szName[100];		// names ours
-	char szClass[256];
-	char szCommand[256];
-
-	BEGIN_READ( pbuf, iSize );
-	strcpy( szClass, READ_STRING() );
-
-	HWND hWnd = FindWindow( szClass, NULL );	// name ours
-	if ( hWnd )
-	{
-		SendMessage( hWnd, WM_CLOSE, 0, 0 );
-
-		for ( int i = 1; i < MAX_PLAYERS; i++ )
-		{
-			if ( g_PlayerInfoList[i].thisplayer )
-				strcpy( szName, g_PlayerInfoList[i].name );
-		}
-
-		ServerCmd( szCommand );	// a retail bug: szCommand is never written
-	}
 
 	return 1;
 }

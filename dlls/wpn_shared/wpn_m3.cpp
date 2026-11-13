@@ -51,7 +51,6 @@ void CM3::Spawn( )
 void CM3::Precache( void )
 {
 	PRECACHE_MODEL("models/v_m3.mdl");
-	PRECACHE_MODEL("models/v_m3_r.mdl");
 	PRECACHE_MODEL("models/w_m3.mdl");
 
 	m_iShellLate = m_iShell = PRECACHE_MODEL ("models/shotgunshell.mdl");// shotgun shell
@@ -84,10 +83,7 @@ int CM3::GetItemInfo(ItemInfo *p)
 
 BOOL CM3::Deploy( )
 {
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_m3.mdl", "models/p_m3.mdl", M3_DRAW, "shotgun", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_m3_r.mdl", "models/p_m3.mdl", M3_DRAW, "shotgun", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_m3.mdl", "models/p_m3.mdl", M3_DRAW, "shotgun", UseDecrement() ? 1 : 0 );
 }
 
 void CM3::PrimaryAttack()
@@ -149,7 +145,8 @@ void CM3::PrimaryAttack()
 		m_flTimeWeaponIdle = 0.875;
 	m_fInSpecialReload = 0;
 
-	m_pPlayer->pev->punchangle.x -= RANDOM_LONG( 4, 6 );
+	m_pPlayer->pev->punchangle.x -= !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) ? UTIL_SharedRandomLong( m_pPlayer->random_seed + 1, 8, 11 ) : UTIL_SharedRandomLong( m_pPlayer->random_seed + 1, 4, 6 );
+
 	m_pPlayer->m_flEjectBrass = gpGlobals->time + 0.45;
 }
 

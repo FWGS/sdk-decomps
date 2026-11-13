@@ -52,6 +52,7 @@ void CUSP::Spawn( )
 	SET_MODEL(ENT(pev), "models/w_usp.mdl");
 
 	m_iDefaultAmmo = USP_DEFAULT_GIVE;
+	m_flAccuracy = 0.92;
 
 	FallInit();// get ready to fall down.
 }
@@ -60,7 +61,6 @@ void CUSP::Spawn( )
 void CUSP::Precache( void )
 {
 	PRECACHE_MODEL("models/v_usp.mdl");
-	PRECACHE_MODEL("models/v_usp_r.mdl");
 	PRECACHE_MODEL("models/w_usp.mdl");
 
 	PRECACHE_SOUND("weapons/usp1.wav");
@@ -99,20 +99,10 @@ BOOL CUSP::Deploy( )
 {
 	m_flAccuracy = 0.92;
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-	{
-		if ( m_iWeaponState & WPNSTATE_USP_SILENCED )
-			return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
-		else
-			return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_UNSIL_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
-	}
+	if ( m_iWeaponState & WPNSTATE_USP_SILENCED )
+		return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
 	else
-	{
-		if ( m_iWeaponState & WPNSTATE_USP_SILENCED )
-			return DefaultDeploy( "models/v_usp_r.mdl", "models/p_usp.mdl", USP_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
-		else
-			return DefaultDeploy( "models/v_usp_r.mdl", "models/p_usp.mdl", USP_UNSIL_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
-	}
+		return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_UNSIL_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
 }
 
 void CUSP::SecondaryAttack( void )
@@ -139,10 +129,10 @@ void CUSP::PrimaryAttack( void )
 {
 	if ( m_iWeaponState & WPNSTATE_USP_SILENCED )
 	{
-		if ( m_pPlayer->pev->velocity.Length2D() > 0 )
+		if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
+			USPFire( ( 1 - m_flAccuracy ) * 1.3, 0.225, FALSE );
+		else if ( m_pPlayer->pev->velocity.Length2D() > 0 )
 			USPFire( ( 1 - m_flAccuracy ) * 0.25, 0.225, FALSE );
-		else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-			USPFire( ( 1 - m_flAccuracy ) * 0.35, 0.225, FALSE );
 		else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
 			USPFire( ( 1 - m_flAccuracy ) * 0.125, 0.225, FALSE );
 		else
@@ -150,10 +140,10 @@ void CUSP::PrimaryAttack( void )
 	}
 	else
 	{
-		if ( m_pPlayer->pev->velocity.Length2D() > 0 )
+		if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
+			USPFire( ( 1 - m_flAccuracy ) * 1.2, 0.225, FALSE );
+		else if ( m_pPlayer->pev->velocity.Length2D() > 0 )
 			USPFire( ( 1 - m_flAccuracy ) * 0.225, 0.225, FALSE );
-		else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-			USPFire( ( 1 - m_flAccuracy ) * 0.3, 0.225, FALSE );
 		else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
 			USPFire( ( 1 - m_flAccuracy ) * 0.08, 0.225, FALSE );
 		else
@@ -171,17 +161,17 @@ void CUSP::USPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 		return;
 
 	if ( m_flLastFire == 0 )
-		m_flLastFire = UTIL_WeaponTimeBase();
+		m_flLastFire = gpGlobals->time;
 	else
 	{
-		m_flAccuracy -= ( 0.3 - ( UTIL_WeaponTimeBase() - m_flLastFire ) ) * 0.275;
+		m_flAccuracy -= ( 0.3 - ( gpGlobals->time - m_flLastFire ) ) * 0.275;
 
 		if ( m_flAccuracy > 0.92 )
 			m_flAccuracy = 0.92;
 		else if ( m_flAccuracy < 0.6 )
 			m_flAccuracy = 0.6;
 
-		m_flLastFire = UTIL_WeaponTimeBase();
+		m_flLastFire = gpGlobals->time;
 	}
 
 	if (m_iClip <= 0)
@@ -227,7 +217,7 @@ void CUSP::USPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	else
 		vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, flSpread, 4096, 1, BULLET_PLAYER_45ACP, 34, 0.79, m_pPlayer->pev, true, m_pPlayer->random_seed );
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireUSP, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), m_pPlayer->m_bLeftHanded != false, m_iClip == 0, m_iWeaponState & WPNSTATE_USP_SILENCED );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireUSP, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), FALSE, m_iClip == 0, m_iWeaponState & WPNSTATE_USP_SILENCED );
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
 		// HEV suit - indicate out of ammo condition

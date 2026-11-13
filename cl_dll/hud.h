@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -46,6 +46,7 @@ enum
 	MAX_PLAYERS = 64,
 	MAX_TEAMS = 64,
 	MAX_TEAM_NAME = 16,
+	MAX_HOSTAGES = 24,	// name ours
 };
 
 typedef struct {
@@ -131,6 +132,10 @@ public:
 	void _cdecl UserCmd_PrevWeapon( void );
 	void _cdecl UserCmd_Adjust_Crosshair( void );	// name ours
 
+	int DrawCrosshair( float flTime, int weaponid );	// Counter-Strike 1.4
+
+	friend class CHudSpectator;	// SetModes sets the observer's crosshair from the members below (retail 0x190f831)
+
 private:
 	float m_fFade;
 	RGBA  m_rgba;
@@ -140,12 +145,12 @@ private:
 	HSPRITE m_hObserverCrosshair;		// name ours
 	wrect_t m_rcObserverCrosshair;		// name ours
 	int m_bObserverCrosshair;			// name ours
-	int m_iLastClip;					// name ours
-	float m_flCrossGap;					// name ours
-	int m_iCrossAlpha;					// name ours
-	int m_iCrossR;						// name ours: the crosshair colour adjust_crosshair cycles
-	int m_iCrossG;						// name ours
-	int m_iCrossB;						// name ours
+	int m_iAmmoLastCheck;
+	float m_flCrosshairDistance;
+	int m_iAlpha;
+	int m_R;							// the crosshair colour adjust_crosshair cycles
+	int m_G;
+	int m_B;
 	int m_iCrossColor;					// name ours: 0 green, 1 red, 2 blue, 3 yellow, 4 cyan
 
 };
@@ -339,6 +344,17 @@ struct extra_player_info_t
 	int health;				// name ours
 };
 
+struct hostage_info_t
+{
+	bool dead;
+	Vector origin;
+	int health;
+	float radarflash;
+	int radarflashon;
+	int radarflashes;
+	char teamname[MAX_TEAM_NAME];
+};
+
 struct team_info_t 
 {
 	char name[MAX_TEAM_NAME];
@@ -356,6 +372,7 @@ struct team_info_t
 
 extern hud_player_info_t	g_PlayerInfoList[MAX_PLAYERS+1];	   // player info from the engine
 extern extra_player_info_t  g_PlayerExtraInfo[MAX_PLAYERS+1];   // additional player info sent directly to the client dll
+extern hostage_info_t		g_HostageInfo[MAX_HOSTAGES+1];
 extern team_info_t			g_TeamInfo[MAX_TEAMS+1];
 extern int					g_IsSpectator[MAX_PLAYERS+1];
 
@@ -412,6 +429,12 @@ public:
 	void SayTextPrint( const char *pszBuf, int iBufSize, int clientIndex = -1 );
 	void SendAudioPlay( const char *pszBuf, int iBufSize );	// name ours
 	void EnsureTextFitsInOneLineAndWrapIfHaveTo( int line );
+friend class CHudSpectator;
+
+private:
+
+	struct cvar_s *	m_HUD_saytext;
+	struct cvar_s *	m_HUD_saytext_time;
 };
 
 //
@@ -449,8 +472,6 @@ public:
 	void Reset( void );
 	int MsgFunc_Flashlight(const char *pszName,  int iSize, void *pbuf );
 	int MsgFunc_FlashBat(const char *pszName,  int iSize, void *pbuf );
-	int MsgFunc_WClose(const char *pszName,  int iSize, void *pbuf );
-	int MsgFunc_WClose2(const char *pszName,  int iSize, void *pbuf );
 	
 private:
 	HSPRITE m_hSprite1;
@@ -519,6 +540,8 @@ public:
 	int YPosition( float y, int height );
 
 	void MessageAdd( const char *pName, float time, int hintMessage );
+	void MessageAdd( const char *pName, float time );
+	void MessageAdd(client_textmessage_t * newMessage );
 	void MessageDrawScan( client_textmessage_t *pMessage, float time );
 	void MessageScanStart( void );
 	void MessageScanNextChar( void );
@@ -583,6 +606,7 @@ private:
 //
 class CHudMoney: public CHudBase	// name ours
 {
+	friend class TeamFortressViewport;	// UpdateSpectatorPanel prints the money (retail 0x195b9ca)
 public:
 	int Init( void );
 	int VidInit( void );
@@ -592,10 +616,10 @@ public:
 	int MsgFunc_BlinkAcct( const char *pszName, int iSize, void *pbuf );
 
 private:
+	int m_iMoneyCount;		// name ours (Counter-Strike 1.6: m_iAccount; 1.4 has it first, as 1.6)
 	int m_HUD_dollar;		// name ours
 	int m_HUD_minus;		// name ours
 	int m_HUD_plus;			// name ours
-	int m_iMoneyCount;		// name ours
 	int m_iDelta;			// name ours
 	float m_fFade;
 	float m_fFadeDelta;		// name ours
@@ -609,6 +633,7 @@ private:
 //
 class CHudRoundTimer: public CHudBase	// name ours
 {
+	friend class TeamFortressViewport;	// UpdateSpectatorPanel prints the time left (retail 0x195ba00; SDK 2.3's commented lines: gHUD.m_roundTimer.m_flTimeEnd)
 public:
 	int Init( void );
 	int VidInit( void );
@@ -617,9 +642,9 @@ public:
 	int MsgFunc_RoundTime( const char *pszName, int iSize, void *pbuf );
 
 private:
+	float m_flEndTime;		// name ours (Counter-Strike 1.6: m_flTimeEnd; 1.4 has it first, as 1.6)
 	int m_HUD_timer;		// name ours
 	int m_iUnused;			// name ours
-	float m_flEndTime;		// name ours
 	float m_flRoundTime;	// name ours
 	float m_flNextToggle;	// name ours
 	int m_bPanicColor;		// name ours
@@ -668,6 +693,7 @@ private:
 	wrect_t *m_prcScope[3][8];		// name ours: the scope's pieces at 640, 800 and 1024 wide
 	wrect_t *m_prcHorizontal;		// name ours
 	wrect_t *m_prcVertical;			// name ours
+	HSPRITE m_hScopeSmall[4];		// name ours: Counter-Strike 1.4, the scope's corners below 640 wide
 	HSPRITE m_hScope[8];			// name ours
 	HSPRITE m_hHorizontal;			// name ours
 	HSPRITE m_hVertical;			// name ours
@@ -710,6 +736,7 @@ public:
 	int		m_Teamplay;
 	int		m_iRes;
 	cvar_t  *m_pCvarStealMouse;
+	cvar_t	*m_pCvarDraw;
 
 	int m_iFontHeight;
 	int DrawHudNumber(int x, int y, int iFlags, int iNumber, int r, int g, int b );
@@ -787,6 +814,11 @@ public:
 	int _cdecl MsgFunc_ResetHUD(const char *pszName,  int iSize, void *pbuf);
 	void _cdecl MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf );
 	void _cdecl MsgFunc_ViewMode( const char *pszName, int iSize, void *pbuf );
+	void _cdecl MsgFunc_CheckModels( const char *pszName, int iSize, void *pbuf );	// name ours
+	void _cdecl MsgFunc_BombDrop( const char *pszName, int iSize, void *pbuf );
+	void _cdecl MsgFunc_BombPickup( const char *pszName, int iSize, void *pbuf );
+	void _cdecl MsgFunc_HostagePos( const char *pszName, int iSize, void *pbuf );
+	void _cdecl MsgFunc_HostageK( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_SetFOV(const char *pszName,  int iSize, void *pbuf);
 	int  _cdecl MsgFunc_Concuss( const char *pszName, int iSize, void *pbuf );
 	int  _cdecl MsgFunc_ReloadSound( const char *pszName, int iSize, void *pbuf );
@@ -836,8 +868,8 @@ public:
 
 	CTempList()
 	{
-		m_iCount = 0;
 		m_iMax = 60;
+		m_iCount = 0;
 		m_pHead = NULL;
 		m_pLast = NULL;
 		m_pTail = NULL;

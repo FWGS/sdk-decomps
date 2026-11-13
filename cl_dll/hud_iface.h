@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
@@ -10,7 +10,7 @@
 #pragma once
 
 #define EXPORT		_declspec( dllexport )
-#define _DLLEXPORT __declspec( dllexport )
+#define _DLLEXPORT		// Counter-Strike 1.4: nothing is exported but F (cdll_int.cpp)
 
 typedef int (*pfnUserMsgHook)(const char *pszName, int iSize, void *pbuf);
 #include "wrect.h"

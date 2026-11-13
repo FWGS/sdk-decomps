@@ -56,7 +56,6 @@ void CKnife::Spawn( )
 void CKnife::Precache( void )
 {
 	PRECACHE_MODEL("models/v_knife.mdl");
-	PRECACHE_MODEL("models/v_knife_r.mdl");
 	PRECACHE_MODEL("models/w_knife.mdl");
 	PRECACHE_SOUND("weapons/knife_deploy1.wav");
 	PRECACHE_SOUND("weapons/knife_hit1.wav");
@@ -92,10 +91,9 @@ BOOL CKnife::Deploy( )
 {
 	EMIT_SOUND( ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/knife_deploy1.wav", 0.3, 2.4 );
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_knife.mdl", "models/p_knife.mdl", KNIFE_DRAW, "knife", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_knife_r.mdl", "models/p_knife.mdl", KNIFE_DRAW, "knife", UseDecrement() ? 1 : 0 );
+	m_iSwing = 0;
+
+	return DefaultDeploy( "models/v_knife.mdl", "models/p_knife.mdl", KNIFE_DRAW, "knife", UseDecrement() ? 1 : 0 );
 }
 
 void CKnife::Holster( int skiplocal /* = 0 */ )
@@ -156,11 +154,8 @@ void FindHullIntersection( const Vector &vecSrc, TraceResult &tr, float *mins, f
 
 void CKnife::PrimaryAttack()
 {
-	if (! Swing( 1 ))
-	{
-		SetThink( SwingAgain );
-		pev->nextthink = UTIL_WeaponTimeBase() + 0.1;
-	}
+	// Counter-Strike 1.4: one swing, no second try (8 bytes; SwingAgain is still in the DLL)
+	Swing( 1 );
 }
 
 
@@ -193,7 +188,7 @@ int CKnife::Swing( int fFirst )
 
 	UTIL_MakeVectors (m_pPlayer->pev->v_angle);
 	Vector vecSrc	= m_pPlayer->GetGunPosition( );
-	Vector vecEnd	= vecSrc + gpGlobals->v_forward * 65;
+	Vector vecEnd	= vecSrc + gpGlobals->v_forward * 48;	// Counter-Strike 1.4 (1.3: 65)
 
 	UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, ENT( m_pPlayer->pev ), &tr );
 
@@ -216,29 +211,14 @@ int CKnife::Swing( int fFirst )
 		if (fFirst)
 		{
 			// miss
-			if ( m_flNextPrimaryAttack + 0.4 < UTIL_WeaponTimeBase() )
+			switch( (m_iSwing++) % 2 )
 			{
-				switch( (m_iSwing++) % 2 )
-				{
-				case 0:
-					SendWeaponAnim( KNIFE_ATTACK1HIT );
-					break;
-				case 1:
-					SendWeaponAnim( KNIFE_ATTACK2HIT );
-					break;
-				}
-			}
-			else
-			{
-				switch( (m_iSwing++) % 2 )
-				{
-				case 0:
-					SendWeaponAnim( KNIFE_MIDATTACK1HIT );
-					break;
-				case 1:
-					SendWeaponAnim( KNIFE_MIDATTACK2HIT );
-					break;
-				}
+			case 0:
+				SendWeaponAnim( KNIFE_MIDATTACK1HIT, UseDecrement() ? 1 : 0 );
+				break;
+			case 1:
+				SendWeaponAnim( KNIFE_MIDATTACK2HIT, UseDecrement() ? 1 : 0 );
+				break;
 			}
 
 			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.35;
@@ -259,32 +239,25 @@ int CKnife::Swing( int fFirst )
 		// hit
 		fDidHit = TRUE;
 
-		CBaseEntity *pEntity = CBaseEntity::Instance(tr.pHit);
+		switch( (m_iSwing++) % 2 )
+		{
+		case 0:
+			SendWeaponAnim( KNIFE_MIDATTACK1HIT, UseDecrement() ? 1 : 0 );
+			break;
+		case 1:
+			SendWeaponAnim( KNIFE_MIDATTACK2HIT, UseDecrement() ? 1 : 0 );
+			break;
+		}
 
-		if ( m_flNextPrimaryAttack + 0.4 < UTIL_WeaponTimeBase() )
-		{
-			switch( (m_iSwing++) % 2 )
-			{
-			case 0:
-				SendWeaponAnim( KNIFE_ATTACK1HIT );
-				break;
-			case 1:
-				SendWeaponAnim( KNIFE_ATTACK2HIT );
-				break;
-			}
-		}
-		else
-		{
-			switch( (m_iSwing++) % 2 )
-			{
-			case 0:
-				SendWeaponAnim( KNIFE_MIDATTACK1HIT );
-				break;
-			case 1:
-				SendWeaponAnim( KNIFE_MIDATTACK2HIT );
-				break;
-			}
-		}
+		// play thwack, smack, or dong sound
+		float flVol = 1.0;
+		int fHitWorld = TRUE;
+
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.4;
+		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.5;
+
+#ifndef CLIENT_DLL
+		CBaseEntity *pEntity = CBaseEntity::Instance(tr.pHit);
 
 		// player "shoot" animation
 		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
@@ -301,13 +274,6 @@ int CKnife::Swing( int fFirst )
 			pEntity->TraceAttack(m_pPlayer->pev, 15, gpGlobals->v_forward, &tr, DMG_NEVERGIB | DMG_BULLET ); 
 		}	
 		ApplyMultiDamage( m_pPlayer->pev, m_pPlayer->pev );
-
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.4;
-		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.5;
-
-		// play thwack, smack, or dong sound
-		float flVol = 1.0;
-		int fHitWorld = TRUE;
 
 		if (pEntity)
 		{
@@ -355,6 +321,7 @@ int CKnife::Swing( int fFirst )
 				break;
 			}
 		}
+#endif
 
 		// delay the decal a bit
 		m_trHit = tr;
@@ -398,7 +365,7 @@ int CKnife::Stab( int fFirst )
 		if (fFirst)
 		{
 			// miss
-			SendWeaponAnim( KNIFE_STABMISS );
+			SendWeaponAnim( KNIFE_STABMISS, UseDecrement() ? 1 : 0 );
 
 			m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 1;
 			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1;
@@ -418,16 +385,7 @@ int CKnife::Stab( int fFirst )
 		// hit
 		fDidHit = TRUE;
 
-		CBaseEntity *pEntity = CBaseEntity::Instance(tr.pHit);
-
-		SendWeaponAnim( KNIFE_STABHIT );
-
-		// player "shoot" animation
-		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
-
-		ClearMultiDamage( );
-		pEntity->TraceAttack(m_pPlayer->pev, 65, gpGlobals->v_forward, &tr, DMG_NEVERGIB | DMG_BULLET ); 
-		ApplyMultiDamage( m_pPlayer->pev, m_pPlayer->pev );
+		SendWeaponAnim( KNIFE_STABHIT, UseDecrement() ? 1 : 0 );
 
 		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 1.1;
 		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.1;
@@ -435,6 +393,16 @@ int CKnife::Stab( int fFirst )
 		// play thwack, smack, or dong sound
 		float flVol = 1.0;
 		int fHitWorld = TRUE;
+
+#ifndef CLIENT_DLL
+		CBaseEntity *pEntity = CBaseEntity::Instance(tr.pHit);
+
+		// player "shoot" animation
+		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
+
+		ClearMultiDamage( );
+		pEntity->TraceAttack(m_pPlayer->pev, 65, gpGlobals->v_forward, &tr, DMG_NEVERGIB | DMG_BULLET ); 
+		ApplyMultiDamage( m_pPlayer->pev, m_pPlayer->pev );
 
 		if (pEntity)
 		{
@@ -471,6 +439,7 @@ int CKnife::Stab( int fFirst )
 				break;
 			}
 		}
+#endif
 
 		// delay the decal a bit
 		m_trHit = tr;

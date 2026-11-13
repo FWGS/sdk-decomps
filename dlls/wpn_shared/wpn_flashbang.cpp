@@ -42,6 +42,8 @@ void CFlashbang::Spawn( )
 	pev->dmg = 4;
 
 	m_iDefaultAmmo = FLASHBANG_DEFAULT_GIVE;
+	m_flStartThrow = 0;
+	m_flReleaseThrow = -1;
 
 	FallInit();// get ready to fall down.
 }
@@ -49,7 +51,6 @@ void CFlashbang::Spawn( )
 
 void CFlashbang::Precache( void )
 {
-	PRECACHE_MODEL("models/v_flashbang_r.mdl");
 	PRECACHE_MODEL("models/v_flashbang.mdl");
 
 	PRECACHE_SOUND("weapons/flashbang-1.wav");
@@ -79,10 +80,7 @@ BOOL CFlashbang::Deploy( )
 {
 	m_flReleaseThrow = -1;
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_flashbang.mdl", "models/p_flashbang.mdl", FLASHBANG_DRAW, "grenade", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_flashbang_r.mdl", "models/p_flashbang.mdl", FLASHBANG_DRAW, "grenade", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_flashbang.mdl", "models/p_flashbang.mdl", FLASHBANG_DRAW, "grenade", UseDecrement() ? 1 : 0 );
 }
 
 BOOL CFlashbang::CanHolster( void )
@@ -101,8 +99,8 @@ void CFlashbang::Holster( int skiplocal /* = 0 */ )
 		DestroyItem();
 	}
 
-	m_flReleaseThrow = 0;
 	m_flStartThrow = 0;
+	m_flReleaseThrow = -1;
 	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "common/null.wav", 1.0, ATTN_NORM);
 }
 
@@ -113,14 +111,14 @@ void CFlashbang::PrimaryAttack()
 		m_flStartThrow = gpGlobals->time;
 		m_flReleaseThrow = 0;
 
-		SendWeaponAnim( FLASHBANG_PINPULL );
+		SendWeaponAnim( FLASHBANG_PINPULL, UseDecrement() ? 1 : 0 );
 		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.5;
 	}
 }
 
 void CFlashbang::WeaponIdle( void )
 {
-	if ( m_flReleaseThrow == 0 )
+	if ( m_flReleaseThrow == 0 && m_flStartThrow )
 		m_flReleaseThrow = gpGlobals->time;
 
 	if ( m_flTimeWeaponIdle > UTIL_WeaponTimeBase() )
@@ -145,10 +143,7 @@ void CFlashbang::WeaponIdle( void )
 
 		Vector vecSrc;
 
-		if ( m_pPlayer->m_bLeftHanded == true )
-			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16;
-		else
-			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16;
+		vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16;
 
 		Vector vecThrow = gpGlobals->v_forward * flVel + m_pPlayer->pev->velocity;
 
@@ -157,7 +152,7 @@ void CFlashbang::WeaponIdle( void )
 
 		CGrenade::ShootTimed( m_pPlayer->pev, vecSrc, vecThrow, time );
 
-		SendWeaponAnim( FLASHBANG_THROW );
+		SendWeaponAnim( FLASHBANG_THROW, UseDecrement() ? 1 : 0 );
 
 		// player "shoot" animation
 		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
@@ -184,7 +179,7 @@ void CFlashbang::WeaponIdle( void )
 
 		if ( m_pPlayer->m_rgAmmo[ m_iPrimaryAmmoType ] )
 		{
-			SendWeaponAnim( FLASHBANG_DRAW );
+			SendWeaponAnim( FLASHBANG_DRAW, UseDecrement() ? 1 : 0 );
 		}
 		else
 		{
@@ -212,11 +207,20 @@ void CFlashbang::WeaponIdle( void )
 			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 75.0 / 30.0;
 		}
 
-		SendWeaponAnim( iAnim );
+		SendWeaponAnim( iAnim, UseDecrement() ? 1 : 0 );
 	}
 }
 
+#ifdef CLIENT_DLL
+extern CBasePlayer *g_pLocalPlayer;
+extern CFlashbang g_Flashbang;
+#endif
+
 BOOL CFlashbang::CanDeploy( void )
 {
-	return m_pPlayer->m_rgAmmo[ m_iPrimaryAmmoType ];
+#ifndef CLIENT_DLL
+	return m_pPlayer->m_rgAmmo[ m_iPrimaryAmmoType ] != 0;
+#else
+	return g_pLocalPlayer->m_rgAmmo[ g_Flashbang.m_iPrimaryAmmoType ] != 0;
+#endif
 }

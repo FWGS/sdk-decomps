@@ -421,13 +421,21 @@ extern DLL_GLOBAL int			g_Language;
 #define SVC_CDTRACK			32
 #define SVC_WEAPONANIM		35
 #define SVC_ROOMTYPE		37
-#define	SVC_HLTV			50
+#define	SVC_DIRECTOR		51
 
-// prxoy director stuff
-#define DRC_EVENT			3	// informs the dircetor about ann important game event
+// Counter-Strike 1.4: the director's events go out as SDK 2.3's svc_director (a length byte,
+// DRC_CMD_EVENT, two entity indices, the flags).  The values are SDK 2.3's common/hltv.h's;
+// that they stand here, where 1.3 had SDK 2.2's block, is ours.
+#define DRC_CMD_EVENT				2	// informs about director command
 
-#define DRC_FLAG_PRIO_MASK		0x0F	//	priorities between 0 and 15 (15 most important)
-#define DRC_FLAG_DRAMATIC		(1<<5)
+#define DRC_FLAG_PRIO_MASK		0x0F	// priorities between 0 and 15 (15 most important)
+#define DRC_FLAG_SIDE			(1<<4)	// 
+#define DRC_FLAG_DRAMATIC		(1<<5)	// is a dramatic scene
+#define DRC_FLAG_SLOWMOTION		(1<<6)  // would look good in SloMo
+#define DRC_FLAG_FACEPLAYER		(1<<7)  // player is doning something (reload/defuse bomb etc)
+#define DRC_FLAG_INTRO			(1<<8)	// is a introduction scene
+#define DRC_FLAG_FINAL			(1<<9)	// is a final scene
+#define DRC_FLAG_NO_RANDOM		(1<<10)	// don't randomize event data
 
 // triggers
 #define	SF_TRIGGER_ALLOWMONSTERS	1// monsters allowed to fire this trigger

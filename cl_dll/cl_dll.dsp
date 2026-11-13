@@ -23,8 +23,8 @@ CFG=cl_dll - Win32 Release
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
-# PROP Scc_ProjName ""$/GoldSrc/cl_dll", HGEBAAAA"
-# PROP Scc_LocalPath "."
+# PROP Scc_ProjName ""
+# PROP Scc_LocalPath ""
 CPP=cl.exe
 MTL=midl.exe
 RSC=rc.exe
@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /MT /W3 /GX /Zi /O2 /I "..\utils\vgui\include" /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\dlls" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "CLIENT_DLL" /D "CLIENT_WEAPONS" /YX /FD /c
+# ADD CPP /nologo /MT /W3 /GX /Zi /O2 /Ob2 /I "..\utils\vgui\include" /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\dlls" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "CLIENT_DLL" /D "CLIENT_WEAPONS" /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -150,6 +150,10 @@ SOURCE=..\game_shared\vgui_scrollbar2.cpp
 # Begin Source File
 
 SOURCE=..\game_shared\vgui_slider2.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\vgui_SpectatorPanel.cpp
 # End Source File
 # Begin Source File
 
@@ -366,10 +370,6 @@ SOURCE=.\message.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\model_check.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\nvg.cpp
 # End Source File
 # Begin Source File
@@ -406,6 +406,10 @@ SOURCE=.\statusbar.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\steam_file.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\StudioModelRenderer.cpp
 # End Source File
 # Begin Source File
@@ -431,10 +435,6 @@ SOURCE=.\vgui_BuyMenu.cpp
 # Begin Source File
 
 SOURCE=..\game_shared\vgui_checkbutton2.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\vgui_ClassMenu.cpp
 # End Source File
 # Begin Source File
 
@@ -666,6 +666,10 @@ SOURCE=.\vgui_ServerBrowser.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\vgui_SpectatorPanel.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\vgui_TeamFortressViewport.h
 # End Source File
 # Begin Source File
@@ -684,6 +688,11 @@ SOURCE=.\wrect.h
 # Begin Source File
 
 SOURCE=..\game_shared\voice_banmgr.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\steam_wrap.c
+# SUBTRACT CPP /Ob2 /YX
 # End Source File
 # End Target
 # End Project

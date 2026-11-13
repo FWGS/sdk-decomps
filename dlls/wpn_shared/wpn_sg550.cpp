@@ -49,7 +49,6 @@ void CSG550::Spawn( )
 void CSG550::Precache( void )
 {
 	PRECACHE_MODEL("models/v_sg550.mdl");
-	PRECACHE_MODEL("models/v_sg550_r.mdl");
 	PRECACHE_MODEL("models/w_sg550.mdl");
 
 	PRECACHE_SOUND("weapons/sg550-1.wav");
@@ -82,10 +81,9 @@ int CSG550::GetItemInfo(ItemInfo *p)
 
 BOOL CSG550::Deploy( )
 {
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_sg550.mdl", "models/p_sg550.mdl", SG550_DRAW, "rifle", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_sg550_r.mdl", "models/p_sg550.mdl", SG550_DRAW, "rifle", UseDecrement() ? 1 : 0 );
+	m_flAccuracy = 0.2;
+
+	return DefaultDeploy( "models/v_sg550.mdl", "models/p_sg550.mdl", SG550_DRAW, "rifle", UseDecrement() ? 1 : 0 );
 }
 
 void CSG550::SecondaryAttack( void )
@@ -106,7 +104,7 @@ void CSG550::SecondaryAttack( void )
 void CSG550::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		SG550Fire( ( 1 - m_flAccuracy ) * 0.35, 0.25, FALSE );
+		SG550Fire( ( 1 - m_flAccuracy ) * 0.45, 0.25, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 0 )
 		SG550Fire( 0.15, 0.25, FALSE );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
@@ -169,7 +167,7 @@ void CSG550::SG550Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	flag = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireSG550, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), 5, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireSG550, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.y * 100), 5, FALSE );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 
@@ -190,6 +188,7 @@ void CSG550::Reload( void )
 
 	if ( DefaultReload( SG550_MAX_CLIP, SG550_RELOAD, 3.35 ) )
 	{
+		m_flAccuracy = 0.2;
 		m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
 		if ( m_pPlayer->pev->fov != 90 )

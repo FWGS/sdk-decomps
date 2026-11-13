@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
@@ -16,6 +16,6 @@
 // fall over
 #define	ROLL	2 
 
-#define DLLEXPORT __declspec( dllexport )
+#define DLLEXPORT		// Counter-Strike 1.4: nothing is exported but F (cdll_int.cpp)
 
 #endif

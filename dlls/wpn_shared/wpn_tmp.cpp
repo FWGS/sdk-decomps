@@ -42,6 +42,9 @@ void CTMP::Spawn( )
 	SET_MODEL(ENT(pev), "models/w_tmp.mdl");
 
 	m_iDefaultAmmo = TMP_DEFAULT_GIVE;
+	m_flAccuracy = 0.2;
+	m_iShotsFired = 0;
+	m_bDelayFire = false;
 
 	FallInit();// get ready to fall down.
 }
@@ -50,7 +53,6 @@ void CTMP::Spawn( )
 void CTMP::Precache( void )
 {
 	PRECACHE_MODEL("models/v_tmp.mdl");
-	PRECACHE_MODEL("models/v_tmp_r.mdl");
 	PRECACHE_MODEL("models/w_tmp.mdl");
 
 	PRECACHE_SOUND("weapons/tmp-1.wav");
@@ -85,16 +87,13 @@ BOOL CTMP::Deploy( )
 	m_iShellOn = 1;
 	m_bDelayFire = false;
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_tmp.mdl", "models/p_tmp.mdl", TMP_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_tmp_r.mdl", "models/p_tmp.mdl", TMP_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_tmp.mdl", "models/p_tmp.mdl", TMP_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
 }
 
 void CTMP::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		TMPFire( ( m_flAccuracy ) * 0.15, 0.07, FALSE );	// sic: the parentheses (the Processor Pack compiler's instruction order)
+		TMPFire( ( m_flAccuracy ) * 0.25, 0.07, FALSE );	// sic: the parentheses (the Processor Pack compiler's instruction order)
 	else
 		TMPFire( ( m_flAccuracy ) * 0.03, 0.07, FALSE );
 }
@@ -143,7 +142,7 @@ void CTMP::TMPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	flag = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireTMP, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), 5, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireTMP, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.y * 100), 5, FALSE );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

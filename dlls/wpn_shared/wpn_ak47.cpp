@@ -42,6 +42,8 @@ void CAK47::Spawn( )
 	SET_MODEL(ENT(pev), "models/w_ak47.mdl");
 
 	m_iDefaultAmmo = AK47_DEFAULT_GIVE;
+	m_flAccuracy = 0.2;
+	m_iShotsFired = 0;
 
 	FallInit();// get ready to fall down.
 }
@@ -50,7 +52,6 @@ void CAK47::Spawn( )
 void CAK47::Precache( void )
 {
 	PRECACHE_MODEL("models/v_ak47.mdl");
-	PRECACHE_MODEL("models/v_ak47_r.mdl");
 	PRECACHE_MODEL("models/w_ak47.mdl");
 
 	PRECACHE_SOUND("weapons/ak47-1.wav");
@@ -87,10 +88,7 @@ BOOL CAK47::Deploy( )
 	m_iShotsFired = 0;
 	m_iShellOn = 1;
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_ak47.mdl", "models/p_ak47.mdl", AK47_DRAW, "ak47", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_ak47_r.mdl", "models/p_ak47.mdl", AK47_DRAW, "ak47", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_ak47.mdl", "models/p_ak47.mdl", AK47_DRAW, "ak47", UseDecrement() ? 1 : 0 );
 }
 
 void CAK47::SecondaryAttack( void )
@@ -100,7 +98,7 @@ void CAK47::SecondaryAttack( void )
 void CAK47::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		AK47Fire( 0.04 + ( 0.3 * m_flAccuracy ), 0.0955, FALSE );
+		AK47Fire( 0.04 + ( 0.4 * m_flAccuracy ), 0.0955, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
 		AK47Fire( 0.04 + ( 0.07 * m_flAccuracy ), 0.0955, FALSE );
 	else
@@ -151,7 +149,7 @@ void CAK47::AK47Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	flag = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireAK47, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), FALSE, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireAK47, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.y * 100), FALSE, FALSE );
 
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
 	m_pPlayer->m_iWeaponFlash = BRIGHT_GUN_FLASH;

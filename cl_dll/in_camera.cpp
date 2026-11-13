@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
@@ -148,6 +148,8 @@ extern trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec
 
 void DLLEXPORT CAM_Think( void )
 {
+	g_pcldstAddrs->pCamThink();
+
 	vec3_t origin;
 	vec3_t ext, pnt, camForward, camRight, camUp;
 	moveclip_t	clip;
@@ -612,10 +614,14 @@ void CAM_EndDistance(void)
 
 int DLLEXPORT CL_IsThirdPerson( void )
 {
-	return cam_thirdperson ? 1 : 0;
+	g_pcldstAddrs->pCL_IsThirdPerson();
+
+	return (cam_thirdperson ? 1 : 0) || (g_iUser1 && (g_iUser2 == gEngfuncs.GetLocalPlayer()->index) );
 }
 
 void DLLEXPORT CL_CameraOffset( float *ofs )
 {
+	g_pcldstAddrs->pCL_GetCameraOffsets( &ofs );
+
 	VectorCopy( cam_ofs, ofs );
 }

@@ -43,6 +43,8 @@ void CHEGrenade::Spawn( )
 	pev->dmg = 4;
 
 	m_iDefaultAmmo = HEGRENADE_DEFAULT_GIVE;
+	m_flStartThrow = 0;
+	m_flReleaseThrow = -1;
 
 	FallInit();// get ready to fall down.
 }
@@ -50,7 +52,6 @@ void CHEGrenade::Spawn( )
 
 void CHEGrenade::Precache( void )
 {
-	PRECACHE_MODEL("models/v_hegrenade_r.mdl");
 	PRECACHE_MODEL("models/v_hegrenade.mdl");
 
 	PRECACHE_SOUND("weapons/hegrenade-1.wav");
@@ -81,10 +82,7 @@ BOOL CHEGrenade::Deploy( )
 {
 	m_flReleaseThrow = -1;
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_hegrenade.mdl", "models/p_hegrenade.mdl", HEGRENADE_DRAW, "grenade", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_hegrenade_r.mdl", "models/p_hegrenade.mdl", HEGRENADE_DRAW, "grenade", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_hegrenade.mdl", "models/p_hegrenade.mdl", HEGRENADE_DRAW, "grenade", UseDecrement() ? 1 : 0 );
 }
 
 BOOL CHEGrenade::CanHolster( void )
@@ -104,8 +102,8 @@ void CHEGrenade::Holster( int skiplocal /* = 0 */ )
 		DestroyItem();
 	}
 
-	m_flReleaseThrow = 0;
 	m_flStartThrow = 0;
+	m_flReleaseThrow = -1;
 
 	EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "common/null.wav", 1.0, ATTN_NORM);
 }
@@ -117,7 +115,7 @@ void CHEGrenade::PrimaryAttack()
 		m_flStartThrow = gpGlobals->time;
 		m_flReleaseThrow = 0;
 
-		SendWeaponAnim( HEGRENADE_PINPULL );
+		SendWeaponAnim( HEGRENADE_PINPULL, UseDecrement() ? 1 : 0 );
 		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.5;
 	}
 }
@@ -125,7 +123,7 @@ void CHEGrenade::PrimaryAttack()
 
 void CHEGrenade::WeaponIdle( void )
 {
-	if ( m_flReleaseThrow == 0 )
+	if ( m_flReleaseThrow == 0 && m_flStartThrow )
 		m_flReleaseThrow = gpGlobals->time;
 
 	if ( m_flTimeWeaponIdle > UTIL_WeaponTimeBase() )
@@ -150,16 +148,15 @@ void CHEGrenade::WeaponIdle( void )
 
 		Vector vecSrc;
 
-		if ( m_pPlayer->m_bLeftHanded == true )
-			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16;
-		else
-			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16;
+		vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16;
 
 		Vector vecThrow = gpGlobals->v_forward * flVel + m_pPlayer->pev->velocity;
 
-		CGrenade::ShootTimed2( m_pPlayer->pev, vecSrc, vecThrow, 1.5, m_pPlayer->m_iTeam );
+		float time = 1.5;
 
-		SendWeaponAnim( HEGRENADE_THROW );
+		CGrenade::ShootTimed2( m_pPlayer->pev, vecSrc, vecThrow, time, m_pPlayer->m_iTeam );
+
+		SendWeaponAnim( HEGRENADE_THROW, UseDecrement() ? 1 : 0 );
 
 		// player "shoot" animation
 		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
@@ -186,7 +183,7 @@ void CHEGrenade::WeaponIdle( void )
 
 		if ( m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] )
 		{
-			SendWeaponAnim( HEGRENADE_DRAW );
+			SendWeaponAnim( HEGRENADE_DRAW, UseDecrement() ? 1 : 0 );
 		}
 		else
 		{
@@ -201,12 +198,21 @@ void CHEGrenade::WeaponIdle( void )
 
 	if ( m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] )
 	{
-		SendWeaponAnim( HEGRENADE_IDLE );
+		SendWeaponAnim( HEGRENADE_IDLE, UseDecrement() ? 1 : 0 );
 		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + RANDOM_FLOAT( 10, 15 );
 	}
 }
 
+#ifdef CLIENT_DLL
+extern CBasePlayer *g_pLocalPlayer;
+extern CHEGrenade g_HEGrenade;
+#endif
+
 BOOL CHEGrenade::CanDeploy( void )
 {
-	return m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType];
+#ifndef CLIENT_DLL
+	return m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] != 0;
+#else
+	return g_pLocalPlayer->m_rgAmmo[g_HEGrenade.m_iPrimaryAmmoType] != 0;
+#endif
 }

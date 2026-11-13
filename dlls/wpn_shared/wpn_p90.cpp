@@ -42,6 +42,9 @@ void CP90::Spawn( )
 	SET_MODEL(ENT(pev), "models/w_p90.mdl");
 
 	m_iDefaultAmmo = P90_DEFAULT_GIVE;
+	m_flAccuracy = 0.2;
+	m_iShotsFired = 0;
+	m_bDelayFire = false;
 
 	FallInit();// get ready to fall down.
 }
@@ -50,7 +53,6 @@ void CP90::Spawn( )
 void CP90::Precache( void )
 {
 	PRECACHE_MODEL("models/v_p90.mdl");
-	PRECACHE_MODEL("models/v_p90_r.mdl");
 	PRECACHE_MODEL("models/w_p90.mdl");
 
 	PRECACHE_SOUND("weapons/p90-1.wav");
@@ -88,16 +90,13 @@ BOOL CP90::Deploy( )
 	m_iShellOn = 1;
 	m_bDelayFire = false;
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_p90.mdl", "models/p_p90.mdl", P90_DRAW, "carbine", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_p90_r.mdl", "models/p_p90.mdl", P90_DRAW, "carbine", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_p90.mdl", "models/p_p90.mdl", P90_DRAW, "carbine", UseDecrement() ? 1 : 0 );
 }
 
 void CP90::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		P90Fire( m_flAccuracy * 0.2, 0.066, FALSE );
+		P90Fire( m_flAccuracy * 0.3, 0.066, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 170 )
 		P90Fire( m_flAccuracy * 0.115, 0.066, FALSE );
 	else
@@ -151,7 +150,7 @@ void CP90::P90Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	flag = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireP90, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), 5, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireP90, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.y * 100), 5, FALSE );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

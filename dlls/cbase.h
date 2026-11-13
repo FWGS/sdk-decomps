@@ -58,6 +58,7 @@ CBaseEntity
 #endif
 
 extern "C" EXPORT int GetEntityAPI( DLL_FUNCTIONS *pFunctionTable, int interfaceVersion );
+extern "C" EXPORT int GetNewDLLFunctions( NEW_DLL_FUNCTIONS *pFunctionTable, int *interfaceVersion );
 
 extern int DispatchSpawn( edict_t *pent );
 extern void DispatchKeyValue( edict_t *pentKeyvalue, KeyValueData *pkvd );
@@ -378,6 +379,15 @@ public:
 	int		ammo_57mm;
 	int		maxammo_357sig;
 	int		ammo_357sig;
+
+	// Counter-Strike 1.4: the grenades' throw times and the knife's swing count are members of every
+	// entity (0x78, 0x7c, 0x80; the three grenade classes and CKnife lost them), so that the client's
+	// prediction finds them in its own CBaseEntity.  Order and names: Counter-Strike 1.6's.
+	float	m_flStartThrow;
+	float	m_flReleaseThrow;
+
+	int		m_iSwing;
+
 	bool	has_disconnected;	// ClientDisconnected sets it, Observer_FindNextPlayer skips such players
 };
 

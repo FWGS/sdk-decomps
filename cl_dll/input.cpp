@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
@@ -219,6 +219,8 @@ Allows the engine to get a kbutton_t directly ( so it can check +mlook state, et
 */
 struct kbutton_s DLLEXPORT *KB_Find( const char *name )
 {
+	g_pcldstAddrs->pFindKey( &name );
+
 	kblist_t *p;
 	p = g_kbkeys;
 	while ( p )
@@ -376,6 +378,8 @@ Return 1 to allow engine to process the key, otherwise, act on it as needed
 */
 int DLLEXPORT HUD_Key_Event( int down, int keynum, const char *pszCurrentBinding )
 {
+	g_pcldstAddrs->pKeyEvent( &down, &keynum, &pszCurrentBinding );
+
 	if (gViewPort)
 		return gViewPort->KeyInput(down, keynum, pszCurrentBinding);
 	
@@ -464,7 +468,11 @@ void IN_Attack2Down(void)
 }
 
 void IN_Attack2Up(void) {KeyUp(&in_attack2);}
-void IN_UseDown (void) {KeyDown(&in_use);}
+void IN_UseDown (void)
+{
+	KeyDown(&in_use);
+	gHUD.m_Spectator.HandleButtonsDown( IN_USE );
+}
 void IN_UseUp (void) {KeyUp(&in_use);}
 void IN_JumpDown (void)
 {
@@ -658,6 +666,8 @@ if active == 1 then we are 1) not playing back demos ( where our commands are ig
 */
 void DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int active )
 {	
+	g_pcldstAddrs->pCL_CreateMove( &frametime, &cmd, &active );
+
 	float spd;
 	vec3_t viewangles;
 	static vec3_t oldangles;
@@ -692,13 +702,8 @@ void DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int activ
 			cmd->forwardmove -= cl_backspeed->value * CL_KeyState (&in_back);
 		}	
 
-		// adjust for speed key
-		if ( in_speed.state & 1 )
-		{
-			cmd->forwardmove *= cl_movespeedkey->value;
-			cmd->sidemove *= cl_movespeedkey->value;
-			cmd->upmove *= cl_movespeedkey->value;
-		}
+		// Allow mice and other controllers to add their inputs
+		IN_Move ( frametime, cmd );
 
 		// clip to maxspeed
 		spd = gEngfuncs.GetClientMaxspeed();
@@ -716,8 +721,13 @@ void DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int activ
 			}
 		}
 
-		// Allow mice and other controllers to add their inputs
-		IN_Move ( frametime, cmd );
+		// adjust for speed key
+		if ( in_speed.state & 1 )
+		{
+			cmd->forwardmove *= cl_movespeedkey->value;
+			cmd->sidemove *= cl_movespeedkey->value;
+			cmd->upmove *= cl_movespeedkey->value;
+		}
 	}
 
 	cmd->impulse = in_impulse;
@@ -984,7 +994,7 @@ void InitInput (void)
 	cl_forwardspeed		= gEngfuncs.pfnRegisterVariable ( "cl_forwardspeed", "400", FCVAR_ARCHIVE );
 	cl_backspeed		= gEngfuncs.pfnRegisterVariable ( "cl_backspeed", "400", FCVAR_ARCHIVE );
 	cl_sidespeed		= gEngfuncs.pfnRegisterVariable ( "cl_sidespeed", "400", 0 );
-	cl_movespeedkey		= gEngfuncs.pfnRegisterVariable ( "cl_movespeedkey", "0.3", 0 );
+	cl_movespeedkey		= gEngfuncs.pfnRegisterVariable ( "cl_movespeedkey", "0.52", 0 );
 	cl_pitchup			= gEngfuncs.pfnRegisterVariable ( "cl_pitchup", "89", 0 );
 	cl_pitchdown		= gEngfuncs.pfnRegisterVariable ( "cl_pitchdown", "89", 0 );
 
@@ -1018,5 +1028,7 @@ void ShutdownInput (void)
 
 void DLLEXPORT HUD_Shutdown( void )
 {
+	g_pcldstAddrs->pShutdown();
+
 	ShutdownInput();
 }

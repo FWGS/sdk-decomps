@@ -42,6 +42,8 @@ void CMP5N::Spawn( )
 	SET_MODEL(ENT(pev), "models/w_mp5.mdl");
 
 	m_iDefaultAmmo = MP5N_DEFAULT_GIVE;
+	m_flAccuracy = 0;
+	m_bDelayFire = false;
 
 	FallInit();// get ready to fall down.
 }
@@ -50,7 +52,6 @@ void CMP5N::Spawn( )
 void CMP5N::Precache( void )
 {
 	PRECACHE_MODEL("models/v_mp5.mdl");
-	PRECACHE_MODEL("models/v_mp5_r.mdl");
 	PRECACHE_MODEL("models/w_mp5.mdl");
 
 	PRECACHE_SOUND("weapons/mp5-1.wav");
@@ -87,16 +88,13 @@ BOOL CMP5N::Deploy( )
 	m_iShellOn = 1;
 	m_bDelayFire = false;
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_mp5.mdl", "models/p_mp5.mdl", MP5N_DRAW, "mp5", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_mp5_r.mdl", "models/p_mp5.mdl", MP5N_DRAW, "mp5", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_mp5.mdl", "models/p_mp5.mdl", MP5N_DRAW, "mp5", UseDecrement() ? 1 : 0 );
 }
 
 void CMP5N::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		MP5NFire( ( m_flAccuracy ) * 0.1, 0.075, FALSE );	// sic: the parentheses (the Processor Pack compiler's instruction order)
+		MP5NFire( ( m_flAccuracy ) * 0.2, 0.075, FALSE );	// sic: the parentheses (the Processor Pack compiler's instruction order)
 	else
 		MP5NFire( ( m_flAccuracy ) * 0.04, 0.075, FALSE );
 }
@@ -145,7 +143,7 @@ void CMP5N::MP5NFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, flSpread, 8192, 1, BULLET_PLAYER_9MM, 26, 0.84, m_pPlayer->pev, false, m_pPlayer->random_seed );
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireMP5N, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), FALSE, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireMP5N, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.y * 100), FALSE, FALSE );
 
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
 	m_pPlayer->m_iWeaponFlash = DIM_GUN_FLASH;

@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir ".\Releasemp"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /G5 /MT /W3 /GX /O2 /I "..\dlls" /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\game_shared" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "VALVE_DLL" /D "CLIENT_WEAPONS" /YX /FD /c
+# ADD CPP /nologo /G5 /MT /W3 /O2 /Ob2 /I "..\dlls" /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\game_shared" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "VALVE_DLL" /D "CLIENT_WEAPONS" /YX /FD /c
 # SUBTRACT CPP /Fr
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -54,7 +54,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /dll /machine:I386
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:windows /dll /map /debug /machine:I386 /def:".\mp.def" /incremental:no
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:windows /dll /map /machine:I386 /def:".\mp.def" /incremental:no
 # SUBTRACT LINK32 /profile
 # Begin Custom Build - Copying to \half-life\mp\dlls
 TargetPath=.\Releasemp\mp.dll
@@ -157,6 +157,118 @@ BuildCmds= \
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat;for;f90"
+# Begin Group "wpn_shared"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_ak47.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_aug.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_awp.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_c4.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_deagle.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_elite.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_fiveseven.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_flashbang.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_g3sg1.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_glock18.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_hegrenade.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_knife.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_m249.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_m3.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_m4a1.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_mac10.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_mp5navy.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_p228.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_p90.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_scout.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_sg550.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_sg552.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_smokegrenade.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_tmp.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_ump45.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_usp.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_xm1014.cpp
+# End Source File
+# End Group
 # Begin Source File
 
 SOURCE=.\airtank.cpp
@@ -268,6 +380,10 @@ SOURCE=.\hostage.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\hostage_localnav.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\items.cpp
 # End Source File
 # Begin Source File
@@ -374,118 +490,6 @@ SOURCE=.\weapons.cpp
 
 SOURCE=.\world.cpp
 # End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_ak47.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_aug.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_awp.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_c4.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_deagle.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_elite.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_fiveseven.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_flashbang.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_g3sg1.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_glock18.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_hegrenade.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_knife.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_m249.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_m3.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_m4a1.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_mac10.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_mp5navy.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_p228.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_p90.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_scout.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_sg550.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_sg552.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_smokegrenade.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_tmp.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_ump45.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_usp.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\wpn_shared\wpn_xm1014.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\xen.cpp
-# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -557,6 +561,14 @@ SOURCE=.\gamerules.h
 # Begin Source File
 
 SOURCE=.\hornet.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\hostage.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\hostage_localnav.h
 # End Source File
 # Begin Source File
 

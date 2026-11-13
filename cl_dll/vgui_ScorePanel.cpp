@@ -1,4 +1,4 @@
-//=========== (C) Copyright 1999 Valve, L.L.C. All rights reserved. ===========
+//=========== (C) Copyright 1996-2002 Valve, L.L.C. All rights reserved. ===========
 //
 // The copyright to the contents herein is the property of Valve, L.L.C.
 // The contents may be used and/or copied only with the written permission of
@@ -28,6 +28,7 @@
 #include "vgui_ScorePanel.h"
 #include "..\game_shared\vgui_helpers.h"
 #include "..\game_shared\vgui_loadtga.h"
+#include "vgui_SpectatorPanel.h"
 
 #include "ITrackerUser.h"
 extern ITrackerUser *g_pTrackerUser;
@@ -36,6 +37,7 @@ hud_player_info_t	 g_PlayerInfoList[MAX_PLAYERS+1];	   // player info from the e
 extra_player_info_t  g_PlayerExtraInfo[MAX_PLAYERS+1];   // additional player info sent directly to the client dll
 team_info_t			 g_TeamInfo[MAX_TEAMS+1];
 int					 g_IsSpectator[MAX_PLAYERS+1];
+hostage_info_t		 g_HostageInfo[MAX_HOSTAGES+1];
 
 int HUD_IsGame( const char *game );
 int EV_TFC_IsAllyTeam( int iTeam1, int iTeam2 );
@@ -228,6 +230,16 @@ ScorePanel::ScorePanel(int x,int y,int wide,int tall) : Panel(x,y,wide,tall)
 	m_HitTestPanel.setBounds(0, 0, wide, tall);
 	m_HitTestPanel.addInputSignal(this);
 
+	m_pCloseButton = new CommandButton( "x", wide-XRES(12 + 4), YRES(2), XRES( 12 ) , YRES( 12 ) );
+	m_pCloseButton->setParent( this );
+	m_pCloseButton->addActionSignal( new CMenuHandler_StringCommandWatch( "-showscores", true ) );
+	m_pCloseButton->setBgColor(0,0,0,255);
+	m_pCloseButton->setFgColor( 255, 255, 255, 0 );
+	m_pCloseButton->setFont(tfont);
+	m_pCloseButton->setBoundKey( (char)255 );
+	m_pCloseButton->setContentAlignment(Label::a_center);
+
+
 	Initialize();
 }
 
@@ -244,13 +256,48 @@ void ScorePanel::Initialize( void )
 	m_iNumTeams = 0;
 	memset( g_PlayerExtraInfo, 0, sizeof g_PlayerExtraInfo );
 	memset( g_TeamInfo, 0, sizeof g_TeamInfo );
+	memset( g_HostageInfo, 0, sizeof g_HostageInfo );
 }
 
+// names ours down to HACK_GetPlayerUniqueID: retail keeps only the readers of these (the functions
+// that filled them have no caller and are not in the image).  .bss order (VC6: uninitialised data by the
+// bucket of the name's hash, then zero-initialised data in the order of definition): retail has g_TeamInfo
+// (bucket 120), the entity array, g_PlayerInfoList (317), the ids (418), g_IsSpectator (552), the id flags
+// (568), g_PlayerExtraInfo (737), g_HostageInfo (878), 64 bytes, then the three flags in this order
+cl_entity_t			 g_ScoreBoardSavedEntities[MAX_PLAYERS];	// bucket 299
+char				 g_ScoreBoardUniqueIDs[MAX_PLAYERS][16];
+bool				 g_bScoreBoardUniqueIDValid[MAX_PLAYERS];
+char				 g_szScoreBoardFile[64];	// sic: 64 bytes of retail's .bss (0x1a083a8) nothing in the image reads; name, type ours (bucket 994)
+bool				 g_bScoreBoardUseStored = false;
+bool				 g_bScoreBoardStored = false;
+bool				 g_bScoreBoardReset = false;
+
+bool HACK_GetPlayerUniqueID( int iPlayer, char playerID[16] )
+{
+	if ( g_bScoreBoardUseStored )
+	{
+		if ( g_bScoreBoardUniqueIDValid[iPlayer] )
+		{
+			memcpy( playerID, g_ScoreBoardUniqueIDs[iPlayer], 16 );
+			return true;
+		}
+
+		return false;
+	}
+
+	return !!gEngfuncs.GetPlayerUniqueID( iPlayer, playerID );
+}
+		
 //-----------------------------------------------------------------------------
 // Purpose: Recalculate the internal scoreboard data
 //-----------------------------------------------------------------------------
 void ScorePanel::Update()
 {
+	if ( g_bScoreBoardReset )
+		g_bScoreBoardReset = false;
+
+	g_bScoreBoardUseStored = g_bScoreBoardStored ? true : false;
+
 	// Set the title
 	if (gViewPort->m_szServerName)
 	{
@@ -260,7 +307,8 @@ void ScorePanel::Update()
 	}
 
 	m_iRows = 0;
-	gViewPort->GetAllPlayersInfo();
+	if ( !g_bScoreBoardStored )
+		gViewPort->GetAllPlayersInfo();
 
 	// Clear out sorts
 	for (int i = 0; i < MAX_PLAYERS; i++)
@@ -277,6 +325,18 @@ void ScorePanel::Update()
 	m_PlayerList.SetScrollRange(m_iRows);
 
 	FillGrid();
+
+	if ( gViewPort->m_pSpectatorPanel->m_menuVisible )
+	{
+		 m_pCloseButton->setVisible ( true );
+	}
+	else 
+	{
+		 m_pCloseButton->setVisible ( false );
+	}
+
+	if ( g_bScoreBoardStored )
+		g_bScoreBoardUseStored = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -744,14 +804,16 @@ void ScorePanel::FillGrid()
 					if ( g_PlayerExtraInfo[ m_iSortedRows[row] ].dead == true )
 					{
 						sprintf(sz, CHudTextMessage::BufferedLocaliseTextString( "#DEAD" ) );
-						break;
 					}
-					else if ( g_PlayerExtraInfo[ m_iSortedRows[row] ].has_c4 == 1 || g_PlayerExtraInfo[ m_iSortedRows[row] ].is_vip == 1 )
+					else if ( g_PlayerExtraInfo[ m_iSortedRows[row] ].has_c4 )
 					{
-						if ( g_PlayerExtraInfo[ m_iSortedRows[row] ].has_c4 == 1 )
-							sprintf(sz, CHudTextMessage::BufferedLocaliseTextString( "#BOMB" ) );
-						else
-							sprintf(sz, CHudTextMessage::BufferedLocaliseTextString( "#VIP" ) );
+						pLabel->setFgColor( 50, 200, 50, 0 );
+						sprintf(sz, CHudTextMessage::BufferedLocaliseTextString( "#BOMB" ) );
+					}
+					else if ( g_PlayerExtraInfo[ m_iSortedRows[row] ].is_vip && ( g_iTeamNumber == 2 || g_iTeamNumber == 0 ) )
+					{
+						pLabel->setFgColor( 255, 205, 45, 0 );
+						sprintf(sz, CHudTextMessage::BufferedLocaliseTextString( "#VIP" ) );
 					}
 					else
 					{
@@ -940,10 +1002,6 @@ void ScorePanel::MouseOverCell(int row, int col)
 	if (pl_info->thisplayer && !gEngfuncs.IsSpectateOnly() )
 		return;
 
-	// only act on audible players
-	if (!GetClientVoiceMgr()->IsPlayerAudible(m_iSortedRows[row]))
-		return;
-
 	// setup the new highlight
 	m_pCurrentHighlightLabel = label;
 	m_iHighlightRow = row;
@@ -996,6 +1054,13 @@ void CLabelHeader::paint()
 	// get size of the panel and the image
 	if (_image)
 	{
+		Color imgColor;
+		getFgColor( imgColor );
+		if( _useFgColorAsImageColor )
+		{
+			_image->setColor( imgColor );
+		}
+
 		_image->getSize(iwide, itall);
 		calcAlignment(iwide, itall, x, y);
 		_image->setPos(x, y);

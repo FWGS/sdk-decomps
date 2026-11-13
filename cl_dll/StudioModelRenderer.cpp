@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
@@ -31,6 +31,8 @@
 
 // Global engine <-> studio model rendering code interface
 engine_studio_api_t IEngineStudio;
+
+cvar_t *cl_righthand;
 
 /////////////////////
 // Implementation of CStudioModelRenderer.h
@@ -439,6 +441,7 @@ void CStudioModelRenderer::StudioSetUpTransform (int trivial_accept)
 
 	//Con_DPrintf("Angles %4.2f prev %4.2f for %i\n", angles[PITCH], m_pCurrentEntity->index);
 	//Con_DPrintf("movetype %d %d\n", m_pCurrentEntity->movetype, m_pCurrentEntity->aiment );
+	/*
 	if (m_pCurrentEntity->curstate.movetype == MOVETYPE_STEP) 
 	{
 		float			f = 0;
@@ -497,7 +500,9 @@ void CStudioModelRenderer::StudioSetUpTransform (int trivial_accept)
 		}
 		//Con_DPrintf("%.3f \n", f );
 	}
-	else if ( m_pCurrentEntity->curstate.movetype != MOVETYPE_NONE ) 
+	else
+	*/
+	if ( m_pCurrentEntity->curstate.movetype != MOVETYPE_NONE ) 
 	{
 		VectorCopy( m_pCurrentEntity->angles, angles );
 	}
@@ -786,7 +791,7 @@ void CStudioModelRenderer::StudioSetupBones ( void )
 	static float		pos4[MAXSTUDIOBONES][3];
 	static vec4_t		q4[MAXSTUDIOBONES];
 
-	if (m_pCurrentEntity->curstate.sequence >=  m_pStudioHeader->numseq) 
+	if (m_pCurrentEntity->curstate.sequence >=  m_pStudioHeader->numseq || m_pCurrentEntity->curstate.sequence < 0) 
 	{
 		m_pCurrentEntity->curstate.sequence = 0;
 	}
@@ -899,6 +904,11 @@ void CStudioModelRenderer::StudioSetupBones ( void )
 		}
 	}
 
+	cl_entity_t *pViewModel = gEngfuncs.GetViewModel();
+	bool bIsViewModel = false;
+
+	if ( pViewModel && pViewModel == m_pCurrentEntity )
+		bIsViewModel = true;
 
 	for (i = 0; i < m_pStudioHeader->numbones; i++) 
 	{
@@ -910,6 +920,15 @@ void CStudioModelRenderer::StudioSetupBones ( void )
 
 		if (pbones[i].parent == -1) 
 		{
+			// Counter-Strike 1.4: the view models are right-handed; cl_righthand 0 mirrors them
+			if ( cl_righthand && cl_righthand->value == 0 && bIsViewModel == true && IEngineStudio.IsHardware() )
+			{
+				bonematrix[1][0] *= -1;
+				bonematrix[1][1] *= -1;
+				bonematrix[1][2] *= -1;
+				bonematrix[1][3] *= -1;
+			}
+
 			if ( IEngineStudio.IsHardware() )
 			{
 				ConcatTransforms ((*m_protationmatrix), bonematrix, (*m_pbonetransform)[i]);
@@ -980,7 +999,7 @@ void CStudioModelRenderer::StudioMergeBones ( model_t *m_pSubModel )
 	float				bonematrix[3][4];
 	static vec4_t		q[MAXSTUDIOBONES];
 
-	if (m_pCurrentEntity->curstate.sequence >=  m_pStudioHeader->numseq) 
+	if (m_pCurrentEntity->curstate.sequence >=  m_pStudioHeader->numseq || m_pCurrentEntity->curstate.sequence < 0) 
 	{
 		m_pCurrentEntity->curstate.sequence = 0;
 	}
@@ -1059,6 +1078,17 @@ int CStudioModelRenderer::StudioDrawModel( int flags )
 	vec3_t dir;
 
 	m_pCurrentEntity = IEngineStudio.GetCurrentEntity();
+
+	// Counter-Strike 1.4: the sniper rifles' view models are not drawn while zoomed in
+	if ( gHUD.m_iFOV < 90 )
+	{
+		char *modelName = m_pCurrentEntity->model->name;
+
+		if ( strstr( modelName, "v_awp" ) || strstr( modelName, "v_scout" ) ||
+			 strstr( modelName, "v_g3sg1" ) || strstr( modelName, "v_sg550" ) )
+			return 0;
+	}
+
 	IEngineStudio.GetTimes( &m_nFrameCount, &m_clTime, &m_clOldTime );
 	IEngineStudio.GetViewInfo( m_vRenderOrigin, m_vUp, m_vRight, m_vNormal );
 	IEngineStudio.GetAliasScale( &m_fSoftwareXScale, &m_fSoftwareYScale );

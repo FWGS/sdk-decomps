@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
@@ -131,6 +131,8 @@ CVoiceStatus::CVoiceStatus()
 	memset(m_pBanButtons, 0, sizeof(m_pBanButtons));
 
 	m_bServerModEnable = -1;
+
+	m_pchGameDir = NULL;
 }
 
 
@@ -155,12 +157,14 @@ CVoiceStatus::~CVoiceStatus()
 
 	FreeBitmaps();
 
-	if(gEngfuncs.pfnGetGameDirectory())
+	if(m_pchGameDir)
 	{
 		if(m_bBanMgrInitialized)
 		{
-			m_BanMgr.SaveState(gEngfuncs.pfnGetGameDirectory());
+			m_BanMgr.SaveState(m_pchGameDir);
 		}
+
+		free(m_pchGameDir);
 	}
 }
 
@@ -223,6 +227,12 @@ int CVoiceStatus::Init(
 	m_iFlags = HUD_ACTIVE;
 	HOOK_MESSAGE(VoiceMask);
 	HOOK_MESSAGE(ReqState);
+
+	// Cache the game directory for use when we shut down
+	const char *pchGameDirT = gEngfuncs.pfnGetGameDirectory();
+	m_pchGameDir = (char *)malloc(strlen(pchGameDirT) + 1);
+	strcpy(m_pchGameDir, pchGameDirT);
+
 	return 1;
 }
 
@@ -393,7 +403,7 @@ void CVoiceStatus::UpdateSpeakerStatus(int entindex, qboolean bTalking)
 	{
 		m_bServerAcked = !!bTalking;
 	}
-	else if(entindex >= 0 && entindex < VOICE_MAX_PLAYERS)
+	else if(entindex >= 0 && entindex <= VOICE_MAX_PLAYERS)
 	{
 		int iClient = entindex - 1;
 		if(iClient < 0)
@@ -553,22 +563,18 @@ void CVoiceStatus::UpdateBanButton(int iClient)
 		return;
 
 	char playerID[16];
-	if(!gEngfuncs.GetPlayerUniqueID(iClient+1, playerID))
+	extern bool HACK_GetPlayerUniqueID( int iPlayer, char playerID[16] );
+	if(!HACK_GetPlayerUniqueID(iClient+1, playerID))
 		return;
 
 	// Figure out if it's blinking or not.
 	bool bBlink   = fmod(m_BlinkTimer, SCOREBOARD_BLINK_FREQUENCY*2) < SCOREBOARD_BLINK_FREQUENCY;
 	bool bTalking = !!m_VoicePlayers[iClient];
-	bool bSquelch = !IsPlayerAudible(iClient+1);
 	bool bBanned  = m_BanMgr.GetPlayerBan(playerID);
 	bool bNeverSpoken = !m_VoiceEnabledPlayers[iClient];
 
 	// Get the appropriate image to display on the panel.
-	if (bSquelch)
-	{
-		pPanel->setImage(NULL);
-	}
-	else if (bBanned)
+	if (bBanned)
 	{
 		pPanel->setImage(m_pScoreboardBanned);
 	}
@@ -836,16 +842,13 @@ void CVoiceStatus::SetPlayerBlockedState(int iPlayer, bool blocked)
 	}
 
 	// Squelch or (try to) unsquelch this player.
-	if (m_AudiblePlayers[iPlayer-1])
+	if (gEngfuncs.pfnGetCvarFloat("voice_clientdebug"))
 	{
-		if (gEngfuncs.pfnGetCvarFloat("voice_clientdebug"))
-		{
-			char str[256];
-			sprintf(str, "CVoiceStatus::SetPlayerBlockedState: setting player %d ban to %d\n", iPlayer, !m_BanMgr.GetPlayerBan(playerID));
-			gEngfuncs.pfnConsolePrint(str);
-		}
-
-		m_BanMgr.SetPlayerBan(playerID, !m_BanMgr.GetPlayerBan(playerID));
-		UpdateServerState(false);
+		char str[256];
+		sprintf(str, "CVoiceStatus::SetPlayerBlockedState: setting player %d ban to %d\n", iPlayer, !m_BanMgr.GetPlayerBan(playerID));
+		gEngfuncs.pfnConsolePrint(str);
 	}
+
+	m_BanMgr.SetPlayerBan( playerID, blocked );
+	UpdateServerState(false);
 }

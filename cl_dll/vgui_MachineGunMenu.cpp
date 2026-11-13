@@ -243,6 +243,7 @@ CMachineGunMenuPanel::CMachineGunMenuPanel(int iTrans, int iRemoveMe, int x,int 
 		}
 
 		m_pClassInfoPanel[i]->setSize( maxX , maxY );
+		if (pfile) gEngfuncs.COM_FreeFile( pfile );
 	}
 
 	// Create the Cancel button

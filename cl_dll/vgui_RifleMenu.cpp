@@ -334,6 +334,7 @@ CRifleMenuPanel::CRifleMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide
 		}
 
 		m_pClassInfoPanel[i]->setSize( maxX , maxY );
+		if (pfile) gEngfuncs.COM_FreeFile( pfile );
 	}
 
 	// Create the Cancel button

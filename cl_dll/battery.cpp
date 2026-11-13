@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -86,7 +86,7 @@ int CHudBattery:: MsgFunc_ArmorType(const char *pszName,  int iSize, void *pbuf 
 
 int CHudBattery::Draw(float flTime)
 {
-	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_HEALTH )
+	if ( ( gHUD.m_iHideHUDDisplay & HIDEHUD_HEALTH ) || g_iUser1 )	// Counter-Strike 1.4: g_iUser1
 		return 1;
 
 	int r, g, b, x, y, a;

@@ -28,6 +28,8 @@ This file contains "stubs" of class member implementations so that we can predic
 #include	"weapons.h"
 #include	"nodes.h"
 
+Vector PGetGunPosition( Vector vOrigin );
+
 // Globals used by game logic
 const Vector g_vecZero = Vector( 0, 0, 0 );
 int gmsgWeapPickup = 0;
@@ -83,7 +85,6 @@ void UTIL_DecalTrace( TraceResult *pTrace, int decalNumber ) { }
 void UTIL_GunshotDecalTrace( TraceResult *pTrace, int decalNumber ) { }
 BOOL UTIL_IsValidEntity( edict_t *pent ) { return TRUE; }
 void UTIL_SetOrigin( entvars_t *, const Vector &org ) { }
-BOOL UTIL_GetNextBestWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pCurrentWeapon ) { return TRUE; }
 void UTIL_LogPrintf(char *,...) { }
 void UTIL_ClientPrintAll( int,char const *,char const *,char const *,char const *,char const *) { }
 void ClientPrint( entvars_t *client, int msg_dest, const char *msg_name, const char *param1, const char *param2, const char *param3, const char *param4 ) { }
@@ -176,8 +177,6 @@ void CBasePlayer::PlayerUse ( void ) { }
 void CBasePlayer::Jump() { }
 void CBasePlayer::Duck( ) { }
 int  CBasePlayer::Classify ( void ) { return 0; }
-void CBasePlayer :: PlayStepSound(int step, float fvol) { }	
-void CBasePlayer :: UpdateStepSound( void ) { }
 void CBasePlayer::PreThink(void) { }
 void CBasePlayer::CheckTimeBasedDamage()  { }
 void CBasePlayer :: UpdateGeigerCounter( void ) { }
@@ -220,13 +219,14 @@ int CBasePlayer :: GetCustomDecalFrames( void ) { return -1; }
 void CBasePlayer::DropPlayerItem ( const char *pszItemName ) { }
 BOOL CBasePlayer::HasPlayerItem( CBasePlayerItem *pCheckItem ) { return FALSE; }
 BOOL CBasePlayer :: SwitchWeapon( CBasePlayerItem *pWeapon )  { return FALSE; }
-Vector CBasePlayer :: GetGunPosition( void ) { return g_vecZero; }
+Vector CBasePlayer :: GetGunPosition( void ) { return PGetGunPosition( pev->origin ); }
 const char *CBasePlayer::TeamID( void ) { return ""; }
 int CBasePlayer :: GiveAmmo( int iCount, char *szName, int iMax ) { return 0; }
 void CBasePlayer::AddPoints( int score, BOOL bAllowNegativeScore ) { } 
 void CBasePlayer::AddPointsToTeam( int score, BOOL bAllowNegativeScore ) { } 
-void CBasePlayer::ResetMaxSpeed( void ) { }
+void CBasePlayer::SetProgressBarTime( int time ) { }
 void CBasePlayer::Radio( const char *msg_id, const char *msg_verbose ) { }
+void CBasePlayerWeapon::KickBack( float up_base, float lateral_base, float up_modifier, float lateral_modifier, float up_max, float lateral_max, int direction_change ) { }
 void CBasePlayer::SetBombIcon( int bFlash ) { }
 
 void ClearMultiDamage(void) { }
@@ -268,5 +268,4 @@ void CBasePlayerAmmo::Materialize( void ) { }
 void CBasePlayerAmmo :: DefaultTouch( CBaseEntity *pOther ) { }
 int CBasePlayerWeapon::ExtractAmmo( CBasePlayerWeapon *pWeapon ) { return 0; }
 int CBasePlayerWeapon::ExtractClipAmmo( CBasePlayerWeapon *pWeapon ) { return 0; }	
-void CBasePlayerWeapon::RetireWeapon( void ) { }
-void CBasePlayerWeapon::KickBack( float up_base, float lateral_base, float up_modifier, float lateral_modifier, float up_max, float lateral_max, int direction_change ) { }
+void CBasePlayerWeapon::RetireWeapon( void ) { UTIL_GetNextBestWeapon( m_pPlayer, this ); }

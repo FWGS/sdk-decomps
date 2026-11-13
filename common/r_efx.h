@@ -84,6 +84,8 @@ color24 gTracerColors[] =
 #define FTENT_SPARKSHOWER		0x00020000
 #define FTENT_NOMODEL			0x00040000 // Doesn't have a model, never try to draw ( it just triggers other things )
 #define FTENT_CLIENTCUSTOM		0x00080000 // Must specify callback.  Callback function is responsible for killing tempent and updating fields ( unless other flags specify how to do things )
+#define FTENT_CORPSE			0x00100000 // Counter-Strike 1.4 (name ours): a player's body; its animation stops on the last frame, it is traced 36 units ahead
+#define FTENT_CORPSELANDED		0x00200000 // Counter-Strike 1.4 (name ours): the body lies on the floor; no more falling and no more traces
 
 typedef struct tempent_s	TEMPENTITY;
 typedef struct tempent_s

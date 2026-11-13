@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
@@ -17,7 +17,7 @@
 #include "cl_entity.h"
 #include "triangleapi.h"
 
-#define DLLEXPORT __declspec( dllexport )
+#define DLLEXPORT		// Counter-Strike 1.4: nothing is exported but F (cdll_int.cpp)
 
 extern "C"
 {
@@ -100,6 +100,8 @@ Non-transparent triangles-- add them here
 */
 void DLLEXPORT HUD_DrawNormalTriangles( void )
 {
+	g_pcldstAddrs->pDrawNormalTriangles();
+
 
 	gHUD.m_Spectator.DrawOverview();
 	
@@ -117,6 +119,8 @@ Render any triangles with transparent rendermode needs here
 */
 void DLLEXPORT HUD_DrawTransparentTriangles( void )
 {
+	g_pcldstAddrs->pDrawTransparentTriangles();
+
 
 #if defined( TEST_IT )
 //	Draw_Triangles();

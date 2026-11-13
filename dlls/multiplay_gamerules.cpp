@@ -277,6 +277,9 @@ extern unsigned short m_usResetDecals;	// client.cpp (Counter-Strike 1.3; 1.6 de
 extern float g_flTimeLimit;		// client.cpp (Counter-Strike 1.1)
 extern float g_flResetTime;		// client.cpp (Counter-Strike 1.1)
 extern int gmsgAllowSpec;		// player.cpp (Counter-Strike 1.1)
+extern int g_iHostageNumber;	// hostage.cpp (Counter-Strike 1.4)
+extern int gmsgBombPickup;		// player.cpp (Counter-Strike 1.4)
+extern void ClearBodyQue( void );	// world.cpp (Counter-Strike 1.4)
 
 //*********************************************************
 // Rules for the half-life multiplayer game.
@@ -296,8 +299,6 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 	m_iRoundWinStatus = 0;
 	m_iNumCTWins = 0;
 	m_iNumTerroristWins = 0;
-	m_pCTCommander = NULL;
-	m_pTerroristCommander = NULL;
 	m_pVIP = NULL;	// Beta 6.0
 	m_iNumCT = 0;
 	m_iNumTerrorist = 0;
@@ -315,7 +316,7 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 	m_fCountedSpawnPoints = false;
 	m_flNextRestartCheck = 0;
 	m_fGameCommenced = false;
-	m_fCompleteReset = true;
+	m_fCompleteReset = false;	// Counter-Strike 1.4 (was true)
 
 	// Beta 6.0: escape and assassination maps, info_map_parameters
 	m_flRequiredEscapeRatio = 0.5;
@@ -330,6 +331,7 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 	m_iUnBalancedRounds = 0;
 	m_iNumEscapeRounds = 0;
 	m_fRoundTerminating = false;	// Counter-Strike 1.3
+	g_iHostageNumber = 0;	// Counter-Strike 1.4: the hostages' numbers start again
 	m_iMaxRounds = (int)CVAR_GET_FLOAT( "mp_maxrounds" );	// Counter-Strike 1.0 (Beta 7.1 read it only at a complete restart)
 
 	// Counter-Strike 1.1: not negative; and the rounds a team may win (mp_winlimit)
@@ -597,13 +599,22 @@ void CHalfLifeMultiplay::CleanUpMap( void )
 		torestart = UTIL_FindEntityByClassname( torestart, "ambient_generic" );
 	}
 
-	// Beta 6.5: every grenade goes (Beta 6.1: only the first). sic: the loop
-	// runs while a grenade is found or more than ten were counted, so with
-	// more than ten grenades it does not end
+	// Counter-Strike 1.4: the sprites too
+	torestart = UTIL_FindEntityByClassname( NULL, "env_sprite" );
+
+	while ( torestart )
+	{
+		torestart->Restart();
+		torestart = UTIL_FindEntityByClassname( torestart, "env_sprite" );
+	}
+
+	// Beta 6.5: every grenade goes (Beta 6.1: only the first).
+	// Counter-Strike 1.4: twenty at most (to 1.3 the loop ran while a grenade
+	// was found or more than ten were counted)
 	int icount = 0;	// Counter-Strike 1.6's name
 	CBaseEntity *toremove = UTIL_FindEntityByClassname( NULL, "grenade" );
 
-	while ( toremove || icount > 10 )
+	while ( toremove && icount < 20 )
 	{
 		UTIL_Remove( toremove );
 		toremove = UTIL_FindEntityByClassname( toremove, "grenade" );
@@ -652,81 +663,43 @@ void CHalfLifeMultiplay::GiveC4( void )
 				player->GiveNamedItem( "weapon_c4" );
 				player->SetBombIcon( FALSE );
 				player->pev->body = 1;
-				m_pTerroristCommander = player;
+				player->m_flDisplayHistory |= 0x1000;	// Counter-Strike 1.4: he is told
+				player->HintMessage( "#Hint_you_have_the_bomb", FALSE, TRUE );
 
 				// Counter-Strike 1.1: the carrier goes to the log
-				UTIL_LogPrintf( "\"%s<%i><%u><TERRORIST>\" triggered \"Spawned_With_The_Bomb\"\n", STRING( player->pev->netname ), GETPLAYERUSERID( player->edict() ), GETPLAYERWONID( player->edict() ) );
+				UTIL_LogPrintf( "\"%s<%i><%s><TERRORIST>\" triggered \"Spawned_With_The_Bomb\"\n", STRING( player->pev->netname ), GETPLAYERUSERID( player->edict() ), GETPLAYERAUTHID( player->edict() ) );
 			}
 		}
 		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
 	}
-}
 
-//=========================================================
-// PickNewCommander - Beta 4.0: one of the team's players,
-// picked at random, becomes its commander (name from the
-// later versions' Linux symbols). Beta 5.0 (leak): only a
-// living one.
-//=========================================================
-void CHalfLifeMultiplay::PickNewCommander( int iTeam )
-{
-	CBaseEntity *pPlayer = NULL;
-	CBasePlayer *player;
-
-	if ( iTeam == TEAM_CT )
-		m_pCTCommander = NULL;
-	else
-		m_pTerroristCommander = NULL;
-
-	int iCount = 0;
-
-	// count the team (sic: without the checks of the second loop)
-	pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
-	while ( pPlayer != NULL )
+	// Counter-Strike 1.4: when the turn found nobody, the first living terrorist gets it
+	if ( !IsThereABomber() )
 	{
-		player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+		m_iC4Turn = 0;
+		pPlayer = UTIL_FindEntityByClassname( NULL, "player" );
 
-		if ( player->m_iTeam == iTeam && player->pev->flags != FL_DORMANT )
-			iCount++;
-
-		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
-	}
-
-	int iCommander = RANDOM_LONG( 1, iCount );
-	iCount = 0;
-
-	pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
-	while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
-	{
-		if ( pPlayer->IsPlayer() && pPlayer->pev->flags != FL_DORMANT )
+		while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
 		{
-			player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
-
-			if ( pPlayer && pPlayer->pev->deadflag == DEAD_NO )
+			if ( pPlayer->IsPlayer() && pPlayer->pev->flags != FL_DORMANT )
 			{
-				if ( iTeam == TEAM_TERRORIST )
+				CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+
+				if ( player->pev->deadflag == DEAD_NO && player->m_iTeam == TEAM_TERRORIST )
 				{
-					if ( player->m_iTeam == TEAM_TERRORIST )
-					{
-						iCount++;
-						m_pTerroristCommander = player;
-						if ( iCount >= iCommander )
-							return;
-					}
-				}
-				else if ( iTeam == TEAM_CT )
-				{
-					if ( player->m_iTeam == TEAM_CT )
-					{
-						iCount++;
-						m_pCTCommander = player;
-						if ( iCount >= iCommander )
-							return;
-					}
+					player->m_bHasC4 = true;
+					player->GiveNamedItem( "weapon_c4" );
+					player->SetBombIcon( FALSE );
+					player->pev->body = 1;
+					player->m_flDisplayHistory |= 0x1000;
+					player->HintMessage( "#Hint_you_have_the_bomb", FALSE, TRUE );
+
+					UTIL_LogPrintf( "\"%s<%i><%s><TERRORIST>\" triggered \"Spawned_With_The_Bomb\"\n", STRING( player->pev->netname ), GETPLAYERUSERID( player->edict() ), GETPLAYERAUTHID( player->edict() ) );
+					return;
 				}
 			}
+			pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
 		}
-		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
 	}
 }
 
@@ -841,6 +814,15 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 				UpdateTeamScores();
 			}
 
+			// Counter-Strike 1.4: the director's event (SDK 2.3's svc_director): the VIP, priority 15, final
+			MESSAGE_BEGIN( MSG_SPEC, SVC_DIRECTOR );
+				WRITE_BYTE( 9 );	// command length in bytes
+				WRITE_BYTE( DRC_CMD_EVENT );
+				WRITE_SHORT( ENTINDEX( m_pVIP->edict() ) );
+				WRITE_SHORT( 0 );
+				WRITE_LONG( 15 | DRC_FLAG_FINAL );
+			MESSAGE_END();
+
 			EndRoundMessage( "#VIP_Escaped", 2 );
 
 			TerminateRound( 5, 1 );
@@ -888,7 +870,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 			TerminateRound( 5, 2 );
 			return;
 		}
-		else if ( NumAliveTerrorist == 0 )
+		else if ( NumAliveTerrorist == 0 && flEscapeRatio < m_flRequiredEscapeRatio )
 		{
 			Broadcast( "ctwin" );
 			m_iAccountCT += ( 1 - flEscapeRatio ) * 3500;
@@ -900,6 +882,24 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 			}
 
 			EndRoundMessage( "#CTs_PreventEscape", 5 );
+
+			TerminateRound( 5, 1 );
+			return;
+		}
+		// Counter-Strike 1.4: the same with a dead terrorist and a spawnable counter-terrorist, for 3,250 times
+		// the share (reached only when the ratio is not a number: no escapers counted, 0 / 0)
+		else if ( NumAliveTerrorist == 0 && NumDeadTerrorist != 0 && m_iNumSpawnableCT > 0 )
+		{
+			Broadcast( "ctwin" );
+			m_iAccountCT += ( 1 - flEscapeRatio ) * 3250;
+
+			if ( !bNeededPlayers )
+			{
+				m_iNumCTWins++;
+				UpdateTeamScores();
+			}
+
+			EndRoundMessage( "#Escaping_Terrorists_Neutralized", 6 );
 
 			TerminateRound( 5, 1 );
 			return;
@@ -1090,7 +1090,8 @@ void CHalfLifeMultiplay::SwapAllPlayers( void )
 //=========================================================
 // BalanceTeams - Beta 6.0 (Linux symbol): the bigger team
 // gives half the difference (at most four) to the other,
-// each time its player with the most frags. Beta 6.5: on an
+// each time its player with the most frags (Counter-Strike
+// 1.4: with the highest user id). Beta 6.5: on an
 // assassination map the counter-terrorists are filled up to
 // 55% of the players and one, else the terrorists to 45% and
 // one
@@ -1149,7 +1150,7 @@ void CHalfLifeMultiplay::BalanceTeams( void )
 
 	for ( int i = 1; i <= iNumToSwap; i++ )
 	{
-		int iHighestFrags = -100;
+		int iHighestUserID = 0;	// Counter-Strike 1.6's name
 		CBasePlayer *pPlayerToSwap = NULL;
 		CBaseEntity *pPlayer = NULL;
 
@@ -1160,10 +1161,11 @@ void CHalfLifeMultiplay::BalanceTeams( void )
 			{
 				CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
 
-				// Beta 6.1: never the VIP
-				if ( player->m_iTeam == iTeamToSwap && player->pev->frags >= iHighestFrags && m_pVIP != player )
+				// Beta 6.1: never the VIP. Counter-Strike 1.4: the one who joined the server last
+				// (the highest user id; to 1.3 the one with the most frags)
+				if ( player->m_iTeam == iTeamToSwap && GETPLAYERUSERID( player->edict() ) > iHighestUserID && m_pVIP != player )
 				{
-					iHighestFrags = player->pev->frags;
+					iHighestUserID = GETPLAYERUSERID( player->edict() );
 					pPlayerToSwap = player;
 				}
 			}
@@ -1173,6 +1175,52 @@ void CHalfLifeMultiplay::BalanceTeams( void )
 		if ( pPlayerToSwap )
 			pPlayerToSwap->SwitchTeam();
 	}
+}
+
+//=========================================================
+// CheckMapConditions - Counter-Strike 1.4 (virtual, slot 61;
+// Linux symbol): what the map has: a bomb target, rescue,
+// buy and escape zones, a VIP safety zone. Retail's
+// ServerActivate (client.cpp) calls it through the slot;
+// RestartRound still looks for them itself (1.3's text)
+//=========================================================
+void CHalfLifeMultiplay::CheckMapConditions( void )
+{
+	if ( UTIL_FindEntityByClassname( NULL, "func_bomb_target" ) )
+	{
+		m_fMapHasBombTarget = true;
+		m_fMapHasBombZone = true;
+	}
+	else if ( UTIL_FindEntityByClassname( NULL, "info_bomb_target" ) )
+	{
+		m_fMapHasBombTarget = true;
+		m_fMapHasBombZone = false;
+	}
+	else
+	{
+		m_fMapHasBombTarget = false;
+		m_fMapHasBombZone = false;
+	}
+
+	if ( UTIL_FindEntityByClassname( NULL, "func_hostage_rescue" ) )
+		m_fMapHasRescueZone = true;
+	else
+		m_fMapHasRescueZone = false;
+
+	if ( UTIL_FindEntityByClassname( NULL, "func_buyzone" ) )
+		m_fMapHasBuyZone = true;
+	else
+		m_fMapHasBuyZone = false;
+
+	if ( UTIL_FindEntityByClassname( NULL, "func_escapezone" ) )
+		m_bMapHasEscapeZone = true;
+	else
+		m_bMapHasEscapeZone = false;
+
+	if ( UTIL_FindEntityByClassname( NULL, "func_vip_safetyzone" ) )
+		m_iMapHasVIPSafetyZone = 1;
+	else
+		m_iMapHasVIPSafetyZone = 2;
 }
 
 //=========================================================
@@ -1193,6 +1241,8 @@ void CHalfLifeMultiplay::RestartRound( void )
 {
 	m_iTotalRoundsPlayed++;	// Beta 7.1
 
+	ClearBodyQue();	// Counter-Strike 1.4: the bodies of the round before go
+
 	// Beta 6.0: the movement settings, every round
 	CVAR_SET_FLOAT( "sv_accelerate", 5 );
 	CVAR_SET_FLOAT( "sv_friction", 4 );
@@ -1203,6 +1253,13 @@ void CHalfLifeMultiplay::RestartRound( void )
 	// first one ends (6.0 waited more than two rounds)
 	m_iNumCT = CountTeamPlayers( TEAM_CT );
 	m_iNumTerrorist = CountTeamPlayers( TEAM_TERRORIST );
+
+	// Counter-Strike 1.4: on a bomb map the clients forget where the bomb lay
+	if ( m_fMapHasBombTarget )
+	{
+		MESSAGE_BEGIN( MSG_ALL, gmsgBombPickup );
+		MESSAGE_END();
+	}
 
 	if ( CVAR_GET_FLOAT( "mp_autoteambalance" ) != 0 && m_iUnBalancedRounds >= 1 )
 		BalanceTeams();
@@ -1319,13 +1376,14 @@ void CHalfLifeMultiplay::RestartRound( void )
 		m_fMapHasBombTarget = true;
 		m_fMapHasBombZone = true;
 	}
+	else if ( UTIL_FindEntityByClassname( NULL, "info_bomb_target" ) )
+	{
+		m_fMapHasBombTarget = true;
+		m_fMapHasBombZone = false;
+	}
 	else
 	{
-		if ( UTIL_FindEntityByClassname( NULL, "info_bomb_target" ) )
-			m_fMapHasBombTarget = true;
-		else
-			m_fMapHasBombTarget = false;
-
+		m_fMapHasBombTarget = false;
 		m_fMapHasBombZone = false;
 	}
 
@@ -1425,20 +1483,14 @@ void CHalfLifeMultiplay::RestartRound( void )
 
 	m_flRoundStartTime2 = m_flRoundStartTime = gpGlobals->time;
 
-	// Beta 3.0: both teams get a new commander
-	PickNewCommander( TEAM_TERRORIST );
-	PickNewCommander( TEAM_CT );
-
-	m_iUnused88 = 2;
-
 	// Counter-Strike 1.3: a complete reset clears the accounts worked out above and the losing streaks
 	if ( m_fCompleteReset )
 	{
+		m_iAccountCT = 0;	// (Counter-Strike 1.4: the accounts first)
+		m_iAccountTerrorist = 0;
 		m_iNumTerroristWins = 0;
 		m_iNumCTWins = 0;
 		m_iNumConsecutiveTerroristLoses = 0;
-		m_iAccountCT = 0;
-		m_iAccountTerrorist = 0;
 		m_iNumConsecutiveCTLoses = 0;
 		m_iLoserBonus = 1400;
 	}
@@ -1451,17 +1503,10 @@ void CHalfLifeMultiplay::RestartRound( void )
 		{
 			CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
 
-			if ( player->m_iTeam != TEAM_UNASSIGNED && player->m_iTeam != TEAM_SPECTATOR )	// (Counter-Strike 1.1: nor the spectators)
-			{
-				if ( player->m_bHasC4 == true )
-					player->DropPlayerItem( "weapon_c4" );
-
-				player->RoundRespawn();
-
-				// Beta 5.0: after a complete reset everybody gets the starting weapons again
-				if ( m_fCompleteReset )
-					player->GiveDefaultItems();
-			}
+			// Counter-Strike 1.4: the spawns are counted from here, and everybody may change teams
+			// again; the account is paid ahead of the respawn (1.3: behind it)
+			player->m_iNumSpawns = 0;
+			player->m_fTeamChanged = false;
 
 			if ( player->m_iTeam == TEAM_CT )
 				player->AddAccount( m_iAccountCT, true );
@@ -1469,11 +1514,22 @@ void CHalfLifeMultiplay::RestartRound( void )
 			{
 				// Beta 6.0: the escapers are counted; on an escape map the
 				// terrorists start with the starting weapons every round
+				// (Counter-Strike 1.4: by losing what they carry at the respawn;
+				// to 1.3 GiveDefaultItems was called here)
 				m_iNumEscapers++;
 				player->AddAccount( m_iAccountTerrorist, true );
 
 				if ( m_bMapHasEscapeZone == true )
-					player->GiveDefaultItems();
+					player->m_fNotKilled = false;
+			}
+
+			// (Beta 5.0 to 1.3: after a complete reset GiveDefaultItems here)
+			if ( player->m_iTeam != TEAM_UNASSIGNED && player->m_iTeam != TEAM_SPECTATOR )	// (Counter-Strike 1.1: nor the spectators)
+			{
+				if ( player->m_bHasC4 == true )
+					player->DropPlayerItem( "weapon_c4" );
+
+				player->RoundRespawn();
 			}
 		}
 		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
@@ -1498,12 +1554,67 @@ void CHalfLifeMultiplay::RestartRound( void )
 	m_fCompleteReset = false;
 }
 
+//=========================================================
+// IsThereABomber - Counter-Strike 1.4 (Linux symbol; local's
+// name Counter-Strike 1.6's): a player who is no
+// counter-terrorist carries the C4
+//=========================================================
+BOOL CHalfLifeMultiplay::IsThereABomber( void )
+{
+	CBasePlayer *pPlayer = (CBasePlayer *)UTIL_FindEntityByClassname( NULL, "player" );
+
+	while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
+	{
+		if ( pPlayer->m_iTeam != TEAM_CT && pPlayer->IsBombGuy() )
+			return TRUE;
+
+		pPlayer = (CBasePlayer *)UTIL_FindEntityByClassname( pPlayer, "player" );
+	}
+
+	return FALSE;
+}
+
+//=========================================================
+// IsThereABomb - Counter-Strike 1.4 (Linux symbol; locals'
+// names Counter-Strike 1.6's): a planted C4 or a weapon_c4
+// exists. sic: the walk does not step past a planted C4, so
+// with one in the map the loop does not end (both libraries)
+//=========================================================
+BOOL CHalfLifeMultiplay::IsThereABomb( void )
+{
+	CGrenade *pC4 = NULL;
+	CBaseEntity *pWeaponC4 = NULL;
+	BOOL bFoundBomb = FALSE;
+
+	pC4 = (CGrenade *)UTIL_FindEntityByClassname( NULL, "grenade" );
+
+	while ( pC4 )
+	{
+		if ( !pC4->m_bIsC4 )
+			pC4 = (CGrenade *)UTIL_FindEntityByClassname( pC4, "grenade" );
+		else
+			bFoundBomb = TRUE;
+	}
+
+	if ( !bFoundBomb )
+	{
+		pWeaponC4 = UTIL_FindEntityByClassname( NULL, "weapon_c4" );
+
+		if ( pWeaponC4 )
+			bFoundBomb = TRUE;
+	}
+
+	return bFoundBomb;
+}
+
 // longest the intermission can last, in seconds
 #define MAX_INTERMISSION_TIME		120
 
 extern cvar_t mp_chattime;	// (SDK 2.2's line; Counter-Strike 1.1)
 // Counter-Strike 1.3: Think reads these cvars' own values (1.6 declares them here, ahead of Think)
 extern cvar_t restartround;
+extern cvar_t sv_restart;	// Counter-Strike 1.4
+extern cvar_t mapvoteratio;	// Counter-Strike 1.4: ProcessMapVote reads the cvar's own value
 extern cvar_t maxrounds;
 extern cvar_t winlimit;
 
@@ -1587,14 +1698,15 @@ void CHalfLifeMultiplay::StackVIPQueue( void )
 
 //=========================================================
 // IsVIPQueueEmpty - terrorists leave the queue first
+// (Counter-Strike 1.4: whoever is no counter-terrorist)
 //=========================================================
 bool CHalfLifeMultiplay::IsVIPQueueEmpty( void )
 {
 	for ( int i = 0; i < 5; i++ )
 	{
-		CBasePlayer *toCheck = m_pVIPQueue[i];	// name ours
+		CBasePlayer *toCheck = m_pVIPQueue[i];	// Counter-Strike 1.6's name
 
-		if ( toCheck && toCheck->m_iTeam == TEAM_TERRORIST )
+		if ( toCheck && toCheck->m_iTeam != TEAM_CT )
 			m_pVIPQueue[i] = NULL;
 	}
 
@@ -1724,7 +1836,7 @@ void CHalfLifeMultiplay::PickNextVIP( void )
 		int iCount = 1;
 
 		CBaseEntity *pPlayer = NULL;
-		CBasePlayer *player;
+		CBasePlayer *player = NULL;
 		CBasePlayer *pLastPlayer = NULL;	// Counter-Strike 1.6's name
 
 		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
@@ -1747,9 +1859,10 @@ void CHalfLifeMultiplay::PickNextVIP( void )
 					return;
 				}
 				else if ( player->m_iTeam == TEAM_CT )
-					iCount++;
+					iCount = iCount + 1;	// sic: the inliner's budget. With iCount++ the GetClassPtr above keeps Vector's constructor out of line (812 bytes for retail's 783); this form, the same on m_iLastPick, ENT( pPlayer->pev ) for edict() in the last arm's loop, or 2 to 20 dead member stores all give retail's code: the function's text is a little longer than its statements show
 
-				pLastPlayer = player;
+				if ( player->m_iTeam != TEAM_SPECTATOR )	// Counter-Strike 1.4: no spectator
+					pLastPlayer = player;
 			}
 			pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
 		}
@@ -1758,13 +1871,14 @@ void CHalfLifeMultiplay::PickNextVIP( void )
 	{
 		// the first counter-terrorist
 		CBaseEntity *pPlayer = NULL;
+		CBasePlayer *player = NULL;
 
 		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
 		while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
 		{
 			if ( pPlayer->pev->flags != FL_DORMANT )
 			{
-				CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
+				player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
 
 				if ( player->m_iTeam == TEAM_CT )
 				{
@@ -1786,6 +1900,10 @@ void CHalfLifeMultiplay::PickNextVIP( void )
 void CHalfLifeMultiplay :: Think ( void )
 {
 	m_VoiceGameMgr.Update(gpGlobals->frametime);
+
+	// Counter-Strike 1.4: the engine's client hull trace stays on
+	if ( (int)CVAR_GET_FLOAT( "sv_clienttrace" ) != 1 )
+		CVAR_SET_FLOAT( "sv_clienttrace", 1 );
 
 	// Beta 5.0 (leak): the first think starts the clock
 	if ( m_flRoundStartTime == 0 )
@@ -1920,27 +2038,31 @@ void CHalfLifeMultiplay :: Think ( void )
 			{
 				CBasePlayer *plr = (CBasePlayer *)UTIL_PlayerByIndex( i );
 
-				// (Counter-Strike 1.1: not the spectators; 1.3: they get the round's timer too)
-				if ( plr && plr->pev->flags != FL_DORMANT && plr->m_iJoiningState == JOIN_DONE )
+				// (Counter-Strike 1.1: not the spectators; 1.3: they get the round's timer too;
+				// 1.4: and so does a player who is still joining)
+				if ( plr && plr->pev->flags != FL_DORMANT )
 				{
-					if ( plr->m_iTeam == TEAM_CT && !bCTPlayed )
+					if ( plr->m_iJoiningState == JOIN_DONE )
 					{
-						plr->Radio( CT_sentence, NULL );
-						bCTPlayed = true;
-					}
-					else if ( plr->m_iTeam == TEAM_TERRORIST && !bTPlayed )
-					{
-						plr->Radio( T_sentence, NULL );
-						bTPlayed = true;
+						if ( plr->m_iTeam == TEAM_CT && !bCTPlayed )
+						{
+							plr->Radio( CT_sentence, NULL );
+							bCTPlayed = true;
+						}
+						else if ( plr->m_iTeam == TEAM_TERRORIST && !bTPlayed )
+						{
+							plr->Radio( T_sentence, NULL );
+							bTPlayed = true;
+						}
+
+						if ( plr->m_iTeam != TEAM_SPECTATOR )
+						{
+							plr->ResetMaxSpeed();
+							plr->m_bCanShoot = true;	// Beta 6.5
+						}
 					}
 
 					plr->SyncRoundTimer();
-
-					if ( plr->m_iTeam != TEAM_SPECTATOR )
-					{
-						plr->ResetMaxSpeed();
-						plr->m_bCanShoot = true;	// Beta 6.5
-					}
 				}
 			}
 		}
@@ -2036,6 +2158,10 @@ void CHalfLifeMultiplay :: Think ( void )
 	{
 		int iRestartDelay = (int)restartround.value;	// (1.6's name; Counter-Strike 1.3: the cvar's own value)
 
+		// Counter-Strike 1.4: sv_restart does the same
+		if ( !iRestartDelay )
+			iRestartDelay = (int)sv_restart.value;
+
 		if ( iRestartDelay > 0 )
 		{
 			if ( iRestartDelay > 10 )
@@ -2056,6 +2182,7 @@ void CHalfLifeMultiplay :: Think ( void )
 			m_flRestartRoundTime = gpGlobals->time + iRestartDelay;
 			m_fCompleteReset = true;
 			CVAR_SET_FLOAT( "sv_restartround", 0 );
+			CVAR_SET_FLOAT( "sv_restart", 0 );
 		}
 
 		m_flNextRestartCheck = gpGlobals->time + 1.0;
@@ -2136,6 +2263,10 @@ BOOL CHalfLifeMultiplay::FShouldSwitchWeapon( CBasePlayer *pPlayer, CBasePlayerI
 		return TRUE;
 	}
 
+	// Counter-Strike 1.4: the player's choice (userinfo "_cl_autowepswitch")
+	if ( !pPlayer->m_iAutoWepSwitch )
+		return FALSE;
+
 	if ( !pPlayer->m_pActiveItem->CanHolster() )
 	{
 		// can't put away the active item.
@@ -2173,18 +2304,8 @@ BOOL CHalfLifeMultiplay :: GetNextBestWeapon( CBasePlayer *pPlayer, CBasePlayerI
 
 		while ( pCheck )
 		{
-			if ( pCheck->iWeight() > -1 && pCheck->iWeight() == pCurrentWeapon->iWeight() && pCheck != pCurrentWeapon )
-			{
-				// this weapon is from the same category. 
-				if ( pCheck->CanDeploy() )
-				{
-					if ( pPlayer->SwitchWeapon( pCheck ) )
-					{
-						return TRUE;
-					}
-				}
-			}
-			else if ( pCheck->iWeight() > iBestWeight && pCheck != pCurrentWeapon )// don't reselect the weapon we're trying to get rid of
+			// (Counter-Strike 1.4: the SDK's first arm, a weapon of the current one's weight, is gone)
+			if ( pCheck->iWeight() > iBestWeight && pCheck != pCurrentWeapon )// don't reselect the weapon we're trying to get rid of
 			{
 				//ALERT ( at_console, "Considering %s\n", STRING( pCheck->pev->classname ) );
 				// we keep updating the 'best' weapon just in case we can't find a weapon of the same weight
@@ -2237,12 +2358,25 @@ BOOL CHalfLifeMultiplay::ClientCommand( CBasePlayer *pPlayer, const char *pcmd )
 BOOL CHalfLifeMultiplay :: ClientConnected( edict_t *pEntity, const char *pszName, const char *pszAddress, char szRejectReason[ 128 ] )
 {
 	m_VoiceGameMgr.ClientConnected(pEntity);
+
+	// Counter-Strike 1.4: the team scores to the connecting client
+	MESSAGE_BEGIN( MSG_ONE, gmsgTeamScore, NULL, pEntity );
+		WRITE_STRING( "CT" );
+		WRITE_SHORT( m_iNumCTWins );
+	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_ONE, gmsgTeamScore, NULL, pEntity );
+		WRITE_STRING( "TERRORIST" );
+		WRITE_SHORT( m_iNumTerroristWins );
+	MESSAGE_END();
+
 	return TRUE;
 }
 
 extern int gmsgSayText;
 extern int gmsgGameMode;
 extern int gmsgViewMode;	// player.cpp (Counter-Strike 1.3)
+extern int gmsgCheckModels;	// player.cpp (Counter-Strike 1.4)
 extern float g_flWeaponCheat;	// world.cpp
 
 void CHalfLifeMultiplay :: UpdateGameMode( CBasePlayer *pPlayer )
@@ -2255,8 +2389,8 @@ void CHalfLifeMultiplay :: UpdateGameMode( CBasePlayer *pPlayer )
 void CHalfLifeMultiplay :: InitHUD( CBasePlayer *pl )
 {
 	// Beta 5.0 (leak): no "has joined the game" for the others any more
-	// Counter-Strike 1.1: the standard log format's line, with the WON id and no team yet (1.0b: "\"%s<%i>\" has entered the game\n")
-	UTIL_LogPrintf( "\"%s<%i><%u><>\" entered the game\n",  STRING( pl->pev->netname ), GETPLAYERUSERID( pl->edict() ), GETPLAYERWONID( pl->edict() ) );
+	// Counter-Strike 1.1: the standard log format's line, with the WON id (Counter-Strike 1.4: the auth id) and no team yet (1.0b: "\"%s<%i>\" has entered the game\n")
+	UTIL_LogPrintf( "\"%s<%i><%s><>\" entered the game\n",  STRING( pl->pev->netname ), GETPLAYERUSERID( pl->edict() ), GETPLAYERAUTHID( pl->edict() ) );
 
 	UpdateGameMode( pl );
 
@@ -2266,6 +2400,10 @@ void CHalfLifeMultiplay :: InitHUD( CBasePlayer *pl )
 		MESSAGE_BEGIN( MSG_ONE, gmsgViewMode, NULL, pl->edict() );
 		MESSAGE_END();
 	}
+
+	// Counter-Strike 1.4: the client looks its player models over (message CheckModels)
+	MESSAGE_BEGIN( MSG_ONE, gmsgCheckModels, NULL, pl->edict() );
+	MESSAGE_END();
 
 	// sending just one score makes the hud scoreboard active;  otherwise
 	// it is just disabled for single play
@@ -2365,29 +2503,33 @@ void CHalfLifeMultiplay :: ClientDisconnected( edict_t *pClient )
 			if ( pPlayer->m_bHasC4 == true )
 				pPlayer->DropPlayerItem( "weapon_c4" );
 
+			// (Counter-Strike 1.4: DropPlayerItem; to 1.3 GiveNamedItem made a new kit)
 			if ( pPlayer->m_fHasDefuser == true )
-				pPlayer->GiveNamedItem( "item_thighpack" );
+				pPlayer->DropPlayerItem( "item_thighpack" );
 
 			// Beta 6.0: a VIP leaving leaves no VIP
 			if ( pPlayer->m_bIsVIP == true )
 				m_pVIP = NULL;
 
-			// Beta 6.5: his map vote goes with him
-			if ( pPlayer->m_iMapVote >= 1 && pPlayer->m_iMapVote <= 100 )
+			pPlayer->m_iCurrentKickVote = 0;	// Counter-Strike 1.4
+
+			// Beta 6.5: his map vote goes with him. Counter-Strike 1.4: any vote
+			// but 0 (to 1.3: 1 to 100), and the count does not go below zero
+			if ( pPlayer->m_iMapVote )
+			{
 				m_iMapVotes[ pPlayer->m_iMapVote - 1 ]--;
+
+				if ( m_iMapVotes[ pPlayer->m_iMapVote - 1 ] < 0 )
+					m_iMapVotes[ pPlayer->m_iMapVote - 1 ] = 0;
+			}
 
 			FireTargets( "game_playerleave", pPlayer, pPlayer, USE_TOGGLE, 0 );
 
 			// Counter-Strike 1.1: with the WON id and the team (team is 1.6's name)
 			char *team = GetTeam( pPlayer->m_iTeam );
-			UTIL_LogPrintf( "\"%s<%i><%u><%s>\" disconnected\n",  STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERWONID( pPlayer->edict() ), team );
+			UTIL_LogPrintf( "\"%s<%i><%s><%s>\" disconnected\n",  STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERAUTHID( pPlayer->edict() ), team );
 
 			pPlayer->RemoveAllItems( TRUE );// destroy all of the players weapons and items
-
-			// Beta 3.0: a counter-terrorist leaving makes the CTs pick a new
-			// commander (sic: whoever he was, and not so for a terrorist)
-			if ( pPlayer->m_iTeam == TEAM_CT )
-				PickNewCommander( TEAM_CT );
 
 			// Beta 5.0 (leak): his observer goes
 			if ( pPlayer->m_pObserver )
@@ -2506,7 +2648,8 @@ void CHalfLifeMultiplay :: PlayerSpawn( CBasePlayer *pPlayer )
 	// Beta 3.0: a survivor of the last round keeps what he has. Beta 5.0: the
 	// starting weapons are the player's (GiveDefaultItems; the leak gave the
 	// knife and the team's pistol here)
-	if ( pPlayer->m_fNotKilled != true && addDefault )
+	// Counter-Strike 1.4: and the VIP always gets his
+	if ( ( pPlayer->m_fNotKilled != true && addDefault ) || pPlayer->m_bIsVIP )
 		pPlayer->GiveDefaultItems();
 
 	// Beta 5.0 (leak): the model the player chose (SetPlayerModel)
@@ -2519,8 +2662,8 @@ BOOL CHalfLifeMultiplay :: FPlayerCanRespawn( CBasePlayer *pPlayer )
 {
 	// Beta 5.0 (leak): once a round; not when both teams have players and
 	// the round is more than 20 seconds old; not before an appearance is chosen
-	// Counter-Strike 1.3: the teams are counted here, and with mp_fadetoblack a player who is too late
-	// for the round gets the black screen at once
+	// Counter-Strike 1.3: the teams are counted here (1.3 only: with mp_fadetoblack a player who is
+	// too late for the round got the black screen at once)
 	if ( pPlayer->m_iNumSpawns > 0 )
 		return FALSE;
 
@@ -2528,12 +2671,7 @@ BOOL CHalfLifeMultiplay :: FPlayerCanRespawn( CBasePlayer *pPlayer )
 	m_iNumTerrorist = CountTeamPlayers( TEAM_TERRORIST );
 
 	if ( m_iNumTerrorist > 0 && m_iNumCT > 0 && m_flRoundStartTime + 20 < gpGlobals->time )
-	{
-		if ( CVAR_GET_FLOAT( "mp_fadetoblack" ) != 0 )
-			UTIL_ScreenFade( pPlayer, Vector( 0, 0, 0 ), 3, 3, 255, FFADE_OUT | FFADE_STAYOUT );
-
 		return FALSE;
-	}
 
 	return pPlayer->m_iMenu != Menu_ChooseAppearance;
 }
@@ -2585,9 +2723,7 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 	// Beta 6.5: his view is his own again
 	SET_VIEW( pVictim->edict(), pVictim->edict() );
 
-	// Beta 4.0: a dead commander, of either team, gets a successor
-	if ( ( pVictim->m_iTeam == TEAM_CT && m_pCTCommander == pVictim ) || ( pVictim->m_iTeam == TEAM_TERRORIST && m_pTerroristCommander == pVictim ) )
-		PickNewCommander( pVictim->m_iTeam );
+	// (Beta 4.0 to Counter-Strike 1.3: a dead commander got a successor here)
 
 	CBasePlayer *peKiller = NULL;
 	CBaseEntity *ktmp = CBaseEntity::Instance( pKiller );
@@ -2658,16 +2794,18 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 				pKillerPlayer->HintMessage( "#Hint_reward_for_killing_vip", TRUE, FALSE );
 				pKillerPlayer->AddAccount( 2500, true );
 
-				// Counter-Strike 1.3: the HLTV director is told (SDK 2.2's message, the priority 15)
-				MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
-					WRITE_BYTE ( DRC_EVENT );	// player killed
+				// Counter-Strike 1.3: the HLTV director is told (the priority 15).
+				// Counter-Strike 1.4: SDK 2.3's svc_director, and the scene is final
+				MESSAGE_BEGIN( MSG_SPEC, SVC_DIRECTOR );
+					WRITE_BYTE ( 9 );	// command length in bytes
+					WRITE_BYTE ( DRC_CMD_EVENT );	// player killed
 					WRITE_SHORT( ENTINDEX(pVictim->edict()) );	// index number of primary entity
 					WRITE_SHORT( ENTINDEX(ENT(pInflictor)) );	// index number of secondary entity
-					WRITE_LONG( 15 | DRC_FLAG_DRAMATIC);   // eventflags (priority and flags)
+					WRITE_LONG( 15 | DRC_FLAG_DRAMATIC | DRC_FLAG_FINAL );   // eventflags (priority and flags)
 				MESSAGE_END();
 
 				// Beta 6.6; Counter-Strike 1.1: the standard log format's line (1.0b: "%s assasinated the VIP\n")
-				UTIL_LogPrintf( "\"%s<%i><%u><TERRORIST>\" triggered \"Assassinated_The_VIP\"\n", STRING( pKillerPlayer->pev->netname ), GETPLAYERUSERID( pKillerPlayer->edict() ), GETPLAYERWONID( pKillerPlayer->edict() ) );
+				UTIL_LogPrintf( "\"%s<%i><%s><TERRORIST>\" triggered \"Assassinated_The_VIP\"\n", STRING( pKillerPlayer->pev->netname ), GETPLAYERUSERID( pKillerPlayer->edict() ), GETPLAYERAUTHID( pKillerPlayer->edict() ) );
 			}
 			else
 				pKillerPlayer->AddAccount( 300, true );
@@ -2681,24 +2819,8 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 		
 		FireTargets( "game_playerkill", ktmp, ktmp, USE_TOGGLE, 0 );
 
-		// Beta 6.5: as in ClientDisconnected. sic: only when another player
-		// killed him
-		CBasePlayer *client = NULL;
-		while ( ((client = (CBasePlayer*)UTIL_FindEntityByClassname( client, "player" )) != NULL) && (!FNullEnt(client->edict())) ) 
-		{
-			if ( !client->pev )
-				continue;
-			if ( client == pVictim )
-				continue;
-
-			// an observer of this player: his camera mode is cleared and set again (Observer_SetMode)
-			if ( client->m_hObserverTarget == pVictim )
-			{
-				int iMode = client->pev->iuser1;
-				client->pev->iuser1 = 0;
-				client->Observer_SetMode( iMode );
-			}
-		}
+		// (Beta 6.5 to Counter-Strike 1.3: his observers' camera mode was set again here, as in
+		// ClientDisconnected; 1.4's observers look for a new target themselves, Observer_CheckTarget)
 	}
 	else
 	{  // killed by the world
@@ -2815,10 +2937,10 @@ void CHalfLifeMultiplay::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, 
 	{  // killed self
 		char *team = GetTeam( pVictim->m_iTeam );
 
-		UTIL_LogPrintf( "\"%s<%i><%u><%s>\" committed suicide with \"%s\"\n",  
+		UTIL_LogPrintf( "\"%s<%i><%s><%s>\" committed suicide with \"%s\"\n",  
 			STRING( pVictim->pev->netname ), 
 			GETPLAYERUSERID( pVictim->edict() ),
-			GETPLAYERWONID( pVictim->edict() ),
+			GETPLAYERAUTHID( pVictim->edict() ),
 			team,
 			killer_weapon_name );
 	}
@@ -2829,14 +2951,14 @@ void CHalfLifeMultiplay::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, 
 		char *VictimTeam = GetTeam( pVictim->m_iTeam );
 		char *KillerTeam = GetTeam( pPlayer->m_iTeam );
 
-		UTIL_LogPrintf( "\"%s<%i><%u><%s>\" killed \"%s<%i><%u><%s>\" with \"%s\"\n",  
+		UTIL_LogPrintf( "\"%s<%i><%s><%s>\" killed \"%s<%i><%s><%s>\" with \"%s\"\n",  
 			STRING( pKiller->netname ),
 			GETPLAYERUSERID( ENT(pKiller) ),
-			GETPLAYERWONID( ENT(pKiller) ),
+			GETPLAYERAUTHID( ENT(pKiller) ),
 			KillerTeam,
 			STRING( pVictim->pev->netname ),
 			GETPLAYERUSERID( pVictim->edict() ),
-			GETPLAYERWONID( pVictim->edict() ),
+			GETPLAYERAUTHID( pVictim->edict() ),
 			VictimTeam,
 			killer_weapon_name );
 	}
@@ -2845,25 +2967,31 @@ void CHalfLifeMultiplay::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, 
 		// killed by the world
 		char *team = GetTeam( pVictim->m_iTeam );
 
-		UTIL_LogPrintf( "\"%s<%i><%u><%s>\" committed suicide with \"%s\" (world)\n",
+		UTIL_LogPrintf( "\"%s<%i><%s><%s>\" committed suicide with \"%s\" (world)\n",
 			STRING( pVictim->pev->netname ), 
 			GETPLAYERUSERID( pVictim->edict() ), 
-			GETPLAYERWONID( pVictim->edict() ),
+			GETPLAYERAUTHID( pVictim->edict() ),
 			team,
 			killer_weapon_name );
 	}
 
 	CheckWinConditions();
 
-	// Counter-Strike 1.3 (SDK 2.2's text): the HLTV director is told
-	MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
-		WRITE_BYTE ( DRC_EVENT );	// player killed
+	// Counter-Strike 1.3 (SDK 2.2's text): the HLTV director is told.
+	// Counter-Strike 1.4: SDK 2.3's svc_director; a kill by a hit to the head has priority 9
+	// and is worth slow motion
+	MESSAGE_BEGIN( MSG_SPEC, SVC_DIRECTOR );
+		WRITE_BYTE ( 9 );	// command length in bytes
+		WRITE_BYTE ( DRC_CMD_EVENT );	// player killed
 		WRITE_SHORT( ENTINDEX(pVictim->edict()) );	// index number of primary entity
 		if (pevInflictor)
 			WRITE_SHORT( ENTINDEX(ENT(pevInflictor)) );	// index number of secondary entity
 		else
 			WRITE_SHORT( ENTINDEX(ENT(pKiller)) );	// index number of secondary entity
-		WRITE_LONG( 7 | DRC_FLAG_DRAMATIC);   // eventflags (priority and flags)
+		if ( iGotHeadshot )
+			WRITE_LONG( 9 | DRC_FLAG_DRAMATIC | DRC_FLAG_SLOWMOTION );   // eventflags (priority and flags)
+		else
+			WRITE_LONG( 7 | DRC_FLAG_DRAMATIC);   // eventflags (priority and flags)
 	MESSAGE_END();
 
 //  Print a standard message
@@ -3133,16 +3261,7 @@ int CHalfLifeMultiplay::PlayerRelationship( CBasePlayer *pPlayer, CBaseEntity *p
 	return GR_NOTTEAMMATE;
 }
 
-BOOL CHalfLifeMultiplay :: PlayFootstepSounds( CBasePlayer *pl, float fvol )
-{
-	if ( g_footsteps && g_footsteps->value == 0 )
-		return FALSE;
-
-	if ( pl->IsOnLadder() || pl->pev->velocity.Length2D() > 135 )	// Counter-Strike 1.0: 135 (Beta 6.0 to 7.1: 190; before: 220)
-		return TRUE;  // only make step sounds in multiplayer if the player is moving fast enough
-
-	return FALSE;
-}
+// (PlayFootstepSounds stood here to Counter-Strike 1.3; 1.4's footsteps are the player movement code's)
 
 BOOL CHalfLifeMultiplay :: FAllowFlashlight( void ) 
 { 
@@ -3561,6 +3680,62 @@ void ExtractCommandString( char *s, char *szCommand )
 }
 
 //=========================================================
+// ResetAllMapVotes - Counter-Strike 1.4 (Linux symbol; the
+// locals' names are Counter-Strike 1.6's): every player in a
+// team takes his map vote back and the counts are zeroed.
+// Retail has it only inside DisplayMaps
+//=========================================================
+void CHalfLifeMultiplay::ResetAllMapVotes( void )
+{
+	int j;
+	CBaseEntity *pTempEntity;
+	CBasePlayer *pTempPlayer;
+
+	pTempEntity = UTIL_FindEntityByClassname( NULL, "player" );
+	while ( pTempEntity != NULL && !FNullEnt( pTempEntity->edict() ) )
+	{
+		pTempPlayer = GetClassPtr( (CBasePlayer *)pTempEntity->pev );
+
+		if ( pTempPlayer->m_iTeam != TEAM_UNASSIGNED )
+			pTempPlayer->m_iMapVote = 0;
+
+		pTempEntity = UTIL_FindEntityByClassname( pTempEntity, "player" );
+	}
+
+	for ( j = 0; j < 100; j++ )
+		m_iMapVotes[j] = 0;
+}
+
+//=========================================================
+// GetMapCount - Counter-Strike 1.4 (Linux symbol; the
+// locals' names are Counter-Strike 1.6's): the number of
+// maps in the map cycle (client.cpp's votemap command)
+//=========================================================
+int GetMapCount( void )
+{
+	static mapcycle_t mapcycle2;
+	char *mapcfile = (char*)CVAR_GET_STRING( "mapcyclefile" );
+	mapcycle_item_s *item;
+	int iCount = 0, iDone = 0;
+
+	DestroyMapCycle( &mapcycle2 );
+	ReloadMapCycleFile( mapcfile, &mapcycle2 );
+
+	item = mapcycle2.next_item;
+
+	while ( item && !iDone )
+	{
+		if ( item->next == mapcycle2.next_item )
+			iDone = 1;
+
+		iCount++;
+		item = item->next;
+	}
+
+	return iCount;
+}
+
+//=========================================================
 // DisplayMaps - Beta 6.5 (Linux symbol; the names of the
 // parameters and locals are Counter-Strike 1.6's): the map
 // cycle with each map's votes, to the player's console; with
@@ -3572,7 +3747,7 @@ void CHalfLifeMultiplay::DisplayMaps( CBasePlayer *player, int iVote )
 	char *mapcfile = (char*)CVAR_GET_STRING( "mapcyclefile" );
 	mapcycle_item_s *item;
 	int iCount = 0;
-	char szNewMap[40];	// (1.6: char *pszNewMap); the size is the frame's
+	char *pszNewMap = NULL;	// (Counter-Strike 1.4: a pointer; to 1.3 a copy of the name)
 
 	DestroyMapCycle( &mapcycle2 );
 	ReloadMapCycleFile( mapcfile, &mapcycle2 );
@@ -3594,46 +3769,53 @@ void CHalfLifeMultiplay::DisplayMaps( CBasePlayer *player, int iVote )
 
 		// Counter-Strike 1.1: titles of the client with the number, the map and its
 		// votes (1.0b: "%d :  %s (%i vote)\n" and "... votes)\n" through sprintf)
-		if ( m_iMapVotes[iCount - 1] == 1 )
+		if ( player )
 		{
-			if ( player )
+			if ( m_iMapVotes[iCount - 1] == 1 )
 				ClientPrint( player->pev, HUD_PRINTCONSOLE, "#Vote", UTIL_dtos1( iCount ), item->mapname, UTIL_dtos2( m_iMapVotes[iCount - 1] ) );
-		}
-		else
-		{
-			if ( player )
+			else
 				ClientPrint( player->pev, HUD_PRINTCONSOLE, "#Votes", UTIL_dtos1( iCount ), item->mapname, UTIL_dtos2( m_iMapVotes[iCount - 1] ) );
 		}
 
 		if ( iCount == iVote )
-			strcpy( szNewMap, item->mapname );
+			pszNewMap = item->mapname;
 
 		item = item->next;
 	}
 
-	if ( szNewMap && iVote )
+	if ( pszNewMap && iVote )
 	{
-		// Beta 6.6: a vote for the map being played adds thirty minutes to it
-		if ( !strcmp( szNewMap, STRING( gpGlobals->mapname ) ) )
+		// Beta 6.6: a vote for the map being played adds thirty minutes to it.
+		// Counter-Strike 1.4: only to a time limit that is set, the clients are
+		// told, and every vote is taken back
+		if ( !strcmp( pszNewMap, STRING( gpGlobals->mapname ) ) )
 		{
-			timelimit.value += 30;
+			if ( timelimit.value != 0 )
+			{
+				timelimit.value += 30;
+				UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Map_Vote_Extend" );
+			}
+
+			ResetAllMapVotes();
 			return;
 		}
 
 		// (Beta 7.0 only: ChangeLevel( szNewMap ) first, to leave the map
 		// cycle standing after the voted map)
-		CHANGE_LEVEL( szNewMap, NULL );
+		CHANGE_LEVEL( pszNewMap, NULL );
 	}
 }
 
 //=========================================================
-// VoteMap - Beta 6.5 (Linux symbol; 1.6 calls it
-// ProcessMapVote, and the locals' names are its): a map's
-// votes are counted afresh; with enough of them
-// (mp_mapvoteratio of the players, 0.35 to 1, and one more)
-// the map changes, else the player is shown the list
+// ProcessMapVote - Beta 6.5 (Linux symbol VoteMap to 1.3,
+// ProcessMapVote from 1.4; the locals' names are Counter-
+// Strike 1.6's): a map's votes are counted afresh; with
+// enough of them (mp_mapvoteratio of the players in a team,
+// 0.35 to 1, rounded; two at least) the map changes, else
+// the player is shown the list. Counter-Strike 1.4: the
+// vote's number and the map's age are client.cpp's to check
 //=========================================================
-void CHalfLifeMultiplay::VoteMap( CBasePlayer *player, int iVote )
+void CHalfLifeMultiplay::ProcessMapVote( CBasePlayer *player, int iVote )
 {
 	CBaseEntity *pTempEntity;
 	CBasePlayer *pTempPlayer;
@@ -3641,51 +3823,46 @@ void CHalfLifeMultiplay::VoteMap( CBasePlayer *player, int iVote )
 	int iRequiredVotes;
 	int iNumPlayers;
 
-	// Beta 6.6: m_iMapVotes has a hundred counts
-	if ( iVote > 99 )
-		return;
-
-	if ( gpGlobals->time < 180 )	// Beta 7.0: three minutes (to 6.6: five)
-	{
-		ClientPrint( player->pev, HUD_PRINTTALK, "#Cannot_Vote_Map" );	// Beta 6.6: to the chat (was the centre)
-		return;
-	}
-
 	iValidVotes = 0;
 	iNumPlayers = 0;
 
 	pTempEntity = UTIL_FindEntityByClassname( NULL, "player" );
 	while ( pTempEntity != NULL && !FNullEnt( pTempEntity->edict() ) )
 	{
-		if ( pTempEntity->IsPlayer() && !( pTempEntity->pev->flags & FL_DORMANT ) )
+		pTempPlayer = GetClassPtr( (CBasePlayer *)pTempEntity->pev );
+
+		if ( pTempPlayer->m_iTeam != TEAM_UNASSIGNED )
 		{
 			iNumPlayers++;
-			pTempPlayer = GetClassPtr( (CBasePlayer *)pTempEntity->pev );
 
 			if ( pTempPlayer->m_iMapVote == iVote )
-			{
 				iValidVotes++;
-
-				// the hidden a12 command's flag: ten votes more
-				if ( pTempPlayer->m_bVoteKicksAtOnce == true )
-					iValidVotes += 10;
-			}
 		}
 		pTempEntity = UTIL_FindEntityByClassname( pTempEntity, "player" );
 	}
 
 	m_iMapVotes[iVote - 1] = iValidVotes;
 
-	float ratio = CVAR_GET_FLOAT( "mp_mapvoteratio" );
+	// (Counter-Strike 1.4: the cvar's own value, and the cvar is set back to the bound)
+	float ratio = mapvoteratio.value;
 
 	if ( ratio > 1.0 )
+	{
 		ratio = 1;
+		CVAR_SET_STRING( "mp_mapvoteratio", "1.0" );
+	}
 	else if ( ratio < 0.35 )
+	{
 		ratio = 0.35f;
+		CVAR_SET_STRING( "mp_mapvoteratio", "0.35" );
+	}
 
-	iRequiredVotes = (int)( iNumPlayers * ratio ) + 1;
+	if ( iNumPlayers > 2 )
+		iRequiredVotes = (int)( iNumPlayers * ratio + 0.5 );
+	else
+		iRequiredVotes = 2;
 
-	if ( iValidVotes >= iRequiredVotes && iNumPlayers != 1 )
+	if ( iValidVotes >= iRequiredVotes )
 	{
 		DisplayMaps( NULL, iVote );
 	}
@@ -3889,4 +4066,5 @@ void CHalfLifeMultiplay :: SendMOTDToClient( edict_t *client )
 void CHalfLifeMultiplay :: ClientUserInfoChanged( CBasePlayer *pPlayer, char *infobuffer )
 {
 	pPlayer->SetPlayerModel( pPlayer->m_bHasC4 );
+	pPlayer->SetPrefsFromUserinfo( infobuffer );	// Counter-Strike 1.4
 }

@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -32,7 +32,14 @@
 
 #include <string.h>
 
+#include "r_studioint.h"
+#include "com_model.h"
+
+extern engine_studio_api_t IEngineStudio;
+
 static int tracerCount[ 32 ];
+
+extern cvar_t *cl_righthand;
 
 extern "C" char PM_FindTextureType( char *name );
 
@@ -337,22 +344,38 @@ void SmokeRise( struct tempent_s *te, float frametime, float current_time )
 // a smoke puff that hits something slides along it
 void HugWalls( struct tempent_s *te, struct pmtrace_s *ptr )
 {
-	Vector smoke_velocity;
 	Vector wall_normal;
+	Vector smoke_velocity;
 	Vector new_velocity;
 	float flLength;
 	float flDot;	// sic: never used (see below)
 
-	new_velocity = Vector( 0, 0, 0 );	// sic: dead store; retail builds a Vector temporary before the cross products
+	new_velocity = Vector( 0, 0, 0 );	// sic: dead store (as in 1.3; without it four x87 operands of the cross products stand the other way round)
 	smoke_velocity = te->entity.baseline.origin;
 	wall_normal = ptr->plane.normal;
+
 	flLength = smoke_velocity.Length();
-	flDot = smoke_velocity.x * wall_normal.x + smoke_velocity.y * wall_normal.y;	// sic: unused; names normal.x and .y before velocity.z (x87 operand order)
-	smoke_velocity.x /= flLength;
-	smoke_velocity.y /= flLength;
-	smoke_velocity.z /= flLength;
+	flDot = smoke_velocity.x * wall_normal.x + smoke_velocity.y * wall_normal.y;	// sic: unused (as in 1.3; x87 operand order of the cross products)
+
+	if ( flLength == 0.0 )
+	{
+		smoke_velocity.x = 0;
+		smoke_velocity.y = 0;
+		smoke_velocity.z = 0;
+	}
+	else
+	{
+		smoke_velocity.x /= flLength;
+		smoke_velocity.y /= flLength;
+		smoke_velocity.z /= flLength;
+	}
+
 	smoke_velocity = CrossProduct( smoke_velocity, wall_normal );
 	new_velocity = CrossProduct( smoke_velocity, wall_normal );
+
+	if ( flLength > 2000.0 )
+		flLength = 2000;
+
 	new_velocity.x *= flLength * 1.5;
 	new_velocity.y *= flLength * 1.5;
 	new_velocity.z *= flLength * 1.5;
@@ -556,6 +579,76 @@ void EV_HLDM_CreateSmoke( float *origin, float *dir, int speed, float scale, int
 			}
 		}
 	}
+}
+
+// sic: a stand-in, name ours.  ev_hldm.obj writes the precompiled header and emits the headers' inline functions by
+// the intermediate code of its own text before each of its functions.  Retail 1.4 has VGUI's Dar<ChangeSignal*>
+// assignment and Scheme's copy constructor ahead of EV_HLDM_GunshotDecalTrace and Scheme's assignment behind it
+// (0x1901de0, 0x1901e00, 0x1902080; 1.3 had all three behind it): its own text before EV_HLDM_GunshotDecalTrace
+// held about 400 bytes of intermediate code more than ours.  This unused inline gives retail's order with 57 to
+// 110 empty statements (full builds; 54 and 120 do not).  Nothing calls it.
+inline void r14_evhldm_unknown( void )
+{
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
 }
 
 char *EV_HLDM_DamageDecal( physent_t *pe )
@@ -815,6 +908,8 @@ void EV_HLDM_FireBullets( int idx, float *forward, float *right, float *up, int 
 	default:	iPenetrationPower = 0; flPenetrationDistance = 0; break;
 	}
 
+	iPenetrationPower *= 2;
+
 	VectorCopy( right, vecRight );
 	VectorCopy( up, vecUp );	// never read (1.6 declares vecUp too); without this copy the spread terms below come out in another operand order
 
@@ -955,6 +1050,25 @@ void EV_HLDM_FireBullets( int idx, float *forward, float *right, float *up, int 
 			{
 				vecSrc[i] = tr.endpos[i] + iPenetrationPower * vecDir[i];
 				vecEnd[i] = vecSrc[i] + flDistance * vecDir[i];
+			}
+
+			// Counter-Strike 1.4: the hole on the far side of the wall (locals as Counter-Strike 1.6 names them)
+			for ( int iPen = 1; iPen < iPenetrationPower; iPen++ )
+			{
+				pmtrace_t trOriginal;
+				Vector vStartPos = tr.endpos + vecDir * iPen;
+				Vector vEndPos = vStartPos + vecDir;
+
+				gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+				gEngfuncs.pEventAPI->EV_PlayerTrace( vStartPos, vEndPos, PM_NORMAL, -1, &trOriginal );
+
+				if ( trOriginal.startsolid && trOriginal.inopen )
+				{
+					gEngfuncs.pEventAPI->EV_PlayerTrace( vEndPos, vStartPos, PM_NORMAL, -1, &trOriginal );
+
+					EV_HLDM_DecalGunshot( &trOriginal, iBulletType, scale_smoke, r_smoke, g_smoke, b_smoke, bCreateSparks, cTextureType );
+					break;
+				}
 			}
 		}
 
@@ -1385,6 +1499,7 @@ void EV_FireGauss( event_args_t *args )
 	{
 		V_PunchAxis( 0, -2.0 );
 		gEngfuncs.pEventAPI->EV_WeaponAnimation( GAUSS_FIRE2, 2 );
+
 	}
 
 	gEngfuncs.pEventAPI->EV_StopSound( idx, CHAN_WEAPON, "ambience/pulsemachine.wav" );
@@ -1720,17 +1835,15 @@ void EV_FireUSP( event_args_t *args )
 	vec3_t velocity;
 	int empty;
 	int silencer_on;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->iparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	silencer_on = args->bparam2;
 	empty = args->bparam1;
 	idx = args->entindex;
@@ -1738,7 +1851,7 @@ void EV_FireUSP( event_args_t *args )
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000.0;
+	angles[0] += args->iparam1 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -1819,24 +1932,22 @@ void EV_FireMP5N( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -1888,24 +1999,22 @@ void EV_FireAK47( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -1957,24 +2066,22 @@ void EV_FireAug( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2028,25 +2135,23 @@ void EV_FireDeagle( event_args_t *args )
 	vec3_t angles;
 	vec3_t velocity;
 	int empty;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	empty = args->bparam1;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2106,24 +2211,22 @@ void EV_FireG3SG1( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2180,25 +2283,23 @@ void EV_FireGlock18( event_args_t *args )
 	vec3_t angles;
 	vec3_t velocity;
 	int empty;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	empty = args->bparam1;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2256,24 +2357,22 @@ void EV_FireM249( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2363,7 +2462,7 @@ void EV_FireM3( event_args_t *args )
 	VectorCopy( forward, vecAiming );
 
 	vecSpread = Vector( 0.0675, 0.0675, 0.0 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 8, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1], 1 );
+	EV_HLDM_FireBullets( idx, forward, right, up, 9, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1], 1 );
 }
 
 void EV_FireM4A1( event_args_t *args )
@@ -2372,26 +2471,25 @@ void EV_FireM4A1( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthand;
 	int silencer_on;
 
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	idx = args->entindex;
 	silencer_on = args->bparam1;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2456,24 +2554,22 @@ void EV_FireMac10( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2527,25 +2623,23 @@ void EV_FireP228( event_args_t *args )
 	vec3_t angles;
 	vec3_t velocity;
 	int empty;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	empty = args->bparam1;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2605,24 +2699,22 @@ void EV_FireP90( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2675,22 +2767,23 @@ void EV_FireXM1014( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t vecSpread;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
+
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2755,8 +2848,8 @@ void EV_FireScout( event_args_t *args )
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2805,8 +2898,8 @@ void EV_FireAWP( event_args_t *args )
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2843,24 +2936,22 @@ void EV_FireSG552( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2913,24 +3004,22 @@ void EV_FireTMP( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -3054,7 +3143,7 @@ void EV_FireEliteLeft( event_args_t *args )
 	VectorCopy( forward, vecAiming );
 
 	Vector vSpread;
-	vSpread = Vector( args->fparam2, (float)( args->iparam1 / 10000000.0 ), args->fparam2 );
+	vSpread = Vector( args->fparam2, (float)( args->iparam1 / 100.0 ), args->fparam2 );
 	vSpread.z = 0;
 	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_50AE, 0, &tracerCount[idx-1], 2 );
 }
@@ -3136,7 +3225,7 @@ void EV_FireEliteRight( event_args_t *args )
 	VectorCopy( forward, vecAiming );
 
 	Vector vSpread;
-	vSpread = Vector( args->fparam2, (float)( args->iparam1 / 10000000.0 ), args->fparam2 );
+	vSpread = Vector( args->fparam2, (float)( args->iparam1 / 100.0 ), args->fparam2 );
 	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_50AE, 0, &tracerCount[idx-1], 2 );
 }
 
@@ -3157,17 +3246,15 @@ void EV_FireFiveSeven( event_args_t *args )
 	vec3_t angles;
 	vec3_t velocity;
 	int empty;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	empty = args->bparam1;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
@@ -3176,8 +3263,8 @@ void EV_FireFiveSeven( event_args_t *args )
 
 	AngleVectors( angles, forward, right, up );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/pshell.mdl");// brass shell
 	
@@ -3235,24 +3322,22 @@ void EV_FireUMP45( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -3304,17 +3389,15 @@ void EV_FireSG550( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthand;
-
-	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
 	vec3_t up, right, forward;
+	cl_entity_t *ent = GetViewEntity();
 
-	ent = GetViewEntity();
-	lefthand = args->bparam2 != 0;
+	int lefthand = cl_righthand->value == 0;
+
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
@@ -3322,8 +3405,8 @@ void EV_FireSG550( event_args_t *args )
 
 	AngleVectors( angles, forward, right, up );
 
-	angles[0] += args->iparam1 / 10000000;
-	angles[1] += args->iparam2 / 10000000;
+	angles[0] += args->iparam1 / 100.0;
+	angles[1] += args->iparam2 / 100.0;
 
 	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/rshell.mdl");// brass shell
 	
@@ -3367,7 +3450,7 @@ void EV_FireSG550( event_args_t *args )
 	VectorCopy( forward, vecAiming );
 
 	Vector vSpread;
-	vSpread = Vector( args->fparam1, args->fparam1, args->fparam1 );
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
 	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_556MM, 0, &tracerCount[idx-1], 2 );
 }
 
@@ -3381,7 +3464,7 @@ void EV_CreateSmoke( event_args_t *args )
 	VectorCopy( args->origin, origin );
 	velocity[0] = args->fparam1;
 	velocity[1] = args->fparam2;
-	velocity[2] = args->iparam1 / 10000;
+	velocity[2] = args->iparam1 / 100.0;
 
 	colour = gEngfuncs.pfnRandomLong( 85, 100 );
 
@@ -3404,8 +3487,71 @@ void EV_CreateSmoke( event_args_t *args )
 	EV_HLDM_CreateSmoke( origin, velocity, gEngfuncs.pfnRandomFloat( 2, 5 ), 1.2, colour, colour, colour, 1, NULL, true, 4 );
 }
 
+// Counter-Strike 1.4: the bodies of dead players (temp entities made by CreateCorpse)
+TEMPENTITY *g_DeadPlayerModels[ 64 ];
+
 void EV_RemoveAllDecals( event_args_t *args )
 {
 	for ( int har = 0; har < (int)CVAR_GET_FLOAT( "r_decals" ); har++ )
 		gEngfuncs.pEfxAPI->R_DecalRemoveAll( har );
+
+	if ( g_DeadPlayerModels[ 0 ] )
+	{
+		for ( int i = 0; i < 64; i++ )
+		{
+			if ( g_DeadPlayerModels[ i ] )
+			{
+				g_DeadPlayerModels[ i ]->die = 0;
+				g_DeadPlayerModels[ i ] = NULL;
+			}
+		}
+	}
+}
+
+// a body sinks into the floor once it has lain for cl_corpsestay seconds
+void RemoveBody( TEMPENTITY *te, float frametime, float current_time )
+{
+	if ( current_time >= CVAR_GET_FLOAT( "cl_corpsestay" ) + te->entity.curstate.fuser2 + 5 )
+		te->entity.origin.z -= frametime * 5;
+}
+
+void HitBody( TEMPENTITY *ent, pmtrace_s *ptr )
+{
+	if ( ptr->plane.normal.z > 0 )
+		ent->flags |= FTENT_CORPSELANDED;
+}
+
+void CreateCorpse( Vector vOrigin, Vector vAngles, const char *pModel, float flAnimTime, int iSequence, int iBody )
+{
+	int iModelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( pModel );
+	TEMPENTITY *pBody = gEngfuncs.pEfxAPI->R_TempModel( vOrigin, Vector( 0, 0, 0 ), vAngles, 100, gEngfuncs.pEventAPI->EV_FindModelIndex( pModel ), 0 );
+
+	if ( pBody == NULL )
+		return;
+
+	pBody->flags |= FTENT_COLLIDEWORLD | FTENT_SPRANIMATE | FTENT_PERSIST | FTENT_CLIENTCUSTOM | FTENT_CORPSE;
+	pBody->frameMax = 255;
+
+	pBody->entity.curstate.animtime = flAnimTime;
+	pBody->entity.curstate.framerate = 1;
+	pBody->entity.curstate.sequence = iSequence;
+	pBody->entity.curstate.frame = 0;
+	pBody->entity.curstate.body = iBody;
+	pBody->entity.curstate.renderamt = 255;
+	pBody->entity.curstate.fuser1 = gHUD.m_flTime + 1;
+	pBody->entity.curstate.fuser2 = CVAR_GET_FLOAT( "cl_corpsestay" ) + gHUD.m_flTime;
+
+	pBody->die = gEngfuncs.GetClientTime() + pBody->entity.curstate.fuser2 + 5;
+	pBody->callback = RemoveBody;
+	pBody->hitcallback = HitBody;
+	pBody->bounceFactor = 0;
+
+	for ( int i = 0; i < 64; i++ )
+	{
+		if ( g_DeadPlayerModels[ i ] == NULL )
+		{
+			g_DeadPlayerModels[ i ] = pBody;
+			break;
+		}
+	}
 }

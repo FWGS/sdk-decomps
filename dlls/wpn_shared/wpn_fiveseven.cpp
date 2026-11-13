@@ -42,6 +42,7 @@ void CFiveSeven::Spawn( )
 	SET_MODEL(ENT(pev), "models/w_fiveseven.mdl");
 
 	m_iDefaultAmmo = FIVESEVEN_DEFAULT_GIVE;
+	m_flAccuracy = 0.92;
 
 	FallInit();// get ready to fall down.
 }
@@ -50,7 +51,6 @@ void CFiveSeven::Spawn( )
 void CFiveSeven::Precache( void )
 {
 	PRECACHE_MODEL("models/v_fiveseven.mdl");
-	PRECACHE_MODEL("models/v_fiveseven_r.mdl");
 	PRECACHE_MODEL("models/w_fiveseven.mdl");
 
 	PRECACHE_SOUND("weapons/fiveseven-1.wav");
@@ -85,18 +85,15 @@ BOOL CFiveSeven::Deploy( )
 {
 	m_flAccuracy = 0.92;
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_fiveseven.mdl", "models/p_fiveseven.mdl", FIVESEVEN_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_fiveseven_r.mdl", "models/p_fiveseven.mdl", FIVESEVEN_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_fiveseven.mdl", "models/p_fiveseven.mdl", FIVESEVEN_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
 }
 
 void CFiveSeven::PrimaryAttack( void )
 {
-	if ( m_pPlayer->pev->velocity.Length2D() > 0 )
+	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
+		FiveSevenFire( ( 1 - m_flAccuracy ) * 1.5, 0.2, FALSE );
+	else if ( m_pPlayer->pev->velocity.Length2D() > 0 )
 		FiveSevenFire( ( 1 - m_flAccuracy ) * 0.255, 0.2, FALSE );
-	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		FiveSevenFire( ( 1 - m_flAccuracy ) * 0.35, 0.2, FALSE );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
 		FiveSevenFire( ( 1 - m_flAccuracy ) * 0.075, 0.2, FALSE );
 	else
@@ -164,7 +161,7 @@ void CFiveSeven::FiveSevenFire( float flSpread, float flCycleTime, BOOL fUseAuto
 	flag = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireFiveSeven, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), m_iClip == 0, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireFiveSeven, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.y * 100), m_iClip == 0, FALSE );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

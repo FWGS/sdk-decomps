@@ -3,27 +3,30 @@
 *	Counter-Strike Beta 2.0, hostage.cpp: the hostage (hostage_entity), the
 *	map's spawn entity.
 *
-*	A scientist model that stands where the map put it until a player uses
-*	it. Used by a player it follows him (counter-terrorists hear it answer),
-*	used again it stays; a hostage told to stay backs away from a player who
-*	comes closer than 200 units. Shot, it flinches by hit group; killed, it
-*	costs its killer 850 dollars and its body is thrown away from him, then
-*	hidden three seconds later. ClientCommand's "hostage" rescues it,
-*	RestartRound puts it back. Beta 2.0: it keeps 82 units from its leader
-*	(36 when backing away), is pushed down while it runs, and a hostage whose
-*	leader is out of reach is in a third state (m_fStopped 2); the money goes
-*	through AddAccount. File, class and method names are Beta 3.1's
-*	(Linux symbols); member names are ours (hostage.h).
+*	A scientist model that stands where the map put it until a
+*	counter-terrorist uses it; then it follows him, and used again it stays.
+*	Shot, it flinches by hit group; killed, it costs its killer money and is
+*	hidden three seconds later. A following hostage that comes into a rescue
+*	zone (or, on a map without one, within 256 units of a rescue point) is
+*	rescued; RestartRound puts it back. File, class and method names are the
+*	Linux libraries' symbols.
 *
-*	Beta 4.1: ClientCommand's "hostage" is gone; a following hostage that
-*	comes within 200 units of a rescue point rescues itself (IdleThink), the
-*	leader pushes it away by walking into it (Touch), it has to be faced to be
-*	used, follows from 2048 units and backs away from 256.
-*
-*	Counter-Strike 1.0: Half-Life's monster_scientist is a hostage too; the
-*	map's spawn flag 4 makes it collide with func_monsterclip (Spawn); in the
-*	training course (rules that are not multiplayer) IdleThink stops it at a
-*	func_monsterclip and TakeDamage tells the rules of a killed hostage.
+*	Counter-Strike 1.4: the hostage finds its way. It no longer walks the
+*	trail of its leader's last positions: every tenth of a second (IdleThink;
+*	the animation runs thirty times a second) DoFollow asks its CLocalNav
+*	(hostage_localnav.cpp) for a path to the leader, walks to the furthest
+*	node of the path it can reach in a straight line (MoveToward), and
+*	wiggles free where it stands still (Wiggle); PreThink, called for every
+*	hostage each frame, lifts it over steps. Only counter-terrorists can use
+*	it; what the attacker loses is counted from the damage done; the
+*	counter-terrorists' radar is sent its place once a second and its death
+*	or rescue (messages HostagePos and HostageK). Written from the Windows
+*	DLL, the 1.4 Linux library (it has the functions the Windows compiler
+*	expanded inline: GetModifiedDamage, PlayPainSound, SetFlinchActivity,
+*	SetDeathActivity, GiveCTTouchBonus, PointAt, IsOnLadder, and one nothing
+*	calls, ApplyHostagePenalty) and Counter-Strike 1.6's debug information
+*	(the names of members, parameters and locals, the order of the
+*	definitions).
 *
 ****/
 
@@ -48,10 +51,17 @@
 #include "gamerules.h"
 #include "hostage.h"
 #include "trains.h"	// Beta 7.1: CFuncVehicle (TakeDamage); the include's place is ours
+#include "hostage_localnav.h"	// Counter-Strike 1.4: CLocalNav
+
 
 extern void Broadcast( const char *sentence );	// multiplay_gamerules.cpp (Beta 3.0)
 extern char *GetTeam( int teamNo );	// multiplay_gamerules.cpp (Counter-Strike 1.3)
-extern void ShowMenu( CBasePlayer *pPlayer, int bitsValidSlots, int nDisplayTime, BOOL fNeedMore, char *pszText );	// client.cpp (Beta 5.0 leak)
+
+extern int gmsgHostagePos;	// player.cpp (Counter-Strike 1.4)
+extern int gmsgHostageK;
+extern cvar_t *g_psv_gravity;	// game.cpp
+
+int g_iHostageNumber = 0;	// Counter-Strike 1.4: counts the hostages spawned (m_iHostageIndex); the Linux library's name
 
 LINK_ENTITY_TO_CLASS( hostage_entity, CHostage );
 LINK_ENTITY_TO_CLASS( monster_scientist, CHostage );	// Counter-Strike 1.0: Half-Life's scientist is a hostage
@@ -70,6 +80,7 @@ void CHostage::Spawn( void )
 	pev->health		= pev->max_health;
 	pev->gravity	= 1.0;
 	pev->view_ofs	= Vector( 0, 0, 12 );	// Beta 6.0
+	pev->velocity	= Vector( 0, 0, 0 );	// Counter-Strike 1.4
 
 	// Counter-Strike 1.0: the monsters' spawn flag (the SDK's monsters.h:
 	// SF_MONSTER_HITMONSTERCLIP, 4; CBaseMonster::MonsterInit's lines)
@@ -82,29 +93,37 @@ void CHostage::Spawn( void )
 
 	SET_MODEL( ENT(pev), STRING( pev->model ) );
 	SetActivity( ACT_IDLE );
-	SetSequenceBox();
 
-	m_flNextUse = 0;
-	m_flNextRescueCheck = 0;
-	m_flFollowRange = 1024;
-	m_fStopped = TRUE;
+	m_flNextChange = 0;
+	m_State = STAND;
 	m_hTargetEnt = NULL;
-	m_flFollowDistance = 128;
+	m_hStoppedTargetEnt = NULL;
 	m_flFlinchTime = 0;
-	m_vecPath[0] = Vector( 0, 0, 0 );	// Beta 3.0
-	m_fRescued = FALSE;					// Beta 5.0 (leak)
+	m_vPathToFollow[0] = Vector( 0, 0, 0 );	// Beta 3.0
+	m_bRescueMe = FALSE;					// Beta 5.0 (leak)
 
 	UTIL_SetSize( pev, Vector( -10, -10, 0 ), Vector( 10, 10, 62 ) );	// Beta 6.0: smaller (was 32 by 32 by 72)
 	UTIL_MakeVectors( pev->v_angle );
-	float flYaw = UTIL_VecToYaw( gpGlobals->v_forward );
-	SetBoneController( 0, flYaw );
+	SetBoneController( 0, UTIL_VecToYaw( gpGlobals->v_forward ) );
+	DROP_TO_FLOOR( ENT( pev ) );	// Counter-Strike 1.4
 
 	SetThink( IdleThink );
-	pev->nextthink = gpGlobals->time + 0.1;
-	// Beta 5.0 (leak): no SetTouch( Touch ) (Beta 4.1's): the engine calls the
-	// Touch override anyway
+	pev->nextthink = gpGlobals->time + RANDOM_FLOAT( 0.1, 0.2 );	// Counter-Strike 1.4: the hostages do not all think in one frame
+	m_flNextFullThink = gpGlobals->time + RANDOM_FLOAT( 0.1, 0.2 );
 
-	m_vecStart = pev->origin;
+	m_vStart = pev->origin;
+	m_vStartAngles = pev->angles;
+	m_vOldPos = Vector( 9999, 9999, 9999 );
+	m_iHostageIndex = ++g_iHostageNumber;
+
+	m_flNextRadarTime = gpGlobals->time + RANDOM_FLOAT( 0, 1 );
+	nTargetNode = NODE_INVALID_EMPTY;
+	m_fHasPath = FALSE;
+	m_flLastPathCheck = -1;
+	m_flPathAcquired = -1;
+	m_flPathCheckInterval = 0.1;
+
+	m_LocalNav = new CLocalNav( this );
 }
 
 void CHostage::Precache( void )
@@ -119,404 +138,162 @@ void CHostage::Precache( void )
 	PRECACHE_SOUND( "hostage/hos3.wav" );
 	PRECACHE_SOUND( "hostage/hos4.wav" );
 	PRECACHE_SOUND( "hostage/hos5.wav" );
+	PRECACHE_MODEL( "sprites/smoke.spr" );	// Counter-Strike 1.4: UTIL_DrawBeamPoints's sprite
 }
 
-int CHostage::Classify( void )
+// Counter-Strike 1.4: nothing to do when the activity is the running one;
+// walking and running pass into each other without starting the frames anew
+void CHostage::SetActivity( int act )
 {
-	return CLASS_HUMAN_PASSIVE;
-}
-
-void CHostage::SetActivity( int activity )
-{
-	int iSequence = LookupActivity( activity );
-
-	if ( iSequence != -1 && pev->sequence != iSequence )	// Beta 3.0: a missing activity changes nothing
+	if ( m_Activity != act )
 	{
-		pev->gaitsequence = iSequence;
-		pev->sequence = iSequence;
-		m_iActivity = activity;
-		pev->frame = 0;
-		ResetSequenceInfo();
+		int sequence = LookupActivity( act );
+
+		if ( sequence != -1 )	// ACTIVITY_NOT_AVAILABLE (animation.h)
+		{
+			if ( pev->sequence != sequence )
+			{
+				if ( ( m_Activity != ACT_WALK && m_Activity != ACT_RUN ) || ( act != ACT_WALK && act != ACT_RUN ) )
+					pev->frame = 0;
+
+				pev->sequence = sequence;
+			}
+
+			m_Activity = act;
+			ResetSequenceInfo();
+		}
 	}
-}
-
-// the size of the current sequence's box. Both new's leak: the pointers are
-// overwritten at once (sic).
-void CHostage::SetCollisionBox( void )
-{
-	studiohdr_t *pstudiohdr;
-	pstudiohdr = (studiohdr_t *)GET_MODEL_PTR( ENT(pev) );
-
-	mstudioseqdesc_t *pseqdesc;
-	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
-
-	Vector vecMins, vecMaxs;
-	vecMins = pseqdesc[ pev->sequence ].bbmin;
-	vecMaxs = pseqdesc[ pev->sequence ].bbmax;
-
-	UTIL_SetSize( pev, vecMins, vecMaxs );
 }
 
 void CHostage::IdleThink( void )
 {
+	pev->nextthink = gpGlobals->time + ( 1.0 / 30 );
+
 	float flInterval = StudioFrameAdvance();
 	DispatchAnimEvents( flInterval );
-	pev->nextthink = gpGlobals->time + 0.1;
 
-	// sic: a stand-in for text the image cannot give. Two facts ask for it.
-	// Every Linux library from Beta 3.1 on has CHostage::GetActivity written
-	// out, which egcs does for the inline functions a file calls, yet no code
-	// reads the member: the call is in text that compiles to nothing. And
-	// IdleThink's inline expansion (which Vector operators and constructors
-	// are called, which expanded) follows the inliner's budget, twice the
-	// function's size as written: Beta 6.5's code needs 40 to 56 units more
-	// than the visible text has, Beta 6.6's (the same text plus one log
-	// line) exactly 44 (11 unused int locals; 10 and 12 do not fit). The
-	// Betas' block, "if ( GetActivity() ) SetActivity( ACT_WALK ); else
-	// SetActivity( ACT_IDLE );" ahead of the function's other inline calls,
-	// with the unused bContinue below, gives retail's bytes in both versions
-	// (Beta 6.5's "== ACT_IDLE" form is 4 units too long for 6.6); the real
-	// text is not known.
-	// Counter-Strike 1.0 (Visual C++ 6.0 SP4, the monster clip block added
-	// below): still needed. Measured in its place: 8 to 12 dead stores to one
-	// int give retail's bytes, 7 and 13 do not, none or unused uninitialised
-	// locals do not; without bContinue 73 lines differ. In Counter-Strike 1.1
-	// (the rescue's log line is longer there) the window is one wide: exactly
-	// 9 dead stores give retail's bytes (8 and 10 do not, nor 1 to 7 and 11
-	// to 30), with any form of the new log line's arguments. The Betas'
-	// block is worth 12, the top of 1.0's window, and does not fit 1.1; this
-	// one-armed block is worth the 9 and gives retail's bytes in 1.0, 1.0b
-	// and 1.1 alike (each compiled and compared; so does the same test with
-	// != ACT_IDLE and SetActivity( ACT_IDLE )), and not in Betas 6.6, 7.0 and
-	// 7.1. So the form changes once, in Counter-Strike 1.0; whether the text
-	// really changed then or in 1.1 is not shown. "if ( GetActivity() )"
-	// alone, a bare call, or a local set from it do not fit.
-	// Counter-Strike 1.3 (SP5, the director message added below): 9 or 10 dead
-	// stores give retail's bytes (0 to 8 and 11 to 20 do not), and this block
-	// does: the fourth version it serves.
-	if ( 0 )
+	if ( m_flNextFullThink > gpGlobals->time )
+		return;
+
+	m_flNextFullThink = gpGlobals->time + 0.1;
+
+	if ( pev->deadflag == DEAD_DEAD )
 	{
-		if ( GetActivity() == ACT_IDLE )
-			SetActivity( ACT_WALK );
+		UTIL_SetSize( pev, Vector( 0, 0, 0 ), Vector( 0, 0, 0 ) );
+		return;
 	}
 
-	if ( pev->deadflag != DEAD_DEAD )
+	// the leader is dead: nobody to follow
+	if ( m_hTargetEnt != NULL && m_hTargetEnt->pev->deadflag != DEAD_NO )
 	{
-		// the leader is dead: nobody to follow
-		if ( m_hTargetEnt != NULL && m_hTargetEnt->pev->deadflag != DEAD_NO )
+		m_State = STAND;
+		m_hTargetEnt = NULL;
+	}
+
+	if ( m_hTargetEnt != NULL )
+	{
+		// Beta 5.0 (leak): a hostage that follows a counter-terrorist is rescued in a
+		// func_hostage_rescue (m_bRescueMe), or on a map without one within 256 units of
+		// an info_hostage_rescue (without those: of an info_player_start); worth 1000
+		// dollars to him
+		CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)m_hTargetEnt->pev );
+
+		if ( pPlayer->m_iTeam == TEAM_CT )
 		{
-			m_fStopped = 2;
-			m_hTargetEnt = NULL;
-		}
-
-		if ( m_hTargetEnt != NULL && ( pev->origin - m_hTargetEnt->pev->origin ).Length() < 3024 && m_fStopped == FALSE )	// Beta 6.0: 3024 (Beta 4.1: 2048, Beta 5.0 leak: 1024)
-		{
-			TraceResult tr;
-
-			// Beta 5.0 (leak): a hostage that follows a counter-terrorist is rescued in a
-			// func_hostage_rescue (m_fRescued), or on a map without one within 256 units of
-			// an info_hostage_rescue (without those: of an info_player_start); checked at
-			// every think, worth 1000 dollars to him (Beta 4.1: once a second, 200 units, 900)
-			CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)m_hTargetEnt->pev );	// names ours
-
-			// Beta 5.0: only while a counter-terrorist leads it; anybody else (or
-			// nobody) leading it clears the rescue (names ours)
-			if ( pPlayer )
+			if ( !((CHalfLifeMultiplay *)g_pGameRules)->m_fMapHasRescueZone )
 			{
-				if ( !((CHalfLifeMultiplay *)g_pGameRules)->m_fMapHasRescueZone )
+				// the three locals as Counter-Strike 1.6 still has them (its debug
+				// information: names, the lines, bContinue never used)
+				CBaseEntity *pSpot;
+				BOOL bContinue = FALSE, bResHostagePt = FALSE;
+
+				pSpot = UTIL_FindEntityByClassname( NULL, "info_hostage_rescue" );
+				if ( pSpot )
+					bResHostagePt = TRUE;
+
+				pSpot = UTIL_FindEntityByClassname( NULL, "info_hostage_rescue" );
+				while ( pSpot != NULL )
 				{
-					if ( pPlayer->m_iTeam == TEAM_CT )
+					if ( ( pSpot->pev->origin - pev->origin ).Length() < 256 )
 					{
-					// the three locals as Counter-Strike 1.6 still has them (its debug
-					// information: names, the lines, bContinue never used): the first
-					// search goes to pSpot, the loops are while loops
-					CBaseEntity *pSpot;
-					BOOL bContinue = FALSE, bResHostagePt = FALSE;
+						m_bRescueMe = TRUE;
+						break;
+					}
 
-					pSpot = UTIL_FindEntityByClassname( NULL, "info_hostage_rescue" );
-					if ( pSpot )
-						bResHostagePt = TRUE;
+					pSpot = UTIL_FindEntityByClassname( pSpot, "info_hostage_rescue" );
+				}
 
-					pSpot = UTIL_FindEntityByClassname( NULL, "info_hostage_rescue" );
+				if ( !bResHostagePt )
+				{
+					pSpot = UTIL_FindEntityByClassname( NULL, "info_player_start" );
 					while ( pSpot != NULL )
 					{
 						if ( ( pSpot->pev->origin - pev->origin ).Length() < 256 )
 						{
-							m_fRescued = TRUE;	// Beta 6.0: no console line any more
+							m_bRescueMe = TRUE;
 							break;
 						}
 
-						pSpot = UTIL_FindEntityByClassname( pSpot, "info_hostage_rescue" );
-					}
-
-					if ( !bResHostagePt )
-					{
-						pSpot = UTIL_FindEntityByClassname( NULL, "info_player_start" );
-						while ( pSpot != NULL )
-						{
-							if ( ( pSpot->pev->origin - pev->origin ).Length() < 256 )
-							{
-								m_fRescued = TRUE;
-								break;
-							}
-
-							pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_start" );
-						}
-					}
-					}
-					else
-						m_fRescued = FALSE;
-				}
-
-				// Beta 5.0: no "Hostage rescued." on the leader's screen any more
-				if ( m_fRescued && pPlayer->m_iTeam == TEAM_CT )
-				{
-					pev->deadflag = DEAD_RESPAWNABLE;	// rescued
-					pPlayer->AddAccount( 1000, true );
-					// Beta 6.6: "%s has rescued a hostage\n"; Counter-Strike 1.1: the log line's new form
-					UTIL_LogPrintf( "\"%s<%i><%u><CT>\" triggered \"Rescued_A_Hostage\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERWONID( pPlayer->edict() ) );
-
-					// Counter-Strike 1.3: tell director about it
-					MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
-						WRITE_BYTE ( DRC_EVENT );
-						WRITE_SHORT( ENTINDEX( pPlayer->edict() ) );
-						WRITE_SHORT( ENTINDEX( this->edict() ) );
-						WRITE_LONG( 15 );
-					MESSAGE_END();
-
-					Remove();
-					((CHalfLifeMultiplay *)g_pGameRules)->m_iHostagesRescued++;
-					((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
-					Broadcast( "rescued" );
-				}
-			}
-			else
-				m_fRescued = FALSE;
-
-			// follow: turn to the leader and run to him
-			Vector vecDir = m_hTargetEnt->pev->origin - pev->origin;
-
-			pev->angles = UTIL_VecToAngles( vecDir );
-			pev->angles.x = 0;
-			pev->angles.z = 0;
-
-			// Beta 6.0: the leader out of sight (a straight line 12 units up,
-			// through glass) sends it along his trail (m_fStopped 6); Beta 3.0
-			// to 5.2 looked 2048 units ahead for a wall
-			UTIL_TraceLine( pev->origin + Vector( 0, 0, 12 ), m_hTargetEnt->pev->origin + Vector( 0, 0, 12 ), ignore_monsters, ignore_glass, ENT( pev ), &tr );
-			if ( tr.flFraction != 1.0 )
-			{
-				m_fStopped = 6;
-				m_flNextStuckCheck = gpGlobals->time + 3;
-				return;
-			}
-
-			if ( vecDir.Length() > m_flFollowDistance )
-			{
-				pev->velocity = vecDir / vecDir.Length() * 370;	// Beta 4.0 (was 310)
-				pev->velocity.z -= 40;
-			}
-
-			// blocked at the feet but free higher up: jump
-			UTIL_MakeVectors( pev->angles );
-			UTIL_TraceLine( pev->origin + gpGlobals->v_up * 2 - gpGlobals->v_forward * 32, pev->origin + gpGlobals->v_forward * 100 + gpGlobals->v_up * 2, ignore_monsters, ENT( pev ), &tr );
-			if ( tr.flFraction != 1.0 )
-			{
-				UTIL_TraceLine( pev->origin + gpGlobals->v_up * 25 - gpGlobals->v_forward * 32, pev->origin + gpGlobals->v_forward * 100 + gpGlobals->v_up * 25, ignore_monsters, ENT( pev ), &tr );
-				if ( tr.flFraction == 1.0 )
-					pev->velocity.z = 150;
-			}
-		}
-		else if ( m_hTargetEnt != NULL && ( pev->origin - m_hTargetEnt->pev->origin ).Length() < 200 && m_fStopped == TRUE )	// Beta 4.1: 256 (Beta 5.0 leak: 200 again)
-		{
-			// told to stay, but the leader is too close: back away from him
-			TraceResult tr;
-			Vector vecDir = pev->origin - m_hTargetEnt->pev->origin;
-
-			pev->angles = UTIL_VecToAngles( vecDir );
-			pev->angles.x = 0;
-			pev->angles.z = 0;
-
-			if ( vecDir.Length() > m_flFollowDistance )
-			{
-				pev->velocity = vecDir / vecDir.Length() * 110;	// Beta 4.1: 200 (Beta 5.0 leak: 110 again)
-				pev->velocity.z -= 40;
-			}
-
-			UTIL_MakeVectors( pev->angles );
-			UTIL_TraceLine( pev->origin + gpGlobals->v_up * 2 - gpGlobals->v_forward * 32, pev->origin + gpGlobals->v_forward * 100 + gpGlobals->v_up * 2, ignore_monsters, ENT( pev ), &tr );
-			if ( tr.flFraction != 1.0 )
-			{
-				UTIL_TraceLine( pev->origin + gpGlobals->v_up * 25 - gpGlobals->v_forward * 32, pev->origin + gpGlobals->v_forward * 100 + gpGlobals->v_up * 25, ignore_monsters, ENT( pev ), &tr );
-				if ( tr.flFraction == 1.0 )
-					pev->velocity.z = 150;
-			}
-		}
-		else if ( m_hTargetEnt != NULL && m_fStopped == 6 )
-		{
-			// Beta 3.0: the leader is out of sight; walk along his trail
-			// (Beta 6.0: no console lines here any more)
-			if ( m_hTargetEnt->IsPlayer() && m_vecPath[0] == Vector( 0, 0, 0 ) )
-			{
-				// take over the leader's last 20 positions and start at the
-				// nearest one in sight (Beta 6.0: a straight line 12 units up)
-				CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)m_hTargetEnt->pev );
-
-				for ( int i = 0; i < 20; i++ )
-					m_vecPath[i] = pPlayer->m_vecOldOrigins[i];
-
-				TraceResult tr;
-				Vector vecDir;
-				float flNearest = 9999;	// name ours (Beta 5.0 to 5.2: 99999)
-
-				for ( i = 0; i <= 19; i++ )	// "<= 19": retail compares with 19 here, with 20 in the loop above
-				{
-					vecDir = m_vecPath[i] - pev->origin;
-					float flDistance = ( m_vecPath[i] - pev->origin ).Length();	// name ours
-
-					UTIL_TraceLine( m_vecPath[i] + Vector( 0, 0, 12 ), pev->origin + Vector( 0, 0, 12 ), ignore_monsters, ignore_glass, ENT( pev ), &tr );
-					if ( flDistance < flNearest && tr.flFraction == 1.0 )
-					{
-						m_iPathIndex = i;
-						flNearest = flDistance;
+						pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_start" );
 					}
 				}
 			}
-			else
+
+			if ( m_bRescueMe )
 			{
-				if ( m_hTargetEnt != NULL && !m_hTargetEnt->IsPlayer() )
-				{
-					m_fStopped = 2;
-					return;
-				}
+				pev->deadflag = DEAD_RESPAWNABLE;	// rescued
+				pPlayer->AddAccount( 1000, true );
+				UTIL_LogPrintf( "\"%s<%i><%s><CT>\" triggered \"Rescued_A_Hostage\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERAUTHID( pPlayer->edict() ) );
 
-				if ( m_hTargetEnt == NULL )
-				{
-					m_fStopped = 2;
-					return;
-				}
+				SendHostageEventMsg();
 
-				UTIL_MakeVectors( pev->angles );
+				// tell director about it
+				MESSAGE_BEGIN( MSG_SPEC, SVC_DIRECTOR );
+					WRITE_BYTE ( 9 );	// command length in bytes
+					WRITE_BYTE ( DRC_CMD_EVENT );
+					WRITE_SHORT( ENTINDEX( pPlayer->edict() ) );
+					WRITE_SHORT( ENTINDEX( this->edict() ) );
+					WRITE_LONG( 15 );
+				MESSAGE_END();
 
-				Vector vecDir = m_vecPath[ m_iPathIndex ] + gpGlobals->v_up * -15 - pev->origin;
-				Vector vecLeader = m_hTargetEnt->pev->origin - pev->origin;	// name ours; Beta 6.0: not used any more (sic)
-				TraceResult tr;
+				pev->effects |= EF_NODRAW;
+				Remove();
 
-				// the leader in sight again: follow him
-				UTIL_TraceLine( pev->origin + Vector( 0, 0, 12 ), m_hTargetEnt->pev->origin + Vector( 0, 0, 12 ), ignore_monsters, ignore_glass, ENT( pev ), &tr );
-				if ( tr.flFraction == 1.0 )
-				{
-					m_fStopped = FALSE;
-					m_vecPath[0] = Vector( 0, 0, 0 );
-					return;
-				}
-
-				// Beta 6.0: not 4 units away from where it was at the last
-				// check: stuck, so take the leader's trail afresh
-				if ( ( m_vecStuckCheckPos - pev->origin ).Length() <= 4 )
-				{
-					m_vecStuckCheckPos = Vector( 0, 0, 0 );
-					m_vecPath[0] = Vector( 0, 0, 0 );
-					m_fStopped = 6;
-					m_flNextStuckCheck = gpGlobals->time + 3;
-					return;
-				}
-
-				if ( vecDir.Length() > 16 )	// Beta 6.0: 16 (was 32)
-				{
-					pev->angles = UTIL_VecToAngles( vecDir );
-					pev->angles.x = 0;
-					pev->angles.z = 0;
-					pev->velocity = vecDir / vecDir.Length() * 380;	// Beta 4.0 (was 310)
-					pev->velocity.z -= 40;
-				}
-				else
-				{
-					// this point reached: on to the next (newer) one
-					m_iPathIndex--;
-					if ( m_iPathIndex < 0 )
-					{
-						// the end of the trail: take the leader's trail afresh
-						m_vecPath[0] = Vector( 0, 0, 0 );
-						m_fStopped = 6;
-						m_flNextStuckCheck = gpGlobals->time + 3;
-						return;
-					}
-				}
-
-				UTIL_TraceLine( pev->origin + gpGlobals->v_up * 2 - gpGlobals->v_forward * 32, pev->origin + gpGlobals->v_forward * 100 + gpGlobals->v_up * 2, ignore_monsters, ENT( pev ), &tr );
-				if ( tr.flFraction != 1.0 )
-				{
-					UTIL_TraceLine( pev->origin + gpGlobals->v_up * 25 - gpGlobals->v_forward * 32, pev->origin + gpGlobals->v_forward * 100 + gpGlobals->v_up * 25, ignore_monsters, ENT( pev ), &tr );
-					if ( tr.flFraction == 1.0 )
-						pev->velocity.z = 150;	// Beta 6.0: no "There's something at my feet!" any more
-				}
-
-				// Beta 6.0: every 3 seconds the position is noted for the stuck check
-				if ( m_flNextStuckCheck < gpGlobals->time )
-				{
-					m_flNextStuckCheck = gpGlobals->time + 3;
-					m_vecStuckCheckPos = pev->origin;
-				}
+				((CHalfLifeMultiplay *)g_pGameRules)->m_iHostagesRescued++;
+				((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
+				Broadcast( "rescued" );
 			}
-		}
-		else
-			m_fStopped = 2;	// no leader near: neither following nor told to stay
-
-		// Counter-Strike 1.0: in the training course a hostage that cannot
-		// walk 32 units ahead is stopped where its box, 10 units wider,
-		// meets a func_monsterclip, and put on the floor when in the air
-		// (from the binary; names ours)
-		Vector vecOrigin = pev->origin;
-
-		if ( !g_pGameRules->IsMultiplayer() )
-		{
-			if ( !WALK_MOVE( ENT( pev ), pev->angles.y, 32, WALKMOVE_CHECKONLY ) )
-			{
-				pev->absmax.x += 10;
-				pev->absmax.y += 10;
-				pev->absmin.x -= 10;
-				pev->absmin.y -= 10;
-
-				CBaseEntity *pEntity = UTIL_FindEntityByClassname( NULL, "func_monsterclip" );
-				while ( pEntity != NULL )
-				{
-					if ( Intersects( pEntity ) )
-					{
-						pev->velocity = g_vecZero;
-
-						if ( !( pev->flags & FL_ONGROUND ) )
-						{
-							pev->origin = vecOrigin;
-							DROP_TO_FLOOR( ENT( pev ) );
-							vecOrigin = pev->origin;
-						}
-					}
-
-					pEntity = UTIL_FindEntityByClassname( pEntity, "func_monsterclip" );
-				}
-
-				pev->absmax.x -= 10;
-				pev->absmax.y -= 10;
-				pev->absmin.x += 10;
-				pev->absmin.y += 10;
-			}
-		}
-
-		pev->origin = vecOrigin;
-
-		if ( gpGlobals->time >= m_flFlinchTime )
-		{
-			if ( pev->velocity.Length() > 120 )
-				SetActivity( ACT_RUN );
-			else if ( pev->velocity.Length() > 15 )
-				SetActivity( ACT_WALK );
-			else
-				SetActivity( ACT_IDLE );
 		}
 	}
-	else
-		UTIL_SetSize( pev, Vector( 0, 0, 0 ), Vector( 0, 0, 0 ) );
+
+	DoFollow();
+
+	// once a second the counter-terrorists' radar is told where it is, when it has moved
+	if ( pev->deadflag != DEAD_DEAD && !( pev->effects & EF_NODRAW ) )
+	{
+		if ( gpGlobals->time >= m_flNextRadarTime )
+		{
+			if ( ( m_vOldPos - pev->origin ).Length() > 1.0 )
+			{
+				m_vOldPos = pev->origin;
+
+				if ( !((CHalfLifeMultiplay *)g_pGameRules)->m_flRestartRoundTime )
+					SendHostagePositionMsg();
+			}
+
+			m_flNextRadarTime = gpGlobals->time + 1.0;
+		}
+	}
+
+	if ( gpGlobals->time >= m_flFlinchTime )
+	{
+		if ( pev->velocity.Length() > 160 )
+			SetActivity( ACT_RUN );
+		else if ( pev->velocity.Length() > 15 )
+			SetActivity( ACT_WALK );
+		else
+			SetActivity( ACT_IDLE );
+	}
 }
 
 void CHostage::Remove( void )
@@ -524,314 +301,757 @@ void CHostage::Remove( void )
 	pev->movetype = MOVETYPE_NONE;
 	pev->solid = SOLID_NOT;
 	pev->takedamage = DAMAGE_NO;
-	pev->effects |= EF_NODRAW;
 
 	UTIL_SetSize( pev, Vector( 0, 0, 0 ), Vector( 0, 0, 0 ) );
 	pev->nextthink = -1;
+	m_flNextFullThink = -1;
 }
 
 // back to where Spawn found it, alive again (Beta 5.0 leak: and healed)
 void CHostage::RePosition( void )
 {
-	pev->health = pev->max_health;	// Beta 5.0 (leak): healed at every new round
+	pev->health = pev->max_health;
 	pev->movetype = MOVETYPE_STEP;
 	pev->solid = SOLID_SLIDEBOX;
 	pev->takedamage = DAMAGE_YES;
 	pev->deadflag = DEAD_NO;
+	pev->velocity = Vector( 0, 0, 0 );
+	pev->angles = m_vStartAngles;
 	pev->effects &= ~EF_NODRAW;
 
 	m_hTargetEnt = NULL;
-	m_fTouched = FALSE;
-	m_fRescued = FALSE;	// Beta 5.0: a rescued hostage is back in play at a new round
+	m_hStoppedTargetEnt = NULL;
 
-	UTIL_SetOrigin( pev, m_vecStart );
-	UTIL_SetSize( pev, Vector( -16, -16, 0 ), Vector( 16, 16, 72 ) );
+	m_bTouched = FALSE;
+	m_bRescueMe = FALSE;
+	m_flNextRadarTime = 0;
+	m_vOldPos = Vector( 9999, 9999, 9999 );
 
-	pev->velocity.z = -80;	// Beta 3.0 (was 50: up)
-	pev->nextthink = 0.1;	// sic: not gpGlobals->time + 0.1
+	UTIL_SetOrigin( pev, m_vStart );
+	UTIL_SetSize( pev, Vector( -10, -10, 0 ), Vector( 10, 10, 62 ) );
+	DROP_TO_FLOOR( ENT( pev ) );
+	SetActivity( ACT_IDLE );
+
 	SetThink( IdleThink );
+	pev->nextthink = gpGlobals->time + RANDOM_FLOAT( 0.1, 0.2 );
+	m_flNextFullThink = gpGlobals->time + RANDOM_FLOAT( 0.1, 0.2 );
+
+	nTargetNode = NODE_INVALID_EMPTY;
+	m_fHasPath = FALSE;
+	m_flLastPathCheck = -1;
+	m_flPathAcquired = -1;
+	m_flPathCheckInterval = 0.1;
 }
 
 int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType )
 {
-	// Beta 3.0: a hit of no particular group counts as a stomach hit, and
-	// any other as a chest hit (each written as a case of its own: the
-	// object's constants come in the order of first use, 1.75 before 2.5,
-	// the code in the order of the later copy of equal cases)
-	switch ( m_LastHitGroup )
-	{
-	case HITGROUP_GENERIC:
-		SetActivity( ACT_SMALL_FLINCH );
-		flDamage *= 1.75;
-		break;
-	case HITGROUP_HEAD:
-		if ( RANDOM_LONG( 0, 1 ) )
-			EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/headshot1.wav", 1, ATTN_NORM );
-		else
-			EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/headshot2.wav", 1, ATTN_NORM );
-		SetActivity( ACT_SMALL_FLINCH );
-		flDamage *= 2.5;
-		break;
-	case HITGROUP_CHEST:
-		SetActivity( ACT_SMALL_FLINCH );
-		flDamage *= 1.5;
-		break;
-	case HITGROUP_STOMACH:
-		SetActivity( ACT_SMALL_FLINCH );
-		flDamage *= 1.75;
-		break;
-	case HITGROUP_LEFTARM:
-		SetActivity( ACT_FLINCH_LEFTARM );
-		flDamage *= 0.75;
-		break;
-	case HITGROUP_RIGHTARM:
-		SetActivity( ACT_FLINCH_RIGHTARM );
-		flDamage *= 0.75;
-		break;
-	case HITGROUP_LEFTLEG:
-		SetActivity( ACT_FLINCH_LEFTLEG );
-		flDamage *= 0.6;
-		break;
-	case HITGROUP_RIGHTLEG:
-		SetActivity( ACT_FLINCH_RIGHTLEG );
-		flDamage *= 0.6;
-		break;
-	default:
-		SetActivity( ACT_SMALL_FLINCH );
-		flDamage *= 1.5;
-		break;
-	}
+	float flActualDamage;
+	CBasePlayer *pAttacker = NULL;
 
-	m_flFlinchTime = gpGlobals->time + 0.75;
-	pev->health -= flDamage;
+	flActualDamage = GetModifiedDamage( flDamage, m_LastHitGroup );
+
+	if ( flActualDamage > pev->health )
+		flActualDamage = pev->health;
+
+	pev->health -= flActualDamage;
+
+	PlayPainSound();
+
+	if ( pevAttacker != NULL )
+	{
+		// Beta 7.1: run over by a vehicle, its driver is the attacker
+		CBaseEntity *pAttackingEnt = GetClassPtr( (CBaseEntity *)pevAttacker );
+
+		if ( pAttackingEnt->Classify() == CLASS_VEHICLE )
+		{
+			CBaseEntity *pDriver = ((CFuncVehicle *)pAttackingEnt)->m_pDriver;
+
+			if ( pDriver )
+				pevAttacker = pDriver->pev;
+		}
+
+		if ( pAttackingEnt->IsPlayer() )
+			pAttacker = GetClassPtr( (CBasePlayer *)pevAttacker );
+	}
 
 	if ( pev->health <= 0 )
 	{
 		pev->health = 0;
 		pev->movetype = MOVETYPE_TOSS;
 		pev->flags &= ~FL_ONGROUND;
+		SetDeathActivity();
 
-		// Beta 3.0: a hit of no particular group, and any other, dies as from a head shot
-		// (Beta 6.5: the body is not thrown any more)
-		switch ( m_LastHitGroup )
+		// Counter-Strike 1.4: the killer pays 500 dollars and 20 for each point of the damage
+		if ( pAttacker )
 		{
-		case HITGROUP_CHEST:
-			SetActivity( ACT_DIESIMPLE );
-			break;
-		case HITGROUP_STOMACH:
-			SetActivity( ACT_DIEFORWARD );
-			break;
-		case HITGROUP_LEFTARM:
-			SetActivity( ACT_DIEBACKWARD );
-			break;
-		case HITGROUP_RIGHTARM:
-			SetActivity( ACT_DIESIMPLE );
-			break;
-		case HITGROUP_LEFTLEG:
-			SetActivity( ACT_DIEBACKWARD );
-			break;
-		case HITGROUP_RIGHTLEG:
-			SetActivity( ACT_DIEFORWARD );
-			break;
-		case HITGROUP_GENERIC:
-		case HITGROUP_HEAD:
-			SetActivity( ACT_DIE_HEADSHOT );
-			break;
-		default:
-			SetActivity( ACT_DIE_HEADSHOT );
-			break;
-		}
-
-		// Beta 7.1: run over by a vehicle, its driver is the attacker
-		// (sic: before the test for an attacker; GetClassPtr makes an entity for none)
-		CBaseEntity *pAttackingEnt = GetClassPtr( (CBaseEntity *)pevAttacker );	// Counter-Strike 1.6's name
-
-		if ( pAttackingEnt->Classify() == CLASS_VEHICLE )
-		{
-			pAttackingEnt = ((CFuncVehicle *)pAttackingEnt)->m_pDriver;
-
-			if ( pAttackingEnt )
-				pevAttacker = pAttackingEnt->pev;
-		}
-
-		// Beta 6.0: only with an attacker (a hostage killed by nobody pays nothing)
-		if ( pevAttacker )
-		{
-			// killing a hostage costs the killer 2250 dollars (Beta 3.1: 850, Beta 5.0: 1500)
-			if ( GetClassPtr( (CBaseEntity *)pevAttacker )->IsPlayer() )
-			{
-				CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pevAttacker );
-
-				pPlayer->AddAccount( -2250, true );
-				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Killed_Hostage" );	// Beta 5.0 (leak); Beta 7.1: a titles.txt name
-				if ( !(pPlayer->m_flDisplayHistory & 0x40) )	// hostage killed
-				{
-					pPlayer->HintMessage( "#Hint_lost_money", FALSE, FALSE );	// Counter-Strike 1.1: the hints are titles of the client's
-					pPlayer->m_flDisplayHistory |= 0x40;
-				}
-
-				// Counter-Strike 1.0: the training course is told
-				if ( !g_pGameRules->IsMultiplayer() )
-					((CHalfLifeTraining *)g_pGameRules)->HostageDied();
-
-				// Beta 6.5: mp_hostagepenalty, the number of hostages a terrorist may
-				// kill; one before it he is warned, at it the server drops him
-				int iHostagePenalty = CVAR_GET_FLOAT( "mp_hostagepenalty" );	// name ours
-
-				if ( pPlayer->m_iTeam == TEAM_TERRORIST && iHostagePenalty != 0 )
-				{
-					pPlayer->m_iHostagesKilled++;
-
-					if ( pPlayer->m_iHostagesKilled == iHostagePenalty - 1 )
-						pPlayer->HintMessage( "#Hint_removed_for_next_hostage_killed", TRUE, FALSE );
-					else if ( pPlayer->m_iHostagesKilled >= iHostagePenalty )
-						CLIENT_COMMAND( pPlayer->edict(), "disconnect\n" );
-				}
-
-				// Beta 7.1: the server log ("%s killed a hostage\n" by way of a buffer);
-				// Counter-Strike 1.1: the log line's new form, at once
-				UTIL_LogPrintf( "\"%s<%i><%u><%s>\" triggered \"Killed_A_Hostage\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERWONID( pPlayer->edict() ), GetTeam( pPlayer->m_iTeam ) );	// Counter-Strike 1.3: GetTeam (1.1: CT or TERRORIST)
-			}
-
-			// Counter-Strike 1.3: tell director about it
-			MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
-				WRITE_BYTE ( DRC_EVENT );
-				WRITE_SHORT( ENTINDEX( ENT(pevAttacker) ) );
-				WRITE_SHORT( ENTINDEX( this->edict() ) );
-				WRITE_LONG( 15 );
-			MESSAGE_END();
+			pAttacker->AddAccount( -20 * (int)flActualDamage - 500, true );
+			AnnounceDeath( pAttacker );
 		}
 
 		pev->takedamage = DAMAGE_NO;
 		pev->deadflag = DEAD_DEAD;
-		pev->solid = SOLID_NOT;	// Beta 6.5
-		pev->nextthink = gpGlobals->time + 3;
-		SetThink( Remove );
+		pev->solid = SOLID_NOT;
 
-		// Beta 4.0: a dead hostage may decide the round; then the counter-terrorists'
-		// commander radios it (Beta 3.0: before the death animation)
+		// Beta 4.0: a dead hostage may decide the round
 		((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
 
-		if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander != NULL )
-			((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander->Radio( "%!MRAD_HOSDOWN", "#Hostage_down" );
+		if ( !((CHalfLifeMultiplay *)g_pGameRules)->m_flRestartRoundTime )
+			SendHostageEventMsg();
+
+		pev->nextthink = gpGlobals->time + 3;
+		SetThink( Remove );
 
 		return 0;
 	}
 
-	// Beta 6.0: no attacker, no damage reported
-	if ( !pevAttacker )
+	SetFlinchActivity();
+
+	if ( !pAttacker )
 		return 0;
 
-	// Beta 5.0 (leak): a player who hurts a hostage is told so, and the first
-	// time given a hint
-	if ( GetClassPtr( (CBaseEntity *)pevAttacker )->IsPlayer() )
-	{
-		CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pevAttacker );	// name ours
+	// Counter-Strike 1.4: a player who hurts a hostage pays 20 dollars for each point of the damage
+	pAttacker->AddAccount( -20 * (int)flActualDamage, true );
+	ClientPrint( pAttacker->pev, HUD_PRINTCENTER, "#Injured_Hostage" );
 
-		ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Injured_Hostage" );
-		if ( !(pPlayer->m_flDisplayHistory & 0x20) )	// hostage injured
-		{
-			pPlayer->HintMessage( "#Hint_careful_around_hostages", FALSE, FALSE );
-			pPlayer->m_flDisplayHistory |= 0x20;
-		}
+	if ( !( pAttacker->m_flDisplayHistory & 0x20 ) )	// hostage injured
+	{
+		pAttacker->HintMessage( "#Hint_careful_around_hostages", FALSE, FALSE );
+		pAttacker->m_flDisplayHistory |= 0x20;
 	}
 
 	return 1;
 }
 
+// Beta 3.0: a hit of no particular group counts as a stomach hit, and any
+// other as a chest hit (each written as a case of its own)
+float CHostage::GetModifiedDamage( float flDamage, int nHitGroup )
+{
+	switch ( nHitGroup )
+	{
+	case HITGROUP_GENERIC:	flDamage *= 1.75; break;
+	case HITGROUP_HEAD:		flDamage *= 2.5; break;
+	case HITGROUP_CHEST:	flDamage *= 1.5; break;
+	case HITGROUP_STOMACH:	flDamage *= 1.75; break;
+	case HITGROUP_LEFTARM:	flDamage *= 0.75; break;
+	case HITGROUP_RIGHTARM:	flDamage *= 0.75; break;
+	case HITGROUP_LEFTLEG:	flDamage *= 0.6; break;
+	case HITGROUP_RIGHTLEG:	flDamage *= 0.6; break;
+	default:				flDamage *= 1.5; break;
+	}
+
+	return flDamage;
+}
+
+void CHostage::PlayPainSound( void )
+{
+	if ( m_LastHitGroup == HITGROUP_HEAD )
+	{
+		switch ( RANDOM_LONG( 0, 1 ) )
+		{
+		case 0:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/headshot1.wav", VOL_NORM, ATTN_NORM ); break;
+		case 1:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "player/headshot2.wav", VOL_NORM, ATTN_NORM ); break;
+		}
+	}
+}
+
+void CHostage::SetFlinchActivity( void )
+{
+	m_flFlinchTime = gpGlobals->time + 0.75;
+
+	switch ( m_LastHitGroup )
+	{
+	case HITGROUP_GENERIC:
+	case HITGROUP_HEAD:
+	case HITGROUP_CHEST:
+	case HITGROUP_STOMACH:
+		SetActivity( ACT_SMALL_FLINCH );
+		break;
+	case HITGROUP_LEFTARM:
+		SetActivity( ACT_FLINCH_LEFTARM );
+		break;
+	case HITGROUP_RIGHTARM:
+		SetActivity( ACT_FLINCH_RIGHTARM );
+		break;
+	case HITGROUP_LEFTLEG:
+		SetActivity( ACT_FLINCH_LEFTLEG );
+		break;
+	case HITGROUP_RIGHTLEG:
+		SetActivity( ACT_FLINCH_RIGHTLEG );
+		break;
+	default:
+		SetActivity( ACT_SMALL_FLINCH );
+		break;
+	}
+}
+
+// Beta 3.0: a hit of no particular group, and any other, dies as from a head shot
+void CHostage::SetDeathActivity( void )
+{
+	switch ( m_LastHitGroup )
+	{
+	case HITGROUP_GENERIC:
+	case HITGROUP_HEAD:
+		SetActivity( ACT_DIE_HEADSHOT );
+		break;
+	case HITGROUP_CHEST:
+		SetActivity( ACT_DIESIMPLE );
+		break;
+	case HITGROUP_STOMACH:
+		SetActivity( ACT_DIEFORWARD );
+		break;
+	case HITGROUP_LEFTARM:
+		SetActivity( ACT_DIEBACKWARD );
+		break;
+	case HITGROUP_RIGHTARM:
+		SetActivity( ACT_DIESIMPLE );
+		break;
+	case HITGROUP_LEFTLEG:
+		SetActivity( ACT_DIEBACKWARD );
+		break;
+	case HITGROUP_RIGHTLEG:
+		SetActivity( ACT_DIEFORWARD );
+		break;
+	default:
+		SetActivity( ACT_DIE_HEADSHOT );
+		break;
+	}
+}
+
+void CHostage::AnnounceDeath( CBasePlayer *pAttacker )
+{
+	ClientPrint( pAttacker->pev, HUD_PRINTCENTER, "#Killed_Hostage" );	// Beta 5.0 (leak); Beta 7.1: a titles.txt name
+
+	if ( !( pAttacker->m_flDisplayHistory & 0x40 ) )	// hostage killed
+	{
+		pAttacker->HintMessage( "#Hint_lost_money", FALSE, FALSE );	// Counter-Strike 1.1: the hints are titles of the client's
+		pAttacker->m_flDisplayHistory |= 0x40;
+	}
+
+	// Counter-Strike 1.0: the training course is told
+	if ( !g_pGameRules->IsMultiplayer() )
+		((CHalfLifeTraining *)g_pGameRules)->HostageDied();
+
+	UTIL_LogPrintf( "\"%s<%i><%s><%s>\" triggered \"Killed_A_Hostage\"\n", STRING( pAttacker->pev->netname ), GETPLAYERUSERID( pAttacker->edict() ), GETPLAYERAUTHID( pAttacker->edict() ), GetTeam( pAttacker->m_iTeam ) );
+
+	// tell director about it
+	MESSAGE_BEGIN( MSG_SPEC, SVC_DIRECTOR );
+		WRITE_BYTE ( 9 );	// command length in bytes
+		WRITE_BYTE ( DRC_CMD_EVENT );
+		WRITE_SHORT( ENTINDEX( pAttacker->edict() ) );
+		WRITE_SHORT( ENTINDEX( this->edict() ) );
+		WRITE_LONG( 15 );
+	MESSAGE_END();
+}
+
+// Beta 6.5: mp_hostagepenalty, the number of hostages a terrorist may kill;
+// one before it he is warned, at it the server drops him. Counter-Strike 1.4:
+// nothing calls it (the Windows linker dropped it): written from the Linux library
+void CHostage::ApplyHostagePenalty( CBasePlayer *pAttacker )
+{
+	if ( pAttacker->m_iTeam == TEAM_TERRORIST )
+	{
+		int iHostagePenalty = CVAR_GET_FLOAT( "mp_hostagepenalty" );
+
+		if ( iHostagePenalty != 0 )
+		{
+			pAttacker->m_iHostagesKilled++;
+
+			if ( pAttacker->m_iHostagesKilled == iHostagePenalty - 1 )
+				pAttacker->HintMessage( "#Hint_removed_for_next_hostage_killed", TRUE, FALSE );
+			else if ( pAttacker->m_iHostagesKilled >= iHostagePenalty )
+				CLIENT_COMMAND( pAttacker->edict(), "disconnect\n" );
+		}
+	}
+}
+
 void CHostage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	if ( gpGlobals->time < m_flNextUse )
+	if ( !pActivator->IsPlayer() )
 		return;
 
 	if ( pev->takedamage == DAMAGE_NO )
 		return;
 
-	m_flNextUse = gpGlobals->time + 1;
+	CBasePlayer *pPlayer = (CBasePlayer *)pActivator;
 
-	if ( pActivator->IsPlayer() )
+	// Counter-Strike 1.4: the terrorists cannot move it any more
+	if ( pPlayer->m_iTeam != TEAM_CT )
 	{
-		// Beta 6.0: his path is recorded for the hostage (CBasePlayer::UpdatePath)
-		((CBasePlayer *)pActivator)->m_bLeadsHostage = true;
-
-		// Beta 3.0: the leader's use makes a following hostage stay; any
-		// other use, or a new leader, makes it follow
-		// Beta 7.0: it stays by losing its leader (state 2: no leader within
-		// reach) rather than by the stopped state
-		if ( pActivator == m_hTargetEnt && m_fStopped == FALSE )
+		if ( !( pPlayer->m_flDisplayHistory & 0x200000 ) )	// Counter-Strike 1.4: only counter-terrorists move hostages
 		{
-			m_hTargetEnt = NULL;
-			m_fStopped = 2;
-		}
-		else
-			m_fStopped = FALSE;
-
-		if ( ((CBasePlayer *)pActivator)->m_iTeam == TEAM_TERRORIST )
-		{
-			m_hTargetEnt = pActivator;
-		}
-		else if ( ((CBasePlayer *)pActivator)->m_iTeam == TEAM_CT )
-		{
-			m_hTargetEnt = pActivator;
-
-			if ( m_fStopped == FALSE )
-			{
-				switch ( RANDOM_LONG( 0, 4 ) )
-				{
-				case 0:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hostage/hos1.wav", 1, ATTN_NORM ); break;
-				case 1:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hostage/hos2.wav", 1, ATTN_NORM ); break;
-				case 2:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hostage/hos3.wav", 1, ATTN_NORM ); break;
-				case 3:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hostage/hos4.wav", 1, ATTN_NORM ); break;
-				case 4:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hostage/hos5.wav", 1, ATTN_NORM ); break;
-				}
-			}
-
-			// the first counter-terrorist to lead it pays himself and his team
-			// (Beta 4.0: 500 each, was 150; Beta 5.0 leak: 150 to him, 100 to the team)
-			if ( !m_fTouched )
-			{
-				m_fTouched = TRUE;
-				((CHalfLifeMultiplay *)g_pGameRules)->m_iAccountCT += 100;
-				((CBasePlayer *)pActivator)->AddAccount( 150, true );
-				// Beta 6.6: "%s touched a hostage\n"; Counter-Strike 1.1: the log line's new form
-				UTIL_LogPrintf( "\"%s<%i><%u><CT>\" triggered \"Touched_A_Hostage\"\n", STRING( pActivator->pev->netname ), GETPLAYERUSERID( pActivator->edict() ), GETPLAYERWONID( pActivator->edict() ) );
-			}
+			pPlayer->m_flDisplayHistory |= 0x200000;
+			pPlayer->HintMessage( "#Only_CT_Can_Move_Hostages", FALSE, TRUE );
 		}
 
-		((CBasePlayer *)pActivator)->HostageUsed();	// Beta 5.0 (leak): the hint
+		return;
 	}
 
-	if ( m_fStopped == TRUE )
+	if ( gpGlobals->time < m_flNextChange )
+		return;
+
+	m_flNextChange = gpGlobals->time + 1;
+	m_flPathAcquired = gpGlobals->time;
+
+	// Beta 3.0: the leader's use makes a following hostage stay; any other
+	// use, or a new leader, makes it follow
+	if ( pActivator != m_hTargetEnt )
 	{
-		m_flFollowDistance = 60;	// Beta 5.0 (leak) (was 36)
-		m_flFollowRange = 300;
+		m_State = FOLLOW;
+		m_hTargetEnt = pActivator;
+		m_hStoppedTargetEnt = NULL;
 	}
-	else if ( m_fStopped == FALSE )
+	else if ( m_State == FOLLOW )
 	{
-		m_flFollowDistance = 128;
-		m_flFollowRange = 1024;
+		m_State = STAND;
+		m_hTargetEnt = NULL;
+		m_hStoppedTargetEnt = pActivator;
+	}
+	else
+		m_State = FOLLOW;
+
+	if ( m_State == FOLLOW )
+		PlayFollowRescueSound();
+
+	GiveCTTouchBonus( pPlayer );
+	pPlayer->HostageUsed();	// Beta 5.0 (leak): the hint
+}
+
+void CHostage::PlayFollowRescueSound( void )
+{
+	switch ( RANDOM_LONG( 0, 4 ) )
+	{
+	case 0:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hostage/hos1.wav", VOL_NORM, ATTN_NORM ); break;
+	case 1:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hostage/hos2.wav", VOL_NORM, ATTN_NORM ); break;
+	case 2:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hostage/hos3.wav", VOL_NORM, ATTN_NORM ); break;
+	case 3:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hostage/hos4.wav", VOL_NORM, ATTN_NORM ); break;
+	case 4:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hostage/hos5.wav", VOL_NORM, ATTN_NORM ); break;
 	}
 }
 
-// Beta 5.0 (leak): the hostage is used on and off (FCAP_ONOFF_USE)
+// the first counter-terrorist to lead it pays himself and his team
+// (Beta 5.0 leak: 150 to him, 100 to the team)
+void CHostage::GiveCTTouchBonus( CBasePlayer *pPlayer )
+{
+	if ( m_bTouched != TRUE )
+	{
+		m_bTouched = TRUE;
+
+		// the rules through a local: with the member taken straight from g_pGameRules
+		// Use (which has this function expanded inline) loads the string base ahead of
+		// the name in the log line below, and retail the name first (the local's name is ours)
+		CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;
+		mp->m_iAccountCT += 100;
+		pPlayer->AddAccount( 150, true );
+		UTIL_LogPrintf( "\"%s<%i><%s><CT>\" triggered \"Touched_A_Hostage\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERAUTHID( pPlayer->edict() ) );
+	}
+}
+
+// Beta 5.0 (leak): the hostage is used on and off (FCAP_ONOFF_USE).
+// Counter-Strike 1.4: and spawned anew when a level is loaded (FCAP_MUST_SPAWN)
 int CHostage::ObjectCaps( void )
 {
-	return CBaseMonster::ObjectCaps() | FCAP_ONOFF_USE;
+	return CBaseMonster::ObjectCaps() | FCAP_MUST_SPAWN | FCAP_ONOFF_USE;
 }
 
-// Beta 4.1: the player the hostage follows pushes it away when he runs into
-// it, at 225 units a second
+// Counter-Strike 1.4: a counter-terrorist or another hostage that walks into
+// it pushes it away, 50 units a second more at each touch
 void CHostage::Touch( CBaseEntity *pOther )
 {
-	// Beta 5.0 (leak): any player pushes it away, at 200 units a second (Beta 4.1:
-	// the one it follows, at 225)
+	Vector vPush;
+	Vector vecSrc;	// name ours
+
 	if ( pOther->IsPlayer() == TRUE )
 	{
-		Vector vecPush;		// name ours
+		if ( ((CBasePlayer *)pOther)->m_iTeam != TEAM_CT )
+			return;
+	}
+	else
+	{
+		if ( !FClassnameIs( pOther->pev, "hostage_entity" ) )
+			return;
+	}
 
-		vecPush = pev->origin - pOther->pev->origin;
-		vecPush = vecPush / vecPush.Length();
-		vecPush = vecPush * 200;
-		pev->velocity = vecPush;
+	vecSrc = pOther->pev->origin;
+	vecSrc.z = pev->origin.z;
+
+	vPush = pev->origin - vecSrc;
+	vPush = vPush / vPush.Length();
+	vPush = vPush * 50;
+
+	pev->velocity.x += vPush.x;
+	pev->velocity.y += vPush.y;
+	pev->velocity.z += vPush.z;
+
+	UTIL_DrawBeamPoints( pev->origin, pev->origin + pev->velocity.Normalize() * 500, 10, 0, 255, 0 );
+}
+
+void CHostage::DoFollow( void )
+{
+	CBaseEntity *pFollowing;
+	Vector vecDest;
+	float flRadius = 0;
+	float flDistToDest;
+
+	if ( m_hTargetEnt == NULL )
+		return;
+
+	pFollowing = GetClassPtr( (CBaseEntity *)m_hTargetEnt->pev );
+	m_LocalNav->SetTargetEnt( pFollowing );
+
+	vecDest = pFollowing->pev->origin;
+	vecDest.z += pFollowing->pev->mins.z;
+
+	flDistToDest = ( vecDest - pev->origin ).Length();
+
+	// near the leader, with a way to him: nothing to do
+	if ( flDistToDest < 80 && ( m_fHasPath || m_LocalNav->PathTraversable( pev->origin, vecDest, TRUE ) != PATH_TRAVERSABLE_EMPTY ) )
+		return;
+
+	if ( pev->flags & FL_ONGROUND )
+	{
+		if ( m_flPathCheckInterval + m_flLastPathCheck < gpGlobals->time )
+		{
+			if ( !m_fHasPath || pFollowing->pev->velocity.Length2D() > 1 )
+			{
+				m_flLastPathCheck = gpGlobals->time;
+				m_LocalNav->RequestNav( this );
+			}
+		}
+	}
+
+	if ( m_fHasPath )
+	{
+		nTargetNode = m_LocalNav->GetFurthestTraversableNode( pev->origin, vecNodes, m_nPathNodes, TRUE );
+
+		if ( !nTargetNode )
+		{
+			if ( ( vecNodes[ nTargetNode ] - pev->origin ).Length2D() < HOSTAGE_STEPSIZE )
+				nTargetNode = NODE_INVALID_EMPTY;
+		}
+
+		if ( nTargetNode == NODE_INVALID_EMPTY )
+		{
+			m_fHasPath = FALSE;
+			m_flPathCheckInterval = 0.1;
+		}
+	}
+
+	if ( gpGlobals->time < m_flFlinchTime )
+		return;
+
+	if ( nTargetNode != NODE_INVALID_EMPTY )
+	{
+		if ( pev->flags & FL_ONGROUND )
+			PointAt( vecNodes[ nTargetNode ] );
+
+		if ( IsOnLadder() )
+			pev->v_angle.x = -60;
+
+		MoveToward( vecNodes[ nTargetNode ] );
+	}
+
+	// two seconds after it got its leader or a path, standing still or with nowhere to go
+	if ( pev->flags & FL_ONGROUND )
+	{
+		if ( m_flPathAcquired != -1 && gpGlobals->time < m_flPathAcquired + 2.0 )
+		{
+			if ( pev->velocity.Length2D() < 1.0 || nTargetNode == NODE_INVALID_EMPTY )
+				Wiggle();
+		}
+	}
+}
+
+void CHostage::PointAt( Vector &vecLoc )
+{
+	pev->angles.x = 0;
+	pev->angles.y = UTIL_VecToAngles( vecLoc - pev->origin ).y;
+	pev->angles.z = 0;
+}
+
+void CHostage::MoveToward( Vector &vecLoc )
+{
+	int nFwdMove;
+	Vector vecFwd;
+	Vector vecbigDest;
+	Vector vecMove;
+
+	CBaseEntity *pFollowing = GetClassPtr( (CBaseEntity *)m_hTargetEnt->pev );
+
+	Vector vecAng;
+
+	vecAng.x = 0;
+	vecAng.y = UTIL_VecToAngles( vecLoc - pev->origin ).y;
+	vecAng.z = 0;
+
+	UTIL_MakeVectorsPrivate( vecAng, vecFwd, NULL, NULL );
+
+	// one step ahead, or less when the goal is nearer
+	float flDist = min( ( vecLoc - pev->origin ).Length2D(), ( vecFwd * CLocalNav::s_flStepSize ).Length2D() );
+
+	vecMove = vecFwd * flDist;
+	vecbigDest = pev->origin + vecMove;
+	nFwdMove = m_LocalNav->PathTraversable( pev->origin, vecbigDest, FALSE );
+
+	if ( nFwdMove != PATH_TRAVERSABLE_EMPTY )
+	{
+		float flSpeed;
+
+		Vector vecDest;
+
+		vecDest = pFollowing->pev->origin;
+		vecDest.z += pFollowing->pev->mins.z;
+
+		if ( !( pev->flags & FL_ONGROUND ) )
+		{
+			flSpeed = 250;
+		}
+		else
+		{
+			float flDist = ( vecDest - pev->origin ).Length();
+
+			if ( flDist < 110 )
+				flSpeed = flDist;
+			else if ( flDist < 250 )
+				flSpeed = 300;
+			else
+				flSpeed = 400;
+		}
+
+		pev->velocity.x = vecFwd.x * flSpeed;
+		pev->velocity.y = vecFwd.y * flSpeed;
+
+		UTIL_DrawBeamPoints( pev->origin, pev->origin + pev->velocity.Normalize() * 500, 10, 255, 0, 0 );
+
+		// sic: the step that needs no jump has its own branch, with a test that
+		// does nothing. Retail compares with 2, leaves, and then with 3; and the
+		// inline expansion of this function (the Vector operators and
+		// constructors expanded up to "vecFwd * flDist", calls from there on)
+		// asks for text worth 6 to 12 dead stores more than the visible code has
+		// (measured: 5 and 13 do not give retail's 817 bytes). An on-ground test
+		// with an empty body here does; an empty branch alone does not. What the
+		// test once guarded is not known.
+		if ( nFwdMove == PATH_TRAVERSABLE_STEP )
+		{
+			if ( pev->flags & FL_ONGROUND )
+			{
+			}
+		}
+		else if ( nFwdMove == PATH_TRAVERSABLE_STEPJUMPABLE )
+		{
+			if ( pev->flags & FL_ONGROUND )
+				pev->velocity.z = 270;
+		}
+	}
+}
+
+BOOL CHostage::IsOnLadder( void )
+{
+	return pev->movetype == MOVETYPE_FLY;
+}
+
+// CLocalNav calls it when the hostage's search may run (RequestNav, Think)
+void CHostage::NavReady( void )
+{
+	CBaseEntity *pFollowing;
+	Vector vecDest;
+	float flRadius = 40;
+	node_index_t nindexPath;
+
+	if ( m_hTargetEnt == NULL )
+		return;
+
+	pFollowing = GetClassPtr( (CBaseEntity *)m_hTargetEnt->pev );
+	vecDest = pFollowing->pev->origin;
+
+	// a leader in the air: where he will land
+	if ( !( pFollowing->pev->flags & FL_ONGROUND ) )
+	{
+		TraceResult tr;
+		Vector vecDropDest;
+
+		vecDropDest = vecDest;
+		vecDropDest.z -= 300;
+
+		UTIL_TraceHull( vecDest, vecDropDest, ignore_monsters, human_hull, pFollowing->edict(), &tr );
+
+		if ( tr.fStartSolid || tr.flFraction == 1.0 )
+			return;
+
+		vecDest = tr.vecEndPos;
+	}
+
+	vecDest.z += pFollowing->pev->mins.z;
+	m_LocalNav->SetTargetEnt( pFollowing );
+
+	nindexPath = m_LocalNav->FindPath( pev->origin, vecDest, flRadius, TRUE );
+
+	if ( nindexPath != NODE_INVALID_EMPTY )
+	{
+		m_fHasPath = TRUE;
+		nTargetNode = NODE_INVALID_EMPTY;
+		m_flPathAcquired = gpGlobals->time;
+		m_flPathCheckInterval = 0.5;
+
+		m_nPathNodes = m_LocalNav->SetupPathNodes( nindexPath, vecNodes, TRUE );
+	}
+	else
+	{
+		// no path: ask more rarely, up to twice a second
+		if ( !m_fHasPath )
+			m_flPathCheckInterval = min( m_flPathCheckInterval + 0.1, 0.5 );
+	}
+}
+
+// the hostage's place, for the radar of every living counter-terrorist
+void CHostage::SendHostagePositionMsg( void )
+{
+	CBaseEntity *pEntity = NULL;
+
+	pEntity = UTIL_FindEntityByClassname( pEntity, "player" );
+	while ( pEntity != NULL && !FNullEnt( pEntity->edict() ) )
+	{
+		if ( pEntity->IsPlayer() && pEntity->pev->flags != FL_DORMANT )
+		{
+			CBasePlayer *pTempPlayer = GetClassPtr( (CBasePlayer *)pEntity->pev );
+
+			if ( pTempPlayer->pev->deadflag == DEAD_NO && pTempPlayer->m_iTeam == TEAM_CT )
+			{
+				MESSAGE_BEGIN( MSG_ONE, gmsgHostagePos, NULL, pTempPlayer->pev );
+					WRITE_BYTE( 0 );
+					WRITE_BYTE( m_iHostageIndex );
+					WRITE_COORD( pev->origin.x );
+					WRITE_COORD( pev->origin.y );
+					WRITE_COORD( pev->origin.z );
+				MESSAGE_END();
+			}
+		}
+
+		pEntity = UTIL_FindEntityByClassname( pEntity, "player" );
+	}
+}
+
+// the hostage is dead or rescued: off their radar
+void CHostage::SendHostageEventMsg( void )
+{
+	CBaseEntity *pEntity = NULL;
+
+	pEntity = UTIL_FindEntityByClassname( pEntity, "player" );
+	while ( pEntity != NULL && !FNullEnt( pEntity->edict() ) )
+	{
+		if ( pEntity->IsPlayer() && pEntity->pev->flags != FL_DORMANT )
+		{
+			CBasePlayer *pTempPlayer = GetClassPtr( (CBasePlayer *)pEntity->pev );
+
+			if ( pTempPlayer->pev->deadflag == DEAD_NO && pTempPlayer->m_iTeam == TEAM_CT )
+			{
+				MESSAGE_BEGIN( MSG_ONE, gmsgHostageK, NULL, pTempPlayer->pev );
+					WRITE_BYTE( m_iHostageIndex );
+				MESSAGE_END();
+			}
+		}
+
+		pEntity = UTIL_FindEntityByClassname( pEntity, "player" );
+	}
+}
+
+// pushed away from every one of the eight directions in which it cannot go
+// 50 units, and a little at random
+void CHostage::Wiggle( void )
+{
+	TraceResult tr;
+	Vector vec( 0, 0, 0 );
+
+	if ( !m_LocalNav->PathTraversable( pev->origin, pev->origin + Vector( 1, 0, 0 ) * 50, TRUE ) )
+		vec = vec - Vector( 1, 0, 0 );
+
+	if ( !m_LocalNav->PathTraversable( pev->origin, pev->origin + Vector( -1, 0, 0 ) * 50, TRUE ) )
+		vec = vec - Vector( -1, 0, 0 );
+
+	if ( !m_LocalNav->PathTraversable( pev->origin, pev->origin + Vector( 0, 1, 0 ) * 50, TRUE ) )
+		vec = vec - Vector( 0, 1, 0 );
+
+	if ( !m_LocalNav->PathTraversable( pev->origin, pev->origin + Vector( 0, -1, 0 ) * 50, TRUE ) )
+		vec = vec - Vector( 0, -1, 0 );
+
+	if ( !m_LocalNav->PathTraversable( pev->origin, pev->origin + Vector( 1, 1, 0 ) * 50, TRUE ) )
+		vec = vec - Vector( 1, 1, 0 );
+
+	if ( !m_LocalNav->PathTraversable( pev->origin, pev->origin + Vector( 1, -1, 0 ) * 50, TRUE ) )
+		vec = vec - Vector( 1, -1, 0 );
+
+	if ( !m_LocalNav->PathTraversable( pev->origin, pev->origin + Vector( -1, 1, 0 ) * 50, TRUE ) )
+		vec = vec - Vector( -1, 1, 0 );
+
+	if ( !m_LocalNav->PathTraversable( pev->origin, pev->origin + Vector( -1, -1, 0 ) * 50, TRUE ) )
+		vec = vec - Vector( -1, -1, 0 );
+
+	vec = vec + Vector( RANDOM_FLOAT( -3, 3 ), RANDOM_FLOAT( -3, 3 ), 0 );
+	pev->velocity = pev->velocity + ( vec.Normalize() * 100 );
+
+	UTIL_DrawBeamPoints( pev->origin, pev->origin + pev->velocity.Normalize() * 500, 10, 0, 0, 255 );
+}
+
+// every frame (CLocalNav::HostagePrethink): a hostage that walks into a
+// step it could stand on is put on top of it
+void CHostage::PreThink( void )
+{
+	Vector vecSrc;
+	Vector vecDest;
+	TraceResult tr;
+	float flOrigDist;
+	float flRaisedDist;
+	float flInterval = gpGlobals->frametime;
+
+	if ( !( pev->flags & FL_ONGROUND ) )
+		return;
+
+	if ( pev->velocity.Length2D() < 1 )
+		return;
+
+	vecSrc = pev->origin;
+	vecDest = vecSrc + pev->velocity * flInterval;
+	vecDest.z = vecSrc.z;
+
+	TRACE_MONSTER_HULL( edict(), vecSrc, vecDest, dont_ignore_monsters, edict(), &tr );
+
+	if ( tr.fStartSolid )
+		return;
+
+	if ( tr.flFraction == 1.0 )
+		return;
+
+	if ( tr.vecPlaneNormal.z > 0.7 )
+		return;
+
+	flOrigDist = ( tr.vecEndPos - pev->origin ).Length2D();
+	vecSrc.z += CLocalNav::s_flStepSize;
+	vecDest = vecSrc + ( pev->velocity.Normalize() * 0.1 );
+	vecDest.z = vecSrc.z;
+
+	TRACE_MONSTER_HULL( edict(), vecSrc, vecDest, dont_ignore_monsters, edict(), &tr );
+
+	if ( tr.fStartSolid )
+		return;
+
+	vecSrc = tr.vecEndPos;
+	vecDest = tr.vecEndPos;
+	vecDest.z -= CLocalNav::s_flStepSize;
+
+	TRACE_MONSTER_HULL( edict(), vecSrc, vecDest, dont_ignore_monsters, edict(), &tr );
+
+	if ( tr.vecPlaneNormal.z < 0.7 )
+		return;
+
+	flRaisedDist = ( tr.vecEndPos - pev->origin ).Length2D();
+
+	if ( flRaisedDist > flOrigDist )
+	{
+		Vector vecNewOrigin;
+
+		vecNewOrigin = pev->origin;
+		vecNewOrigin.z = tr.vecEndPos.z;
+
+		UTIL_SetOrigin( pev, vecNewOrigin );
+		pev->velocity.z += pev->gravity * g_psv_gravity->value * flInterval;
 	}
 }

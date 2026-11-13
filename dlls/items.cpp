@@ -355,9 +355,12 @@ class CItemKevlar : public CItem
 	}
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{
-		pPlayer->m_iKevlar = 1;
+		// Counter-Strike 1.4: a helmet already worn stays
+		if ( pPlayer->m_iKevlar == 0 )
+			pPlayer->m_iKevlar = 1;
+
 		pPlayer->pev->armorvalue = 100;
-		EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/kevlar.wav", 1, ATTN_NORM );
+		EMIT_SOUND( ENT(pPlayer->pev), CHAN_ITEM, "items/ammopickup2.wav", 1, ATTN_NORM );
 
 		MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
 			WRITE_STRING( STRING(pev->classname) );
@@ -393,7 +396,7 @@ class CItemAssaultSuit : public CItem
 	{
 		pPlayer->m_iKevlar = 2;
 		pPlayer->pev->armorvalue = 100;
-		EMIT_SOUND( ENT(pPlayer->pev), CHAN_VOICE, "items/kevlar.wav", 1, ATTN_NORM );
+		EMIT_SOUND( ENT(pPlayer->pev), CHAN_ITEM, "items/ammopickup2.wav", 1, ATTN_NORM );
 
 		MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
 			WRITE_STRING( STRING(pev->classname) );

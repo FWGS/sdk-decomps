@@ -42,6 +42,8 @@ void CSG552::Spawn( )
 	SET_MODEL(ENT(pev), "models/w_sg552.mdl");
 
 	m_iDefaultAmmo = SG552_DEFAULT_GIVE;
+	m_flAccuracy = 0.2;
+	m_iShotsFired = 0;
 
 	FallInit();// get ready to fall down.
 }
@@ -50,7 +52,6 @@ void CSG552::Spawn( )
 void CSG552::Precache( void )
 {
 	PRECACHE_MODEL("models/v_sg552.mdl");
-	PRECACHE_MODEL("models/v_sg552_r.mdl");
 	PRECACHE_MODEL("models/w_sg552.mdl");
 
 	PRECACHE_SOUND("weapons/sg552-1.wav");
@@ -87,10 +88,7 @@ BOOL CSG552::Deploy( )
 	m_iShotsFired = 0;
 	m_iShellOn = 1;
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_sg552.mdl", "models/p_sg552.mdl", SG552_DRAW, "mp5", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_sg552_r.mdl", "models/p_sg552.mdl", SG552_DRAW, "mp5", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_sg552.mdl", "models/p_sg552.mdl", SG552_DRAW, "mp5", UseDecrement() ? 1 : 0 );
 }
 
 void CSG552::SecondaryAttack( void )
@@ -117,7 +115,7 @@ void CSG552::SecondaryAttack( void )
 void CSG552::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		SG552Fire( 0.035 + ( 0.35 * m_flAccuracy ), 0.0825, FALSE );
+		SG552Fire( 0.035 + ( 0.45 * m_flAccuracy ), 0.0825, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
 		SG552Fire( 0.035 + ( 0.075 * m_flAccuracy ), 0.0825, FALSE );
 	else if ( m_pPlayer->pev->fov == 90 )
@@ -173,7 +171,7 @@ void CSG552::SG552Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, flSpread, 8192, 2, BULLET_PLAYER_556MM, 33, 0.955, m_pPlayer->pev, false, m_pPlayer->random_seed );
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireSG552, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), 5, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireSG552, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.y * 100), 5, FALSE );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

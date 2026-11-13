@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -109,6 +109,7 @@ public:
 	int MsgFunc_Damage(const char *pszName,  int iSize, void *pbuf);
 	int MsgFunc_Radar(const char *pszName,  int iSize, void *pbuf);
 	int MsgFunc_ScoreAttrib(const char *pszName,  int iSize, void *pbuf);
+	int MsgFunc_ClCorpse(const char *pszName,  int iSize, void *pbuf);	// Counter-Strike 1.4
 	void UserCmd_TrackPlayer( void );		// name ours
 	void UserCmd_ClearPlayers( void );		// name ours
 	void UserCmd_DrawRadar( void );			// name ours

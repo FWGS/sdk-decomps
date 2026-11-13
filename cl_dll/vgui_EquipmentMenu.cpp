@@ -324,6 +324,7 @@ CEquipmentMenuPanel::CEquipmentMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 		}
 
 		m_pClassInfoPanel[i]->setSize( maxX , maxY );
+		if (pfile) gEngfuncs.COM_FreeFile( pfile );
 	}
 
 	// Create the Cancel button

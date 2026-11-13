@@ -1,4 +1,4 @@
-//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: 
 //
@@ -168,6 +168,8 @@ IN_ActivateMouse
 */
 void DLLEXPORT IN_ActivateMouse (void)
 {
+	g_pcldstAddrs->pIN_ActivateMouse();
+
 	if (mouseinitialized)
 	{
 		if (mouseparmsvalid)
@@ -183,6 +185,8 @@ IN_DeactivateMouse
 */
 void DLLEXPORT IN_DeactivateMouse (void)
 {
+	g_pcldstAddrs->pIN_DeactivateMouse();
+
 	if (mouseinitialized)
 	{
 		if (restore_spi)
@@ -268,6 +272,8 @@ IN_MouseEvent
 */
 void DLLEXPORT IN_MouseEvent (int mstate)
 {
+	g_pcldstAddrs->pIN_MouseEvent( &mstate );
+
 	int		i;
 
 	if ( iMouseInUse || g_iVisibleMouse )
@@ -401,6 +407,8 @@ IN_Accumulate
 */
 void DLLEXPORT IN_Accumulate (void)
 {
+	g_pcldstAddrs->pIN_Accumulate();
+
 	//only accumulate mouse if we are not moving the camera with the mouse
 	if ( !iMouseInUse && !g_iVisibleMouse )
 	{
@@ -425,6 +433,8 @@ IN_ClearStates
 */
 void DLLEXPORT IN_ClearStates (void)
 {
+	g_pcldstAddrs->pIN_ClearStates();
+
 	if ( !mouseactive )
 		return;
 
@@ -939,7 +949,6 @@ void IN_Init (void)
 	joy_wwhack1				= gEngfuncs.pfnRegisterVariable ( "joywwhack1", "0.0", 0 );
 	joy_wwhack2				= gEngfuncs.pfnRegisterVariable ( "joywwhack2", "0.0", 0 );
 
-	gEngfuncs.pfnAddCommand ("force_centerview", Force_CenterView_f);
 	gEngfuncs.pfnAddCommand ("joyadvancedupdate", Joy_AdvancedUpdate_f);
 
 	IN_StartupMouse ();

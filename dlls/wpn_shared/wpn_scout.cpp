@@ -49,7 +49,6 @@ void CSCOUT::Spawn( )
 void CSCOUT::Precache( void )
 {
 	PRECACHE_MODEL("models/v_scout.mdl");
-	PRECACHE_MODEL("models/v_scout_r.mdl");
 	PRECACHE_MODEL("models/w_scout.mdl");
 
 	PRECACHE_SOUND("weapons/scout_fire-1.wav");
@@ -82,10 +81,7 @@ int CSCOUT::GetItemInfo(ItemInfo *p)
 
 BOOL CSCOUT::Deploy( )
 {
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_scout.mdl", "models/p_scout.mdl", SCOUT_DRAW, "rifle", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_scout_r.mdl", "models/p_scout.mdl", SCOUT_DRAW, "rifle", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_scout.mdl", "models/p_scout.mdl", SCOUT_DRAW, "rifle", UseDecrement() ? 1 : 0 );
 }
 
 void CSCOUT::SecondaryAttack( void )
@@ -115,10 +111,10 @@ void CSCOUT::SecondaryAttack( void )
 
 void CSCOUT::PrimaryAttack( void )
 {
-	if ( m_pPlayer->pev->velocity.Length2D() > 170 )
+	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
+		SCOUTFire( 0.2, 1.25, FALSE );
+	else if ( m_pPlayer->pev->velocity.Length2D() > 170 )
 		SCOUTFire( 0.075, 1.25, FALSE );
-	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		SCOUTFire( 0.1, 1.25, FALSE );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
 		SCOUTFire( 0, 1.25, FALSE );
 	else
@@ -175,7 +171,7 @@ void CSCOUT::SCOUTFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	flag = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireSCOUT, 0.0, (float *)&g_vecZero, m_pPlayer->pev->angles, vecDir.x * 1000.0, vecDir.y * 1000.0, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), FALSE, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireSCOUT, 0.0, (float *)&g_vecZero, m_pPlayer->pev->angles, vecDir.x * 1000.0, vecDir.y * 1000.0, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.y * 100), FALSE, FALSE );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

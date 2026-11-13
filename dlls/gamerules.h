@@ -152,7 +152,6 @@ public:
 
 // Sounds
 	virtual BOOL PlayTextureSounds( void ) { return TRUE; }
-	virtual BOOL PlayFootstepSounds( CBasePlayer *pl, float fvol ) { return TRUE; }
 
 // Monsters
 	virtual BOOL FAllowMonsters( void ) = 0;//are monsters allowed
@@ -163,6 +162,10 @@ public:
 	// Counter-Strike 1.3: the freeze period is the base class's (1.6's names and places; to 1.1 both were
 	// CHalfLifeMultiplay's, the function not virtual)
 	virtual BOOL IsFreezePeriod( void ) { return m_bFreezePeriod; }
+
+	// Counter-Strike 1.4: what the map has (1.6's name and place; the base class's slot 61 is an empty function)
+	virtual void CheckMapConditions( void ) {};
+
 	BOOL m_bFreezePeriod;			// 0x04 TRUE from RestartRound until Think sees the freeze time run out
 };
 
@@ -348,7 +351,6 @@ public:
 	virtual int PlayerRelationship( CBasePlayer *pPlayer, CBaseEntity *pTarget );
 
 	virtual BOOL PlayTextureSounds( void ) { return FALSE; }
-	virtual BOOL PlayFootstepSounds( CBasePlayer *pl, float fvol );
 
 // Monsters
 	virtual BOOL FAllowMonsters( void );
@@ -362,12 +364,14 @@ public:
 	// Counter-Strike 1.0b: sets the player's model again (1.6 declares it at this place)
 	virtual void ClientUserInfoChanged( CBasePlayer *pPlayer, char *infobuffer );
 
+	// Counter-Strike 1.4 (slot 61, ahead of the round's own virtuals)
+	virtual void CheckMapConditions( void );
+
 // Counter-Strike: the round. g_pGameRules is a CGameRules *: client.cpp and player.cpp
 // reach these through a cast, ((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions().
 	virtual void CleanUpMap( void );
 	virtual void RestartRound( void );
 	virtual void CheckWinConditions( void );
-	virtual void PickNewCommander( int iTeam );
 	// Beta 4.0 (Linux symbols): weapon boxes cleared at a new round, the bomb defusers
 	// and the C4, the round's starting weapons
 	virtual void RemoveGuns( void );
@@ -376,6 +380,8 @@ public:
 	// Beta 5.0 (leak) (Linux symbols): a team is full when it has as many
 	// players as the map has spawn points for it; the round's freeze period
 	// and the seconds left in it or in the round
+	BOOL IsThereABomber( void );	// player: needed by CBasePlayer::JoiningThink (Counter-Strike 1.4; Linux symbols, 1.6's return types)
+	BOOL IsThereABomb( void );		// player: needed by CBasePlayer::JoiningThink
 	BOOL TeamFull( int team_id );
 	BOOL TeamStacked( int newTeam_id, int curTeam_id );	// Beta 5.0 (Linux symbol)
 	float TimeRemaining( void ) { return m_iRoundTimeSecs - gpGlobals->time + m_flRoundStartTime; }
@@ -409,7 +415,6 @@ public:
 	int m_iRoundWinStatus;			// 0x48 [0x30] 0 round running, 1 CTs won, 2 terrorists won, 3 nobody
 	short m_iNumCTWins;				// 0x4c [0x9c] rounds won (TeamScore)
 	short m_iNumTerroristWins;		// 0x4e [0x9e]
-	int m_iUnused88;				// 0x50 [0xa0] new in Beta 4.0: only RestartRound refers to it (sets 2)
 	bool m_fTargetBombed;			// 0x54 [0xa4] new in Beta 4.0: the C4 went off near a bomb target this round (Explode2)
 	bool m_fBombDefused;			// 0x55 [0xa5] new in the leak: the planted C4 was defused (C4Think)
 	bool m_fMapHasBombTarget;		// 0x56 [0xa6] the map has a func_bomb_target or an info_bomb_target (RestartRound looks)
@@ -452,8 +457,6 @@ public:
 	int m_iMaxRoundsWon;			// 0x250 new in 1.1: mp_winlimit as the constructor and a complete restart read it; Think changes the map when a team has won that many rounds
 	int m_iStoredSpectValue;		// 0x254 new in 1.1: allow_spectators as the constructor found it
 	// (Counter-Strike 1.1's offsets from here on are the comments' plus 8: Beta 7.1's offsets, Beta 7.0's plus 8; Beta 6.1's in brackets)
-	CBasePlayer *m_pCTCommander;	// 0x250 [0xb0] new in Beta 3.0: the counter-terrorists' commander (PickNewCommander)
-	CBasePlayer *m_pTerroristCommander;	// 0x254 [0xb4] the terrorists'
 	CBasePlayer *m_pVIP;			// 0x258 [0xb8] new in Beta 6.0: the VIP (PickNextVIP, MakeVIP)
 	CBasePlayer *m_pVIPQueue[5];	// 0x25c [0xbc] new in Beta 6.0: counter-terrorists waiting to be the VIP (AddToVIPQueue)
 
@@ -470,7 +473,8 @@ public:
 	// the team scores to every client, the map vote
 	void UpdateTeamScores( void );
 	void DisplayMaps( CBasePlayer *player, int iVote );
-	void VoteMap( CBasePlayer *player, int iVote );
+	void ResetAllMapVotes( void );	// Counter-Strike 1.4 (Linux symbol; 1.6 declares it at this place)
+	void ProcessMapVote( CBasePlayer *player, int iVote );	// (to 1.3: VoteMap)
 
 protected:
 	virtual void ChangeLevel( void );	// (Beta 7.0 only: a char *szMap parameter; Linux symbols)
@@ -485,6 +489,9 @@ public:
 	// (to Counter-Strike 1.1 m_bFreezePeriod stood here, 0x278 [0xd8])
 	float m_flNextRestartCheck;		// 0x27c [0xdc] when Think reads sv_restartround next (every half second; Beta 6.1: every second)
 	bool m_fGameCommenced;			// 0x280 [0xe0] both teams have had spawnable players (CheckWinConditions; until then a round ends at once)
+	// (Counter-Strike 1.4: the class ends here, at 0x2a1; its size is 0x2a8 on Windows because the voice manager's
+	// double aligns the class to 8 bytes. The Linux library, which aligns doubles to 4, has m_fGameCommenced at
+	// 0x29c and CHalfLifeTraining's first member right behind it at 0x2a0: the four bytes at 0x2a4 are padding)
 };
 
 //=========================================================
@@ -499,6 +506,7 @@ class CHalfLifeTraining : public CHalfLifeMultiplay
 	bool fVGUIMenus;							// 0x294 the player's m_bVGUIMenus, kept from his spawn
 
 public:
+	virtual void CheckMapConditions( void ) {};	// Counter-Strike 1.4: the training rules look for nothing (the Linux function is empty; 1.6's place)
 	void HostageDied( void );
 	bool PlayerCanBuy( CBasePlayer *pPlayer );
 

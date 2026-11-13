@@ -42,6 +42,8 @@ void CUMP45::Spawn( )
 	SET_MODEL(ENT(pev), "models/w_ump45.mdl");
 
 	m_iDefaultAmmo = UMP45_DEFAULT_GIVE;
+	m_flAccuracy = 0;
+	m_bDelayFire = false;
 
 	FallInit();// get ready to fall down.
 }
@@ -50,7 +52,6 @@ void CUMP45::Spawn( )
 void CUMP45::Precache( void )
 {
 	PRECACHE_MODEL("models/v_ump45.mdl");
-	PRECACHE_MODEL("models/v_ump45_r.mdl");
 	PRECACHE_MODEL("models/w_ump45.mdl");
 
 	PRECACHE_SOUND("weapons/ump45-1.wav");
@@ -86,16 +87,13 @@ BOOL CUMP45::Deploy( )
 	iShellOn = 1;
 	m_bDelayFire = false;
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_ump45.mdl", "models/p_ump45.mdl", UMP45_DRAW, "carbine", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_ump45_r.mdl", "models/p_ump45.mdl", UMP45_DRAW, "carbine", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_ump45.mdl", "models/p_ump45.mdl", UMP45_DRAW, "carbine", UseDecrement() ? 1 : 0 );
 }
 
 void CUMP45::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		UMP45Fire( ( m_flAccuracy ) * 0.14, 0.1, FALSE );	// sic: the parentheses (the Processor Pack compiler's instruction order)
+		UMP45Fire( ( m_flAccuracy ) * 0.24, 0.1, FALSE );	// sic: the parentheses (the Processor Pack compiler's instruction order)
 	else
 		UMP45Fire( ( m_flAccuracy ) * 0.04, 0.1, FALSE );
 }
@@ -144,7 +142,7 @@ void CUMP45::UMP45Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, flSpread, 8192, 1, BULLET_PLAYER_45ACP, 30, 0.82, m_pPlayer->pev, false, m_pPlayer->random_seed );
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireUMP45, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), FALSE, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireUMP45, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.y * 100), FALSE, FALSE );
 
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
 	m_pPlayer->m_iWeaponFlash = DIM_GUN_FLASH;

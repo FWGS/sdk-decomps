@@ -97,6 +97,8 @@ static DLL_FUNCTIONS gFunctionTable =
 
 static void SetObjectCollisionBox( entvars_t *pev );
 
+NEW_DLL_FUNCTIONS gNewDLLFunctions;
+
 int GetEntityAPI( DLL_FUNCTIONS *pFunctionTable, int interfaceVersion )
 {
 	if ( !pFunctionTable || interfaceVersion != INTERFACE_VERSION )
@@ -118,6 +120,20 @@ int GetEntityAPI2( DLL_FUNCTIONS *pFunctionTable, int *interfaceVersion )
 	}
 	
 	memcpy( pFunctionTable, &gFunctionTable, sizeof( DLL_FUNCTIONS ) );
+	return TRUE;
+}
+
+// Counter-Strike 1.4: the engine asks for the new entry points by this export (SDK 2.3's
+// NEW_DLL_FUNCTIONS; the table is all zero: the DLL supplies none of the three).
+int GetNewDLLFunctions( NEW_DLL_FUNCTIONS *pFunctionTable, int *interfaceVersion )
+{
+	if ( !pFunctionTable || *interfaceVersion != NEW_DLL_FUNCTIONS_VERSION )
+	{
+		*interfaceVersion = NEW_DLL_FUNCTIONS_VERSION;
+		return FALSE;
+	}
+
+	memcpy( pFunctionTable, &gNewDLLFunctions, sizeof( NEW_DLL_FUNCTIONS ) );
 	return TRUE;
 }
 

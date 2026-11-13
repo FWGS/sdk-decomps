@@ -51,7 +51,6 @@ void CXM1014::Spawn( )
 void CXM1014::Precache( void )
 {
 	PRECACHE_MODEL("models/v_xm1014.mdl");
-	PRECACHE_MODEL("models/v_xm1014_r.mdl");
 	PRECACHE_MODEL("models/w_xm1014.mdl");
 
 	m_iShellLate = m_iShell = PRECACHE_MODEL ("models/shotgunshell.mdl");// shotgun shell
@@ -82,10 +81,7 @@ int CXM1014::GetItemInfo(ItemInfo *p)
 
 BOOL CXM1014::Deploy( )
 {
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_xm1014.mdl", "models/p_xm1014.mdl", XM1014_DRAW, "m249", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_xm1014_r.mdl", "models/p_xm1014.mdl", XM1014_DRAW, "m249", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_xm1014.mdl", "models/p_xm1014.mdl", XM1014_DRAW, "m249", UseDecrement() ? 1 : 0 );
 }
 
 void CXM1014::PrimaryAttack()
@@ -129,7 +125,7 @@ void CXM1014::PrimaryAttack()
 	flag = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireXM1014, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, (int)(0.0725 * 10000), (int)(m_vecAiming.x * 10000), m_iClip == 0, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireXM1014, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, 7, (int)(m_vecAiming.x * 100), m_iClip == 0, FALSE );
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
 		// HEV suit - indicate out of ammo condition
@@ -146,7 +142,7 @@ void CXM1014::PrimaryAttack()
 		m_flTimeWeaponIdle = 0.75;
 	m_fInSpecialReload = 0;
 
-	m_pPlayer->pev->punchangle.x -= RANDOM_LONG( 3, 5 );
+	m_pPlayer->pev->punchangle.x -= !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) ? UTIL_SharedRandomLong( m_pPlayer->random_seed + 1, 7, 10 ) : UTIL_SharedRandomLong( m_pPlayer->random_seed + 1, 3, 5 );
 }
 
 void CXM1014::Reload( void )

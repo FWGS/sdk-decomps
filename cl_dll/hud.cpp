@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -83,8 +83,10 @@ static CHLVoiceStatusHelper g_VoiceStatusHelper;
 extern client_sprite_t *GetSpriteList(client_sprite_t *pList, const char *psz, int iRes, int iCount);
 
 extern cvar_t *sensitivity;
-HWND g_CheatWindows[20];	// name ours: windows CHud's destructor enables again (nothing fills it in Beta 7.1); in 1.3's .bss it stands before g_VoiceStatusHelper, so its name's hash bucket is below 226 (g_hCheatWindows: 564)
 cvar_t *cl_lw = NULL;
+extern cvar_t *cl_righthand;
+extern cvar_t *cl_minmodels;
+extern cvar_t *cl_dynamiccrosshair;
 
 void ShutdownInput (void);
 
@@ -109,6 +111,36 @@ int __MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf)
 int __MsgFunc_ViewMode(const char *pszName, int iSize, void *pbuf)
 {
 	gHUD.MsgFunc_ViewMode( pszName, iSize, pbuf );
+	return 1;
+}
+
+int __MsgFunc_CheckModels(const char *pszName, int iSize, void *pbuf)
+{
+	gHUD.MsgFunc_CheckModels( pszName, iSize, pbuf );
+	return 1;
+}
+
+int __MsgFunc_BombDrop(const char *pszName, int iSize, void *pbuf)
+{
+	gHUD.MsgFunc_BombDrop( pszName, iSize, pbuf );
+	return 1;
+}
+
+int __MsgFunc_BombPickup(const char *pszName, int iSize, void *pbuf)
+{
+	gHUD.MsgFunc_BombPickup( pszName, iSize, pbuf );
+	return 1;
+}
+
+int __MsgFunc_HostagePos(const char *pszName, int iSize, void *pbuf)
+{
+	gHUD.MsgFunc_HostagePos( pszName, iSize, pbuf );
+	return 1;
+}
+
+int __MsgFunc_HostageK(const char *pszName, int iSize, void *pbuf)
+{
+	gHUD.MsgFunc_HostageK( pszName, iSize, pbuf );
 	return 1;
 }
 
@@ -143,7 +175,7 @@ void __CmdFunc_OpenCommandMenu(void)
 {
 	if ( gViewPort )
 	{
-		gViewPort->ShowCommandMenu();
+		gViewPort->ShowCommandMenu( gViewPort->m_StandardMenu );
 	}
 }
 
@@ -287,9 +319,14 @@ void CHud :: Init( void )
 	HOOK_MESSAGE( GameMode );
 	HOOK_MESSAGE( InitHUD );
 	HOOK_MESSAGE( ViewMode );
+	HOOK_MESSAGE( CheckModels );
 	HOOK_MESSAGE( SetFOV );
 	HOOK_MESSAGE( Concuss );
 	HOOK_MESSAGE( ReloadSound );
+	HOOK_MESSAGE( BombDrop );
+	HOOK_MESSAGE( BombPickup );
+	HOOK_MESSAGE( HostagePos );
+	HOOK_MESSAGE( HostageK );
 
 	// TFFree CommandMenu
 	HOOK_COMMAND( "+commandmenu", OpenCommandMenu );
@@ -327,15 +364,21 @@ void CHud :: Init( void )
 	CVAR_CREATE( "max_shells", "120", 0 );
 	CVAR_CREATE( "max_smokepuffs", "120", 0 );
 	CVAR_CREATE( "fastsprites", "0", FCVAR_ARCHIVE );
+	CVAR_CREATE( "cl_corpsestay", "600", FCVAR_ARCHIVE );
+	CVAR_CREATE( "_cl_autowepswitch", "1", FCVAR_ARCHIVE | FCVAR_USERINFO );
 	default_fov = CVAR_CREATE( "default_fov", "90", 0 );
 	cl_lw = gEngfuncs.pfnGetCvarPointer( "cl_lw" );
 	m_pCvarStealMouse = CVAR_CREATE( "hud_capturemouse", "1", FCVAR_ARCHIVE );
+	m_pCvarDraw = CVAR_CREATE( "hud_draw", "1", FCVAR_ARCHIVE );
 
 	// the renderer's settings at startup, which Redraw holds them to
 	m_flTexSort = CVAR_GET_FLOAT( "gl_texsort" );
 	if ( CVAR_GET_FLOAT( "gl_alphamin" ) == 0 )
 		m_bNoAlphaMin = true;
 	m_flZMax = CVAR_GET_FLOAT( "gl_zmax" );
+	cl_righthand = CVAR_CREATE( "cl_righthand", "1", FCVAR_ARCHIVE );
+	cl_minmodels = CVAR_CREATE( "cl_minmodels", "0", FCVAR_ARCHIVE );
+	cl_dynamiccrosshair = CVAR_CREATE( "cl_dynamiccrosshair", "1", FCVAR_ARCHIVE );
 
 	m_pSpriteList = NULL;
 
@@ -358,6 +401,7 @@ void CHud :: Init( void )
 	m_NVG.Init();
 	m_Ammo.Init();
 	m_Health.Init();
+	m_SayText.Init();
 	m_Spectator.Init();
 	m_Geiger.Init();
 	m_Train.Init();
@@ -372,7 +416,6 @@ void CHud :: Init( void )
 	m_Money.Init();
 	m_RoundTimer.Init();
 	m_ProgressBar.Init();
-	m_SayText.Init();
 	m_Menu.Init();
 	GetClientVoiceMgr()->Init(&g_VoiceStatusHelper, (vgui::Panel**)&gViewPort);
 
@@ -383,8 +426,6 @@ void CHud :: Init( void )
 	g_ShellList.m_flLife = 2.0;
 	g_SmokeList.m_flLife = 1.0;
 	m_bGunSmoke = false;
-
-	memset( g_CheatWindows, 0, sizeof( g_CheatWindows ) );	// Counter-Strike 1.3: 20 (1.1 cleared 21)
 
 	m_Teamplay = 1;
 }
@@ -413,15 +454,6 @@ CHud :: ~CHud()
 			free( pList );
 		}
 		m_pHudList = NULL;
-	}
-
-	for ( int i = 0; i <= 20; i++ )	// sic: <= 20, one past the array
-	{
-		if ( g_CheatWindows[i] )
-		{
-			EnableWindow( g_CheatWindows[i], TRUE );
-			COM_Log( "c:\\cheaters.log", "Windows renabled\n" );
-		}
 	}
 
 	g_ShellList.Expire( 99999 );

@@ -49,7 +49,6 @@ void CG3SG1::Spawn( )
 void CG3SG1::Precache( void )
 {
 	PRECACHE_MODEL("models/v_g3sg1.mdl");
-	PRECACHE_MODEL("models/v_g3sg1_r.mdl");
 	PRECACHE_MODEL("models/w_g3sg1.mdl");
 
 	PRECACHE_SOUND("weapons/g3sg1-1.wav");
@@ -82,10 +81,9 @@ int CG3SG1::GetItemInfo(ItemInfo *p)
 
 BOOL CG3SG1::Deploy( )
 {
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_g3sg1.mdl", "models/p_g3sg1.mdl", G3SG1_DRAW, "mp5", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_g3sg1_r.mdl", "models/p_g3sg1.mdl", G3SG1_DRAW, "mp5", UseDecrement() ? 1 : 0 );
+	m_flAccuracy = 0.2;
+
+	return DefaultDeploy( "models/v_g3sg1.mdl", "models/p_g3sg1.mdl", G3SG1_DRAW, "mp5", UseDecrement() ? 1 : 0 );
 }
 
 void CG3SG1::SecondaryAttack( void )
@@ -169,7 +167,7 @@ void CG3SG1::G3SG1Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	flag = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireG3SG1, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), FALSE, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireG3SG1, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.y * 100), FALSE, FALSE );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 
@@ -190,6 +188,7 @@ void CG3SG1::Reload( void )
 
 	if ( DefaultReload( G3SG1_MAX_CLIP, G3SG1_RELOAD, 3.5 ) )
 	{
+		m_flAccuracy = 0.2;
 		m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
 		if ( m_pPlayer->pev->fov != 90 )

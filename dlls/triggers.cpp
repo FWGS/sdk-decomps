@@ -1267,8 +1267,9 @@ void CBaseTrigger::CounterUse( CBaseEntity *pActivator, CBaseEntity *pCaller, US
 		return;
 	
 	BOOL fTellActivator =
-		(FClassnameIs(m_hActivator->pev, "player") &&
-		!FBitSet(pev->spawnflags, SPAWNFLAG_NOMESSAGE));
+		(m_hActivator != 0) &&
+		FClassnameIs(m_hActivator->pev, "player") &&
+		!FBitSet(pev->spawnflags, SPAWNFLAG_NOMESSAGE);
 	if (m_cTriggersLeft != 0)
 	{
 		if (fTellActivator)
@@ -2092,7 +2093,7 @@ void CHostageRescue::HostageRescueTouch( CBaseEntity *pOther )
 		((CBasePlayer *)pOther)->m_signals.Signal( 4 );
 
 	if ( !strcmp( STRING( pOther->pev->classname ), "hostage_entity" ) )
-		((CHostage *)pOther)->m_fRescued = TRUE;
+		((CHostage *)pOther)->m_bRescueMe = TRUE;	// hostage: needed by hostage.h (the member has Counter-Strike 1.6's name)
 }
 
 
@@ -2126,7 +2127,7 @@ void CEscapeZone::EscapeTouch( CBaseEntity *pOther )
 			// Beta 6.5: he stays where he is (Beta 6.0 and 6.1: Disappear); the round may be over
 			((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
 			// Beta 6.6: "%s has escaped\n"; Counter-Strike 1.1: the log line's new form
-			UTIL_LogPrintf( "\"%s<%i><%u><TERRORIST>\" triggered \"Terrorist_Escaped\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERWONID( pPlayer->edict() ) );
+			UTIL_LogPrintf( "\"%s<%i><%s><TERRORIST>\" triggered \"Terrorist_Escaped\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERAUTHID( pPlayer->edict() ) );
 
 			// Beta 6.1: his team is told ("prisoners are notified when someone escapes")
 			for ( int i = 1; i <= gpGlobals->maxClients; i++ )
@@ -2172,7 +2173,7 @@ void CVIP_SafetyZone::VIP_SafetyTouch( CBaseEntity *pOther )
 		if ( pPlayer->m_bIsVIP == true )
 		{
 			// Counter-Strike 1.1: a line in the server's log
-			UTIL_LogPrintf( "\"%s<%i><%u><CT>\" triggered \"Escaped_As_VIP\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERWONID( pPlayer->edict() ) );
+			UTIL_LogPrintf( "\"%s<%i><%s><CT>\" triggered \"Escaped_As_VIP\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERAUTHID( pPlayer->edict() ) );
 			pPlayer->m_bEscaped = true;
 			pPlayer->Disappear();
 			pPlayer->AddAccount( 2500, true );	// Beta 6.5

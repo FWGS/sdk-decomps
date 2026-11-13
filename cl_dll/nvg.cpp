@@ -8,6 +8,9 @@
 #include "hud.h"
 #include "cl_util.h"
 #include "parsemsg.h"
+#include "r_studioint.h"
+
+extern engine_studio_api_t IEngineStudio;
 
 void EV_HLDM_CreateDLight( float *origin, float radius, int r, int g, int b, float life );	// name ours: ev_hldm.cpp
 
@@ -97,6 +100,11 @@ int CHudNVG :: VidInit( void )
 	m_prcScope[2][7] = new wrect_t;
 	m_prcHorizontal = new wrect_t;
 	m_prcVertical = new wrect_t;
+
+	m_hScopeSmall[0] = SPR_Load( "sprites/top_left_small.spr" );
+	m_hScopeSmall[1] = SPR_Load( "sprites/top_right_small.spr" );
+	m_hScopeSmall[2] = SPR_Load( "sprites/bottom_left_small.spr" );
+	m_hScopeSmall[3] = SPR_Load( "sprites/bottom_right_small.spr" );
 
 	tl = gHUD.GetSpriteIndex( "top_left" );
 	t = gHUD.GetSpriteIndex( "top" );
@@ -307,8 +315,8 @@ int CHudNVG :: Draw( float flTime )
 		EV_HLDM_CreateDLight( gHUD.m_vecOrigin, iRadius, 1, 20, 1, 0.1 );
 	}
 
-	// the sniper scope, zoomed in and from 640 wide
-	if ( gHUD.m_iFOV < 45 && ScreenWidth >= 640 )
+	// the sniper scope, zoomed in (Counter-Strike 1.4: in hardware mode only, and below 640 wide too)
+	if ( IEngineStudio.IsHardware() && gHUD.m_iFOV < 45 )
 	{
 		int cx = ScreenWidth / 2;	// names ours
 		int cy = ScreenHeight / 2;
@@ -352,7 +360,7 @@ int CHudNVG :: Draw( float flTime )
 			SPR_Set( m_hScope2[7], 255, 255, 255 );
 			SPR_DrawHoles( 0, cx + 128, cy + 128, m_prcScope[1][7] );
 		}
-		else
+		else if ( ScreenWidth >= 640 )
 		{
 			SPR_Set( m_hScope[0], 255, 255, 255 );
 			SPR_DrawHoles( 0, cx - 320, cy - 240, m_prcScope[0][0] );
@@ -370,6 +378,28 @@ int CHudNVG :: Draw( float flTime )
 			SPR_DrawHoles( 0, cx - 128, cy + 128, m_prcScope[0][6] );
 			SPR_Set( m_hScope[7], 255, 255, 255 );
 			SPR_DrawHoles( 0, cx + 128, cy + 128, m_prcScope[0][7] );
+		}
+		else if ( ScreenWidth >= 512 )
+		{
+			SPR_Set( m_hScopeSmall[0], 255, 255, 255 );
+			SPR_DrawHoles( 0, 0, 0, &gHUD.GetSpriteRect( gHUD.GetSpriteIndex( "top_left" ) ) );
+			SPR_Set( m_hScopeSmall[1], 255, 255, 255 );
+			SPR_DrawHoles( 0, cx, 0, &gHUD.GetSpriteRect( gHUD.GetSpriteIndex( "top_right" ) ) );
+			SPR_Set( m_hScopeSmall[2], 255, 255, 255 );
+			SPR_DrawHoles( 0, 0, cy, &gHUD.GetSpriteRect( gHUD.GetSpriteIndex( "bottom_left" ) ) );
+			SPR_Set( m_hScopeSmall[3], 255, 255, 255 );
+			SPR_DrawHoles( 0, cx, cy, &gHUD.GetSpriteRect( gHUD.GetSpriteIndex( "bottom_right" ) ) );
+		}
+		else
+		{
+			SPR_Set( m_hScopeSmall[0], 255, 255, 255 );
+			SPR_DrawHoles( 0, -48, 0, &gHUD.GetSpriteRect( gHUD.GetSpriteIndex( "top_left" ) ) );
+			SPR_Set( m_hScopeSmall[1], 255, 255, 255 );
+			SPR_DrawHoles( 0, cx, 0, &gHUD.GetSpriteRect( gHUD.GetSpriteIndex( "top_right" ) ) );
+			SPR_Set( m_hScopeSmall[2], 255, 255, 255 );
+			SPR_DrawHoles( 0, -48, cy - 32, &gHUD.GetSpriteRect( gHUD.GetSpriteIndex( "bottom_left" ) ) );
+			SPR_Set( m_hScopeSmall[3], 255, 255, 255 );
+			SPR_DrawHoles( 0, cx, cy - 32, &gHUD.GetSpriteRect( gHUD.GetSpriteIndex( "bottom_right" ) ) );
 		}
 
 		// the black bands around the scope

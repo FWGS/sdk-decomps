@@ -29,9 +29,11 @@
 *	and only the back left one looks whether it hit another vehicle (and only
 *	prints that).
 *
-*	Next carries a stand-in (marked sic) for text that makes no code but that
-*	VC6's inline expansion shows was there (CollisionDetection's, of Beta 7.1 to
-*	Counter-Strike 1.1, is not needed under Service Pack 5).
+*	Next carries a stand-in (marked sic: two dead initialised locals) for text
+*	that makes no code but that the x87 operand order shows was there; the dead
+*	stores that went with it up to Counter-Strike 1.3 are 1.4's dead local `temp`
+*	(CollisionDetection's stand-in, of Beta 7.1 to Counter-Strike 1.1, is not
+*	needed under Service Pack 5).
 *
 ****/
 #include "extdll.h"
@@ -267,7 +269,7 @@ void CFuncVehicle :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 
 				// braking, then reversing down to -0.35 (retail's compares)
 				if ( delta > 0 )								flSpeedRatio = delta - 0.0125;
-				else if ( delta > -0.05 )						flSpeedRatio = delta - 0.0075;
+				else if ( delta <= 0 && delta > -0.05 )			flSpeedRatio = delta - 0.0075;
 				else if ( delta <= 0.05 && delta > -0.1 )		flSpeedRatio = delta - 0.01;
 				else if ( delta <= 0.15 && delta > -0.15 )		flSpeedRatio = delta - 0.0125;
 				else if ( delta <= 0.15 && delta > -0.22 )		flSpeedRatio = delta - 0.01375;
@@ -636,17 +638,14 @@ void CFuncVehicle :: Next( void )
 
 	float time = 0.1;
 
-	// sic: a stand-in for text of Next that makes no code. Two more locals than
-	// the text below has give retail's x87 operand order in the two cross
-	// products (one leaves 8 instructions in another order, three leave 6),
-	// and 12 to 28 more units of size give its choice of expanded operators:
-	// with the two initialised, 1 to 5 further dead stores fit, none and 6 do
-	// not. What stood here is not known. Beta 7.0's larger stand-in, its
-	// declared-then-assigned vGravityVector and its gotos are not needed here.
-	// Counter-Strike 1.3 (SP5): still needed; with the two initialised, 2 to 4
-	// further dead stores give retail's bytes, 0, 1 and 5 to 7 do not.
+	// sic: a stand-in for text of Next that makes no code: two more initialised locals than
+	// the text has give retail's x87 operand order in the two cross products below (Beta 7.0 to
+	// Counter-Strike 1.3 needed the same two, with dead stores for the inliner's budget; in 1.4
+	// the dead local `temp` near the function's end does that part). Measured for 1.4: none
+	// leaves 4 instructions in another order, one 2, two give retail's 2,717 bytes, three leave
+	// 8 instructions. What stood here is not known (1.6 has three more lines than this text
+	// between `up` and `time` and no further local in its debug information).
 	int iStandIn0 = 0, iStandIn1 = 0;
-	iStandIn0 = 0; iStandIn1 = 0; iStandIn0 = 0;
 
 	if ( m_flSteeringWheelDecay < gpGlobals->time )
 	{
@@ -754,7 +753,12 @@ void CFuncVehicle :: Next( void )
 		m_vVehicleDirection = gpGlobals->v_forward * -1;
 	}
 
-	UTIL_VecToAngles( m_vVehicleDirection );	// result unused in retail
+	// Counter-Strike 1.4: the angles go into a local nothing reads (1.6's debug information has
+	// `Vector temp` at this place). Declared and then assigned it gives retail's 2,717 bytes and
+	// its stack slot; as an initialiser 2,711, without the local 2,708. Betas 7.0 to 1.3 needed
+	// a stand-in of dead locals and stores earlier in the function for the same budget.
+	Vector temp;
+	temp = UTIL_VecToAngles( m_vVehicleDirection );
 
 	if ( m_flUpdateSound < gpGlobals->time )
 	{

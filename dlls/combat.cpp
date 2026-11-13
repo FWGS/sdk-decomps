@@ -1799,10 +1799,9 @@ Vector CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, float ve
 
 	// Counter-Strike 1.3: a player's shot takes its two numbers from the seed
 	// he shares with his client, which computes the same deviation (SDK 2.2's
-	// FireBulletsPlayer has these two lines).  Retail bug kept: anything else
-	// that fires runs the old loop on three locals of the else block, which
-	// hide the function's x, y and z, so its bullet takes x and y unset
-	// (retail reads two stack slots the loop's path never writes).
+	// FireBulletsPlayer has these two lines).  Counter-Strike 1.3 ran the old
+	// loop on three locals of the else block, which hid the function's x, y
+	// and z; 1.4's loop writes the function's own (one set of stack slots).
 	float x, y, z;
 
 	if ( IsPlayer() )
@@ -1815,7 +1814,6 @@ Vector CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, float ve
 	else
 	{
 		// get circular gaussian spread
-		float x, y, z;
 		do {
 			x = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
 			y = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);

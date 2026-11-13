@@ -32,6 +32,10 @@ enum c4_e		// names ours
 
 extern int gmsgBarTime;
 
+#ifdef CLIENT_DLL
+extern bool g_bInBombZone;
+#endif
+
 LINK_ENTITY_TO_CLASS( weapon_c4, CC4 );
 
 
@@ -46,6 +50,8 @@ void CC4::Spawn( )
 
 	m_iId = WEAPON_C4;
 	m_iDefaultAmmo = C4_DEFAULT_GIVE;
+	m_bStartedArming = false;
+	m_fArmedTime = 0;
 
 	if ( pev->targetname )
 	{
@@ -108,7 +114,6 @@ void CC4::Holster( int skiplocal )
 		DestroyItem();
 	}
 
-	SendWeaponAnim( C4_DRAW );
 	EMIT_SOUND( ENT(m_pPlayer->pev), CHAN_WEAPON, "common/null.wav", 1.0, ATTN_NORM );
 }
 
@@ -117,106 +122,122 @@ void CC4::PrimaryAttack( void )
 	if ( m_pPlayer->m_rgAmmo[ m_iPrimaryAmmoType ] <= 0 )
 		return;
 
+	// Counter-Strike 1.4: the planter stands on the ground, in the zone, and does not move
+	// (1.6's two names)
+	int onGround = ( m_pPlayer->pev->flags & FL_ONGROUND );
+#ifdef CLIENT_DLL
+	int inBombZone = g_bInBombZone;
+#else
+	int inBombZone = ( m_pPlayer->m_signals.m_iState & 2 );	// the bomb target zone
+#endif
+
 	if ( m_bStartedArming == false )
 	{
-		if ( m_pPlayer->m_signals.m_iState & 2 )	// the bomb target zone
+		if ( inBombZone && onGround )
 		{
 			m_bStartedArming = true;
 			m_fArmedTime = gpGlobals->time + 3.0;
 			m_bBombPlacedAnimation = false;
 
-			SendWeaponAnim( C4_ARM );
-			m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
+			SendWeaponAnim( C4_ARM, UseDecrement() ? 1 : 0 );
 
-			MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, ENT(m_pPlayer->pev) );
-				WRITE_SHORT( 3 );
-			MESSAGE_END();
+#ifndef CLIENT_DLL
+			g_engfuncs.pfnSetClientMaxspeed( ENT( m_pPlayer->pev ), 1 );
+
+			m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
+			m_pPlayer->SetProgressBarTime( 3 );
+#endif
 		}
 		else
 		{
-			ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "#C4_Plant_At_Bomb_Spot" );
+			if ( !inBombZone )
+				ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "#C4_Plant_At_Bomb_Spot" );
+			else
+				ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "#C4_Plant_Must_Be_On_Ground" );
+
 			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.0;
 			return;
 		}
 	}
 	else
 	{
-		if ( !( gpGlobals->time >= m_fArmedTime ) )
+		if ( onGround && inBombZone )
 		{
-			if ( gpGlobals->time >= m_fArmedTime - 0.75 && m_bBombPlacedAnimation == false )
+			if ( !( gpGlobals->time >= m_fArmedTime ) )
 			{
-				m_bBombPlacedAnimation = true;
-				SendWeaponAnim( C4_DROP );
-				m_pPlayer->SetAnimation( PLAYER_HOLDBOMB );
+				if ( gpGlobals->time >= m_fArmedTime - 0.75 && m_bBombPlacedAnimation == false )
+				{
+					m_bBombPlacedAnimation = true;
+					SendWeaponAnim( C4_DROP, UseDecrement() ? 1 : 0 );
+#ifndef CLIENT_DLL
+					m_pPlayer->SetAnimation( PLAYER_HOLDBOMB );
+#endif
+				}
 			}
-			else if ( !( m_pPlayer->m_signals.m_iState & 2 ) )
+			else if ( m_bStartedArming == true )
 			{
-				ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "#C4_Arming_Cancelled" );
-				m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.5;
 				m_bStartedArming = false;
+				m_fArmedTime = 0;
 
-				MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, ENT(m_pPlayer->pev) );
+#ifndef CLIENT_DLL
+				Broadcast( "BOMBPL" );
+				m_pPlayer->m_bHasC4 = false;
+
+				if ( pev->speed != 0 && g_pGameRules )
+					((CHalfLifeMultiplay *)g_pGameRules)->m_iC4Timer = (int)pev->speed;
+
+				CGrenade::ShootSatchelCharge( m_pPlayer->pev, m_pPlayer->pev->origin, Vector( 0, 0, 0 ) );
+
+				// tell director about it
+				MESSAGE_BEGIN( MSG_SPEC, SVC_DIRECTOR );
+					WRITE_BYTE ( 9 );	// command length in bytes
+					WRITE_BYTE ( DRC_CMD_EVENT );
+					WRITE_SHORT( ENTINDEX( m_pPlayer->edict() ) );
 					WRITE_SHORT( 0 );
+					WRITE_LONG( 11 | DRC_FLAG_FACEPLAYER );
 				MESSAGE_END();
 
-				m_pPlayer->SetAnimation( PLAYER_HOLDBOMB );
+				UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Bomb_Planted" );
+				UTIL_LogPrintf( "\"%s<%i><%s><TERRORIST>\" triggered \"Planted_The_Bomb\"\n", STRING( m_pPlayer->pev->netname ),
+					GETPLAYERUSERID( m_pPlayer->edict() ), GETPLAYERAUTHID( m_pPlayer->edict() ) );
+				EMIT_SOUND( edict(), CHAN_WEAPON, "weapons/c4_plant.wav", VOL_NORM, ATTN_NORM );
 
-				if ( m_bBombPlacedAnimation == true )
-					SendWeaponAnim( C4_DRAW );
-				else
-					SendWeaponAnim( C4_IDLE1 );
+				m_pPlayer->pev->body = 0;
+				m_pPlayer->ResetMaxSpeed();
+				m_pPlayer->SetBombIcon( FALSE );
+#endif
 
-				return;
+				m_pPlayer->m_rgAmmo[ m_iPrimaryAmmoType ]--;
+
+				if ( !m_pPlayer->m_rgAmmo[ m_iPrimaryAmmoType ] )
+				{
+					RetireWeapon();
+					return;
+				}
 			}
 		}
-		else if ( m_bStartedArming == true )
+		else
 		{
-			m_bStartedArming = false;
-			m_fArmedTime = 0;
-
-			if ( m_pPlayer->m_signals.m_iState & 2 )
-			{
-			Broadcast( "BOMBPL" );
-			m_pPlayer->m_bHasC4 = false;
-
-			SendWeaponAnim( C4_IDLE1 );
-
-			if ( pev->speed != 0 && g_pGameRules )
-				((CHalfLifeMultiplay *)g_pGameRules)->m_iC4Timer = (int)pev->speed;
-
-			CGrenade::ShootSatchelCharge( m_pPlayer->pev, m_pPlayer->pev->origin, Vector( 0, 0, 0 ) );
-
-			// tell director about it
-			MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
-				WRITE_BYTE ( DRC_EVENT );
-				WRITE_SHORT( ENTINDEX( m_pPlayer->edict() ) );
-				WRITE_SHORT( 0 );
-				WRITE_LONG( 11 );
-			MESSAGE_END();
-
-			UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Bomb_Planted" );
-			UTIL_LogPrintf( "\"%s<%i><%u><TERRORIST>\" triggered \"Planted_The_Bomb\"\n", STRING( m_pPlayer->pev->netname ),
-				GETPLAYERUSERID( m_pPlayer->edict() ), GETPLAYERWONID( m_pPlayer->edict() ) );
-			EMIT_SOUND( edict(), CHAN_WEAPON, "weapons/c4_plant.wav", VOL_NORM, ATTN_NORM );
-
-			m_pPlayer->pev->body = 0;
-			m_pPlayer->SetBombIcon( FALSE );
-
-			m_pPlayer->m_rgAmmo[ m_iPrimaryAmmoType ]--;
-
-			if ( !m_pPlayer->m_rgAmmo[ m_iPrimaryAmmoType ] )
-			{
-				RetireWeapon();
-				return;
-			}
-			}
+			if ( !inBombZone )
+				ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "#C4_Arming_Cancelled" );
 			else
-			{
-				ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "#C4_Activated_At_Bomb_Spot" );
-				m_pPlayer->SetAnimation( PLAYER_HOLDBOMB );
-				m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.0;
-				return;
-			}
+				ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "#C4_Plant_Must_Be_On_Ground" );
+
+			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.5;
+			m_bStartedArming = false;
+
+#ifndef CLIENT_DLL
+			m_pPlayer->ResetMaxSpeed();
+			m_pPlayer->SetProgressBarTime( 0 );
+			m_pPlayer->SetAnimation( PLAYER_HOLDBOMB );
+#endif
+
+			if ( m_bBombPlacedAnimation == true )
+				SendWeaponAnim( C4_DRAW, UseDecrement() ? 1 : 0 );
+			else
+				SendWeaponAnim( C4_IDLE1, UseDecrement() ? 1 : 0 );
+
+			return;
 		}
 	}
 
@@ -229,16 +250,17 @@ void CC4::WeaponIdle( void )
 	if ( m_bStartedArming == true )
 	{
 		m_bStartedArming = false;
+#ifndef CLIENT_DLL
+		m_pPlayer->ResetMaxSpeed();
 		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.0;
 
-		MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, ENT(m_pPlayer->pev) );
-			WRITE_BYTE( 0 );
-		MESSAGE_END();
+		m_pPlayer->SetProgressBarTime( 0 );
+#endif
 
 		if ( m_bBombPlacedAnimation == true )
-			SendWeaponAnim( C4_DRAW );
+			SendWeaponAnim( C4_DRAW, UseDecrement() ? 1 : 0 );
 		else
-			SendWeaponAnim( C4_IDLE1 );
+			SendWeaponAnim( C4_IDLE1, UseDecrement() ? 1 : 0 );
 	}
 
 	if ( m_flTimeWeaponIdle > UTIL_WeaponTimeBase() )
@@ -246,8 +268,8 @@ void CC4::WeaponIdle( void )
 
 	if ( m_pPlayer->m_rgAmmo[ m_iPrimaryAmmoType ] > 0 )
 	{
-		SendWeaponAnim( C4_DRAW );
-		SendWeaponAnim( C4_IDLE1 );
+		SendWeaponAnim( C4_DRAW, UseDecrement() ? 1 : 0 );
+		SendWeaponAnim( C4_IDLE1, UseDecrement() ? 1 : 0 );
 	}
 	else
 	{

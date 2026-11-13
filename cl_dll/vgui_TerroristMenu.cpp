@@ -292,6 +292,7 @@ CTerroristMenuPanel::CTerroristMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 		}
 
 		m_pClassInfoPanel[i]->setSize( maxX , maxY );
+		if (pfile) gEngfuncs.COM_FreeFile( pfile );
 	}
 
 	m_iCurrentInfo = 0;
@@ -301,87 +302,8 @@ CTerroristMenuPanel::CTerroristMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 // Update
 void CTerroristMenuPanel::Update()
 {
-	// Don't allow the player to join a team if they're not in a team
-	if (!g_iTeamNumber)
-		return;
-
-	int	 iYPos = CLASSMENU_TOPLEFT_BUTTON_Y;
-
-	// Cycle through the rest of the buttons
-	for (int i = 0; i <= 4; i++)
-	{
-		bool bCivilian = (gViewPort->GetValidClasses(g_iTeamNumber) == -1);
-
-		if ( bCivilian )
-		{
-			// If this team can only be civilians, only the civilian button's visible
-			if (i == 0)
-			{
-				m_pButtons[0]->setVisible( true );
-				SetActiveInfo( 0 );
-				iYPos += CLASSMENU_BUTTON_SIZE_Y + CLASSMENU_BUTTON_SPACER_Y;
-			}
-			else
-			{
-				m_pButtons[i]->setVisible( false );
-			}
-		}
-		else 
-		{
-			if ( m_pButtons[i]->IsNotValid() || i == 0 )
-			{
-				m_pButtons[i]->setVisible( false );
-			}
-			else
-			{
-				m_pButtons[i]->setVisible( true );
-				m_pButtons[i]->setPos( CLASSMENU_TOPLEFT_BUTTON_X, iYPos );
-				iYPos += CLASSMENU_BUTTON_SIZE_Y + CLASSMENU_BUTTON_SPACER_Y;
-
-				// Start with the first option up
-				if (!m_iCurrentInfo)
-					SetActiveInfo( i );
-			}
-		}
-
-		// Now count the number of teammembers of this class
-		int iTotal = 0;
-		for ( int j = 1; j < MAX_PLAYERS; j++ )
-		{
-			if ( g_PlayerInfoList[j].name == NULL )
-				continue; // empty player slot, skip
-			if ( g_PlayerExtraInfo[j].teamname[0] == 0 )
-				continue; // skip over players who are not in a team
-			if ( g_PlayerInfoList[j].thisplayer )
-				continue; // skip this player
-			if ( g_PlayerExtraInfo[j].teamnumber != g_iTeamNumber )
-				continue; // skip over players in other teams
-
-			// If this team is forced to be civilians, just count the number of teammates
-			if ( g_PlayerExtraInfo[j].playerclass != i && !bCivilian )
-				continue;
-
-			iTotal++;
-		}
-
-		char sz[256]; 
-		sprintf(sz, m_sPlayersOnTeamString, iTotal);
-		m_pPlayers[i]->setText( sz );
-
-		// Set the text color to the teamcolor
-		m_pPlayers[i]->setFgColor( iTeamColors[g_iTeamNumber][0], iTeamColors[g_iTeamNumber][1], iTeamColors[g_iTeamNumber][2], 0 );
-
-		// set the graphic to be the team pick
-		if ( m_pClassImages[i] )
-		{
-			m_pClassImages[i]->setVisible( false );
-		}
-
-		if ( m_pClassImages[i] != NULL )
-		{
-			m_pClassImages[i]->setVisible( true );
-		}
-	}
+	// Counter-Strike 1.4: nothing (the slot of retail's vtable points at a lone ret, 0x190bba0; 1.3 had
+	// the class menu's button and player count code here)
 }
 
 //======================================

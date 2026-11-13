@@ -1192,8 +1192,7 @@ void CFuncTrackTrain :: Next( void )
 {
 	float time = 0.5;
 
-	ALERT( at_console, "Train speed = %f\n", pev->speed );	// Counter-Strike Beta 6.0
-
+	// (Counter-Strike 1.4: Beta 6.0's "Train speed = %f" console line is gone)
 	if ( !pev->speed )
 	{
 		ALERT( at_aiconsole, "TRAIN(%s): Speed is 0\n", STRING(pev->targetname) );

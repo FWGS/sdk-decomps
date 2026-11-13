@@ -51,6 +51,9 @@ void CM4A1::Spawn( )
 	SET_MODEL(ENT(pev), "models/w_m4a1.mdl");
 
 	m_iDefaultAmmo = M4A1_DEFAULT_GIVE;
+	m_flAccuracy = 0.2;
+	m_iShotsFired = 0;
+	m_bDelayFire = true;
 
 	FallInit();// get ready to fall down.
 }
@@ -59,7 +62,6 @@ void CM4A1::Spawn( )
 void CM4A1::Precache( void )
 {
 	PRECACHE_MODEL("models/v_m4a1.mdl");
-	PRECACHE_MODEL("models/v_m4a1_r.mdl");
 	PRECACHE_MODEL("models/w_m4a1.mdl");
 
 	PRECACHE_SOUND("weapons/m4a1-1.wav");
@@ -101,20 +103,10 @@ BOOL CM4A1::Deploy( )
 	m_bDelayFire = true;
 	m_iShellOn = 1;
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-	{
-		if ( m_iWeaponState & WPNSTATE_M4A1_SILENCED )
-			return DefaultDeploy( "models/v_m4a1.mdl", "models/p_m4a1.mdl", M4A1_DRAW, "rifle", UseDecrement() ? 1 : 0 );
-		else
-			return DefaultDeploy( "models/v_m4a1.mdl", "models/p_m4a1.mdl", M4A1_UNSIL_DRAW, "rifle", UseDecrement() ? 1 : 0 );
-	}
+	if ( m_iWeaponState & WPNSTATE_M4A1_SILENCED )
+		return DefaultDeploy( "models/v_m4a1.mdl", "models/p_m4a1.mdl", M4A1_DRAW, "rifle", UseDecrement() ? 1 : 0 );
 	else
-	{
-		if ( m_iWeaponState & WPNSTATE_M4A1_SILENCED )
-			return DefaultDeploy( "models/v_m4a1_r.mdl", "models/p_m4a1.mdl", M4A1_DRAW, "rifle", UseDecrement() ? 1 : 0 );
-		else
-			return DefaultDeploy( "models/v_m4a1_r.mdl", "models/p_m4a1.mdl", M4A1_UNSIL_DRAW, "rifle", UseDecrement() ? 1 : 0 );
-	}
+		return DefaultDeploy( "models/v_m4a1.mdl", "models/p_m4a1.mdl", M4A1_UNSIL_DRAW, "rifle", UseDecrement() ? 1 : 0 );
 }
 
 void CM4A1::SecondaryAttack( void )
@@ -142,7 +134,7 @@ void CM4A1::PrimaryAttack( void )
 	if ( !( m_iWeaponState & WPNSTATE_M4A1_SILENCED ) )
 	{
 		if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-			M4A1Fire( 0.035 + ( 0.3 * m_flAccuracy ), 0.0875, FALSE );
+			M4A1Fire( 0.035 + ( 0.4 * m_flAccuracy ), 0.0875, FALSE );
 		else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
 			M4A1Fire( 0.035 + ( 0.07 * m_flAccuracy ), 0.0875, FALSE );
 		else
@@ -151,7 +143,7 @@ void CM4A1::PrimaryAttack( void )
 	else
 	{
 		if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-			M4A1Fire( 0.035 + ( 0.3 * m_flAccuracy ), 0.0875, FALSE );
+			M4A1Fire( 0.035 + ( 0.4 * m_flAccuracy ), 0.0875, FALSE );
 		else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
 			M4A1Fire( 0.035 + ( 0.07 * m_flAccuracy ), 0.0875, FALSE );
 		else
@@ -214,7 +206,7 @@ void CM4A1::M4A1Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	flag = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireM4A1, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), ( m_iWeaponState & WPNSTATE_M4A1_SILENCED ) ? true : false, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireM4A1, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.y * 100), ( m_iWeaponState & WPNSTATE_M4A1_SILENCED ) ? true : false, FALSE );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

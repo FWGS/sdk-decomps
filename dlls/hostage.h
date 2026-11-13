@@ -4,57 +4,93 @@
 *
 *	client.cpp (ClientCommand) and multiplay_gamerules.cpp (RestartRound) call
 *	CHostage's non-virtual Remove and RePosition, so its declaration was
-*	shared; where it stood the image cannot say. This header and its name
-*	are ours. Class and method names are retail's: the export
-*	?IdleThink@CHostage@@QAEXXZ, the rest from Beta 3.1's symbols. The
-*	layout is retail's (336 bytes, 56 of its own, two Vector members by the
-*	constructor); the member names are ours.
+*	shared; where it stood the image cannot say. Class and method names are
+*	retail's: the export ?IdleThink@CHostage@@QAEXXZ, the rest from the Linux
+*	libraries' symbols.
+*
+*	Counter-Strike 1.4: the hostage finds its way (hostage_localnav.h). The
+*	class is 0x7a0 bytes (GetClassPtr<CHostage>). The header's name, the
+*	members' names, types and order and the enum are Counter-Strike 1.6's
+*	(debug information of its Linux library: its class has every member of
+*	1.4's at the same place, 0x14 higher, and four more behind
+*	m_iHostageIndex); the offsets are where 1.4's code reads or writes the
+*	members. Five it does not touch (m_flMarkPosition, m_iModel, m_iSkin,
+*	m_iWaypoint, m_target): they fill the gaps in 1.6's order.
+*	The methods are the 1.4 Linux library's symbols, declared in the order
+*	of 1.6's class.
 *
 ****/
 #ifndef HOSTAGE_H
 #define HOSTAGE_H
+
+#define MAX_NODES			100		// CLocalNav's nodes (hostage_localnav.h); name ours
+#define MAX_HOSTAGES		12		// name ours
+
+enum state { FOLLOW, STAND, DUCK, SCARED, IDLE, FOLLOWPATH };
+
+class CLocalNav;
 
 class CHostage : public CBaseMonster
 {
 public:
 	void Spawn( void );
 	void Precache( void );
-	int  Classify ( void );
-	void SetActivity( int activity );
-	void SetCollisionBox( void );
 	void EXPORT IdleThink( void );
 	void EXPORT Remove( void );
 	void RePosition( void );
-	int  TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType );
+	void SetActivity( int act );
+	int  ObjectCaps( void );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	int  TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType );
 	void Touch( CBaseEntity *pOther );
-	int  GetActivity( void ) { return m_iActivity; }	// Linux symbol (every library from Beta 3.1 on has it written out, after BloodColor: before it in the text); no code of the Windows DLL reads the member
+	int  Classify ( void ) { return CLASS_HUMAN_PASSIVE; }
+	int  GetActivity( void ) { return m_Activity; }
 	int  BloodColor( void ) { return BLOOD_COLOR_RED; }
-	int  ObjectCaps( void );	// Beta 5.0 (leak) (Linux symbol): the hostage is used on and off
+	float GetModifiedDamage( float flDamage, int nHitGroup );
+	void SetFlinchActivity( void );
+	void SetDeathActivity( void );
+	void PlayPainSound( void );
+	void PlayFollowRescueSound( void );
+	void AnnounceDeath( CBasePlayer *pAttacker );
+	void ApplyHostagePenalty( CBasePlayer *pAttacker );
+	void GiveCTTouchBonus( CBasePlayer *pPlayer );
+	void SendHostagePositionMsg( void );
+	void SendHostageEventMsg( void );
+	void DoFollow( void );
+	BOOL IsOnLadder( void );
+	void PointAt( Vector &vecLoc );
+	void MoveToward( Vector &vecLoc );
+	void NavReady( void );
+	void Wiggle( void );
+	void PreThink( void );
 
-	// names ours; offsets are Beta 6.5's (CHostage is 0x2b4 bytes, GetClassPtr<CHostage>: Beta 6.1's
-	// 0x258 and the 0x5c bytes CBaseEntity grew; every member is where the code of hostage.cpp reads it).
-	// Counter-Strike 1.6's debug information still has m_Activity, m_bTouched, m_bRescueMe, m_flFlinchTime,
-	// m_State, m_vStart, m_vPathToFollow[20] and m_iWaypoint in this order (our m_iActivity, m_fTouched,
-	// m_fRescued, m_flFlinchTime, m_fStopped, m_vecStart, m_vecPath, m_iPathIndex).
-	// m_hTargetEnt (CBaseMonster's) is the player the hostage follows.
-	int		m_iActivity;		// 0x174 the activity SetActivity last started
-	BOOL	m_fTouched;			// 0x178 new in Beta 1.1: a counter-terrorist has used it since the last RePosition (the first use pays)
-	BOOL	m_fRescued;			// 0x17c new in Beta 5.0 (leak): it reached a rescue zone (CHostageRescue::HostageRescueTouch, IdleThink); Spawn clears it
-	float	m_flFollowDistance;	// 0x180 Spawn: 128; Use: 128 when following, 60 when told to stay; IdleThink moves the hostage only when farther than this
-	float	m_flFlinchTime;		// 0x184 TakeDamage: now + 0.75; IdleThink leaves the activity alone until then
-	float	m_flNextUse;		// 0x188 Use answers once a second
-	float	m_flNextRescueCheck;	// 0x18c Beta 4.1: IdleThink looked for a rescue point once a second; from Beta 5.0 (leak) on only Spawn sets it (0)
-	float	m_flFollowRange;	// 0x190 only written: Spawn 1024, Use 300 when told to stay, 1024 when following
-	float	m_flNextStuckCheck;	// 0x194 new in Beta 5.0, unreferenced there; Beta 6.0: when IdleThink next notes the position for the stuck check (every 3 seconds on the trail; set when the trail is taken)
-	int		m_iUnused13C;		// 0x198 new in Beta 5.0: no function refers to it
-	int		m_iUnused140;		// 0x19c new in Beta 6.0: no function refers to it (m_fStopped and the rest are 4 bytes later than in Beta 5.2)
-	BOOL	m_fStopped;			// 0x1a0 TRUE: stays where it is (Spawn); FALSE: follows m_hTargetEnt (Use toggles it); 2: no leader within reach; 6 (Beta 3.0): the leader is out of sight, it walks his trail
-	Vector	m_vecStart;			// 0x1a4 where Spawn stood; RePosition moves the hostage back there (Beta 3.0 drops the unused Vector before it)
-	Vector	m_vecPath[20];		// 0x1b0 new in Beta 3.0: the positions of the leader's trail the hostage walks along (IdleThink copies his m_vecOldOrigins)
-	Vector	m_vecStuckCheckPos;	// 0x2a0 new in Beta 6.0: the position noted every 3 seconds on the trail; not 4 units from it means stuck: the trail is taken afresh (IdleThink)
-	int		m_iPathIndex;		// 0x2ac the point of m_vecPath it walks to
-	int		m_iUnused23C;		// 0x2b0 new in Beta 5.0 (leak): no function refers to it
+	int		m_Activity;				// 0x180 the activity SetActivity last started
+	BOOL	m_bTouched;				// 0x184 a counter-terrorist has used it since the last RePosition (the first use pays)
+	BOOL	m_bRescueMe;			// 0x188 it reached a rescue zone (CHostageRescue::HostageRescueTouch, IdleThink)
+	float	m_flFlinchTime;			// 0x18c TakeDamage: now + 0.75; the activity is left alone until then
+	float	m_flNextChange;			// 0x190
+	float	m_flMarkPosition;		// 0x194
+	int		m_iModel;				// 0x198
+	int		m_iSkin;				// 0x19c
+	float	m_flNextRadarTime;		// 0x1a0
+	state	m_State;				// 0x1a4
+	Vector	m_vStart;				// 0x1a8 where Spawn stood; RePosition moves the hostage back there
+	Vector	m_vStartAngles;			// 0x1b4
+	Vector	m_vPathToFollow[20];	// 0x1c0
+	int		m_iWaypoint;			// 0x2b0
+	CBasePlayer *m_target;			// 0x2b4
+	CLocalNav *m_LocalNav;			// 0x2b8
+	int		nTargetNode;			// 0x2bc
+	Vector	vecNodes[MAX_NODES];	// 0x2c0
+	EHANDLE	m_hStoppedTargetEnt;	// 0x770
+	float	m_flNextFullThink;		// 0x778
+	float	m_flPathCheckInterval;	// 0x77c
+	float	m_flLastPathCheck;		// 0x780
+	int		m_nPathNodes;			// 0x784
+	BOOL	m_fHasPath;				// 0x788
+	float	m_flPathAcquired;		// 0x78c
+	Vector	m_vOldPos;				// 0x790
+	int		m_iHostageIndex;		// 0x79c
 };
 
 #endif // HOSTAGE_H

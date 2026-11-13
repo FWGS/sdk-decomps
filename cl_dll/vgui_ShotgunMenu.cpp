@@ -256,6 +256,7 @@ CShotgunMenuPanel::CShotgunMenuPanel(int iTrans, int iRemoveMe, int x,int y,int 
 		}
 
 		m_pClassInfoPanel[i]->setSize( maxX , maxY );
+		if (pfile) gEngfuncs.COM_FreeFile( pfile );
 	}
 
 	// Create the Cancel button

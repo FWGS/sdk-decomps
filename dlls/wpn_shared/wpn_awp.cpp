@@ -50,7 +50,6 @@ void CAWP::Spawn( )
 void CAWP::Precache( void )
 {
 	PRECACHE_MODEL("models/v_awp.mdl");
-	PRECACHE_MODEL("models/v_awp_r.mdl");
 	PRECACHE_MODEL("models/w_awp.mdl");
 
 	PRECACHE_SOUND("weapons/awp1.wav");
@@ -86,10 +85,7 @@ int CAWP::GetItemInfo(ItemInfo *p)
 
 BOOL CAWP::Deploy( )
 {
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_awp.mdl", "models/p_awp.mdl", AWP_DRAW, "rifle", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_awp_r.mdl", "models/p_awp.mdl", AWP_DRAW, "rifle", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_awp.mdl", "models/p_awp.mdl", AWP_DRAW, "rifle", UseDecrement() ? 1 : 0 );
 }
 
 void CAWP::SecondaryAttack( void )
@@ -112,9 +108,9 @@ void CAWP::PrimaryAttack( void )
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
 		AWPFire( 0.85, 1.45, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
-		AWPFire( 0.15, 1.45, FALSE );
+		AWPFire( 0.25, 1.45, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 10 )
-		AWPFire( 0.03, 1.45, FALSE );
+		AWPFire( 0.1, 1.45, FALSE );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
 		AWPFire( 0, 1.45, FALSE );
 	else
@@ -171,7 +167,7 @@ void CAWP::AWPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	flag = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireAWP, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.x * 10000000), FALSE, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireAWP, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.x * 100), FALSE, FALSE );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

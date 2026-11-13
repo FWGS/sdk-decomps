@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -21,6 +21,7 @@
 #include "hud.h"
 #include "cl_util.h"
 #include "parsemsg.h"
+#include "pm_shared.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -37,6 +38,12 @@ client_sprite_t *GetSpriteList(client_sprite_t *pList, const char *psz, int iRes
 WeaponsResource gWR;
 
 int g_weaponselect = 0;
+int g_iShotsFired;	// Counter-Strike: the fire events count the local player's shots; the crosshair spreads by it (1.6's name and place)
+
+// Counter-Strike 1.4 (names and place Counter-Strike 1.6's): set by HUD_WeaponsPostThink
+int g_iPlayerFlags;
+int g_iWeaponFlags;
+float g_flPlayerSpeed;
 
 void WeaponsResource :: LoadAllWeaponSprites( void )
 {
@@ -227,7 +234,6 @@ WEAPON* WeaponsResource :: GetNextActivePos( int iSlot, int iSlotPos )
 
 
 int giBucketHeight, giBucketWidth, giABHeight, giABWidth; // Ammo Bar width and height
-int g_iShotsFired;	// name ours: the fire events count the local player's shots; the crosshair spreads by it
 
 HSPRITE ghsprBuckets;					// Sprite for top row of weapons menu
 
@@ -295,14 +301,14 @@ int CHudAmmo::Init(void)
 	CVAR_CREATE( "hud_fastswitch", "0", FCVAR_ARCHIVE );		// controls whether or not weapons can be selected in one keypress
 	CVAR_CREATE( "cl_observercrosshair", "1", 0 );
 
-	m_iFlags |= HUD_ACTIVE; //!!!
+	m_iFlags |= HUD_ACTIVE | HUD_INTERMISSION; //!!!
 	m_bObserverCrosshair = 0;
-	m_flCrossGap = 0;
-	m_iLastClip = 0;
-	m_iCrossAlpha = 200;
-	m_iCrossR = 50;
-	m_iCrossG = 250;
-	m_iCrossB = 50;
+	m_flCrosshairDistance = 0;
+	m_iAmmoLastCheck = 0;
+	m_iAlpha = 200;
+	m_R = 50;
+	m_G = 250;
+	m_B = 50;
 	m_iCrossColor = 0;
 
 	gWR.Init();
@@ -647,14 +653,17 @@ int CHudAmmo::MsgFunc_CurWeapon(const char *pszName, int iSize, void *pbuf )
 		return 0;
 	}
 
-	// Is player dead???
-	if ((iId == -1) && (iClip == -1))
+	if ( g_iUser1 != OBS_IN_EYE )
 	{
-		gHUD.m_fPlayerDead = TRUE;
-		gpActiveSel = NULL;
-		return 1;
+		// Is player dead???
+		if ((iId == -1) && (iClip == -1))
+		{
+			gHUD.m_fPlayerDead = TRUE;
+			gpActiveSel = NULL;
+			return 1;
+		}
+		gHUD.m_fPlayerDead = FALSE;
 	}
-	gHUD.m_fPlayerDead = FALSE;
 
 	WEAPON *pWeapon = gWR.GetWeapon( iId );
 
@@ -672,22 +681,20 @@ int CHudAmmo::MsgFunc_CurWeapon(const char *pszName, int iSize, void *pbuf )
 
 	m_pWeapon = pWeapon;
 
-	if ( !(gHUD.m_iHideHUDDisplay & ( HIDEHUD_WEAPONS | HIDEHUD_ALL )) )
-	{
-		if ( gHUD.m_iFOV >= 90 )
-		{ // normal crosshairs: Draw draws its own
-			SetCrosshair(0, nullrc, 0, 0, 0);
-		}
-		else
-		{ // zoomed crosshairs
-			if (fOnTarget && m_pWeapon->hZoomedAutoaim)
-				SetCrosshair(m_pWeapon->hZoomedAutoaim, m_pWeapon->rcZoomedAutoaim, 255, 255, 255);
-			else
-				SetCrosshair(m_pWeapon->hZoomedCrosshair, m_pWeapon->rcZoomedCrosshair, 255, 255, 255);
-		}
-
-		m_bObserverCrosshair = 0;
+	// Counter-Strike 1.4: whatever the HUD hides
+	if ( gHUD.m_iFOV >= 90 )
+	{ // normal crosshairs: Draw draws its own
+		SetCrosshair(0, nullrc, 0, 0, 0);
 	}
+	else
+	{ // zoomed crosshairs
+		if (fOnTarget && m_pWeapon->hZoomedAutoaim)
+			SetCrosshair(m_pWeapon->hZoomedAutoaim, m_pWeapon->rcZoomedAutoaim, 255, 255, 255);
+		else
+			SetCrosshair(m_pWeapon->hZoomedCrosshair, m_pWeapon->rcZoomedCrosshair, 255, 255, 255);
+	}
+
+	m_bObserverCrosshair = 0;
 
 	m_fFade = 200.0f; //!!!
 	m_iFlags |= HUD_ACTIVE;
@@ -807,12 +814,12 @@ void CHudAmmo::UserCmd_Adjust_Crosshair(void)
 
 	switch ( m_iCrossColor )
 	{
-	case 0: m_iCrossR = 50; m_iCrossG = 250; m_iCrossB = 50; break;
-	case 1: m_iCrossR = 250; m_iCrossG = 50; m_iCrossB = 50; break;
-	case 2: m_iCrossR = 50; m_iCrossG = 50; m_iCrossB = 250; break;
-	case 3: m_iCrossR = 250; m_iCrossG = 250; m_iCrossB = 50; break;
-	case 4: m_iCrossR = 50; m_iCrossG = 250; m_iCrossB = 250; break;
-	default: m_iCrossR = 50; m_iCrossG = 250; m_iCrossB = 50; break;
+	case 0: m_R = 50; m_G = 250; m_B = 50; break;
+	case 1: m_R = 250; m_G = 50; m_B = 50; break;
+	case 2: m_R = 50; m_G = 50; m_B = 250; break;
+	case 3: m_R = 250; m_G = 250; m_B = 50; break;
+	case 4: m_R = 50; m_G = 250; m_B = 250; break;
+	default: m_R = 50; m_G = 250; m_B = 50; break;
 	}
 }
 
@@ -923,98 +930,48 @@ int CHudAmmo::Draw(float flTime)
 	int AmmoWidth;
 
 	if ( gEngfuncs.IsSpectateOnly() )
+	{
+		// Counter-Strike 1.4: the spectator in first person sees the crosshair
+		if ( g_iUser1 == OBS_IN_EYE )
+			DrawCrosshair( flTime, 0 );
 		return 1;
+	}
 
-	if (!(gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT)) ))
+	if ( gHUD.m_iIntermission )
+	{
+		static wrect_t nullrc;
+		SetCrosshair( 0, nullrc, 0, 0, 0 );
 		return 1;
+	}
 
-	if ( (gHUD.m_iHideHUDDisplay & ( HIDEHUD_WEAPONS | HIDEHUD_ALL )) )
-		return 1;
+	if ( g_iUser1 != OBS_IN_EYE )
+	{
+		if (!(gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT)) ))
+			return 1;
 
-	// Draw Weapon Menu
-	DrawWList(flTime);
+		if ( (gHUD.m_iHideHUDDisplay & ( HIDEHUD_WEAPONS | HIDEHUD_ALL )) )
+			return 1;
 
-	// Draw ammo pickup history
-	gHR.DrawAmmoHistory( flTime );
+		// Draw Weapon Menu
+		DrawWList(flTime);
 
-	if (!(m_iFlags & HUD_ACTIVE))
-		return 0;
+		// Draw ammo pickup history
+		gHR.DrawAmmoHistory( flTime );
+
+		if (!(m_iFlags & HUD_ACTIVE))
+			return 0;
+	}
 
 	if (!m_pWeapon)
 		return 0;
 
 	WEAPON *pw = m_pWeapon; // shorthand
 
-	// the crosshair: four lines that spread with every shot the fire events count
 	if ( gHUD.m_iFOV >= 90 && pw->iId != 18 && pw->iId != 24 && pw->iId != 3 && pw->iId != 13 )
-	{
-		int iDistance, iDeltaDistance;		// names Counter-Strike 1.6's (DrawCrosshair)
+		DrawCrosshair( flTime, pw->iId );
 
-		switch ( pw->iId )
-		{
-		case 1: iDistance = 8; iDeltaDistance = 3; break;
-		case 4: iDistance = 8; iDeltaDistance = 3; break;
-		case 11: iDistance = 8; iDeltaDistance = 3; break;
-		case 16: iDistance = 8; iDeltaDistance = 3; break;
-		case 17: iDistance = 8; iDeltaDistance = 3; break;
-		case 18: iDistance = 8; iDeltaDistance = 3; break;
-		case 26: iDistance = 8; iDeltaDistance = 3; break;
-		case 19: iDistance = 6; iDeltaDistance = 2; break;
-		case 21: iDistance = 8; iDeltaDistance = 6; break;
-		case 24: iDistance = 6; iDeltaDistance = 4; break;
-		case 28: iDistance = 4; iDeltaDistance = 4; break;
-		case 23: iDistance = 7; iDeltaDistance = 3; break;
-		case 25: iDistance = 7; iDeltaDistance = 3; break;
-		case 29: iDistance = 7; iDeltaDistance = 3; break;
-		case 30: iDistance = 7; iDeltaDistance = 3; break;
-		case 5: iDistance = 9; iDeltaDistance = 4; break;
-		case 7: iDistance = 9; iDeltaDistance = 3; break;
-		case 8: iDistance = 3; iDeltaDistance = 3; break;
-		case 6: iDistance = 6; iDeltaDistance = 3; break;
-		case 12: iDistance = 6; iDeltaDistance = 3; break;
-		case 20: iDistance = 6; iDeltaDistance = 3; break;
-		case 3: iDistance = 5; iDeltaDistance = 3; break;
-		case 13: iDistance = 5; iDeltaDistance = 3; break;
-		case 27: iDistance = 5; iDeltaDistance = 3; break;
-		default:
-			iDistance = 4;
-			iDeltaDistance = 3;
-			break;
-		}
-
-		if ( g_iShotsFired > m_iLastClip )
-		{
-			m_flCrossGap += iDeltaDistance;
-			m_iCrossAlpha -= 40;
-
-			if ( m_flCrossGap > 15 )
-				m_flCrossGap = 15;
-			if ( m_iCrossAlpha < 120 )
-				m_iCrossAlpha = 120;
-		}
-		else
-		{
-			m_flCrossGap -= ( m_flCrossGap * 0.013 ) + 0.1;
-			m_iCrossAlpha += 2;
-		}
-
-		if ( g_iShotsFired > 600 )
-			g_iShotsFired = 1;
-
-		m_iLastClip = g_iShotsFired;
-
-		if ( m_flCrossGap < iDistance )
-			m_flCrossGap = iDistance;
-		if ( m_iCrossAlpha > 255 )
-			m_iCrossAlpha = 255;
-
-		int iLength = (int)( ( m_flCrossGap - iDistance ) / 2 ) + 5;	// name ours
-
-		FillRGBA( ScreenWidth / 2 - (int)m_flCrossGap - iLength, ScreenHeight / 2, iLength, 1, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
-		FillRGBA( ScreenWidth / 2 + (int)m_flCrossGap, ScreenHeight / 2, iLength, 1, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
-		FillRGBA( ScreenWidth / 2, ScreenHeight / 2 - (int)m_flCrossGap - iLength, 1, iLength, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
-		FillRGBA( ScreenWidth / 2, ScreenHeight / 2 + (int)m_flCrossGap, 1, iLength, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
-	}
+	if ( g_iUser1 == OBS_IN_EYE )
+		return 1;
 
 	// SPR_Draw Ammo
 	if ((pw->iAmmoType < 0) && (pw->iAmmo2Type < 0))
@@ -1167,6 +1124,198 @@ void DrawAmmoBar(WEAPON *p, int x, int y, int width, int height)
 			DrawBar(x, y, width, height, f);
 		}
 	}
+}
+
+// Counter-Strike 1.4 (names and place Counter-Strike 1.6's): how the crosshair of each weapon spreads:
+// 1 in the air, 2 when moving, 4 when ducking, 8 and 16 wider
+int GetWeaponAccuracyFlags( int iWeaponID )
+{
+	switch ( iWeaponID )
+	{
+	case 16:	// WEAPON_USP
+		return ( g_iWeaponFlags & 1 ) ? 15 : 7;
+	case 17:	// WEAPON_GLOCK18
+		return ( g_iWeaponFlags & 2 ) ? 23 : 7;
+	case 8:		// WEAPON_AUG
+		return 3;
+	case 20:	// WEAPON_M249
+		return 3;
+	case 27:	// WEAPON_SG552
+		return 3;
+	case 28:	// WEAPON_AK47
+		return 3;
+	case 30:	// WEAPON_P90
+		return 3;
+	case 22:	// WEAPON_M4A1
+		return ( g_iWeaponFlags & 4 ) ? 11 : 3;
+	case 7:		// WEAPON_MAC10
+		return 1;
+	case 12:	// WEAPON_UMP45
+		return 1;
+	case 19:	// WEAPON_MP5N
+		return 1;
+	case 23:	// WEAPON_TMP
+		return 1;
+	case 1:		// WEAPON_P228
+		return 7;
+	case 11:	// WEAPON_FIVESEVEN
+		return 7;
+	case 26:	// WEAPON_DEAGLE
+		return 7;
+	case 3:		// WEAPON_SCOUT
+		return 0;
+	case 4:		// WEAPON_HEGRENADE
+		return 0;
+	case 5:		// WEAPON_XM1014
+		return 0;
+	case 6:		// WEAPON_C4
+		return 0;
+	case 9:		// WEAPON_SMOKEGRENADE
+		return 0;
+	case 10:	// WEAPON_ELITE
+		return 0;
+	case 13:	// WEAPON_SG550
+		return 0;
+	case 18:	// WEAPON_AWP
+		return 0;
+	case 21:	// WEAPON_M3
+		return 0;
+	case 24:	// WEAPON_G3SG1
+		return 0;
+	case 25:	// WEAPON_FLASHBANG
+		return 0;
+	case 29:	// WEAPON_KNIFE
+		return 0;
+	}
+
+	return 0;
+}
+
+cvar_t *cl_dynamiccrosshair;
+
+int CHudAmmo::DrawCrosshair( float flTime, int weaponid )
+{
+	int iDistance;
+	int iDeltaDistance;
+	int iWeaponAccuracyFlags;
+
+	switch ( weaponid )
+	{
+	case 1: iDistance = 8; iDeltaDistance = 3; break;
+	case 4: iDistance = 8; iDeltaDistance = 3; break;
+	case 11: iDistance = 8; iDeltaDistance = 3; break;
+	case 16: iDistance = 8; iDeltaDistance = 3; break;
+	case 17: iDistance = 8; iDeltaDistance = 3; break;
+	case 18: iDistance = 8; iDeltaDistance = 3; break;
+	case 26: iDistance = 8; iDeltaDistance = 3; break;
+	case 19: iDistance = 6; iDeltaDistance = 2; break;
+	case 21: iDistance = 8; iDeltaDistance = 6; break;
+	case 24: iDistance = 6; iDeltaDistance = 4; break;
+	case 28: iDistance = 4; iDeltaDistance = 4; break;
+	case 23: iDistance = 7; iDeltaDistance = 3; break;
+	case 25: iDistance = 7; iDeltaDistance = 3; break;
+	case 29: iDistance = 7; iDeltaDistance = 3; break;
+	case 30: iDistance = 7; iDeltaDistance = 3; break;
+	case 5: iDistance = 9; iDeltaDistance = 4; break;
+	case 7: iDistance = 9; iDeltaDistance = 3; break;
+	case 8: iDistance = 3; iDeltaDistance = 3; break;
+	case 6: iDistance = 6; iDeltaDistance = 3; break;
+	case 12: iDistance = 6; iDeltaDistance = 3; break;
+	case 20: iDistance = 6; iDeltaDistance = 3; break;
+	case 3: iDistance = 5; iDeltaDistance = 3; break;
+	case 13: iDistance = 5; iDeltaDistance = 3; break;
+	case 27: iDistance = 5; iDeltaDistance = 3; break;
+	default:
+		iDistance = 4;
+		iDeltaDistance = 3;
+		break;
+	}
+
+	iWeaponAccuracyFlags = GetWeaponAccuracyFlags( weaponid );
+
+	if ( iWeaponAccuracyFlags && cl_dynamiccrosshair && cl_dynamiccrosshair->value != 0 && !( gHUD.m_iHideHUDDisplay & HIDEHUD_WEAPONS ) )
+	{
+		if ( !( g_iPlayerFlags & FL_ONGROUND ) && ( iWeaponAccuracyFlags & 1 ) )
+		{
+			iDistance *= 2.0f;
+		}
+		else if ( ( g_iPlayerFlags & FL_DUCKING ) && ( iWeaponAccuracyFlags & 4 ) )
+		{
+			iDistance *= 0.5f;
+		}
+		else
+		{
+			int iWeaponMaxSpeed;	// name ours
+
+			switch ( weaponid )
+			{
+			case 1:		// WEAPON_P228
+			case 11:	// WEAPON_FIVESEVEN
+			case 16:	// WEAPON_USP
+			case 17:	// WEAPON_GLOCK18
+			case 26:	// WEAPON_DEAGLE
+				iWeaponMaxSpeed = 0;
+				break;
+			case 8:		// WEAPON_AUG
+			case 20:	// WEAPON_M249
+			case 22:	// WEAPON_M4A1
+			case 27:	// WEAPON_SG552
+			case 28:	// WEAPON_AK47
+				iWeaponMaxSpeed = 140;
+				break;
+			case 30:	// WEAPON_P90
+				iWeaponMaxSpeed = 170;
+				break;
+			default:
+				iWeaponMaxSpeed = 0;
+				break;
+			}
+
+			if ( (int)g_flPlayerSpeed > iWeaponMaxSpeed && ( iWeaponAccuracyFlags & 2 ) )
+				iDistance *= 1.5f;
+		}
+
+		if ( iWeaponAccuracyFlags & 8 )
+			iDistance *= 1.4f;
+
+		if ( iWeaponAccuracyFlags & 16 )
+			iDistance *= 1.4f;
+	}
+
+	if ( g_iShotsFired > m_iAmmoLastCheck )
+	{
+		m_flCrosshairDistance += iDeltaDistance;
+		m_iAlpha -= 40;
+
+		if ( m_flCrosshairDistance > 15 )
+			m_flCrosshairDistance = 15;
+		if ( m_iAlpha < 120 )
+			m_iAlpha = 120;
+	}
+	else
+	{
+		m_flCrosshairDistance -= ( m_flCrosshairDistance * 0.013 ) + 0.1;
+		m_iAlpha += 2;
+	}
+
+	if ( g_iShotsFired > 600 )
+		g_iShotsFired = 1;
+
+	m_iAmmoLastCheck = g_iShotsFired;
+
+	if ( m_flCrosshairDistance < iDistance )
+		m_flCrosshairDistance = iDistance;
+	if ( m_iAlpha > 255 )
+		m_iAlpha = 255;
+
+	int iBarSize = 5 - (int)( ( m_flCrosshairDistance - iDistance ) * -0.5f );
+
+	FillRGBA( ScreenWidth / 2 - (int)m_flCrosshairDistance - iBarSize + 1, ScreenHeight / 2, iBarSize, 1, m_R, m_G, m_B, m_iAlpha );
+	FillRGBA( ScreenWidth / 2 + (int)m_flCrosshairDistance, ScreenHeight / 2, iBarSize, 1, m_R, m_G, m_B, m_iAlpha );
+	FillRGBA( ScreenWidth / 2, ScreenHeight / 2 - (int)m_flCrosshairDistance - iBarSize, 1, iBarSize, m_R, m_G, m_B, m_iAlpha );
+	FillRGBA( ScreenWidth / 2, ScreenHeight / 2 + (int)m_flCrosshairDistance, 1, iBarSize, m_R, m_G, m_B, m_iAlpha );
+
+	return 1;
 }
 
 
@@ -1465,6 +1614,10 @@ int CHudMoney::Draw( float flTime )
 	}
 
 	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_MONEY )
+		return 1;
+
+	// Counter-Strike 1.4: not for spectators
+	if ( g_iUser1 )
 		return 1;
 
 	x = ScreenWidth - gHUD.GetSpriteWidth( gHUD.m_HUD_number_0 ) * 5 - ( ScreenWidth < 640 ? 12 : 16 );

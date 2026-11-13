@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -111,11 +111,14 @@ int CHud :: Redraw( float flTime, int intermission )
 			m_iIntermission = intermission;
 			gViewPort->HideCommandMenu();
 			gViewPort->HideScoreBoard();
+			gViewPort->UpdateSpectatorPanel();
 		}
 		else if ( !m_iIntermission && intermission )
 		{
+			m_iIntermission = intermission;
 			gViewPort->HideCommandMenu();
 			gViewPort->ShowScoreBoard();
+			gViewPort->UpdateSpectatorPanel();
 
 			// Take a screenshot if the client's got the cvar set
 			if ( CVAR_GET_FLOAT( "hud_takesshots" ) != 0 )
@@ -134,22 +137,25 @@ int CHud :: Redraw( float flTime, int intermission )
 	// if no redrawing is necessary
 	// return 0;
 	
-	HUDLIST *pList = m_pHudList;
-
-	while (pList)
+	if ( m_pCvarDraw->value )
 	{
-		if ( !intermission )
-		{
-			if ( (pList->p->m_iFlags & HUD_ACTIVE) && !(m_iHideHUDDisplay & HIDEHUD_ALL) )
-				pList->p->Draw(flTime);
-		}
-		else
-		{  // it's an intermission,  so only draw hud elements that are set to draw during intermissions
-			if ( pList->p->m_iFlags & HUD_INTERMISSION )
-				pList->p->Draw( flTime );
-		}
+		HUDLIST *pList = m_pHudList;
 
-		pList = pList->pNext;
+		while (pList)
+		{
+			if ( !intermission )
+			{
+				if ( (pList->p->m_iFlags & HUD_ACTIVE) && !(m_iHideHUDDisplay & HIDEHUD_ALL) )
+					pList->p->Draw(flTime);
+			}
+			else
+			{  // it's an intermission,  so only draw hud elements that are set to draw during intermissions
+				if ( pList->p->m_iFlags & HUD_INTERMISSION )
+					pList->p->Draw( flTime );
+			}
+
+			pList = pList->pNext;
+		}
 	}
 
 	// are we in demo mode? do we need to draw the logo in the top corner?
@@ -215,14 +221,6 @@ int CHud :: Redraw( float flTime, int intermission )
 		pszDisconnect[4] = 'o';	pszDisconnect[10] = '\n';
 		pszDisconnect[5] = 'n';	pszDisconnect[11] = 0;
 
-		char *pszRestart = new char[9];		// name ours
-		pszRestart[0] = 'r';	pszRestart[6] = 't';
-		pszRestart[1] = 'e';	pszRestart[7] = '\n';
-		pszRestart[2] = 's';	pszRestart[8] = 0;
-		pszRestart[3] = 't';
-		pszRestart[4] = 'a';
-		pszRestart[5] = 'r';
-
 		char *pszQuit = new char[6];		// name ours
 		pszQuit[0] = 'q';	pszQuit[5] = 0;
 		pszQuit[1] = 'u';
@@ -240,13 +238,6 @@ int CHud :: Redraw( float flTime, int intermission )
 		if ( CVAR_GET_FLOAT( "cl_pitchdown" ) != 89 )
 		{
 			ClientCmd( "cl_pitchdown 89\n" );
-			ClientCmd( pszKill );
-			ClientCmd( pszDisconnect );
-		}
-
-		if ( CVAR_GET_FLOAT( "r_drawentities" ) >= 2 )
-		{
-			ClientCmd( "r_drawentites 1\n" );	// the image spells it so
 			ClientCmd( pszKill );
 			ClientCmd( pszDisconnect );
 		}
@@ -304,8 +295,6 @@ int CHud :: Redraw( float flTime, int intermission )
 			delete pszKill;
 		if ( pszDisconnect )
 			delete pszDisconnect;
-		if ( pszRestart )
-			delete pszRestart;
 		if ( pszQuit )
 			delete pszQuit;
 		if ( pszKernel )

@@ -37,6 +37,9 @@
 #define OBS_CHASE_LOCKED	1
 #define OBS_CHASE_FREE		2
 #define OBS_ROAMING			3
+#define OBS_IN_EYE			4		// Counter-Strike 1.4 (SDK 2.3's pm_shared.h)
+#define OBS_MAP_FREE		5
+#define OBS_MAP_CHASE		6
 
 //
 // generic player
@@ -171,6 +174,10 @@ public:
 	unsigned short		m_usPlayerBleed;		// 0x178 four bytes nothing reads or writes (1.6's name and type, by its place)
 	EHANDLE				m_hObserverTarget;		// 0x17c the player an observer watches (observer.cpp; 1.6's name)
 	float				m_flNextObserverInput;	// 0x184 Observer_HandleButtons takes no button before this time (1.6's name)
+	int					m_iObserverWeapon;		// new in Counter-Strike 1.4: what the observed player holds and carries, as last sent to this observer (1.6's four names)
+	int					m_iObserverC4State;
+	bool				m_bObserverHasDefuser;
+	int					m_iObserverLastMode;
 	float				m_flFlinchTime;			// 0x188 the flinch animation plays until then
 	float				m_flNextFlinchTime;		// 0x18c no new flinch animation before this time
 	bool				m_fHeavyDamage;			// 0x190 the last hit was a heavy one (TakeDamage)
@@ -191,18 +198,16 @@ public:
 	int					m_iJoiningState;		// 0x1c8 JoiningThink's step (the JOIN_ enum)
 	CBaseEntity			*m_pIntroCamera;		// 0x1cc the trigger_camera a joining player looks through
 	float				m_flIntroCameraTime;	// 0x1d0
-	int					m_iIgnoreGhosts;		// 0x1d4
 	float				m_flLastActivity;		// 0x1d8 when the player last pressed a button
 	bool				m_fShowingLevelText;	// 0x1dc the map's briefing is on the screen
 	bool				m_fTeamChanged;			// 0x1dd a dead player changed teams this round
 	int					m_iAppearance;			// 0x1e0 the player model
-	bool				m_fKicked;				// 0x1e4
 	int					m_iTeamKills;			// 0x1e8
 	int					m_iIgnoreMessages;		// 0x1ec ignoremsg
 	bool				m_bHasNightVision;		// 0x1f0
 	bool				m_bNightVisionOn;		// 0x1f1
 	Vector				m_vecOldOrigins[20];	// 0x1f4 the trail a hostage follows
-	float				m_flNextOldOrigin;		// 0x2e4
+	float				m_flIdleCheckTime;		// 0x2f8 PreThink looks every 5 seconds whether the player is idle (1.6's name; to 1.3 m_flNextOldOrigin, the trail's timer)
 	float				m_flNextRadio;			// 0x2e8 no radio message before this time
 	int					m_iRadioMessages;		// 0x2ec radio messages left
 	bool				m_fIgnoreRadio;			// 0x2f0 the ignoreradio command
@@ -217,26 +222,23 @@ public:
 	int					m_iChaseNext;			// 0x33c Beta 6.1's chase camera words, less its mode byte (the mode is pev->iuser1 now)
 	CBaseEntity			*m_pChaseTarget;		// 0x340
 	float				m_fCamSwitch;			// 0x344 Beta 6.1's m_flNextObserverInput (1.6's name; the new member at 0x184 has Beta 6.1's name now)
-	bool				m_bLeadsHostage;		// 0x348 a hostage follows him; PreThink records his path
-	Vector				m_vecLastPathPos;		// 0x34c
 	bool				m_bEscaped;				// 0x358 a terrorist who reached an escape zone
 	bool				m_bIsVIP;				// 0x359 the VIP of an assassination map (ResetMaxSpeed: 227)
 	float				m_flNextRadarUpdate;	// 0x35c
 	Vector				m_vecLastRadarOrigin;	// 0x360
-	bool				m_bLeftHanded;			// 0x36c userinfo "lefthand": v_*.mdl rather than v_*_r.mdl
 	int					m_iCurrentKickVote;		// 0x370 the user id he voted to kick
 	float				m_flNextVoteTime;		// 0x374
-	bool				m_bVoteKicksAtOnce;		// 0x378 Beta 6.1's two bools (the hidden a12 command; the TK penalty)
 	bool				m_bJustKilledTeammate;	// 0x379 (1.6's name)
 	int					m_iHostagesKilled;		// 0x37c new in Beta 6.5 (1.6's name, by its place)
 	int					m_iMapVote;				// 0x380 new in Beta 6.5 (1.6's name, by its place)
 	bool				m_bCanShoot;			// 0x384 cleared in the freeze time, set when the round starts (1.6's name)
-	bool				m_bVGUIMenus;			// 0x385 (0x386 to Counter-Strike 1.0: 1.0b drops Beta 6.6's m_bVerifyModel, which stood here, with VerifyModel) new in Beta 7.0: userinfo "vgui_menus", read with the model check in PreThink (1.6's name; it stands after the gait members there)
 	float				m_flLastFired;			// 0x388 new in Beta 7.0: the time of the last shot (SetAnimation stamps it and plays the run animation four seconds later; Spawn: -15). 1.6's name: its Spawn stores the same -15 in the member after m_bCanShoot
 	float				m_flLastAttackedTeammate;	// 0x38c new in Beta 7.0: TakeDamage's "attacked a teammate" line, at most once in 0.6 s (1.6's name)
-	float				m_flTimeCheckAllowed;	// 0x390 new in Beta 7.0: PreThink checks the client's keys and model no sooner, every 3 s (1.6 has int m_iTimeCheckAllowed at this place, the timeleft command's; a float here, the prefix ours)
 	bool				m_bHeadshotKilled;		// 0x394 new in Beta 7.1: Killed and SetAnimation set it when the last hit was to the head, DeathNotice then names the weapon "headshot"; Spawn clears it (1.6's name; there it stands after m_flLastAttackedTeammate)
 	bool				m_bPunishedForTK;		// 0x395 new in Counter-Strike 1.1: set when a team killer is kept out of a round; Killed then shows the hint "#Hint_cannot_play_because_tk" and clears it (1.6's name, after m_bHeadshotKilled there too)
+	bool				m_bHasChangedName;		// new in Counter-Strike 1.4: a living player's new name waits in m_szNewName until he spawns (1.6's three names)
+	char				m_szNewName[32];
+	bool				m_bIsDefusing;
 	float				m_flNextZoneCheck;		// 0x398 HandleSignals' next check (0x394 in Beta 7.0, 0x388 to Beta 6.6; 1.6: m_tmHandleSignals)
 	CPlayerSignals		m_signals;				// 0x39c
 	edict_t				*m_pentCurBombTarget;	// 0x3a4 the bomb target the player is in (Counter-Strike 1.6's name; CC4::Use clears it around the plant)
@@ -316,7 +318,6 @@ public:
 	int			m_iFOV;			// field of view
 	int			m_iClientFOV;	// client's known FOV
 	// Counter-Strike (Beta 6.1's names)
-	BOOL		m_fHasAssaultSuit;	// 0x598
 	int			m_iNumSpawns;		// 0x59c spawns since the player joined
 	CBaseEntity	*m_pObserver;		// 0x5a0 Beta 5.0's observer entity; nothing sets it
 	// usable player items 
@@ -331,7 +332,6 @@ public:
 	Vector				m_vecAutoAim;
 	BOOL				m_fOnTarget;
 	int					m_iDeaths;
-	float				m_iRespawnFrames;	// used in PlayerDeathThink() to make sure players can always respawn
 
 	//Player ID
 	void InitStatusBar( void );
@@ -412,14 +412,14 @@ public:
 	void SetBombIcon( int bFlash );
 	void AddAccount( int amount, bool bTrackChange );
 	bool CanPlayerBuy( bool display );
-	void WindowCheck( void );				// Beta 7.1 (Linux symbol): the client is told which windows to close (message WClose)
 	void Disappear( void );
 	void GiveDefaultItems( void );
 	void HandleSignals( void );
-	BOOL HasAssaultSuit( void );
 	bool HintMessage( const char *pMessage, BOOL bDisplayIfPlayerDead, BOOL bOverride );
+	BOOL IsArmored( int nHitGroup );							// Counter-Strike 1.4 (1.6's parameter names)
+	BOOL ShouldDoLargeFlinch( int nHitGroup, int nGunType );	// Counter-Strike 1.4
 	void HostageUsed( void );
-	BOOL IsCommander( void );
+	BOOL IsBombGuy( void );					// Counter-Strike 1.4 (Linux symbol)
 	bool IsObserver( void );
 	void JoiningThink( void );
 	void MakeVIP( void );
@@ -427,6 +427,10 @@ public:
 	void Observer_FindNextPlayer( bool bReverse );
 	void Observer_HandleButtons( void );
 	void Observer_SetMode( int iMode );
+	CBaseEntity *Observer_IsValidTarget( int iPlayerIndex, bool bSameTeam );	// Counter-Strike 1.4
+	void Observer_CheckTarget( void );
+	void Observer_CheckProperties( void );
+	void SetProgressBarTime( int time );
 	void RemoveLevelText( void );
 	void Reset( void );
 	void ResetMenu( void );
@@ -438,10 +442,13 @@ public:
 	void TabulateAmmo( void );
 	void ThrowPrimary( void );
 	void ThrowWeapon( char *pszItemName );
-	void UpdatePath( void );
 	void CheatImpulseCommands( int iImpulse );
 
 	void StartDeathCam( void );
+	void SpawnClientSideCorpse( void );		// Counter-Strike 1.4 (Linux symbol)
+	void ResetStamina( void );				// Counter-Strike 1.4 (Linux symbol)
+	void SendHostagePos( void );			// Counter-Strike 1.4 (Linux symbol)
+	void SetPrefsFromUserinfo( char *infobuffer );	// Counter-Strike 1.4 (Linux symbol; 1.6's parameter name)
 	void StartObserver( Vector vecPosition, Vector vecViewAngle );
 
 	void AddPoints( int score, BOOL bAllowNegativeScore );
@@ -472,8 +479,6 @@ public:
 	void SetSuitUpdate(char *name, int fgroup, int iNoRepeat);
 	void UpdateGeigerCounter( void );
 	void CheckTimeBasedDamage( void );
-	void UpdateStepSound( void );
-	void PlayStepSound(int step, float fvol);
 
 	BOOL FBecomeProne ( void );
 	void BarnacleVictimBitten ( entvars_t *pevBarnacle );
@@ -511,6 +516,11 @@ public:
 	float				m_flPitch;
 	float				m_flYaw;
 	float				m_flGaitMovement;
+
+	// new in Counter-Strike 1.4 (1.6's names and order)
+	int					m_iAutoWepSwitch;
+	bool				m_bVGUIMenus;			// userinfo "vgui_menus" (stood after m_bCanShoot up to 1.3)
+	bool				m_bShowHints;			// 0x885 Counter-Strike 1.4: userinfo "_ah" (SetPrefsFromUserinfo; HintMessage; 1.6's name)
 };
 
 #define AUTOAIM_2DEGREES  0.0348994967025

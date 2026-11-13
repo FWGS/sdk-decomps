@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -54,6 +54,75 @@ void CAM_ToFirstPerson(void);
 void CHud :: MsgFunc_ViewMode( const char *pszName, int iSize, void *pbuf )
 {
 	CAM_ToFirstPerson();
+}
+
+void CheckPlayerModelFiles( void );
+
+void CHud :: MsgFunc_CheckModels( const char *pszName, int iSize, void *pbuf )
+{
+	CheckPlayerModelFiles();
+}
+
+void CHud :: MsgFunc_BombDrop( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+
+	g_PlayerExtraInfo[MAX_CLIENTS].radar_pos.x = READ_COORD();
+	g_PlayerExtraInfo[MAX_CLIENTS].radar_pos.y = READ_COORD();
+	g_PlayerExtraInfo[MAX_CLIENTS].radar_pos.z = READ_COORD();
+
+	g_PlayerExtraInfo[MAX_CLIENTS].flash_next = gHUD.m_flTime;
+	g_PlayerExtraInfo[MAX_CLIENTS].flash_on = 1;
+	g_PlayerExtraInfo[MAX_CLIENTS].flash_left = 99999;
+
+	strcpy( g_PlayerExtraInfo[MAX_CLIENTS].teamname, "TERRORIST" );
+	g_PlayerExtraInfo[MAX_CLIENTS].dead = false;
+}
+
+void CHud :: MsgFunc_BombPickup( const char *pszName, int iSize, void *pbuf )
+{
+	g_PlayerExtraInfo[MAX_CLIENTS].flash_next = -1;
+	g_PlayerExtraInfo[MAX_CLIENTS].flash_on = 0;
+	g_PlayerExtraInfo[MAX_CLIENTS].flash_left = 0;
+}
+
+void CHud :: MsgFunc_HostagePos( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+
+	int flag = READ_BYTE();
+	int idx = READ_BYTE();
+
+	if ( idx <= MAX_HOSTAGES )
+	{
+		g_HostageInfo[idx].origin.x = READ_COORD();
+		g_HostageInfo[idx].origin.y = READ_COORD();
+		g_HostageInfo[idx].origin.z = READ_COORD();
+
+		if ( flag == 1 )
+		{
+			g_HostageInfo[idx].radarflash = gHUD.m_flTime;
+			g_HostageInfo[idx].radarflashon = 1;
+			g_HostageInfo[idx].radarflashes = 99999;
+		}
+
+		strcpy( g_HostageInfo[idx].teamname, "CT" );
+		g_HostageInfo[idx].dead = false;
+	}
+}
+
+void CHud :: MsgFunc_HostageK( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+
+	int idx = READ_BYTE();
+
+	if ( idx <= MAX_HOSTAGES )
+	{
+		g_HostageInfo[idx].radarflash = gHUD.m_flTime;
+		g_HostageInfo[idx].radarflashes = 15;
+		g_HostageInfo[idx].dead = true;
+	}
 }
 
 void CHud :: MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf )

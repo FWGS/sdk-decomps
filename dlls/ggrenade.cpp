@@ -227,11 +227,12 @@ void CGrenade::Explode2( TraceResult *pTrace, int bitsDamageType )
 	RadiusDamage ( pev, pevOwner, mp->m_flBombRadius, CLASS_NONE, bitsDamageType );	// Beta 6.0: the map's bomb radius (info_map_parameters; 500 by default) (was pev->dmg x 5)
 
 	// Counter-Strike 1.3: tell director about it (the bomb's explosion)
-	MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
-		WRITE_BYTE ( DRC_EVENT );
+	MESSAGE_BEGIN( MSG_SPEC, SVC_DIRECTOR );
+		WRITE_BYTE ( 9 );	// command length in bytes
+		WRITE_BYTE ( DRC_CMD_EVENT );
 		WRITE_SHORT( ENTINDEX( this->edict() ) );
 		WRITE_SHORT( 0 );
-		WRITE_LONG( 15 );
+		WRITE_LONG( 15 | DRC_FLAG_FINAL );
 	MESSAGE_END();
 
 	if ( RANDOM_FLOAT( 0 , 1 ) < 0.5 )
@@ -539,7 +540,7 @@ void CGrenade::SG_Smoke( void )
 
 		UTIL_MakeVectors( pev->angles );
 
-		origin = gpGlobals->v_forward * RANDOM_FLOAT( 5, 10 );
+		origin = gpGlobals->v_forward * RANDOM_FLOAT( 3, 8 );
 
 		R_angle = m_angle * ( 3.141517 / 180 );
 		m_angle = ( m_angle + 30 ) % 360;
@@ -549,9 +550,9 @@ void CGrenade::SG_Smoke( void )
 		origin.x = x_old * cos( R_angle ) - y_old * sin( R_angle );
 		origin.y = x_old * sin( R_angle ) + y_old * cos( R_angle );
 
-		origin.z = RANDOM_FLOAT( 0, 25 );	// Counter-Strike 1.3 (1.1: 500)
+		origin.z = RANDOM_FLOAT( 1.5, 3.5 );	// Counter-Strike 1.4 (1.3: 0 to 25; 1.1: 500)
 
-		PLAYBACK_EVENT_FULL( 0, NULL, m_usEvent, 0.0, pev->origin, (float *)&g_vecZero, origin.x, origin.y, origin.z * 10000, 4, m_bLightSmoke, 6 );
+		PLAYBACK_EVENT_FULL( 0, NULL, m_usEvent, 0.0, pev->origin, (float *)&g_vecZero, origin.x, origin.y, origin.z * 100, 4, m_bLightSmoke, 6 );
 	}
 
 	int iMaxSmokePuffs;
@@ -1016,34 +1017,35 @@ void CGrenade::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 		{
 			if ( !m_bStartDefuse )
 			{
+				// Counter-Strike 1.4: the defuser stands still
+				g_engfuncs.pfnSetClientMaxspeed( ENT( player->pev ), 1 );
+
 				if ( player->m_fHasDefuser == true )
 				{
 					// Counter-Strike 1.1: a line in the server's log, here and below
-					UTIL_LogPrintf( "\"%s<%i><%u><CT>\" triggered \"Begin_Bomb_Defuse_With_Kit\"\n", STRING( player->pev->netname ), GETPLAYERUSERID( player->edict() ), GETPLAYERWONID( player->edict() ) );
+					UTIL_LogPrintf( "\"%s<%i><%s><CT>\" triggered \"Begin_Bomb_Defuse_With_Kit\"\n", STRING( player->pev->netname ), GETPLAYERUSERID( player->edict() ), GETPLAYERAUTHID( player->edict() ) );
 					ClientPrint( player->pev, HUD_PRINTCENTER, "#Defusing_Bomb_With_Defuse_Kit" );
 					EMIT_SOUND( ENT(player->pev), CHAN_ITEM, "weapons/c4_disarm.wav", 1.0, ATTN_NORM );
+					player->m_bIsDefusing = true;
 					m_pBombDefuser = pActivator;
 					m_bStartDefuse = true;
 					m_flDefuseCountDown = gpGlobals->time + 5.0;
 					m_fNextDefuse = gpGlobals->time + 0.5;
 
-					MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, player->pev );
-						WRITE_SHORT( 5 );
-					MESSAGE_END();
+					player->SetProgressBarTime( 5 );
 				}
 				else
 				{
-					UTIL_LogPrintf( "\"%s<%i><%u><CT>\" triggered \"Begin_Bomb_Defuse_Without_Kit\"\n", STRING( player->pev->netname ), GETPLAYERUSERID( player->edict() ), GETPLAYERWONID( player->edict() ) );
+					UTIL_LogPrintf( "\"%s<%i><%s><CT>\" triggered \"Begin_Bomb_Defuse_Without_Kit\"\n", STRING( player->pev->netname ), GETPLAYERUSERID( player->edict() ), GETPLAYERAUTHID( player->edict() ) );
 					ClientPrint( player->pev, HUD_PRINTCENTER, "#Defusing_Bomb_Without_Defuse_Kit" );
 					EMIT_SOUND( ENT(player->pev), CHAN_ITEM, "weapons/c4_disarm.wav", 1.0, ATTN_NORM );
+					player->m_bIsDefusing = true;
 					m_pBombDefuser = pActivator;
 					m_bStartDefuse = true;
 					m_flDefuseCountDown = gpGlobals->time + 10.0;
 					m_fNextDefuse = gpGlobals->time + 0.5;
 
-					MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, player->pev );
-						WRITE_SHORT( 10 );
-					MESSAGE_END();
+					player->SetProgressBarTime( 10 );
 				}
 			}
 			else
@@ -1250,22 +1252,29 @@ void CGrenade::C4Think( void )
 			UTIL_Remove( this );
 	}
 
-	// Beta 5.0 (leak): the defuser must keep using the C4 (CGrenade::Use); he may
-	// move, crouch or not, and needs no kit
+	// Beta 5.0 (leak): the defuser must keep using the C4 (CGrenade::Use) and needs no kit.
+	// Counter-Strike 1.4: he stands still on the ground while he defuses (Use sets his speed to 1
+	// and m_bIsDefusing; leaving the ground stops the defusing with a message), and whenever the
+	// defusing ends his speed is his weapon's again.
 	if ( m_bStartDefuse == true && m_pBombDefuser )
 	{
 		if ( m_flDefuseCountDown > gpGlobals->time )
 		{
-			if ( m_fNextDefuse < gpGlobals->time )
-			{
-				// he let go: the progress bar goes and the defusing stops
-				MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, m_pBombDefuser->pev );
-					WRITE_BYTE( 0 );
-				MESSAGE_END();
+			int iOnGround = ( m_pBombDefuser->pev->flags & FL_ONGROUND );	// 1.6's name
 
-				m_pBombDefuser = NULL;
-				m_bStartDefuse = false;
+			if ( m_fNextDefuse < gpGlobals->time || !iOnGround )
+			{
+				if ( !iOnGround )
+					ClientPrint( m_pBombDefuser->pev, HUD_PRINTCENTER, "#C4_Defuse_Must_Be_On_Ground" );
+
+				// he let go: the progress bar goes and the defusing stops
+				((CBasePlayer *)m_pBombDefuser)->ResetMaxSpeed();
+				((CBasePlayer *)m_pBombDefuser)->m_bIsDefusing = false;
+				((CBasePlayer *)m_pBombDefuser)->SetProgressBarTime( 0 );
+
 				m_flDefuseCountDown = 0;
+				m_bStartDefuse = false;
+				m_pBombDefuser = NULL;
 			}
 		}
 		else
@@ -1273,30 +1282,37 @@ void CGrenade::C4Think( void )
 			if ( m_pBombDefuser->pev->deadflag == DEAD_NO )
 			{
 				Broadcast( "BOMBDEF" );
-				// Counter-Strike 1.3: tell director about it (the defusal)
-				MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
-					WRITE_BYTE ( DRC_EVENT );
-					WRITE_SHORT( ENTINDEX( this->edict() ) );
+				// Counter-Strike 1.3: tell director about it (the defusal); 1.4: SDK 2.3's message, the defuser's index
+				MESSAGE_BEGIN( MSG_SPEC, SVC_DIRECTOR );
+					WRITE_BYTE ( 9 );	// command length in bytes
+					WRITE_BYTE ( DRC_CMD_EVENT );
+					WRITE_SHORT( ENTINDEX( m_pBombDefuser->edict() ) );
 					WRITE_SHORT( 0 );
-					WRITE_LONG( 15 );
+					WRITE_LONG( 15 | DRC_FLAG_FINAL | DRC_FLAG_FACEPLAYER | DRC_FLAG_DRAMATIC );
 				MESSAGE_END();
 
 				// Beta 6.6: "%s has defused the bomb\n"; Counter-Strike 1.1: the log line's new form
-				UTIL_LogPrintf( "\"%s<%i><%u><CT>\" triggered \"Defused_The_Bomb\"\n", STRING( m_pBombDefuser->pev->netname ), GETPLAYERUSERID( m_pBombDefuser->edict() ), GETPLAYERWONID( m_pBombDefuser->edict() ) );
+				UTIL_LogPrintf( "\"%s<%i><%s><CT>\" triggered \"Defused_The_Bomb\"\n", STRING( m_pBombDefuser->pev->netname ), GETPLAYERUSERID( m_pBombDefuser->edict() ), GETPLAYERAUTHID( m_pBombDefuser->edict() ) );
 				// Beta 5.0: the last beep, still sounding, is stopped
 				UTIL_EmitAmbientSound( ENT(pev), pev->origin, "weapons/c4_beep5.wav", 0, ATTN_NONE, SND_STOP, 0 );
 				EMIT_SOUND(ENT(m_pBombDefuser->pev), CHAN_WEAPON, "weapons/c4_disarmed.wav", 1.0, ATTN_NORM);
 				UTIL_Remove( this );
 				m_bJustBlew = TRUE;
+
+				((CBasePlayer *)m_pBombDefuser)->ResetMaxSpeed();
+				((CBasePlayer *)m_pBombDefuser)->m_bIsDefusing = false;
+
 				((CHalfLifeMultiplay *)g_pGameRules)->m_fBombDefused = true;
 				((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
-				m_pBombDefuser = NULL;
 				m_bStartDefuse = false;
+				m_pBombDefuser = NULL;
 				return;
 			}
 
 			// Beta 5.0: a defuser who died at the end lets the next one start
 			// afresh (the leak left the defuse running)
+			((CBasePlayer *)m_pBombDefuser)->ResetMaxSpeed();
+			((CBasePlayer *)m_pBombDefuser)->m_bIsDefusing = false;
 			m_bStartDefuse = false;
 			m_pBombDefuser = NULL;
 		}

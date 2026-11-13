@@ -41,6 +41,8 @@ void CM249::Spawn( )
 	SET_MODEL(ENT(pev), "models/w_m249.mdl");
 
 	m_iDefaultAmmo = M249_DEFAULT_GIVE;
+	m_flAccuracy = 0.2;
+	m_iShotsFired = 0;
 
 	FallInit();// get ready to fall down.
 }
@@ -49,7 +51,6 @@ void CM249::Spawn( )
 void CM249::Precache( void )
 {
 	PRECACHE_MODEL("models/v_m249.mdl");
-	PRECACHE_MODEL("models/v_m249_r.mdl");
 	PRECACHE_MODEL("models/w_m249.mdl");
 
 	PRECACHE_SOUND("weapons/m249-1.wav");
@@ -88,16 +89,13 @@ BOOL CM249::Deploy( )
 	m_iShotsFired = 0;
 	m_iShellOn = 1;
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_m249.mdl", "models/p_m249.mdl", M249_DRAW, "m249", UseDecrement() ? 1 : 0 );
-	else
-		return DefaultDeploy( "models/v_m249_r.mdl", "models/p_m249.mdl", M249_DRAW, "m249", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_m249.mdl", "models/p_m249.mdl", M249_DRAW, "m249", UseDecrement() ? 1 : 0 );
 }
 
 void CM249::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		M249Fire( 0.045 + ( 0.4 * m_flAccuracy ), 0.1, FALSE );
+		M249Fire( 0.045 + ( 0.5 * m_flAccuracy ), 0.1, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
 		M249Fire( 0.045 + ( 0.095 * m_flAccuracy ), 0.1, FALSE );
 	else
@@ -151,7 +149,7 @@ void CM249::M249Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	flag = 0;
 #endif
 
-	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireM249, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), FALSE, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireM249, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 100), (int)(m_pPlayer->pev->punchangle.y * 100), FALSE, FALSE );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 
@@ -161,10 +159,10 @@ void CM249::M249Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.6;
 
-	if ( m_pPlayer->pev->velocity.Length2D() > 0 )
-		KickBack( 1.1, 0.5, 0.3, 0.06, 4.0, 3.0, 8 );
-	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
+	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
 		KickBack( 1.8, 0.65, 0.45, 0.125, 5.0, 3.5, 8 );
+	else if ( m_pPlayer->pev->velocity.Length2D() > 0 )
+		KickBack( 1.1, 0.5, 0.3, 0.06, 4.0, 3.0, 8 );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
 		KickBack( 0.75, 0.325, 0.25, 0.025, 3.5, 2.5, 9 );
 	else
