@@ -33,8 +33,9 @@ release_init() {
 	[ -f "$VC_TOOLCHAINS/wineprefix/system.reg" ] || release_die "no Wine prefix at $VC_TOOLCHAINS/wineprefix (docs/setup.md)"
 	[ -d "$1" ] || release_die "SRC: no folder $1"
 	SRC=$(cd "$1" && pwd)
-	[ -f "$SRC/dlls/hl.dsp" ] && [ -f "$SRC/cl_dll/cl_dll.dsp" ] ||
-		release_die "$SRC has no dlls/hl.dsp and cl_dll/cl_dll.dsp: not a checkout of a mod branch"
+	# the server's project: dlls/hl.dsp, or the one the mod's script names (RELEASE_SERVER_DSP)
+	[ -f "$SRC/${RELEASE_SERVER_DSP:-dlls/hl.dsp}" ] && [ -f "$SRC/cl_dll/cl_dll.dsp" ] ||
+		release_die "$SRC has no ${RELEASE_SERVER_DSP:-dlls/hl.dsp} and cl_dll/cl_dll.dsp: not a checkout of a mod branch"
 	mkdir -p "$2"
 	OUT=$(cd "$2" && pwd)
 	for c in wine wineserver faketime python3 sha256sum cmp; do
