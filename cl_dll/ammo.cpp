@@ -19,13 +19,14 @@
 //
 
 #include "hud.h"
-#include "util.h"
+#include "cl_util.h"
 #include "parsemsg.h"
 
 #include <string.h>
 #include <stdio.h>
 
 #include "ammohistory.h"
+#include "vgui_TeamFortressViewport.h"
 
 WEAPON *gpActiveSel;	// NULL means off, 1 means just the menu bar, otherwise
 						// this points to the active weapon menu item
@@ -34,6 +35,8 @@ WEAPON *gpLastSel;		// Last weapon menu selection
 client_sprite_t *GetSpriteList(client_sprite_t *pList, const char *psz, int iRes, int iCount);
 
 WeaponsResource gWR;
+
+int g_weaponselect = 0;
 
 void WeaponsResource :: LoadAllWeaponSprites( void )
 {
@@ -249,6 +252,7 @@ DECLARE_COMMAND(m_Ammo, Slot10);
 DECLARE_COMMAND(m_Ammo, Close);
 DECLARE_COMMAND(m_Ammo, NextWeapon);
 DECLARE_COMMAND(m_Ammo, PrevWeapon);
+DECLARE_COMMAND(m_Ammo, Adjust_Crosshair);
 
 // width of ammo fonts
 #define AMMO_SMALL_WIDTH 10
@@ -282,6 +286,7 @@ int CHudAmmo::Init(void)
 	HOOK_COMMAND("cancelselect", Close);
 	HOOK_COMMAND("invnext", NextWeapon);
 	HOOK_COMMAND("invprev", PrevWeapon);
+	HOOK_COMMAND("adjust_crosshair", Adjust_Crosshair);
 
 	Reset();
 
@@ -294,6 +299,10 @@ int CHudAmmo::Init(void)
 	m_flCrossGap = 0;
 	m_iLastClip = 0;
 	m_iCrossAlpha = 200;
+	m_iCrossR = 50;
+	m_iCrossG = 250;
+	m_iCrossB = 50;
+	m_iCrossColor = 0;
 
 	gWR.Init();
 	gHR.Init();
@@ -397,7 +406,10 @@ void CHudAmmo::Think(void)
 	if (gHUD.m_iKeyBits & IN_ATTACK)
 	{
 		if (gpActiveSel != (WEAPON *)1)
+		{
 			ServerCmd(gpActiveSel->szName);
+			g_weaponselect = gpActiveSel->iId;
+		}
 
 		gpLastSel = gpActiveSel;
 		gpActiveSel = NULL;
@@ -455,13 +467,14 @@ void WeaponsResource :: SelectSlot( int iSlot, int fAdvance, int iDirection )
 		return;
 
 	WEAPON *p = NULL;
+	bool fastSwitch = CVAR_GET_FLOAT( "hud_fastswitch" ) != 0;
 
 	if ( (gpActiveSel == NULL) || (gpActiveSel == (WEAPON *)1) || (iSlot != gpActiveSel->iSlot) )
 	{
 		PlaySound( "common/wpn_hudon.wav", 1 );
 		p = GetFirstPos( iSlot );
 
-		if ( p && CVAR_GET_FLOAT( "hud_fastswitch" ) > 0 ) // check for fast weapon switch mode
+		if ( p && fastSwitch ) // check for fast weapon switch mode
 		{
 			// if fast weapon switch is on, then weapons can be selected in a single keypress
 			// but only if there is only one item in the bucket
@@ -483,12 +496,17 @@ void WeaponsResource :: SelectSlot( int iSlot, int fAdvance, int iDirection )
 	}
 
 	
-	if ( !p )  // if no selection found,  just display the weapon list
-		gpActiveSel = (WEAPON *)1;
+	if ( !p )  // no selection found
+	{
+		// just display the weapon list, unless fastswitch is on just ignore it
+		if ( !fastSwitch )
+			gpActiveSel = (WEAPON *)1;
+		else
+			gpActiveSel = NULL;
+	}
 	else 
 		gpActiveSel = p;
 }
-
 
 //------------------------------------------------------------------------
 // Message Handlers
@@ -706,55 +724,89 @@ int CHudAmmo::MsgFunc_WeaponList(const char *pszName, int iSize, void *pbuf )
 //------------------------------------------------------------------------
 // Command Handlers
 //------------------------------------------------------------------------
+// Slot button pressed
+void CHudAmmo::SlotInput( int iSlot )
+{
+	// Let the Viewport use it first, for menus
+	if ( gViewPort && gViewPort->SlotInput( iSlot ) )
+		return;
+
+	gWR.SelectSlot(iSlot, FALSE, 1);
+}
 
 void CHudAmmo::UserCmd_Slot1(void)
 {
-	gWR.SelectSlot(0, FALSE, 1);
+	SlotInput( 0 );
 }
 
 void CHudAmmo::UserCmd_Slot2(void)
 {
-	gWR.SelectSlot(1, FALSE, 1);
+	SlotInput( 1 );
 }
 
 void CHudAmmo::UserCmd_Slot3(void)
 {
-	gWR.SelectSlot(2, FALSE, 1);
+	SlotInput( 2 );
 }
 
 void CHudAmmo::UserCmd_Slot4(void)
 {
-	gWR.SelectSlot(3, FALSE, 1);
+	SlotInput( 3 );
 }
 
 void CHudAmmo::UserCmd_Slot5(void)
 {
-	gWR.SelectSlot(4, FALSE, 1);
+	SlotInput( 4 );
 }
 
 void CHudAmmo::UserCmd_Slot6(void)
 {
-	gWR.SelectSlot(5, FALSE, 1);
+	SlotInput( 5 );
 }
 
 void CHudAmmo::UserCmd_Slot7(void)
 {
-	gWR.SelectSlot(6, FALSE, 1);
+	SlotInput( 6 );
 }
 
 void CHudAmmo::UserCmd_Slot8(void)
 {
-	gWR.SelectSlot(7, FALSE, 1);
+	SlotInput( 7 );
 }
 
 void CHudAmmo::UserCmd_Slot9(void)
 {
-	gWR.SelectSlot(8, FALSE, 1);
+	SlotInput( 8 );
 }
 
 void CHudAmmo::UserCmd_Slot10(void)
 {
-	gWR.SelectSlot(9, FALSE, 1);
+	SlotInput( 9 );
+}
+
+// cycles the crosshair's colour (name ours)
+// The switch stands one case to a line, as Counter-Strike 1.6's ammo.cpp has this function's
+// cases (its lines 911 to 921: these five colours, the same five again for a crosshair that
+// is not drawn additively, then this default).  The layout counts: VC6's intermediate code
+// carries a line record for every source line with code (5 bytes each), and ammo.obj places
+// the headers' inline functions by the intermediate code before each of its own functions.
+// Five lines to a case put vgui::Frame's copy constructor before DrawAmmoBar; retail has it
+// after.
+void CHudAmmo::UserCmd_Adjust_Crosshair(void)
+{
+	m_iCrossColor++;
+	if ( m_iCrossColor > 4 )
+		m_iCrossColor = 0;
+
+	switch ( m_iCrossColor )
+	{
+	case 0: m_iCrossR = 50; m_iCrossG = 250; m_iCrossB = 50; break;
+	case 1: m_iCrossR = 250; m_iCrossG = 50; m_iCrossB = 50; break;
+	case 2: m_iCrossR = 50; m_iCrossG = 50; m_iCrossB = 250; break;
+	case 3: m_iCrossR = 250; m_iCrossG = 250; m_iCrossB = 50; break;
+	case 4: m_iCrossR = 50; m_iCrossG = 250; m_iCrossB = 250; break;
+	default: m_iCrossR = 50; m_iCrossG = 250; m_iCrossB = 50; break;
+	}
 }
 
 void CHudAmmo::UserCmd_Close(void)
@@ -986,10 +1038,10 @@ int CHudAmmo::Draw(float flTime)
 		if ( m_iCrossAlpha > 250 )
 			m_iCrossAlpha = 250;
 
-		FillRGBA( ScreenWidth / 2 - (int)m_flCrossGap - 5, ScreenHeight / 2, 5, 1, 50, 250, 50, m_iCrossAlpha );
-		FillRGBA( ScreenWidth / 2 + (int)m_flCrossGap, ScreenHeight / 2, 5, 1, 50, 250, 50, m_iCrossAlpha );
-		FillRGBA( ScreenWidth / 2, ScreenHeight / 2 - (int)m_flCrossGap - 5, 1, 5, 50, 250, 50, m_iCrossAlpha );
-		FillRGBA( ScreenWidth / 2, ScreenHeight / 2 + (int)m_flCrossGap, 1, 5, 50, 250, 50, m_iCrossAlpha );
+		FillRGBA( ScreenWidth / 2 - (int)m_flCrossGap - 5, ScreenHeight / 2, 5, 1, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
+		FillRGBA( ScreenWidth / 2 + (int)m_flCrossGap, ScreenHeight / 2, 5, 1, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
+		FillRGBA( ScreenWidth / 2, ScreenHeight / 2 - (int)m_flCrossGap - 5, 1, 5, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
+		FillRGBA( ScreenWidth / 2, ScreenHeight / 2 + (int)m_flCrossGap, 1, 5, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
 	}
 
 	// SPR_Draw Ammo
@@ -1165,7 +1217,19 @@ int CHudAmmo::DrawWList(float flTime)
 	else 
 		iActiveSlot = gpActiveSel->iSlot;
 
-	x = ScreenWidth >= 640 ? 138 : 70; //!!!
+	// sic: the SDK's `x = 10;` stays (a dead store) and the new value follows as an if/else on
+	// one line, here and before the buckets below.  The image gives only the value; the text is
+	// read from two measurements.  Counter-Strike 1.6 has this conditional on one source line,
+	// one line below the place of the SDK's `x = 10;`, at both places.  And retail's ammo.obj
+	// has vgui::ActionSignal's constructor between the two money hooks: with the colour switch
+	// above at one case a line, DrawAmmoBar and this function need 109 to 122 bytes more
+	// intermediate code than `x = ScreenWidth >= 640 ? 138 : 70;` gives in Betas 6.5 to 7.1
+	// together (7.1 alone, by full builds: 110 to 129).  This text gives 118; the conditional
+	// expression with the kept stores 38, the one-line if/else without them 80.  An if/else on
+	// four lines without the stores gives 110 and builds the same file in all four versions:
+	// the image cannot tell the two apart.
+	x = 10; //!!!
+	if ( ScreenWidth >= 640 ) x = 138; else x = 70;
 	y = 10; //!!!
 	
 
@@ -1213,8 +1277,8 @@ int CHudAmmo::DrawWList(float flTime)
 
 
 	a = 128; //!!!
-	x = ScreenWidth >= 640 ? 138 : 70;
-
+	x = 10;
+	if ( ScreenWidth >= 640 ) x = 138; else x = 70;	// sic: as above
 	// Draw all of the buckets
 	for (i = 0; i < MAX_WEAPON_SLOTS; i++)
 	{
@@ -1453,6 +1517,103 @@ int CHudMoney::Draw( float flTime )
 
 		gHUD.DrawHudNumber( x, y, m_iDelta < 0 ? -m_iDelta : m_iDelta, r2, g2, b2 );
 	}
+
+	// sic: a stand-in.  Retail's money functions carried more intermediate code than ours for
+	// the same machine code.  ammo.obj builds its own precompiled header and emits the VGUI
+	// classes' inline copy constructors and assignments by the intermediate code before each
+	// of its own functions, so their places among VidInit .. GetSpriteList and vgui::Dar<T>'s
+	// members measure it: 83 to 86 empty statements here give retail's order in Betas 6.5, 6.6
+	// and 7.0 (6.5 alone takes 82 to 86, 6.6 79 to 86, 7.0 83 to 86).  At least 8 of them must
+	// stand before the end of this function (6.6 has App's copy constructor before
+	// MsgFunc_Money); the others give the same order between MsgFunc_BlinkAcct and
+	// GetSpriteList (measured in an unused inline function there), where Counter-Strike 1.6's
+	// ammo.cpp has nothing.  What text it was, the image does not say.
+	//
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
 
 	return 1;
 }

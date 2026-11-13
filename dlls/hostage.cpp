@@ -24,6 +24,17 @@
 
 #include "extdll.h"
 #include "util.h"
+// The include of studio.h (needed since Beta 6.5 for studiohdr_t) stands
+// ahead of cbase.h: the place is ours, but the image pins that this file's
+// list does not begin extdll.h util.h cbase.h. In every server from Beta 6.5
+// to 1.3 hostage.obj has GetClassPtr<CBaseEntity> ahead of
+// CHostage::BloodColor, the order of a source that writes its own .pch, which
+// under /YX a list beginning with those three headers never does in a
+// Rebuild All (it reuses the three-header .pch). Counter-Strike 1.0's PDB
+// has one link, so no later build can explain it (measured: compiled after
+// the three-header .pch this text gives retail's object; with the include
+// behind hostage.h, 79 bytes differ)
+#include "../engine/studio.h"
 #include "cbase.h"
 #include "monsters.h"
 #include "weapons.h"
@@ -31,7 +42,6 @@
 #include "player.h"
 #include "gamerules.h"
 #include "hostage.h"
-#include "../engine/studio.h"
 
 extern void Broadcast( const char *sentence );	// multiplay_gamerules.cpp (Beta 3.0)
 extern void ShowMenu( CBasePlayer *pPlayer, int bitsValidSlots, int nDisplayTime, BOOL fNeedMore, char *pszText );	// client.cpp (Beta 5.0 leak)
@@ -140,6 +150,26 @@ void CHostage::IdleThink( void )
 	DispatchAnimEvents( flInterval );
 	pev->nextthink = gpGlobals->time + 0.1;
 
+	// sic: a stand-in for text the image cannot give. Two facts ask for it.
+	// Every Linux library from Beta 3.1 on has CHostage::GetActivity written
+	// out, which egcs does for the inline functions a file calls, yet no code
+	// reads the member: the call is in text that compiles to nothing. And
+	// IdleThink's inline expansion (which Vector operators and constructors
+	// are called, which expanded) follows the inliner's budget, twice the
+	// function's size as written: Beta 6.5's code needs 40 to 56 units more
+	// than the visible text has, Beta 6.6's (the same text plus one log
+	// line) exactly 44 (11 unused int locals; 10 and 12 do not fit). This
+	// block, ahead of the function's other inline calls, with the unused
+	// bContinue below, gives retail's bytes in both versions (Beta 6.5's
+	// "== ACT_IDLE" form is 4 units too long for 6.6); the real text is not known.
+	if ( 0 )
+	{
+		if ( GetActivity() )
+			SetActivity( ACT_WALK );
+		else
+			SetActivity( ACT_IDLE );
+	}
+
 	if ( pev->deadflag != DEAD_DEAD )
 	{
 		// the leader is dead: nobody to follow
@@ -167,29 +197,40 @@ void CHostage::IdleThink( void )
 				{
 					if ( pPlayer->m_iTeam == TEAM_CT )
 					{
-					BOOL fRescueSpots = FALSE;
-					if ( UTIL_FindEntityByClassname( NULL, "info_hostage_rescue" ) )
-						fRescueSpots = TRUE;
-
+					// the three locals as Counter-Strike 1.6 still has them (its debug
+					// information: names, the lines, bContinue never used): the first
+					// search goes to pSpot, the loops are while loops
 					CBaseEntity *pSpot;
-					for ( pSpot = UTIL_FindEntityByClassname( NULL, "info_hostage_rescue" ); pSpot != NULL; pSpot = UTIL_FindEntityByClassname( pSpot, "info_hostage_rescue" ) )
+					BOOL bContinue = FALSE, bResHostagePt = FALSE;
+
+					pSpot = UTIL_FindEntityByClassname( NULL, "info_hostage_rescue" );
+					if ( pSpot )
+						bResHostagePt = TRUE;
+
+					pSpot = UTIL_FindEntityByClassname( NULL, "info_hostage_rescue" );
+					while ( pSpot != NULL )
 					{
 						if ( ( pSpot->pev->origin - pev->origin ).Length() < 256 )
 						{
 							m_fRescued = TRUE;	// Beta 6.0: no console line any more
 							break;
 						}
+
+						pSpot = UTIL_FindEntityByClassname( pSpot, "info_hostage_rescue" );
 					}
 
-					if ( !fRescueSpots )
+					if ( !bResHostagePt )
 					{
-						for ( pSpot = UTIL_FindEntityByClassname( NULL, "info_player_start" ); pSpot != NULL; pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_start" ) )
+						pSpot = UTIL_FindEntityByClassname( NULL, "info_player_start" );
+						while ( pSpot != NULL )
 						{
 							if ( ( pSpot->pev->origin - pev->origin ).Length() < 256 )
 							{
 								m_fRescued = TRUE;
 								break;
 							}
+
+							pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_start" );
 						}
 					}
 					}
@@ -430,8 +471,6 @@ void CHostage::RePosition( void )
 
 int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType )
 {
-	int iForce;	// how hard the body is thrown
-
 	// Beta 3.0: a hit of no particular group counts as a stomach hit, and
 	// any other as a chest hit (each written as a case of its own: the
 	// object's constants come in the order of first use, 1.75 before 2.5,
@@ -490,73 +529,71 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 		pev->flags &= ~FL_ONGROUND;
 
 		// Beta 3.0: a hit of no particular group, and any other, dies as from a head shot
+		// (Beta 6.5: the body is not thrown any more)
 		switch ( m_LastHitGroup )
 		{
 		case HITGROUP_CHEST:
 			SetActivity( ACT_DIESIMPLE );
-			iForce = 2;
 			break;
 		case HITGROUP_STOMACH:
 			SetActivity( ACT_DIEFORWARD );
-			iForce = 1;
 			break;
 		case HITGROUP_LEFTARM:
 			SetActivity( ACT_DIEBACKWARD );
-			iForce = 2;
 			break;
 		case HITGROUP_RIGHTARM:
 			SetActivity( ACT_DIESIMPLE );
-			iForce = 2;
 			break;
 		case HITGROUP_LEFTLEG:
 			SetActivity( ACT_DIEBACKWARD );
-			iForce = 1;
 			break;
 		case HITGROUP_RIGHTLEG:
 			SetActivity( ACT_DIEFORWARD );
-			iForce = 1;
 			break;
 		case HITGROUP_GENERIC:
 		case HITGROUP_HEAD:
 			SetActivity( ACT_DIE_HEADSHOT );
-			iForce = 2;
 			break;
-		default:	// written apart, as the jump table shows (a shared label drops cases 0 and 1 from it)
+		default:
 			SetActivity( ACT_DIE_HEADSHOT );
-			iForce = 2;
 			break;
 		}
 
-		// Beta 6.0: only with an attacker (a hostage killed by nobody pays
-		// nothing and falls where it is)
+		// Beta 6.0: only with an attacker (a hostage killed by nobody pays nothing)
 		if ( pevAttacker )
 		{
-			// killing a hostage costs the killer 1500 dollars (Beta 3.1: 850)
+			// killing a hostage costs the killer 2250 dollars (Beta 3.1: 850, Beta 5.0: 1500)
 			if ( GetClassPtr( (CBaseEntity *)pevAttacker )->IsPlayer() )
 			{
 				CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pevAttacker );
 
-				pPlayer->AddAccount( -1500, true );
+				pPlayer->AddAccount( -2250, true );
 				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You killed a hostage!" );	// Beta 5.0 (leak)
 				if ( !(pPlayer->m_flDisplayHistory & 0x40) )	// hostage killed
 				{
 					pPlayer->HintMessage( "You have lost money for killing a hostage.", FALSE, FALSE );
 					pPlayer->m_flDisplayHistory |= 0x40;
 				}
+
+				// Beta 6.5: mp_hostagepenalty, the number of hostages a terrorist may
+				// kill; one before it he is warned, at it the server drops him
+				int iHostagePenalty = CVAR_GET_FLOAT( "mp_hostagepenalty" );	// name ours
+
+				if ( pPlayer->m_iTeam == TEAM_TERRORIST && iHostagePenalty != 0 )
+				{
+					pPlayer->m_iHostagesKilled++;
+
+					if ( pPlayer->m_iHostagesKilled == iHostagePenalty - 1 )
+						pPlayer->HintMessage( "If you kill one more hostage, you will be removed from the server.", TRUE, FALSE );
+					else if ( pPlayer->m_iHostagesKilled >= iHostagePenalty )
+						CLIENT_COMMAND( pPlayer->edict(), "disconnect\n" );
+				}
 			}
-
-			// the body flies away from the killer
-			pev->velocity = pev->origin - pevAttacker->origin;
-			pev->velocity = pev->velocity / pev->velocity.Length();
-			pev->velocity = pev->velocity * iForce * RANDOM_FLOAT( 100, 150 );
-			pev->velocity.z += RANDOM_FLOAT( 100, 200 ) * iForce;
-
-			if ( pev->velocity.Length() > 350 )
-				pev->velocity = pev->velocity / pev->velocity.Length() * 350;
 		}
 
 		pev->takedamage = DAMAGE_NO;
 		pev->deadflag = DEAD_DEAD;
+		pev->solid = SOLID_NOT;	// Beta 6.5
 		pev->nextthink = gpGlobals->time + 3;
 		SetThink( Remove );
 

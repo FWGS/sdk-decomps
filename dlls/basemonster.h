@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -58,7 +58,7 @@ public:
 	float DamageForce( float damage );
 	virtual void Killed( entvars_t *pevAttacker, int iGib );
 	virtual void PainSound ( void ) { return; };
-	virtual void ResetMaxSpeed( void ) {}	// Beta 5.0 (leak): Linux symbol; the player's speed follows his weapon
+	virtual void ResetMaxSpeed( void ) {}
 
 	void RadiusDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType );
 	void RadiusDamage(Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType );
@@ -87,9 +87,9 @@ public:
 	virtual BOOL FInViewCone ( Vector *pOrigin );// see if given location is in monster's view cone
 	void TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType);
 	void MakeDamageBloodDecal ( int cCount, float flNoise, TraceResult *ptr, const Vector &vecDir );
-	void BloodSplat( Vector &vecSrc, Vector &vecDir, int HitLocation, int iVelocity );	// Beta 6.0 (Linux symbol; parameter names ours)
 	virtual BOOL	IsAlive( void ) { return (pev->deadflag != DEAD_DEAD); }
 	virtual int		BloodColor( void ) { return m_bloodColor; }
+	void BloodSplat( Vector &vecSrc, Vector &vecDir, int HitLocation, int iVelocity );	// Counter-Strike (Linux symbol; parameter names ours)
 
 };
 

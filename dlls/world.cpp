@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -489,6 +489,16 @@ void CWorld :: Spawn( void )
 		strncpy( g_szMapBriefingText, pFile, 510 );
 		PRECACHE_GENERIC( UTIL_VarArgs( "maps/%s.txt", STRING( gpGlobals->mapname ) ) );
 	}
+	else
+	{
+		// Beta 6.5: a map without a briefing of its own gets maps/default.txt
+		pFile = (char *)LOAD_FILE_FOR_ME( UTIL_VarArgs( "maps/default.txt" ), &flength );
+		if ( pFile && flength )
+		{
+			strncpy( g_szMapBriefingText, pFile, 510 );
+			PRECACHE_GENERIC( UTIL_VarArgs( "maps/default.txt" ) );
+		}
+	}
 	FREE_FILE( pFile );
 }
 
@@ -500,7 +510,7 @@ void CWorld :: Precache( void )
 	
 #if 1
 	CVAR_SET_STRING("sv_gravity", "800"); // 67ft/sec
-	CVAR_SET_STRING("sv_maxspeed", "320");	// Counter-Strike Beta 3.0
+	CVAR_SET_STRING("sv_maxspeed", "900");	// Counter-Strike Beta 3.0: 320; Beta 6.5: 900 (the weapons limit the speed, pm_shared)
 	CVAR_SET_STRING("sv_stepsize", "18");
 #else
 	CVAR_SET_STRING("sv_gravity", "384"); // 32ft/sec
@@ -568,6 +578,15 @@ void CWorld :: Precache( void )
 		PRECACHE_MODEL( "models/agibs.mdl" );
 	}
 
+	PRECACHE_SOUND ("weapons/ric1.wav");
+	PRECACHE_SOUND ("weapons/ric2.wav");
+	PRECACHE_SOUND ("weapons/ric3.wav");
+	PRECACHE_SOUND ("weapons/ric4.wav");
+	PRECACHE_SOUND ("weapons/ric5.wav");
+	PRECACHE_SOUND ("weapons/ric_metal-1.wav");	// Counter-Strike Beta 6.5
+	PRECACHE_SOUND ("weapons/ric_metal-2.wav");
+	PRECACHE_SOUND ("weapons/ric_conc-1.wav");
+	PRECACHE_SOUND ("weapons/ric_conc-2.wav");
 //
 // Setup light animation tables. 'a' is total darkness, 'z' is maxbright.
 //

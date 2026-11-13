@@ -20,7 +20,7 @@
 //
 
 #include "hud.h"
-#include "util.h"
+#include "cl_util.h"
 #include "parsemsg.h"
 
 #include <string.h>
@@ -60,6 +60,9 @@ void CHudStatusBar :: Reset( void )
 	memset( m_iStatusValues, 0, sizeof m_iStatusValues );
 
 	m_iStatusValues[0] = 1;  // 0 is the special index, which always returns true
+
+	for ( i = 0; i < 32; i++ )
+		g_PlayerExtraInfo[i].health_time = 0;
 }
 
 void CHudStatusBar :: ParseStatusString( int line_num )
@@ -129,10 +132,11 @@ void CHudStatusBar :: ParseStatusString( int line_num )
 						switch ( valtype )
 						{
 						case 'p':  // player name
-							GetPlayerInfo( indexval, &gHUD.m_Scoreboard.m_PlayerInfoList[indexval] );
-							if ( gHUD.m_Scoreboard.m_PlayerInfoList[indexval].name != NULL )
+							GetPlayerInfo( indexval, &g_PlayerInfoList[indexval] );
+							if ( g_PlayerInfoList[indexval].name != NULL )
 							{
-								strncpy( szRepString, gHUD.m_Scoreboard.m_PlayerInfoList[indexval].name, MAX_PLAYER_NAME_LENGTH );
+								strncpy( szRepString, g_PlayerInfoList[indexval].name, MAX_PLAYER_NAME_LENGTH );
+								gHUD.m_Health.m_iPlayerTarget = indexval;
 							}
 							else
 							{
@@ -140,6 +144,8 @@ void CHudStatusBar :: ParseStatusString( int line_num )
 							}
 							break;
 						case 'i':  // number
+							g_PlayerExtraInfo[gHUD.m_Health.m_iPlayerTarget].health_time = gHUD.m_flTime + 5;
+							g_PlayerExtraInfo[gHUD.m_Health.m_iPlayerTarget].health = indexval;
 							sprintf( szRepString, "%d", indexval );
 							break;
 						case 'c':  // relation to the player (letter and name ours)
@@ -184,6 +190,9 @@ int CHudStatusBar :: Draw( float fTime )
 		m_bReparseString = FALSE;
 	}
 
+	if ( g_iUser1 > 0 )
+		return 0;
+
 	// Draw the status bar lines
 	for ( int i = 0; i < MAX_STATUSBAR_LINES; i++ )
 	{
@@ -192,9 +201,9 @@ int CHudStatusBar :: Draw( float fTime )
 
 		int Y_START;
 		if ( ScreenHeight >= 480 )
-			Y_START = ScreenHeight - 45;
+			Y_START = ScreenHeight - 55;
 		else
-			Y_START = ScreenHeight - 35;
+			Y_START = ScreenHeight - 45;
 
 		int x = 5;
 		int y = Y_START - ( TextHeight * i ); // draw along bottom of screen

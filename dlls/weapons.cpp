@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -173,47 +173,7 @@ void DecalGunshot( TraceResult *pTrace, int iBulletType, bool fShooterOnly, entv
 	if ( !UTIL_IsValidEntity( pTrace->pHit ) )
 		return;
 
-	if ( VARS(pTrace->pHit)->solid == SOLID_BSP || VARS(pTrace->pHit)->movetype == MOVETYPE_PUSHSTEP )
-	{
-		CBaseEntity *pEntity = NULL;
-		// Decal the wall with a gunshot
-		if ( !FNullEnt(pTrace->pHit) )
-			pEntity = CBaseEntity::Instance(pTrace->pHit);
-
-		// Counter-Strike Beta 6.0: metal takes one of the first three
-		// gunshot decals (and says so on the console)
-		int decalNumber;	// name ours
-
-		if ( bHitMetal == false )
-			decalNumber = DamageDecal( pEntity, DMG_BULLET );
-		else
-		{
-			ALERT( at_console, "Hit Metal!!\n" );
-			decalNumber = RANDOM_LONG( 0, 2 );
-		}
-
-		switch( iBulletType )
-		{
-		case BULLET_PLAYER_9MM:
-		case BULLET_MONSTER_9MM:
-		case BULLET_PLAYER_MP5:
-		case BULLET_MONSTER_MP5:
-		case BULLET_PLAYER_BUCKSHOT:
-		case BULLET_PLAYER_357:
-		default:
-			// smoke and decal
-			UTIL_GunshotDecalTrace( pTrace, decalNumber, fShooterOnly, pevShooter );
-			break;
-		case BULLET_MONSTER_12MM:
-			// smoke and decal
-			UTIL_GunshotDecalTrace( pTrace, decalNumber, fShooterOnly, pevShooter );
-			break;
-		case BULLET_PLAYER_CROWBAR:
-			// wall decal
-			UTIL_DecalTrace( pTrace, DamageDecal( pEntity, DMG_CLUB ) );
-			break;
-		}
-	}
+	// Beta 6.5: nothing more; the client's events draw the decals
 }
 
 
@@ -463,14 +423,11 @@ void W_Precache(void)
 	// HE grenade
 	UTIL_PrecacheOtherWeapon( "weapon_hegrenade" );
 
+	// Beta 6.5: the smoke grenade
+	UTIL_PrecacheOtherWeapon( "weapon_smokegrenade" );
+
 	// Beta 5.0 (leak): the C4 is a weapon
 	UTIL_PrecacheOtherWeapon( "weapon_c4" );
-	UTIL_PrecacheOther( "debris" );
-
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
-	// satchel charge
-	UTIL_PrecacheOtherWeapon( "weapon_satchel" );
-#endif
 
 
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
@@ -740,8 +697,8 @@ void CBasePlayerItem::DefaultTouch( CBaseEntity *pOther )
 //=========================================================
 void CBasePlayerWeapon::EjectBrassLate( void )
 {
-	// Beta 6.0: the shell flies out on the side away from the gun hand, 6
-	// units out (was 10)
+	// Beta 6.0: the shell flies out on the side away from the gun hand
+	// (Beta 6.5: 9 units out and 9 down; Beta 6.0: 6 and 12)
 	if ( m_pPlayer->m_bLeftHanded == true )
 	{
 		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
@@ -750,7 +707,7 @@ void CBasePlayerWeapon::EjectBrassLate( void )
 								 + gpGlobals->v_right * RANDOM_FLOAT(50,70) 
 								 + gpGlobals->v_up * RANDOM_FLOAT(100,150) 
 								 + gpGlobals->v_forward * 25;
-		EjectBrass ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 16 - gpGlobals->v_right * 6 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL); 
+		EjectBrass ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -9 + gpGlobals->v_forward * 16 - gpGlobals->v_right * 9 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL); 
 	}
 	else
 	{
@@ -760,7 +717,7 @@ void CBasePlayerWeapon::EjectBrassLate( void )
 								 - gpGlobals->v_right * RANDOM_FLOAT(50,70) 
 								 + gpGlobals->v_up * RANDOM_FLOAT(100,150) 
 								 + gpGlobals->v_forward * 25;
-		EjectBrass ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 16 + gpGlobals->v_right * 6 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL); 
+		EjectBrass ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -9 + gpGlobals->v_forward * 16 + gpGlobals->v_right * 9 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL); 
 	}
 }
 
@@ -773,24 +730,23 @@ void CBasePlayerWeapon::EjectBrassLate( void )
 // lateral_max; one shot in direction_change + 1 turns the
 // side over (Beta 4.1: before the sideways kick, which
 // that shot gives at half strength; Beta 4.0: after it).
+// Beta 6.5: the shot count is the weapon's own.
 //=========================================================
 void CBasePlayerWeapon::KickBack( float up_base, float lateral_base, float up_modifier, float lateral_modifier, float up_max, float lateral_max, int direction_change )
 {
 	float flKickUp;
 	float flKickLateral;
 
-	if ( m_pPlayer->m_iShotsFired == 1 )
+	if ( m_iShotsFired == 1 )
 	{
 		flKickUp = up_base;
 		flKickLateral = lateral_base;
 	}
 	else
 	{
-		flKickUp = up_base + m_pPlayer->m_iShotsFired * up_modifier;
-		flKickLateral = lateral_base + m_pPlayer->m_iShotsFired * lateral_modifier;
+		flKickUp = up_base + m_iShotsFired * up_modifier;
+		flKickLateral = lateral_base + m_iShotsFired * lateral_modifier;
 	}
-
-	ALERT( at_console, "Kick: UP = %.2f/%.2f  LAT = %.2f/%.2f\n", flKickUp, up_max, flKickLateral, lateral_max );	// Beta 5.0 (leak)
 
 	m_pPlayer->pev->punchangle.x -= flKickUp;
 	if ( m_pPlayer->pev->punchangle.x < up_max * -1 )
@@ -816,102 +772,78 @@ void CBasePlayerWeapon::KickBack( float up_base, float lateral_base, float up_mo
 }
 
 //=========================================================
-// FireRemaining - the second and third shot of a burst.
-// The weapon fires the first one and sets
-// m_pPlayer->m_flNextBurstShot; ItemPostFrame calls this
-// as long as that is not zero.
+// FireRemaining - the second and third shot of the Glock
+// 18's burst.  The weapon fires the first one and sets
+// m_flNextBurstShot; ItemPostFrame calls this as long as
+// that is not zero.  Beta 6.5: the burst's state is the
+// weapon's own, the shot is the client's event (the shell
+// and the sound with it), and only the Glock is left.
 //=========================================================
 void CBasePlayerWeapon::FireRemaining( void )
 {
-	float flDelay;
-
 	m_iClip--;
-	if ( m_iClip < 0 )
+
+	if (m_iClip < 0)
 	{
-		// Beta 5.0 (leak): an empty magazine ends the burst
 		m_iClip = 0;
-		m_pPlayer->m_iBurstShotsFired = 3;
-		m_pPlayer->m_flNextBurstShot = 0;
+		m_iBurstShotsFired = 3;
+		m_flNextBurstShot = 0;
 		return;
 	}
 
-	// Beta 6.1: the shot leaves from the eye again ("off center shooting
-	// fixed"; Beta 6.0: 5 units to the gun hand's side); the shell still
-	// flies out of the other side
-	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
-	Vector vecShellVelocity;
+	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+	Vector vecSrc = m_pPlayer->GetGunPosition( );
+	Vector vecAiming;
+	vecAiming = gpGlobals->v_forward;
 
-	if ( m_pPlayer->m_bLeftHanded == true )
-	{
-		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( 0.05, 0.05, 0.05 ), 8192, 1, BULLET_PLAYER_9MM, 18, 0.9, NULL, true );
+	m_pPlayer->ammo_9mm--;
 
-		vecShellVelocity = m_pPlayer->pev->velocity 
-						 + gpGlobals->v_right * RANDOM_FLOAT(40,150) 
-						 + gpGlobals->v_up * RANDOM_FLOAT(100,260) 
-						 + gpGlobals->v_forward * RANDOM_FLOAT(-100,100);
-	}
-	else
-	{
-		UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
-
-		vecShellVelocity = m_pPlayer->pev->velocity 
-						 - gpGlobals->v_right * RANDOM_FLOAT(40,150) 
-						 + gpGlobals->v_up * RANDOM_FLOAT(100,260) 
-						 + gpGlobals->v_forward * RANDOM_FLOAT(-100,100);
-	}
-
-	Vector vecDir;
-
-	vecDir = gpGlobals->v_forward;
-
-	if ( m_iId == WEAPON_GLOCK18 )
-	{
-		if ( m_pPlayer->m_bLeftHanded == true )
-		{
-			EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 32 - gpGlobals->v_right * 11 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL, m_pPlayer->pev ); 
-			m_pPlayer->FireBullets3( vecSrc, vecDir, Vector( 0.025, 0.025, 0.025 ), 8192, 1, BULLET_PLAYER_9MM, 18, 0.9, 0, true );
-		}
-		else
-		{
-			EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_up * -12 + gpGlobals->v_forward * 32 + gpGlobals->v_right * 11 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL, m_pPlayer->pev ); 
-			m_pPlayer->FireBullets3( vecSrc, vecDir, Vector( 0.025, 0.025, 0.025 ), 8192, 1, BULLET_PLAYER_9MM, 18, 0.9, 0, true );
-		}
-
-		flDelay = 0.1;
-	}
-	else if ( m_iId == WEAPON_M4A1 )
-	{
-		ALERT( at_console, " I'm here!\n" );	// Beta 5.0 (leak)
-		EjectBrass2 ( pev->origin + m_pPlayer->pev->view_ofs - gpGlobals->v_up * 8 + gpGlobals->v_forward * 20 - gpGlobals->v_right * 10 , vecShellVelocity, pev->angles.y, m_iShellLate, TE_BOUNCE_SHELL, m_pPlayer->pev ); 
-		m_pPlayer->FireBullets3( vecSrc, vecDir, Vector( 0.015, 0.015, 0.015 ), 8192, 1, BULLET_PLAYER_556MM, 26, 0.94, 0 );
-		flDelay = 0.075;
-	}
+	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireGlock18, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, (int)(0.05 * 10000), (int)(m_vecAiming.z * 10000), (m_iClip == 0), 6 );	// sic: 6 (the client's copy passes m_bLeftHanded)
 
 	m_pPlayer->pev->effects |= EF_MUZZLEFLASH;
 	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
-	m_pPlayer->m_iBurstShotsFired++;
-	if ( m_pPlayer->m_iBurstShotsFired != 3 )
-		m_pPlayer->m_flNextBurstShot = gpGlobals->time + flDelay;
+	m_iBurstShotsFired++;
+
+	if (m_iBurstShotsFired != 3)
+		m_flNextBurstShot = gpGlobals->time + 0.1f;
 	else
-		m_pPlayer->m_flNextBurstShot = 0;
+		m_flNextBurstShot = 0;
+}
+
+BOOL CanAttack( float attack_time, float curtime, BOOL isPredicted )
+{
+#if defined( CLIENT_WEAPONS )
+	if ( !isPredicted )
+#else
+	if ( 1 )
+#endif
+	{
+		return ( attack_time <= curtime ) ? TRUE : FALSE;
+	}
+	else
+	{
+		return ( attack_time <= 0.0 ) ? TRUE : FALSE;
+	}
 }
 
 void CBasePlayerWeapon::ItemPostFrame( void )
 {
-	if ( m_pPlayer->m_flNextBurstShot != 0.0 )
+	if ( m_flNextBurstShot != 0.0 )
 		FireRemaining();
 
 	// back to the scope once the bolt has been worked
-	if ( m_flNextPrimaryAttack <= gpGlobals->time )
+	if ( m_flNextPrimaryAttack <= UTIL_WeaponTimeBase() )
 	{
-		if ( m_pPlayer->m_fResumeZoom == TRUE )
+		if ( m_pPlayer->m_bResumeZoom == true )
 		{
 			m_pPlayer->m_iFOV = m_pPlayer->m_iLastZoom;
+			m_pPlayer->pev->fov = m_pPlayer->m_iFOV;
+
 			if ( m_pPlayer->m_iFOV == m_pPlayer->m_iLastZoom )
 			{
-				m_pPlayer->pev->viewmodel = 0;
-				m_pPlayer->m_fResumeZoom = FALSE;
+				m_pPlayer->m_bResumeZoom = false;
 			}
 		}
 	}
@@ -922,7 +854,7 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		EjectBrassLate();
 	}
 
-	if ((m_fInReload) && (m_pPlayer->m_flNextAttack <= gpGlobals->time))
+	if ((m_fInReload) && ( m_pPlayer->m_flNextAttack <= UTIL_WeaponTimeBase() ) )
 	{
 		// complete the reload. 
 		int j = min( iMaxClip() - m_iClip, m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]);	
@@ -931,10 +863,12 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		m_iClip += j;
 		m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] -= j;
 
+		m_pPlayer->TabulateAmmo();
+
 		m_fInReload = FALSE;
 	}
 
-	if ((m_pPlayer->pev->button & IN_ATTACK2) && (m_flNextSecondaryAttack <= gpGlobals->time))
+	if ((m_pPlayer->pev->button & IN_ATTACK2) && ( m_flNextSecondaryAttack <= UTIL_WeaponTimeBase() ) )
 	{
 		if ( pszAmmo2() && !m_pPlayer->m_rgAmmo[SecondaryAmmoIndex()] )
 		{
@@ -944,12 +878,14 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		SecondaryAttack();
 		m_pPlayer->pev->button &= ~IN_ATTACK2;
 	}
-	else if ((m_pPlayer->pev->button & IN_ATTACK) && (m_flNextPrimaryAttack <= gpGlobals->time))
+	else if ((m_pPlayer->pev->button & IN_ATTACK) && ( m_flNextPrimaryAttack <= UTIL_WeaponTimeBase() ) )
 	{
 		if ( (m_iClip == 0 && pszAmmo1()) || (iMaxClip() == -1 && !m_pPlayer->m_rgAmmo[PrimaryAmmoIndex()] ) )
 		{
 			m_fFireOnEmpty = TRUE;
 		}
+
+		m_pPlayer->TabulateAmmo();
 
 		// Beta 5.0 (leak): no shooting in the freeze period at the start of a round
 		if ( g_pGameRules->IsMultiplayer() && !((CHalfLifeMultiplay *)g_pGameRules)->IsFreezePeriod() )
@@ -965,32 +901,44 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		// no fire buttons down
 
 		// Beta 3.0: after a shot the count of shots fired is set to 20 and
-		// then runs down by one a frame (the accuracy of the next shot)
-		if ( m_fDelayFire == true )
+		// then runs down (the accuracy of the next shot)
+		if ( m_bDelayFire == true )
 		{
-			m_fDelayFire = false;
-			m_pPlayer->m_iShotsFired = 20;
+			m_bDelayFire = false;
+			m_iShotsFired = 20;
 		}
 
 		m_fFireOnEmpty = FALSE;
 
-		if ( m_pPlayer->m_iShotsFired > 0 )
-			m_pPlayer->m_iShotsFired--;	// (Beta 3.0 printed "Accuracy = %i" here)
+		// Beta 6.5: the pistols forget their shots at once; the others lose
+		// one every 0.0225 seconds (Beta 6.1: one a frame)
+		if ( m_iId == WEAPON_USP || m_iId == WEAPON_GLOCK18 || m_iId == WEAPON_P228 || m_iId == WEAPON_DEAGLE )
+		{
+			m_iShotsFired = 0;
+		}
+		else
+		{
+			if ( m_iShotsFired > 0 && m_flDecreaseShotsFired < gpGlobals->time )
+			{
+				m_flDecreaseShotsFired = gpGlobals->time + 0.0225;
+				m_iShotsFired--;
+			}
+		}
 
-		if ( !IsUseable() && m_flNextPrimaryAttack < gpGlobals->time ) 
+		if ( !IsUseable() && m_flNextPrimaryAttack < UTIL_WeaponTimeBase() ) 
 		{
 			// weapon isn't useable, switch.
 			// Beta 5.0 (leak): no more; an empty weapon stays in the player's hands
 //			if ( !(iFlags() & ITEM_FLAG_NOAUTOSWITCHEMPTY) && g_pGameRules->GetNextBestWeapon( m_pPlayer, this ) )
 //			{
-//				m_flNextPrimaryAttack = gpGlobals->time + 0.3;
+//				m_flNextPrimaryAttack = ( UseDecrement() ? 0.0 : gpGlobals->time ) + 0.3;
 //				return;
 //			}
 		}
 		else
 		{
 			// weapon is useable. Reload if empty and weapon has waited as long as it has to after firing
-			if ( m_iClip == 0 && !(iFlags() & ITEM_FLAG_NOAUTORELOAD) && m_flNextPrimaryAttack < gpGlobals->time )
+			if ( m_iClip == 0 && !(iFlags() & ITEM_FLAG_NOAUTORELOAD) && m_flNextPrimaryAttack < UTIL_WeaponTimeBase() )
 			{
 				Reload();
 				return;
@@ -1045,7 +993,7 @@ void CBasePlayerItem::Kill( void )
 	pev->nextthink = gpGlobals->time + .1;
 }
 
-void CBasePlayerItem::Holster( void )
+void CBasePlayerItem::Holster( int skiplocal /* = 0 */ )
 { 
 	m_pPlayer->pev->viewmodel = 0; 
 	m_pPlayer->pev->weaponmodel = 0;
@@ -1103,6 +1051,7 @@ int CBasePlayerWeapon::AddToPlayer( CBasePlayer *pPlayer )
 
 int CBasePlayerWeapon::UpdateClientData( CBasePlayer *pPlayer )
 {
+	BOOL bSend = FALSE;
 	int state = 0;
 	if ( pPlayer->m_pActiveItem == this )
 	{
@@ -1112,7 +1061,31 @@ int CBasePlayerWeapon::UpdateClientData( CBasePlayer *pPlayer )
 			state = 1;
 	}
 
-	if ( !pPlayer->m_fWeapon || pPlayer->m_pActiveItem != pPlayer->m_pClientActiveItem || m_iClip != m_iClientClip || state != m_iClientWeaponState || pPlayer->m_iFOV != pPlayer->m_iClientFOV )
+	// Forcing send of all data!
+	if ( !pPlayer->m_fWeapon )
+	{
+		bSend = TRUE;
+	}
+	
+	// This is the current or last weapon, so the state will need to be updated
+	if ( this == pPlayer->m_pActiveItem ||
+		 this == pPlayer->m_pClientActiveItem )
+	{
+		if ( pPlayer->m_pActiveItem != pPlayer->m_pClientActiveItem )
+		{
+			bSend = TRUE;
+		}
+	}
+
+	// If the ammo, state, or fov has changed, update the weapon
+	if ( m_iClip != m_iClientClip || 
+		 state != m_iClientWeaponState || 
+		 pPlayer->m_iFOV != pPlayer->m_iClientFOV )
+	{
+		bSend = TRUE;
+	}
+	
+	if ( bSend )
 	{
 		MESSAGE_BEGIN( MSG_ONE, gmsgCurWeapon, NULL, pPlayer->pev );
 			WRITE_BYTE( state );
@@ -1132,8 +1105,15 @@ int CBasePlayerWeapon::UpdateClientData( CBasePlayer *pPlayer )
 }
 
 
-void CBasePlayerWeapon::SendWeaponAnim( int iAnim )
+void CBasePlayerWeapon::SendWeaponAnim( int iAnim, int skiplocal )
 {
+	m_pPlayer->pev->weaponanim = iAnim;
+
+#if defined( CLIENT_WEAPONS )
+	if ( skiplocal && ENGINE_CANSKIP( m_pPlayer->edict() ) )
+		return;
+#endif
+
 	MESSAGE_BEGIN( MSG_ONE, SVC_WEAPONANIM, NULL, m_pPlayer->pev );
 		WRITE_BYTE( iAnim );						// sequence number
 		WRITE_BYTE( pev->body );					// weaponmodel bodygroup.
@@ -1220,21 +1200,24 @@ BOOL CBasePlayerWeapon :: CanDeploy( void )
 	return TRUE;
 }
 
-BOOL CBasePlayerWeapon :: DefaultDeploy( char *szViewModel, char *szWeaponModel, int iAnim, char *szAnimExt )
+BOOL CBasePlayerWeapon :: DefaultDeploy( char *szViewModel, char *szWeaponModel, int iAnim, char *szAnimExt, int skiplocal /* = 0 */ )
 {
 	if (!CanDeploy( ))
 		return FALSE;
 
+	m_pPlayer->TabulateAmmo();
 	m_pPlayer->pev->viewmodel = MAKE_STRING(szViewModel);
 	m_pPlayer->pev->weaponmodel = MAKE_STRING(szWeaponModel);
+	m_iViewModel = m_pPlayer->pev->viewmodel;	// Beta 6.5
 	strcpy( m_pPlayer->m_szAnimExtention, szAnimExt );
-	SendWeaponAnim( iAnim );
+	SendWeaponAnim( iAnim, skiplocal );
 
-	m_pPlayer->m_flNextAttack = gpGlobals->time + 0.5;
-	m_flTimeWeaponIdle = gpGlobals->time + 1.0;
+	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
+	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.0;
+	m_flDecreaseShotsFired = gpGlobals->time;	// Beta 6.5
 
-	m_pPlayer->m_iFOV = 90;
-	m_pPlayer->m_fResumeZoom = FALSE;
+	m_pPlayer->pev->fov = m_pPlayer->m_iFOV = 90;
+	m_pPlayer->m_bResumeZoom = false;
 	m_pPlayer->m_iLastZoom = 90;
 
 	return TRUE;
@@ -1289,25 +1272,36 @@ BOOL CBasePlayerWeapon :: DefaultReload( int iClipSize, int iAnim, float fDelay 
 	if (j == 0)
 		return FALSE;
 
-	m_pPlayer->m_flNextAttack = gpGlobals->time + fDelay;
+	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + fDelay;
 
 	ReloadSound();	// Beta 5.0 (leak): the others near him hear it
 	SendWeaponAnim( iAnim );
 
 	m_fInReload = TRUE;
 
-	m_flTimeWeaponIdle = gpGlobals->time + fDelay + 0.5;
+	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + fDelay + 0.5;
 	return TRUE;
 }
 
 BOOL CBasePlayerWeapon :: PlayEmptySound( void )
 {
-	if (m_iPlayEmptySound)
+	// Beta 6.5: a dry-fire click of the weapon's kind (Half-Life's revolver
+	// click before), and m_iPlayEmptySound is no longer cleared
+	if ( m_iId == WEAPON_USP || m_iId == WEAPON_GLOCK18 || m_iId == WEAPON_P228 || m_iId == WEAPON_DEAGLE )
 	{
-		EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/357_cock1.wav", 0.8, ATTN_NORM);
-		m_iPlayEmptySound = 0;
-		return 0;
+		if (m_iPlayEmptySound)
+		{
+			EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/dryfire_pistol.wav", 0.8, ATTN_NORM);
+		}
 	}
+	else
+	{
+		if (m_iPlayEmptySound)
+		{
+			EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/dryfire_rifle.wav", 0.8, ATTN_NORM);
+		}
+	}
+
 	return 0;
 }
 
@@ -1330,7 +1324,7 @@ int CBasePlayerWeapon::SecondaryAmmoIndex( void )
 	return -1;
 }
 
-void CBasePlayerWeapon::Holster( void )
+void CBasePlayerWeapon::Holster( int skiplocal /* = 0 */ )
 { 
 	// the G3/SG-1's scope: clear the screen (Beta 2.0 and 2.1: the AWP's too)
 	if ( m_iId == WEAPON_G3SG1 )
@@ -1602,7 +1596,7 @@ void CWeaponBox::Touch( CBaseEntity *pOther )
 				if ( !pPlayer )
 					return;
 
-				pPlayer->m_fHasC4 = true;
+				pPlayer->m_bHasC4 = true;
 				pPlayer->SetBombIcon( FALSE );
 				pPlayer->pev->body = 1;
 			}
@@ -1835,13 +1829,13 @@ void CWeaponBox::SetObjectCollisionBox( void )
 //=========================================================
 // Counter-Strike Beta 6.0: armoury_entity (Linux symbols: CArmoury,
 // ArmouryTouch, KeyValue, Spawn, Restart, Precache), a stack of one kind
-// of weapon or equipment lying in the map ("item" 0 to 17, "count").
+// of weapon or equipment lying in the map ("item" 0 to 18, "count").
 // Each touch gives a living player one: a gun with ammunition only to
 // one without a primary weapon, a flashbang to one with fewer than two,
-// an HE grenade to one with none, armour to one without that armour; the
-// VIP takes nothing. An empty stack disappears until the next round, when
-// Restart refills it in proportion to the terrorists playing. Names of
-// the members ours.
+// an HE grenade or (Beta 6.5) a smoke grenade to one with none, armour to
+// one without that armour; the VIP takes nothing. An empty stack
+// disappears until the next round, when Restart refills it in proportion
+// to the terrorists playing. Names of the members ours.
 //=========================================================
 class CArmoury : public CBaseEntity
 {
@@ -1912,6 +1906,9 @@ public:
 		case 17:	// assault
 			SET_MODEL( ENT( pev ), "models/w_assault.mdl" );
 			break;
+		case 18:	// smokegrenade (Beta 6.5)
+			SET_MODEL( ENT( pev ), "models/w_smokegrenade.mdl" );
+			break;
 		default:
 			SET_MODEL( ENT( pev ), "models/w_kevlar.mdl" );
 			break;
@@ -1926,8 +1923,9 @@ public:
 
 	// a new round: the first one counts the map's items; then each stack
 	// gets its share (its count over the total of its kind, an integer
-	// division, sic) times the terrorists playing times 0.7 for guns, 1.5 for
-	// grenades, 0.65 for armour (at least one)
+	// division, sic) times the terrorists playing times 0.85 for guns, 1.75 for
+	// flashbangs and HE grenades, 1 for armour (at least one). Beta 6.1: 0.7,
+	// 1.75, 0.7. The smoke grenade (18) counts as a gun.
 	void Restart( void )
 	{
 		CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// name ours
@@ -1958,7 +1956,7 @@ public:
 			}
 			else
 			{
-				m_iCount = (float)( m_iInitialCount / mp->m_iTotalArmourCount ) * mp->m_iNumTerrorist * 0.7;	// Beta 6.1 (Beta 6.0: 0.65)
+				m_iCount = (float)( m_iInitialCount / mp->m_iTotalArmourCount ) * mp->m_iNumTerrorist;	// Beta 6.5 (Beta 6.1: times 0.7)
 
 				if ( m_iCount < 1 )
 					m_iCount = 1;
@@ -1974,7 +1972,7 @@ public:
 			}
 			else
 			{
-				m_iCount = (float)( m_iInitialCount / mp->m_iTotalGunCount ) * mp->m_iNumTerrorist * 0.7;
+				m_iCount = (float)( m_iInitialCount / mp->m_iTotalGunCount ) * mp->m_iNumTerrorist * 0.85;	// Beta 6.5 (Beta 6.1: 0.7)
 
 				if ( m_iCount < 1 )
 					m_iCount = 1;
@@ -2041,6 +2039,9 @@ public:
 			break;
 		case 17:	// assault
 			PRECACHE_MODEL( "models/w_assault.mdl" );
+			break;
+		case 18:	// smokegrenade (Beta 6.5)
+			PRECACHE_MODEL( "models/w_smokegrenade.mdl" );
 			break;
 		default:
 			PRECACHE_MODEL( "models/w_kevlar.mdl" );
@@ -2158,6 +2159,13 @@ public:
 				pPlayer->GiveNamedItem( "item_assaultsuit" );
 				m_iCount--;
 				break;
+			case 18:	// Beta 6.5
+				if ( pPlayer->AmmoInventory( CBasePlayer::GetAmmoIndex( "SmokeGrenade" ) ) >= 1 )
+					return;
+
+				pPlayer->GiveNamedItem( "weapon_smokegrenade" );
+				m_iCount--;
+				break;
 			}
 		}
 
@@ -2165,10 +2173,10 @@ public:
 			pev->effects |= EF_NODRAW;
 	}
 
-	int		m_iItem;			// 0x20 "item": 0 MP5 Navy, 1 TMP, 2 P90, 3 MAC-10, 4 AK-47, 5 SG-552, 6 M4A1, 7 AUG, 8 Scout, 9 G3/SG-1, 10 AWP, 11 M3, 12 XM1014, 13 M249, 14 flashbang, 15 HE grenade, 16 kevlar, 17 assault suit
-	int		m_iCount;			// 0x24 "count": how many are left
-	int		m_iInitialCount;	// 0x28 the count the map gave (Spawn)
-	bool	m_bAlreadyCounted;	// 0x2c the first Restart added the count to the game rules' totals
+	int		m_iItem;			// 0x7c "item": 0 MP5 Navy, 1 TMP, 2 P90, 3 MAC-10, 4 AK-47, 5 SG-552, 6 M4A1, 7 AUG, 8 Scout, 9 G3/SG-1, 10 AWP, 11 M3, 12 XM1014, 13 M249, 14 flashbang, 15 HE grenade, 16 kevlar, 17 assault suit, 18 smoke grenade
+	int		m_iCount;			// 0x80 "count": how many are left
+	int		m_iInitialCount;	// 0x84 the count the map gave (Spawn)
+	bool	m_bAlreadyCounted;	// 0x88 the first Restart added the count to the game rules' totals
 };
 
 

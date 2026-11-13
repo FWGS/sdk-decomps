@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -32,136 +32,6 @@
 extern void Broadcast( const char *sentence );	// multiplay_gamerules.cpp (Beta 3.0)
 extern int gmsgItemPickup;	// Beta 4.1 (player.cpp)
 extern int gmsgBarTime;	// Beta 5.0 (leak) (player.cpp)
-
-
-//===================debris
-
-// Counter-Strike Beta 3.0: the concussion grenade's shrapnel, the SDK's
-// crossbow bolt (crossbow.cpp) made into a bouncing fragment. Beta 3.1's
-// Linux library has these functions in this file (and an empty debris.cpp).
-// Member names after m_iTrail are ours.
-class CDebris : public CBaseEntity
-{
-	void Spawn( void );
-	void Precache( void );
-	int  Classify ( void );
-	void EXPORT BubbleThink( void );
-	void EXPORT BoltTouch( CBaseEntity *pOther );
-
-	int m_iTrail;
-	int m_iBounces;		// times it hit something that takes no damage; it stops making sparks and sounds at the fourth (Beta 3.1: no longer read)
-	float m_flDamage;	// 30 at first, three quarters of it after each bounce
-
-public:
-	static CDebris *BoltCreate( void );
-};
-LINK_ENTITY_TO_CLASS( debris, CDebris );
-
-CDebris *CDebris::BoltCreate( void )
-{
-	// Create a new entity with CDebris private data
-	CDebris *pBolt = GetClassPtr( (CDebris *)NULL );
-	pBolt->pev->classname = MAKE_STRING("debris");
-	pBolt->Spawn();
-
-	return pBolt;
-}
-
-void CDebris::Spawn( )
-{
-	Precache( );
-	pev->movetype = MOVETYPE_BOUNCE;
-	pev->solid = SOLID_BBOX;
-
-	pev->gravity = 0.5;
-	m_flDamage = 30;
-	m_iBounces = 0;
-
-	SET_MODEL(ENT(pev), "models/shrapnel.mdl");
-
-	UTIL_SetOrigin( pev, pev->origin );
-	UTIL_SetSize(pev, Vector(0, 0, 0), Vector(0, 0, 0));
-
-	SetTouch( BoltTouch );
-	SetThink( SUB_Remove );
-	pev->nextthink = gpGlobals->time + 1.5;	// Beta 3.1 (3.0: 2)
-}
-
-
-void CDebris::Precache( )
-{
-	PRECACHE_MODEL ("models/shrapnel.mdl");
-	PRECACHE_SOUND("weapons/xbow_hitbod1.wav");
-	PRECACHE_SOUND("weapons/xbow_hitbod2.wav");
-	PRECACHE_SOUND("weapons/xbow_fly1.wav");
-	PRECACHE_SOUND("weapons/xbow_hit1.wav");
-	PRECACHE_SOUND("weapons/ric1.wav");
-	PRECACHE_SOUND("weapons/ric2.wav");
-	PRECACHE_SOUND("weapons/ric3.wav");
-	PRECACHE_SOUND("weapons/ric4.wav");
-	PRECACHE_SOUND("weapons/ric5.wav");
-	PRECACHE_SOUND("fvox/beep.wav");
-	m_iTrail = PRECACHE_MODEL("sprites/streak.spr");
-}
-
-
-int	CDebris :: Classify ( void )
-{
-	return	CLASS_NONE;
-}
-
-void CDebris::BoltTouch( CBaseEntity *pOther )
-{
-	// Beta 3.1: no more bouncing (and no console lines): a fragment
-	// that hits what takes no damage stays until it is removed
-	if (pOther->pev->takedamage)
-	{
-		TraceResult tr = UTIL_GetGlobalTrace( );
-		entvars_t	*pevOwner;
-
-		pevOwner = VARS( pev->owner );
-
-		// Beta 5.2: a fragment whose owner is gone hurts nobody (it is only removed)
-		if ( pevOwner )
-		{
-			// UNDONE: this needs to call TraceAttack instead
-			ClearMultiDamage( );
-
-			if ( pOther->IsPlayer() )
-			{
-				pOther->TraceAttack(pevOwner, m_flDamage, pev->velocity.Normalize(), &tr, DMG_BULLET | DMG_NEVERGIB ); 
-			}
-			else
-			{
-				pOther->TraceAttack(pevOwner, m_flDamage, pev->velocity.Normalize(), &tr, DMG_BULLET | DMG_NEVERGIB ); 
-			}
-
-			ApplyMultiDamage( pev, pevOwner );
-
-			pev->velocity = Vector( 0, 0, 0 );
-			// play body "thwack" sound
-			switch( RANDOM_LONG(0,1) )
-			{
-			case 0:
-				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/xbow_hitbod1.wav", 1, ATTN_NORM); break;
-			case 1:
-				EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/xbow_hitbod2.wav", 1, ATTN_NORM); break;
-			}
-		}
-
-		Killed( pev, GIB_NEVER );
-	}
-}
-
-void CDebris::BubbleThink( void )
-{
-	pev->nextthink = gpGlobals->time + 0.1;
-
-	if (pev->waterlevel == 0)
-		return;
-
-	UTIL_BubbleTrail( pev->origin - pev->velocity * 0.1, pev->origin, 1 );
-}
 
 
 //===================grenade
@@ -246,11 +116,15 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 
 	flRndSound = RANDOM_FLOAT( 0 , 1 );
 
-	switch ( RANDOM_LONG( 0, 1 ) )
-	{
-		case 0:	EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/flashbang-2.wav", 0.55, ATTN_NORM);	break;
-		default:	EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/flashbang-1.wav", 0.55, ATTN_NORM);	break;
-	}
+	// (an if, not Beta 3.0's switch with a default: with inline expansion on, retail calls
+	// the Vector copy constructor three times in the origin's sum above, which Visual C++
+	// 6.0 does only while this function stays within its smallest inlining budget; the
+	// switch makes it a few units too long. A ?: for pevOwner or the spark count as the
+	// loop's own variable would do the same; the sounds are the part that is not SDK text.)
+	if ( RANDOM_LONG( 0, 1 ) )
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/flashbang-1.wav", 0.55, ATTN_NORM);
+	else
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/flashbang-2.wav", 0.55, ATTN_NORM);
 
 	pev->effects |= EF_NODRAW;
 	SetThink( Smoke );
@@ -465,6 +339,64 @@ void CGrenade::Explode3( TraceResult *pTrace, int bitsDamageType )
 }
 
 
+//
+// Counter-Strike Beta 6.5: the flashbang's Explode without the flash, thinking
+// SG_Smoke next (nothing calls it: SG_Detonate starts the smoke itself)
+//
+void CGrenade::SG_Explode( TraceResult *pTrace, int bitsDamageType )
+{
+	float		flRndSound;// sound randomizer
+
+	pev->model = iStringNull;//invisible
+	pev->solid = SOLID_NOT;// intangible
+
+	pev->takedamage = DAMAGE_NO;
+
+	// Pull out of the wall a bit
+	if ( pTrace->flFraction != 1.0 )
+	{
+		pev->origin = pTrace->vecEndPos + (pTrace->vecPlaneNormal * (pev->dmg - 24) * 0.6);
+	}
+
+	int iContents = UTIL_PointContents ( pev->origin );
+
+	CSoundEnt::InsertSound ( bits_SOUND_COMBAT, pev->origin, NORMAL_EXPLOSION_VOLUME, 3.0 );
+	entvars_t *pevOwner;
+	if ( pev->owner )
+		pevOwner = VARS( pev->owner );
+	else
+		pevOwner = NULL;
+
+	pev->owner = NULL; // can't traceline attack owner if this is set
+
+	if ( RANDOM_FLOAT( 0 , 1 ) < 0.5 )
+	{
+		UTIL_DecalTrace( pTrace, DECAL_SCORCH1 );
+	}
+	else
+	{
+		UTIL_DecalTrace( pTrace, DECAL_SCORCH2 );
+	}
+
+	flRndSound = RANDOM_FLOAT( 0 , 1 );
+
+	if ( RANDOM_LONG( 0, 1 ) )
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/flashbang-1.wav", 0.55, ATTN_NORM);
+	else
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/flashbang-2.wav", 0.55, ATTN_NORM);
+
+	SetThink( SG_Smoke );
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	if (iContents != CONTENTS_WATER)
+	{
+		int sparkCount = RANDOM_LONG(0,3);
+		for ( int i = 0; i < sparkCount; i++ )
+			Create( "spark_shower", pev->origin, pTrace->vecPlaneNormal, NULL );
+	}
+}
+
+
 // Counter-Strike Beta 4.0: the HE grenade's smoke (Explode3 thinks it)
 void CGrenade::Smoke3_C( void )
 {
@@ -580,6 +512,60 @@ void CGrenade::Smoke( void )
 	UTIL_Remove( this );
 }
 
+//
+// Counter-Strike Beta 6.5: the smoke grenade smokes: once a second it plays
+// its event (the client draws the puffs, EV_CreateSmoke) with a direction that
+// turns 30 degrees each time, 22 times (14 for a light one), then it goes.
+// The locals' names are Counter-Strike 1.6's (debug information).
+//
+void CGrenade::SG_Smoke( void )
+{
+	if (UTIL_PointContents ( pev->origin ) == CONTENTS_WATER)
+	{
+		UTIL_Bubbles( pev->origin - Vector( 64, 64, 64 ), pev->origin + Vector( 64, 64, 64 ), 100 );
+	}
+	else
+	{
+		Vector origin, angle;	// (angle is not used; without it the code differs by three instructions)
+		float x_old, y_old, R_angle;
+
+		UTIL_MakeVectors( pev->angles );
+
+		origin = gpGlobals->v_forward * RANDOM_FLOAT( 5, 10 );
+
+		R_angle = m_angle * ( 3.141517 / 180 );
+		m_angle = ( m_angle + 30 ) % 360;
+
+		x_old = origin.x;
+		y_old = origin.y;
+		origin.x = x_old * cos( R_angle ) - y_old * sin( R_angle );
+		origin.y = x_old * sin( R_angle ) + y_old * cos( R_angle );
+
+		origin.z = RANDOM_FLOAT( 0, 500 );
+
+		PLAYBACK_EVENT_FULL( 0, NULL, m_usEvent, 0.0, pev->origin, (float *)&g_vecZero, origin.x, origin.y, origin.z * 10000, 4, m_bLightSmoke, 6 );
+	}
+
+	int iMaxSmokePuffs;
+	float flSmokeInterval = 1.0;
+
+	if ( m_bLightSmoke == true )
+		iMaxSmokePuffs = 12;
+	else
+		iMaxSmokePuffs = 20;
+
+	if ( m_SGSmoke > iMaxSmokePuffs )
+	{
+		pev->effects |= EF_NODRAW;
+		UTIL_Remove( this );
+		return;
+	}
+
+	pev->nextthink = gpGlobals->time + flSmokeInterval;
+	SetThink( SG_Smoke );
+	m_SGSmoke++;
+}
+
 void CGrenade::Killed( entvars_t *pevAttacker, int iGib )
 {
 	Detonate( );
@@ -614,11 +600,48 @@ void CGrenade::Detonate( void )
 }
 
 
+//
+// Counter-Strike Beta 6.5: the smoke grenade goes off (SG_TumbleThink): its
+// sound, and SG_Smoke from the next tenth of a second on. Another "grenade"
+// within 250 units whose time has passed (a smoke grenade still smoking; a
+// planted C4, whose dmgtime is never set) makes this one's smoke light.
+// (the trace is Detonate's and not used; pentFind, pEnt, fDistance: CS 1.6's names)
+//
+void CGrenade::SG_Detonate( void )
+{
+	TraceResult tr;
+	Vector		vecSpot;// trace starts here!
+
+	vecSpot = pev->origin + Vector ( 0 , 0 , 8 );
+	UTIL_TraceLine ( vecSpot, vecSpot + Vector ( 0, 0, -40 ),  ignore_monsters, ENT(pev), & tr);
+
+	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/sg_explode.wav", 1.0, ATTN_NORM);
+
+	edict_t *pentFind = FIND_ENTITY_BY_CLASSNAME( NULL, "grenade" );
+	while ( !FNullEnt( pentFind ) )
+	{
+		CBaseEntity *pEnt = CBaseEntity::Instance( pentFind );
+		if ( pEnt )
+		{
+			float fDistance = ( pEnt->pev->origin - pev->origin ).Length();
+			if ( fDistance != 0 && fDistance <= 250 )
+			{
+				if ( pEnt->pev->dmgtime < gpGlobals->time )
+					m_bLightSmoke = true;
+			}
+		}
+		pentFind = FIND_ENTITY_BY_CLASSNAME( pentFind, "grenade" );
+	}
+
+	m_bDetonated = true;
+	pev->nextthink = gpGlobals->time + 0.1;
+	SetThink( SG_Smoke );
+}
+
+
 // Counter-Strike Beta 4.0: the C4 (C4Think)
 void CGrenade::Detonate2( void )
 {
-	ALERT( at_console, " ******* STAGE 0 ******* \n" );	// Beta 5.0 (leak)
-
 	TraceResult tr;
 	Vector		vecSpot;// trace starts here!
 
@@ -823,11 +846,40 @@ void CGrenade :: TumbleThink( void )
 }
 
 
+// Counter-Strike Beta 6.5: the smoke grenade in flight (ShootSmokeGrenade); TumbleThink's text
+void CGrenade :: SG_TumbleThink( void )
+{
+	if (!IsInWorld())
+	{
+		UTIL_Remove( this );
+		return;
+	}
+
+	StudioFrameAdvance( );
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	if (pev->dmgtime - 1 < gpGlobals->time)
+	{
+		CSoundEnt::InsertSound ( bits_SOUND_DANGER, pev->origin + pev->velocity * (pev->dmgtime - gpGlobals->time), 400, 0.1 );
+	}
+
+	if (pev->dmgtime <= gpGlobals->time)
+	{
+		SetThink( SG_Detonate );
+	}
+	if (pev->waterlevel != 0)
+	{
+		pev->velocity = pev->velocity * 0.5;
+		pev->framerate = 0.2;
+	}
+}
+
+
 void CGrenade:: Spawn( void )
 {
 	pev->movetype = MOVETYPE_BOUNCE;
 	pev->classname = MAKE_STRING( "grenade" );
-	m_fPlantedC4 = false;	// Beta 5.0 (leak)
+	m_bIsC4 = false;	// Beta 5.0 (leak)
 	
 	pev->solid = SOLID_BBOX;
 
@@ -948,20 +1000,20 @@ CGrenade * CGrenade:: ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector v
 //
 void CGrenade::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	if ( m_fPlantedC4 )
+	if ( m_bIsC4 )
 	{
 		CBasePlayer *player = GetClassPtr( (CBasePlayer *)pActivator->pev );	// name ours
 
 		if ( player->m_iTeam == TEAM_CT )
 		{
-			if ( !m_fStartDefuse )
+			if ( !m_bStartDefuse )
 			{
 				if ( player->m_fHasDefuser == true )
 				{
 					ClientPrint( player->pev, HUD_PRINTCENTER, "Defusing bomb WITH Defuse kit..." );
 					EMIT_SOUND( ENT(player->pev), CHAN_ITEM, "weapons/c4_disarm.wav", 1.0, ATTN_NORM );
 					m_pDefuser = pActivator;
-					m_fStartDefuse = true;
+					m_bStartDefuse = true;
 					m_flDefuseDone = gpGlobals->time + 5.0;
 					m_flNextDefuseCheck = gpGlobals->time + 0.5;
 
@@ -974,7 +1026,7 @@ void CGrenade::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 					ClientPrint( player->pev, HUD_PRINTCENTER, "Defusing bomb WITHOUT Defuse kit..." );
 					EMIT_SOUND( ENT(player->pev), CHAN_ITEM, "weapons/c4_disarm.wav", 1.0, ATTN_NORM );
 					m_pDefuser = pActivator;
-					m_fStartDefuse = true;
+					m_bStartDefuse = true;
 					m_flDefuseDone = gpGlobals->time + 10.0;
 					m_flNextDefuseCheck = gpGlobals->time + 0.5;
 
@@ -1032,9 +1084,9 @@ CGrenade * CGrenade :: ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart,
 	pGrenade->m_flBeepAttenuation = 0;
 	pGrenade->m_pszBeepSound = NULL;
 	pGrenade->m_flNextBlink = gpGlobals->time + 2.0;
-	pGrenade->m_fPlantedC4 = true;
+	pGrenade->m_bIsC4 = true;
 	pGrenade->m_flNextDefuseCheck = 0;
-	pGrenade->m_fStartDefuse = false;
+	pGrenade->m_bStartDefuse = false;
 
 	pGrenade->pev->friction = 0.9;
 	pGrenade->m_fC4Done = false;
@@ -1048,6 +1100,50 @@ CGrenade * CGrenade :: ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart,
 	}
 
 	pGrenade->m_pentBombTarget = NULL;
+	return pGrenade;
+}
+
+
+//
+// Counter-Strike Beta 6.5: the smoke grenade (CSmokeGrenade), ShootTimed's text:
+// 35 damage (BounceSound's and TumbleThink's limits read it), 3 units large, the
+// event SG_Smoke plays
+//
+CGrenade * CGrenade:: ShootSmokeGrenade( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time, unsigned short usEvent )
+{
+	CGrenade *pGrenade = GetClassPtr( (CGrenade *)NULL );
+	pGrenade->Spawn();
+	UTIL_SetOrigin( pGrenade->pev, vecStart );
+	pGrenade->pev->velocity = vecVelocity;
+	pGrenade->pev->angles = pevOwner->angles;
+	pGrenade->pev->owner = ENT(pevOwner);
+	pGrenade->m_usEvent = usEvent;
+	pGrenade->m_bLightSmoke = false;
+	pGrenade->m_bDetonated = false;
+	
+	pGrenade->SetTouch( BounceTouch );	// Bounce if touched
+	
+	pGrenade->pev->dmgtime = gpGlobals->time + time;
+	pGrenade->SetThink( SG_TumbleThink );
+	pGrenade->pev->nextthink = gpGlobals->time + 0.1;
+	if (time < 0.1)
+	{
+		pGrenade->pev->nextthink = gpGlobals->time;
+		pGrenade->pev->velocity = Vector( 0, 0, 0 );
+	}
+		
+	pGrenade->pev->sequence = RANDOM_LONG( 3, 6 );
+	pGrenade->pev->framerate = 1.0;
+	pGrenade->m_fC4Done = TRUE;
+
+	pGrenade->pev->gravity = 0.5;
+	pGrenade->pev->friction = 0.8;
+	pGrenade->m_SGSmoke = 0;
+
+	SET_MODEL(ENT(pGrenade->pev), "models/w_smokegrenade.mdl");
+	pGrenade->pev->dmg = 35;
+	UTIL_SetSize(pGrenade->pev, Vector( 0, 0, 0), Vector(3, 3, 3));
+
 	return pGrenade;
 }
 
@@ -1145,7 +1241,7 @@ void CGrenade::C4Think( void )
 
 	// Beta 5.0 (leak): the defuser must keep using the C4 (CGrenade::Use); he may
 	// move, crouch or not, and needs no kit
-	if ( m_fStartDefuse == true && m_pDefuser )
+	if ( m_bStartDefuse == true && m_pDefuser )
 	{
 		if ( m_flDefuseDone > gpGlobals->time )
 		{
@@ -1157,7 +1253,7 @@ void CGrenade::C4Think( void )
 				MESSAGE_END();
 
 				m_pDefuser = NULL;
-				m_fStartDefuse = false;
+				m_bStartDefuse = false;
 				m_flDefuseDone = 0;
 			}
 		}
@@ -1174,13 +1270,13 @@ void CGrenade::C4Think( void )
 				((CHalfLifeMultiplay *)g_pGameRules)->m_fBombDefused = true;
 				((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
 				m_pDefuser = NULL;
-				m_fStartDefuse = false;
+				m_bStartDefuse = false;
 				return;
 			}
 
 			// Beta 5.0: a defuser who died at the end lets the next one start
 			// afresh (the leak left the defuse running)
-			m_fStartDefuse = false;
+			m_bStartDefuse = false;
 			m_pDefuser = NULL;
 		}
 	}

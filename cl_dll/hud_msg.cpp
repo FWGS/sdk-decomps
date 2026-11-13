@@ -17,7 +17,7 @@
 //
 
 #include "hud.h"
-#include "util.h"
+#include "cl_util.h"
 #include "parsemsg.h"
 
 /// USER-DEFINED SERVER MESSAGE HANDLERS
@@ -41,6 +41,12 @@ int CHud :: MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf )
 
 	// reset concussion effect
 	m_iConcussionEffect = 0;
+
+	if ( CheckModelBounds() != true )
+	{
+		gEngfuncs.Con_Printf( "***Only Losers cheat!***\n" );
+		ClientCmd( "disconnect\n" );
+	}
 
 	return 1;
 }
@@ -107,8 +113,8 @@ int CHud :: MsgFunc_ReloadSound( const char *pszName, int iSize, void *pbuf )
 {
 	BEGIN_READ( pbuf, iSize );
 
-	BYTE vol = READ_BYTE();	// name ours
-	BYTE type = READ_BYTE();	// name ours
+	short vol = READ_BYTE();	// name ours
+	short type = READ_BYTE();	// name ours
 
 	switch ( type )
 	{

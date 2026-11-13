@@ -117,5 +117,18 @@ public:
 inline Vector operator*(float fl, const Vector& v)	{ return v * fl; }
 inline float DotProduct(const Vector& a, const Vector& b) { return(a.x*b.x+a.y*b.y+a.z*b.z); }
 inline Vector CrossProduct(const Vector& a, const Vector& b) { return Vector( a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x ); }
+// Counter-Strike: a vector turned about z by angle degrees (pi as 3.141517), z set to 0: EV_CreateSmoke's arithmetic.
+// Name, parameters, the four locals and the lines (function 125, locals 127 and 129) are Counter-Strike 1.6's.
+// sic: the statements are ours, and so is their size: this intermediate code stands ahead of VGUI's classes in
+// every unit of the client and places their inline functions; 401 to 435 bytes give retail's file, this is 435.
+// These five comment lines keep the function on line 125: do not add or remove one.
+inline Vector RotateVectorZ( const Vector &a, int angle )
+{
+	float x_old = a.x, y_old = a.y, R_angle = angle * ( 3.141517 / 180 );
+
+	Vector new_vector( x_old * cos( R_angle ) - y_old * sin( R_angle ), x_old * sin( R_angle ) + y_old * cos( R_angle ), 0.0 );
+
+	return new_vector;
+}
 
 #define vec3_t Vector

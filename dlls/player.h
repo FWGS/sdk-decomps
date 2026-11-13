@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -31,6 +31,12 @@
 #define		PFLAG_DUCKING		( 1<<3 )		// In the process of ducking, but totally squatted yet
 #define		PFLAG_USING			( 1<<4 )		// Using a continuous entity
 #define		PFLAG_OBSERVER		( 1<<5 )		// player is locked in stationary cam mode. Spectators can move, observers can't.
+
+// Beta 6.5: the observer's camera mode, pev->iuser1 (Valve's names, pm_shared.h of later SDKs)
+#define OBS_NONE			0
+#define OBS_CHASE_LOCKED	1
+#define OBS_CHASE_FREE		2
+#define OBS_ROAMING			3
 
 //
 // generic player
@@ -115,8 +121,6 @@ enum
 
 #include "hintmessage.h"	// Beta 5.0 (leak)
 
-class CObserver;	// Beta 5.0 (leak): observer.cpp
-
 // Beta 5.0 (leak): the status bar names the player in the crosshair
 // (InitStatusBar, UpdateStatusBar): SDK 2.3's text, with the leak's values:
 // 1024 units (8192 for a spectator), and the values the type of what is seen,
@@ -138,114 +142,92 @@ enum sbar_data
 #define SBAR_TARGETTYPE_ENEMY		2
 #define SBAR_TARGETTYPE_HOSTAGE		3
 
-// Beta 5.0 (leak): what the zones a player stands in signal (buy zone, bomb
-// target, rescue zone: the zone entities' touch functions and PostThink's
-// checks set bits; once in a while PostThink takes them as the new state).
-// The class, its members and its inline functions' names are ours; retail
-// has the three bodies (Signal, Update in player.obj, GetState first in
-// c4.obj). Update's body is in player.cpp: VC6 emits it after the zone
-// icons' helpers defined before it (the order of definition).
-class CSignals
+// Counter-Strike: the zone flags (buy zone, bomb target, rescue zone) that HandleSignals
+// compares from one frame to the next (class and member names ours).
+class CPlayerSignals
 {
 public:
-	CSignals( void ) { m_iSignals = 0; m_iState = 0; }	// retail's body: 0x1000e5a0, in client.obj after CBasePlayer's constructor
+	CPlayerSignals( void ) { m_iSignals = 0; m_iState = 0; }
 	void Signal( int flags ) { m_iSignals |= flags; }
-	int Update( void );
+	int Update( void ) { int old = m_iState; m_iState = m_iSignals; m_iSignals = 0; return m_iState ^ old; }
 	int GetState( void ) { return m_iState; }
-
-	int m_iSignals;		// 0x00 the bits signalled since the last Update
-	int m_iState;		// 0x04 the bits in force
+	int		m_iSignals;		// the zones touched this frame
+	int		m_iState;		// the zones of the frame before
 };
 
 class CBasePlayer : public CBaseMonster
 {
 public:
-	// Counter-Strike's members: 476 bytes in front of the SDK's (Beta 1.0: 96, 1.1: 88,
-	// 2.0: 116, 3.0: 376, 3.1: 380, 4.0: 412). Beta 2.0 makes the two flags at 0x148 bools and adds the members from
-	// 0x168 on; Beta 3.0 makes the kevlar flag an int and adds 256 bytes before
-	// m_iMenu; Beta 4.0 adds m_iHEGrenades before m_iFlashBangs and
-	// 28 bytes after m_fIgnoreRadio. Beta 5.0 (leak) drops the name check, the
-	// kick vote, the grenade counters, the night vision and the vote timer,
-	// adds the joining state, the intro camera, the idle time, the briefing
-	// flag, the hint messages, the display history (retail's save-table name),
-	// the zone signals and the bomb target, and moves m_iMenu behind them.
-	// Beta 5.0 drops m_fSendResetHUD (the leak's 0x194), so every member
-	// after it is 4 bytes earlier up to m_pObserver, and the sixth item slot
-	// takes them back (offsets of Beta 5.0, the leak's in brackets from
-	// m_iNightVisionAlpha on; before it, Beta 4.1's). Every
-	// name here is ours but m_flDisplayHistory; the offsets are retail's
-	// (CBaseMonster ends at 0x118).
-	float				m_flFlinchTime;			// 0x118 the flinch animation plays until then: SetAnimation ignores everything but PLAYER_FLINCH meanwhile
-	float				m_flNextFlinchTime;		// 0x11c no new flinch animation before this time
-	bool				m_fHeavyDamage;			// 0x120 (a bool from Beta 2.0 on) the last hit was a heavy one (TakeDamage); picks the long flinch and the thrown deaths
-	float				m_flVelocityModifier;	// 0x124 scales pev->velocity on the ground; 0.2 when hit, back to 1 by 0.01 a frame
-	float				m_flLastFired;			// 0x128 when the pistol was last fired (USP, G3SG1)
-	float				m_flAccuracy;			// 0x12c meaning depends on the weapon: the G3SG1 takes it as accuracy (spread 1 - value, back towards 0.98 with time since the last shot); the M249, M4A1, MP5 Navy and TMP as a spread factor that grows with m_iShotsFired and Reload sets to 0
-	float				m_flNextBurstShot;		// 0x130 when FireRemaining fires the burst's next shot; 0 = no burst running
-	int					m_iBurstShotsFired;		// 0x134 shots of the burst so far
-	int					m_iLastZoom;			// 0x138 the m_iFOV to come back to after the shot (AWP)
-	bool				m_fResumeZoom;			// 0x13c (a bool from Beta 2.0 on) zoom back to m_iLastZoom when the weapon can fire again
-	int					m_iShotsFired;			// 0x140 shots since the trigger was pulled; ItemPostFrame clears it
-	float				m_flEjectBrass;			// 0x144 when ItemPostFrame calls EjectBrassLate; 0 = nothing pending
-	int					m_iKevlar;				// 0x148 (a bool before Beta 3.0) 0 none, 1 kevlar (item_kevlar), 2 kevlar and helmet (item_assaultsuit); cleared when the armor is used up
-	bool				m_fNotKilled;			// 0x14c set at the end of Spawn, cleared by Killed and ClientPutInServer: a player who lived through the round keeps armor, kevlar and ammunition
-	int					m_iTeam;				// 0x150 TEAM_TERRORIST or TEAM_CT
-	int					m_iAccount;				// 0x154 money
-	bool				m_bHasPrimary;			// 0x158 an unused int until Beta 5.2; Beta 6.0: he carries a primary weapon (AddPlayerItem sets, DropPlayerItem, Spawn, GiveDefaultItems clear; CArmoury::ArmouryTouch gives none to him; name ours)
-	int					m_iUnused15C;			// 0x15c only written: SetAnimation zeroes it when the death animation starts
-	int					m_iDeathThrow;			// 0x160 how Killed throws the body: 0 not, 1 forwards, 2 backwards, 3 away from the attacker
-	float				m_flLastSay;			// 0x164 time of the last chat line (Host_Say lets one through a second)
-	bool				m_fJustConnected;		// 0x168 [0x16c] set by ClientPutInServer; JoiningThink clears it when the player first spawns
-	bool				m_fUnused169;			// 0x169 [new] only written: ClientPutInServer sets it
-	int					m_iJoiningState;		// 0x16c [new] JoiningThink's step: 0 playing, 1 just connected (camera, briefing), 2 reading the briefing, 3 choosing a team, 4 choosing a model, 5 about to spawn (ClientPutInServer, PreThink, the menus, multiplay's Think and PlayerThink)
-	CBaseEntity			*m_pIntroCamera;		// 0x170 [new] the trigger_camera a joining player looks through (ClientPutInServer, JoiningThink: the next one every 6 seconds)
-	float				m_flIntroCameraTime;	// 0x174 [new] when JoiningThink moves to the next camera
-	int					m_iIgnoreGhosts;		// 0x178 [new] set when the client's ghosts key (Beta 5.0; the leak: ignoreghosts) is 0 or off (JoiningThink); CObserver::CGhosts::Update shows no ghosts to him
-	float				m_flLastActivity;		// 0x17c [new] when the player last pressed a button (PreThink); idle longer than the game rules allow, mp_autokick kicks him
-	bool				m_fShowingLevelText;	// 0x180 [new] the map's briefing is on the screen (showbriefing, JoiningThink); a button press takes it away (RemoveLevelText)
-	bool				m_fTeamChanged;			// 0x181 new in Beta 5.0: a dead player changed teams (HandleMenu_ChooseTeam); chooseteam allows one change a death (Killed and JoiningThink clear it; name ours)
-	int					m_iAppearance;			// 0x184 [0x170] the player model (ClientPutInServer 1, HandleMenu_ChooseAppearance; ClientUserInfoChanged and SetPlayerModel map it to a model)
-	bool				m_fKicked;				// 0x188 [0x178] sent away (team killer): ClientCommand ignores him, Spawn kills him
-	int					m_iTeamKills;			// 0x18c [0x184] team mates killed; the third kicks the killer (PlayerKilled)
-	int					m_iIgnoreMessages;		// 0x190 [0x188] ignoremsg: 0 all, 1 no broadcast messages, 2 no team messages either
-	bool				m_bHasNightVision;		// 0x194 Beta 6.0: bought night vision goggles (BuyItem; ClientPutInServer, Spawn clear it; the leak's and Beta 5.0's int m_iNightVisionAlpha, set to 60 and read by nothing, was here; name ours)
-	bool				m_bNightVisionOn;		// 0x195 Beta 6.0: the goggles are on (the nightvision command; Spawn clears it; name ours)
-	Vector				m_vecOldOrigins[20];	// 0x198 [0x19c] the trail a hostage follows; PreThink pushes pev->origin in front every 0.2 seconds
-	float				m_flNextOldOrigin;		// 0x288 [0x28c] when PreThink records the next position
-	float				m_flNextRadio;			// 0x28c [0x290] no radio message before this time (1.5 seconds after the last)
-	int					m_iRadioMessages;		// 0x290 [0x294] radio messages left (Spawn sets the number)
-	bool				m_fIgnoreRadio;			// 0x294 [0x298] the ignoreradio command; CBasePlayer::Radio sends such a player nothing
-	bool				m_fHasC4;				// 0x295 [0x299] carries the C4 bomb
-	bool				m_fHasDefuser;			// 0x296 [0x29a] carries a defuse kit (bought: BuyItem); CGrenade::Use defuses in 5 seconds with it, 10 without
-	bool				m_fKilledByBlast;		// 0x297 [0x29b] the last hit was a blast (DMG_BLAST); picks the death animation
-	Vector				m_vecBlastDir;			// 0x298 [0x29c] from the inflictor to the player, at the last hit (TakeDamage)
-	bool				m_fKilledByHEGrenade;	// 0x2a4 [0x2a8] the last hit was an HE grenade's (DMG_HEGRENADE); a team mate killed so is not counted
-	CHintMessageQueue	m_hintMessageQueue;		// 0x2a8 [0x2ac] the hints waiting (HintMessage adds, PreThink shows, Spawn empties)
-	int					m_flDisplayHistory;		// 0x2d8 [0x2dc] retail's save-table name (FIELD_INTEGER): a bit per hint the player has seen (PreThink, Spawn, HostageUsed, TakeDamage, multiplay's PlayerKilled, ...)
-	int					m_iMenu;				// 0x2dc [0x2e0] the menu the client has open (client.cpp)
-	// Beta 5.2: the dead player's camera, which replaces the observer entity
-	// (16 bytes; every member after them is 0x10 later than in Beta 5.0)
-	char				m_cObserverMode;		// 0x2e0 0 the free camera (GhostMode), 1 the chase camera following m_pChaseTarget (ChaseCamMode); Spawn: 1 when mp_chasecam is 1; JUMP switches
-	int					m_iChaseNext;			// 0x2e4 the player index GetPlayerToChase tries first (Spawn: 1)
-	CBaseEntity			*m_pChaseTarget;		// 0x2e8 the player watched (GetPlayerToChase), NULL when there is none
-	float				m_flNextObserverInput;	// 0x2ec JUMP and ATTACK act again from this time (half a second; Spawn: 0)
-	// Beta 6.0: 48 bytes (every member after them is 0x30 later than in Beta 5.2; names ours)
-	bool				m_bLeadsHostage;		// 0x2f0 a hostage follows him (CHostage::Use); PreThink records his path (UpdatePath); Spawn, Killed, Disappear clear it
-	Vector				m_vecLastPathPos;		// 0x2f4 where UpdatePath last saw him; a way-point is inserted when the hull trace from there is blocked
-	bool				m_bEscaped;				// 0x300 a terrorist who reached a func_escapezone (CEscapeZone::EscapeTouch); Spawn clears it
-	bool				m_bIsVIP;				// 0x301 the VIP of an assassination map (MakeVIP, ResetCurrentVIP)
-	float				m_flNextRadarUpdate;	// 0x304 UpdateClientData sends the team mates his radar position every so often
-	Vector				m_vecLastRadarOrigin;	// 0x308 the position last sent (UpdateClientData)
-	bool				m_bLeftHanded;			// 0x314 the client's "lefthand" key is set (ClientUserInfoChanged): the weapons deploy the v_*.mdl models, else v_*_r.mdl
-	int					m_iCurrentKickVote;		// 0x318 the user id he voted to kick (vote; KickPlayer, Spawn clear it)
-	float				m_flNextVoteTime;		// 0x31c no vote before this time (3 seconds after the last)
-	// Beta 6.1: 4 bytes (every member after them 4 later than in Beta 6.0;
-	// m_bJustKilledTeammate from CS 1.6's Linux debug information, m_bVoteKicksAtOnce ours)
-	bool				m_bVoteKicksAtOnce;		// 0x320 set by the hidden a12 command (1977, one of six names, ducking): his vote holding the knife counts 1977 votes (ClientCommand)
-	bool				m_bJustKilledTeammate;	// 0x321 he killed a team mate (multiplay's PlayerKilled); RoundRespawn makes him sit the next round out (Spawn clears it)
-	float				m_flNextZoneCheck;		// 0x324 PostThink checks the zones the player stands in every 0.2 seconds (Spawn: 0)
-	CSignals			m_signals;				// 0x328 the zones' signals: buy zone 1, bomb target 2 (the buy commands, CC4::PrimaryAttack, CBuyZone, CBombTarget)
-	edict_t				*m_pentBombTarget;		// 0x330 the bomb target the player is in (CBombTarget::BombTargetTouch); the planted C4 keeps it (ShootSatchelCharge)
+	int					random_seed;    // See that is shared between client & server for shared weapons code
+
+	// Counter-Strike's members, 0x178 to 0x398.  Offsets are Beta 6.5's (retail mp.dll); names are
+	// Beta 6.1's reconstruction's (ours) unless said; "1.6" = Counter-Strike 1.6's debug information.
+	unsigned short		m_usPlayerBleed;		// 0x178 four bytes nothing reads or writes (1.6's name and type, by its place)
+	EHANDLE				m_hObserverTarget;		// 0x17c the player an observer watches (observer.cpp; 1.6's name)
+	float				m_flNextObserverInput;	// 0x184 Observer_HandleButtons takes no button before this time (1.6's name)
+	float				m_flFlinchTime;			// 0x188 the flinch animation plays until then
+	float				m_flNextFlinchTime;		// 0x18c no new flinch animation before this time
+	bool				m_fHeavyDamage;			// 0x190 the last hit was a heavy one (TakeDamage)
+	float				m_flVelocityModifier;	// 0x194 scales the velocity on the ground after a hit
+	int					m_iLastZoom;			// 0x198 the field of view DefaultDeploy resets to 90 (Beta 1.0's name)
+	bool				m_bResumeZoom;			// 0x19c (Beta 1.0's m_fResumeZoom, now a bool)
+	float				m_flEjectBrass;			// 0x1a0 when ItemPostFrame throws the shell late (the AWP's bolt, the M3 0.45 s after its shot); Beta 1.0's name
+	int					m_iKevlar;				// 0x1a4 0 none, 1 kevlar, 2 kevlar and helmet
+	bool				m_fNotKilled;			// 0x1a8 lived through the round: keeps his weapons
+	int					m_iTeam;				// 0x1ac the player's team: the grenade throws pass it (Beta 1.0's name)
+	int					m_iAccount;				// 0x1b0 money
+	bool				m_bHasPrimary;			// 0x1b4 he carries a primary weapon
+	int					m_iUnused15C;			// 0x1b8 only written (Beta 6.1's name, after its offset there)
+	int					m_iDeathThrow;			// 0x1bc how Killed throws the body
+	float				m_flLastSay;			// 0x1c0 time of the last chat line
+	bool				m_fJustConnected;		// 0x1c4
+	bool				m_fUnused169;			// 0x1c5 only written (Beta 6.1's name)
+	int					m_iJoiningState;		// 0x1c8 JoiningThink's step (the JOIN_ enum)
+	CBaseEntity			*m_pIntroCamera;		// 0x1cc the trigger_camera a joining player looks through
+	float				m_flIntroCameraTime;	// 0x1d0
+	int					m_iIgnoreGhosts;		// 0x1d4
+	float				m_flLastActivity;		// 0x1d8 when the player last pressed a button
+	bool				m_fShowingLevelText;	// 0x1dc the map's briefing is on the screen
+	bool				m_fTeamChanged;			// 0x1dd a dead player changed teams this round
+	int					m_iAppearance;			// 0x1e0 the player model
+	bool				m_fKicked;				// 0x1e4
+	int					m_iTeamKills;			// 0x1e8
+	int					m_iIgnoreMessages;		// 0x1ec ignoremsg
+	bool				m_bHasNightVision;		// 0x1f0
+	bool				m_bNightVisionOn;		// 0x1f1
+	Vector				m_vecOldOrigins[20];	// 0x1f4 the trail a hostage follows
+	float				m_flNextOldOrigin;		// 0x2e4
+	float				m_flNextRadio;			// 0x2e8 no radio message before this time
+	int					m_iRadioMessages;		// 0x2ec radio messages left
+	bool				m_fIgnoreRadio;			// 0x2f0 the ignoreradio command
+	bool				m_bHasC4;				// 0x2f1 the bomb carrier (CC4::PrimaryAttack clears it; 1.6's name)
+	bool				m_fHasDefuser;			// 0x2f2 carries a defuse kit
+	bool				m_fKilledByBlast;		// 0x2f3 the last hit was a blast
+	Vector				m_vecBlastDir;			// 0x2f4 from the inflictor to the player, at the last hit
+	bool				m_fKilledByHEGrenade;	// 0x300
+	CHintMessageQueue	m_hintMessageQueue;		// 0x304 the hints waiting
+	int					m_flDisplayHistory;		// 0x334 (the save table's name) a bit per hint seen
+	int					m_iMenu;				// 0x338 the menu the client has open
+	int					m_iChaseNext;			// 0x33c Beta 6.1's chase camera words, less its mode byte (the mode is pev->iuser1 now)
+	CBaseEntity			*m_pChaseTarget;		// 0x340
+	float				m_fCamSwitch;			// 0x344 Beta 6.1's m_flNextObserverInput (1.6's name; the new member at 0x184 has Beta 6.1's name now)
+	bool				m_bLeadsHostage;		// 0x348 a hostage follows him; PreThink records his path
+	Vector				m_vecLastPathPos;		// 0x34c
+	bool				m_bEscaped;				// 0x358 a terrorist who reached an escape zone
+	bool				m_bIsVIP;				// 0x359 the VIP of an assassination map (ResetMaxSpeed: 227)
+	float				m_flNextRadarUpdate;	// 0x35c
+	Vector				m_vecLastRadarOrigin;	// 0x360
+	bool				m_bLeftHanded;			// 0x36c userinfo "lefthand": v_*.mdl rather than v_*_r.mdl
+	int					m_iCurrentKickVote;		// 0x370 the user id he voted to kick
+	float				m_flNextVoteTime;		// 0x374
+	bool				m_bVoteKicksAtOnce;		// 0x378 Beta 6.1's two bools (the hidden a12 command; the TK penalty)
+	bool				m_bJustKilledTeammate;	// 0x379 (1.6's name)
+	int					m_iHostagesKilled;		// 0x37c new in Beta 6.5 (1.6's name, by its place)
+	int					m_iMapVote;				// 0x380 new in Beta 6.5 (1.6's name, by its place)
+	bool				m_bCanShoot;			// 0x384 cleared in the freeze time, set when the round starts (1.6's name)
+	float				m_flNextZoneCheck;		// 0x388 HandleSignals' next check
+	CPlayerSignals		m_signals;				// 0x38c
+	edict_t				*m_pentBombTarget;		// 0x394 the bomb target the player is in
 
 	int					m_iPlayerSound;// the index of the sound list slot reserved for this player
 	int					m_iTargetVolume;// ideal sound volume. 
@@ -321,10 +303,10 @@ public:
 	int			m_iClientHideHUD;
 	int			m_iFOV;			// field of view
 	int			m_iClientFOV;	// client's known FOV
-	// Beta 5.0 (leak), names ours (Beta 5.2's offsets, 0x10 more than Beta 5.0's):
-	BOOL		m_fHasAssaultSuit;	// 0x530 (Beta 5.2: 0x500) GiveNamedItem: TRUE for item_assaultsuit, FALSE for item_kevlar; HasAssaultSuit wants it and armor
-	int			m_iNumSpawns;		// 0x534 spawns since the player joined (Spawn counts, JoiningThink clears; FPlayerCanRespawn)
-	CObserver	*m_pObserver;		// 0x538 Beta 5.0's observer entity; from Beta 5.2 on nothing sets it, ClientDisconnected still removes it (sic)
+	// Counter-Strike (Beta 6.1's names)
+	BOOL		m_fHasAssaultSuit;	// 0x598
+	int			m_iNumSpawns;		// 0x59c spawns since the player joined
+	CBaseEntity	*m_pObserver;		// 0x5a0 Beta 5.0's observer entity; nothing sets it
 	// usable player items 
 	CBasePlayerItem	*m_rgpPlayerItems[MAX_ITEM_TYPES];
 	CBasePlayerItem *m_pActiveItem;
@@ -339,15 +321,14 @@ public:
 	int					m_iDeaths;
 	float				m_iRespawnFrames;	// used in PlayerDeathThink() to make sure players can always respawn
 
-	// Beta 5.0 (leak): SDK 2.3's status bar, here (0x638 to 0x750)
 	//Player ID
 	void InitStatusBar( void );
 	void UpdateStatusBar( void );
-	int m_izSBarState[ SBAR_END ];
-	float m_flNextSBarUpdateTime;
-	float m_flStatusBarDisappearDelay;
-	char m_SbarString0[ SBAR_STRING_SIZE ];
-	char m_SbarString1[ SBAR_STRING_SIZE ];
+	int m_izSBarState[ SBAR_END ];					// 0x6e0
+	float m_flNextSBarUpdateTime;					// 0x6f0
+	float m_flStatusBarDisappearDelay;				// 0x6f4
+	char m_SbarString0[ SBAR_STRING_SIZE ];			// 0x6f8
+	char m_SbarString1[ SBAR_STRING_SIZE ];			// 0x778
 
 	int m_lastx, m_lasty;  // These are the previous update's crosshair angles, DON"T SAVE/RESTORE
 
@@ -356,8 +337,9 @@ public:
 
 	char m_szTeamName[TEAM_NAME_LENGTH];
 
+
 	virtual void Spawn( void );
-	void Pain( int iLastHitGroup, bool bHasArmour );	// parameter names ours
+	void Pain( int iLastHitGroup, bool bHasArmour );
 
 //	virtual void Think( void );
 	virtual void Jump( void );
@@ -375,7 +357,7 @@ public:
 	virtual BOOL IsSneaking( void ) { return m_tSneaking <= gpGlobals->time; }
 	virtual BOOL IsAlive( void ) { return (pev->deadflag == DEAD_NO) && pev->health > 0; }
 	virtual BOOL ShouldFadeOnDeath( void ) { return FALSE; }
-	virtual	BOOL IsPlayer( void ) { return !( pev->flags & FL_SPECTATOR ); }	// Beta 5.0 (leak): a joining player (FL_SPECTATOR, ClientPutInServer) is not one
+	virtual	BOOL IsPlayer( void ) { return !(pev->flags & FL_SPECTATOR); }			// Spectators should return FALSE for this, they aren't "players" as far as game logic is concerned
 
 	virtual BOOL IsNetClient( void ) { return TRUE; }		// Bots should return FALSE for this, they can't receive NET messages
 															// Spectators should return TRUE for this
@@ -411,48 +393,49 @@ public:
 
 	// custom player functions
 	virtual void ImpulseCommands( void );
+
+	// Counter-Strike (names the Linux library's; parameter names and return types ours)
+	virtual void ResetMaxSpeed( void );
+	void Radio( const char *msg_id, const char *msg_verbose );
+	void SetBombIcon( int bFlash );
+	void AddAccount( int amount, bool bTrackChange );
+	bool CanPlayerBuy( bool display );
+	void Disappear( void );
+	void GiveDefaultItems( void );
+	void HandleSignals( void );
+	BOOL HasAssaultSuit( void );
+	bool HintMessage( const char *pMessage, BOOL bDisplayIfPlayerDead, BOOL bOverride );
+	void HostageUsed( void );
+	BOOL IsCommander( void );
+	bool IsObserver( void );
+	void JoiningThink( void );
+	void MakeVIP( void );
+	void MenuPrint( CBasePlayer *pPlayer, const char *msg );
+	void Observer_FindNextPlayer( bool bReverse );
+	void Observer_HandleButtons( void );
+	void Observer_SetMode( int iMode );
+	void RemoveLevelText( void );
+	void Reset( void );
+	void ResetMenu( void );
+	void RoundRespawn( void );
+	void SetPlayerModel( BOOL HasC4 );
+	void SetScoreboardAttributes( CBasePlayer *destination = NULL );
+	void SwitchTeam( void );
+	void SyncRoundTimer( void );
+	void TabulateAmmo( void );
+	void ThrowPrimary( void );
+	void ThrowWeapon( char *pszItemName );
+	void UpdatePath( void );
 	void CheatImpulseCommands( int iImpulse );
 
 	void StartDeathCam( void );
 	void StartObserver( Vector vecPosition, Vector vecViewAngle );
-	// Beta 5.2 (Linux symbols): the chase camera
-	CBaseEntity *GetPlayerToChase( void );
-	void GhostMode( void );
-	void ChaseCamMode( void );
 
 	void AddPoints( int score, BOOL bAllowNegativeScore );
 	void AddPointsToTeam( int score, BOOL bAllowNegativeScore );
 	BOOL AddPlayerItem( CBasePlayerItem *pItem );
 	BOOL RemovePlayerItem( CBasePlayerItem *pItem );
-	void ThrowWeapon( char *pszItemName );
-	void ThrowPrimary( void );
-
-	// Beta 5.0 (leak), Linux symbols; parameter counts from retail's stack cleanup
-	// (names ours)
-	void AddAccount( int amount, bool bTrackChange );
-	void Radio( const char *msg_id, const char *msg_verbose );
-	void DropPlayerItem( const char *pszItemName );
-	void SetPlayerModel( BOOL HasC4 );
-	void SetBombIcon( BOOL bFlash );
-	BOOL IsCommander( void );
-	// Beta 6.0 (Linux symbols)
-	bool CanPlayerBuy( bool display );	// parameter name ours
-	void Disappear( void );
-	void MakeVIP( void );
-	void SwitchTeam( void );
-	void UpdatePath( void );
-	void SyncRoundTimer( void );
-	void MenuPrint( CBasePlayer *pPlayer, const char *msg );
-	void RoundRespawn( void );
-	void HostageUsed( void );
-	bool HintMessage( const char *pMessage, BOOL bDisplayIfPlayerDead, BOOL bForce );	// Beta 5.0: a third flag, forcing the hint past the client's autohelp key (Linux symbol: three ints; name ours)
-	BOOL HasAssaultSuit( void );
-	void SetScoreboardAttributes( CBasePlayer *destination = NULL );	// NULL: every player sees this one's marks
-	void ResetMenu( void );
-	void RemoveLevelText( void );
-	void JoiningThink( void );
-	void HandleSignals( void );
-	virtual void ResetMaxSpeed( void );
+	void DropPlayerItem ( const char *pszItemName );
 	BOOL HasPlayerItem( CBasePlayerItem *pCheckItem );
 	BOOL HasNamedPlayerItem( const char *pszItemName );
 	BOOL HasWeapons( void );// do I have ANY weapons?
@@ -469,7 +452,6 @@ public:
 	void SendAmmoUpdate(void);
 
 	void WaterMove( void );
-	void CheckWaterJump( void );
 	void EXPORT PlayerDeathThink( void );
 	void PlayerUse( void );
 
@@ -488,8 +470,6 @@ public:
 	int Illumination( void );
 
 	void ResetAutoaim( void );
-	void Reset( void );				// Beta 5.0 (Linux symbol): a complete reset (RestartRound)
-	void GiveDefaultItems( void );	// Beta 5.0 (Linux symbol): the starting weapons
 	Vector GetAutoaimVector( float flDelta  );
 	Vector AutoaimDeflection( Vector &vecSrc, float flDist, float flDelta  );
 

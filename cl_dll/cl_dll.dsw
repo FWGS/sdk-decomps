@@ -8,7 +8,7 @@ Project: "cl_dll"=.\cl_dll.dsp - Package Owner=<4>
 Package=<5>
 {{{
     begin source code control
-    "$/GoldSrc/cl_dll", HGEBAAAA
+    "$/HLStandardSDK/SourceCode/cl_dll", NUWHAAAA
     .
     end source code control
 }}}
@@ -23,10 +23,6 @@ Global:
 
 Package=<5>
 {{{
-    begin source code control
-    "$/GoldSrc/cl_dll", HGEBAAAA
-    .
-    end source code control
 }}}
 
 Package=<3>

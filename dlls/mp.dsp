@@ -39,11 +39,11 @@ RSC=rc.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir ""
+# PROP Output_Dir ".\Releasemp"
 # PROP Intermediate_Dir ".\Releasemp"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /G5 /MT /W3 /GX /O2 /Ob0 /I "..\engine" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "VALVE_DLL" /YX /FD /c
+# ADD CPP /nologo /G5 /MT /W3 /GX /O2 /I "..\dlls" /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\\" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "VALVE_DLL" /D "CLIENT_WEAPONS" /YX /FD /c
 # SUBTRACT CPP /Fr
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -54,12 +54,12 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /dll /machine:I386
-# ADD LINK32 user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:windows /dll /map /debug /machine:I386 /def:".\mp.def" /incremental:no
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:windows /dll /map /debug /machine:I386 /def:".\mp.def" /incremental:no
 # SUBTRACT LINK32 /profile
 # Begin Custom Build - Copying to \half-life\mp\dlls
-TargetPath=.\mp.dll
+TargetPath=.\Releasemp\mp.dll
 TargetName=mp
-InputPath=.\mp.dll
+InputPath=.\Releasemp\mp.dll
 SOURCE="$(InputPath)"
 
 "$(TargetName)" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -80,7 +80,7 @@ SOURCE="$(InputPath)"
 # PROP Intermediate_Dir ".\debugmp"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MTd /W3 /Gm /GX /Zi /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /G5 /MTd /W3 /Gm /GX /ZI /Od /I "..\engine" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "VALVE_DLL" /FR /YX /FD /c
+# ADD CPP /nologo /G5 /MTd /W3 /Gm /GX /ZI /Od /I "..\dlls" /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\\" /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "VALVE_DLL" /D "CLIENT_WEAPONS" /FR /YX /FD /c
 # ADD BASE MTL /nologo /D "_DEBUG" /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
@@ -117,7 +117,7 @@ SOURCE="$(InputPath)"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /G5 /MT /W3 /GX /Zi /O2 /I "..\engine" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "QUIVER" /D "VOXEL" /D "QUAKE2" /D "VALVE_DLL" /YX /c
 # SUBTRACT BASE CPP /Fr
-# ADD CPP /nologo /G5 /MT /W3 /GX /Zi /O2 /I "..\engine" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "VALVE_DLL" /YX /FD /c
+# ADD CPP /nologo /G5 /MT /W3 /GX /Zi /O2 /I "..\dlls" /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\\" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "VALVE_DLL" /D "CLIENT_WEAPONS" /YX /FD /c
 # SUBTRACT CPP /Fr
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
@@ -163,10 +163,6 @@ SOURCE=.\airtank.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\ak47.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\ammo.cpp
 # End Source File
 # Begin Source File
@@ -176,14 +172,15 @@ SOURCE=.\animating.cpp
 # Begin Source File
 
 SOURCE=.\animation.cpp
-# End Source File
-# Begin Source File
 
-SOURCE=.\aug.cpp
-# End Source File
-# Begin Source File
+!IF  "$(CFG)" == "mp - Win32 Release"
 
-SOURCE=.\awp.cpp
+!ELSEIF  "$(CFG)" == "mp - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "mp - Win32 Profile"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -192,10 +189,6 @@ SOURCE=.\bmodels.cpp
 # Begin Source File
 
 SOURCE=.\buttons.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\c4.cpp
 # End Source File
 # Begin Source File
 
@@ -211,10 +204,6 @@ SOURCE=.\combat.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\deagle.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\doors.cpp
 # End Source File
 # Begin Source File
@@ -227,19 +216,11 @@ SOURCE=.\explode.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\flashbang.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\func_break.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\func_tank.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\g3sg1.cpp
 # End Source File
 # Begin Source File
 
@@ -256,10 +237,6 @@ SOURCE=.\ggrenade.cpp
 # Begin Source File
 
 SOURCE=.\globals.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\glock18.cpp
 # End Source File
 # Begin Source File
 
@@ -283,15 +260,7 @@ SOURCE=.\healthkit.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\hegrenade.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\hintmessage.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\hornet.cpp
 # End Source File
 # Begin Source File
 
@@ -303,27 +272,7 @@ SOURCE=.\items.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\knife.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\lights.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\m249.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\m3.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\m4a1.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\mac10.cpp
 # End Source File
 # Begin Source File
 
@@ -335,10 +284,6 @@ SOURCE=.\mortar.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\mp5navy.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\mpstubb.cpp
 # End Source File
 # Begin Source File
@@ -347,11 +292,7 @@ SOURCE=.\multiplay_gamerules.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\p228.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\p90.cpp
+SOURCE=.\observer.cpp
 # End Source File
 # Begin Source File
 
@@ -371,19 +312,15 @@ SOURCE=.\player.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\satchel.cpp
+SOURCE=..\pm_shared\pm_debug.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\scout.cpp
+SOURCE=..\pm_shared\pm_math.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\sg552.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\shield.cpp
+SOURCE=..\pm_shared\pm_shared.c
 # End Source File
 # Begin Source File
 
@@ -411,15 +348,7 @@ SOURCE=.\subs.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\tmp.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\triggers.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\usp.cpp
 # End Source File
 # Begin Source File
 
@@ -435,11 +364,99 @@ SOURCE=.\world.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\xen.cpp
+SOURCE=.\wpn_shared\wpn_ak47.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\xm1014.cpp
+SOURCE=.\wpn_shared\wpn_aug.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_awp.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_c4.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_deagle.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_flashbang.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_g3sg1.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_glock18.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_hegrenade.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_knife.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_m249.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_m3.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_m4a1.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_mac10.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_mp5navy.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_p228.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_p90.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_scout.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_sg552.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_smokegrenade.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_tmp.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_usp.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_xm1014.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\xen.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -511,10 +528,6 @@ SOURCE=.\gamerules.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\hintmessage.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\hornet.h
 # End Source File
 # Begin Source File
@@ -539,15 +552,35 @@ SOURCE=.\nodes.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\observer.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\plane.h
 # End Source File
 # Begin Source File
 
 SOURCE=.\player.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\pm_shared\pm_debug.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\pm_shared\pm_defs.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\pm_shared\pm_info.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\pm_shared\pm_materials.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\pm_shared\pm_movevars.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\pm_shared\pm_shared.h
 # End Source File
 # Begin Source File
 

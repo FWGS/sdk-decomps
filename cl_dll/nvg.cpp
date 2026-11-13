@@ -6,8 +6,10 @@
 //
 
 #include "hud.h"
-#include "util.h"
+#include "cl_util.h"
 #include "parsemsg.h"
+
+void EV_HLDM_CreateDLight( float *origin, float radius, int r, int g, int b, float life );	// name ours: ev_hldm.cpp
 
 DECLARE_MESSAGE( m_NVG, NVGToggle );
 DECLARE_COMMAND( m_NVG, NVGAdjustUp );
@@ -161,7 +163,11 @@ void CHudNVG :: UserCmd_NVGAdjustDown( void )
 int CHudNVG :: Draw( float flTime )
 {
 	if ( m_iOn )
+	{
 		FillRGBA( 0, 0, ScreenWidth, ScreenHeight, 50, 225, 50, m_iAlpha );
+		int iRadius = gEngfuncs.pfnRandomLong( 0, 50 ) + 750;	// name ours
+		EV_HLDM_CreateDLight( gHUD.m_vecOrigin, iRadius, 1, 20, 1, 0.1 );
+	}
 
 	// the sniper scope, zoomed in and from 640 wide
 	if ( gHUD.m_iFOV < 45 && ScreenWidth >= 640 )

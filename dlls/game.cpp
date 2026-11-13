@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -24,15 +24,19 @@ cvar_t  servercfgfile = {"servercfgfile","server.cfg"};
 cvar_t  lservercfgfile = {"lservercfgfile","listenserver.cfg"};
 
 // multiplayer server rules
+cvar_t	fragsleft	= {"mp_fragsleft","0", FCVAR_SERVER | FCVAR_UNLOGGED };	  // Don't spam console/log files/users with this changing
+cvar_t	timeleft	= {"mp_timeleft","0" , FCVAR_SERVER | FCVAR_UNLOGGED };	  // "      "
+
+// multiplayer server rules
 // Beta 5.0 (leak): mp_lowlag, mp_limitteams, mp_fraglimit, mp_falldamage,
 // mp_weaponstay, mp_forcerespawn, mp_autocrosshair, mp_teamlist,
 // mp_teamoverride, mp_defaultteam and mp_friendly_grenade_damage are no longer
 // registered (FireBullets3 and AllowAutoTargetCrosshair still read mp_lowlag
 // and mp_autocrosshair by name); Beta 5.0 registers mp_limitteams again, and
-// FireBullets3 no longer reads mp_lowlag
+// FireBullets3 no longer reads mp_lowlag.  Beta 6.5 (SDK 2.0): mp_footsteps is
+// the engine's; mp_teamplay is not registered
 cvar_t	timelimit	= {"mp_timelimit","0", FCVAR_SERVER };
 cvar_t	friendlyfire= {"mp_friendlyfire","0", FCVAR_SERVER };
-cvar_t	footsteps	= {"mp_footsteps","1", FCVAR_SERVER };
 cvar_t	flashlight	= {"mp_flashlight","0", FCVAR_SERVER };
 cvar_t	decalfrequency = {"decalfrequency","30", FCVAR_SERVER };
 cvar_t	allowmonsters={"mp_allowmonsters","0", FCVAR_SERVER };
@@ -40,12 +44,22 @@ cvar_t	allowmonsters={"mp_allowmonsters","0", FCVAR_SERVER };
 cvar_t	roundtime	= {"mp_roundtime","5", FCVAR_SERVER };			// minutes, 3 to 9 (CHalfLifeMultiplay)
 cvar_t	freezetime	= {"mp_freezetime","6", FCVAR_SERVER };			// Beta 5.0 (leak): seconds the players stand still at a round's start, 0 to 15
 cvar_t	c4timer		= {"mp_c4timer","45", FCVAR_SERVER };			// seconds, 10 to 90 (Beta 4.1: 35 by default, Beta 5.0 leak: 45)
-cvar_t	ghostfrequency = {"mp_ghostfrequency","0.1", FCVAR_SERVER };	// Beta 5.0 (leak): how often an observer's view of the other ghosts is updated (CObserver::CGhosts::Update)
-cvar_t	chasecam	= {"mp_chasecam","0", FCVAR_SERVER };			// Beta 5.0 (leak): the observer modes allowed (CObserver)
+cvar_t	ghostfrequency = {"mp_ghostfrequency","0.1", FCVAR_SERVER };	// Beta 5.0 (leak): how often an observer's view of the other ghosts is updated
 cvar_t	autokick	= {"mp_autokick","1", FCVAR_SERVER };			// Beta 5.0 (leak): kick idle players and team killers
 cvar_t	restartround = {"sv_restartround","0", FCVAR_SERVER };		// Beta 5.0 (leak): restart the round in so many seconds (Think)
 cvar_t	limitteams	= {"mp_limitteams","2", FCVAR_SERVER };			// Beta 5.0: how many players one team may have more than the other, 0 (no limit) to 20 (ReadMultiplayCvars, TeamStacked)
 cvar_t	autoteambalance = {"mp_autoteambalance","1", FCVAR_SERVER };	// Beta 6.0 (Linux symbol): balance the teams at a new round when they stay uneven (RestartRound, BalanceTeams)
+// Beta 6.5 (Linux symbols); mp_chasecam is gone
+cvar_t	tkpunish	= {"mp_tkpunish","0", FCVAR_SERVER };			// read by CBasePlayer::RoundRespawn (the team killer's round out)
+cvar_t	hostagepenalty = {"mp_hostagepenalty","13", FCVAR_SERVER };	// read by CHostage::TakeDamage
+cvar_t	mirrordamage = {"mp_mirrordamage","0", FCVAR_SERVER };		// registered only: nothing in the DLL reads it by name
+cvar_t	logmessages	= {"mp_logmessages","0", FCVAR_SERVER };		// read by Host_Say
+cvar_t	forcechasecam = {"mp_forcechasecam","0", FCVAR_SERVER };	// read by Observer_FindNextPlayer and Observer_SetMode
+cvar_t	mapvoteratio = {"mp_mapvoteratio","0.6", FCVAR_SERVER };	// the share of the players a map needs to be voted in, 0.35 to 1 (CHalfLifeMultiplay::VoteMap)
+
+cvar_t 	*g_psv_gravity = NULL;
+cvar_t	*g_psv_aim = NULL;
+cvar_t	*g_footsteps = NULL;
 
 //CVARS FOR SKILL LEVEL SETTINGS
 // Agrunt
@@ -454,6 +468,9 @@ cvar_t	sk_player_leg3	= { "sk_player_leg3","1" };
 void GameDLLInit( void )
 {
 	// Register cvars here:
+	g_psv_gravity = CVAR_GET_POINTER( "sv_gravity" );
+	g_psv_aim = CVAR_GET_POINTER( "sv_aim" );
+	g_footsteps = CVAR_GET_POINTER( "mp_footsteps" );
 
 	CVAR_REGISTER (&displaysoundlist);
 	CVAR_REGISTER (&mapcyclefile);
@@ -461,9 +478,7 @@ void GameDLLInit( void )
 	CVAR_REGISTER (&lservercfgfile);
 
 	CVAR_REGISTER (&timelimit);
-
 	CVAR_REGISTER (&friendlyfire);
-	CVAR_REGISTER (&footsteps);
 	CVAR_REGISTER (&flashlight);
 	CVAR_REGISTER (&decalfrequency);
 	CVAR_REGISTER (&allowmonsters);
@@ -471,11 +486,19 @@ void GameDLLInit( void )
 	CVAR_REGISTER (&freezetime);
 	CVAR_REGISTER (&c4timer);
 	CVAR_REGISTER (&ghostfrequency);
-	CVAR_REGISTER (&chasecam);
 	CVAR_REGISTER (&autokick);
 	CVAR_REGISTER (&restartround);
 	CVAR_REGISTER (&limitteams);
 	CVAR_REGISTER (&autoteambalance);
+	CVAR_REGISTER (&tkpunish);
+	CVAR_REGISTER (&hostagepenalty);
+	CVAR_REGISTER (&mirrordamage);
+	CVAR_REGISTER (&logmessages);
+	CVAR_REGISTER (&forcechasecam);
+	CVAR_REGISTER (&mapvoteratio);
+
+	CVAR_REGISTER (&fragsleft);
+	CVAR_REGISTER (&timeleft);
 
 // REGISTER CVARS FOR SKILL LEVEL STUFF
 	// Agrunt

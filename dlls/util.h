@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -87,7 +87,7 @@ typedef int BOOL;
 // The _declspec forces them to be exported by name so we can do a lookup with GetProcAddress()
 // The function is used to intialize / allocate the object for the entity
 #define LINK_ENTITY_TO_CLASS(mapClassName,DLLClassName) \
-	extern "C" _declspec( dllexport ) void mapClassName( entvars_t *pev ); \
+	extern "C" EXPORT void mapClassName( entvars_t *pev ); \
 	void mapClassName( entvars_t *pev ) { GetClassPtr( (DLLClassName *)pev ); }
 
 
@@ -258,8 +258,8 @@ extern BOOL			UTIL_ShouldShowBlood( int bloodColor );
 extern void			UTIL_BloodDecalTrace( TraceResult *pTrace, int bloodColor );
 extern void			UTIL_DecalTrace( TraceResult *pTrace, int decalNumber );
 extern void			UTIL_PlayerDecalTrace( TraceResult *pTrace, int playernum, int decalNumber, BOOL bIsCustom );
-extern void			UTIL_GunshotDecalTrace( TraceResult *pTrace, int decalNumber, bool fShooterOnly, entvars_t *pevShooter );
-extern char			UTIL_TextureHit( TraceResult *ptr, Vector vecSrc, Vector vecEnd );	// Beta 6.0 (Linux symbol; parameter names ours)
+extern void			UTIL_GunshotDecalTrace( TraceResult *pTrace, int decalNumber, bool fShooterOnly, entvars_t *pevShooter );	// Counter-Strike (Linux symbol; parameter names ours)
+extern char			UTIL_TextureHit( TraceResult *ptr, Vector vecSrc, Vector vecEnd );	// Counter-Strike (Linux symbol; parameter names ours)
 extern void			UTIL_Sparks( const Vector &position );
 extern void			UTIL_Ricochet( const Vector &position, float scale );
 extern void			UTIL_StringToVector( float *pVector, const char *pString );
@@ -291,6 +291,10 @@ inline void			UTIL_CenterPrintAll( const char *msg_name, const char *param1 = NU
 {
 	UTIL_ClientPrintAll( HUD_PRINTCENTER, msg_name, param1, param2, param3, param4 );
 }
+
+class CBasePlayerItem;
+class CBasePlayer;
+extern BOOL UTIL_GetNextBestWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pCurrentWeapon );
 
 // prints messages through the HUD
 extern void ClientPrint( entvars_t *client, int msg_dest, const char *msg_name, const char *param1 = NULL, const char *param2 = NULL, const char *param3 = NULL, const char *param4 = NULL );
@@ -406,23 +410,17 @@ extern DLL_GLOBAL int			g_Language;
 #define VEC_HUMAN_HULL_MAX	Vector( 16, 16, 72 )
 #define VEC_HUMAN_HULL_DUCK	Vector( 16, 16, 36 )
 
-#define VEC_VIEW			Vector( 0, 0, 17 )	// Beta 5.0 (leak): 17 (Beta 1.1 to 4.1: 24)
+#define VEC_VIEW			Vector( 0, 0, 17 )	// Counter-Strike (Beta 5.0 leak on): 17; CBasePlayer::Spawn stores it (pm_shared.c has its own 28)
 
-#define VEC_DUCK_HULL_MIN		Vector(-16, -16, -18 )
-#define VEC_DUCK_HULL_MAX		Vector( 16,  16,  18)
-#define VEC_DUCK_VIEW			Vector( 0, 0, 12 )	// Beta 5.0 (leak): 12 (Beta 1.1 to 4.1: 10)
+#define VEC_DUCK_HULL_MIN	Vector(-16, -16, -18 )
+#define VEC_DUCK_HULL_MAX	Vector( 16,  16,  18)
+#define VEC_DUCK_VIEW		Vector( 0, 0, 12 )
 
 #define SVC_TEMPENTITY		23
 #define SVC_INTERMISSION	30
 #define SVC_CDTRACK			32
 #define SVC_WEAPONANIM		35
 #define SVC_ROOMTYPE		37
-#define SVC_ADDANGLE	    38			// [vec3] add this angle to the view angle
-#define SVC_NEWUSERMSG      39
-#define SVC_CROSSHAIRANGLE  50
-#define SVC_SOUNDFADE       51
-#define SVC_CLIENTMAXSPEED  52
-
 
 // triggers
 #define	SF_TRIGGER_ALLOWMONSTERS	1// monsters allowed to fire this trigger
@@ -478,6 +476,9 @@ void TEXTURETYPE_Init();
 char TEXTURETYPE_Find(char *name);
 float TEXTURETYPE_PlaySound(TraceResult *ptr,  Vector vecSrc, Vector vecEnd, int iBulletType);
 
+// Counter-Strike
+void Broadcast( const char *sentence );		// parameter name ours
+
 #define CBTEXTURENAMEMAX	13			// only load first n chars of name
 
 #define CHAR_TEX_CONCRETE	'C'			// texture types
@@ -491,7 +492,7 @@ float TEXTURETYPE_PlaySound(TraceResult *ptr,  Vector vecSrc, Vector vecEnd, int
 #define CHAR_TEX_COMPUTER	'P'
 #define CHAR_TEX_GLASS		'Y'
 #define CHAR_TEX_FLESH		'F'
-#define CHAR_TEX_SNOW		'N'			// Counter-Strike Beta 6.0 (name ours)
+#define CHAR_TEX_SNOW		'N'			// Counter-Strike (name ours)
 
 // NOTE: use EMIT_SOUND_DYN to set the pitch of a sound. Pitch of 100
 // is no pitch shift.  Pitch > 100 up to 255 is a higher pitch, pitch < 100
@@ -524,3 +525,31 @@ void EMIT_GROUPNAME_SUIT(edict_t *entity, const char *groupname);
 	EMIT_SOUND_DYN ( ENT(pev), chan , array [ RANDOM_LONG(0,ARRAYSIZE( array )-1) ], 1.0, ATTN_NORM, 0, RANDOM_LONG(95,105) ); 
 
 #define RANDOM_SOUND_ARRAY( array ) (array) [ RANDOM_LONG(0,ARRAYSIZE( (array) )-1) ]
+
+
+#define PLAYBACK_EVENT( flags, who, index ) PLAYBACK_EVENT_FULL( flags, who, index, 0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, 0, 0 );
+#define PLAYBACK_EVENT_DELAY( flags, who, index, delay ) PLAYBACK_EVENT_FULL( flags, who, index, delay, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, 0, 0 );
+
+#define GROUP_OP_AND	0
+#define GROUP_OP_NAND	1
+
+extern int g_groupmask;
+extern int g_groupop;
+
+class UTIL_GroupTrace
+{
+public:
+	UTIL_GroupTrace( int groupmask, int op );
+	~UTIL_GroupTrace( void );
+
+private:
+	int m_oldgroupmask, m_oldgroupop;
+};
+
+void UTIL_SetGroupTrace( int groupmask, int op );
+void UTIL_UnsetGroupTrace( void );
+
+int UTIL_SharedRandomLong( unsigned int seed, int low, int high );
+float UTIL_SharedRandomFloat( unsigned int seed, float low, float high );
+
+float UTIL_WeaponTimeBase( void );

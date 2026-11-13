@@ -25,11 +25,7 @@
 #define RGB_REDISH 0x00FF1010 //255,160,0
 #define RGB_GREENISH 0x0000A000 //0,160,0
 
-typedef struct rect_s
-{
-	int				left, right, top, bottom;
-} wrect_t;
-
+#include "wrect.h"
 #include "cl_dll.h"
 #include "ammo.h"
 
@@ -54,6 +50,8 @@ typedef struct {
 #define HUD_INTERMISSION 2
 
 #define MAX_PLAYER_NAME_LENGTH		32
+
+#define	MAX_MOTD_LENGTH				1024
 
 //
 //-----------------------------------------------------
@@ -100,6 +98,7 @@ public:
 	int MsgFunc_HideWeapon( const char *pszName, int iSize, void *pbuf );
 	int MsgFunc_Crosshair( const char *pszName, int iSize, void *pbuf );
 
+	void SlotInput( int iSlot );
 	void _cdecl UserCmd_Slot1( void );
 	void _cdecl UserCmd_Slot2( void );
 	void _cdecl UserCmd_Slot3( void );
@@ -113,6 +112,7 @@ public:
 	void _cdecl UserCmd_Close( void );
 	void _cdecl UserCmd_NextWeapon( void );
 	void _cdecl UserCmd_PrevWeapon( void );
+	void _cdecl UserCmd_Adjust_Crosshair( void );	// name ours
 
 private:
 	float m_fFade;
@@ -126,6 +126,10 @@ private:
 	int m_iLastClip;					// name ours
 	float m_flCrossGap;					// name ours
 	int m_iCrossAlpha;					// name ours
+	int m_iCrossR;						// name ours: the crosshair colour adjust_crosshair cycles
+	int m_iCrossG;						// name ours
+	int m_iCrossB;						// name ours
+	int m_iCrossColor;					// name ours: 0 green, 1 red, 2 blue, 3 yellow, 4 cyan
 
 };
 
@@ -197,6 +201,9 @@ private:
 //
 //-----------------------------------------------------
 //
+// REMOVED: Vgui has replaced this.
+//
+/*
 class CHudMOTD : public CHudBase
 {
 public:
@@ -208,12 +215,12 @@ public:
 	int MsgFunc_MOTD( const char *pszName, int iSize, void *pbuf );
 
 protected:
-	enum { MAX_MOTD_LENGTH = 245, };	// sic: 245 to 248 give the image
 	static int MOTD_DISPLAY_TIME;
 	char m_szMOTD[ MAX_MOTD_LENGTH ];
-	float m_flActiveTill;
+	float m_flActiveRemaining;
 	int m_iLines;
 };
+*/
 
 //
 //-----------------------------------------------------
@@ -247,6 +254,9 @@ protected:
 //
 //-----------------------------------------------------
 //
+// REMOVED: Vgui has replaced this.
+//
+/*
 class CHudScoreboard: public CHudBase
 {
 public:
@@ -267,43 +277,7 @@ public:
 	int MsgFunc_Radar( const char *pszName, int iSize, void *pbuf );
 	void DeathMsg( int killer, int victim );
 
-	bool m_bDrawRadar;	// name ours
-
-	enum { 
-		MAX_PLAYERS = 64,
-		MAX_TEAMS = 3,
-	};
-
-	struct player_info_t : public hud_player_info_t {	// name ours
-		bool dead;	// name ours
-	};
-
-	struct extra_player_info_t {
-		short frags;
-		short deaths;
-		short teamnumber;	// name ours
-		int has_c4;			// name ours
-		int is_vip;			// name ours
-		Vector radar_pos;	// name ours
-		float flash_next;	// name ours
-		int flash_on;		// name ours
-		int flash_left;		// name ours
-	};
-
-	struct team_info_t {
-		short name;			// an index into the team names
-		short frags;
-		short deaths;
-		short ping;
-		short packetloss;
-		short ownteam;
-		short players;
-		int already_drawn;
-	};
-
-	player_info_t m_PlayerInfoList[MAX_PLAYERS+1];	   // player info from the engine
-	extra_player_info_t m_PlayerExtraInfo[MAX_PLAYERS+1];  // additional player info sent directly to the client dll
-	team_info_t m_TeamInfo[MAX_TEAMS+1];
+	int m_iNumTeams;
 
 	int m_iLastKilledBy;
 	int m_fLastKillTime;
@@ -320,7 +294,58 @@ public:
 	HSPRITE m_hRadarBg;			// name ours
 
 	void GetAllPlayersInfo( void );
+private:
+	struct cvar_s *cl_showpacketloss;
+
 };
+*/
+
+enum 
+{ 
+	MAX_PLAYERS = 64,
+	MAX_TEAMS = 64,
+	MAX_TEAM_NAME = 16,
+};
+
+struct extra_player_info_t 
+{
+	short frags;
+	short deaths;
+	short unused;			// name ours: no function of Beta 6.5 refers to it
+	int has_c4;				// name ours
+	int is_vip;				// name ours
+	Vector radar_pos;		// name ours
+	float flash_next;		// name ours
+	int flash_on;			// name ours
+	int flash_left;			// name ours
+	short playerclass;
+	short teamnumber;
+	char teamname[MAX_TEAM_NAME];
+	bool dead;				// name ours
+	float health_time;		// name ours: the status bar shows the health until then
+	int health;				// name ours
+};
+
+struct team_info_t 
+{
+	char name[MAX_TEAM_NAME];
+	short unused;			// sic: two bytes nothing reads
+	short frags;
+	short deaths;
+	short ping;
+	short packetloss;
+	short ownteam;
+	short players;
+	int already_drawn;
+	int scores_overriden;
+	int teamnumber;
+};
+
+extern hud_player_info_t	g_PlayerInfoList[MAX_PLAYERS+1];	   // player info from the engine
+extern extra_player_info_t  g_PlayerExtraInfo[MAX_PLAYERS+1];   // additional player info sent directly to the client dll
+extern team_info_t			g_TeamInfo[MAX_TEAMS+1];
+extern int					g_IsSpectator[MAX_PLAYERS+1];
+
 
 //
 //-----------------------------------------------------
@@ -371,7 +396,7 @@ public:
 	int Draw( float flTime );
 	int MsgFunc_SayText( const char *pszName, int iSize, void *pbuf );
 	int MsgFunc_SendAudio( const char *pszName, int iSize, void *pbuf );
-	void SayTextPrint( const char *pszBuf, int iBufSize );
+	void SayTextPrint( const char *pszBuf, int iBufSize, int clientIndex = -1 );
 	void SendAudioPlay( const char *pszBuf, int iBufSize );	// name ours
 	void EnsureTextFitsInOneLineAndWrapIfHaveTo( int line );
 };
@@ -455,8 +480,8 @@ class CHudTextMessage: public CHudBase
 {
 public:
 	int Init( void );
-	char *LocaliseTextString( const char *msg, char *dst_buffer, int buffer_size );
-	char *BufferedLocaliseTextString( const char *msg );
+	static char *LocaliseTextString( const char *msg, char *dst_buffer, int buffer_size );
+	static char *BufferedLocaliseTextString( const char *msg );
 	char *LookupString( const char *msg_name, int *msg_dest = NULL );
 	int MsgFunc_TextMsg(const char *pszName, int iSize, void *pbuf);
 };
@@ -640,6 +665,8 @@ private:
 //-----------------------------------------------------
 //
 
+typedef struct cvar_s cvar_t;
+
 class CHud
 {
 private:
@@ -654,6 +681,7 @@ private:
 
 public:
 
+	HSPRITE						m_hsprCursor;
 	float m_flTime;	   // the current client time
 	float m_fOldTime;  // the time at which the HUD was last redrawn
 	double m_flTimeDelta; // the difference between flTime and fOldTime
@@ -664,6 +692,7 @@ public:
 	int		m_iFOV;
 	int		m_Teamplay;
 	int		m_iRes;
+	cvar_t  *m_pCvarStealMouse;
 
 	int m_iFontHeight;
 	int DrawHudNumber(int x, int y, int iFlags, int iNumber, int r, int g, int b );
@@ -680,6 +709,7 @@ private:
 	wrect_t *m_rgrcRects;	/*[HUD_SPRITE_COUNT]*/
 	char *m_rgszSpriteNames; /*[HUD_SPRITE_COUNT][MAX_SPRITE_NAME_LENGTH]*/
 
+	struct cvar_s *default_fov;
 public:
 	HSPRITE GetSprite( int index ) 
 	{
@@ -711,8 +741,6 @@ public:
 	CHudTrain	m_Train;
 	CHudFlashlight m_Flash;
 	CHudMessage m_Message;
-	CHudScoreboard m_Scoreboard;
-	CHudMOTD    m_MOTD;
 	CHudStatusBar    m_StatusBar;
 	CHudDeathNotice m_DeathNotice;
 	CHudSayText m_SayText;
@@ -754,21 +782,25 @@ public:
 	int m_HUD_number_0;
 
 	float m_flCvarCheckTime;	// name ours
+	bool m_bGunSmoke;			// name ours: the gunsmoke command toggles it
 
 
 	void AddHudElem(CHudBase *p);
 
+	float GetSensitivity();
+
 };
+
+class TeamFortressViewport;
 
 extern CHud gHUD;
 
-// sic: a stand-in, name ours.
-// The headers held more intermediate code between class CHud's inline
-// functions and util.h's CVAR_GET_FLOAT than ours: ammo.obj and health.obj place their header
-// inline functions by it.  The leak needs 213 to 243 bytes more, Beta 5.0 and 5.2 83 to 188,
-// Beta 6.0 138 to 198 (or the .cpp files that much more of their own); which text it was, the
-// image does not say.  Nothing calls this.
-inline void b50leak_unknown( void )
+// sic: a stand-in, name ours.  More intermediate code stood in Counter-Strike's headers up to here
+// than in ours: the objects that build their own precompiled headers place the headers' inline
+// functions by its size.  It was 141 lines until util_vector.h got
+// RotateVectorZ, Counter-Strike 1.6's inline function (402 bytes with this compiler);
+// with it Beta 6.5 takes 60 to 63 lines, 6.6 60 to 65, 7.0 and 7.1 59 to 61.  Nothing calls this.
+inline void b65_hud_unknown( void )
 {
 	;
 	;
@@ -785,4 +817,171 @@ inline void b50leak_unknown( void )
 	;
 	;
 	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
 }
+// name ours: the times at which shells (or smoke puffs) were made, so that no more than
+// m_iMax of them are around at once (max_shells, max_smokepuffs); CHud::Think drops those
+// older than m_flLife
+class CTempList
+{
+public:
+	class Node
+	{
+	public:
+		Node( float flTime ) { m_flTime = flTime; }
+
+		float m_flTime;
+		Node *m_pNext;
+		Node *m_pPrev;
+	};
+
+	CTempList()
+	{
+		m_iCount = 0;
+		m_iMax = 60;
+		m_pHead = NULL;
+		m_pLast = NULL;
+		m_pTail = NULL;
+		m_flLife = 2.0;
+	}
+
+	~CTempList()
+	{
+		Expire( 99999 );
+	}
+
+	bool Add( float flTime )
+	{
+		if ( m_iCount < m_iMax )
+		{
+			if ( !m_pHead )
+			{
+				m_pHead = new Node( flTime );
+				m_pHead->m_pNext = NULL;
+				m_pHead->m_pPrev = NULL;
+				m_pTail = m_pLast = m_pHead;
+			}
+			else
+			{
+				m_pTail->m_pNext = new Node( flTime );
+				m_pTail->m_pNext->m_pPrev = m_pTail;
+				m_pLast = m_pTail = m_pTail->m_pNext;
+			}
+
+			m_iCount++;
+			return true;
+		}
+
+		return false;
+	}
+
+	void Expire( float flTime )
+	{
+		while ( m_pLast && m_flLife + m_pLast->m_flTime < flTime )
+		{
+			Node *pPrev = m_pLast->m_pPrev;
+			delete m_pLast;
+			m_pLast = pPrev;
+			m_pTail = pPrev;
+			m_iCount--;
+
+			if ( !m_pLast )
+			{
+				m_pHead = NULL;
+				m_pTail = NULL;
+			}
+		}
+	}
+
+	int m_iCount;
+	int m_iMax;
+	float m_flLife;
+	Node *m_pHead;
+	Node *m_pLast;
+	Node *m_pTail;
+};
+
+extern CTempList g_ShellList;	// name ours
+extern CTempList g_SmokeList;	// name ours
+
+bool CheckModelBounds( void );	// name ours (model_check.cpp)
+extern TeamFortressViewport *gViewPort;
+
+extern int g_iPlayerClass;
+extern int g_iTeamNumber;
+extern int g_iUser1;
+extern int g_iUser2;
+
+
+// sic: a stand-in, names ours.  Counter-Strike's headers declare more symbols than ours: the MOTD
+// window's and the class menu's constructors (SDK text, unchanged), whose operand order follows
+// the number of names declared before them, compile as retail's only with more declared names at
+// the end of hud.h (an enum of that many members).  With
+// RotateVectorZ in util_vector.h, by full builds: Beta 6.5 18, 19 or 21 to 24; Beta 6.6 5 to 7;
+// Beta 7.0 48, 49, 51 or 52 (55 to 61 before RotateVectorZ); Beta 7.1 44 to 48 (its rifle menu's
+// Update too; 55 to 60 before).  What Counter-Strike declared, the image does not say.
+enum b70_unknown_e
+{
+	B70_UNKNOWN0,
+	B70_UNKNOWN1,
+	B70_UNKNOWN2,
+	B70_UNKNOWN3,
+	B70_UNKNOWN4,
+	B70_UNKNOWN5,
+	B70_UNKNOWN6,
+	B70_UNKNOWN7,
+	B70_UNKNOWN8,
+	B70_UNKNOWN9,
+	B70_UNKNOWN10,
+	B70_UNKNOWN11,
+	B70_UNKNOWN12,
+	B70_UNKNOWN13,
+	B70_UNKNOWN14,
+	B70_UNKNOWN15,
+	B70_UNKNOWN16,
+	B70_UNKNOWN17,
+};

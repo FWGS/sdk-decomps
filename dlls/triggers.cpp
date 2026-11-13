@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -2007,7 +2007,7 @@ void CBombTarget::BombTargetTouch( CBaseEntity *pOther )
 
 	CBasePlayer *p = (CBasePlayer *)pOther;	// name ours
 
-	if ( p->m_fHasC4 == true )
+	if ( p->m_bHasC4 == true )
 	{
 		p->m_signals.Signal( 2 );	// at a bomb target
 		p->m_pentBombTarget = edict();
@@ -2075,7 +2075,8 @@ void CEscapeZone::EscapeTouch( CBaseEntity *pOther )
 		if ( pPlayer->m_iTeam == TEAM_TERRORIST )
 		{
 			pPlayer->m_bEscaped = true;
-			pPlayer->Disappear();
+			// Beta 6.5: he stays where he is (Beta 6.0 and 6.1: Disappear); the round may be over
+			((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
 
 			// Beta 6.1: his team is told ("prisoners are notified when someone escapes")
 			for ( int i = 1; i <= gpGlobals->maxClients; i++ )
@@ -2122,6 +2123,7 @@ void CVIP_SafetyZone::VIP_SafetyTouch( CBaseEntity *pOther )
 		{
 			pPlayer->m_bEscaped = true;
 			pPlayer->Disappear();
+			pPlayer->AddAccount( 2500, true );	// Beta 6.5
 		}
 	}
 }
@@ -2178,7 +2180,7 @@ LINK_ENTITY_TO_CLASS( trigger_endsection, CTriggerEndSection );
 void CTriggerEndSection::EndSectionUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	// Only save on clients
-	if ( !pActivator->IsNetClient() )
+	if ( pActivator && !pActivator->IsNetClient() )
 		return;
     
 	SetUse( NULL );

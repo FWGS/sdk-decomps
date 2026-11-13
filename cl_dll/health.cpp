@@ -23,13 +23,19 @@
 #include "MATH.H"
 
 #include "hud.h"
-#include "util.h"
+#include "cl_util.h"
 #include "parsemsg.h"
 #include <string.h>
 
 
+DECLARE_COMMAND(m_Health, TrackPlayer )
+DECLARE_COMMAND(m_Health, ClearPlayers )
+DECLARE_COMMAND(m_Health, DrawRadar )
+DECLARE_COMMAND(m_Health, HideRadar )
 DECLARE_MESSAGE(m_Health, Health )
 DECLARE_MESSAGE(m_Health, Damage )
+DECLARE_MESSAGE(m_Health, ScoreAttrib )
+DECLARE_MESSAGE(m_Health, Radar )
 
 #define PAIN_NAME "sprites/%d_pain.spr"
 #define DAMAGE_NAME "sprites/%d_dmg.spr"
@@ -56,6 +62,12 @@ int CHudHealth::Init(void)
 {
 	HOOK_MESSAGE(Health);
 	HOOK_MESSAGE(Damage);
+	HOOK_MESSAGE(Radar);
+	HOOK_MESSAGE(ScoreAttrib);
+	HOOK_COMMAND("trackplayer", TrackPlayer);
+	HOOK_COMMAND("clearplayers", ClearPlayers);
+	HOOK_COMMAND("drawradar", DrawRadar);
+	HOOK_COMMAND("hideradar", HideRadar);
 	m_iHealth = 100;
 	m_fFade = 0;
 	m_iFlags = 0;
@@ -65,7 +77,11 @@ int CHudHealth::Init(void)
 	giDmgWidth = 0;
 
 	memset(m_dmg, 0, sizeof(DAMAGE_IMAGE) * NUM_DMG_TYPES);
-
+	for ( int i = 0; i <= 32; i++ )
+		m_bTrackArray[i] = false;	// one more than the array holds
+	m_iPlayerTarget = 0;
+	m_iPlayerNum = 0;
+	m_bDrawRadar = true;
 
 	gHUD.AddHudElem(this);
 	return 1;
@@ -94,6 +110,15 @@ int CHudHealth::VidInit(void)
 
 	giDmgHeight = gHUD.GetSpriteRect(m_HUD_dmg_bio).right - gHUD.GetSpriteRect(m_HUD_dmg_bio).left;
 	giDmgWidth = gHUD.GetSpriteRect(m_HUD_dmg_bio).bottom - gHUD.GetSpriteRect(m_HUD_dmg_bio).top;
+
+	int iRadar = gHUD.GetSpriteIndex( "radar" );	// names ours
+	m_prcRadar = &gHUD.GetSpriteRect( iRadar );
+	m_hRadar = gHUD.GetSprite( iRadar );
+
+	int iRadarBg = gHUD.GetSpriteIndex( "radarback" );
+	m_prcRadarBg = &gHUD.GetSpriteRect( iRadarBg );
+	m_hRadarBg = gHUD.GetSprite( iRadarBg );
+
 	return 1;
 }
 
@@ -176,8 +201,13 @@ int CHudHealth::Draw(float flTime)
 //	if (m_iHealth <= 0)
 //		return 1;
 
+	GetAllPlayersInfo();
+
 	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_HEALTH )
 		return 1;
+
+	if ( !gHUD.m_fPlayerDead && m_bDrawRadar == true )
+		DrawRadar( flTime );
 
 	if ( !m_hSprite )
 		m_hSprite = LoadSprite(PAIN_NAME);
@@ -686,6 +716,203 @@ int CHudProgressBar::MsgFunc_BarTime( const char *pszName, int iSize, void *pbuf
 		m_flDuration = iTime;
 	else
 		m_flDuration = -1;
+
+	return 1;
+}
+
+
+// the radar: team mates as dots around the player, top left (locals: names ours)
+void CHudHealth :: DrawRadar( float flTime )
+{
+	Vector origin;
+	origin = gHUD.m_vecOrigin;
+	char szTeamName[20];	// sic: 17 to 20 give the image\x27s frame
+	strcpy( szTeamName, g_PlayerExtraInfo[m_iPlayerNum].teamname );
+
+	if ( g_PlayerExtraInfo[m_iPlayerNum].dead == true )
+		return;
+
+	SPR_Set( m_hRadar, 25, 75, 25 );
+	SPR_DrawAdditive( 0, 0, 0, m_prcRadar );
+
+	for ( int i = 0; i < 32; i++ )
+	{
+		if ( i == m_iPlayerNum || strcmp( szTeamName, g_PlayerExtraInfo[i].teamname ) || g_PlayerExtraInfo[i].dead )
+			continue;
+
+		float dx = g_PlayerExtraInfo[i].radar_pos.x - origin.x;
+		float dy = g_PlayerExtraInfo[i].radar_pos.y - origin.y;
+		float dz = g_PlayerExtraInfo[i].radar_pos.z - origin.z;
+
+		// the bearing of the team mate, in degrees from 0 to 360
+		float angle = atan( dy / dx );
+		angle = angle * 180 / 3.141592654;
+		if ( dx < 0 && dy < 0 )
+			angle += 180;
+		else if ( dx < 0 && dy >= 0 )
+			angle += 180;
+		else if ( dx >= 0 && dy < 0 )
+			angle += 360;
+
+		dy = sqrt( dx * dx + dy * dy ) * -1;	// the distance, negative
+
+		// relative to the view, in radians: turn ( 0, distance ) by it
+		angle = ( gHUD.m_vecAngles.y - angle ) * 3.141592654;
+		angle = angle / 180;
+		float x0 = 0, y0 = dy;	// names ours
+		float x = x0 * cos( angle ) - y0 * sin( angle );
+		float y = x0 * sin( angle ) + y0 * cos( angle );
+
+		float range;
+		int size, dot;
+		if ( ScreenWidth < 640 )
+		{
+			range = 1024;
+			size = 64;
+			dot = 1;
+		}
+		else
+		{
+			range = 2048;
+			size = 128;
+			dot = 2;
+		}
+
+		if ( dy * -1 > range )
+		{
+			float k = dy * -1 / range;
+			x = x / k;
+			y = y / k;
+		}
+
+		int px = size / 2 + (int)( x / 32 );
+		int py = size / 2 + (int)( y / 32 );
+
+		if ( px < 0 || py < 0 || px > size || py > size )
+			continue;
+
+		int r, g, b;
+		if ( !g_PlayerExtraInfo[i].has_c4 && !g_PlayerExtraInfo[i].is_vip )
+		{
+			if ( m_bTrackArray[i - 1] == true )
+			{
+				r = 185;
+				g = 20;
+				b = 20;
+			}
+			else
+			{
+				r = 150;
+				g = 75;
+				b = 250;
+			}
+		}
+		else
+		{
+			r = 250;
+			g = 0;
+			b = 0;
+		}
+
+		if ( dz < -128 )
+		{
+			float h = dz * -1;
+			if ( h > 3096 )
+				h = 3096;
+			int len = (int)( h / 400 );
+			FillRGBA( px, py, 1, len + dot * 2, r, g, b, 235 );
+			FillRGBA( px - 2, py + len + dot * 2, 5, 1, r, g, b, 235 );
+		}
+		else if ( dz > 128 )
+		{
+			if ( dz > 3096 )
+				dz = 3096;
+			FillRGBA( px - 2, py, 5, 1, r, g, b, 235 );
+			FillRGBA( px, py + 1, 1, (int)( dz / 400 ) + dot * 2 - 1, r, g, b, 235 );
+		}
+		else
+		{
+			FillRGBA( px, py, dot, dot, r, g, b, 235 );
+		}
+
+		if ( g_PlayerExtraInfo[i].flash_next != -1 && flTime > g_PlayerExtraInfo[i].flash_next && g_PlayerExtraInfo[i].flash_left > 0 )
+		{
+			g_PlayerExtraInfo[i].flash_next = flTime + 0.15;
+			g_PlayerExtraInfo[i].flash_on = 1 - g_PlayerExtraInfo[i].flash_on;
+			g_PlayerExtraInfo[i].flash_left--;
+		}
+
+		if ( g_PlayerExtraInfo[i].flash_on == 1 && g_PlayerExtraInfo[i].flash_left > 0 )
+			FillRGBA( px - 3, py - 3, dot + 3, dot + 3, 230, 110, 25, 245 );
+	}
+}
+
+void CHudHealth :: UserCmd_TrackPlayer( void )
+{
+	if ( m_iPlayerTarget >= 1 && m_iPlayerTarget <= 32 )
+		m_bTrackArray[m_iPlayerTarget - 1] = true;
+}
+
+void CHudHealth :: UserCmd_ClearPlayers( void )
+{
+	for ( int i = 0; i < 32; i++ )
+		m_bTrackArray[i] = false;
+}
+
+void CHudHealth :: UserCmd_DrawRadar( void )
+{
+	m_bDrawRadar = true;
+}
+
+void CHudHealth :: UserCmd_HideRadar( void )
+{
+	m_bDrawRadar = false;
+}
+
+// Message handler for Radar message
+// accepts four values:
+//		byte: client number
+//		coord, coord, coord: the client's origin
+int CHudHealth :: MsgFunc_Radar( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+	int cl = READ_BYTE();
+	float x = READ_COORD();	// names ours
+	float y = READ_COORD();
+	float z = READ_COORD();
+
+	g_PlayerExtraInfo[cl].radar_pos = Vector( x, y, z );
+
+	return 1;
+}
+
+void CHudHealth :: GetAllPlayersInfo( void )
+{
+	for ( int i = 1; i < MAX_PLAYERS; i++ )
+	{
+		GetPlayerInfo( i, &g_PlayerInfoList[i] );
+
+		if ( g_PlayerInfoList[i].thisplayer )
+			m_iPlayerNum = i;  // !!!HACK: this should be initialized elsewhere... maybe gotten from the engine
+	}
+}
+
+// Message handler for ScoreAttrib message
+// accepts two values:
+//		byte: client number
+//		byte: flags (1: dead, 2: carries the bomb, 4: the VIP)
+int CHudHealth :: MsgFunc_ScoreAttrib( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+	short cl = READ_BYTE();
+	short flags = READ_BYTE();	// name ours
+
+	if ( cl > 0 && cl <= MAX_PLAYERS )
+	{
+		g_PlayerExtraInfo[cl].dead = flags & 1;
+		g_PlayerExtraInfo[cl].has_c4 = ( flags & 2 ) ? 1 : 0;
+		g_PlayerExtraInfo[cl].is_vip = ( flags & 4 ) ? 1 : 0;
+	}
 
 	return 1;
 }

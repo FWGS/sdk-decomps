@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -119,6 +119,7 @@ class CAmbientGeneric : public CBaseEntity
 public:
 	void KeyValue( KeyValueData* pkvd);
 	void Spawn( void );
+	void Restart( void );	// Counter-Strike Beta 6.5 (Linux symbol): a new round starts the sound afresh
 	void Precache( void );
 	void EXPORT ToggleUse ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT RampThink( void );
@@ -219,6 +220,66 @@ void CAmbientGeneric :: Spawn( void )
 	Precache( );
 }
 
+
+// Counter-Strike Beta 6.5: a new round stops the sound and starts it again,
+// whether or not it was playing (and whatever AMBIENT_SOUND_START_SILENT says)
+void CAmbientGeneric :: Restart( void )
+{
+	if ( FBitSet ( pev->spawnflags, AMBIENT_SOUND_EVERYWHERE) )
+	{
+		m_flAttenuation = ATTN_NONE;
+	}
+	else if ( FBitSet ( pev->spawnflags, AMBIENT_SOUND_SMALLRADIUS) )
+	{
+		m_flAttenuation = ATTN_IDLE;
+	}
+	else if ( FBitSet ( pev->spawnflags, AMBIENT_SOUND_MEDIUMRADIUS) )
+	{
+		m_flAttenuation = ATTN_STATIC;
+	}
+	else if ( FBitSet ( pev->spawnflags, AMBIENT_SOUND_LARGERADIUS) )
+	{
+		m_flAttenuation = ATTN_NORM;
+	}
+	else 
+	{// if the designer didn't set a sound attenuation, default to one.
+		m_flAttenuation = ATTN_STATIC;
+	}
+	
+	char* szSoundFile = (char*) STRING(pev->message);
+
+	if ( FStringNull( pev->message ) || strlen( szSoundFile ) < 1 )
+	{
+		ALERT( at_error, "EMPTY AMBIENT AT: %f, %f, %f\n", pev->origin.x, pev->origin.y, pev->origin.z );
+		pev->nextthink = gpGlobals->time + 0.1;
+		SetThink( SUB_Remove );
+		return;
+	}
+    pev->solid		= SOLID_NOT;
+    pev->movetype	= MOVETYPE_NONE;
+
+	SetThink(RampThink);
+	pev->nextthink = 0;
+
+	SetUse ( ToggleUse );
+	
+	m_fActive = TRUE;
+
+	UTIL_EmitAmbientSound ( ENT(pev), pev->origin, szSoundFile, 
+			0, 0, SND_STOP, 0);
+
+	InitModulationParms();
+
+	UTIL_EmitAmbientSound ( ENT(pev), pev->origin, szSoundFile, 
+			(m_dpv.vol * 0.01), m_flAttenuation, 0, m_dpv.pitch);
+
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	if ( FBitSet ( pev->spawnflags, AMBIENT_SOUND_NOT_LOOPING ) )
+		m_fLooping = FALSE;
+	else
+		m_fLooping = TRUE;
+}
 
 void CAmbientGeneric :: Precache( void )
 {

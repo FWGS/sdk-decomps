@@ -107,21 +107,37 @@ public:
 	virtual void Reset( void );
 	int MsgFunc_Health(const char *pszName,  int iSize, void *pbuf);
 	int MsgFunc_Damage(const char *pszName,  int iSize, void *pbuf);
+	int MsgFunc_Radar(const char *pszName,  int iSize, void *pbuf);
+	int MsgFunc_ScoreAttrib(const char *pszName,  int iSize, void *pbuf);
+	void UserCmd_TrackPlayer( void );		// name ours
+	void UserCmd_ClearPlayers( void );		// name ours
+	void UserCmd_DrawRadar( void );			// name ours
+	void UserCmd_HideRadar( void );			// name ours
+	void DrawRadar( float flTime );			// name ours
+	void GetAllPlayersInfo( void );
 	int m_iHealth;
 	int m_HUD_dmg_bio;
 	int m_HUD_cross;
+	float m_fFade;
+	float m_fAttackFront, m_fAttackRear, m_fAttackLeft, m_fAttackRight;
+	void GetPainColor( int &r, int &g, int &b );
+	bool m_bTrackArray[32];					// name ours: players trackplayer marked on the radar
+	int m_iPlayerTarget;					// name ours: the player the status bar last named
+	int m_iPlayerNum;
+	bool m_bDrawRadar;						// name ours
 
 private:
 	HSPRITE m_hSprite;
 	HSPRITE m_hDamage;
+	wrect_t *m_prcRadar;					// name ours
+	HSPRITE m_hRadar;						// name ours
+	wrect_t *m_prcRadarBg;					// name ours
+	HSPRITE m_hRadarBg;						// name ours
 	
 	DAMAGE_IMAGE m_dmg[NUM_DMG_TYPES];
 	int	m_bitsDamage;
-	float m_fFade;
-	void GetPainColor( int &r, int &g, int &b );
 	int DrawPain(float fTime);
 	int DrawDamage(float fTime);
-	float m_fAttackFront, m_fAttackRear, m_fAttackLeft, m_fAttackRight;
 	void CalcDamageDirection(vec3_t vecFrom);
 	void UpdateTiles(float fTime, long bits);
 };	

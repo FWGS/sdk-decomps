@@ -237,31 +237,7 @@ class C338MagnumAmmo : public CBasePlayerAmmo
 LINK_ENTITY_TO_CLASS( ammo_338magnum, C338MagnumAmmo );
 
 
-class CFlashbangAmmo : public CBasePlayerAmmo
-{
-	void Spawn( void )
-	{
-		Precache( );
-		SET_MODEL(ENT(pev), "models/w_9mmclip.mdl");
-		CBasePlayerAmmo::Spawn( );
-	}
-	void Precache( void )
-	{
-		PRECACHE_MODEL ("models/w_9mmclip.mdl");
-		PRECACHE_SOUND("items/9mmclip1.wav");
-	}
-	BOOL AddAmmo( CBaseEntity *pOther )
-	{
-		if (pOther->GiveAmmo( AMMO_FLASHBANGBOX_GIVE, "Flashbang", AMMO_FLASHBANGBOX_MAX ) != -1)
-		{
-			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
-			return TRUE;
-		}
-		return FALSE;
-	}
-};
-LINK_ENTITY_TO_CLASS( ammo_flashbang, CFlashbangAmmo );
-
+// Beta 6.5: no ammo_flashbang (CFlashbangAmmo) any more
 
 // Beta 3.0: the P90's ammunition (class name from the later versions' Linux symbols)
 class C57MMAmmo : public CBasePlayerAmmo

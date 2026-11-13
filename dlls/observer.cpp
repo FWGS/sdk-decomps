@@ -1,420 +1,253 @@
 /***
 *
-*	Counter-Strike Beta 5.0 (leak), observer.cpp: the dead player's observer
-*	(observer, CObserver: Beta 5.0's Linux symbols; observer.h).
-*
-*	Every player has one (CBasePlayer::Spawn creates it); when he dies and
-*	the dead camera starts, StartObserver gives it to him. In chase mode
-*	(mp_chasecam) his view follows a living player, from 112 units behind the
-*	player's eyes along his own view direction; fire picks the next player,
-*	jump switches to free mode (where the player flies), where fire jumps to
-*	the next player's place and jump goes back to chase mode. A team mate
-*	only, while mp_chasecam is set. Observers see each other as ghosts.
+*	Counter-Strike Beta 6.5, observer.cpp: the dead player's camera
+*	(CBasePlayer::Observer_FindNextPlayer, Observer_HandleButtons,
+*	Observer_SetMode; Linux symbols). The mode is pev->iuser1 (OBS_ROAMING
+*	free flight, OBS_CHASE_LOCKED and OBS_CHASE_FREE behind a player), the
+*	target's entity index pev->iuser2: the engine's player movement and the
+*	client read them. Beta 6.1's GhostMode, ChaseCamMode and GetPlayerToChase
+*	(player.cpp) are gone.
 *
 ****/
+#include	"extdll.h"
+#include	"util.h"
+#include	"cbase.h"
+#include	"player.h"
+#include	"weapons.h"
 
-// No weapons.h: with it the guard of GetChaseOrigin's static is VC6's $S14,
-// not $S9, and VC6 lays the static out after its guard; retail has it before.
-#include "extdll.h"
-#include "util.h"
-#include "cbase.h"
-#include "monsters.h"
-#include "nodes.h"
-#include "player.h"
-#include "gamerules.h"
-#include "observer.h"
+extern int gmsgCrosshair;
 
-extern DLL_GLOBAL short g_sModelIndexCTGhost;
-extern DLL_GLOBAL short g_sModelIndexTGhost;
-extern int gmsgCrosshair;	// Beta 5.0 (player.cpp)
-
-LINK_ENTITY_TO_CLASS( observer, CObserver );
-
-CObserver::CObserver()
+// Find the next client in the game for this player to spectate
+void CBasePlayer::Observer_FindNextPlayer( bool bReverse )
 {
-	m_pOwner = NULL;
-}
+	int		iStart;
+	if ( m_hObserverTarget )
+		iStart = ENTINDEX( m_hObserverTarget->edict() );
+	else
+		iStart = ENTINDEX( edict() );
+	int	    iCurrent = iStart;
+	m_hObserverTarget = NULL;
+	int iDir = bReverse ? -1 : 1; 
 
-CObserver *CObserver::Create( void )
-{
-	return (CObserver *)CBaseEntity::Create( "observer", Vector(), Vector(), NULL );
-}
-
-void CObserver::Precache( void )
-{
-	PRECACHE_MODEL( "models/agibs.mdl" );
-}
-
-void CObserver::Spawn( void )
-{
-	SetOwner( NULL );
-
-	pev->solid = SOLID_NOT;
-	pev->renderfx = kRenderFxNone;
-	pev->rendermode = kRenderTransAdd;
-	pev->renderamt = 0;
-	pev->nextthink = gpGlobals->time + 0.001;
-
-	m_iTarget = 0;
-	m_pLastTarget = NULL;
-	m_iLastButtons = 0;
-
-	SET_MODEL( ENT( pev ), "models/agibs.mdl" );
-	SET_SIZE( ENT( pev ), Vector( -8, -8, -8 ), Vector( 8, 8, 8 ) );
-
-	m_ghosts.Reset();
-}
-
-void CObserver::SetOwner( CBasePlayer *pOwner )
-{
-	CBasePlayer *pOldOwner = m_pOwner;	// name ours
-
-	m_pOwner = pOwner;
-
-	if ( pOwner )
+	if ( CVAR_GET_FLOAT( "mp_forcechasecam" ) == 0 )
 	{
-		m_ghosts.SetHintMessage();
-		SET_ORIGIN( edict(), m_pOwner->pev->origin + m_pOwner->pev->view_ofs );
+		// anybody who is in the game
+		do
+		{
+			iCurrent += iDir;
 
-		if ( CVAR_GET_FLOAT( "mp_chasecam" ) != 0 )
-			SetChaseMode( 1 );	// Beta 5.0: locked
-		else
-			SetFreeMode();
+			// Loop through the clients
+			if (iCurrent > gpGlobals->maxClients)
+				iCurrent = 1;
+			if (iCurrent < 1)
+				iCurrent = gpGlobals->maxClients;
+
+			CBaseEntity *pEnt = UTIL_PlayerByIndex( iCurrent );
+			if ( !pEnt )
+				continue;
+			if ( pEnt == this )
+				continue;
+			if ( pEnt->has_disconnected )
+				continue;
+			// Don't spec observers or players who haven't picked a class yet
+			if ( ((CBasePlayer*)pEnt)->pev->iuser1 || (pEnt->pev->effects & EF_NODRAW) )
+				continue;
+
+			m_hObserverTarget = pEnt;
+			break;
+
+		} while ( iCurrent != iStart );
 	}
 	else
 	{
-		if ( pOldOwner )
-			SET_VIEW( pOldOwner->edict(), pOldOwner->edict() );
+		// mp_forcechasecam: team mates only
+		do
+		{
+			iCurrent += iDir;
 
-		SetThink( NULL );
+			// Loop through the clients
+			if (iCurrent > gpGlobals->maxClients)
+				iCurrent = 1;
+			if (iCurrent < 1)
+				iCurrent = gpGlobals->maxClients;
+
+			CBaseEntity *pEnt = UTIL_PlayerByIndex( iCurrent );
+			if ( !pEnt )
+				continue;
+			if ( pEnt == this )
+				continue;
+			if ( pEnt->has_disconnected )
+				continue;
+			// Don't spec observers or players who haven't picked a class yet
+			if ( ((CBasePlayer*)pEnt)->pev->iuser1 || (pEnt->pev->effects & EF_NODRAW) )
+				continue;
+			if ( ((CBasePlayer*)pEnt)->m_iTeam != m_iTeam )
+				continue;
+
+			m_hObserverTarget = pEnt;
+			break;
+
+		} while ( iCurrent != iStart );
 	}
-}
 
-void CObserver::NextClient( void )
-{
-	int iNext = FindNextClient( m_iTarget + 1, FALSE );	// name ours
-
-	if ( !iNext )
-		iNext = FindNextClient( m_iTarget + 1, TRUE );
-
-	m_iTarget = iNext;
-}
-
-// a player who can be watched
-static BOOL IsValidTarget( CBaseEntity *pTarget )	// name ours
-{
-	// Beta 5.0: a player with a name (one still connecting has none)
-	if ( pTarget && !FNullEnt( pTarget->edict() ) && STRING( pTarget->pev->netname )[0] && pTarget->IsAlive() )
-		return TRUE;
-
-	return FALSE;
-}
-
-void CObserver::ChaseMoveThink( void )
-{
-	if ( !m_iTarget )
-		NextClient();
-
-	HandleButtons();
-	m_ghosts.Update( m_pOwner, pev->origin );
-
-	if ( m_iTarget )
+	// Did we find a target?
+	if ( m_hObserverTarget )
 	{
-		CBaseEntity *pTarget = UTIL_PlayerByIndex( m_iTarget );	// name ours
+		// Store the target in pev so the physics DLL can get to it
+		if (pev->iuser1 != OBS_ROAMING)
+			pev->iuser2 = ENTINDEX( m_hObserverTarget->edict() );
+		// Move to the target
+		UTIL_SetOrigin( pev, m_hObserverTarget->pev->origin );
 
-		if ( IsValidTarget( pTarget ) )
-		{
-			if ( pTarget != m_pLastTarget )
-			{
-				SET_VIEW( m_pOwner->edict(), edict() );
-				m_pLastTarget = pTarget;
-			}
-
-			// Beta 5.0: the owner stands where the view is too (the
-			// leak moved the observer only); locked, the view follows the
-			// target's yaw from 42 units higher and stands still
-			if ( m_cChaseMode == 0 )
-			{
-				const Vector &vecOrigin = GetChaseOrigin( m_pOwner->pev->v_angle, pTarget->pev, Vector( 0, 0, 0 ) );	// names ours
-
-				SET_ORIGIN( edict(), vecOrigin );
-				SET_ORIGIN( m_pOwner->edict(), vecOrigin );
-				pev->angles = m_pOwner->pev->v_angle;
-				pev->velocity = pTarget->pev->velocity;
-			}
-			else if ( m_cChaseMode == 1 )
-			{
-				Vector vecAngles = pTarget->pev->v_angle;
-				vecAngles.x = 0;
-
-				const Vector &vecOrigin = GetChaseOrigin( vecAngles, pTarget->pev, Vector( 0, 0, 42 ) );
-
-				SET_ORIGIN( edict(), vecOrigin );
-				SET_ORIGIN( m_pOwner->edict(), vecOrigin );
-				pev->angles = pTarget->pev->v_angle;
-				pev->angles.x = 0;
-				pev->velocity = g_vecZero;
-			}
-		}
-		else
-		{
-			// Beta 5.0: 3 seconds (the leak: 1), standing still
-			m_flNextChase = gpGlobals->time + 3;
-			pev->velocity = Vector( 0, 0, 0 );
-			SetThink( ChaseMoveDelayThink );
-		}
-
-		pev->nextthink = gpGlobals->time + 0.001;
+		ALERT( at_console, "Now Tracking %s\n", STRING( m_hObserverTarget->pev->netname ) );
 	}
 	else
 	{
-		ALERT( at_console, "No valid clients available, switching observer to free mode\n" );
-		SetFreeMode();
+		ALERT( at_console, "No observer targets.\n" );
 	}
 }
 
-void CObserver::ChaseMoveDelayThink( void )
+// Handle buttons in observer mode
+void CBasePlayer::Observer_HandleButtons()
 {
-	HandleButtons();
-	m_ghosts.Update( m_pOwner, m_pOwner->pev->origin );
-
-	if ( gpGlobals->time > m_flNextChase )
-	{
-		NextClient();
-		SetThink( ChaseMoveThink );
-	}
-
-	pev->nextthink = gpGlobals->time + 0.001;
-}
-
-void CObserver::FreeMoveThink( void )
-{
-	HandleButtons();
-	m_ghosts.Update( m_pOwner, m_pOwner->pev->origin );
-	pev->nextthink = gpGlobals->time + 0.001;
-}
-
-// the next living player from iStart on (the owner's team mates, or with
-// bSameTeam set the others: sic, the flag says the opposite), 0 if none
-int CObserver::FindNextClient( int iStart, BOOL bSameTeam )
-{
-	if ( !m_pOwner || FNullEnt( m_pOwner->edict() ) )
-		return 0;
-
-	int iClient = ( iStart - 1 ) % ( gpGlobals->maxClients + 1 ) + 1;	// names ours
-
-	do
-	{
-		CBasePlayer *pPlayer = (CBasePlayer *)UTIL_PlayerByIndex( iClient );
-
-		if ( IsValidTarget( pPlayer ) )
-		{
-			BOOL bMatch;
-
-			if ( bSameTeam )
-				bMatch = ( m_pOwner->m_iTeam != pPlayer->m_iTeam );
-			else
-				bMatch = ( m_pOwner->m_iTeam == pPlayer->m_iTeam );
-
-			if ( bMatch )
-				return iClient;
-		}
-
-		iClient = iClient % ( gpGlobals->maxClients + 1 ) + 1;
-	}
-	while ( iClient != iStart );
-
-	return 0;
-}
-
-void CObserver::HandleButtons( void )
-{
-	if ( !m_pOwner )
+	// Slow down mouse clicks
+	if ( m_flNextObserverInput > gpGlobals->time )
 		return;
 
-	int iButtons = m_pOwner->pev->button;	// name ours
-
-	if ( m_pfnThink == &CObserver::FreeMoveThink )
+	// Jump changes from modes: Chase to Roaming
+	if ( m_afButtonPressed & IN_JUMP )
 	{
-		if ( ( iButtons & IN_JUMP ) && !( m_iLastButtons & IN_JUMP ) )
-		{
-			if ( !m_iTarget )
-				NextClient();
+		if ( pev->iuser1 == OBS_ROAMING )
+			Observer_SetMode( OBS_CHASE_LOCKED );
+		else if ( pev->iuser1 == OBS_CHASE_LOCKED )
+			Observer_SetMode( OBS_CHASE_FREE );
+		else
+			Observer_SetMode( OBS_ROAMING );
 
-			if ( m_iTarget )
-				SetChaseMode( 1 );
-			else
-				ClientPrint( m_pOwner->pev, HUD_PRINTCENTER, "No valid targets\nCan not switch to CHASE MODE" );
-		}
-		else if ( ( iButtons & IN_ATTACK ) && !( m_iLastButtons & IN_ATTACK ) )
-		{
-			NextClient();
-
-			if ( m_iTarget )
-			{
-				CBaseEntity *pTarget = UTIL_PlayerByIndex( m_iTarget );
-
-				if ( IsValidTarget( pTarget ) )
-					SET_ORIGIN( m_pOwner->edict(), GetChaseOrigin( m_pOwner->pev->v_angle, pTarget->pev, Vector( 0, 0, 0 ) ) );
-			}
-		}
-	}
-	else if ( m_pfnThink == &CObserver::ChaseMoveThink )
-	{
-		if ( ( iButtons & IN_JUMP ) && !( m_iLastButtons & IN_JUMP ) )
-		{
-			// Beta 5.0: locked goes to free look; free look goes to the free
-			// mode, or with mp_chasecam back to locked (the leak: chase to
-			// free unless mp_chasecam, in multiplayer)
-			if ( CVAR_GET_FLOAT( "mp_chasecam" ) != 0 )
-			{
-				if ( m_cChaseMode == 1 )
-					SetChaseMode( 0 );
-				else if ( m_cChaseMode == 0 )
-					SetChaseMode( 1 );
-			}
-			else
-			{
-				if ( m_cChaseMode == 1 )
-					SetChaseMode( 0 );
-				else if ( m_cChaseMode == 0 )
-					SetFreeMode();
-			}
-		}
-		else if ( ( iButtons & IN_ATTACK ) && !( m_iLastButtons & IN_ATTACK ) )
-		{
-			NextClient();
-			m_flNextChase = 0;
-		}
+		m_flNextObserverInput = gpGlobals->time + 0.2;
 	}
 
-	m_iLastButtons = iButtons;
-}
-
-// Beta 5.0: the observer's crosshair on or off (name ours; the Crosshair
-// message is Beta 5.0's)
-inline void SetCrosshair( CBasePlayer *pPlayer, BOOL bOn )
-{
-	MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pPlayer->pev );
-		WRITE_BYTE( bOn );
-	MESSAGE_END();
-}
-
-void CObserver::SetChaseMode( char cMode )
-{
-	// Beta 5.0: two chase modes (the leak: "Observer switched to CHASE MODE");
-	// no crosshair in either
-	if ( cMode == 0 )
+	// Attack moves to the next player
+	if ( m_afButtonPressed & IN_ATTACK )
 	{
-		ClientPrint( m_pOwner->pev, HUD_PRINTCENTER, "Switched to FREELOOK chase mode" );
-		SET_VIEW( m_pOwner->edict(), edict() );
-		SET_ORIGIN( edict(), m_pOwner->pev->origin + m_pOwner->pev->view_ofs );
-		SetThink( ChaseMoveThink );
-		SetCrosshair( m_pOwner, FALSE );
-		pev->movetype = MOVETYPE_FLY;
-		pev->nextthink = gpGlobals->time + 0.001;
-	}
-	else if ( cMode == 1 )
-	{
-		ClientPrint( m_pOwner->pev, HUD_PRINTCENTER, "Switched to LOCKED chase mode" );
-		SET_VIEW( m_pOwner->edict(), edict() );
-		SET_ORIGIN( edict(), m_pOwner->pev->origin + m_pOwner->pev->view_ofs );
-		SetThink( ChaseMoveThink );
-		SetCrosshair( m_pOwner, FALSE );
-		pev->movetype = MOVETYPE_FLY;
-		pev->nextthink = gpGlobals->time + 0.001;
+		Observer_FindNextPlayer( false );
+
+		m_flNextObserverInput = gpGlobals->time + 0.2;
 	}
 
-	m_cChaseMode = cMode;
-}
-
-void CObserver::SetFreeMode( void )
-{
-	ClientPrint( m_pOwner->pev, HUD_PRINTCENTER, "Switched to CLASSIC observer mode" );	// Beta 5.0 (the leak: "Observer switched to FREE MODE")
-	SET_VIEW( m_pOwner->edict(), m_pOwner->edict() );
-	SET_ORIGIN( m_pOwner->edict(), pev->origin );
-	SetThink( FreeMoveThink );
-	SetCrosshair( m_pOwner, TRUE );	// Beta 5.0
-	pev->movetype = MOVETYPE_NONE;
-	pev->nextthink = gpGlobals->time + 0.001;
-}
-
-// where the chasing view stands: 112 units behind the target's eyes along
-// the given view, moved by vecOffset (Beta 5.0), pulled 4 units off a wall
-// it hits (Beta 5.0: the trace passes through glass)
-const Vector &CObserver::GetChaseOrigin( const Vector &angles, entvars_t *pevTarget, Vector &vecOffset )
-{
-	static Vector chaseorg;	// Linux symbol
-
-	UTIL_MakeVectors( angles );
-
-	TraceResult tr;
-	Vector vecStart = pevTarget->origin + pevTarget->view_ofs;	// names ours
-	Vector vecEnd = vecStart - gpGlobals->v_forward * 112 + vecOffset;
-
-	UTIL_TraceLine( vecStart, vecEnd, ignore_monsters, ignore_glass, ENT( pev ), &tr );
-
-	chaseorg = tr.vecEndPos + tr.vecPlaneNormal * 4;
-
-	return chaseorg;
-}
-
-void CObserver::CGhosts::Reset( void )
-{
-	m_flNextUpdate = 0;
-	m_fShowHint = FALSE;
-}
-
-void CObserver::CGhosts::SetHintMessage( void )
-{
-	m_flHintTime = gpGlobals->time + 2;
-	m_fShowHint = TRUE;
-}
-
-void CObserver::CGhosts::Update( CBasePlayer *pOwner, const Vector &vecOrigin )
-{
-	if ( m_fShowHint && gpGlobals->time > m_flHintTime && g_pGameRules->IsMultiplayer() )
+	// Attack2 moves to the prev player
+	if ( m_afButtonPressed & IN_ATTACK2 )
 	{
-		// Beta 5.0: one hint; if the client takes no hints, its first line
-		// is forced (the leak: by mp_chasecam, the second line once)
-		if ( !pOwner->HintMessage( "You are an observer until next round.\nPress FIRE to find players.\nPress JUMP to switch modes.", TRUE, FALSE ) )
-			pOwner->HintMessage( "You are an observer until next round.", TRUE, TRUE );
+		Observer_FindNextPlayer( true );
 
-		m_fShowHint = FALSE;
+		m_flNextObserverInput = gpGlobals->time + 0.2;
 	}
+}
 
-	if ( gpGlobals->time > m_flNextUpdate )
+// Attempt to change the observer mode
+void CBasePlayer::Observer_SetMode( int iMode )
+{
+	// Just abort if we're changing to the mode we're already in
+	if ( iMode == pev->iuser1 )
+		return;
+
+	// Changing to Roaming?
+	if ( iMode == OBS_ROAMING )
 	{
-		float flFrequency = CVAR_GET_FLOAT( "mp_ghostfrequency" );	// name ours
-
-		if ( flFrequency != 0 )
+		if ( CVAR_GET_FLOAT( "mp_forcechasecam" ) == 0 )
 		{
-		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
-		{
-			CBasePlayer *pPlayer = (CBasePlayer *)UTIL_PlayerByIndex( i );
+			pev->iuser1 = OBS_ROAMING;
+			pev->iuser2 = 0;
 
-			if ( !pPlayer || FNullEnt( pPlayer->edict() ) || pPlayer == pOwner )
-				continue;
-
-			// only to other observers who want them
-			if ( !( pPlayer->m_afPhysicsFlags & PFLAG_OBSERVER ) || pPlayer->m_iIgnoreGhosts )
-				continue;
-
-			MESSAGE_BEGIN( MSG_ONE, SVC_TEMPENTITY, NULL, pPlayer->pev );
-				WRITE_BYTE( TE_EXPLOSION );
-				WRITE_COORD( vecOrigin.x );
-				WRITE_COORD( vecOrigin.y );
-				WRITE_COORD( vecOrigin.z );
-				WRITE_SHORT( pOwner->m_iTeam == TEAM_CT ? g_sModelIndexCTGhost : g_sModelIndexTGhost );
-				WRITE_BYTE( 2 );
-				WRITE_BYTE( 40 );	// Beta 5.0 (the leak: 30)
-				WRITE_BYTE( TE_EXPLFLAG_NODLIGHTS | TE_EXPLFLAG_NOSOUND | TE_EXPLFLAG_NOPARTICLES );
+			MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pev );
+				WRITE_BYTE( 1 );
 			MESSAGE_END();
+
+			ClientPrint( pev, HUD_PRINTCENTER, "#Spec_Mode3" );
+			return;
 		}
 
-		m_flNextUpdate = gpGlobals->time + flFrequency;
+		// mp_forcechasecam: no free flight while there is somebody to follow
+		if ( m_hObserverTarget == NULL )
+			Observer_FindNextPlayer( false );
+
+		if (m_hObserverTarget)
+		{
+			pev->iuser1 = OBS_CHASE_LOCKED;
+			pev->iuser2 = ENTINDEX( m_hObserverTarget->edict() );
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pev );
+				WRITE_BYTE( 0 );
+			MESSAGE_END();
+
+			ClientPrint( pev, HUD_PRINTCENTER, "#Spec_Mode1" );
 		}
 		else
-			m_flNextUpdate = gpGlobals->time + 1;
+		{
+			pev->iuser1 = OBS_ROAMING;
+			pev->iuser2 = 0;
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pev );
+				WRITE_BYTE( 1 );
+			MESSAGE_END();
+
+			ClientPrint( pev, HUD_PRINTCENTER, "#Spec_Mode3" );
+		}
+
+		return;
+	}
+
+	// Changing to Chase Lock?
+	if ( iMode == OBS_CHASE_LOCKED )
+	{
+		// If changing from Roaming, or starting observing, make sure there is a target
+		if ( m_hObserverTarget == NULL )
+			Observer_FindNextPlayer( false );
+
+		if (m_hObserverTarget)
+		{
+			pev->iuser1 = OBS_CHASE_LOCKED;
+			pev->iuser2 = ENTINDEX( m_hObserverTarget->edict() );
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pev );
+				WRITE_BYTE( 0 );
+			MESSAGE_END();
+
+			ClientPrint( pev, HUD_PRINTCENTER, "#Spec_Mode1" );
+		}
+		else
+		{
+			ClientPrint( pev, HUD_PRINTCENTER, "#Spec_NoTarget"  );
+			Observer_SetMode(OBS_ROAMING);
+		}
+
+		return;
+	}
+
+	// Changing to Chase Freelook?
+	if ( iMode == OBS_CHASE_FREE )
+	{
+		// If changing from Roaming, or starting observing, make sure there is a target
+		if ( m_hObserverTarget == NULL )
+			Observer_FindNextPlayer( false );
+
+		if (m_hObserverTarget)
+		{
+			pev->iuser1 = OBS_CHASE_FREE;
+			pev->iuser2 = ENTINDEX( m_hObserverTarget->edict() );
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pev );
+				WRITE_BYTE( 0 );
+			MESSAGE_END();
+
+			ClientPrint( pev, HUD_PRINTCENTER, "#Spec_Mode2" );
+		}
+		else
+		{
+			ClientPrint( pev, HUD_PRINTCENTER, "#Spec_NoTarget"  );
+			Observer_SetMode(OBS_ROAMING);
+		}
+		
+		return;
 	}
 }

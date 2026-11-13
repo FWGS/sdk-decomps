@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -35,6 +35,12 @@ extern DLL_GLOBAL int			g_iSkillLevel;
 
 extern Vector VecBModelOrigin( entvars_t* pevBModel );
 extern entvars_t *g_pevLastInflictor;
+
+// (Beta 6.0's eight unreferenced globals, PosX to alpha, are not this file's: in Beta
+// 6.5's Linux library PosX to nvg stand between cbase.cpp's data and client.cpp's
+// g_serveractive, and retail's 32 unreferenced bytes at 0x1009cdd0 lie in front of
+// client.obj's g_serveractive at 0x1009cdf0; combat.obj's .bss is FireBullets' tracer
+// count alone, at 0x1009ce00. They belong to client.cpp.)
 
 #define GERMAN_GIB_COUNT		4
 #define	HUMAN_GIB_COUNT			6
@@ -1029,7 +1035,7 @@ float CBaseMonster :: DamageForce( float damage )
 
 //
 // RadiusFlash - a flashbang goes off: blind every player who can see the spot
-// within 750 units; the nearer, the longer, and much longer when facing it.
+// within 1500 units; the nearer, the longer, and longer when facing it.
 //
 void RadiusFlash( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int iClassIgnore, int bitsDamageType )
 {
@@ -1037,7 +1043,7 @@ void RadiusFlash( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker
 	TraceResult	tr;
 	float		flAdjustedDamage, falloff;
 	Vector		vecSpot;
-	float		flRadius = 1000;
+	float		flRadius = 1500;	// Beta 6.5 (was 1000)
 
 	if ( flRadius )
 		falloff = flDamage / flRadius;
@@ -1087,17 +1093,19 @@ void RadiusFlash( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker
 				}
 
 				Vector vecLOS;
+				float flDot;
 
 				UTIL_MakeVectors( pEntity->pev->v_angle );
 				vecLOS = vecSrc - ( pEntity->pev->origin + pEntity->pev->view_ofs );
+				flDot = DotProduct( vecLOS, gpGlobals->v_forward );
 
-				if ( DotProduct( vecLOS, gpGlobals->v_forward ) >= 0.0 )
+				if ( flDot >= 0.0 )
 				{
 					UTIL_ScreenFade( pEntity, Vector( 255, 255, 255 ), flAdjustedDamage * 3, flAdjustedDamage / 1.5, 255, 0 );
 				}
 				else
 				{
-					UTIL_ScreenFade( pEntity, Vector( 255, 255, 255 ), flAdjustedDamage, flAdjustedDamage / 6, 200, 0 );
+					UTIL_ScreenFade( pEntity, Vector( 255, 255, 255 ), flAdjustedDamage * 1.75, flAdjustedDamage / 3.5, 200, 0 );	// Beta 6.5 (was x 1, / 6)
 				}
 			}
 		}
@@ -1535,9 +1543,8 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 
 	for (ULONG iShot = 1; iShot <= cShots; iShot++)
 	{
-		// Beta 6.0: never used; with it the loop counts iShot up to cShots, as
-		// retail's does (without: the count-down of Beta 5.2). The name is CS 1.6's
-		// (its debug information has an unused local of that name at this place)
+		// Beta 6.0: never used (Beta 6.1's text; the name is CS 1.6's, whose debug
+		// information has an unused local of that name at this place)
 		int spark = 0;
 
 		// get circular gaussian spread
@@ -1574,7 +1581,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 				tracer = 1;
 			switch( iBulletType )
 			{
-			case BULLET_PLAYER_MP5:
+			case BULLET_PLAYER_MP5:		// (SDK 1.0's text, as Beta 6.1: SDK 2.0 has a break here, retail's code does not)
 			case BULLET_MONSTER_MP5:
 			case BULLET_MONSTER_9MM:
 			case BULLET_MONSTER_12MM:
@@ -1588,20 +1595,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 					WRITE_COORD( tr.vecEndPos.y );
 					WRITE_COORD( tr.vecEndPos.z );
 				MESSAGE_END();
-
 				break;
-				/*
-			case BULLET_12MM:
-				WRITE_BYTE(MSG_BROADCAST, SVC_TEMPENTITY);
-				WRITE_BYTE(MSG_BROADCAST, TE_RAILTRAIL);
-				WRITE_COORD(MSG_BROADCAST, vecSrc.x);
-				WRITE_COORD(MSG_BROADCAST, vecSrc.y);
-				WRITE_COORD(MSG_BROADCAST, vecSrc.z);
-				WRITE_COORD(MSG_BROADCAST, tr.vecEndPos.x);
-				WRITE_COORD(MSG_BROADCAST, tr.vecEndPos.y);
-				WRITE_COORD(MSG_BROADCAST, tr.vecEndPos.z);
-				break;
-				*/
 			}
 		}
 		// do damage, paint decals
@@ -1621,44 +1615,24 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 			default:
 			case BULLET_PLAYER_9MM:		
 				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg9MM, vecDir, &tr, DMG_BULLET); 
-				if ( !tracer )
-				{
-					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-					DecalGunshot( &tr, iBulletType, false, pev, false );
-				}
 				break;
 
 			case BULLET_PLAYER_MP5:		
 				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgMP5, vecDir, &tr, DMG_BULLET); 
-				if ( !tracer )
-				{
-					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-					DecalGunshot( &tr, iBulletType, false, pev, false );
-				}
 				break;
 
 			case BULLET_PLAYER_BUCKSHOT:	
 			{
 				 // make distance based!
 				// Counter-Strike Beta 6.0: it is: 20 a pellet at the muzzle, less with
-				// the distance (Beta 1.0 to 5.2: 13, Beta 1.0 15); no texture sound
-				int iBuckshotDamage = ( 1 - tr.flFraction ) * 20;	// name ours
-				ALERT( at_console, "Shotgun Damage = %i\n", iBuckshotDamage );
-				pEntity->TraceAttack(pevAttacker, iBuckshotDamage, vecDir, &tr, DMG_BULLET);
-				if ( !tracer )
-				{
-					DecalGunshot( &tr, iBulletType, false, pev, false );
-				}
+				// the distance (Beta 1.0 to 5.2: 13, Beta 1.0 15)
+				float flDamage = ( 1 - tr.flFraction ) * 20;	// Beta 6.5: a float, cast for the call (the name is CS 1.6's)
+				pEntity->TraceAttack(pevAttacker, (int)flDamage, vecDir, &tr, DMG_BULLET);
 				break;
 			}
 			
 			case BULLET_PLAYER_357:		
 				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg357, vecDir, &tr, DMG_BULLET); 
-				if ( !tracer )
-				{
-					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-					DecalGunshot( &tr, iBulletType, false, pev, false );
-				}
 				break;
 
 			case BULLET_MONSTER_9MM:
@@ -1713,16 +1687,29 @@ One bullet that loses damage with distance and goes on through what it hits.
 */
 void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iPenetration, int iBulletType, int iDamage, float flRangeModifier, entvars_t *pevAttacker, bool bPistol )
 {
-	int iOriginalPenetration = iPenetration;	// Beta 6.0 (name ours)
-	int iCurrentDamage = iDamage;
-	float flCurrentDistance;
+	int iOriginalPenetration = iPenetration;	// Beta 6.0; no longer read (Beta 6.5)
 	int iPenetrationPower;
 	float flPenetrationDistance;
-	int iSparksAmount;		// Beta 6.0: the sparks of a hit on such a texture (name ours)
+	int iCurrentDamage = iDamage;
+	float flCurrentDistance;
 	TraceResult tr;
 	Vector vecRight = gpGlobals->v_right;
 	Vector vecUp = gpGlobals->v_up;
-	bool bHitMetal = false;	// Beta 6.0: a bullet of this shot hit metal, a grate, a vent or a computer (name ours)
+	CBaseEntity *pEntity;
+	bool bHitMetal = false;	// Beta 6.0: a bullet of this shot hit metal, a grate, a vent or a computer
+	int iSparksAmount;		// Beta 6.0: the sparks of a hit on such a texture; no longer read (Beta 6.5)
+
+	// sic (stand-in): retail's text of this function is longer than what its code shows.
+	// Visual C++ 6.0's inliner gives a function a budget of twice its size as the
+	// front end counted it (dead statements included), and retail's pattern (the
+	// Vector constructors called in the first two statements, everything expanded
+	// in the loop but the last copy of the second branch) needs 98 to 147 units more
+	// than the statements below make: 14 to 21 dead stores (measured: 13 and 22 give
+	// other code; where they stand does not matter). What the text was cannot be
+	// read from the image.
+	int iStandIn;
+	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
+	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
 
 	// the penetration of each bullet (Beta 3.0 had no breaks here, so that
 	// every bullet fell through to 0 and 0; Beta 3.1: "bullet penetration bug
@@ -1730,27 +1717,27 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 	switch ( iBulletType )
 	{
 	case BULLET_PLAYER_9MM:
-		iPenetrationPower = 14;
+		iPenetrationPower = 21;
 		flPenetrationDistance = 800;
 		iSparksAmount = 15;
 		break;
 	case BULLET_PLAYER_45ACP:
-		iPenetrationPower = 10;
+		iPenetrationPower = 15;
 		flPenetrationDistance = 500;
 		iSparksAmount = 20;
 		break;
 	case BULLET_PLAYER_50AE:
-		iPenetrationPower = 20;
+		iPenetrationPower = 30;
 		flPenetrationDistance = 1000;
 		iSparksAmount = 20;
 		break;
 	case BULLET_PLAYER_762MM:
-		iPenetrationPower = 24;
+		iPenetrationPower = 36;
 		flPenetrationDistance = 5000;
 		iSparksAmount = 30;
 		break;
 	case BULLET_PLAYER_556MM:
-		iPenetrationPower = 20;
+		iPenetrationPower = 45;
 		flPenetrationDistance = 4000;
 		iSparksAmount = 30;
 		break;
@@ -1760,12 +1747,12 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 		iSparksAmount = 30;
 		break;
 	case BULLET_PLAYER_57MM:
-		iPenetrationPower = 20;
+		iPenetrationPower = 30;
 		flPenetrationDistance = 2500;
 		iSparksAmount = 20;
 		break;
 	case BULLET_PLAYER_357SIG:	// Beta 4.0: the P228's
-		iPenetrationPower = 20;
+		iPenetrationPower = 30;
 		flPenetrationDistance = 800;
 		iSparksAmount = 20;
 		break;
@@ -1800,10 +1787,11 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 		ClearMultiDamage();
 		UTIL_TraceLine(vecSrc, vecEnd, dont_ignore_monsters, ENT(pev)/*pentIgnore*/, &tr);
 
-		// Beta 6.0: the material hit takes power from the bullet; metal,
-		// grates, vents and computers spark
-		char cTextureType = UTIL_TextureHit( &tr, vecSrc, vecEnd );	// name ours
-		bool bSparks = false;	// name ours
+		// Beta 6.0: the material hit takes power from the bullet (Beta 6.5:
+		// wood gives it half as much again). The sparks are the client's now
+		// (EV_HLDM_DecalGunshot); bSparks is still set and no longer read.
+		char cTextureType = UTIL_TextureHit( &tr, vecSrc, vecEnd );
+		bool bSparks = false;
 
 		switch ( cTextureType )
 		{
@@ -1836,46 +1824,21 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 			iPenetrationPower *= 0.4;
 			break;
 		case CHAR_TEX_WOOD:
+			iPenetrationPower *= 1.5;
 			break;
 		default:
 			bSparks = false;
 			break;
 		}
 
-		ALERT( at_console, "Penetration Power : %i\n", iPenetrationPower );
-
 		if (tr.flFraction != 1.0)
 		{
-			CBaseEntity *pEntity = CBaseEntity::Instance(tr.pHit);
+			pEntity = CBaseEntity::Instance(tr.pHit);
 
 			iPenetration--;
 			flCurrentDistance = tr.flFraction * flDistance;
 			float flDamageModifier = pow( flRangeModifier, flCurrentDistance / 500 );
 			iCurrentDamage *= flDamageModifier;
-
-			// Beta 6.0: the first wall that sparks shows the shooter a streak
-			// splash, one time in three
-			if ( iPenetration == iOriginalPenetration - 1 && bSparks == true )
-			{
-				Vector vecSparkDir = tr.vecPlaneNormal;	// name ours
-
-				if ( RANDOM_LONG( 0, 2 ) == 0 )
-				{
-					MESSAGE_BEGIN( MSG_ONE, SVC_TEMPENTITY, tr.vecEndPos, pev );
-						WRITE_BYTE( TE_STREAK_SPLASH );
-						WRITE_COORD( tr.vecEndPos.x );
-						WRITE_COORD( tr.vecEndPos.y );
-						WRITE_COORD( tr.vecEndPos.z );
-						WRITE_COORD( vecSparkDir.x );
-						WRITE_COORD( vecSparkDir.y );
-						WRITE_COORD( vecSparkDir.z );
-						WRITE_BYTE( 5 );	// color
-						WRITE_SHORT( iSparksAmount );
-						WRITE_SHORT( 50 );	// base speed
-						WRITE_SHORT( 100 );	// random velocity
-					MESSAGE_END();
-				}
-			}
 
 			if ( flCurrentDistance > flPenetrationDistance )
 				iPenetration = 0;
@@ -1883,12 +1846,8 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 			if ( VARS(tr.pHit)->solid == SOLID_BSP && iPenetration != 0 )
 			{
 				// Counter-Strike Beta 2.0: with bPistol (name ours: the pistols, but also the
-				// AWP and the G3/SG-1 pass it) every bullet marks the wall; the other guns'
-				// bullets do so one in four with mp_lowlag 1, and every time with
-				// mp_lowlag 0 (Beta 5.0 leak: with sv_sendvelocity 0, which the engine
-				// registers; mp_lowlag is not registered any more, game.cpp; Beta 5.0:
-				// sv_sendvelocity alone decides, mp_lowlag is not read)
-				// (Beta 4.0: one in three where the bullet goes through)
+				// AWP and the G3/SG-1 pass it) every bullet marks the wall for everyone; the
+				// other guns' bullets do so one time in four, else for the shooter alone
 				if ( !bPistol )
 				{
 					if ( RANDOM_LONG( 0, 3 ) == 0 )
@@ -1932,189 +1891,6 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 		ApplyMultiDamage(pev, pevAttacker);
 	}
 }
-
-/*
-================
-FireBullets2
-
-FireBullets without tracers, whose bullets go through iPenetration walls and,
-fired one at a time, through a player.
-================
-*/
-void CBaseEntity::FireBullets2( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iBulletType, int iPenetration, int iTracerFreq, int iDamage, entvars_t *pevAttacker )
-{
-	static int tracerCount;	// unused, as iTracerFreq
-	int tracer;
-	bool fShootThrough = false;
-	TraceResult tr;
-	Vector vecRight = gpGlobals->v_right;
-	Vector vecUp = gpGlobals->v_up;
-
-	if ( pevAttacker == NULL )
-		pevAttacker = pev;  // the default attacker is ourselves
-
-	// Vector vecSrc = pev->origin + gpGlobals->v_forward * 10;
-	//vecSrc.z = pevShooter->absmin.z + pevShooter->size.z * 0.7;
-	//vecSrc.z = pev->origin.z + (pev->view_ofs.z - 4);
-	ClearMultiDamage();
-	gMultiDamage.type = DMG_BULLET | DMG_NEVERGIB;
-
-	for (ULONG iShot = 1; iShot <= cShots; iShot++)
-	{
-		// get circular gaussian spread
-		float x, y, z;
-		do {
-			x = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
-			y = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
-			z = x*x+y*y;
-		} while (z > 1);
-
-		Vector vecDir = vecDirShooting +
-						x * vecSpread.x * vecRight +
-						y * vecSpread.y * vecUp;
-		Vector vecEnd;
-
-		vecEnd = vecSrc + vecDir * flDistance;
-		UTIL_TraceLine(vecSrc, vecEnd, dont_ignore_monsters, ENT(pev)/*pentIgnore*/, &tr);
-
-		tracer = 0;
-
-		// do damage, paint decals
-		if (tr.flFraction != 1.0)
-		{
-			CBaseEntity *pEntity = CBaseEntity::Instance(tr.pHit);
-
-			// through the wall
-			if ( VARS(tr.pHit)->solid == SOLID_BSP && iPenetration )
-			{
-				DecalGunshot( &tr, iBulletType, false, pev, false );
-				iPenetration--;
-
-				vecSrc = tr.vecEndPos + vecDir * 32;
-				vecEnd = vecSrc + vecDir * flDistance;
-
-				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg9MM, vecDir, &tr, DMG_BULLET);
-				UTIL_TraceLine(vecSrc, vecEnd, dont_ignore_monsters, ENT(pev)/*pentIgnore*/, &tr);
-
-				if (tr.flFraction != 1.0)
-					pEntity = CBaseEntity::Instance(tr.pHit);
-			}
-
-			if (tr.flFraction != 1.0)
-			{
-				if ( iDamage )
-				{
-					pEntity->TraceAttack(pevAttacker, iDamage, vecDir, &tr, DMG_BULLET | ((iDamage > 16) ? DMG_ALWAYSGIB : DMG_NEVERGIB) );
-
-					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-					DecalGunshot( &tr, iBulletType, false, pev, false );
-				}
-				else switch(iBulletType)
-				{
-				default:
-				case BULLET_PLAYER_9MM:
-					pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg9MM, vecDir, &tr, DMG_BULLET);
-					if ( !tracer )
-					{
-						TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-						DecalGunshot( &tr, iBulletType, false, pev, false );
-					}
-					break;
-
-				case BULLET_PLAYER_MP5:
-					pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgMP5, vecDir, &tr, DMG_BULLET);
-					if ( !tracer )
-					{
-						TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-						DecalGunshot( &tr, iBulletType, false, pev, false );
-					}
-					break;
-
-				case BULLET_PLAYER_BUCKSHOT:
-					 // make distance based!
-					pEntity->TraceAttack(pevAttacker, 20, vecDir, &tr, DMG_BULLET);	// Beta 6.0: 20 a pellet (was the skill value)
-					if ( !tracer )
-					{
-						// TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-						DecalGunshot( &tr, iBulletType, false, pev, false );
-					}
-					break;
-
-				case BULLET_PLAYER_357:
-					pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg357, vecDir, &tr, DMG_BULLET);
-					if ( !tracer )
-					{
-						TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-						DecalGunshot( &tr, iBulletType, false, pev, false );
-					}
-					break;
-
-				case BULLET_MONSTER_9MM:
-					pEntity->TraceAttack(pevAttacker, gSkillData.monDmg9MM, vecDir, &tr, DMG_BULLET);
-
-					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-					DecalGunshot( &tr, iBulletType, false, pev, false );
-
-					break;
-
-				case BULLET_MONSTER_MP5:
-					pEntity->TraceAttack(pevAttacker, gSkillData.monDmgMP5, vecDir, &tr, DMG_BULLET);
-
-					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-					DecalGunshot( &tr, iBulletType, false, pev, false );
-
-					break;
-
-				case BULLET_MONSTER_12MM:
-					pEntity->TraceAttack(pevAttacker, gSkillData.monDmg12MM, vecDir, &tr, DMG_BULLET);
-					if ( !tracer )
-					{
-						TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-						DecalGunshot( &tr, iBulletType, false, pev, false );
-					}
-					break;
-
-				case BULLET_NONE: // FIX
-					pEntity->TraceAttack(pevAttacker, 50, vecDir, &tr, DMG_CLUB);
-					TEXTURETYPE_PlaySound(&tr, vecSrc, vecEnd, iBulletType);
-					// only decal glass
-					if ( !FNullEnt(tr.pHit) && VARS(tr.pHit)->rendermode != 0)
-					{
-						UTIL_DecalTrace( &tr, DECAL_GLASSBREAK1 + RANDOM_LONG(0,2) );
-					}
-
-					break;
-				}
-
-				// a single bullet that hit a player goes on through him
-				if ( pEntity->pev->classname == MAKE_STRING("player") && iPenetration > 0 && cShots == 1 )
-					fShootThrough = true;
-			}
-		}
-		// make bullet trails
-		UTIL_BubbleTrail( vecSrc, tr.vecEndPos, (flDistance * tr.flFraction) / 64.0 );
-	}
-	ApplyMultiDamage(pev, pevAttacker);
-
-	if ( fShootThrough == true )
-	{
-		vecSrc = tr.vecEndPos + vecDirShooting * 32;
-
-		Vector vecEnd;
-
-		vecEnd = vecSrc + vecDirShooting * flDistance;
-		UTIL_TraceLine(vecSrc, vecEnd, dont_ignore_monsters, ENT(pev)/*pentIgnore*/, &tr);
-
-		if (tr.flFraction != 1.0)
-		{
-			CBaseEntity *pEntity = CBaseEntity::Instance(tr.pHit);
-
-			pEntity->TraceAttack(pevAttacker, gSkillData.plrDmg9MM, vecDirShooting, &tr, DMG_BULLET);
-			ApplyMultiDamage(pEntity->pev, pevAttacker);	// sic: the victim is the inflictor
-		}
-	}
-}
-
 
 void CBaseEntity :: TraceBleed( float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType )
 {

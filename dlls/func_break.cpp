@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -166,6 +166,12 @@ void CBreakable::Spawn( void )
     m_angle			= pev->angles.y;
 	pev->angles.y	= 0;
 
+	// HACK:  matGlass can receive decals, we need the client to know about this
+	//  so use class to store the material flag
+	if ( m_Material == matGlass )
+	{
+		pev->playerclass = 1;
+	}
 	
 	SET_MODEL(ENT(pev), STRING(pev->model) );//set size and link into world.
 
@@ -633,8 +639,9 @@ int CBreakable :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, f
 		pev->deadflag = DEAD_DEAD;
 		pev->effects = EF_NODRAW;
 
-		// Beta 5.2: it breaks at its next think, after the delay
-		SetThink( Die );
+		// Beta 5.2: it broke at its next think, after the delay (SetThink( Die ));
+		// Beta 6.5: at once; the delay still sets the next think
+		Die();
 
 		if ( m_flDelay == 0 )
 			m_flDelay = 0.1;

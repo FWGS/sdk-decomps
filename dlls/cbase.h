@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1999, 2000 Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -51,7 +51,11 @@ CBaseEntity
 
 // C functions for external declarations that call the appropriate C++ methods
 
+#ifdef _WIN32
 #define EXPORT	_declspec( dllexport )
+#else
+#define EXPORT
+#endif
 
 extern "C" EXPORT int GetEntityAPI( DLL_FUNCTIONS *pFunctionTable, int interfaceVersion );
 
@@ -141,7 +145,7 @@ public:
 	// initialization functions
 	virtual void	Spawn( void ) { return; }
 	virtual void	Precache( void ) { return; }
-	virtual void	Restart( void ) { return; }	// Counter-Strike Beta 4.0: puts the entity back as the map had it, at a new round (Linux symbol; body ours)
+	virtual void	Restart( void ) {}
 	virtual void	KeyValue( KeyValueData* pkvd) { pkvd->fHandled = FALSE; }
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
@@ -236,8 +240,7 @@ public:
 	void EXPORT SUB_CallUseToggle( void ) { this->Use( this, this, USE_TOGGLE, 0 ); }
 	int			ShouldToggle( USE_TYPE useType, BOOL currentState );
 	void		FireBullets( ULONG	cShots, Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iBulletType, int iTracerFreq = 4, int iDamage = 0, entvars_t *pevAttacker = NULL  );
-	void		FireBullets2( ULONG	cShots, Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iBulletType, int iPenetration, int iTracerFreq = 4, int iDamage = 0, entvars_t *pevAttacker = NULL  );
-	void		FireBullets3( Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iPenetration, int iBulletType, int iDamage, float flRangeModifier, entvars_t *pevAttacker = NULL, bool bPistol = false  );
+	void EXPORT	FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iPenetration, int iBulletType, int iDamage, float flRangeModifier, entvars_t *pevAttacker, bool bPistol );
 
 	virtual CBaseEntity *Respawn( void ) { return NULL; }
 
@@ -290,8 +293,10 @@ public:
 #ifdef _DEBUG
 	void FunctionCheck( void *pFunction, char *name ) 
 	{ 
+#ifdef _WIN32
 		if (pFunction && !NAME_FOR_FUNCTION((unsigned long)(pFunction)) )
 			ALERT( at_error, "No EXPORT: %s:%s (%08lx)\n", STRING(pev->classname), name, (unsigned long)pFunction );
+#endif // _WIN32
 	}
 
 	BASEPTR	ThinkSet( BASEPTR func, char *name ) 
@@ -345,6 +350,34 @@ public:
 
 	virtual	BOOL FVisible ( CBaseEntity *pEntity );
 	virtual	BOOL FVisible ( const Vector &vecOrigin );
+
+	// Counter-Strike: the ammo the client's weapons predict with (TabulateAmmo fills the ammo_
+	// counts from m_rgAmmo, UpdateClientData sends them).  Names: Counter-Strike 1.6's debug
+	// information; Beta 6.5's server and client agree with its offsets less the four think
+	// pointers' size.
+	int		*current_ammo;
+	float	currentammo;
+	int		maxammo_buckshot;
+	int		ammo_buckshot;
+	int		maxammo_9mm;
+	int		ammo_9mm;
+	int		maxammo_556nato;
+	int		ammo_556nato;
+	int		maxammo_556natobox;
+	int		ammo_556natobox;
+	int		maxammo_762nato;
+	int		ammo_762nato;
+	int		maxammo_45acp;
+	int		ammo_45acp;
+	int		maxammo_50ae;
+	int		ammo_50ae;
+	int		maxammo_338mag;
+	int		ammo_338mag;
+	int		maxammo_57mm;
+	int		ammo_57mm;
+	int		maxammo_357sig;
+	int		ammo_357sig;
+	bool	has_disconnected;	// ClientDisconnected sets it, Observer_FindNextPlayer skips such players
 };
 
 
@@ -602,7 +635,7 @@ public:
 #define DMG_SLOWBURN		(1 << 21)	// in an oven
 #define DMG_SLOWFREEZE		(1 << 22)	// in a subzero freezer
 #define DMG_MORTAR			(1 << 23)	// Hit by air raid (done to distinguish grenade from mortar)
-#define DMG_HEGRENADE		(1 << 24)	// Counter-Strike Beta 4.0: an HE grenade's blast (Detonate3); name ours
+#define DMG_HEGRENADE		(1 << 24)	// Counter-Strike: an HE grenade's blast (name ours)
 
 // these are the damage types that are allowed to gib corpses
 #define DMG_GIB_CORPSE		( DMG_CRUSH | DMG_FALL | DMG_BLAST | DMG_SONIC | DMG_CLUB )
