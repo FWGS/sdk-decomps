@@ -18,6 +18,7 @@
 
 //#include "weapons.h"
 //#include "items.h"
+#include "../game_shared/voice_gamemgr.h"	// Counter-Strike 1.3; the path's spelling is ours
 class CBasePlayerItem;
 class CBasePlayer;
 class CItem;
@@ -93,6 +94,7 @@ public:
 	virtual edict_t *GetPlayerSpawnSpot( CBasePlayer *pPlayer );// Place this player on their spawnspot and face them the proper direction.
 
 	virtual BOOL AllowAutoTargetCrosshair( void ) { return TRUE; };
+	virtual BOOL ClientCommand_DeadOrAlive( CBasePlayer *pPlayer, const char *pcmd ) { return FALSE; };  // Counter-Strike 1.3: the commands a dead player may give too (1.6's name and place)
 	virtual BOOL ClientCommand( CBasePlayer *pPlayer, const char *pcmd ) { return FALSE; };  // handles the user commands;  returns TRUE if command handled properly
 	virtual void ClientUserInfoChanged( CBasePlayer *pPlayer, char *infobuffer ) {}		// the player has changed userinfo;  can change it now
 
@@ -157,6 +159,11 @@ public:
 
 	// Immediately end a multiplayer game
 	virtual void EndMultiplayerGame( void ) {}
+
+	// Counter-Strike 1.3: the freeze period is the base class's (1.6's names and places; to 1.1 both were
+	// CHalfLifeMultiplay's, the function not virtual)
+	virtual BOOL IsFreezePeriod( void ) { return m_bFreezePeriod; }
+	BOOL m_bFreezePeriod;			// 0x04 TRUE from RestartRound until Think sees the freeze time run out
 };
 
 extern CGameRules *InstallGameRules( void );
@@ -213,6 +220,7 @@ public:
 	virtual float FlWeaponRespawnTime( CBasePlayerItem *pWeapon );
 	virtual float FlWeaponTryRespawn( CBasePlayerItem *pWeapon );
 	virtual Vector VecWeaponRespawnSpot( CBasePlayerItem *pWeapon );
+	virtual edict_t *GetPlayerSpawnSpot( CBasePlayer *pPlayer );	// Counter-Strike 1.3 (1.6 declares it at this place)
 
 // Item retrieval
 	virtual BOOL CanHaveItem( CBasePlayer *pPlayer, CItem *pItem );
@@ -348,6 +356,9 @@ public:
 	// Immediately end a multiplayer game
 	virtual void EndMultiplayerGame( void ) { GoToIntermission(); }
 
+	// Counter-Strike 1.3: the voice manager's commands (1.6 declares them at this place)
+	virtual BOOL ClientCommand_DeadOrAlive( CBasePlayer *pPlayer, const char *pcmd );
+	virtual BOOL ClientCommand( CBasePlayer *pPlayer, const char *pcmd );
 	// Counter-Strike 1.0b: sets the player's model again (1.6 declares it at this place)
 	virtual void ClientUserInfoChanged( CBasePlayer *pPlayer, char *infobuffer );
 
@@ -367,8 +378,14 @@ public:
 	// and the seconds left in it or in the round
 	BOOL TeamFull( int team_id );
 	BOOL TeamStacked( int newTeam_id, int curTeam_id );	// Beta 5.0 (Linux symbol)
-	BOOL IsFreezePeriod( void ) { return m_bFreezePeriod; }
 	float TimeRemaining( void ) { return m_iRoundTimeSecs - gpGlobals->time + m_flRoundStartTime; }
+
+	// Counter-Strike 1.3: the voice manager, the class's first member (the server's constructor builds it at
+	// this + 8 and calls its Init with the helper and maxClients; Counter-Strike 1.6's name and place, line 426).
+	// It is 0x20 bytes and 8-aligned (a double): every member below stands 0x24 higher than the offsets in the
+	// comments, which are 1.1's (m_iC4Timer is at 0x88 in both of 1.3's DLLs); those behind m_iEndIntermissionButtonHit
+	// 0x20 higher, m_bFreezePeriod having gone to CGameRules.
+	CVoiceGameMgr m_VoiceGameMgr;
 
 	// member names ours; the offsets are retail's
 	float m_flRestartRoundTime;		// 0x04 Think calls RestartRound at this time; 0 = no restart pending
@@ -465,7 +482,7 @@ protected:
 
 public:
 	// Beta 5.0 (leak), after the SDK's members (names ours; Beta 7.1's offsets, Beta 6.1's in brackets)
-	BOOL m_bFreezePeriod;			// 0x278 [0xd8] TRUE from RestartRound until Think sees the freeze time run out (IsFreezePeriod)
+	// (to Counter-Strike 1.1 m_bFreezePeriod stood here, 0x278 [0xd8])
 	float m_flNextRestartCheck;		// 0x27c [0xdc] when Think reads sv_restartround next (every half second; Beta 6.1: every second)
 	bool m_fGameCommenced;			// 0x280 [0xe0] both teams have had spawnable players (CheckWinConditions; until then a round ends at once)
 };
@@ -487,7 +504,7 @@ public:
 
 	CHalfLifeTraining();
 
-	virtual BOOL IsMultiplayer( void );
+	virtual BOOL IsMultiplayer( void ) { return FALSE; }	// in the class, as Counter-Strike 1.6 has it (1.3's object has it behind the constructor with the compiler's ~CHalfLifeMultiplay)
 	virtual BOOL IsDeathmatch( void );
 	virtual void InitHUD( CBasePlayer *pl );
 	virtual edict_t *GetPlayerSpawnSpot( CBasePlayer *pPlayer );

@@ -388,7 +388,7 @@ void CSMGMenuPanel::Update()
 // Key inputs for the Class Menu
 bool CSMGMenuPanel::SlotInput( int iSlot )
 {
-	if ( (iSlot < 0) || (iSlot > 9) )
+	if ( (iSlot < 0) || ( (iSlot > 4) && (iSlot != 9) ) )
 		return false;
 
 	if ( iSlot == 9 )

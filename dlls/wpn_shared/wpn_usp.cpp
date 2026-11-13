@@ -171,17 +171,17 @@ void CUSP::USPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 		return;
 
 	if ( m_flLastFire == 0 )
-		m_flLastFire = gpGlobals->time;
+		m_flLastFire = UTIL_WeaponTimeBase();
 	else
 	{
-		m_flAccuracy -= ( 0.3 - ( gpGlobals->time - m_flLastFire ) ) * 0.275;
+		m_flAccuracy -= ( 0.3 - ( UTIL_WeaponTimeBase() - m_flLastFire ) ) * 0.275;
 
 		if ( m_flAccuracy > 0.92 )
 			m_flAccuracy = 0.92;
 		else if ( m_flAccuracy < 0.6 )
 			m_flAccuracy = 0.6;
 
-		m_flLastFire = gpGlobals->time;
+		m_flLastFire = UTIL_WeaponTimeBase();
 	}
 
 	if (m_iClip <= 0)
@@ -210,17 +210,24 @@ void CUSP::USPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	if ( !( m_iWeaponState & WPNSTATE_USP_SILENCED ) )
 		m_pPlayer->pev->effects |= EF_MUZZLEFLASH;
 
+	int flag;
+#if defined( CLIENT_WEAPONS )
+	flag = FEV_NOTHOST;
+#else
+	flag = 0;
+#endif
+
 	Vector vecAiming;
 	vecAiming = gpGlobals->v_forward;
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
-	Vector vecDir;	// unused, as in the other fire functions (Counter-Strike 1.6's debug info has the local in each); without it the x87 operands of v_angle + punchangle come in another order
+	Vector vecDir;
 
 	if ( m_iWeaponState & WPNSTATE_USP_SILENCED )
-		m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_45ACP, 30, 0.79, NULL, true );
+		vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, flSpread, 4096, 1, BULLET_PLAYER_45ACP, 30, 0.79, m_pPlayer->pev, true, m_pPlayer->random_seed );
 	else
-		m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_45ACP, 34, 0.79, NULL, true );
+		vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, flSpread, 4096, 1, BULLET_PLAYER_45ACP, 34, 0.79, m_pPlayer->pev, true, m_pPlayer->random_seed );
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireUSP, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, (int)(flSpread * 10000), m_pPlayer->m_bLeftHanded != false, m_iClip == 0, m_iWeaponState & WPNSTATE_USP_SILENCED );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireUSP, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), m_pPlayer->m_bLeftHanded != false, m_iClip == 0, m_iWeaponState & WPNSTATE_USP_SILENCED );
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
 		// HEV suit - indicate out of ammo condition
@@ -228,7 +235,9 @@ void CUSP::USPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2;
 
+#ifndef CLIENT_DLL	// Counter-Strike 1.3: the server's function ends with this statement and the client's has not got it
 	m_pPlayer->pev->punchangle.x -= 2;
+#endif
 }
 
 void CUSP::Reload( void )

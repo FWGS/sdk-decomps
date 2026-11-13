@@ -446,7 +446,7 @@ void CRifleMenuPanel::Update()
 // Key inputs for the Class Menu
 bool CRifleMenuPanel::SlotInput( int iSlot )
 {
-	if ( (iSlot < 0) || (iSlot > 9) )
+	if ( (iSlot < 0) || ( (iSlot > 7) && (iSlot != 9) ) )
 		return false;
 
 	if ( iSlot == 9 )

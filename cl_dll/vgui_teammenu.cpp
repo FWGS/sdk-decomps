@@ -1,4 +1,4 @@
-//=========== (C) Copyright 1999 Valve, L.L.C. All rights reserved. ===========
+//=========== (C) Copyright 1996-2001 Valve, L.L.C. All rights reserved. ===========
 //
 // The copyright to the contents herein is the property of Valve, L.L.C.
 // The contents may be used and/or copied only with the written permission of
@@ -100,7 +100,7 @@ CTeamMenuPanel::CTeamMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,i
 	pSchemes->getBgColor( hTeamWindowText, r, g, b, a );
 	m_pBriefing->setBgColor( r, g, b, a );
 
-	m_pBriefing->setText("Map Description not available.");
+	m_pBriefing->setText( gHUD.m_TextMessage.BufferedLocaliseTextString("#Map_Description_not_available") );
 	
 	// Team Menu buttons
 	for (int i = 1; i <= 5; i++)

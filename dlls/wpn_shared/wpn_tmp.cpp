@@ -94,9 +94,9 @@ BOOL CTMP::Deploy( )
 void CTMP::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		TMPFire( m_flAccuracy * 0.15, 0.07, FALSE );
+		TMPFire( ( m_flAccuracy ) * 0.15, 0.07, FALSE );	// sic: the parentheses (the Processor Pack compiler's instruction order)
 	else
-		TMPFire( m_flAccuracy * 0.03, 0.07, FALSE );
+		TMPFire( ( m_flAccuracy ) * 0.03, 0.07, FALSE );
 }
 
 void CTMP::TMPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
@@ -132,11 +132,18 @@ void CTMP::TMPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	Vector vecAiming;
 	vecAiming = gpGlobals->v_forward;
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
-	Vector vecDir;	// sic: unused (an SDK leftover); without it the x87 operands of the event's parameters come in another order
+	Vector vecDir;
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 20, 0.85, NULL, false );
+	vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, flSpread, 8192, 1, BULLET_PLAYER_9MM, 20, 0.85, m_pPlayer->pev, false, m_pPlayer->random_seed );
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireTMP, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_pPlayer->pev->punchangle.x, m_pPlayer->pev->punchangle.y, (int)(flSpread * 10000), (int)(m_pPlayer->pev->punchangle.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
+	int flag;
+#if defined( CLIENT_WEAPONS )
+	flag = FEV_NOTHOST;
+#else
+	flag = 0;
+#endif
+
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireTMP, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), 5, m_pPlayer->m_bLeftHanded != false );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

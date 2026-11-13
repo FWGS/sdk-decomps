@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -41,9 +41,18 @@ typedef struct {
 	int x, y;
 } POSITION;
 
+enum 
+{ 
+	MAX_PLAYERS = 64,
+	MAX_TEAMS = 64,
+	MAX_TEAM_NAME = 16,
+};
+
 typedef struct {
 	unsigned char r,g,b,a;
 } RGBA;
+
+typedef struct cvar_s cvar_t;
 
 
 #define HUD_ACTIVE	1
@@ -75,6 +84,14 @@ struct HUDLIST {
 	CHudBase	*p;
 	HUDLIST		*pNext;
 };
+
+
+
+//
+//-----------------------------------------------------
+//
+#include "..\game_shared\voice_status.h"
+#include "hud_spectator.h"
 
 
 //
@@ -302,13 +319,6 @@ private:
 
 };
 */
-
-enum 
-{ 
-	MAX_PLAYERS = 64,
-	MAX_TEAMS = 64,
-	MAX_TEAM_NAME = 16,
-};
 
 struct extra_player_info_t 
 {
@@ -672,7 +682,7 @@ private:
 //-----------------------------------------------------
 //
 
-typedef struct cvar_s cvar_t;
+
 
 class CHud
 {
@@ -741,17 +751,18 @@ public:
 	
 	int GetSpriteIndex( const char *SpriteName );	// gets a sprite index, for use in the m_rghSprites[] array
 
-	CHudAmmo	m_Ammo;
-	CHudHealth	m_Health;
-	CHudGeiger	m_Geiger;
-	CHudBattery	m_Battery;
-	CHudTrain	m_Train;
-	CHudFlashlight m_Flash;
-	CHudMessage m_Message;
-	CHudStatusBar    m_StatusBar;
+	CHudAmmo		m_Ammo;
+	CHudHealth		m_Health;
+	CHudSpectator		m_Spectator;
+	CHudGeiger		m_Geiger;
+	CHudBattery		m_Battery;
+	CHudTrain		m_Train;
+	CHudFlashlight	m_Flash;
+	CHudMessage		m_Message;
+	CHudStatusBar   m_StatusBar;
 	CHudDeathNotice m_DeathNotice;
-	CHudSayText m_SayText;
-	CHudMenu	m_Menu;
+	CHudSayText		m_SayText;
+	CHudMenu		m_Menu;
 	CHudAmmoSecondary	m_AmmoSecondary;
 	CHudTextMessage m_TextMessage;
 	CHudStatusIcons m_StatusIcons;
@@ -766,7 +777,7 @@ public:
 	int Redraw( float flTime, int intermission );
 	int UpdateClientData( client_data_t *cdata, float time );
 
-	CHud() : m_iSpriteCount(0), m_pHudList(NULL) {}  
+	CHud();			// Counter-Strike 1.3: not in the class body (the constructor's code is hud.obj's, after Init)
 	~CHud();			// destructor, frees allocated memory
 
 	// user messages
@@ -775,6 +786,7 @@ public:
 	int _cdecl MsgFunc_Logo(const char *pszName,  int iSize, void *pbuf);
 	int _cdecl MsgFunc_ResetHUD(const char *pszName,  int iSize, void *pbuf);
 	void _cdecl MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf );
+	void _cdecl MsgFunc_ViewMode( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_SetFOV(const char *pszName,  int iSize, void *pbuf);
 	int  _cdecl MsgFunc_Concuss( const char *pszName, int iSize, void *pbuf );
 	int  _cdecl MsgFunc_ReloadSound( const char *pszName, int iSize, void *pbuf );
@@ -806,75 +818,6 @@ class TeamFortressViewport;
 
 extern CHud gHUD;
 
-// sic: a stand-in, name ours.  More intermediate code stood in Counter-Strike's headers up to here
-// than in ours: the objects that build their own precompiled headers place the headers' inline
-// functions by its size, and only before CTempList does it put CTempList::Add after
-// EV_HLDM_FireBullets.  It was 141 to 145 lines until util_vector.h got
-// RotateVectorZ, Counter-Strike 1.6's inline function, which is 435 bytes of what this stood for
-// (1.3 needs nothing here).  With it this version takes
-//
-// 56 to 59 lines here (full builds against retail's SHA-256).  Nothing calls this.
-inline void b65_hud_unknown( void )
-{
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-}
 // name ours: the times at which shells (or smoke puffs) were made, so that no more than
 // m_iMax of them are around at once (max_shells, max_smokepuffs); CHud::Think drops those
 // older than m_flLife
@@ -968,10 +911,11 @@ extern int g_iPlayerClass;
 extern int g_iTeamNumber;
 extern int g_iUser1;
 extern int g_iUser2;
+extern int g_iUser3;
 
-// sic: seven declared names that Counter-Strike 1.1's headers had and this text has not. The constructors of
-// CMessageWindowPanel and CClassMenuPanel and CRifleMenuPanel::Update compile to retail's code in the release build
-// with 5 to 8, 11 or 12 names here (5 to 14 built; it was 15 before RotateVectorZ's seven names)
+// sic: declared names that Counter-Strike's headers had and this text has not (the count modulo 64 orders two
+// operands in the constructors of CMessageWindowPanel and CClassMenuPanel and in CRifleMenuPanel::Update).  Counter-
+// Strike 1.1 took 13 to 17 or 20; 1.3 takes 45, 46 or 49 (40 to 51 built in full)
 enum r11_hud_unknown_e
 {
 	R11_HUD_UNKNOWN0,
@@ -981,4 +925,43 @@ enum r11_hud_unknown_e
 	R11_HUD_UNKNOWN4,
 	R11_HUD_UNKNOWN5,
 	R11_HUD_UNKNOWN6,
+	R11_HUD_UNKNOWN7,
+	R11_HUD_UNKNOWN8,
+	R11_HUD_UNKNOWN9,
+	R11_HUD_UNKNOWN10,
+	R11_HUD_UNKNOWN11,
+	R11_HUD_UNKNOWN12,
+	R11_HUD_UNKNOWN13,
+	R11_HUD_UNKNOWN14,
+	R11_HUD_UNKNOWN15,
+	R11_HUD_UNKNOWN16,
+	R11_HUD_UNKNOWN17,
+	R11_HUD_UNKNOWN18,
+	R11_HUD_UNKNOWN19,
+	R11_HUD_UNKNOWN20,
+	R11_HUD_UNKNOWN21,
+	R11_HUD_UNKNOWN22,
+	R11_HUD_UNKNOWN23,
+	R11_HUD_UNKNOWN24,
+	R11_HUD_UNKNOWN25,
+	R11_HUD_UNKNOWN26,
+	R11_HUD_UNKNOWN27,
+	R11_HUD_UNKNOWN28,
+	R11_HUD_UNKNOWN29,
+	R11_HUD_UNKNOWN30,
+	R11_HUD_UNKNOWN31,
+	R11_HUD_UNKNOWN32,
+	R11_HUD_UNKNOWN33,
+	R11_HUD_UNKNOWN34,
+	R11_HUD_UNKNOWN35,
+	R11_HUD_UNKNOWN36,
+	R11_HUD_UNKNOWN37,
+	R11_HUD_UNKNOWN38,
+	R11_HUD_UNKNOWN39,
+	R11_HUD_UNKNOWN40,
+	R11_HUD_UNKNOWN41,
+	R11_HUD_UNKNOWN42,
+	R11_HUD_UNKNOWN43,
+	R11_HUD_UNKNOWN44,
+	R11_HUD_UNKNOWN45,
 };

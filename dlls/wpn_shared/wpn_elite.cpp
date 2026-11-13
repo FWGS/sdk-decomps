@@ -162,6 +162,13 @@ void CELITE::ELITEFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_pPlayer->pev->effects |= EF_MUZZLEFLASH;
 
+	int flag;
+#if defined( CLIENT_WEAPONS )
+	flag = FEV_NOTHOST;
+#else
+	flag = 0;
+#endif
+
 	Vector vecAiming;
 	vecAiming = gpGlobals->v_forward;
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
@@ -173,9 +180,10 @@ void CELITE::ELITEFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 		m_iWeaponState &= ~WPNSTATE_ELITE_LEFT;
 
 		vecSrc = vecSrc - gpGlobals->v_right * 5;
-		m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 20, 0.75, NULL, true );
+		Vector vecDir;
+		vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, flSpread, 8192, 1, BULLET_PLAYER_9MM, 20, 0.75, m_pPlayer->pev, true, m_pPlayer->random_seed );
 
-		PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireELITE_LEFT, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, flTimeDiff, m_vecAiming.y, (int)(flSpread * 10000), m_iClip, 5, 6 );
+		PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireELITE_LEFT, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, flTimeDiff, vecDir.x, (int)(vecDir.y * 10000000), m_iClip, FALSE, FALSE );
 	}
 	else
 	{
@@ -184,9 +192,10 @@ void CELITE::ELITEFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 		m_iWeaponState |= WPNSTATE_ELITE_LEFT;
 
 		vecSrc = vecSrc + gpGlobals->v_right * 5;
-		m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 27, 0.75, NULL, true );
+		Vector vecDir;
+		vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, flSpread, 8192, 1, BULLET_PLAYER_9MM, 27, 0.75, m_pPlayer->pev, true, m_pPlayer->random_seed );
 
-		PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireELITE_RIGHT, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, flTimeDiff, m_vecAiming.y, (int)(flSpread * 10000), m_iClip, 5, 6 );
+		PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireELITE_RIGHT, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, flTimeDiff, vecDir.x, (int)(vecDir.y * 10000000), m_iClip, FALSE, FALSE );
 	}
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)

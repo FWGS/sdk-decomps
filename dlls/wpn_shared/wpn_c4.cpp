@@ -141,7 +141,7 @@ void CC4::PrimaryAttack( void )
 	}
 	else
 	{
-		if ( gpGlobals->time < m_fArmedTime )
+		if ( !( gpGlobals->time >= m_fArmedTime ) )
 		{
 			if ( gpGlobals->time >= m_fArmedTime - 0.75 && m_bBombPlacedAnimation == false )
 			{
@@ -179,25 +179,20 @@ void CC4::PrimaryAttack( void )
 			Broadcast( "BOMBPL" );
 			m_pPlayer->m_bHasC4 = false;
 
-			Vector vecEnd;
-			vecEnd = UTIL_GetAimVector( m_pPlayer->edict(), 0 );
-			Vector vecDir = vecEnd.Normalize() * 12;
-			vecEnd = vecDir;
-			vecEnd.z = -10;
-			vecEnd = m_pPlayer->pev->origin + vecEnd;
-
-			TraceResult tr;
-			UTIL_TraceLine( m_pPlayer->pev->origin, vecEnd, ignore_monsters, edict(), &tr );
-
 			SendWeaponAnim( C4_IDLE1 );
 
 			if ( pev->speed != 0 && g_pGameRules )
 				((CHalfLifeMultiplay *)g_pGameRules)->m_iC4Timer = (int)pev->speed;
 
-			if ( tr.flFraction == 1.0 )
-				CGrenade::ShootSatchelCharge( m_pPlayer->pev, vecEnd, Vector( 0, 0, 0 ) );
-			else
-				CGrenade::ShootSatchelCharge( m_pPlayer->pev, tr.vecEndPos + tr.vecPlaneNormal * 5, Vector( 0, 0, 0 ) );
+			CGrenade::ShootSatchelCharge( m_pPlayer->pev, m_pPlayer->pev->origin, Vector( 0, 0, 0 ) );
+
+			// tell director about it
+			MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
+				WRITE_BYTE ( DRC_EVENT );
+				WRITE_SHORT( ENTINDEX( m_pPlayer->edict() ) );
+				WRITE_SHORT( 0 );
+				WRITE_LONG( 11 );
+			MESSAGE_END();
 
 			UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Bomb_Planted" );
 			UTIL_LogPrintf( "\"%s<%i><%u><TERRORIST>\" triggered \"Planted_The_Bomb\"\n", STRING( m_pPlayer->pev->netname ),

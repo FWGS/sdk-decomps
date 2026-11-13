@@ -394,6 +394,35 @@ void CBasePlayerWeapon::Holster( int skiplocal /* = 0 */ )
 
 /*
 =====================
+CBaseEntity::FireBullets3
+
+Counter-Strike 1.3: the bullet's deviation, from the seed the server shares with the client when
+there is an attacker (the server's function computes the same two numbers before it traces)
+=====================
+*/
+Vector CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, float vecSpread, float flDistance, int iPenetration, int iBulletType, int iDamage, float flRangeModifier, entvars_t *pevAttacker, bool bPistol, int shared_rand )
+{
+	float x, y, z;
+
+	if ( !pevAttacker )
+	{
+		do {
+			x = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
+			y = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
+			z = x*x+y*y;
+		} while (z > 1);
+	}
+	else
+	{
+		x = UTIL_SharedRandomFloat( shared_rand, -0.5, 0.5 ) + UTIL_SharedRandomFloat( shared_rand + 1, -0.5, 0.5 );
+		y = UTIL_SharedRandomFloat( shared_rand + 2, -0.5, 0.5 ) + UTIL_SharedRandomFloat( shared_rand + 3, -0.5, 0.5 );
+	}
+
+	return Vector( x * vecSpread, y * vecSpread, 0.0 );
+}
+
+/*
+=====================
 CBasePlayerWeapon::SendWeaponAnim
 
 Animate weapon model
@@ -435,9 +464,10 @@ void CBasePlayerWeapon::FireRemaining( void )
 	Vector vecAiming;
 	vecAiming = gpGlobals->v_forward;
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( 0.05, 0.05, 0.05 ), 8192, 1, BULLET_PLAYER_9MM, 18, 0.9, NULL, true );
+	Vector vecDir;
+	vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, 0.05, 8192, 1, BULLET_PLAYER_9MM, 18, 0.9, m_pPlayer->pev, true, m_pPlayer->random_seed );
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireGlock18, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, (int)(0.05 * 10000), (int)(m_vecAiming.z * 10000), (m_iClip == 0), m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireGlock18, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), (m_iClip == 0), m_pPlayer->m_bLeftHanded != false );
 
 	m_pPlayer->pev->effects |= EF_MUZZLEFLASH;
 	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
@@ -566,6 +596,24 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 // Nothing calls it.
 inline void b65_hlweapons_unknown( void )
 {
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
 	;
 	;
 	;
@@ -869,87 +917,33 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	// FIXME, make this a method in each weapon?  where you pass in an entity_state_t *?
 	switch ( from->client.m_iId )
 	{
-	case WEAPON_USP:
-		pWeapon = &g_USP;
-		break;
-	case WEAPON_ELITE:
-		pWeapon = &g_ELITE;
-		break;
-	case WEAPON_FIVESEVEN:
-		pWeapon = &g_FIVESEVEN;
-		break;
-	case WEAPON_UMP45:
-		pWeapon = &g_UMP45;
-		break;
-	case WEAPON_MP5N:
-		pWeapon = &g_MP5N;
-		break;
-	case WEAPON_SG552:
-		pWeapon = &g_SG552;
-		break;
-	case WEAPON_AK47:
-		pWeapon = &g_AK47;
-		break;
-	case WEAPON_AUG:
-		pWeapon = &g_AUG;
-		break;
-	case WEAPON_AWP:
-		pWeapon = &g_AWP;
-		break;
-	case WEAPON_C4:
-		pWeapon = &g_C4;
-		break;
-	case WEAPON_DEAGLE:
-		pWeapon = &g_DEAGLE;
-		break;
-	case WEAPON_FLASHBANG:
-		pWeapon = &g_Flashbang;
-		break;
-	case WEAPON_SMOKEGRENADE:
-		pWeapon = &g_SmokeGrenade;
-		break;
-	case WEAPON_G3SG1:
-		pWeapon = &g_G3SG1;
-		break;
-	case WEAPON_SG550:
-		pWeapon = &g_SG550;
-		break;
-	case WEAPON_GLOCK18:
-		pWeapon = &g_GLOCK18;
-		break;
-	case WEAPON_HEGRENADE:
-		pWeapon = &g_HEGrenade;
-		break;
-	case WEAPON_KNIFE:
-		pWeapon = &g_Knife;
-		break;
-	case WEAPON_M249:
-		pWeapon = &g_M249;
-		break;
-	case WEAPON_M3:
-		pWeapon = &g_M3;
-		break;
-	case WEAPON_M4A1:
-		pWeapon = &g_M4A1;
-		break;
-	case WEAPON_MAC10:
-		pWeapon = &g_MAC10;
-		break;
-	case WEAPON_P228:
-		pWeapon = &g_P228;
-		break;
-	case WEAPON_P90:
-		pWeapon = &g_P90;
-		break;
-	case WEAPON_SCOUT:
-		pWeapon = &g_SCOUT;
-		break;
-	case WEAPON_TMP:
-		pWeapon = &g_TMP;
-		break;
-	case WEAPON_XM1014:
-		pWeapon = &g_XM1014;
-		break;
+	case WEAPON_USP: pWeapon = &g_USP; break;
+	case WEAPON_ELITE: pWeapon = &g_ELITE; break;
+	case WEAPON_FIVESEVEN: pWeapon = &g_FIVESEVEN; break;
+	case WEAPON_UMP45: pWeapon = &g_UMP45; break;
+	case WEAPON_MP5N: pWeapon = &g_MP5N; break;
+	case WEAPON_SG552: pWeapon = &g_SG552; break;
+	case WEAPON_AK47: pWeapon = &g_AK47; break;
+	case WEAPON_AUG: pWeapon = &g_AUG; break;
+	case WEAPON_AWP: pWeapon = &g_AWP; break;
+	case WEAPON_C4: pWeapon = &g_C4; break;
+	case WEAPON_DEAGLE: pWeapon = &g_DEAGLE; break;
+	case WEAPON_FLASHBANG: pWeapon = &g_Flashbang; break;
+	case WEAPON_SMOKEGRENADE: pWeapon = &g_SmokeGrenade; break;
+	case WEAPON_G3SG1: pWeapon = &g_G3SG1; break;
+	case WEAPON_SG550: pWeapon = &g_SG550; break;
+	case WEAPON_GLOCK18: pWeapon = &g_GLOCK18; break;
+	case WEAPON_HEGRENADE: pWeapon = &g_HEGrenade; break;
+	case WEAPON_KNIFE: pWeapon = &g_Knife; break;
+	case WEAPON_M249: pWeapon = &g_M249; break;
+	case WEAPON_M3: pWeapon = &g_M3; break;
+	case WEAPON_M4A1: pWeapon = &g_M4A1; break;
+	case WEAPON_MAC10: pWeapon = &g_MAC10; break;
+	case WEAPON_P228: pWeapon = &g_P228; break;
+	case WEAPON_P90: pWeapon = &g_P90; break;
+	case WEAPON_SCOUT: pWeapon = &g_SCOUT; break;
+	case WEAPON_TMP: pWeapon = &g_TMP; break;
+	case WEAPON_XM1014: pWeapon = &g_XM1014; break;
 	}
 
 	// We are not predicting the current weapon, just bow out here.

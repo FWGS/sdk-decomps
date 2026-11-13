@@ -125,7 +125,14 @@ void CM3::PrimaryAttack()
 
 	m_pPlayer->FireBullets( 9, vecSrc, vecAiming, Vector( 0.0675, 0.0675, 0 ), 3000, BULLET_PLAYER_BUCKSHOT, 0 );
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireM3, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, 0, 0 );
+	int flag;
+#if defined( CLIENT_WEAPONS )
+	flag = FEV_NOTHOST;
+#else
+	flag = 0;
+#endif
+
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireM3, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, 0, 0, 0, 0 );
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
 		// HEV suit - indicate out of ammo condition

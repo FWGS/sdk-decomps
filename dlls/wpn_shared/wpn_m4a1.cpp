@@ -193,21 +193,28 @@ void CM4A1::M4A1Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	Vector vecAiming;
 	vecAiming = gpGlobals->v_forward;
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
-	Vector vecDir;	// unused, as in the other fire functions (Counter-Strike 1.6's debug info has the local in each); without it the x87 operands of v_angle + punchangle come in another order
+	Vector vecDir;
 
 	if ( !( m_iWeaponState & WPNSTATE_M4A1_SILENCED ) )
 	{
-		m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 32, 0.97, NULL, false );
+		vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, flSpread, 8192, 2, BULLET_PLAYER_556MM, 32, 0.97, m_pPlayer->pev, false, m_pPlayer->random_seed );
 		m_pPlayer->pev->effects |= EF_MUZZLEFLASH;
 	}
 	else
 	{
-		m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 33, 0.95, NULL, false );
+		vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, flSpread, 8192, 2, BULLET_PLAYER_556MM, 33, 0.95, m_pPlayer->pev, false, m_pPlayer->random_seed );
 	}
 
 	m_pPlayer->ammo_556nato--;
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireM4A1, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_pPlayer->pev->punchangle.x, m_pPlayer->pev->punchangle.y, (int)(flSpread * 10000), (int)(m_pPlayer->pev->punchangle.z * 10000), ( m_iWeaponState & WPNSTATE_M4A1_SILENCED ) ? true : false, m_pPlayer->m_bLeftHanded != false );
+	int flag;
+#if defined( CLIENT_WEAPONS )
+	flag = FEV_NOTHOST;
+#else
+	flag = 0;
+#endif
+
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireM4A1, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), ( m_iWeaponState & WPNSTATE_M4A1_SILENCED ) ? true : false, m_pPlayer->m_bLeftHanded != false );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

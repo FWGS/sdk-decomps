@@ -149,19 +149,12 @@ void CSmokeGrenade::WeaponIdle( void )
 		Vector vecSrc;
 
 		if ( m_pPlayer->m_bLeftHanded == true )
-			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16 - gpGlobals->v_right * 12;
+			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16;
 		else
-			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16 + gpGlobals->v_right * 12;
+			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16;
 
 		Vector vecThrow = gpGlobals->v_forward * flVel + m_pPlayer->pev->velocity;
 
-		// alway explode 3 seconds after the pin was pulled
-		float time = m_flStartThrow - gpGlobals->time + 3.0;
-		if (time < 0)
-			time = 0;
-
-		// sic: the SDK's time above, left in and unused (the fuse is 1.5 s): without it the stack slots and an
-		// x87 operand order differ from retail's; float time = 1.5 passed as the time gives retail's code too
 		CGrenade::ShootSmokeGrenade( m_pPlayer->pev, vecSrc, vecThrow, 1.5, m_usCreateSmoke );
 
 		SendWeaponAnim( SMOKEGRENADE_THROW );

@@ -122,7 +122,14 @@ void CXM1014::PrimaryAttack()
 
 	m_pPlayer->FireBullets( 6, vecSrc, vecAiming, Vector( 0.0725, 0.0725, 0 ), 3048, BULLET_PLAYER_BUCKSHOT, 0 );
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireXM1014, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, (int)(0.0725 * 10000), (int)(m_vecAiming.x * 10000), m_iClip == 0, m_pPlayer->m_bLeftHanded != false );
+	int flag;
+#if defined( CLIENT_WEAPONS )
+	flag = FEV_NOTHOST;
+#else
+	flag = 0;
+#endif
+
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireXM1014, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, (int)(0.0725 * 10000), (int)(m_vecAiming.x * 10000), m_iClip == 0, m_pPlayer->m_bLeftHanded != false );
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
 		// HEV suit - indicate out of ammo condition

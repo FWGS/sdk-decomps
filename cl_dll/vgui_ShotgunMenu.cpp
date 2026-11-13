@@ -332,7 +332,7 @@ void CShotgunMenuPanel::Update()
 // Key inputs for the Class Menu
 bool CShotgunMenuPanel::SlotInput( int iSlot )
 {
-	if ( (iSlot < 0) || (iSlot > 9) )
+	if ( (iSlot < 0) || ( (iSlot > 1) && (iSlot != 9) ) )
 		return false;
 
 	if ( iSlot == 9 )

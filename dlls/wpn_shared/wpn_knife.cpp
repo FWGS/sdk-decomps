@@ -185,6 +185,8 @@ void CKnife::SwingAgain( void )
 
 int CKnife::Swing( int fFirst )
 {
+	;	// sic: a stand-in of two lines (two or more give retail's client).  Counter-Strike 1.3's client has
+	;	// Vector::operator* between Swing and Stab: 48 bytes more intermediate code before Stab than the SDK's layout; the eight breaks below are 40
 	int fDidHit = FALSE;
 
 	TraceResult tr;
@@ -219,9 +221,11 @@ int CKnife::Swing( int fFirst )
 				switch( (m_iSwing++) % 2 )
 				{
 				case 0:
-					SendWeaponAnim( KNIFE_ATTACK1HIT ); break;
+					SendWeaponAnim( KNIFE_ATTACK1HIT );
+					break;
 				case 1:
-					SendWeaponAnim( KNIFE_ATTACK2HIT ); break;
+					SendWeaponAnim( KNIFE_ATTACK2HIT );
+					break;
 				}
 			}
 			else
@@ -229,9 +233,11 @@ int CKnife::Swing( int fFirst )
 				switch( (m_iSwing++) % 2 )
 				{
 				case 0:
-					SendWeaponAnim( KNIFE_MIDATTACK1HIT ); break;
+					SendWeaponAnim( KNIFE_MIDATTACK1HIT );
+					break;
 				case 1:
-					SendWeaponAnim( KNIFE_MIDATTACK2HIT ); break;
+					SendWeaponAnim( KNIFE_MIDATTACK2HIT );
+					break;
 				}
 			}
 
@@ -260,9 +266,11 @@ int CKnife::Swing( int fFirst )
 			switch( (m_iSwing++) % 2 )
 			{
 			case 0:
-				SendWeaponAnim( KNIFE_ATTACK1HIT ); break;
+				SendWeaponAnim( KNIFE_ATTACK1HIT );
+				break;
 			case 1:
-				SendWeaponAnim( KNIFE_ATTACK2HIT ); break;
+				SendWeaponAnim( KNIFE_ATTACK2HIT );
+				break;
 			}
 		}
 		else
@@ -270,9 +278,11 @@ int CKnife::Swing( int fFirst )
 			switch( (m_iSwing++) % 2 )
 			{
 			case 0:
-				SendWeaponAnim( KNIFE_MIDATTACK1HIT ); break;
+				SendWeaponAnim( KNIFE_MIDATTACK1HIT );
+				break;
 			case 1:
-				SendWeaponAnim( KNIFE_MIDATTACK2HIT ); break;
+				SendWeaponAnim( KNIFE_MIDATTACK2HIT );
+				break;
 			}
 		}
 

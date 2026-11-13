@@ -29,8 +29,9 @@
 *	and only the back left one looks whether it hit another vehicle (and only
 *	prints that).
 *
-*	CollisionDetection and Next each carry a stand-in (marked sic) for text
-*	that makes no code but that VC6's inline expansion shows was there.
+*	Next carries a stand-in (marked sic) for text that makes no code but that
+*	VC6's inline expansion shows was there (CollisionDetection's, of Beta 7.1 to
+*	Counter-Strike 1.1, is not needed under Service Pack 5).
 *
 ****/
 #include "extdll.h"
@@ -472,22 +473,11 @@ void CFuncVehicle :: CollisionDetection( void )
 	TraceResult tr;
 	bool bHitSomething = false;
 
-	// sic: a stand-in for text of CollisionDetection that makes no code. Retail
-	// expands the Vector operators here as a function 164 to 171 units larger
-	// than the text below gets expanded (VC6 gives a function twice its own
-	// size to spend on inline expansion and counts what the optimizer later
-	// removes). A dead store counts 4: 41 and 42 of them give retail's bytes,
-	// 40 and 43 do not (bHitSomething, a local Counter-Strike 1.6 has, counts
-	// as one more: without it 42 and 43 fit). What stood here is not known;
-	// Blocked shows the kind, old lines left behind a return.
-	int iStandIn;
-	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
-	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
-	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
-	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
-	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
-	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
-	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
+	// Counter-Strike 1.3 (Visual C++ 6.0 SP5): no stand-in here. From Beta 7.1 to
+	// Counter-Strike 1.1 a run of dead stores stood at this place (42 of them; 41
+	// and 42 fitted) for text that made no code and counted in the inliner's
+	// budget. SP5 expands the Vector operators as retail has them with any number
+	// from 0 to 60 (measured), and the release build is retail's file without.
 
 	if ( pev->speed < 0 )
 	{
@@ -653,6 +643,8 @@ void CFuncVehicle :: Next( void )
 	// with the two initialised, 1 to 5 further dead stores fit, none and 6 do
 	// not. What stood here is not known. Beta 7.0's larger stand-in, its
 	// declared-then-assigned vGravityVector and its gotos are not needed here.
+	// Counter-Strike 1.3 (SP5): still needed; with the two initialised, 2 to 4
+	// further dead stores give retail's bytes, 0, 1 and 5 to 7 do not.
 	int iStandIn0 = 0, iStandIn1 = 0;
 	iStandIn0 = 0; iStandIn1 = 0; iStandIn0 = 0;
 

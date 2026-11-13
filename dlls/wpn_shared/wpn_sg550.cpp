@@ -160,9 +160,16 @@ void CSG550::SG550Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
 	Vector vecDir;
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 40, 0.98, NULL, true );
+	vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, flSpread, 8192, 2, BULLET_PLAYER_556MM, 40, 0.98, m_pPlayer->pev, true, m_pPlayer->random_seed );
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireSG550, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, flSpread, m_vecAiming.y, (int)(flSpread * 10000), (int)(m_vecAiming.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
+	int flag;
+#if defined( CLIENT_WEAPONS )
+	flag = FEV_NOTHOST;
+#else
+	flag = 0;
+#endif
+
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireSG550, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), 5, m_pPlayer->m_bLeftHanded != false );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 
@@ -172,13 +179,8 @@ void CSG550::SG550Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.8;
 
-#ifdef CLIENT_DLL
-	m_pPlayer->pev->punchangle.x -= UTIL_SharedRandomFloat( 6, 1.5, 1.75 ) + m_pPlayer->pev->punchangle.x * 0.25f;
-	m_pPlayer->pev->punchangle.y += UTIL_SharedRandomFloat( 6, -1, 1 );
-#else
-	m_pPlayer->pev->punchangle.x -= RANDOM_FLOAT( 1.5, 1.75 ) + m_pPlayer->pev->punchangle.x * 0.25f;
-	m_pPlayer->pev->punchangle.y += RANDOM_FLOAT( -1, 1 );
-#endif
+	m_pPlayer->pev->punchangle.x -= UTIL_SharedRandomFloat( m_pPlayer->random_seed + 4, 1.5, 1.75 ) + m_pPlayer->pev->punchangle.x * 0.25f;
+	m_pPlayer->pev->punchangle.y += UTIL_SharedRandomFloat( m_pPlayer->random_seed + 5, -1, 1 );
 }
 
 void CSG550::Reload( void )

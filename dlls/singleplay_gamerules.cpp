@@ -34,6 +34,8 @@ extern int gmsgMOTD;
 //=========================================================
 CHalfLifeRules::CHalfLifeRules( void )
 {
+	m_bFreezePeriod = FALSE;	// Counter-Strike 1.3
+
 	RefreshSkillData();
 }
 
@@ -121,6 +123,16 @@ float CHalfLifeRules::FlPlayerFallDamage( CBasePlayer *pPlayer )
 //=========================================================
 void CHalfLifeRules :: PlayerSpawn( CBasePlayer *pPlayer )
 {
+	// Counter-Strike 1.3: a suit, a knife, a USP, an MP5 and a grenade
+	pPlayer->pev->weapons |= (1<<WEAPON_SUIT);
+
+	pPlayer->GiveNamedItem( "weapon_knife" );
+	pPlayer->GiveNamedItem( "weapon_usp" );
+	pPlayer->GiveNamedItem( "weapon_mp5navy" );
+	pPlayer->GiveNamedItem( "weapon_hegrenade" );
+
+	pPlayer->GiveAmmo( 60, "9mm", 120 );
+	pPlayer->GiveAmmo( 24, "45acp", 48 );
 }
 
 //=========================================================
@@ -208,6 +220,28 @@ float CHalfLifeRules :: FlWeaponTryRespawn( CBasePlayerItem *pWeapon )
 Vector CHalfLifeRules :: VecWeaponRespawnSpot( CBasePlayerItem *pWeapon )
 {
 	return pWeapon->pev->origin;
+}
+
+// GetPlayerSpawnSpot - Counter-Strike 1.3: the first info_player_start (CGameRules's function with the
+// search written out; the local's name is Counter-Strike 1.6's)
+edict_t *CHalfLifeRules :: GetPlayerSpawnSpot( CBasePlayer *pPlayer )
+{
+	CBaseEntity *pSpot = UTIL_FindEntityByClassname( NULL, "info_player_start" );
+
+	if ( !pSpot )
+	{
+		ALERT(at_error, "PutClientInServer: no info_player_start on level");
+		return INDEXENT(0);
+	}
+
+	pPlayer->pev->origin = pSpot->pev->origin + Vector(0,0,1);
+	pPlayer->pev->v_angle  = g_vecZero;
+	pPlayer->pev->velocity = g_vecZero;
+	pPlayer->pev->angles = pSpot->pev->angles;
+	pPlayer->pev->punchangle = g_vecZero;
+	pPlayer->pev->fixangle = TRUE;
+
+	return pSpot->edict();
 }
 
 //=========================================================

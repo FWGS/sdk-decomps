@@ -388,7 +388,7 @@ void CTerroristMenuPanel::Update()
 // Key inputs for the Class Menu
 bool CTerroristMenuPanel::SlotInput( int iSlot )
 {
-	if ( (iSlot < 0) || (iSlot > 9) )
+	if ( (iSlot < 0) || (iSlot > 4) )
 		return false;
 	if ( !m_pButtons[ iSlot ] )
 		return false;

@@ -1,3 +1,9 @@
+//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//
+// Purpose: 
+//
+// $NoKeywords: $
+//=============================================================================
 
 #ifndef TEAMFORTRESSVIEWPORT_H
 #define TEAMFORTRESSVIEWPORT_H
@@ -63,10 +69,6 @@ extern char *sLocalisedClasses[];
 extern int iTeamColors[5][3];
 
 #define MAX_SERVERNAME_LENGTH	32
-
-// Use this to set any co-ords in 640x480 space
-#define XRES(x)					(x  * ((float)ScreenWidth / 640))
-#define YRES(y)					(y  * ((float)ScreenHeight / 480))
 
 // Command Menu positions 
 #define MAX_MENUS				40
@@ -278,6 +280,7 @@ private:
 	int			 m_iCurrentPlayerClass;
 	int			 m_iUser1;
 	int			 m_iUser2;
+	int			 m_iUser3;
 
 	// VGUI Menus
 	void		 CreateTeamMenu( void );
@@ -323,6 +326,7 @@ private:
 	// Spectator "menu"
 	CTransparentPanel	*m_pSpectatorMenu;
 	Label				*m_pSpectatorLabel;
+	Label				*m_pSpectatorHelpLabel;
 	int					m_iAllowSpectators;
 
 	// Data for specific sections of the Command Menu
@@ -413,7 +417,35 @@ public:
 	virtual void paintBackground();
 
 	CSchemeManager *GetSchemeManager( void ) { return &m_SchemeManager; }
-	ScorePanel *GetScoreBoard( void ) { return m_pScoreBoard; }	// SDK 2.2's line; nothing in 1.1 calls it
+	ScorePanel *GetScoreBoard( void ) { return m_pScoreBoard; }
+
+	// sic: a stand-in, name ours (intermediate code between VGUI's classes and the command buttons; Counter-Strike 1.1
+	// took GetScoreBoard for it, which 1.3 calls).  Measured with hud.h's b65_hud_unknown.
+	void r13_viewport_unknown( void )
+	{
+		;
+		;
+		;
+		;
+		;
+		;
+		;
+		;
+		;
+		;
+		;
+		;
+		;
+		;
+		;
+		;
+		;
+		;
+		;
+		;
+		;
+		;
+	}
 
 	void *operator new( size_t stAllocateBlock );
 

@@ -1,3 +1,10 @@
+//========= Copyright © 1996-2001, Valve LLC, All rights reserved. ============
+//
+// Purpose: 
+//
+// $NoKeywords: $
+//=============================================================================
+
 // Client side entity management functions
 
 #include <memory.h>
@@ -11,6 +18,7 @@
 #include "event_api.h"
 #include "pm_defs.h"
 #include "pmtrace.h"	
+
 
 #define DLLEXPORT __declspec( dllexport )
 
@@ -57,6 +65,17 @@ int DLLEXPORT HUD_AddEntity( int type, struct cl_entity_s *ent, const char *mode
 	default:
 		break;
 	}
+	// each frame every entity passes this function, so the overview hooks it to filter the overview entities
+	if (gEngfuncs.IsSpectateOnly())
+	{
+		gHUD.m_Spectator.AddOverviewEntity( type, ent, modelname );
+
+		if ( (	gHUD.m_Spectator.m_iMainMode == MAIN_IN_EYE ||
+				gHUD.m_Spectator.m_iInsetMode == INSET_IN_EYE ) &&
+				ent->index == gHUD.m_Spectator.m_iObserverTarget )
+			return 0;	// don't draw the player we are following in eye
+
+	}
 
 	return 1;
 }
@@ -78,8 +97,10 @@ void DLLEXPORT HUD_TxferLocalOverrides( struct entity_state_s *state, const stru
 	state->iuser1 = client->iuser1;
 	state->iuser2 = client->iuser2;
 
-	// Counter-Strike: the freeze time and left-hand flags
+	// Duck prevention
 	state->iuser3 = client->iuser3;
+
+	// Fire prevention
 	state->iuser4 = client->iuser4;
 }
 
@@ -142,8 +163,11 @@ void DLLEXPORT HUD_ProcessPlayerState( struct entity_state_s *dst, const struct 
 	{
 		g_iPlayerClass = dst->playerclass;
 		g_iTeamNumber = dst->team;
+
 		g_iUser1 = src->iuser1;
 		g_iUser2 = src->iuser2;
+		g_iUser3 = src->iuser3;
+
 	}
 }
 
@@ -186,6 +210,16 @@ void DLLEXPORT HUD_TxferPredictionData ( struct entity_state_s *ps, const struct
 	// Counter-Strike: the freeze time and left-hand flags, and the ammo counts
 	pcd->iuser3					= ppcd->iuser3;
 	pcd->iuser4					= ppcd->iuser4;
+
+	if ( gEngfuncs.IsSpectateOnly() )
+	{
+		// in specator mode we tell the engine who we want to spectate and how
+		// iuser3 is not used for duck prevention (since the spectator can't duck at all)
+		pcd->iuser1 = g_iUser1;	// observer mode
+		pcd->iuser2 = g_iUser2; // first target
+		pcd->iuser3 = g_iUser3; // second target
+
+	}
 
 	VectorCopy( ppcd->vuser2, pcd->vuser2 );
 	VectorCopy( ppcd->vuser3, pcd->vuser3 );
@@ -501,8 +535,11 @@ void DLLEXPORT HUD_CreateEntities( void )
 	Beams();
 #endif
 
+
 	// Add in any game specific objects
 	Game_AddObjects();
+
+	GetClientVoiceMgr()->CreateEntities();
 }
 
 /*
@@ -693,6 +730,7 @@ void DLLEXPORT HUD_TempEntUpdate (
 				pTemp->entity.origin[1] += pTemp->entity.baseline.origin[1] * frametime + 4 * sin( client_time * 30 + (int)pTemp );
 				pTemp->entity.origin[2] += pTemp->entity.baseline.origin[2] * frametime;
 			}
+			
 			else 
 			{
 				for ( i = 0; i < 3; i++ ) 
@@ -936,3 +974,4 @@ cl_entity_t DLLEXPORT *HUD_GetUserEntity( int index )
 	return NULL;
 #endif
 }
+

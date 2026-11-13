@@ -482,166 +482,8 @@ void W_Precache(void)
 	// Beta 5.0 (leak): what the others hear of a reload (ReloadSound)
 	PRECACHE_SOUND ("weapons/generic_reload.wav");
 
-	// Beta 6.6: every weapon's player model (the weapons' own Precache
-	// functions no longer do it), and with it the planted C4 and the thrown
-	// grenades; a client's file must keep within the bounds given here
-	// (vMin, vMax: Counter-Strike 1.6's names in ClientPrecache)
-	Vector vMin( -17, -6, -19 );
-	Vector vMax( 17, 12, 29 );
-
-	PRECACHE_MODEL( "models/p_ak47.mdl" );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_ak47.mdl" );
-
-	PRECACHE_MODEL( "models/p_aug.mdl" );
-	vMin = Vector( -23, -6, -18 );
-	vMax = Vector( 23, 7, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_aug.mdl" );
-
-	PRECACHE_MODEL( "models/p_awp.mdl" );
-	vMin = Vector( -30, -24, -19 );
-	vMax = Vector( 30, 17, 19 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_awp.mdl" );
-
-	PRECACHE_MODEL( "models/p_c4.mdl" );
-	vMin = Vector( -7, -7, -15 );
-	vMax = Vector( 7, 7, 15 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_c4.mdl" );
-
-	PRECACHE_MODEL( "models/w_c4.mdl" );
-	vMin = Vector( -4, -8, -3 );
-	vMax = Vector( 3, 7, 3 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/w_c4.mdl" );
-
-	PRECACHE_MODEL( "models/p_deagle.mdl" );
-	vMin = Vector( -8, -4, -19 );
-	vMax = Vector( 8, 4, 19 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_deagle.mdl" );
-
-	PRECACHE_MODEL( "models/p_flashbang.mdl" );
-	PRECACHE_MODEL( "models/w_flashbang.mdl" );
-	vMin = Vector( -7, -2, -18 );
-	vMax = Vector( 7, 2, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_flashbang.mdl" );
-	vMin = Vector( -5, -5, -5 );
-	vMax = Vector( 5, 5, 14 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/w_flashbang.mdl" );
-
-	PRECACHE_MODEL( "models/p_g3sg1.mdl" );
-	vMin = Vector( -31, -7, -19 );
-	vMax = Vector( 31, 5, 27 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_g3sg1.mdl" );
-
-	// Counter-Strike 1.0: the SG-550; force_model_samebounds, with bounds
-	PRECACHE_MODEL( "models/p_sg550.mdl" );
-	vMin = Vector( -33, -4, -20 );
-	vMax = Vector( 33, 7, 30 );
-	ENGINE_FORCE_UNMODIFIED( force_model_samebounds, (float *)&vMin, (float *)&vMax, "models/p_sg550.mdl" );
-
-	PRECACHE_MODEL( "models/p_glock18.mdl" );
-	vMin = Vector( -8, -5, -18 );
-	vMax = Vector( 8, 4, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_glock18.mdl" );
-
-	PRECACHE_MODEL( "models/p_hegrenade.mdl" );
-	PRECACHE_MODEL( "models/w_hegrenade.mdl" );
-	vMin = Vector( -7, -2, -18 );
-	vMax = Vector( 7, 2, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_hegrenade.mdl" );
-	vMin = Vector( -5, -5, -5 );
-	vMax = Vector( 5, 5, 14 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/w_hegrenade.mdl" );
-
-	PRECACHE_MODEL( "models/p_knife.mdl" );
-	vMin = Vector( -7, -7, -18 );
-	vMax = Vector( 7, 5, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_knife.mdl" );
-
-	PRECACHE_MODEL( "models/p_m249.mdl" );
-	vMin = Vector( -29, -7, -18 );
-	vMax = Vector( 29, 5, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_m249.mdl" );
-
-	PRECACHE_MODEL( "models/p_m3.mdl" );
-	vMin = Vector( -21, -13, -18 );
-	vMax = Vector( 21, 23, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_m3.mdl" );
-
-	PRECACHE_MODEL( "models/p_m4a1.mdl" );
-	vMin = Vector( -22, -8, -19 );
-	vMax = Vector( 22, 4, 25 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_m4a1.mdl" );
-
-	PRECACHE_MODEL( "models/p_mac10.mdl" );
-	vMin = Vector( -10, -6, -18 );
-	vMax = Vector( 10, 4, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_mac10.mdl" );
-
-	PRECACHE_MODEL( "models/p_mp5.mdl" );
-	vMin = Vector( -23, -8, -18 );
-	vMax = Vector( 23, 3, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_mp5.mdl" );
-
-	// Counter-Strike 1.0: the UMP45, as the SG-550
-	PRECACHE_MODEL( "models/p_ump45.mdl" );
-	vMin = Vector( -14, -2, -18 );
-	vMax = Vector( 14, 2, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_samebounds, (float *)&vMin, (float *)&vMax, "models/p_ump45.mdl" );
-
-	PRECACHE_MODEL( "models/p_p228.mdl" );
-	vMin = Vector( -10, -4, -18 );
-	vMax = Vector( 10, 4, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_p228.mdl" );
-
-	PRECACHE_MODEL( "models/p_p90.mdl" );
-	vMin = Vector( -15, -4, -18 );
-	vMax = Vector( 13, 6, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_p90.mdl" );
-
-	PRECACHE_MODEL( "models/p_scout.mdl" );
-	vMin = Vector( -32, -4, -19 );
-	vMax = Vector( 32, 5, 19 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_scout.mdl" );
-
-	PRECACHE_MODEL( "models/p_sg552.mdl" );
-	vMin = Vector( -23, -5, -18 );
-	vMax = Vector( 23, 7, 19 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_sg552.mdl" );
-
-	PRECACHE_MODEL( "models/p_smokegrenade.mdl" );
-	PRECACHE_MODEL( "models/w_smokegrenade.mdl" );
-	vMin = Vector( -7, -2, -18 );
-	vMax = Vector( 7, 2, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_smokegrenade.mdl" );
-	vMin = Vector( -5, -5, -5 );
-	vMax = Vector( 5, 5, 14 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/w_smokegrenade.mdl" );
-
-	PRECACHE_MODEL( "models/p_tmp.mdl" );
-	vMin = Vector( -15, -4, -18 );
-	vMax = Vector( 15, 6, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_tmp.mdl" );
-
-	PRECACHE_MODEL( "models/p_usp.mdl" );
-	vMin = Vector( -13, -4, -18 );
-	vMax = Vector( 13, 3, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_usp.mdl" );
-
-	// Beta 7.0: the Elites
-	PRECACHE_MODEL( "models/p_elite.mdl" );
-	vMin = Vector( -10, -4, -20 );
-	vMax = Vector( 10, 4, 20 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_elite.mdl" );
-
-	// Counter-Strike 1.0: the Five-seveN
-	PRECACHE_MODEL( "models/p_fiveseven.mdl" );
-	vMin = Vector( -8, -3, -18 );
-	vMax = Vector( 8, 3, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_fiveseven.mdl" );
-
-	PRECACHE_MODEL( "models/p_xm1014.mdl" );
-	vMin = Vector( -25, -19, -18 );
-	vMax = Vector( 25, 16, 18 );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_xm1014.mdl" );
+	// Counter-Strike 1.3: the weapons' player models and their bounds (here since
+	// Beta 6.6) are precached by ClientPrecache, where Counter-Strike 1.6 has them.
 }
 
 
@@ -965,10 +807,11 @@ void CBasePlayerWeapon::FireRemaining( void )
 	Vector vecAiming;
 	vecAiming = gpGlobals->v_forward;
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( 0.05, 0.05, 0.05 ), 8192, 1, BULLET_PLAYER_9MM, 18, 0.9, NULL, true );
+	Vector vecDir;
+	vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, 0.05, 8192, 1, BULLET_PLAYER_9MM, 18, 0.9, m_pPlayer->pev, true, m_pPlayer->random_seed );
 	m_pPlayer->ammo_9mm--;
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireGlock18, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, (int)(0.05 * 10000), (int)(m_vecAiming.z * 10000), (m_iClip == 0), 6 );	// sic: 6 (the client's copy passes m_bLeftHanded)
+	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireGlock18, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000), (int)(m_pPlayer->pev->punchangle.y * 10000), (m_iClip == 0), m_pPlayer->m_bLeftHanded != false );	// 10000 here (the client's copy and the weapons multiply by 10000000)
 
 	m_pPlayer->pev->effects |= EF_MUZZLEFLASH;
 	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
@@ -1776,6 +1619,14 @@ void CWeaponBox::Touch( CBaseEntity *pOther )
 
 				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Got_bomb" );
 				UTIL_LogPrintf( "\"%s<%i><%u><TERRORIST>\" triggered \"Got_The_Bomb\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERWONID( pPlayer->edict() ) );
+
+				// Counter-Strike 1.3: tell director about it
+				MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
+					WRITE_BYTE ( DRC_EVENT );
+					WRITE_SHORT( ENTINDEX( pPlayer->edict() ) );
+					WRITE_SHORT( 0 );
+					WRITE_LONG( 6 );
+				MESSAGE_END();
 
 				pPlayer->m_bHasC4 = true;
 				pPlayer->SetBombIcon( FALSE );

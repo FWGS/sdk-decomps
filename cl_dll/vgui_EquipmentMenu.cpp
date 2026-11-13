@@ -400,7 +400,7 @@ void CEquipmentMenuPanel::Update()
 // Key inputs for the Class Menu
 bool CEquipmentMenuPanel::SlotInput( int iSlot )
 {
-	if ( (iSlot < 0) || (iSlot > 9) )
+	if ( (iSlot < 0) || ( (iSlot > 6) && (iSlot != 9) ) )
 		return false;
 
 	if ( iSlot == 9 )

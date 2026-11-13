@@ -159,25 +159,36 @@ void CBasePlayer::Observer_SetMode( int iMode )
 	{
 		// mp_forcechasecam: no free flight while there is somebody to follow
 		// Counter-Strike 1.1: a spectator (allow_spectators) flies freely
-		// whatever the cvar says; the free flight stands once in the text
-		// (1.0b: twice, the first for mp_forcechasecam 0)
-		if ( CVAR_GET_FLOAT( "mp_forcechasecam" ) != 0 && m_iTeam != TEAM_SPECTATOR )
+		// whatever the cvar says.
+		// Counter-Strike 1.3: mp_fadetoblack forbids the free flight as mp_forcechasecam
+		// does, and the free flight stands twice in the text again (as in 1.0b)
+		if ( ( CVAR_GET_FLOAT( "mp_fadetoblack" ) == 0 && CVAR_GET_FLOAT( "mp_forcechasecam" ) == 0 ) || m_iTeam == TEAM_SPECTATOR )
 		{
-			if ( m_hObserverTarget == NULL )
-				Observer_FindNextPlayer( false );
+			pev->iuser1 = OBS_ROAMING;
+			pev->iuser2 = 0;
 
-			if (m_hObserverTarget)
-			{
-				pev->iuser1 = OBS_CHASE_LOCKED;
-				pev->iuser2 = ENTINDEX( m_hObserverTarget->edict() );
+			MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pev );
+				WRITE_BYTE( 1 );
+			MESSAGE_END();
 
-				MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pev );
-					WRITE_BYTE( 0 );
-				MESSAGE_END();
+			ClientPrint( pev, HUD_PRINTCENTER, "#Spec_Mode3" );
+			return;
+		}
 
-				ClientPrint( pev, HUD_PRINTCENTER, "#Spec_Mode1" );
-				return;
-			}
+		if ( m_hObserverTarget == NULL )
+			Observer_FindNextPlayer( false );
+
+		if (m_hObserverTarget)
+		{
+			pev->iuser1 = OBS_CHASE_LOCKED;
+			pev->iuser2 = ENTINDEX( m_hObserverTarget->edict() );
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pev );
+				WRITE_BYTE( 0 );
+			MESSAGE_END();
+
+			ClientPrint( pev, HUD_PRINTCENTER, "#Spec_Mode1" );
+			return;
 		}
 
 		pev->iuser1 = OBS_ROAMING;
@@ -225,7 +236,8 @@ void CBasePlayer::Observer_SetMode( int iMode )
 		if ( m_hObserverTarget == NULL )
 			Observer_FindNextPlayer( false );
 
-		if (m_hObserverTarget)
+		// Counter-Strike 1.3: mp_forcechasecam 3 leaves only the locked chase camera (but for a spectator)
+		if ( m_hObserverTarget != NULL && ( CVAR_GET_FLOAT( "mp_forcechasecam" ) != 3 || m_iTeam == TEAM_SPECTATOR ) )
 		{
 			pev->iuser1 = OBS_CHASE_FREE;
 			pev->iuser2 = ENTINDEX( m_hObserverTarget->edict() );

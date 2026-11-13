@@ -107,7 +107,7 @@ Vector VecCheckToss ( entvars_t *pev, const Vector &vecSpot1, Vector vecSpot2, f
 	UTIL_TraceLine(vecMidPoint, vecMidPoint + Vector(0,0,500), ignore_monsters, ENT(pev), &tr);
 	vecMidPoint = tr.vecEndPos;
 	// (subtract 15 so the grenade doesn't hit the ceiling)
-	vecMidPoint.z -= 15;
+	vecMidPoint.z -= 50;	// Counter-Strike 1.3: 50 (the SDK and up to 1.1: 15)
 
 	if (vecMidPoint.z < vecSpot1.z || vecMidPoint.z < vecSpot2.z)
 	{

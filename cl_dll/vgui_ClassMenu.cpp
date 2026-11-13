@@ -1,4 +1,4 @@
-//=========== (C) Copyright 1999 Valve, L.L.C. All rights reserved. ===========
+//=========== (C) Copyright 1996-2001 Valve, L.L.C. All rights reserved. ===========
 //
 // The copyright to the contents herein is the property of Valve, L.L.C.
 // The contents may be used and/or copied only with the written permission of
@@ -200,7 +200,9 @@ CClassMenuPanel::CClassMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide
 		char *cText = CHudTextMessage::BufferedLocaliseTextString( "#Class_descr_not_avail" );
 		char *pfile = (char*)gEngfuncs.COM_LoadFile( sz, 5, NULL );
 		if (pfile)
+		{
 			cText = pfile;
+		}
 		
 		// Create the Text info window
 		TextPanel *pTextWindow = new TextPanel(cText, textOffs, CLASSMENU_WINDOW_TEXT_Y, (CLASSMENU_WINDOW_SIZE_X - textOffs)-5, CLASSMENU_WINDOW_SIZE_Y - CLASSMENU_WINDOW_TEXT_Y);
@@ -215,7 +217,7 @@ CClassMenuPanel::CClassMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide
 		int wide,tall;
 		pTextWindow->getTextImage()->getTextSizeWrapped( wide,tall);
 		pTextWindow->setSize(wide,tall);
-		//pTextWindow->setBorder(new LineBorder());
+
 		int xx,yy;
 		pTextWindow->getPos(xx,yy);
 		int maxX=xx+wide;

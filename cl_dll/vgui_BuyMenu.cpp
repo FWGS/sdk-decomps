@@ -212,8 +212,18 @@ void CBuyMenuPanel::Update( void )
 // Key inputs
 bool CBuyMenuPanel::SlotInput( int iSlot )
 {
-	if ( (iSlot < 0) || (iSlot > 9) )
+	if ( (iSlot < 0) || ( (iSlot > 7) && (iSlot != 9) ) )
 		return false;
+
+	if ( iSlot == 9 )
+	{
+		if ( !(m_pCancelButton->IsNotValid()) )
+		{
+			m_pCancelButton->fireActionSignal();
+			return true;
+		}
+	}
+
 	if ( !m_pButtons[ iSlot ] )
 		return false;
 

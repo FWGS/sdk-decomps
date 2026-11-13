@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -102,7 +102,7 @@ void EV_GetGunPosition( event_args_t *args, float *pos, float *origin )
 	idx = args->entindex;
 
 	VectorClear( view_ofs );
-	view_ofs[2] = DEFAULT_VIEWHEIGHT;
+	view_ofs[2] = 17;	// Counter-Strike 1.3: pm_shared.c's standing view height (VEC_VIEW); EV_GetDefaultShellInfo still starts from DEFAULT_VIEWHEIGHT, 28
 
 	if ( EV_IsPlayer( idx ) )
 	{
@@ -127,37 +127,38 @@ EV_EjectBrass
 Bullet shell casings
 =================
 */
-void EV_EjectBrass( float *origin, float *velocity, float rotation, int model, int soundtype, int idx, int angularScale )
+void EV_EjectBrass( float *origin, float *velocity, float rotation, int model, int soundtype, int idx, int angle_velocity )
 {
-	vec3_t endpos;
-	TEMPENTITY *pTemp;	// name ours
+	TEMPENTITY *te;
 
 	if ( EV_IsLocal( idx ) )
 	{
+		vec3_t endpos;
 		VectorClear( endpos );
 		endpos[1] = rotation;
 		g_ShellList.Add( gHUD.m_flTime );
-		pTemp = gEngfuncs.pEfxAPI->R_TempModel( origin, velocity, endpos, 2.0, model, soundtype );
+		te = gEngfuncs.pEfxAPI->R_TempModel( origin, velocity, endpos, 2.0, model, soundtype );
 
-		if ( pTemp )
+		if ( te )
 		{
-			pTemp->entity.baseline.angles[0] *= angularScale;
-			pTemp->entity.baseline.angles[1] *= angularScale;
-			pTemp->entity.baseline.angles[2] *= angularScale;
+			te->entity.baseline.angles[0] *= angle_velocity;
+			te->entity.baseline.angles[1] *= angle_velocity;
+			te->entity.baseline.angles[2] *= angle_velocity;
 		}
 	}
 	else if ( g_ShellList.m_iCount < g_ShellList.m_iMax )
 	{
+		vec3_t endpos;
 		VectorClear( endpos );
 		endpos[1] = rotation;
 		g_ShellList.Add( gHUD.m_flTime );
-		pTemp = gEngfuncs.pEfxAPI->R_TempModel( origin, velocity, endpos, 2.0, model, soundtype );
+		te = gEngfuncs.pEfxAPI->R_TempModel( origin, velocity, endpos, 2.0, model, soundtype );
 
-		if ( pTemp )
+		if ( te )
 		{
-			pTemp->entity.baseline.angles[0] *= angularScale;
-			pTemp->entity.baseline.angles[1] *= angularScale;
-			pTemp->entity.baseline.angles[2] *= angularScale;
+			te->entity.baseline.angles[0] *= angle_velocity;
+			te->entity.baseline.angles[1] *= angle_velocity;
+			te->entity.baseline.angles[2] *= angle_velocity;
 		}
 	}
 }

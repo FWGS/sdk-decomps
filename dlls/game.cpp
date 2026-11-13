@@ -55,6 +55,9 @@ cvar_t	mirrordamage = {"mp_mirrordamage","0", FCVAR_SERVER };		// registered onl
 cvar_t	logmessages	= {"mp_logmessages","0", FCVAR_SERVER };		// read by Host_Say
 cvar_t	forcechasecam = {"mp_forcechasecam","0", FCVAR_SERVER };	// read by Observer_FindNextPlayer and Observer_SetMode
 cvar_t	mapvoteratio = {"mp_mapvoteratio","0.6", FCVAR_SERVER };	// the share of the players a map needs to be voted in, 0.35 to 1 (CHalfLifeMultiplay::VoteMap)
+// Counter-Strike 1.3 (Linux symbols)
+cvar_t	logdetail	= {"mp_logdetail","0", FCVAR_SERVER };
+cvar_t	startmoney	= {"mp_startmoney","800", FCVAR_SERVER };
 // Beta 7.1 (Linux symbol)
 cvar_t	maxrounds	= {"mp_maxrounds","0", FCVAR_SERVER };			// the map changes after so many rounds, 0 = no limit (CHalfLifeMultiplay::RestartRound and Think read it by name)
 // Counter-Strike 1.1 (Linux symbols)
@@ -68,6 +71,10 @@ cvar_t  mp_chattime = {"mp_chattime","10", FCVAR_SERVER };	// SDK 2.2: seconds o
 cvar_t 	*g_psv_gravity = NULL;
 cvar_t	*g_psv_aim = NULL;
 cvar_t	*g_footsteps = NULL;
+// Counter-Strike 1.3 (Linux symbols): CHalfLifeMultiplay::Think reads the movement settings through these
+cvar_t	*g_psv_accelerate = NULL;
+cvar_t	*g_psv_friction = NULL;
+cvar_t	*g_psv_stopspeed = NULL;
 
 //CVARS FOR SKILL LEVEL SETTINGS
 // Agrunt
@@ -471,6 +478,7 @@ cvar_t	sk_player_leg3	= { "sk_player_leg3","1" };
 
 // END Cvars for Skill Level settings
 
+
 // Register your console variables here
 // This gets called one time when the game is initialied
 void GameDLLInit( void )
@@ -479,6 +487,9 @@ void GameDLLInit( void )
 	g_psv_gravity = CVAR_GET_POINTER( "sv_gravity" );
 	g_psv_aim = CVAR_GET_POINTER( "sv_aim" );
 	g_footsteps = CVAR_GET_POINTER( "mp_footsteps" );
+	g_psv_accelerate = CVAR_GET_POINTER( "sv_accelerate" );
+	g_psv_friction = CVAR_GET_POINTER( "sv_friction" );
+	g_psv_stopspeed = CVAR_GET_POINTER( "sv_stopspeed" );
 
 	CVAR_REGISTER (&displaysoundlist);
 
@@ -505,6 +516,8 @@ void GameDLLInit( void )
 	CVAR_REGISTER (&maxrounds);
 	CVAR_REGISTER (&winlimit);
 	CVAR_REGISTER (&fadetoblack);
+	CVAR_REGISTER (&logdetail);
+	CVAR_REGISTER (&startmoney);
 	CVAR_REGISTER (&playerid);
 	CVAR_REGISTER (&allow_spectators);
 	CVAR_REGISTER (&mp_chattime);

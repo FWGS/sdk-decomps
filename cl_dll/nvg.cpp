@@ -297,6 +297,9 @@ void CHudNVG :: UserCmd_NVGAdjustDown( void )
 
 int CHudNVG :: Draw( float flTime )
 {
+	if ( gEngfuncs.IsSpectateOnly() )
+		return 1;
+
 	if ( m_iOn )
 	{
 		FillRGBA( 0, 0, ScreenWidth, ScreenHeight, 50, 225, 50, m_iAlpha );

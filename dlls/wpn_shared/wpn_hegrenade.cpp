@@ -151,24 +151,13 @@ void CHEGrenade::WeaponIdle( void )
 		Vector vecSrc;
 
 		if ( m_pPlayer->m_bLeftHanded == true )
-			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16 - gpGlobals->v_right * 12;
+			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16;
 		else
-			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16 + gpGlobals->v_right * 12;
+			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16;
 
 		Vector vecThrow = gpGlobals->v_forward * flVel + m_pPlayer->pev->velocity;
 
-		// alway explode 3 seconds after the pin was pulled
-		float time = m_flStartThrow - gpGlobals->time + 3.0;
-		if (time < 0)
-			time = 0;
-
-		// sic: the SDK's fuse computation, then a fixed 1.5 s.  The image cannot show
-		// dead code, but VC6's inline budget for this function needs about this much
-		// more of it (see wpn_hegrenade.cpp's commit): without it the vecThrow sum
-		// calls Vector( float, float, float ) out of line and every temporary moves.
-		time = 1.5;
-
-		CGrenade::ShootTimed2( m_pPlayer->pev, vecSrc, vecThrow, time, m_pPlayer->m_iTeam );
+		CGrenade::ShootTimed2( m_pPlayer->pev, vecSrc, vecThrow, 1.5, m_pPlayer->m_iTeam );
 
 		SendWeaponAnim( HEGRENADE_THROW );
 

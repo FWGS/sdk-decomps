@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -569,6 +569,9 @@ int CHudAmmo::MsgFunc_HideWeapon( const char *pszName, int iSize, void *pbuf )
 	
 	gHUD.m_iHideHUDDisplay = READ_BYTE();
 
+	if ( gEngfuncs.IsSpectateOnly() )
+		return 1;
+
 	if ( gHUD.m_iHideHUDDisplay & ( HIDEHUD_WEAPONS | HIDEHUD_ALL ) )
 	{
 		if ( !m_bObserverCrosshair )
@@ -594,6 +597,9 @@ int CHudAmmo::MsgFunc_Crosshair( const char *pszName, int iSize, void *pbuf )
 {
 	BEGIN_READ( pbuf, iSize );
 	int iOn = READ_BYTE();	// name ours
+
+	if ( gEngfuncs.IsSpectateOnly() )
+		return 1;
 
 	if ( CVAR_GET_FLOAT( "cl_observercrosshair" ) != 0 )
 	{
@@ -915,6 +921,9 @@ int CHudAmmo::Draw(float flTime)
 {
 	int a, x, y, r, g, b;
 	int AmmoWidth;
+
+	if ( gEngfuncs.IsSpectateOnly() )
+		return 1;
 
 	if (!(gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT)) ))
 		return 1;
@@ -1382,6 +1391,9 @@ int CHudMoney::Draw( float flTime )
 	int r, g, b, x, y, a;
 	int r2, g2, b2;	// names ours
 
+	if ( gEngfuncs.IsSpectateOnly() )
+		return 1;
+
 	UnpackRGB( r, g, b, RGB_YELLOWISH );
 
 	// Has the money changed? Flash it, green for more, red for less
@@ -1399,17 +1411,19 @@ int CHudMoney::Draw( float flTime )
 		{
 			a = MIN_ALPHA + m_fFade * 25.6f;
 
+			// Counter-Strike 1.3 blends every component with the flash colour (green 0/255/0, red 255/0/0);
+			// the spelling is ours (the constants and the operand order are retail's)
 			if ( m_iDelta > 0 )
 			{
-				r = r * ( 5 - m_fFade ) / 5;
-				g = g * ( 5 - m_fFade ) / 5 + m_fFade * 51;
-				b = b * ( 5 - m_fFade ) / 5;
+				r = r * ( 5 - m_fFade ) / 5 + 0 * m_fFade / 5;
+				g = g * ( 5 - m_fFade ) / 5 + 255 * m_fFade / 5;
+				b = b * ( 5 - m_fFade ) / 5 + 0 * m_fFade / 5;
 			}
 			else if ( m_iDelta < 0 )
 			{
-				r = r * ( 5 - m_fFade ) / 5 + m_fFade * 51;
-				g = g * ( 5 - m_fFade ) / 5;
-				b = b * ( 5 - m_fFade ) / 5;
+				r = r * ( 5 - m_fFade ) / 5 + 255 * m_fFade / 5;
+				g = g * ( 5 - m_fFade ) / 5 + 0 * m_fFade / 5;
+				b = b * ( 5 - m_fFade ) / 5 + 0 * m_fFade / 5;
 			}
 		}
 	}

@@ -318,7 +318,7 @@ void CMachineGunMenuPanel::Update()
 // Key inputs for the Class Menu
 bool CMachineGunMenuPanel::SlotInput( int iSlot )
 {
-	if ( (iSlot < 0) || (iSlot > 9) )
+	if ( (iSlot < 0) || ( (iSlot > 0) && (iSlot != 9) ) )
 		return false;
 
 	if ( iSlot == 9 )

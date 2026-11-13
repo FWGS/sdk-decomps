@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -196,6 +196,10 @@ int CHudMenu :: Draw( float flTime )
 // selects an item from the menu
 void CHudMenu :: SelectMenuItem( int menu_item )
 {
+	// Counter-Strike 1.3: no menu keys while the MOTD window is up
+	if ( gViewPort->m_pCurrentMenu && gViewPort->m_pCurrentMenu->GetMenuID() == MENU_INTRO )
+		return;
+
 	// if menu_item is in a valid slot,  send a menuselect command to the server
 	if ( (menu_item > 0) && (m_bitsValidSlots & (1 << (menu_item-1))) )
 	{

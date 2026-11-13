@@ -42,7 +42,6 @@ CHalfLifeTraining::CHalfLifeTraining( void )
 	PRECACHE_MODEL( "models/w_weaponbox.mdl" );
 }
 
-BOOL CHalfLifeTraining::IsMultiplayer( void ) { return FALSE; }
 BOOL CHalfLifeTraining::IsDeathmatch( void ) { return FALSE; }
 void CHalfLifeTraining::InitHUD( CBasePlayer *pl ) {}
 

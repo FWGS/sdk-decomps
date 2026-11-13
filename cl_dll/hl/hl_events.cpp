@@ -30,18 +30,18 @@ void EV_SpinGauss( struct event_args_s *args  );
 void EV_TrainPitchAdjust( struct event_args_s *args );
 void EV_VehiclePitchAdjust( struct event_args_s *args );
 
-// Counter-Strike (names ours: the SDK's pattern on the event files' names)
+// Counter-Strike (the names are those of Valve's 1.6 debug information)
 void EV_FireUSP( struct event_args_s *args );
 void EV_FireMP5N( struct event_args_s *args );
 void EV_FireAK47( struct event_args_s *args );
-void EV_FireAUG( struct event_args_s *args );
+void EV_FireAug( struct event_args_s *args );
 void EV_FireDeagle( struct event_args_s *args );
 void EV_FireG3SG1( struct event_args_s *args );
 void EV_FireGlock18( struct event_args_s *args );
 void EV_FireM249( struct event_args_s *args );
 void EV_FireM3( struct event_args_s *args );
 void EV_FireM4A1( struct event_args_s *args );
-void EV_FireMAC10( struct event_args_s *args );
+void EV_FireMac10( struct event_args_s *args );
 void EV_FireP228( struct event_args_s *args );
 void EV_FireP90( struct event_args_s *args );
 void EV_FireXM1014( struct event_args_s *args );
@@ -50,6 +50,7 @@ void EV_FireAWP( struct event_args_s *args );
 void EV_FireSG552( struct event_args_s *args );
 void EV_FireTMP( struct event_args_s *args );
 void EV_CreateSmoke( struct event_args_s *args );
+void EV_RemoveAllDecals( struct event_args_s *args );
 void EV_FireEliteLeft( struct event_args_s *args );
 void EV_FireEliteRight( struct event_args_s *args );
 void EV_Knife( struct event_args_s *args );
@@ -88,7 +89,7 @@ void Game_HookEvents( void )
 	gEngfuncs.pfnHookEvent( "events/usp.sc",					EV_FireUSP );
 	gEngfuncs.pfnHookEvent( "events/mp5n.sc",					EV_FireMP5N );
 	gEngfuncs.pfnHookEvent( "events/ak47.sc",					EV_FireAK47 );
-	gEngfuncs.pfnHookEvent( "events/aug.sc",					EV_FireAUG );
+	gEngfuncs.pfnHookEvent( "events/aug.sc",					EV_FireAug );
 	gEngfuncs.pfnHookEvent( "events/deagle.sc",					EV_FireDeagle );
 	gEngfuncs.pfnHookEvent( "events/g3sg1.sc",					EV_FireG3SG1 );
 	gEngfuncs.pfnHookEvent( "events/sg550.sc",					EV_FireSG550 );
@@ -96,7 +97,7 @@ void Game_HookEvents( void )
 	gEngfuncs.pfnHookEvent( "events/m249.sc",					EV_FireM249 );
 	gEngfuncs.pfnHookEvent( "events/m3.sc",						EV_FireM3 );
 	gEngfuncs.pfnHookEvent( "events/m4a1.sc",					EV_FireM4A1 );
-	gEngfuncs.pfnHookEvent( "events/mac10.sc",					EV_FireMAC10 );
+	gEngfuncs.pfnHookEvent( "events/mac10.sc",					EV_FireMac10 );
 	gEngfuncs.pfnHookEvent( "events/p90.sc",					EV_FireP90 );
 	gEngfuncs.pfnHookEvent( "events/p228.sc",					EV_FireP228 );
 	gEngfuncs.pfnHookEvent( "events/awp.sc",					EV_FireAWP );
@@ -109,6 +110,7 @@ void Game_HookEvents( void )
 	gEngfuncs.pfnHookEvent( "events/elite_left.sc",				EV_FireEliteLeft );
 	gEngfuncs.pfnHookEvent( "events/elite_right.sc",				EV_FireEliteRight );
 	gEngfuncs.pfnHookEvent( "events/knife.sc",					EV_Knife );
+	gEngfuncs.pfnHookEvent( "events/decal_reset.sc",				EV_RemoveAllDecals );
 	szCreateSmoke[0] = 'e';
 	szCreateSmoke[1] = 'v';
 	szCreateSmoke[2] = 'e';

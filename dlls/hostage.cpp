@@ -50,6 +50,7 @@
 #include "trains.h"	// Beta 7.1: CFuncVehicle (TakeDamage); the include's place is ours
 
 extern void Broadcast( const char *sentence );	// multiplay_gamerules.cpp (Beta 3.0)
+extern char *GetTeam( int teamNo );	// multiplay_gamerules.cpp (Counter-Strike 1.3)
 extern void ShowMenu( CBasePlayer *pPlayer, int bitsValidSlots, int nDisplayTime, BOOL fNeedMore, char *pszText );	// client.cpp (Beta 5.0 leak)
 
 LINK_ENTITY_TO_CLASS( hostage_entity, CHostage );
@@ -190,6 +191,9 @@ void CHostage::IdleThink( void )
 	// 7.1. So the form changes once, in Counter-Strike 1.0; whether the text
 	// really changed then or in 1.1 is not shown. "if ( GetActivity() )"
 	// alone, a bare call, or a local set from it do not fit.
+	// Counter-Strike 1.3 (SP5, the director message added below): 9 or 10 dead
+	// stores give retail's bytes (0 to 8 and 11 to 20 do not), and this block
+	// does: the fourth version it serves.
 	if ( 0 )
 	{
 		if ( GetActivity() == ACT_IDLE )
@@ -271,6 +275,15 @@ void CHostage::IdleThink( void )
 					pPlayer->AddAccount( 1000, true );
 					// Beta 6.6: "%s has rescued a hostage\n"; Counter-Strike 1.1: the log line's new form
 					UTIL_LogPrintf( "\"%s<%i><%u><CT>\" triggered \"Rescued_A_Hostage\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERWONID( pPlayer->edict() ) );
+
+					// Counter-Strike 1.3: tell director about it
+					MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
+						WRITE_BYTE ( DRC_EVENT );
+						WRITE_SHORT( ENTINDEX( pPlayer->edict() ) );
+						WRITE_SHORT( ENTINDEX( this->edict() ) );
+						WRITE_LONG( 15 );
+					MESSAGE_END();
+
 					Remove();
 					((CHalfLifeMultiplay *)g_pGameRules)->m_iHostagesRescued++;
 					((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
@@ -677,8 +690,16 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 
 				// Beta 7.1: the server log ("%s killed a hostage\n" by way of a buffer);
 				// Counter-Strike 1.1: the log line's new form, at once
-				UTIL_LogPrintf( "\"%s<%i><%u><%s>\" triggered \"Killed_A_Hostage\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERWONID( pPlayer->edict() ), ( pPlayer->m_iTeam == TEAM_CT ) ? "CT" : "TERRORIST" );
+				UTIL_LogPrintf( "\"%s<%i><%u><%s>\" triggered \"Killed_A_Hostage\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERWONID( pPlayer->edict() ), GetTeam( pPlayer->m_iTeam ) );	// Counter-Strike 1.3: GetTeam (1.1: CT or TERRORIST)
 			}
+
+			// Counter-Strike 1.3: tell director about it
+			MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
+				WRITE_BYTE ( DRC_EVENT );
+				WRITE_SHORT( ENTINDEX( ENT(pevAttacker) ) );
+				WRITE_SHORT( ENTINDEX( this->edict() ) );
+				WRITE_LONG( 15 );
+			MESSAGE_END();
 		}
 
 		pev->takedamage = DAMAGE_NO;

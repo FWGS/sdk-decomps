@@ -49,9 +49,22 @@ typedef unsigned char byte;
 #include "enginecallback.h"
 #endif
 
+#include "com_model.h"
+#include "r_studioint.h"
+
 extern globalvars_t				*gpGlobals;
 
 #pragma warning( disable : 4244 )
+
+void SV_StudioSetupBones( struct model_s *pModel, 
+					float frame,
+					int sequence,
+					const vec3_t angles,
+					const vec3_t origin,
+					const byte *pcontroller,
+					const byte *pblending,
+					int iBone,
+					const edict_t *pEdict );
 
 
 
@@ -522,4 +535,777 @@ int GetBodygroup( void *pmodel, entvars_t *pev, int iGroup )
 	int iCurrent = (pev->body / pbodypart->base) % pbodypart->nummodels;
 
 	return iCurrent;
+}
+
+
+sv_blending_interface_t svBlending = 
+{
+	SV_BLENDING_INTERFACE_VERSION,
+	SV_StudioSetupBones
+};
+
+// Global engine <-> studio model code interface
+server_studio_api_t IEngineStudio;
+
+studiohdr_t *g_pstudiohdr;
+
+float (*g_pRotationMatrix)[3][4];
+
+float (*g_pBoneTransform)[MAXSTUDIOBONES][3][4];
+
+/*
+====================
+Server_GetBlendingInterface
+
+Export this function for the engine to use the blending code to blend models
+====================
+*/
+extern "C" _declspec( dllexport ) int Server_GetBlendingInterface( int version, 
+	struct sv_blending_interface_s **ppinterface, 
+	struct server_studio_api_s *pstudio, 
+	float (*rotationmatrix)[3][4], 
+	float (*bonetransform)[MAXSTUDIOBONES][3][4] )
+{
+	if ( version != SV_BLENDING_INTERFACE_VERSION )
+		return 0;
+
+	*ppinterface = &svBlending;
+
+	memcpy( &IEngineStudio, pstudio, sizeof( IEngineStudio ) );
+
+	g_pRotationMatrix = rotationmatrix;
+	g_pBoneTransform = bonetransform;
+
+	return 1;
+}
+
+/*
+====================
+AngleQuaternion
+
+====================
+*/
+void AngleQuaternion( float *angles, vec4_t quaternion )
+{
+	float		angle;
+	float		sr, sp, sy, cr, cp, cy;
+
+	// FIXME: rescale the inputs to 1/2 angle
+	angle = angles[2] * 0.5;
+	sy = sin(angle);
+	cy = cos(angle);
+	angle = angles[1] * 0.5;
+	sp = sin(angle);
+	cp = cos(angle);
+	angle = angles[0] * 0.5;
+	sr = sin(angle);
+	cr = cos(angle);
+
+	quaternion[0] = sr*cp*cy-cr*sp*sy; // X
+	quaternion[1] = cr*sp*cy+sr*cp*sy; // Y
+	quaternion[2] = cr*cp*sy-sr*sp*cy; // Z
+	quaternion[3] = cr*cp*cy+sr*sp*sy; // W
+}
+
+/*
+====================
+QuaternionSlerp
+
+====================
+*/
+float	omega, cosom, sinom, sclp, sclq;
+void QuaternionSlerp( vec4_t p, vec4_t q, float t, vec4_t qt )
+{
+	int i;
+
+	// decide if one of the quaternions is backwards
+	float a = 0;
+	float b = 0;
+
+	for (i = 0; i < 4; i++)
+	{
+		a += (p[i]-q[i])*(p[i]-q[i]);
+		b += (p[i]+q[i])*(p[i]+q[i]);
+	}
+	if (a > b)
+	{
+		for (i = 0; i < 4; i++)
+		{
+			q[i] = -q[i];
+		}
+	}
+
+	cosom = p[0]*q[0] + p[1]*q[1] + p[2]*q[2] + p[3]*q[3];
+
+	if ((1.0 + cosom) > 0.000001)
+	{
+		if ((1.0 - cosom) > 0.000001)
+		{
+			omega = acos( cosom );
+			sinom = sin( omega );
+			sclp = sin( (1.0 - t)*omega) / sinom;
+			sclq = sin( t*omega ) / sinom;
+		}
+		else
+		{
+			sclp = 1.0 - t;
+			sclq = t;
+		}
+		for (i = 0; i < 4; i++) {
+			qt[i] = sclp * p[i] + sclq * q[i];
+		}
+	}
+	else
+	{
+		qt[0] = -q[1];
+		qt[1] = q[0];
+		qt[2] = -q[3];
+		qt[3] = q[2];
+		sclp = sin( (1.0 - t) * (0.5 * Q_PI));
+		sclq = sin( t * (0.5 * Q_PI));
+		for (i = 0; i < 3; i++)
+		{
+			qt[i] = sclp * p[i] + sclq * qt[i];
+		}
+	}
+}
+
+/*
+====================
+QuaternionMatrix
+
+====================
+*/
+void QuaternionMatrix( vec4_t quaternion, float (*matrix)[4] )
+{
+	matrix[0][0] = 1.0 - 2.0 * quaternion[1] * quaternion[1] - 2.0 * quaternion[2] * quaternion[2];
+	matrix[1][0] = 2.0 * quaternion[0] * quaternion[1] + 2.0 * quaternion[3] * quaternion[2];
+	matrix[2][0] = 2.0 * quaternion[0] * quaternion[2] - 2.0 * quaternion[3] * quaternion[1];
+
+	matrix[0][1] = 2.0 * quaternion[0] * quaternion[1] - 2.0 * quaternion[3] * quaternion[2];
+	matrix[1][1] = 1.0 - 2.0 * quaternion[0] * quaternion[0] - 2.0 * quaternion[2] * quaternion[2];
+	matrix[2][1] = 2.0 * quaternion[1] * quaternion[2] + 2.0 * quaternion[3] * quaternion[0];
+
+	matrix[0][2] = 2.0 * quaternion[0] * quaternion[2] + 2.0 * quaternion[3] * quaternion[1];
+	matrix[1][2] = 2.0 * quaternion[1] * quaternion[2] - 2.0 * quaternion[3] * quaternion[0];
+	matrix[2][2] = 1.0 - 2.0 * quaternion[0] * quaternion[0] - 2.0 * quaternion[1] * quaternion[1];
+}
+
+/*
+====================
+StudioGetAnim
+
+====================
+*/
+mstudioanim_t *StudioGetAnim( model_t *m_pSubModel, mstudioseqdesc_t *pseqdesc )
+{
+	mstudioseqgroup_t	*pseqgroup;
+	cache_user_t *paSequences;
+
+	pseqgroup = (mstudioseqgroup_t *)((byte *)g_pstudiohdr + g_pstudiohdr->seqgroupindex) + pseqdesc->seqgroup;
+
+	if (pseqdesc->seqgroup == 0)
+	{
+		return (mstudioanim_t *)((byte *)g_pstudiohdr + pseqgroup->data + pseqdesc->animindex);
+	}
+
+	paSequences = (cache_user_t *)m_pSubModel->submodels;
+
+	if (paSequences == NULL)
+	{
+		paSequences = (cache_user_t *)IEngineStudio.Mem_Calloc( 16, sizeof( cache_user_t ) ); // UNDONE: leak!
+		m_pSubModel->submodels = (dmodel_t *)paSequences;
+	}
+
+	if (!IEngineStudio.Cache_Check( (struct cache_user_s *)&(paSequences[pseqdesc->seqgroup])))
+	{
+		IEngineStudio.LoadCacheFile( pseqgroup->name, (struct cache_user_s *)&paSequences[pseqdesc->seqgroup] );
+	}
+	return (mstudioanim_t *)((byte *)paSequences[pseqdesc->seqgroup].data + pseqdesc->animindex);
+}
+
+/*
+====================
+LookupAnimation
+
+====================
+*/
+mstudioanim_t *LookupAnimation( studiohdr_t *pstudiohdr, model_s *model, mstudioseqdesc_t *pseqdesc, int index )
+{
+	mstudioanim_t *panim = NULL;
+
+	panim = StudioGetAnim( model, pseqdesc );
+
+	if ( index < 0 )
+		return panim;
+
+	if ( index > ( pseqdesc->numblends - 1 ) )
+		return panim;
+
+	panim += index * pstudiohdr->numbones;
+
+	return panim;
+}
+
+/*
+====================
+StudioCalcBoneAdj
+
+====================
+*/
+void StudioCalcBoneAdj( float dadt, float *adj, const byte *pcontroller1, const byte *pcontroller2, byte mouthopen )
+{
+	int					i, j;
+	float				value;
+	mstudiobonecontroller_t *pbonecontroller;
+	
+	pbonecontroller = (mstudiobonecontroller_t *)((byte *)g_pstudiohdr + g_pstudiohdr->bonecontrollerindex);
+
+	for (j = 0; j < g_pstudiohdr->numbonecontrollers; j++)
+	{
+		i = pbonecontroller[j].index;
+		if (i <= 3)
+		{
+			// check for 360% wrapping
+			if (pbonecontroller[j].type & STUDIO_RLOOP)
+			{
+				if (abs(pcontroller1[i] - pcontroller2[i]) > 128)
+				{
+					int a, b;
+					a = (pcontroller1[j] + 128) % 256;
+					b = (pcontroller2[j] + 128) % 256;
+					value = ((a * dadt) + (b * (1 - dadt)) - 128) * (360.0/256.0) + pbonecontroller[j].start;
+				}
+				else 
+				{
+					value = ((pcontroller1[i] * dadt + (pcontroller2[i]) * (1.0 - dadt))) * (360.0/256.0) + pbonecontroller[j].start;
+				}
+			}
+			else 
+			{
+				value = (pcontroller1[i] * dadt + pcontroller2[i] * (1.0 - dadt)) / 255.0;
+				if (value < 0) value = 0;
+				if (value > 1.0) value = 1.0;
+				value = (1.0 - value) * pbonecontroller[j].start + value * pbonecontroller[j].end;
+			}
+		}
+		else
+		{
+			value = mouthopen / 64.0;
+			if (value > 1.0) value = 1.0;				
+			value = (1.0 - value) * pbonecontroller[j].start + value * pbonecontroller[j].end;
+		}
+		switch(pbonecontroller[j].type & STUDIO_TYPES)
+		{
+		case STUDIO_XR:
+		case STUDIO_YR:
+		case STUDIO_ZR:
+			adj[j] = value * (Q_PI / 180.0);
+			break;
+		case STUDIO_X:
+		case STUDIO_Y:
+		case STUDIO_Z:
+			adj[j] = value;
+			break;
+		}
+	}
+}
+
+/*
+====================
+StudioCalcBoneQuaterion
+
+====================
+*/
+void StudioCalcBoneQuaterion( int frame, float s, mstudiobone_t *pbone, mstudioanim_t *panim, float *adj, float *q )
+{
+	int					j, k;
+	vec4_t				q1, q2;
+	vec3_t				angle1, angle2;
+	mstudioanimvalue_t	*panimvalue;
+
+	for (j = 0; j < 3; j++)
+	{
+		if (panim->offset[j+3] == 0)
+		{
+			angle2[j] = angle1[j] = pbone->value[j+3]; // default;
+		}
+		else
+		{
+			panimvalue = (mstudioanimvalue_t *)((byte *)panim + panim->offset[j+3]);
+			k = frame;
+			// DEBUG
+			if (panimvalue->num.total < panimvalue->num.valid)
+				k = 0;
+			while (panimvalue->num.total <= k)
+			{
+				k -= panimvalue->num.total;
+				panimvalue += panimvalue->num.valid + 1;
+				// DEBUG
+				if (panimvalue->num.total < panimvalue->num.valid)
+					k = 0;
+			}
+			// Bah, missing blend!
+			if (panimvalue->num.valid > k)
+			{
+				angle1[j] = panimvalue[k+1].value;
+
+				if (panimvalue->num.valid > k + 1)
+				{
+					angle2[j] = panimvalue[k+2].value;
+				}
+				else
+				{
+					if (panimvalue->num.total > k + 1)
+						angle2[j] = angle1[j];
+					else
+						angle2[j] = panimvalue[panimvalue->num.valid+2].value;
+				}
+			}
+			else
+			{
+				angle1[j] = panimvalue[panimvalue->num.valid].value;
+				if (panimvalue->num.total > k + 1)
+				{
+					angle2[j] = angle1[j];
+				}
+				else
+				{
+					angle2[j] = panimvalue[panimvalue->num.valid + 2].value;
+				}
+			}
+			angle1[j] = pbone->value[j+3] + angle1[j] * pbone->scale[j+3];
+			angle2[j] = pbone->value[j+3] + angle2[j] * pbone->scale[j+3];
+		}
+
+		if (pbone->bonecontroller[j+3] != -1)
+		{
+			angle1[j] += adj[pbone->bonecontroller[j+3]];
+			angle2[j] += adj[pbone->bonecontroller[j+3]];
+		}
+	}
+
+	if (!VectorCompare( angle1, angle2 ))
+	{
+		AngleQuaternion( angle1, q1 );
+		AngleQuaternion( angle2, q2 );
+		QuaternionSlerp( q1, q2, s, q );
+	}
+	else
+	{
+		AngleQuaternion( angle1, q );
+	}
+}
+
+/*
+====================
+StudioCalcBonePosition
+
+====================
+*/
+void StudioCalcBonePosition( int frame, float s, mstudiobone_t *pbone, mstudioanim_t *panim, float *adj, float *pos )
+{
+	int					j, k;
+	mstudioanimvalue_t	*panimvalue;
+
+	for (j = 0; j < 3; j++)
+	{
+		pos[j] = pbone->value[j]; // default;
+		if (panim->offset[j] != 0)
+		{
+			panimvalue = (mstudioanimvalue_t *)((byte *)panim + panim->offset[j]);
+			
+			k = frame;
+			// DEBUG
+			if (panimvalue->num.total < panimvalue->num.valid)
+				k = 0;
+			// find span of values that includes the frame we want
+			while (panimvalue->num.total <= k)
+			{
+				k -= panimvalue->num.total;
+				panimvalue += panimvalue->num.valid + 1;
+  				// DEBUG
+				if (panimvalue->num.total < panimvalue->num.valid)
+					k = 0;
+			}
+			// if we're inside the span
+			if (panimvalue->num.valid > k)
+			{
+				// and there's more data in the span
+				if (panimvalue->num.valid > k + 1)
+				{
+					pos[j] += (panimvalue[k+1].value * (1.0 - s) + s * panimvalue[k+2].value) * pbone->scale[j];
+				}
+				else
+				{
+					pos[j] += panimvalue[k+1].value * pbone->scale[j];
+				}
+			}
+			else
+			{
+				// are we at the end of the repeating values section and there's another section with data?
+				if (panimvalue->num.total <= k + 1)
+				{
+					pos[j] += (panimvalue[panimvalue->num.valid].value * (1.0 - s) + s * panimvalue[panimvalue->num.valid + 2].value) * pbone->scale[j];
+				}
+				else
+				{
+					pos[j] += panimvalue[panimvalue->num.valid].value * pbone->scale[j];
+				}
+			}
+		}
+		if ( pbone->bonecontroller[j] != -1 && adj )
+		{
+			pos[j] += adj[pbone->bonecontroller[j]];
+		}
+	}
+}
+
+/*
+====================
+StudioSlerpBones
+
+====================
+*/
+void StudioSlerpBones( vec4_t q1[], float pos1[][3], vec4_t q2[], float pos2[][3], float s )
+{
+	int			i;
+	vec4_t		q3;
+	float		s1;
+
+	if (s < 0) s = 0;
+	else if (s > 1.0) s = 1.0;
+
+	s1 = 1.0 - s;
+
+	for (i = 0; i < g_pstudiohdr->numbones; i++)
+	{
+		QuaternionSlerp( q1[i], q2[i], s, q3 );
+		q1[i][0] = q3[0];
+		q1[i][1] = q3[1];
+		q1[i][2] = q3[2];
+		q1[i][3] = q3[3];
+		pos1[i][0] = pos1[i][0] * s1 + pos2[i][0] * s;
+		pos1[i][1] = pos1[i][1] * s1 + pos2[i][1] * s;
+		pos1[i][2] = pos1[i][2] * s1 + pos2[i][2] * s;
+	}
+}
+
+/*
+====================
+StudioCalcRotations
+
+====================
+*/
+void StudioCalcRotations( mstudiobone_t *pbones, int *chain, int chainlength, float *adj, float pos[][3], vec4_t *q, mstudioseqdesc_t *pseqdesc, mstudioanim_t *panim, float f, float s )
+{
+	int					i, j;
+
+	for (i = chainlength - 1; i >= 0; i--)
+	{
+		j = chain[i];
+		StudioCalcBoneQuaterion( (int)f, s, &pbones[j], &panim[j], adj, q[j] );
+		StudioCalcBonePosition( (int)f, s, &pbones[j], &panim[j], adj, pos[j] );
+	}
+}
+
+/*
+================
+ConcatTransforms
+
+================
+*/
+void ConcatTransforms (float in1[3][4], float in2[3][4], float out[3][4])
+{
+	out[0][0] = in1[0][0] * in2[0][0] + in1[0][1] * in2[1][0] +
+				in1[0][2] * in2[2][0];
+	out[0][1] = in1[0][0] * in2[0][1] + in1[0][1] * in2[1][1] +
+				in1[0][2] * in2[2][1];
+	out[0][2] = in1[0][0] * in2[0][2] + in1[0][1] * in2[1][2] +
+				in1[0][2] * in2[2][2];
+	out[0][3] = in1[0][0] * in2[0][3] + in1[0][1] * in2[1][3] +
+				in1[0][2] * in2[2][3] + in1[0][3];
+	out[1][0] = in1[1][0] * in2[0][0] + in1[1][1] * in2[1][0] +
+				in1[1][2] * in2[2][0];
+	out[1][1] = in1[1][0] * in2[0][1] + in1[1][1] * in2[1][1] +
+				in1[1][2] * in2[2][1];
+	out[1][2] = in1[1][0] * in2[0][2] + in1[1][1] * in2[1][2] +
+				in1[1][2] * in2[2][2];
+	out[1][3] = in1[1][0] * in2[0][3] + in1[1][1] * in2[1][3] +
+				in1[1][2] * in2[2][3] + in1[1][3];
+	out[2][0] = in1[2][0] * in2[0][0] + in1[2][1] * in2[1][0] +
+				in1[2][2] * in2[2][0];
+	out[2][1] = in1[2][0] * in2[0][1] + in1[2][1] * in2[1][1] +
+				in1[2][2] * in2[2][1];
+	out[2][2] = in1[2][0] * in2[0][2] + in1[2][1] * in2[1][2] +
+				in1[2][2] * in2[2][2];
+	out[2][3] = in1[2][0] * in2[0][3] + in1[2][1] * in2[1][3] +
+				in1[2][2] * in2[2][3] + in1[2][3];
+}
+
+float GetPlayerPitch( const edict_t *pEdict );
+float GetPlayerYaw( const edict_t *pEdict );
+int GetPlayerGaitsequence( const edict_t *pEdict );
+
+/*
+====================
+SV_StudioSetupBones
+
+====================
+*/
+void SV_StudioSetupBones( struct model_s *pModel, 
+					float frame,
+					int sequence,
+					const vec3_t angles,
+					const vec3_t origin,
+					const byte *pcontroller,
+					const byte *pblending,
+					int iBone,
+					const edict_t *pEdict )
+{
+	int					i, j;
+	float				f, subframe;
+	float				adj[MAXSTUDIOCONTROLLERS];
+	mstudiobone_t		*pbones;
+	mstudioseqdesc_t	*pseqdesc;
+	mstudioanim_t		*panim;
+
+	static float		pos[MAXSTUDIOBONES][3];
+	float				bonematrix[3][4];
+	static vec4_t		q[MAXSTUDIOBONES];
+	static float		pos2[MAXSTUDIOBONES][3];
+	static vec4_t		q2[MAXSTUDIOBONES];
+
+	int					chain[MAXSTUDIOBONES];
+	int					chainlength = 0;
+
+	g_pstudiohdr = (studiohdr_t *)IEngineStudio.Mod_Extradata( pModel );
+
+	// Bound sequence number
+	if (sequence < 0 || sequence >= g_pstudiohdr->numseq) 
+	{
+		sequence = 0;
+	}
+
+	pbones = (mstudiobone_t *)((byte *)g_pstudiohdr + g_pstudiohdr->boneindex);
+	pseqdesc = (mstudioseqdesc_t *)((byte *)g_pstudiohdr + g_pstudiohdr->seqindex) + sequence;
+
+	panim = StudioGetAnim( pModel, pseqdesc );
+
+	if (iBone < -1 || iBone >= g_pstudiohdr->numbones)
+		iBone = 0;
+
+	if (iBone == -1)
+	{
+		chainlength = g_pstudiohdr->numbones;
+		for (i = 0; i < g_pstudiohdr->numbones; i++)
+			chain[(chainlength - i) - 1] = i;
+	}
+	else
+	{
+		// only the parent bones
+		for (i = iBone; i != -1; i = pbones[i].parent)
+			chain[chainlength++] = i;
+	}
+
+	if (pseqdesc->numframes <= 1)
+	{
+		f = 0;
+	}
+	else
+	{
+		f = (frame * (pseqdesc->numframes - 1)) / 256.0;
+	}
+
+	subframe = f - (int)f;
+
+	StudioCalcBoneAdj( 0, adj, pcontroller, pcontroller, 0 );
+
+	for (i = chainlength - 1; i >= 0; i--)
+	{
+		j = chain[i];
+		StudioCalcBoneQuaterion( (int)f, subframe, &pbones[j], &panim[j], adj, q[j] );
+		StudioCalcBonePosition( (int)f, subframe, &pbones[j], &panim[j], adj, pos[j] );
+	}
+
+	// This game knows how to do nine way blending
+	if (pseqdesc->numblends == 9)
+	{
+		static float		pos3[MAXSTUDIOBONES][3];
+		static vec4_t		q3[MAXSTUDIOBONES];
+		static float		pos4[MAXSTUDIOBONES][3];
+		static vec4_t		q4[MAXSTUDIOBONES];
+
+		float				s, t;
+
+		s = GetPlayerYaw( pEdict );
+		t = GetPlayerPitch( pEdict );
+
+		// Blending is 0-127 == Left to Middle, 128 to 255 == Middle to right
+		if ( s <= 127.0 )
+		{
+			// Scale 0-127 blending up to 0-255
+			s = ( s * 2.0 );
+
+			if ( t <= 127.0 )
+			{
+				t = ( t * 2.0 );
+
+				StudioCalcRotations( pbones, chain, chainlength, adj, pos, q, pseqdesc, panim, f, subframe );
+
+				panim = LookupAnimation( g_pstudiohdr, pModel, pseqdesc, 1 );
+				StudioCalcRotations( pbones, chain, chainlength, adj, pos2, q2, pseqdesc, panim, f, subframe );
+
+				panim = LookupAnimation( g_pstudiohdr, pModel, pseqdesc, 3 );
+				StudioCalcRotations( pbones, chain, chainlength, adj, pos3, q3, pseqdesc, panim, f, subframe );
+
+				panim = LookupAnimation( g_pstudiohdr, pModel, pseqdesc, 4 );
+				StudioCalcRotations( pbones, chain, chainlength, adj, pos4, q4, pseqdesc, panim, f, subframe );
+			}
+			else
+			{
+				t = 2.0 * ( t - 127.0 );
+
+				panim = LookupAnimation( g_pstudiohdr, pModel, pseqdesc, 3 );
+				StudioCalcRotations( pbones, chain, chainlength, adj, pos, q, pseqdesc, panim, f, subframe );
+
+				panim = LookupAnimation( g_pstudiohdr, pModel, pseqdesc, 4 );
+				StudioCalcRotations( pbones, chain, chainlength, adj, pos2, q2, pseqdesc, panim, f, subframe );
+
+				panim = LookupAnimation( g_pstudiohdr, pModel, pseqdesc, 6 );
+				StudioCalcRotations( pbones, chain, chainlength, adj, pos3, q3, pseqdesc, panim, f, subframe );
+
+				panim = LookupAnimation( g_pstudiohdr, pModel, pseqdesc, 7 );
+				StudioCalcRotations( pbones, chain, chainlength, adj, pos4, q4, pseqdesc, panim, f, subframe );
+			}
+		}
+		else
+		{
+			// Scale 127-255 blending up to 0-255
+			s = 2.0 * ( s - 127.0 );
+
+			if ( t <= 127.0 )
+			{
+				t = ( t * 2.0 );
+
+				panim = LookupAnimation( g_pstudiohdr, pModel, pseqdesc, 1 );
+				StudioCalcRotations( pbones, chain, chainlength, adj, pos, q, pseqdesc, panim, f, subframe );
+
+				panim = LookupAnimation( g_pstudiohdr, pModel, pseqdesc, 2 );
+				StudioCalcRotations( pbones, chain, chainlength, adj, pos2, q2, pseqdesc, panim, f, subframe );
+
+				panim = LookupAnimation( g_pstudiohdr, pModel, pseqdesc, 4 );
+				StudioCalcRotations( pbones, chain, chainlength, adj, pos3, q3, pseqdesc, panim, f, subframe );
+
+				panim = LookupAnimation( g_pstudiohdr, pModel, pseqdesc, 5 );
+				StudioCalcRotations( pbones, chain, chainlength, adj, pos4, q4, pseqdesc, panim, f, subframe );
+			}
+			else
+			{
+				t = 2.0 * ( t - 127.0 );
+
+				panim = LookupAnimation( g_pstudiohdr, pModel, pseqdesc, 4 );
+				StudioCalcRotations( pbones, chain, chainlength, adj, pos, q, pseqdesc, panim, f, subframe );
+
+				panim = LookupAnimation( g_pstudiohdr, pModel, pseqdesc, 5 );
+				StudioCalcRotations( pbones, chain, chainlength, adj, pos2, q2, pseqdesc, panim, f, subframe );
+
+				panim = LookupAnimation( g_pstudiohdr, pModel, pseqdesc, 7 );
+				StudioCalcRotations( pbones, chain, chainlength, adj, pos3, q3, pseqdesc, panim, f, subframe );
+
+				panim = LookupAnimation( g_pstudiohdr, pModel, pseqdesc, 8 );
+				StudioCalcRotations( pbones, chain, chainlength, adj, pos4, q4, pseqdesc, panim, f, subframe );
+			}
+		}
+
+		// Normalize interpolant
+		s /= 255.0;
+		t /= 255.0;
+
+		// Spherically interpolate the bones
+		StudioSlerpBones( q, pos, q2, pos2, s );
+		StudioSlerpBones( q3, pos3, q4, pos4, s );
+
+		StudioSlerpBones( q, pos, q3, pos3, t );
+	}
+	else if (pseqdesc->numblends > 1)
+	{
+		float				b;
+
+		pseqdesc = (mstudioseqdesc_t *)((byte *)g_pstudiohdr + g_pstudiohdr->seqindex) + sequence;
+
+		panim = StudioGetAnim( pModel, pseqdesc );
+		panim += g_pstudiohdr->numbones;
+
+		for (i = chainlength - 1; i >= 0; i--)
+		{
+			j = chain[i];
+			StudioCalcBoneQuaterion( (int)f, subframe, &pbones[j], &panim[j], adj, q2[j] );
+			StudioCalcBonePosition( (int)f, subframe, &pbones[j], &panim[j], adj, pos2[j] );
+		}
+
+		b = (float)pblending[0] / 255.0;
+
+		StudioSlerpBones( q, pos, q2, pos2, b );
+	}
+
+	// calc gait animation
+	if (pseqdesc->numblends == 9 && sequence < 85 && sequence != 8 && sequence != 9)
+	{
+		int copy = 1;
+		int gaitsequence = GetPlayerGaitsequence( pEdict );
+
+		if (gaitsequence < 0 || gaitsequence >= g_pstudiohdr->numseq) 
+		{
+			gaitsequence = 0;
+		}
+
+		pseqdesc = (mstudioseqdesc_t *)((byte *)g_pstudiohdr + g_pstudiohdr->seqindex) + gaitsequence;
+
+		panim = StudioGetAnim( pModel, pseqdesc );
+		StudioCalcRotations( pbones, chain, chainlength, adj, pos2, q2, pseqdesc, panim, 0, 0 );
+
+		for (i = 0; i < g_pstudiohdr->numbones; i++)
+		{
+			if ( !strcmp( pbones[i].name, "Bip01 Spine" ) )
+			{
+				copy = 0;
+			}
+			else if ( !strcmp( pbones[ pbones[i].parent ].name, "Bip01 Pelvis" ) )
+			{
+				copy = 1;
+			}
+
+			if ( copy )
+			{
+				memcpy( pos[i], pos2[i], sizeof( pos[i] ) );
+				memcpy( q[i], q2[i], sizeof( q[i] ) );
+			}
+		}
+	}
+
+	AngleMatrix( angles, (*g_pRotationMatrix) );
+
+	(*g_pRotationMatrix)[0][3] = origin[0];
+	(*g_pRotationMatrix)[1][3] = origin[1];
+	(*g_pRotationMatrix)[2][3] = origin[2];
+
+	for (i = chainlength - 1; i >= 0; i--)
+	{
+		j = chain[i];
+		QuaternionMatrix( q[j], bonematrix );
+
+		bonematrix[0][3] = pos[j][0];
+		bonematrix[1][3] = pos[j][1];
+		bonematrix[2][3] = pos[j][2];
+
+		if (pbones[j].parent == -1) 
+		{
+			ConcatTransforms( (*g_pRotationMatrix), bonematrix, (*g_pBoneTransform)[j] );
+		} 
+		else 
+		{
+			ConcatTransforms( (*g_pBoneTransform)[pbones[j].parent], bonematrix, (*g_pBoneTransform)[j] );
+		}
+	}
 }

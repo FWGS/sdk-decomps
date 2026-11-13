@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -19,6 +19,10 @@
 #include "hud.h"
 #include "cl_util.h"
 #include "parsemsg.h"
+#include "r_efx.h"
+
+#define MAX_CLIENTS 32
+
 
 /// USER-DEFINED SERVER MESSAGE HANDLERS
 
@@ -45,6 +49,13 @@ int CHud :: MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf )
 	return 1;
 }
 
+void CAM_ToFirstPerson(void);
+
+void CHud :: MsgFunc_ViewMode( const char *pszName, int iSize, void *pbuf )
+{
+	CAM_ToFirstPerson();
+}
+
 void CHud :: MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf )
 {
 	// prepare all hud data
@@ -56,6 +67,7 @@ void CHud :: MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf )
 			pList->p->InitHUDData();
 		pList = pList->pNext;
 	}
+
 }
 
 

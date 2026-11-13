@@ -50,21 +50,21 @@ void EV_FireMP5( struct event_args_s *args  );
 void EV_FirePython( struct event_args_s *args  );
 void EV_FireGauss( struct event_args_s *args  );
 void EV_SpinGauss( struct event_args_s *args  );
-void EV_VehiclePitchAdjust( struct event_args_s *args );	// name ours
+void EV_VehiclePitchAdjust( struct event_args_s *args );
 void EV_TrainPitchAdjust( struct event_args_s *args );
 
-// Counter-Strike (names ours)
+// Counter-Strike
 void EV_FireUSP( struct event_args_s *args );
 void EV_FireMP5N( struct event_args_s *args );
 void EV_FireAK47( struct event_args_s *args );
-void EV_FireAUG( struct event_args_s *args );
+void EV_FireAug( struct event_args_s *args );
 void EV_FireDeagle( struct event_args_s *args );
 void EV_FireG3SG1( struct event_args_s *args );
 void EV_FireGlock18( struct event_args_s *args );
 void EV_FireM249( struct event_args_s *args );
 void EV_FireM3( struct event_args_s *args );
 void EV_FireM4A1( struct event_args_s *args );
-void EV_FireMAC10( struct event_args_s *args );
+void EV_FireMac10( struct event_args_s *args );
 void EV_FireP228( struct event_args_s *args );
 void EV_FireP90( struct event_args_s *args );
 void EV_FireXM1014( struct event_args_s *args );
@@ -73,9 +73,10 @@ void EV_FireAWP( struct event_args_s *args );
 void EV_FireSG552( struct event_args_s *args );
 void EV_FireTMP( struct event_args_s *args );
 void EV_CreateSmoke( struct event_args_s *args );
-void EV_FireEliteLeft( struct event_args_s *args );	// name ours
-void EV_FireEliteRight( struct event_args_s *args );	// name ours
-void EV_Knife( struct event_args_s *args );	// name ours
+void EV_RemoveAllDecals( struct event_args_s *args );
+void EV_FireEliteLeft( struct event_args_s *args );
+void EV_FireEliteRight( struct event_args_s *args );
+void EV_Knife( struct event_args_s *args );
 void EV_FireFiveSeven( struct event_args_s *args );
 void EV_FireUMP45( struct event_args_s *args );
 void EV_FireSG550( struct event_args_s *args );
@@ -233,8 +234,8 @@ char EV_HLDM_PlayTextureSound( int idx, pmtrace_t *ptr, float *vecSrc, float *ve
 	return chTextureType;
 }
 
-// name ours: a dynamic light at the view origin (night vision)
-void EV_HLDM_CreateDLight( float *origin, float radius, int r, int g, int b, float life )
+// name ours (EV_HLDM_CreateLight in Valve's 1.6 debug information; nvg.cpp calls it): a dynamic light at the view origin (night vision)
+void EV_HLDM_CreateDLight( float *origin, float radius, int r, int g, int b, float time )
 {
 	dlight_t *dl = gEngfuncs.pEfxAPI->CL_AllocDlight( 0 );
 
@@ -243,7 +244,7 @@ void EV_HLDM_CreateDLight( float *origin, float radius, int r, int g, int b, flo
 	dl->color.r = r;
 	dl->color.g = g;
 	dl->color.b = b;
-	dl->die = gHUD.m_flTime + life;
+	dl->die = gHUD.m_flTime + time;
 }
 
 // names ours: the wind that drifts the smoke puffs
@@ -252,8 +253,8 @@ static int g_iWindDirY = 1;
 static float g_flWindX;
 static float g_flWindY;
 
-// name ours: a smoke puff slows down and rises, and drifts with the wind
-void EV_SmokeWind( struct tempent_s *te, float frametime, float currenttime )
+// a smoke puff slows down and rises, and drifts with the wind
+void SmokeRise_Wind( struct tempent_s *te, float frametime, float current_time )
 {
 	if ( te->entity.curstate.frame > 7 )
 	{
@@ -310,8 +311,8 @@ void EV_SmokeWind( struct tempent_s *te, float frametime, float currenttime )
 	}
 }
 
-// name ours: black smoke fades and grows
-void EV_BlackSmoke( struct tempent_s *te, float frametime, float currenttime )
+// black smoke fades and grows
+void SmokeRise_Wind_Expand( struct tempent_s *te, float frametime, float current_time )
 {
 	if ( te->entity.curstate.renderamt >= 75 )
 		te->entity.curstate.renderamt -= gEngfuncs.pfnRandomLong( 0, 9 ) == 0;
@@ -320,8 +321,8 @@ void EV_BlackSmoke( struct tempent_s *te, float frametime, float currenttime )
 		te->entity.curstate.scale *= 1.025f;
 }
 
-// name ours: a smoke puff slows down and rises
-void EV_Smoke( struct tempent_s *te, float frametime, float currenttime )
+// a smoke puff slows down and rises
+void SmokeRise( struct tempent_s *te, float frametime, float current_time )
 {
 	if ( te->entity.curstate.frame > 7 )
 	{
@@ -333,34 +334,34 @@ void EV_Smoke( struct tempent_s *te, float frametime, float currenttime )
 	}
 }
 
-// name ours: a smoke puff that hits something slides along it
-void EV_SmokeTouch( struct tempent_s *te, struct pmtrace_s *ptr )
+// a smoke puff that hits something slides along it
+void HugWalls( struct tempent_s *te, struct pmtrace_s *ptr )
 {
-	Vector vecVelocity;
-	Vector vecNormal;
-	Vector vecNew;
+	Vector smoke_velocity;
+	Vector wall_normal;
+	Vector new_velocity;
 	float flLength;
 	float flDot;	// sic: never used (see below)
 
-	vecNew = Vector( 0, 0, 0 );	// sic: dead store; retail builds a Vector temporary before the cross products
-	vecVelocity = te->entity.baseline.origin;
-	vecNormal = ptr->plane.normal;
-	flLength = vecVelocity.Length();
-	flDot = vecVelocity.x * vecNormal.x + vecVelocity.y * vecNormal.y;	// sic: unused; names normal.x and .y before velocity.z (x87 operand order)
-	vecVelocity.x /= flLength;
-	vecVelocity.y /= flLength;
-	vecVelocity.z /= flLength;
-	vecVelocity = CrossProduct( vecVelocity, vecNormal );
-	vecNew = CrossProduct( vecVelocity, vecNormal );
-	vecNew.x *= flLength * 1.5;
-	vecNew.y *= flLength * 1.5;
-	vecNew.z *= flLength * 1.5;
-	te->entity.baseline.origin = vecNew;
+	new_velocity = Vector( 0, 0, 0 );	// sic: dead store; retail builds a Vector temporary before the cross products
+	smoke_velocity = te->entity.baseline.origin;
+	wall_normal = ptr->plane.normal;
+	flLength = smoke_velocity.Length();
+	flDot = smoke_velocity.x * wall_normal.x + smoke_velocity.y * wall_normal.y;	// sic: unused; names normal.x and .y before velocity.z (x87 operand order)
+	smoke_velocity.x /= flLength;
+	smoke_velocity.y /= flLength;
+	smoke_velocity.z /= flLength;
+	smoke_velocity = CrossProduct( smoke_velocity, wall_normal );
+	new_velocity = CrossProduct( smoke_velocity, wall_normal );
+	new_velocity.x *= flLength * 1.5;
+	new_velocity.y *= flLength * 1.5;
+	new_velocity.z *= flLength * 1.5;
+	te->entity.baseline.origin = new_velocity;
 }
 
 static char szBlackSmoke[25];	// name ours: the black smoke sprite's name, built a character at a time (25 to 28 bytes fit before tracerCount)
 
-// name ours: a smoke puff tempent
+// a smoke puff tempent
 void EV_HLDM_CreateSmoke( float *origin, float *dir, int speed, float scale, int r, int g, int b, int iSmokeType, float *base_velocity, bool bWind, int framerate )
 {
 	TEMPENTITY *te = NULL;
@@ -495,9 +496,9 @@ void EV_HLDM_CreateSmoke( float *origin, float *dir, int speed, float scale, int
 		if ( iSmokeType != 0 && iSmokeType != 1 )
 		{
 			if ( !bWind )
-				te->callback = EV_Smoke;
+				te->callback = SmokeRise;
 			else
-				te->callback = EV_SmokeWind;
+				te->callback = SmokeRise_Wind;
 
 			te->entity.curstate.rendermode = kRenderTransAdd;
 			te->entity.curstate.renderamt = 150;
@@ -520,7 +521,7 @@ void EV_HLDM_CreateSmoke( float *origin, float *dir, int speed, float scale, int
 				te->entity.curstate.renderamt = 200;
 			}
 
-			te->callback = EV_BlackSmoke;
+			te->callback = SmokeRise_Wind_Expand;
 
 			if ( iSmokeType == 1 )
 				te->entity.baseline.fuser1 = 6;
@@ -531,7 +532,7 @@ void EV_HLDM_CreateSmoke( float *origin, float *dir, int speed, float scale, int
 				te->entity.baseline.fuser1 -= 3;
 		}
 
-		te->hitcallback = EV_SmokeTouch;
+		te->hitcallback = HugWalls;
 		te->entity.curstate.rendercolor.r = r;
 		te->entity.curstate.rendercolor.g = g;
 		te->entity.curstate.rendercolor.b = b;
@@ -625,7 +626,7 @@ void EV_HLDM_GunshotDecalTrace( pmtrace_t *pTrace, char *decalName, char chTextu
 	}
 }
 
-void EV_HLDM_DecalGunshot( pmtrace_t *pTrace, int iBulletType, float scale, int r, int g, int b, bool bStreakSplash, char cTextureType )
+void EV_HLDM_DecalGunshot( pmtrace_t *pTrace, int iBulletType, float scale, int r, int g, int b, bool bCreateSparks, char cTextureType )
 {
 	physent_t *pe;
 
@@ -635,7 +636,7 @@ void EV_HLDM_DecalGunshot( pmtrace_t *pTrace, int iBulletType, float scale, int 
 	{
 		EV_HLDM_GunshotDecalTrace( pTrace, EV_HLDM_DamageDecal( pe ), cTextureType );
 
-		if ( bStreakSplash == true )
+		if ( bCreateSparks == true )
 		{
 			vec3_t dir;
 
@@ -643,18 +644,18 @@ void EV_HLDM_DecalGunshot( pmtrace_t *pTrace, int iBulletType, float scale, int 
 			dir[1] = pTrace->plane.normal[1] * gEngfuncs.pfnRandomFloat( 4, 10 );
 			dir[2] = pTrace->plane.normal[2] * gEngfuncs.pfnRandomFloat( 4, 10 );
 
-			float speed = gEngfuncs.pfnRandomFloat( 4, 10 );	// name ours
-			int count = gEngfuncs.pfnRandomLong( 15, 30 );	// name ours
-			gEngfuncs.pEfxAPI->R_StreakSplash( pTrace->endpos, dir, 30, count, speed, -75, 75 );
+			float speed = gEngfuncs.pfnRandomFloat( 4, 10 );
+			int amount = gEngfuncs.pfnRandomLong( 15, 30 );
+			gEngfuncs.pEfxAPI->R_StreakSplash( pTrace->endpos, dir, 30, amount, speed, -75, 75 );
 		}
 
-		vec3_t origin;
+		vec3_t position;
 
-		origin[0] = pTrace->endpos[0] + pTrace->plane.normal[0] * 5;
-		origin[1] = pTrace->endpos[1] + pTrace->plane.normal[1] * 5;
-		origin[2] = pTrace->endpos[2] + pTrace->plane.normal[2] * 5;
+		position[0] = pTrace->endpos[0] + pTrace->plane.normal[0] * 5;
+		position[1] = pTrace->endpos[1] + pTrace->plane.normal[1] * 5;
+		position[2] = pTrace->endpos[2] + pTrace->plane.normal[2] * 5;
 
-		EV_HLDM_CreateSmoke( origin, pTrace->plane.normal, 25, scale, r, g, b, 2, NULL, true, 35 );
+		EV_HLDM_CreateSmoke( position, pTrace->plane.normal, 25, scale, r, g, b, 2, NULL, true, 35 );
 	}
 }
 
@@ -757,6 +758,22 @@ char UTIL_TextureHit( pmtrace_t *ptr, Vector vecSrc, Vector vecEnd )
 	return chTextureType;
 }
 
+// Counter-Strike 1.3: nothing calls it; its statics are in retail's .bss (16,384 bytes ahead of
+// hl_baseentity.obj's data).  Name, parameter, statics and place are Counter-Strike 1.6's (line 829 there,
+// between UTIL_TextureHit and EV_HLDM_FireBullets' comment), the format string is its binary's.  The place
+// shows in the image: which copies of identical functions the linker keeps.
+char *vstr( float *v )
+{
+	static int idx = 0;
+	static char string[ 16 ][ 1024 ];
+
+	idx++;
+	idx &= 15;
+
+	sprintf( string[ idx ], "%.4f %.4f %.4f", v[0], v[1], v[2] );
+	return string[ idx ];
+}
+
 /*
 ================
 FireBullets
@@ -769,57 +786,76 @@ void EV_HLDM_FireBullets( int idx, float *forward, float *right, float *up, int 
 	int i;
 	pmtrace_t tr;
 	int iShot;
+	vec3_t vecRight, vecUp;
 	int tracer;
-	int iPower;					// name ours
-	float flPenetrationDistance;	// name ours
-	float flCurrentDistance;		// name ours
-	int iOriginalPenetration;	// name ours
-	char cTextureType;			// name ours
-	bool bSparks;				// name ours
-	int iSmokeR, iSmokeG, iSmokeB;	// names ours
-	float flSmokeScale;			// name ours
-	vec3_t vecRight;
+	int r13_firebullets_unknown = 0;	// sic: a stand-in, name ours: with a second spread loop that the optimiser removes (below) the
+										// loop before it addresses its arrays as the image does
 
-	iSmokeR = iSmokeG = iSmokeB = 40;
-	flSmokeScale = 0.4;
-	iOriginalPenetration = iPenetration;
+	float scale_smoke;
+	int r_smoke, g_smoke, b_smoke;
+
+	r_smoke = g_smoke = b_smoke = 40;
+	scale_smoke = 0.4;
+	int iInitialPenetration = iPenetration;
+	float flPenetrationDistance;
+	float flCurrentDistance;
+	int iPenetrationPower;
+
 	switch ( iBulletType )
 	{
-	case BULLET_PLAYER_9MM:		iPower = 21; flPenetrationDistance = 800; break;
-	case BULLET_PLAYER_45ACP:	iPower = 15; flPenetrationDistance = 500; break;
-	case BULLET_PLAYER_50AE:	iPower = 30; flPenetrationDistance = 1000; break;
-	case BULLET_PLAYER_762MM:	iPower = 39; flPenetrationDistance = 5000; break;
-	case BULLET_PLAYER_556MM:	iPower = 35; flPenetrationDistance = 4000; break;
-	case BULLET_PLAYER_338MAG:	iPower = 45; flPenetrationDistance = 8000; break;
-	case BULLET_PLAYER_57MM:	iPower = 30; flPenetrationDistance = 2000; break;
-	case BULLET_PLAYER_357SIG:	iPower = 25; flPenetrationDistance = 800; break;
-	case BULLET_PLAYER_BUCKSHOT:	iPower = 8; flPenetrationDistance = 500; break;
-	default:	iPower = 0; flPenetrationDistance = 0; break;
+	case BULLET_PLAYER_9MM:		iPenetrationPower = 21; flPenetrationDistance = 800; break;
+	case BULLET_PLAYER_45ACP:	iPenetrationPower = 15; flPenetrationDistance = 500; break;
+	case BULLET_PLAYER_50AE:	iPenetrationPower = 30; flPenetrationDistance = 1000; break;
+	case BULLET_PLAYER_762MM:	iPenetrationPower = 39; flPenetrationDistance = 5000; break;
+	case BULLET_PLAYER_556MM:	iPenetrationPower = 35; flPenetrationDistance = 4000; break;
+	case BULLET_PLAYER_338MAG:	iPenetrationPower = 45; flPenetrationDistance = 8000; break;
+	case BULLET_PLAYER_57MM:	iPenetrationPower = 30; flPenetrationDistance = 2000; break;
+	case BULLET_PLAYER_357SIG:	iPenetrationPower = 25; flPenetrationDistance = 800; break;
+	case BULLET_PLAYER_BUCKSHOT:	iPenetrationPower = 8; flPenetrationDistance = 500; break;
+	default:	iPenetrationPower = 0; flPenetrationDistance = 0; break;
 	}
 
 	VectorCopy( right, vecRight );
+	VectorCopy( up, vecUp );	// never read (1.6 declares vecUp too); without this copy the spread terms below come out in another operand order
 
 	for ( iShot = 1; iShot <= cShots; iShot++ )
 	{
 		vec3_t vecDir, vecEnd;
 
-		iPenetration = iOriginalPenetration;
+		iPenetration = iInitialPenetration;
 
-		// get circular gaussian spread
 		vec3_t spread;
-		do {
-			spread[0] = gEngfuncs.pfnRandomFloat(-0.5,0.5) + gEngfuncs.pfnRandomFloat(-0.5,0.5);
-			spread[1] = gEngfuncs.pfnRandomFloat(-0.5,0.5) + gEngfuncs.pfnRandomFloat(-0.5,0.5);
-			spread[2] = spread[0] * spread[0] + spread[1] *spread[1];
-		} while (spread[2] > 1);
-
-		for ( i = 0 ; i < 3; i++ )
+		//We randomize for the Shotgun.
+		if ( iBulletType == BULLET_PLAYER_BUCKSHOT )
 		{
-			// sic: the image loads vecRight[ i ] first in the x term and spread[ 1 ] first in the y term;
-			// the SDK's spelling loads up [ i ] first in the y term, and parenthesising only the y term
-			// moves vecSpread[ 0 ] first in the x term
-			vecDir[i] = vecDirShooting[i] + spread[ 0 ] * ( vecSpread[ 0 ] * vecRight[ i ] ) + ( spread[ 1 ] * up [ i ] ) * vecSpread[ 1 ];
-			vecEnd[i] = vecSrc[ i ] + flDistance * vecDir[ i ];
+			do {
+				spread[0] = gEngfuncs.pfnRandomFloat(-0.5,0.5) + gEngfuncs.pfnRandomFloat(-0.5,0.5);
+				spread[1] = gEngfuncs.pfnRandomFloat(-0.5,0.5) + gEngfuncs.pfnRandomFloat(-0.5,0.5);
+				spread[2] = spread[0] * spread[0] + spread[1] *spread[1];
+			} while (spread[2] > 1);
+
+			for ( i = 0 ; i < 3; i++ )
+			{
+				vecDir[i] = vecDirShooting[i] + spread[ 0 ] * vecSpread[ 0 ] * vecRight[ i ] + spread[ 1 ] * vecSpread[ 1 ] * up [ i ];
+				vecEnd[i] = vecSrc[ i ] + flDistance * vecDir[ i ];
+			}
+		}//But other guns already have their spread randomized in the synched spread.
+		else
+		{
+
+			for ( i = 0 ; i < 3; i++ )
+			{
+				vecDir[i] = vecDirShooting[i] + vecSpread[ 0 ] * right[ i ] + vecSpread[ 1 ] * up [ i ];
+				vecEnd[i] = vecSrc[ i ] + flDistance * vecDir[ i ];
+			}
+			if ( r13_firebullets_unknown )	// sic: never true (see the declaration)
+			{
+				for ( i = 0 ; i < 3; i++ )
+				{
+					vecDir[i] = vecDirShooting[i] + spread[ 0 ] * vecSpread[ 0 ] * vecRight[ i ] + spread[ 1 ] * vecSpread[ 1 ] * up [ i ];
+					vecEnd[i] = vecSrc[ i ] + flDistance * vecDir[ i ];
+				}
+			}
 		}
 
 		gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
@@ -832,18 +868,18 @@ void EV_HLDM_FireBullets( int idx, float *forward, float *right, float *up, int 
 
 		gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
 
-		bSparks = false;
+		char cTextureType;
+		bool bCreateSparks = false;
 
 		while ( iPenetration != 0 )
 		{
-			gEngfuncs.pEventAPI->EV_PlayerTrace( vecSrc, vecEnd, PM_STUDIO_BOX, -1, &tr );
+			gEngfuncs.pEventAPI->EV_PlayerTrace( vecSrc, vecEnd, PM_NORMAL, -1, &tr );
 
 			tracer = EV_HLDM_CheckTracer( idx, vecSrc, tr.endpos, forward, right, iBulletType, iTracerFreq, tracerCount );
 
 			// sic: this spelling of the range test (the product tested before it is stored, the store
 			// inside the second test) is the only one found that keeps the product on the FPU stack
-			// across the zero test as the image does and also lets the spread terms above take the
-			// image's operand order
+			// across the zero test as the image does
 			if ( tr.fraction * flDistance == 0.0 )
 				break;
 
@@ -876,39 +912,39 @@ void EV_HLDM_FireBullets( int idx, float *forward, float *right, float *up, int 
 			switch ( cTextureType )
 			{
 			case CHAR_TEX_METAL:
-				iPower *= 0.15;
-				bSparks = true;
+				iPenetrationPower *= 0.15;
+				bCreateSparks = true;
 				break;
 			case CHAR_TEX_CONCRETE:
-				iSmokeR = 65;
-				iSmokeG = 65;
-				iSmokeB = 65;
-				iPower *= 0.25;
-				bSparks = true;
+				r_smoke = 65;
+				g_smoke = 65;
+				b_smoke = 65;
+				iPenetrationPower *= 0.25;
+				bCreateSparks = true;
 				break;
 			case CHAR_TEX_GRATE:
 			case CHAR_TEX_VENT:
-				iPower *= 0.5;
-				bSparks = true;
+				iPenetrationPower *= 0.5;
+				bCreateSparks = true;
 				break;
 			case CHAR_TEX_TILE:
-				iPower *= 0.65;
-				bSparks = true;
+				iPenetrationPower *= 0.65;
+				bCreateSparks = true;
 				break;
 			case CHAR_TEX_COMPUTER:
-				iPower *= 0.4;
-				bSparks = true;
+				iPenetrationPower *= 0.4;
+				bCreateSparks = true;
 				break;
 			case CHAR_TEX_WOOD:
-				iSmokeR = 75;
-				iSmokeG = 42;
-				iSmokeB = 15;
-				flSmokeScale = 0.5;
-				bSparks = false;
+				r_smoke = 75;
+				g_smoke = 42;
+				b_smoke = 15;
+				scale_smoke = 0.5;
+				bCreateSparks = false;
 				break;
 			}
 
-			EV_HLDM_DecalGunshot( &tr, iBulletType, flSmokeScale, iSmokeR, iSmokeG, iSmokeB, bSparks, cTextureType );
+			EV_HLDM_DecalGunshot( &tr, iBulletType, scale_smoke, r_smoke, g_smoke, b_smoke, bCreateSparks, cTextureType );
 
 			if ( !iPenetration )
 				break;
@@ -917,7 +953,7 @@ void EV_HLDM_FireBullets( int idx, float *forward, float *right, float *up, int 
 
 			for ( i = 0; i <= 2; i++ )
 			{
-				vecSrc[i] = tr.endpos[i] + iPower * vecDir[i];
+				vecSrc[i] = tr.endpos[i] + iPenetrationPower * vecDir[i];
 				vecEnd[i] = vecSrc[i] + flDistance * vecDir[i];
 			}
 		}
@@ -1683,19 +1719,18 @@ void EV_FireUSP( event_args_t *args )
 	vec3_t angles;
 	vec3_t velocity;
 	int empty;
-	int silencer_on;	// name ours
-	bool lefthanded;	// name ours
+	int silencer_on;
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->iparam2 != 0;
+	lefthand = args->iparam2 != 0;
 	silencer_on = args->bparam2;
 	empty = args->bparam1;
 	idx = args->entindex;
@@ -1703,8 +1738,7 @@ void EV_FireUSP( event_args_t *args )
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	if ( args->angles[1] >= 180 )
-		args->angles[1] -= 360;
+	angles[0] += args->iparam1 / 10000000.0;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -1734,22 +1768,22 @@ void EV_FireUSP( event_args_t *args )
 
 		if ( gHUD.m_bGunSmoke == true )
 		{
-			vec3_t vecSmoke;	// name ours
-			vecSmoke = ent->attachment[0];
-			vecSmoke[0] -= forward[0] * 3;
-			vecSmoke[1] -= forward[1] * 3;
-			vecSmoke[2] -= forward[2] * 3;
-			float flScale = gEngfuncs.pfnRandomFloat( 0.1, 0.25 );	// name ours
+			vec3_t smoke_origin;
+			smoke_origin = ent->attachment[0];
+			smoke_origin[0] -= forward[0] * 3;
+			smoke_origin[1] -= forward[1] * 3;
+			smoke_origin[2] -= forward[2] * 3;
+			float base_scale = gEngfuncs.pfnRandomFloat( 0.1, 0.25 );
 
-			EV_HLDM_CreateSmoke( vecSmoke, forward, 0, flScale, 7, 7, 7, 3, velocity, false, 35 );
-			EV_HLDM_CreateSmoke( vecSmoke, forward, 20, flScale + 0.1, 10, 10, 10, 2, velocity, false, 35 );
-			EV_HLDM_CreateSmoke( vecSmoke, forward, 40, flScale, 13, 13, 13, 2, velocity, false, 35 );
+			EV_HLDM_CreateSmoke( smoke_origin, forward, 0, base_scale, 7, 7, 7, 3, velocity, false, 35 );
+			EV_HLDM_CreateSmoke( smoke_origin, forward, 20, base_scale + 0.1, 10, 10, 10, 2, velocity, false, 35 );
+			EV_HLDM_CreateSmoke( smoke_origin, forward, 40, base_scale, 13, 13, 13, 2, velocity, false, 35 );
 		}
 	}
 
 	if ( EV_IsLocal( idx ) )
 	{
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 36, -14, -14, false );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 36, -14, 14, false );
@@ -1773,8 +1807,10 @@ void EV_FireUSP( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 4096, BULLET_PLAYER_45ACP, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 4096, BULLET_PLAYER_45ACP, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_FireMP5N( event_args_t *args )
@@ -1783,26 +1819,24 @@ void EV_FireMP5N( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthanded;	// name ours
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
+	lefthand = args->bparam2 != 0;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->fparam1;
-	angles[1] += args->fparam2;
-	angles[2] += args->iparam2 / 10000.1;
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -1822,7 +1856,7 @@ void EV_FireMP5N( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 34, -10, -11, false );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 34, -10, 11, false );
@@ -1842,8 +1876,10 @@ void EV_FireMP5N( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_9MM, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_9MM, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_FireAK47( event_args_t *args )
@@ -1852,26 +1888,24 @@ void EV_FireAK47( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthanded;	// name ours
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
+	lefthand = args->bparam2 != 0;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->fparam1;
-	angles[1] += args->fparam2;
-	angles[2] += args->iparam2 / 10000.1;
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -1891,7 +1925,7 @@ void EV_FireAK47( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -8, -10, false );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -8, 10, false );
@@ -1911,36 +1945,36 @@ void EV_FireAK47( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 
 	VectorCopy( forward, vecAiming );
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_762MM, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_762MM, 0, &tracerCount[idx-1], 2 );
 }
 
-void EV_FireAUG( event_args_t *args )
+void EV_FireAug( event_args_t *args )
 {
 	int idx;
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthanded;	// name ours
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
+	lefthand = args->bparam2 != 0;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->fparam1;
-	angles[1] += args->fparam2;
-	angles[2] += args->iparam2 / 10000.1;
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -1960,7 +1994,7 @@ void EV_FireAUG( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 17, -8, -14, true );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 17, -8, 14, true );
@@ -1981,8 +2015,10 @@ void EV_FireAUG( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 
 	VectorCopy( forward, vecAiming );
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_556MM, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_556MM, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_FireDeagle( event_args_t *args )
@@ -1992,23 +2028,25 @@ void EV_FireDeagle( event_args_t *args )
 	vec3_t angles;
 	vec3_t velocity;
 	int empty;
-	bool lefthanded;	// name ours
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
+	lefthand = args->bparam2 != 0;
 	empty = args->bparam1;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
+
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2035,7 +2073,7 @@ void EV_FireDeagle( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 35, -11, -16, false );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 35, -11, 16, false );
@@ -2056,8 +2094,10 @@ void EV_FireDeagle( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_50AE, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_50AE, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_FireG3SG1( event_args_t *args )
@@ -2066,22 +2106,24 @@ void EV_FireG3SG1( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthanded;	// name ours
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
+	lefthand = args->bparam2 != 0;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
+
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2105,7 +2147,7 @@ void EV_FireG3SG1( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -8, -10, false );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 17, -8, 10, false );
@@ -2126,8 +2168,9 @@ void EV_FireG3SG1( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	vecSpread = Vector( args->fparam1, args->fparam1, args->fparam1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_762MM, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_762MM, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_FireGlock18( event_args_t *args )
@@ -2137,23 +2180,25 @@ void EV_FireGlock18( event_args_t *args )
 	vec3_t angles;
 	vec3_t velocity;
 	int empty;
-	bool lefthanded;	// name ours
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
+	lefthand = args->bparam2 != 0;
 	empty = args->bparam1;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
+
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2179,7 +2224,7 @@ void EV_FireGlock18( event_args_t *args )
 	{
 		g_iShotsFired++;
 
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 36, -14, -14, false );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 36, -14, 14, false );
@@ -2200,8 +2245,9 @@ void EV_FireGlock18( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 4096, BULLET_PLAYER_9MM, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 4096, BULLET_PLAYER_9MM, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_FireM249( event_args_t *args )
@@ -2210,26 +2256,24 @@ void EV_FireM249( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthanded;	// name ours
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
+	lefthand = args->bparam2 != 0;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->fparam1;
-	angles[1] += args->fparam2;
-	angles[2] += args->iparam2 / 10000.1;
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2249,7 +2293,7 @@ void EV_FireM249( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -10, -13, true );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -10, 13, true );
@@ -2270,8 +2314,10 @@ void EV_FireM249( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 
 	VectorCopy( forward, vecAiming );
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_556MM, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_556MM, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_FireM3( event_args_t *args )
@@ -2326,28 +2372,26 @@ void EV_FireM4A1( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthanded;	// name ours
-	int silencer_on;	// name ours
+	bool lefthand;
+	int silencer_on;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
-	silencer_on = args->bparam1;
+	lefthand = args->bparam2 != 0;
 	idx = args->entindex;
+	silencer_on = args->bparam1;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->fparam1;
-	angles[1] += args->fparam2;
-	angles[2] += args->iparam2 / 10000.1;
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2375,7 +2419,7 @@ void EV_FireM4A1( event_args_t *args )
 	{
 		g_iShotsFired++;
 
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -8, -10, false );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -8, 10, false );
@@ -2400,36 +2444,36 @@ void EV_FireM4A1( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 
 	VectorCopy( forward, vecAiming );
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_556MM, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_556MM, 0, &tracerCount[idx-1], 2 );
 }
 
-void EV_FireMAC10( event_args_t *args )
+void EV_FireMac10( event_args_t *args )
 {
 	int idx;
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthanded;	// name ours
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
+	lefthand = args->bparam2 != 0;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->fparam1;
-	angles[1] += args->fparam2;
-	angles[2] += args->iparam2 / 10000.1;
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2449,7 +2493,7 @@ void EV_FireMAC10( event_args_t *args )
 	{
 		g_iShotsFired++;
 
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 32, -9, -11, false );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 32, -9, 11, false );
@@ -2470,8 +2514,10 @@ void EV_FireMAC10( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_9MM, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_9MM, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_FireP228( event_args_t *args )
@@ -2481,23 +2527,25 @@ void EV_FireP228( event_args_t *args )
 	vec3_t angles;
 	vec3_t velocity;
 	int empty;
-	bool lefthanded;	// name ours
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
+	lefthand = args->bparam2 != 0;
 	empty = args->bparam1;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
+
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2524,7 +2572,7 @@ void EV_FireP228( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 36, -14, -14, false );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 36, -14, 14, false );
@@ -2545,8 +2593,10 @@ void EV_FireP228( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_357SIG, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_357SIG, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_FireP90( event_args_t *args )
@@ -2555,26 +2605,24 @@ void EV_FireP90( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthanded;	// name ours
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
+	lefthand = args->bparam2 != 0;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->fparam1;
-	angles[1] += args->fparam2;
-	angles[2] += args->iparam2 / 10000.1;
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2594,7 +2642,7 @@ void EV_FireP90( event_args_t *args )
 	{
 		g_iShotsFired++;
 
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 35, -16, -22, true );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 35, -16, 22, true );
@@ -2615,8 +2663,10 @@ void EV_FireP90( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 
 	VectorCopy( forward, vecAiming );
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_57MM, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_57MM, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_FireXM1014( event_args_t *args )
@@ -2625,7 +2675,7 @@ void EV_FireXM1014( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthanded;	// name ours
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
@@ -2636,7 +2686,7 @@ void EV_FireXM1014( event_args_t *args )
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
+	lefthand = args->bparam2 != 0;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
@@ -2663,7 +2713,7 @@ void EV_FireXM1014( event_args_t *args )
 	{
 		g_iShotsFired++;
 
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 22, -9, -11, false );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 22, -9, 11, false );
@@ -2697,7 +2747,6 @@ void EV_FireScout( event_args_t *args )
 
 	cl_entity_t *ent;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
@@ -2705,6 +2754,10 @@ void EV_FireScout( event_args_t *args )
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
+
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
+
 	AngleVectors( angles, forward, right, up );
 
 	if ( EV_IsLocal( idx ) )
@@ -2728,8 +2781,11 @@ void EV_FireScout( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	vecSpread = Vector( args->fparam1, args->fparam1, args->fparam1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_762MM, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread.x = args->fparam1 / 1000.0;
+	vSpread.y = args->fparam2 / 1000.0;
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_762MM, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_FireAWP( event_args_t *args )
@@ -2741,7 +2797,6 @@ void EV_FireAWP( event_args_t *args )
 
 	cl_entity_t *ent;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
@@ -2749,6 +2804,9 @@ void EV_FireAWP( event_args_t *args )
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
+
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2773,8 +2831,10 @@ void EV_FireAWP( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	vecSpread = Vector( args->fparam1, args->fparam1, args->fparam1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_338MAG, 0, &tracerCount[idx-1], 3 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_338MAG, 0, &tracerCount[idx-1], 3 );
 }
 
 void EV_FireSG552( event_args_t *args )
@@ -2783,26 +2843,24 @@ void EV_FireSG552( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthanded;	// name ours
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
+	lefthand = args->bparam2 != 0;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->fparam1;
-	angles[1] += args->fparam2;
-	angles[2] += args->iparam2 / 10000.1;
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2822,7 +2880,7 @@ void EV_FireSG552( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -8, -10, false );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -8, 10, false );
@@ -2843,8 +2901,10 @@ void EV_FireSG552( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 
 	VectorCopy( forward, vecAiming );
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_556MM, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_556MM, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_FireTMP( event_args_t *args )
@@ -2853,26 +2913,24 @@ void EV_FireTMP( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthanded;	// name ours
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
+	lefthand = args->bparam2 != 0;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->fparam1;
-	angles[1] += args->fparam2;
-	angles[2] += args->iparam2 / 10000.1;
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2892,7 +2950,7 @@ void EV_FireTMP( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 32, -6, -11, false );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 32, -6, 11, false );
@@ -2913,8 +2971,10 @@ void EV_FireTMP( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_9MM, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_9MM, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_FireEliteLeft( event_args_t *args )
@@ -2923,20 +2983,19 @@ void EV_FireEliteLeft( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	float flTimeDiff;	// name ours: the time since the last shot
-	int iClip;			// name ours
+	int bullets_left;
+	float time_diff;	// the time since the last shot
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	flTimeDiff = args->fparam1;
-	iClip = args->iparam2;
+	time_diff = args->fparam1;
+	bullets_left = args->iparam2;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
@@ -2952,17 +3011,17 @@ void EV_FireEliteLeft( event_args_t *args )
 
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
-		if ( iClip <= 1 )
+		if ( bullets_left <= 1 )
 			gEngfuncs.pEventAPI->EV_WeaponAnimation( ELITE_SHOOTLEFTLAST, 2 );
-		else if ( flTimeDiff >= 0.5 )
+		else if ( time_diff >= 0.5 )
 			gEngfuncs.pEventAPI->EV_WeaponAnimation( ELITE_SHOOTLEFT5, 2 );
-		else if ( flTimeDiff >= 0.4 )
+		else if ( time_diff >= 0.4 )
 			gEngfuncs.pEventAPI->EV_WeaponAnimation( ELITE_SHOOTLEFT4, 2 );
-		else if ( flTimeDiff >= 0.3 )
+		else if ( time_diff >= 0.3 )
 			gEngfuncs.pEventAPI->EV_WeaponAnimation( ELITE_SHOOTLEFT3, 2 );
-		else if ( flTimeDiff >= 0.2 )
+		else if ( time_diff >= 0.2 )
 			gEngfuncs.pEventAPI->EV_WeaponAnimation( ELITE_SHOOTLEFT2, 2 );
-		else if ( flTimeDiff >= 0.0 )
+		else if ( time_diff >= 0.0 )
 			gEngfuncs.pEventAPI->EV_WeaponAnimation( ELITE_SHOOTLEFT1, 2 );
 
 		if ( gHUD.m_bGunSmoke == true )
@@ -2994,8 +3053,10 @@ void EV_FireEliteLeft( event_args_t *args )
 	vecSrc = vecSrc - right * 5;
 	VectorCopy( forward, vecAiming );
 
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_50AE, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam2, (float)( args->iparam1 / 10000000.0 ), args->fparam2 );
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_50AE, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_FireEliteRight( event_args_t *args )
@@ -3004,20 +3065,19 @@ void EV_FireEliteRight( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	float flTimeDiff;	// name ours: the time since the last shot
-	int iClip;			// name ours
+	int bullets_left;
+	float time_diff;	// the time since the last shot
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	flTimeDiff = args->fparam1;
-	iClip = args->iparam2;
+	time_diff = args->fparam1;
+	bullets_left = args->iparam2;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
@@ -3033,17 +3093,17 @@ void EV_FireEliteRight( event_args_t *args )
 
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
-		if ( iClip <= 1 )
+		if ( bullets_left <= 1 )
 			gEngfuncs.pEventAPI->EV_WeaponAnimation( ELITE_SHOOTRIGHTLAST, 2 );
-		else if ( flTimeDiff >= 0.5 )
+		else if ( time_diff >= 0.5 )
 			gEngfuncs.pEventAPI->EV_WeaponAnimation( ELITE_SHOOTRIGHT5, 2 );
-		else if ( flTimeDiff >= 0.4 )
+		else if ( time_diff >= 0.4 )
 			gEngfuncs.pEventAPI->EV_WeaponAnimation( ELITE_SHOOTRIGHT4, 2 );
-		else if ( flTimeDiff >= 0.3 )
+		else if ( time_diff >= 0.3 )
 			gEngfuncs.pEventAPI->EV_WeaponAnimation( ELITE_SHOOTRIGHT3, 2 );
-		else if ( flTimeDiff >= 0.2 )
+		else if ( time_diff >= 0.2 )
 			gEngfuncs.pEventAPI->EV_WeaponAnimation( ELITE_SHOOTRIGHT2, 2 );
-		else if ( flTimeDiff >= 0.0 )
+		else if ( time_diff >= 0.0 )
 			gEngfuncs.pEventAPI->EV_WeaponAnimation( ELITE_SHOOTRIGHT1, 2 );
 
 		if ( gHUD.m_bGunSmoke == true )
@@ -3075,8 +3135,9 @@ void EV_FireEliteRight( event_args_t *args )
 	vecSrc = vecSrc + right * 5;
 	VectorCopy( forward, vecAiming );
 
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_50AE, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam2, (float)( args->iparam1 / 10000000.0 ), args->fparam2 );
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_50AE, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_Knife( event_args_t *args )
@@ -3096,18 +3157,17 @@ void EV_FireFiveSeven( event_args_t *args )
 	vec3_t angles;
 	vec3_t velocity;
 	int empty;
-	bool lefthanded;	// name ours
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
+	lefthand = args->bparam2 != 0;
 	empty = args->bparam1;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
@@ -3115,6 +3175,9 @@ void EV_FireFiveSeven( event_args_t *args )
 	VectorCopy( args->angles, angles );
 
 	AngleVectors( angles, forward, right, up );
+
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/pshell.mdl");// brass shell
 	
@@ -3139,7 +3202,7 @@ void EV_FireFiveSeven( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 36, -14, -14, false );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 36, -14, 14, false );
@@ -3160,8 +3223,10 @@ void EV_FireFiveSeven( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_57MM, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_57MM, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_FireUMP45( event_args_t *args )
@@ -3170,26 +3235,24 @@ void EV_FireUMP45( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthanded;	// name ours
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
+	lefthand = args->bparam2 != 0;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
-	angles[0] += args->fparam1;
-	angles[1] += args->fparam2;
-	angles[2] += args->iparam2 / 10000.1;
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -3209,7 +3272,7 @@ void EV_FireUMP45( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 34, -10, -11, false );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 34, -10, 11, false );
@@ -3229,8 +3292,10 @@ void EV_FireUMP45( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_45ACP, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam2, args->fparam1 );
+	vSpread.z = 0;
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_45ACP, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_FireSG550( event_args_t *args )
@@ -3239,24 +3304,26 @@ void EV_FireSG550( event_args_t *args )
 	vec3_t origin;
 	vec3_t angles;
 	vec3_t velocity;
-	bool lefthanded;	// name ours
+	bool lefthand;
 
 	cl_entity_t *ent;
 	vec3_t ShellVelocity;
 	vec3_t ShellOrigin;
 	int shell;
 	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
 	vec3_t up, right, forward;
 
 	ent = GetViewEntity();
-	lefthanded = args->bparam2 != 0;
+	lefthand = args->bparam2 != 0;
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
 	AngleVectors( angles, forward, right, up );
+
+	angles[0] += args->iparam1 / 10000000;
+	angles[1] += args->iparam2 / 10000000;
 
 	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/rshell.mdl");// brass shell
 	
@@ -3278,7 +3345,7 @@ void EV_FireSG550( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
-		if ( lefthanded )
+		if ( lefthand )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -8, -10, false );
 		else
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 17, -8, 10, false );
@@ -3299,15 +3366,16 @@ void EV_FireSG550( event_args_t *args )
 	EV_GetGunPosition( args, vecSrc, origin );
 	VectorCopy( forward, vecAiming );
 
-	vecSpread = Vector( args->fparam1, args->fparam1, args->fparam1 );
-	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_556MM, 0, &tracerCount[idx-1], 2 );
+	Vector vSpread;
+	vSpread = Vector( args->fparam1, args->fparam1, args->fparam1 );
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vSpread, 8192, BULLET_PLAYER_556MM, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_CreateSmoke( event_args_t *args )
 {
 	vec3_t origin;
 	vec3_t velocity;
-	int color;			// name ours
+	int colour;
 	double flAngle = 15 * ( 3.141517 / 180 );	// name ours: 15 degrees, pi as 3.141517; this grouping gives the image's constant (15 * 3.141517 / 180 differs in the last bit)
 
 	VectorCopy( args->origin, origin );
@@ -3315,14 +3383,14 @@ void EV_CreateSmoke( event_args_t *args )
 	velocity[1] = args->fparam2;
 	velocity[2] = args->iparam1 / 10000;
 
-	color = gEngfuncs.pfnRandomLong( 85, 100 );
+	colour = gEngfuncs.pfnRandomLong( 85, 100 );
 
 	if ( args->bparam1 )
-		EV_HLDM_CreateSmoke( origin, velocity, gEngfuncs.pfnRandomFloat( 5, 10 ), 2.0, color, color, color, 1, NULL, true, 4 );
+		EV_HLDM_CreateSmoke( origin, velocity, gEngfuncs.pfnRandomFloat( 5, 10 ), 2.0, colour, colour, colour, 1, NULL, true, 4 );
 	else
-		EV_HLDM_CreateSmoke( origin, velocity, gEngfuncs.pfnRandomFloat( 5, 10 ), 2.0, color, color, color, 0, NULL, true, 4 );
+		EV_HLDM_CreateSmoke( origin, velocity, gEngfuncs.pfnRandomFloat( 5, 10 ), 2.0, colour, colour, colour, 0, NULL, true, 4 );
 
-	float z = velocity[2];
+	float old_z = velocity[2];
 	Vector vecTemp( velocity[0] * cos( flAngle ) - velocity[1] * sin( flAngle ), velocity[0] * sin( flAngle ) + velocity[1] * cos( flAngle ), 0.0 );	// name ours
 	Vector vecRotated;		// name ours
 	float *pflRotated = vecRotated;	// sic: name ours; the one store through this pointer stops VC6 reusing the rotated x it holds in a register, which gives the image's frame
@@ -3332,6 +3400,12 @@ void EV_CreateSmoke( event_args_t *args )
 	velocity = vecRotated;
 	velocity[0] = velocity[0] * 0.75;
 	velocity[1] = velocity[1] * 0.75;
-	velocity[2] = z * 0.75;
-	EV_HLDM_CreateSmoke( origin, velocity, gEngfuncs.pfnRandomFloat( 2, 5 ), 1.2, color, color, color, 1, NULL, true, 4 );
+	velocity[2] = old_z * 0.75;
+	EV_HLDM_CreateSmoke( origin, velocity, gEngfuncs.pfnRandomFloat( 2, 5 ), 1.2, colour, colour, colour, 1, NULL, true, 4 );
+}
+
+void EV_RemoveAllDecals( event_args_t *args )
+{
+	for ( int har = 0; har < (int)CVAR_GET_FLOAT( "r_decals" ); har++ )
+		gEngfuncs.pEfxAPI->R_DecalRemoveAll( har );
 }

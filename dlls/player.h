@@ -130,7 +130,8 @@ enum
 // (InitStatusBar, UpdateStatusBar): SDK 2.3's text, with the leak's values:
 // 1024 units (8192 for a spectator), and the values the type of what is seen,
 // its name and its health (names ours: SDK 2.3 has name, health and armor)
-#define MAX_ID_RANGE 1024
+// Counter-Strike 1.3: 2048 units, the SDK's value
+#define MAX_ID_RANGE 2048
 #define MAX_SPEC_ID_RANGE 8192	// name ours
 #define SBAR_STRING_SIZE 128
 
@@ -491,6 +492,25 @@ public:
 
 	void SetCustomDecalFrames( int nFrames );
 	int GetCustomDecalFrames( void );
+
+	// Counter-Strike 1.3: the server animates the player's gait itself (GetPlayerPitch, GetPlayerYaw and
+	// GetPlayerGaitsequence read the results for the engine).  The functions' names are the 1.3 Linux
+	// library's; the members' names, types and order are Counter-Strike 1.6's (player.h lines 644 to 650).  They
+	// are the last 36 bytes of the class: the 1.3 server allocates 0x86c bytes for a player where 1.1 has 0x848,
+	// and no offset below 0x848 moved.
+	void StudioEstimateGait( void );
+	void StudioPlayerBlend( int *pBlend, float *pPitch );	// parameter names ours
+	void CalculatePitchBlend( void );
+	void CalculateYawBlend( void );
+	void StudioProcessGait( void );
+
+	int					m_iGaitsequence;
+	float				m_flGaitframe;
+	float				m_flGaityaw;
+	Vector				m_prevgaitorigin;
+	float				m_flPitch;
+	float				m_flYaw;
+	float				m_flGaitMovement;
 };
 
 #define AUTOAIM_2DEGREES  0.0348994967025

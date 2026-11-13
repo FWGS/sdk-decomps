@@ -310,10 +310,10 @@ enum gauss_e {
 };
 
 void EV_HLDM_GunshotDecalTrace( pmtrace_t *pTrace, char *decalName, char chTextureType );
-void EV_HLDM_DecalGunshot( pmtrace_t *pTrace, int iBulletType, float scale, int r, int g, int b, bool bStreakSplash, char cTextureType );
+void EV_HLDM_DecalGunshot( pmtrace_t *pTrace, int iBulletType, float scale, int r, int g, int b, bool bCreateSparks, char cTextureType );
 int EV_HLDM_CheckTracer( int idx, float *vecSrc, float *end, float *forward, float *right, int iBulletType, int iTracerFreq, int *tracerCount );
 void EV_HLDM_FireBullets( int idx, float *forward, float *right, float *up, int cShots, float *vecSrc, float *vecDirShooting, float *vecSpread, float flDistance, int iBulletType, int iTracerFreq, int *tracerCount, int iPenetration );
 void EV_HLDM_CreateSmoke( float *origin, float *dir, int speed, float scale, int r, int g, int b, int iSmokeType, float *base_velocity, bool bWind, int framerate );
-void EV_HLDM_CreateDLight( float *origin, float radius, int r, int g, int b, float life );
+void EV_HLDM_CreateDLight( float *origin, float radius, int r, int g, int b, float time );
 
 #endif // EV_HLDMH

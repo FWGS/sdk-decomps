@@ -69,28 +69,14 @@ extern int gmsgSpectator;
 // sets it, the timeleft command reads it) and the time of the last complete restart (RestartRound)
 float g_flTimeLimit = 0;
 float g_flResetTime = 0;
+unsigned short m_usResetDecals;	// Counter-Strike 1.3: the decal_reset event (the Linux library's name)
 
 void LinkUserMessages( void );
 
-// GetTeam - Counter-Strike 1.1: a team's name for the log lines, as in multiplay_gamerules.cpp (1.6
-// declares that file's function at this place; 1.1 has no such function in either library, and this
-// file's callers have the switch in them too, so the text is here as well)
-inline char *GetTeam( int teamNo )
-{
-	switch ( teamNo )
-	{
-	case TEAM_TERRORIST:
-		return "TERRORIST";
-	case TEAM_CT:
-		return "CT";
-	case TEAM_SPECTATOR:
-		return "SPECTATOR";
-	default:
-		break;
-	}
-
-	return "";
-}
+// GetTeam - a team's name for the log lines.  Counter-Strike 1.3: multiplay_gamerules.cpp's function is
+// out of line and this file calls it (1.1 had the switch in every caller; Counter-Strike 1.6 declares the
+// function at this place)
+char *GetTeam( int teamNo );
 
 /*
  * used by kill command and disconnect command
@@ -489,6 +475,20 @@ inline void UpdateTeamInfo( CBasePlayer *pPlayer, int iTeam )
 		pPlayer->SetScoreboardAttributes( NULL );
 }
 
+// Counter-Strike 1.3: mp_startmoney is kept between 800 and 16000 (the name is the
+// Linux library's, money Counter-Strike 1.6's local)
+extern cvar_t startmoney;
+
+void CheckStartMoney( void )
+{
+	int money = (int)startmoney.value;
+
+	if ( money > 16000 )
+		CVAR_SET_FLOAT( "mp_startmoney", 16000 );
+	else if ( money < 800 )
+		CVAR_SET_FLOAT( "mp_startmoney", 800 );
+}
+
 /*
 ===========
 ClientPutInServer
@@ -530,7 +530,10 @@ void ClientPutInServer( edict_t *pEntity )
 	// Beta 5.0 (leak): he starts with 800 dollars, outside the game: no team,
 	// invisible, flying, not to be hurt, until JoiningThink lets him in; the
 	// view is the map's intro camera if it has one, else a CT spawn point
-	pPlayer->m_iAccount = 800;
+	// Counter-Strike 1.3: the starting money is the cvar mp_startmoney, kept
+	// between 800 and 16000 (1.1: 800)
+	CheckStartMoney();
+	pPlayer->m_iAccount = (int)startmoney.value;
 	pPlayer->m_fGameHUDInitialized = FALSE;
 	pPlayer->m_flDisplayHistory &= ~( 1 << 1 );
 
@@ -641,6 +644,8 @@ void Host_Say( edict_t *pEntity, int teamonly )
 	// them as a node of the tree, and the count of such nodes ahead of the first
 	// player->pev (period 4) decides how the log line's STRING at the end is added:
 	// with them retail's 1,343 bytes, without them pStringBase in esi and 1,345
+	// (Counter-Strike 1.1). 1.3's longer function needs them too: 1,413 bytes with
+	// them as retail, 1,414 without
 	if ( player->m_flLastSay != 0.0 && ( gpGlobals->time - player->m_flLastSay ) < 0.66 )
 		return;
 
@@ -702,7 +707,12 @@ void Host_Say( edict_t *pEntity, int teamonly )
 // turn on color set 2  (color on,  no sound)
 	// Beta 5.0 (leak): a player with no team gets no prefix, and the text is
 	// left as it is (sic)
-	if ( teamonly == 1 )
+	// Counter-Strike 1.3: a spectator's text is marked so and goes to spectators only
+	if ( player->m_iTeam == TEAM_SPECTATOR )
+	{
+		sprintf( text, "%c(Spectator) %s :   ", 2, STRING( pEntity->v.netname ) );
+	}
+	else if ( teamonly == 1 )
 	{
 		if ( player->m_iTeam == TEAM_CT && bSenderDead == false )
 			sprintf( text, "%c(Counter-Terrorist) %s :   ", 2, STRING( pEntity->v.netname ) );
@@ -752,7 +762,11 @@ void Host_Say( edict_t *pEntity, int teamonly )
 		if ( !(client->IsNetClient()) )	// Not a client ? (should never be true)
 			continue;
 
-		if ( teamonly && g_pGameRules->PlayerRelationship(client, CBaseEntity::Instance(pEntity)) != GR_TEAMMATE )
+		if ( teamonly && player->m_iTeam != TEAM_SPECTATOR && g_pGameRules->PlayerRelationship(client, CBaseEntity::Instance(pEntity)) != GR_TEAMMATE )
+			continue;
+
+		// Counter-Strike 1.3: spectators talk among themselves
+		if ( player->m_iTeam == TEAM_SPECTATOR && client->m_iTeam != player->m_iTeam )
 			continue;
 
 		// the living hear the living, the dead hear the dead; ignoremessages 1
@@ -794,25 +808,24 @@ void Host_Say( edict_t *pEntity, int teamonly )
 	// Counter-Strike 1.6's names
 	if ( CVAR_GET_FLOAT( "mp_logmessages" ) != 0 )
 	{
+		char *deadText = "";	// Counter-Strike 1.3; name ours
 		char *temp = ( teamonly == 1 ) ? "say_team" : "say";
-		char *szTeam;
 
-		if ( player->m_iTeam == TEAM_TERRORIST )
-			szTeam = "TERRORIST";
-		else if ( player->m_iTeam == TEAM_CT )
-			szTeam = "CT";
-		else if ( player->m_iTeam == TEAM_SPECTATOR )
-			szTeam = "SPECTATOR";
-		else
-			szTeam = "UNASSIGNED";
+		// Counter-Strike 1.3: the team's name from GetTeam (1.1 had the names here,
+		// with UNASSIGNED for no team), and " (dead)" behind a dead player's text
+		char *szTeam = GetTeam( player->m_iTeam );
 
-		UTIL_LogPrintf( "\"%s<%i><%u><%s>\" %s \"%s\"\n", 
+		if ( player->m_iTeam != TEAM_SPECTATOR && bSenderDead == true )
+			deadText = " (dead)";
+
+		UTIL_LogPrintf( "\"%s<%i><%u><%s>\" %s \"%s\"%s\n", 
 			STRING( player->pev->netname ), 
 			GETPLAYERUSERID( player->edict() ),
 			GETPLAYERWONID( player->edict() ),
 			szTeam,
 			temp,
-			p );
+			p,
+			deadText );
 	}
 }
 
@@ -1719,9 +1732,16 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 		// Counter-Strike 1.1: the spectators, when allow_spectators is set; a living
 		// player only during the freeze time. He loses his items and his money, his
 		// score is sent as zero and he becomes an observer at a spawn point
-		if ( allow_spectators.value != 0 )
+		// Counter-Strike 1.3: the HLTV proxy may always
+		if ( allow_spectators.value == 0 && !( player->pev->flags & FL_PROXY ) )
 		{
-			if ( !((CHalfLifeMultiplay *)g_pGameRules)->IsFreezePeriod() && player->pev->deadflag == DEAD_NO )
+			ClientPrint( player->pev, HUD_PRINTCENTER, "#Cannot_Be_Spectator" );
+			CLIENT_COMMAND( player->edict(), "slot10\n" );
+			return FALSE;
+		}
+
+		{
+			if ( !g_pGameRules->IsFreezePeriod() && player->pev->deadflag == DEAD_NO )
 			{
 				ClientPrint( player->pev, HUD_PRINTCENTER, "#Cannot_Be_Spectator" );
 				CLIENT_COMMAND( player->edict(), "slot10\n" );
@@ -1733,8 +1753,21 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 
 			player->RemoveAllItems( TRUE );
 			player->m_bHasC4 = false;
+
+			// Counter-Strike 1.3: logged
+			if ( player->m_iTeam != TEAM_SPECTATOR )
+			{
+				// (GetTeam is called ahead of the others: a local; szOldTeam as below)
+				char *szOldTeam = GetTeam( player->m_iTeam );
+
+				UTIL_LogPrintf( "\"%s<%i><%u><%s>\" joined team \"SPECTATOR\"\n", 
+					STRING( player->pev->netname ), 
+					GETPLAYERUSERID( player->edict() ),
+					GETPLAYERWONID( player->edict() ),
+					szOldTeam );
+			}
 			player->m_iTeam = TEAM_SPECTATOR;
-			player->m_iJoiningState = JOIN_CHOOSING;
+			player->m_iJoiningState = JOIN_DONE;	// Counter-Strike 1.3 (1.1: JOIN_CHOOSING)
 			player->pev->frags = 0;
 			player->m_iAccount = 0;
 
@@ -1763,12 +1796,6 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 			MESSAGE_END();
 			return TRUE;
 		}
-		else
-		{
-			ClientPrint( player->pev, HUD_PRINTCENTER, "#Cannot_Be_Spectator" );
-			CLIENT_COMMAND( player->edict(), "slot10\n" );
-			return FALSE;
-		}
 	default:
 		return FALSE;
 	}
@@ -1788,8 +1815,37 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 	if ( player->IsCommander() )
 		mp->PickNewCommander( player->m_iTeam );
 
-	int oldTeam = player->m_iTeam;	// Counter-Strike 1.1, for the log (1.6's name)
-	player->m_iTeam = team;
+	// Counter-Strike 1.3: a spectator who joins a team is set up as ClientPutInServer
+	// sets up a new player (JoiningThink spawns him)
+	if ( player->m_iTeam == TEAM_SPECTATOR && team != TEAM_SPECTATOR )
+	{
+		player->m_fNotKilled = true;
+		player->m_fKicked = false;
+		player->m_iIgnoreMessages = 0;
+		player->m_iTeamKills = 0;
+
+		CheckStartMoney();
+		player->m_iAccount = (int)startmoney.value;
+
+		player->pev->solid = SOLID_NOT;
+		player->pev->movetype = MOVETYPE_NOCLIP;
+		player->pev->effects = EF_NODRAW;
+		player->pev->effects |= EF_NOINTERP;
+		player->pev->takedamage = DAMAGE_NO;
+		player->pev->deadflag = DEAD_DEAD;
+		player->pev->velocity = g_vecZero;
+		player->pev->punchangle = g_vecZero;
+
+		player->m_bHasNightVision = false;
+		player->m_bVoteKicksAtOnce = false;
+		player->m_iHostagesKilled = 0;
+		player->m_iMapVote = 0;
+		player->has_disconnected = false;
+		player->m_iJoiningState = JOIN_SPAWN;
+
+		g_engfuncs.pfnSetClientMaxspeed( ENT(player->pev), 1 );
+		SET_MODEL( ENT(player->pev), "models/player.mdl" );
+	}
 
 	switch ( team )
 	{
@@ -1808,6 +1864,10 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 	else
 		player->m_fTeamChanged = true;
 
+	// Counter-Strike 1.3: the team is set here, behind the menu and the kill (1.1: ahead of them)
+	int oldTeam = player->m_iTeam;	// for the log (1.6's name)
+	player->m_iTeam = team;
+
 	UpdateTeamInfo( player, -1 );
 
 	// Counter-Strike 1.1: titles of the client with the name (1.0b: "%s is joining the
@@ -1820,16 +1880,7 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 	// with the team he leaves (1.0b: "%s is joining the TERRORIST force\n" or "... CT force\n").
 	// szOldTeam and szNewTeam are 1.6's names
 	char *szOldTeam = GetTeam( oldTeam );
-	char *szNewTeam;
-
-	if ( team == TEAM_TERRORIST )
-		szNewTeam = "TERRORIST";
-	else if ( team == TEAM_CT )
-		szNewTeam = "CT";
-	else if ( team == TEAM_SPECTATOR )
-		szNewTeam = "SPECTATOR";
-	else
-		szNewTeam = "UNASSIGNED";
+	char *szNewTeam = GetTeam( team );	// Counter-Strike 1.3 (1.1 had the names here)
 
 	UTIL_LogPrintf( "\"%s<%i><%u><%s>\" joined team \"%s\"\n", 
 		STRING( player->pev->netname ), 
@@ -2252,7 +2303,7 @@ void ClientCommand( edict_t *pEntity )
 		// a title of the client with the minutes and the two-digit seconds, and another one
 		// when there is no time limit (1.0b: "Time Remaining:  %i:%.2i\n"). secs and temp
 		// are Counter-Strike 1.6's names
-		if ( CVAR_GET_FLOAT( "mp_timelimit" ) != 0 )
+		if ( timelimit.value != 0 )
 		{
 			int iTimeRemaining = (int)( g_flTimeLimit - gpGlobals->time );
 
@@ -2507,7 +2558,8 @@ void ClientCommand( edict_t *pEntity )
 	else if ( FStrEq(pcmd, "showbriefing" ) )
 	{
 		// Beta 5.0 (leak): the map's briefing again; Beta 5.0: for a player in a team
-		if ( g_szMapBriefingText[0] && pPlayer->m_iTeam != TEAM_UNASSIGNED )
+		// Counter-Strike 1.3: not for an observer
+		if ( g_szMapBriefingText[0] && pPlayer->m_iTeam != TEAM_UNASSIGNED && !( pPlayer->m_afPhysicsFlags & PFLAG_OBSERVER ) )
 		{
 			pPlayer->MenuPrint( pPlayer, g_szMapBriefingText );
 			pPlayer->m_fShowingLevelText = true;
@@ -2562,6 +2614,15 @@ void ClientCommand( edict_t *pEntity )
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Command_Not_Available" );
 			return;	// (Counter-Strike 1.1's code needs this return: without it the block shares the tail of votemap's "#Wait_3_Seconds" block, which retail's does not)
 		}
+	}
+	else if ( FStrEq(pcmd, "spectate" ) && ( pPlayer->pev->flags & FL_PROXY ) )
+	{
+		// Counter-Strike 1.3: the HLTV proxy joins the spectators
+		HandleMenu_ChooseTeam( pPlayer, 6 );
+	}
+	else if ( g_pGameRules->ClientCommand_DeadOrAlive( GetClassPtr((CBasePlayer *)pev), pcmd ) )
+	{
+		// Counter-Strike 1.3: the voice manager's commands, for the dead too
 	}
 	else if ( pPlayer->pev->deadflag != DEAD_NO )
 	{
@@ -2748,11 +2809,14 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 
 		// Counter-Strike 1.1: SDK 2.2's log line, with the team's name in the place of the model
 		// (1.0b: "\"%s<%i>\" changed name to \"%s<%i>\"\n")
+		// Counter-Strike 1.3: GetTeam is a call, made ahead of the others (a local; the name is ours)
+		char *szTeam = GetTeam( pPlayer->m_iTeam );
+
 		UTIL_LogPrintf( "\"%s<%i><%u><%s>\" changed name to \"%s\"\n", 
 			STRING( pEntity->v.netname ), 
 			GETPLAYERUSERID( pEntity ), 
 			GETPLAYERWONID( pEntity ),
-			GetTeam( pPlayer->m_iTeam ), 
+			szTeam, 
 			g_engfuncs.pfnInfoKeyValue( infobuffer, "name" ) );
 	}
 
@@ -2873,8 +2937,19 @@ void StartFrame( void )
 	if ( g_fGameOver )
 		return;
 
+	// Counter-Strike 1.3: the skill cvar is looked up once (skill is Counter-Strike
+	// 1.6's name for the static)
+	static cvar_t *skill = NULL;
+	if ( !skill )
+		skill = CVAR_GET_POINTER( "skill" );
+
 	gpGlobals->teamplay = 1.0;	// Beta 5.0 (leak): always teams
-	g_iSkillLevel = CVAR_GET_FLOAT("skill");
+
+	if ( skill )
+		g_iSkillLevel = (int)skill->value;
+	else
+		g_iSkillLevel = 0;
+
 	g_ulFrameCount++;
 }
 
@@ -3092,6 +3167,44 @@ void ClientPrecache( void )
 	PRECACHE_MODEL("models/player/urban/urban.mdl");
 	PRECACHE_MODEL("models/player/vip/vip.mdl");
 
+	// Counter-Strike 1.3: the weapons' player models, the planted C4 and the thrown
+	// grenades (W_Precache had them from Beta 6.6 to 1.1)
+	PRECACHE_MODEL("models/p_ak47.mdl");
+	PRECACHE_MODEL("models/p_aug.mdl");
+	PRECACHE_MODEL("models/p_awp.mdl");
+	PRECACHE_MODEL("models/p_c4.mdl");
+	PRECACHE_MODEL("models/w_c4.mdl");
+	PRECACHE_MODEL("models/p_deagle.mdl");
+	PRECACHE_MODEL("models/p_flashbang.mdl");
+	PRECACHE_MODEL("models/w_flashbang.mdl");
+	PRECACHE_MODEL("models/p_hegrenade.mdl");
+	PRECACHE_MODEL("models/w_hegrenade.mdl");
+	PRECACHE_MODEL("models/p_glock18.mdl");
+	PRECACHE_MODEL("models/p_sg550.mdl");
+	PRECACHE_MODEL("models/p_g3sg1.mdl");
+	PRECACHE_MODEL("models/p_knife.mdl");
+	PRECACHE_MODEL("models/p_m249.mdl");
+	PRECACHE_MODEL("models/p_m3.mdl");
+	PRECACHE_MODEL("models/p_m4a1.mdl");
+	PRECACHE_MODEL("models/p_mac10.mdl");
+	PRECACHE_MODEL("models/p_mp5.mdl");
+	PRECACHE_MODEL("models/p_ump45.mdl");
+	PRECACHE_MODEL("models/p_p228.mdl");
+	PRECACHE_MODEL("models/p_p90.mdl");
+	PRECACHE_MODEL("models/p_scout.mdl");
+	PRECACHE_MODEL("models/p_sg552.mdl");
+	PRECACHE_MODEL("models/p_smokegrenade.mdl");
+	PRECACHE_MODEL("models/w_smokegrenade.mdl");
+	PRECACHE_MODEL("models/p_tmp.mdl");
+	PRECACHE_MODEL("models/p_usp.mdl");
+	PRECACHE_MODEL("models/p_elite.mdl");
+	PRECACHE_MODEL("models/p_fiveseven.mdl");
+	PRECACHE_MODEL("models/p_xm1014.mdl");
+
+	// temp is Counter-Strike 1.6's name (its debug information): a zero vector for
+	// the sprites' force_exactfile calls below
+	Vector temp = g_vecZero;
+
 	// Beta 6.6: the player models are precached here, and the client's files must
 	// keep within these bounds (vMin, vMax: Counter-Strike 1.6's names)
 	Vector vMin( -38, -24, -41 );	// Counter-Strike 1.0 (Beta 7.1: 48, 36, 58); Counter-Strike 1.1: 24 wide (1.0b: 22)
@@ -3107,6 +3220,167 @@ void ClientPrecache( void )
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/terror/terror.mdl" );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/urban/urban.mdl" );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/vip/vip.mdl" );
+
+	// Beta 6.5: for some of the client's sprites the engine is told that the
+	// client's file must be the server's (force_exactfile; the bounds are not
+	// used for that)
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/black_smoke1.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/black_smoke2.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/black_smoke3.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/black_smoke4.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/fast_wallpuff1.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom2.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom3.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom_left.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom_left2.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom_left3.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom_right.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom_right2.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom_right3.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/left.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/left2.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/left3.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/right.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/right2.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/right3.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top2.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top3.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top_left.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top_left2.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top_left3.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top_right.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top_right2.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top_right3.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/vertical.spr" );
+	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/horizontal.spr" );
+
+	// Beta 6.6: bounds a client's file of each weapon model must keep within
+	// (Counter-Strike 1.0: force_model_samebounds for the SG-550 and the UMP45)
+	vMin = Vector( -17, -6, -19 );
+	vMax = Vector( 17, 12, 29 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_ak47.mdl" );
+
+	vMin = Vector( -23, -6, -18 );
+	vMax = Vector( 23, 7, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_aug.mdl" );
+
+	vMin = Vector( -30, -24, -19 );
+	vMax = Vector( 30, 17, 19 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_awp.mdl" );
+
+	vMin = Vector( -7, -7, -15 );
+	vMax = Vector( 7, 7, 15 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_c4.mdl" );
+
+	vMin = Vector( -4, -8, -3 );
+	vMax = Vector( 3, 7, 3 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/w_c4.mdl" );
+
+	vMin = Vector( -8, -4, -19 );
+	vMax = Vector( 8, 4, 19 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_deagle.mdl" );
+
+	vMin = Vector( -7, -2, -18 );
+	vMax = Vector( 7, 2, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_flashbang.mdl" );
+
+	vMin = Vector( -5, -5, -5 );
+	vMax = Vector( 5, 5, 14 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/w_flashbang.mdl" );
+
+	vMin = Vector( -31, -7, -19 );
+	vMax = Vector( 31, 5, 27 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_g3sg1.mdl" );
+
+	vMin = Vector( -33, -4, -20 );
+	vMax = Vector( 33, 7, 30 );
+	ENGINE_FORCE_UNMODIFIED( force_model_samebounds, (float *)&vMin, (float *)&vMax, "models/p_sg550.mdl" );
+
+	vMin = Vector( -8, -5, -18 );
+	vMax = Vector( 8, 4, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_glock18.mdl" );
+
+	vMin = Vector( -7, -2, -18 );
+	vMax = Vector( 7, 2, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_hegrenade.mdl" );
+
+	vMin = Vector( -5, -5, -5 );
+	vMax = Vector( 5, 5, 14 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/w_hegrenade.mdl" );
+
+	vMin = Vector( -7, -7, -18 );
+	vMax = Vector( 7, 5, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_knife.mdl" );
+
+	vMin = Vector( -29, -7, -18 );
+	vMax = Vector( 29, 5, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_m249.mdl" );
+
+	vMin = Vector( -21, -13, -18 );
+	vMax = Vector( 21, 23, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_m3.mdl" );
+
+	vMin = Vector( -22, -8, -19 );
+	vMax = Vector( 22, 4, 25 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_m4a1.mdl" );
+
+	vMin = Vector( -10, -6, -18 );
+	vMax = Vector( 10, 4, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_mac10.mdl" );
+
+	vMin = Vector( -23, -8, -18 );
+	vMax = Vector( 23, 3, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_mp5.mdl" );
+
+	vMin = Vector( -14, -2, -18 );
+	vMax = Vector( 14, 2, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_samebounds, (float *)&vMin, (float *)&vMax, "models/p_ump45.mdl" );
+
+	vMin = Vector( -10, -4, -18 );
+	vMax = Vector( 10, 4, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_p228.mdl" );
+
+	vMin = Vector( -15, -4, -18 );
+	vMax = Vector( 13, 6, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_p90.mdl" );
+
+	vMin = Vector( -32, -4, -19 );
+	vMax = Vector( 32, 5, 19 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_scout.mdl" );
+
+	vMin = Vector( -23, -5, -18 );
+	vMax = Vector( 23, 7, 19 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_sg552.mdl" );
+
+	vMin = Vector( -7, -2, -18 );
+	vMax = Vector( 7, 2, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_smokegrenade.mdl" );
+
+	vMin = Vector( -5, -5, -5 );
+	vMax = Vector( 5, 5, 14 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/w_smokegrenade.mdl" );
+
+	vMin = Vector( -15, -4, -18 );
+	vMax = Vector( 15, 6, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_tmp.mdl" );
+
+	vMin = Vector( -13, -4, -18 );
+	vMax = Vector( 13, 3, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_usp.mdl" );
+
+	vMin = Vector( -10, -4, -20 );
+	vMax = Vector( 10, 4, 20 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_elite.mdl" );
+
+	vMin = Vector( -8, -3, -18 );
+	vMax = Vector( 8, 3, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_fiveseven.mdl" );
+
+	vMin = Vector( -25, -19, -18 );
+	vMax = Vector( 25, 16, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_xm1014.mdl" );
 
 	// hud sounds
 
@@ -3127,15 +3401,10 @@ void ClientPrecache( void )
 	PRECACHE_SOUND("player/geiger1.wav");
 
 	if (giPrecacheGrunt)
-		UTIL_PrecacheOther("monster_human_grunt");
+		UTIL_PrecacheOther("enemy_terrorist");	// Counter-Strike 1.3 (1.1: the SDK's monster_human_grunt)
 
-	// Beta 6.5: sprites for the client (wall puffs, smoke, and a set named
-	// after the screen's sides and corners); for some the engine is told that
-	// the client's file must be the server's (force_exactfile; the bounds are
-	// not used for that, both point at one zero vector). temp is
-	// Counter-Strike 1.6's name (its debug information)
-	Vector temp = g_vecZero;
-
+	// Beta 6.5: sprites for the client (wall puffs, smoke, and a set named after
+	// the screen's sides and corners)
 	PRECACHE_MODEL("sprites/wall_puff1.spr");
 	PRECACHE_MODEL("sprites/wall_puff2.spr");
 	PRECACHE_MODEL("sprites/wall_puff3.spr");
@@ -3145,13 +3414,6 @@ void ClientPrecache( void )
 	PRECACHE_MODEL("sprites/black_smoke3.spr");
 	PRECACHE_MODEL("sprites/black_smoke4.spr");
 	PRECACHE_MODEL("sprites/fast_wallpuff1.spr");
-
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/black_smoke1.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/black_smoke2.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/black_smoke3.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/black_smoke4.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/fast_wallpuff1.spr" );
-
 	PRECACHE_MODEL("sprites/pistol_smoke1.spr");
 	PRECACHE_MODEL("sprites/pistol_smoke2.spr");
 	PRECACHE_MODEL("sprites/rifle_smoke1.spr");
@@ -3184,32 +3446,9 @@ void ClientPrecache( void )
 	PRECACHE_MODEL("sprites/vertical.spr");
 	PRECACHE_MODEL("sprites/horizontal.spr");
 
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom2.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom3.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom_left.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom_left2.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom_left3.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom_right.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom_right2.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/bottom_right3.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/left.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/left2.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/left3.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/right.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/right2.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/right3.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top2.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top3.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top_left.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top_left2.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top_left3.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top_right.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top_right2.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/top_right3.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/vertical.spr" );
-	ENGINE_FORCE_UNMODIFIED( force_exactfile, (float *)&temp, (float *)&temp, "sprites/horizontal.spr" );
+	// Counter-Strike 1.3: the event that removes every decal at a round's start
+	// (CleanUpMap plays it; the name is the Linux library's)
+	m_usResetDecals = PRECACHE_EVENT( 1, "events/decal_reset.sc" );
 }
 
 /*
@@ -3359,6 +3598,13 @@ void SetupVisibility( edict_t *pViewEntity, edict_t *pClient, unsigned char **pv
 		pView = pViewEntity;
 	}
 
+	if ( pClient->v.flags & FL_PROXY )
+	{
+		*pvs = NULL;	// the spectator proxy sees
+		*pas = NULL;	// and hears everything
+		return;
+	}
+
 	// Beta 6.5: an observer sees what the player he watches sees
 	CBasePlayer *pPlayer = (CBasePlayer *)CBaseEntity::Instance( pClient );
 
@@ -3378,6 +3624,83 @@ void SetupVisibility( edict_t *pViewEntity, edict_t *pClient, unsigned char **pv
 }
 
 #include "entity_state.h"
+
+// Counter-Strike 1.3: for each client, when each entity was last sent because it
+// was in his PVS, and the leafs he was in then (AddToFullPack).  Written from
+// retail's code; the types', members' and locals' names are Counter-Strike 1.6's
+// (its debug information), g_PVSStatus is the Linux library's.
+typedef struct
+{
+	float m_fTimeEnteredPVS;
+} ENTITYPVSSTATUS;
+
+typedef struct
+{
+	ENTITYPVSSTATUS m_Status[ 1380 ];
+
+	int headnode;
+	int num_leafs;
+	short leafnums[ MAX_ENT_LEAFS ];
+} PLAYERPVSSTATUS;
+
+static PLAYERPVSSTATUS g_PVSStatus[ 32 ];
+
+void ResetPlayerPVS( edict_t *client, int clientnum )
+{
+	PLAYERPVSSTATUS *pvs = &g_PVSStatus[ clientnum ];
+
+	memset( pvs, 0, sizeof( *pvs ) );
+
+	pvs->headnode = client->headnode;
+	pvs->num_leafs = client->num_leafs;
+	memcpy( pvs->leafnums, client->leafnums, sizeof( pvs->leafnums ) );
+}
+
+bool CheckPlayerPVSLeafChanged( edict_t *client, int clientnum )
+{
+	PLAYERPVSSTATUS *pvs = &g_PVSStatus[ clientnum ];
+
+	if ( pvs->headnode != client->headnode || pvs->num_leafs != client->num_leafs )
+		return true;
+
+	if ( client->num_leafs > 0 )
+	{
+		for ( int i = 0; i < client->num_leafs; i++ )
+		{
+			if ( client->leafnums[ i ] != pvs->leafnums[ i ] )
+				return true;
+		}
+	}
+
+	return false;
+}
+
+void MarkEntityInPVS( int clientnum, int entitynum, float time, bool inpvs )
+{
+	PLAYERPVSSTATUS *pvs = &g_PVSStatus[ clientnum ];
+	ENTITYPVSSTATUS *es = &pvs->m_Status[ entitynum ];
+
+	if ( inpvs )
+		es->m_fTimeEnteredPVS = time;
+	else
+		es->m_fTimeEnteredPVS = 0;
+}
+
+bool CheckEntityRecentlyInPVS( int clientnum, int entitynum, float currenttime )
+{
+	PLAYERPVSSTATUS *pvs = &g_PVSStatus[ clientnum ];
+	ENTITYPVSSTATUS *es = &pvs->m_Status[ entitynum ];
+
+	// never sent
+	if ( es->m_fTimeEnteredPVS == 0 )
+		return false;
+
+	// sent more than a second ago
+	if ( es->m_fTimeEnteredPVS + 1.0f < currenttime )
+		return false;
+
+	return true;
+}
 
 /*
 AddToFullPack
@@ -3411,13 +3734,27 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 		return 0;
 	}
 
+	// Counter-Strike 1.3: an entity that was sent to this client within the last
+	// second is sent without asking the engine; the record is cleared when the
+	// client's leafs change (hostnum is Counter-Strike 1.6's name)
+	int hostnum = ENTINDEX( host ) - 1;
+
+	if ( CheckPlayerPVSLeafChanged( host, hostnum ) )
+		ResetPlayerPVS( host, hostnum );
+
 	// Ignore if not the host and not touching a PVS/PAS leaf
 	// If pSet is NULL, then the test will always succeed and the entity will be added to the update
 	if ( ent != host )
 	{
-		if ( !ENGINE_CHECK_VISIBILITY( (const struct edict_s *)ent, pSet ) )
+		if ( !CheckEntityRecentlyInPVS( hostnum, e, gpGlobals->time ) )
 		{
-			return 0;
+			if ( !ENGINE_CHECK_VISIBILITY( (const struct edict_s *)ent, pSet ) )
+			{
+				MarkEntityInPVS( hostnum, e, gpGlobals->time, false );
+				return 0;
+			}
+
+			MarkEntityInPVS( hostnum, e, gpGlobals->time, true );
 		}
 	}
 
@@ -4096,6 +4433,11 @@ void CmdEnd ( const edict_t *player )
 	{
 		UTIL_UnsetGroupTrace();
 	}
+
+	// Counter-Strike 1.3: a ducking player gets the duck hull's size back after
+	// every command
+	if ( pl->pev->flags & FL_DUCKING )
+		UTIL_SetSize( pl->pev, VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX );
 }
 
 /*

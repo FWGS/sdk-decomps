@@ -33,6 +33,7 @@
 #include "../engine/shake.h"
 #include "decals.h"
 #include "gamerules.h"
+#include "studio.h"
 
 // #define DUCKFIX
 
@@ -54,6 +55,10 @@ int MapTextureTypeStepType(char chTextureType);
 extern CGraph	WorldGraph;
 
 extern cvar_t playerid;	// Counter-Strike 1.1: game.cpp's mp_playerid (declared here in Counter-Strike 1.6 too)
+extern cvar_t logdetail;	// Counter-Strike 1.3: game.cpp's mp_logdetail (LogAttack)
+extern cvar_t startmoney;	// Counter-Strike 1.3: game.cpp's mp_startmoney
+
+char *GetTeam( int teamNo );	// Counter-Strike 1.3: multiplay_gamerules.cpp's (declared here in Counter-Strike 1.6 too)
 
 #define	PLAYER_WALLJUMP_SPEED 300 // how fast we can spring off walls
 #define PLAYER_LONGJUMP_SPEED 350 // how fast we longjump
@@ -166,6 +171,7 @@ int gmsgFlashlight = 0;
 int gmsgFlashBattery = 0;
 int gmsgResetHUD = 0;
 int gmsgInitHUD = 0;
+int gmsgViewMode = 0;	// Counter-Strike 1.3: message ViewMode, no data (Linux symbol)
 int gmsgShowGameTitle = 0;
 int gmsgCurWeapon = 0;
 int gmsgHealth = 0;
@@ -183,6 +189,7 @@ int gmsgTeamInfo = 0;
 int gmsgTeamScore = 0;
 int gmsgGameMode = 0;
 int gmsgMOTD = 0;
+int gmsgServerName = 0;	// Counter-Strike 1.3: SDK 2.2's
 int gmsgAmmoPickup = 0;
 int gmsgWeapPickup = 0;
 int gmsgItemPickup = 0;
@@ -238,6 +245,7 @@ void LinkUserMessages( void )
 	gmsgWeaponList = REG_USER_MSG("WeaponList", -1);
 	gmsgResetHUD = REG_USER_MSG("ResetHUD", 0);		// called every respawn (Beta 5.0 (leak): no byte)
 	gmsgInitHUD = REG_USER_MSG("InitHUD", 0 );		// called every time a new player joins the server
+	gmsgViewMode = REG_USER_MSG("ViewMode", 0 );	// Counter-Strike 1.3
 	gmsgShowGameTitle = REG_USER_MSG("GameTitle", 1);
 	gmsgDeathMsg = REG_USER_MSG( "DeathMsg", -1 );
 	gmsgScoreAttrib = REG_USER_MSG( "ScoreAttrib", 2 );	// Beta 5.0 (leak)
@@ -246,6 +254,7 @@ void LinkUserMessages( void )
 	gmsgTeamScore = REG_USER_MSG( "TeamScore", -1 );  // sets the score of a team on the scoreboard
 	gmsgGameMode = REG_USER_MSG( "GameMode", 1 );
 	gmsgMOTD = REG_USER_MSG( "MOTD", -1 );
+	gmsgServerName = REG_USER_MSG( "ServerName", -1 );
 	gmsgAmmoPickup = REG_USER_MSG( "AmmoPickup", 2 );
 	gmsgWeapPickup = REG_USER_MSG( "WeapPickup", 1 );
 	gmsgItemPickup = REG_USER_MSG( "ItemPickup", -1 );
@@ -420,6 +429,27 @@ void CBasePlayer::Radio( const char *msg_id, const char *msg_verbose )
 	if ( !IsPlayer() )
 		return;
 
+	// Counter-Strike 1.3: the sentence's name out of the message ("%!MRAD_..."), the client's
+	// CHudSayText code; the speaker says it himself at the end.  Retail bug kept: strcat onto a
+	// buffer nothing has written
+	char szBuf[64];
+	char szSound[64];
+
+	strcat( szBuf, msg_id );
+
+	char *dst = szSound;
+	char *pszSound = strstr( szBuf, "%!" );
+	if ( pszSound )
+	{
+		char *src = pszSound + 1;
+
+		while ( *src > ' ' && *src < 'z' )
+			*dst++ = *src++;
+		*dst = 0;
+
+		strcpy( pszSound, src );
+	}
+
 	CBaseEntity *pPlayer = NULL;
 	pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
 	while ( pPlayer != NULL && !FNullEnt( pPlayer->edict() ) )
@@ -455,6 +485,8 @@ void CBasePlayer::Radio( const char *msg_id, const char *msg_verbose )
 		}
 		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
 	}
+
+	EMIT_SOUND( ENT(pev), CHAN_VOICE, szSound, 0.8, ATTN_NORM );
 }
 
 
@@ -741,6 +773,82 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 	}
 }
 
+// GetWeaponName - Counter-Strike 1.3: the name of what did the damage, for the log; the text is
+// CHalfLifeMultiplay::DeathNotice's (the names are Counter-Strike 1.6's)
+const char *GetWeaponName( entvars_t *pevInflictor, entvars_t *pKiller )
+{
+	int killer_index = 0;
+	const char *killer_weapon_name = "world";		// by default, the player is killed by the world
+
+	if ( pKiller->flags & FL_CLIENT )
+	{
+		killer_index = ENTINDEX(ENT(pKiller));
+		
+		if ( pevInflictor )
+		{
+			if ( pevInflictor == pKiller )
+			{
+				// If the inflictor is the killer,  then it must be their current weapon doing the damage
+				CBasePlayer *pPlayer = (CBasePlayer*)CBaseEntity::Instance( pKiller );
+				
+				if ( pPlayer && pPlayer->m_pActiveItem )
+				{
+					killer_weapon_name = pPlayer->m_pActiveItem->pszName();
+				}
+			}
+			else
+			{
+				killer_weapon_name = STRING( pevInflictor->classname );  // it's just that easy
+			}
+		}
+	}
+	else
+	{
+		killer_weapon_name = STRING( pevInflictor->classname );
+	}
+
+	// strip the monster_* or weapon_* from the inflictor's classname
+	if ( strncmp( killer_weapon_name, "weapon_", 7 ) == 0 )
+		killer_weapon_name += 7;
+	else if ( strncmp( killer_weapon_name, "monster_", 8 ) == 0 )
+		killer_weapon_name += 8;
+	else if ( strncmp( killer_weapon_name, "func_", 5 ) == 0 )
+		killer_weapon_name += 5;
+
+	return killer_weapon_name;
+}
+
+// LogAttack - Counter-Strike 1.3: one log line for a hit, when mp_logdetail asks for it (1: hits on
+// enemies, 2: hits on team mates, 3: both)
+void LogAttack( CBasePlayer *pAttacker, CBasePlayer *pVictim, int teamAttack, int healthHit, int armorHit, int newHealth, int newArmor, const char *killer_weapon_name )
+{
+	int detail = logdetail.value;
+
+	if ( !detail )
+		return;
+
+	if ( !pAttacker || !pVictim )
+		return;
+
+	if ( ( teamAttack && ( detail & 2 ) ) || ( !teamAttack && ( detail & 1 ) ) )
+	{
+		UTIL_LogPrintf( "\"%s<%i><%u><%s>\" attacked \"%s<%i><%u><%s>\" with \"%s\" (damage \"health:%d\") (damage \"armor:%d\") (health \"%d\") (armor \"%d\")\n",
+			STRING( pAttacker->pev->netname ),
+			GETPLAYERUSERID( pAttacker->edict() ),
+			GETPLAYERWONID( pAttacker->edict() ),
+			GetTeam( pAttacker->m_iTeam ),
+			STRING( pVictim->pev->netname ),
+			GETPLAYERUSERID( pVictim->edict() ),
+			GETPLAYERWONID( pVictim->edict() ),
+			GetTeam( pVictim->m_iTeam ),
+			killer_weapon_name,
+			healthHit,
+			armorHit,
+			newHealth,
+			newArmor );
+	}
+}
+
 /*
 	Take some damage.  
 	NOTE: each call to TakeDamage with bitsDamageType set to a time-based damage
@@ -764,6 +872,9 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	float flRatio;
 	float flHealthPrev = pev->health;
 	int iGunType;	// Beta 7.0: the attacker's weapon (Counter-Strike 1.6's name)
+	// Counter-Strike 1.3: what LogAttack is told (Counter-Strike 1.6's names)
+	int teamAttack = FALSE, armorHit = 0;
+	CBasePlayer *pAttack = NULL;
 
 	flBonus = ARMOR_BONUS;
 	flRatio = ARMOR_RATIO;
@@ -782,15 +893,30 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 
 		// an HE grenade spares the thrower's team unless mp_friendlyfire (Beta 5.0 leak;
 		// Beta 4.0 to 4.1: mp_friendly_grenade_damage)
-		if ( CVAR_GET_FLOAT( "mp_friendlyfire" ) == 0 && ( bitsDamageType & DMG_HEGRENADE ) )
+		// Counter-Strike 1.3: with mp_friendlyfire the thrower is the attacker of the log line
+		// (the locals' names are Counter-Strike 1.6's)
+		if ( bitsDamageType & DMG_HEGRENADE )
 		{
-			CBaseEntity *pInflictor = GetClassPtr( (CBaseEntity *)pevInflictor );	// name ours
+			CGrenade *pGrenade;
+			CBaseEntity *temp = GetClassPtr( (CBaseEntity *)pevInflictor );
 
-			if ( !strcmp( STRING( pInflictor->pev->classname ), "grenade" ) )
+			if ( !strcmp( STRING( temp->pev->classname ), "grenade" ) )
 			{
-				// Beta 5.0: the thrower's own grenade hurts him
-				if ( GetClassPtr( (CGrenade *)pevInflictor )->m_iTeam == m_iTeam && &edict()->v != pevAttacker )
-					return 0;
+				pGrenade = GetClassPtr( (CGrenade *)pevInflictor );
+
+				if ( CVAR_GET_FLOAT( "mp_friendlyfire" ) == 0 )
+				{
+					// Beta 5.0: the thrower's own grenade hurts him
+					if ( pGrenade->m_iTeam == m_iTeam && &edict()->v != pevAttacker )
+						return 0;
+				}
+				else
+				{
+					if ( pGrenade->m_iTeam == m_iTeam )
+						teamAttack = TRUE;
+
+					pAttack = (CBasePlayer *)CBaseEntity::Instance( pevAttacker );
+				}
 			}
 		}
 
@@ -803,20 +929,26 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 				 ( m_iKevlar == 2 && ( m_LastHitGroup == HITGROUP_CHEST || m_LastHitGroup == HITGROUP_STOMACH || m_LastHitGroup == HITGROUP_GENERIC || m_LastHitGroup == HITGROUP_LEFTARM || m_LastHitGroup == HITGROUP_RIGHTARM || m_LastHitGroup == HITGROUP_HEAD ) ) )
 			{
 				float flNew = flDamage * flRatio;
-
 				float flArmor;
 
 				flArmor = flDamage - flNew;
 
 				// Does this use more armor than we have?
+				// Counter-Strike 1.3: armorHit, the armour lost (when there is too little: what was asked for)
 				if (flArmor > pev->armorvalue)
 				{
+					armorHit = flArmor;
 					flArmor = pev->armorvalue;
 					flNew = flDamage - flArmor;
 					pev->armorvalue = 0;
 				}
 				else
+				{
+					int oldValue = pev->armorvalue;
+
 					pev->armorvalue -= flArmor;
+					armorHit = oldValue - (int)pev->armorvalue;
+				}
 
 				flDamage = flNew;
 
@@ -829,9 +961,9 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		else
 			Pain( m_LastHitGroup, false );
 
-		flDamage = m_lastDamageAmount = (int)flDamage;
+		m_lastDamageAmount = flDamage;
 
-		if ( flDamage >= pev->health )
+		if ( (int)flDamage >= pev->health )
 		{
 			if ( bitsDamageType & DMG_BLAST )
 				m_fKilledByBlast = true;
@@ -844,19 +976,29 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 			Pain( m_LastHitGroup, false );
 		}
 
-		flDamage = CBaseMonster::TakeDamage( pevInflictor, pevAttacker, flDamage, bitsDamageType );
+		LogAttack( pAttack, this, teamAttack, (int)flDamage, armorHit, (int)pev->health - (int)flDamage, (int)pev->armorvalue, GetWeaponName( pevInflictor, pevAttacker ) );
+
+		float fTookDamage = CBaseMonster::TakeDamage( pevInflictor, pevAttacker, (int)flDamage, bitsDamageType );
 
 		// reset damage time countdown for each type of time based damage player just sustained
 		for ( int i = 0; i < CDMG_TIMEBASED; i++ )
 			if ( bitsDamageType & ( DMG_PARALYZE << i ) )
 				m_rgbTimeBasedDamage[i] = 0;
 
+		// tell director about it
+		MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
+			WRITE_BYTE ( DRC_EVENT );	// take damage event
+			WRITE_SHORT( ENTINDEX(this->edict()) );	// index number of primary entity
+			WRITE_SHORT( ENTINDEX(ENT(pevInflictor)) );	// index number of secondary entity
+			WRITE_LONG( 5 );   // eventflags (priority and flags)
+		MESSAGE_END();
+
 		ALERT( at_console, "EXPLOSION DAMAGE\n" );	// Beta 5.0 (leak)
 
-		return flDamage;
+		return fTookDamage;
 	}
 
-	CBasePlayer *pAttacker = (CBasePlayer *)CBaseEntity::Instance( pevAttacker );
+	CBaseEntity *pAttacker = CBaseEntity::Instance( pevAttacker );
 
 	// Beta 4.0: a grenade's damage is taken whatever the rules say
 	if ( !g_pGameRules->FPlayerCanTakeDamage( this, pAttacker ) && strcmp( "grenade", STRING( pevInflictor->classname ) ) )
@@ -874,20 +1016,22 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	// a player's hits: half damage to a team mate (and to himself), who is told
 	// so (Beta 5.0 leak: the money for hitting an enemy is gone)
 	// Beta 6.5: the attacker's entity is checked before it is asked
-	CBaseEntity *pAttack = GetClassPtr( (CBaseEntity *)pevAttacker );	// name ours
+	CBaseEntity *attacker = GetClassPtr( (CBaseEntity *)pevAttacker );	// Counter-Strike 1.6's name
 
-	if ( pAttack && pAttack->IsPlayer() )
+	if ( attacker && attacker->IsPlayer() )
 	{
-		pAttacker = GetClassPtr( (CBasePlayer *)pevAttacker );
+		pAttack = GetClassPtr( (CBasePlayer *)pevAttacker );
 
-		if ( pAttacker->m_iTeam == m_iTeam )
+		if ( pAttack->m_iTeam == m_iTeam )
 		{
 			// the victim's history decides whether the attacker hears the hint (sic)
 			if ( !( m_flDisplayHistory & 0x200 ) )
 			{
 				m_flDisplayHistory |= 0x200;
-				pAttacker->HintMessage( "#Hint_try_not_to_injure_teammates", FALSE, FALSE );
+				pAttack->HintMessage( "#Hint_try_not_to_injure_teammates", FALSE, FALSE );
 			}
+
+			teamAttack = TRUE;
 
 			// Beta 7.0: the attacker's team reads it in the chat, at most once in
 			// 0.6 seconds (6.6: "You injured a teammate!" in the middle of the
@@ -896,9 +1040,9 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 			// every player of the victim's team (1.0b: "%s attacked a teammate\n"
 			// written to a static buffer and passed to TeamPrint, which 1.1 no
 			// longer has). The locals' names are Counter-Strike 1.6's.
-			if ( ( pAttacker->m_flLastAttackedTeammate + 0.6 ) < gpGlobals->time )
+			if ( ( pAttack->m_flLastAttackedTeammate + 0.6 ) < gpGlobals->time )
 			{
-				pAttacker->m_flLastAttackedTeammate = gpGlobals->time;
+				pAttack->m_flLastAttackedTeammate = gpGlobals->time;
 
 				CBaseEntity *pBasePlayer = NULL;
 				CBasePlayer *basePlayer;
@@ -911,13 +1055,13 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 					basePlayer = GetClassPtr( (CBasePlayer *)pBasePlayer->pev );
 
 					if ( basePlayer->m_iTeam == m_iTeam )
-						ClientPrint( basePlayer->pev, HUD_PRINTTALK, "#Game_teammate_attack", STRING( pAttacker->pev->netname ) );
+						ClientPrint( basePlayer->pev, HUD_PRINTTALK, "#Game_teammate_attack", STRING( pAttack->pev->netname ) );
 				}
 			}
 		}
 
 		// Beta 7.0: 35% (6.6: half)
-		if ( pAttacker->m_iTeam == m_iTeam )
+		if ( pAttack->m_iTeam == m_iTeam )
 			flDamage *= 0.35;
 
 		// Beta 3.0: how much of the damage the armour lets through depends
@@ -935,9 +1079,9 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		// whose case is gone
 		// Beta 7.0: the weapon's number is kept for the flinch below; without
 		// a weapon it is not set (sic)
-		if ( pAttacker->m_pActiveItem )
+		if ( pAttack->m_pActiveItem )
 		{
-		iGunType = pAttacker->m_pActiveItem->m_iId;
+		iGunType = pAttack->m_pActiveItem->m_iId;
 
 		switch ( iGunType )
 		{
@@ -1007,7 +1151,7 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 			{
 				Vector attack_velocity;	// Counter-Strike 1.6's name
 
-				attack_velocity = pev->origin - pAttacker->pev->origin;
+				attack_velocity = pev->origin - pAttack->pev->origin;
 				attack_velocity = attack_velocity.Normalize();
 				m_flVelocityModifier = 0.65;
 				attack_velocity = pev->velocity + attack_velocity * 170;
@@ -1040,7 +1184,6 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 			 ( m_iKevlar == 2 && ( m_LastHitGroup == HITGROUP_CHEST || m_LastHitGroup == HITGROUP_STOMACH || m_LastHitGroup == HITGROUP_GENERIC || m_LastHitGroup == HITGROUP_LEFTARM || m_LastHitGroup == HITGROUP_RIGHTARM || m_LastHitGroup == HITGROUP_HEAD ) ) )
 		{
 			float flNew = flDamage * flRatio;
-
 			float flArmor;
 
 			flArmor = (flDamage - flNew) * flBonus;
@@ -1048,13 +1191,19 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 			// Does this use more armor than we have?
 			if (flArmor > pev->armorvalue)
 			{
+				armorHit = flArmor;
 				flArmor = pev->armorvalue;
 				flArmor *= (1/flBonus);
 				flNew = flDamage - flArmor;
 				pev->armorvalue = 0;
 			}
 			else
+			{
+				int oldValue = pev->armorvalue;
+
 				pev->armorvalue -= flArmor;
+				armorHit = oldValue - (int)pev->armorvalue;
+			}
 
 			flDamage = flNew;
 
@@ -1067,6 +1216,8 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	else
 		Pain( m_LastHitGroup, false );
 
+	LogAttack( pAttack, this, teamAttack, (int)flDamage, armorHit, (int)pev->health - (int)flDamage, (int)pev->armorvalue, GetWeaponName( pevInflictor, pevAttacker ) );
+
 	// this cast to INT is critical!!! If a player ends up with 0.5 health, the engine will get that
 	// as an int (zero) and think the player is dead! (this will incite a clientside screentilt, etc)
 	fTookDamage = CBaseMonster::TakeDamage(pevInflictor, pevAttacker, (int)flDamage, bitsDamageType);
@@ -1078,6 +1229,14 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 			if (bitsDamageType & (DMG_PARALYZE << i))
 				m_rgbTimeBasedDamage[i] = 0;
 	}
+
+	// tell director about it
+	MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
+		WRITE_BYTE ( DRC_EVENT );	// take damage event
+		WRITE_SHORT( ENTINDEX(this->edict()) );	// index number of primary entity
+		WRITE_SHORT( ENTINDEX(ENT(pevInflictor)) );	// index number of secondary entity
+		WRITE_LONG( 5 );   // eventflags (priority and flags)
+	MESSAGE_END();
 
 
 	// how bad is it, doc?
@@ -1487,8 +1646,31 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	}
 
 	SetAnimation( PLAYER_DIE );
-		
+
 	m_iRespawnFrames = 0;
+
+	// Counter-Strike 1.3: a grenade held with the pin out (the attack button down) leaves his hand.
+	// Retail passes his angles for the throw's velocity
+	if ( m_pActiveItem && m_pActiveItem->m_pPlayer )
+	{
+		if ( m_pActiveItem->m_iId == WEAPON_HEGRENADE )
+		{
+			if ( pev->button & IN_ATTACK )
+				CGrenade::ShootTimed2( pev, pev->origin + pev->view_ofs, pev->angles, 1.5, m_iTeam );
+		}
+		else if ( m_pActiveItem->m_iId == WEAPON_FLASHBANG )
+		{
+			if ( pev->button & IN_ATTACK )
+				CGrenade::ShootTimed( pev, pev->origin + pev->view_ofs, pev->angles, 1.5 );
+		}
+		else if ( m_pActiveItem->m_iId == WEAPON_SMOKEGRENADE )
+		{
+			CSmokeGrenade *pSmoke = (CSmokeGrenade *)m_pActiveItem;	// Counter-Strike 1.6's name
+
+			if ( pev->button & IN_ATTACK )
+				CGrenade::ShootSmokeGrenade( pev, pev->origin + pev->view_ofs, pev->angles, 1.5, pSmoke->m_usCreateSmoke );
+		}
+	}
 
 	pev->modelindex = g_ulModelIndexPlayer;    // don't use eyes
 
@@ -2576,6 +2758,8 @@ void CBasePlayer::MakeVIP( void )
 	((CHalfLifeMultiplay *)g_pGameRules)->m_iConsecutiveVIP = 1;
 }
 
+void CheckStartMoney( void );	// Counter-Strike 1.3: client.cpp's (declared at this place in Counter-Strike 1.6 too)
+
 //=========================================================
 // JoiningThink - Beta 5.0 (leak) (Linux symbol): a player
 // who has connected but not joined (m_iJoiningState):
@@ -2596,7 +2780,7 @@ void CBasePlayer::MakeVIP( void )
 //=========================================================
 void CBasePlayer::JoiningThink( void )
 {
-	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// names ours
+	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// Counter-Strike 1.6's names (mp, MPRules, pentSpawnSpot)
 
 	switch ( m_iJoiningState )
 	{
@@ -2655,6 +2839,7 @@ void CBasePlayer::JoiningThink( void )
 		break;
 
 	case JOIN_SPAWN:
+	{
 		m_fNotKilled = false;
 		m_fKicked = false;
 		m_iIgnoreMessages = 0;
@@ -2665,23 +2850,27 @@ void CBasePlayer::JoiningThink( void )
 		ResetMaxSpeed();
 		m_iJoiningState = JOIN_DONE;
 
-		mp = (CHalfLifeMultiplay *)g_pGameRules;
+		CHalfLifeMultiplay *MPRules = (CHalfLifeMultiplay *)g_pGameRules;
 
 		// Beta 6.0: on an escape map a counter-terrorist starts with 3000
-		if ( mp->m_bMapHasEscapeZone == true && m_iTeam == TEAM_CT )
+		if ( MPRules->m_bMapHasEscapeZone == true && m_iTeam == TEAM_CT )
 		{
 			m_iAccount = 0;
-			AddAccount( 3000, TRUE );
+			// Counter-Strike 1.3: mp_startmoney (Beta 6.0 to 1.1: 3000)
+			CheckStartMoney();
+			AddAccount( (int)startmoney.value, TRUE );
 		}
 
 		if ( !g_pGameRules->FPlayerCanRespawn( this ) )
 		{
 			pev->deadflag = DEAD_RESPAWNABLE;
 			pev->classname = MAKE_STRING( "player" );
-			pev->flags = FL_SPECTATOR | FL_CLIENT;
+			pev->flags &= FL_PROXY;	// keep proxy flag sey by engine
+			pev->flags |= FL_SPECTATOR | FL_CLIENT;
 			m_fTeamChanged = false;	// Beta 5.0
-			StartObserver( pev->origin, VARS( mp->GetPlayerSpawnSpot( this ) )->angles );
-			mp->CheckWinConditions();
+			edict_t *pentSpawnSpot = MPRules->GetPlayerSpawnSpot( this );
+			StartObserver( pev->origin, VARS( pentSpawnSpot )->angles );
+			MPRules->CheckWinConditions();
 
 			// Beta 7.0: everybody learns his team and score, as Spawn tells them
 			MESSAGE_BEGIN( MSG_ALL, gmsgTeamInfo );
@@ -2707,38 +2896,40 @@ void CBasePlayer::JoiningThink( void )
 		}
 
 		Spawn();
-		mp->CheckWinConditions();
+		MPRules->CheckWinConditions();
 
 		// the first of each team to spawn when no restart is pending commands it
-		if ( mp->m_flRestartRoundTime == 0 )
+		if ( MPRules->m_flRestartRoundTime == 0 )
 		{
 			if ( m_iTeam == TEAM_CT )
 			{
-				if ( !mp->m_pCTCommander )
-					mp->m_pCTCommander = this;
+				if ( !MPRules->m_pCTCommander )
+					MPRules->m_pCTCommander = this;
 			}
 			else
 			{
-				if ( !mp->m_pTerroristCommander )
+				if ( !MPRules->m_pTerroristCommander )
 				{
-					if ( mp->m_fMapHasBombTarget )
-						mp->GiveC4();
+					if ( MPRules->m_fMapHasBombTarget )
+						MPRules->GiveC4();
 					else
-						mp->m_pTerroristCommander = this;
+						MPRules->m_pTerroristCommander = this;
 				}
 			}
 		}
 
 		// Beta 6.0: one more terrorist who can escape this round
 		if ( m_iTeam == TEAM_TERRORIST )
-			mp->m_iNumEscapers++;
+			MPRules->m_iNumEscapers++;
 		return;
+	}
 	}
 
 	// the intro cameras
 	if ( m_pIntroCamera && gpGlobals->time >= m_flIntroCameraTime )
 	{
-		Vector vecAngles;	// names ours
+		CBaseEntity *Target;	// Counter-Strike 1.6's names
+		Vector CamAngles;
 
 		m_pIntroCamera = UTIL_FindEntityByClassname( m_pIntroCamera, "trigger_camera" );
 		if ( !m_pIntroCamera )
@@ -2746,20 +2937,20 @@ void CBasePlayer::JoiningThink( void )
 
 		// Beta 5.0: the camera looks at its target (the leak took the camera's
 		// angles); one without a target ends the tour
-		CBaseEntity *pTarget = UTIL_FindEntityByTargetname( NULL, STRING( m_pIntroCamera->pev->target ) );
-		if ( !pTarget )
+		Target = UTIL_FindEntityByTargetname( NULL, STRING( m_pIntroCamera->pev->target ) );
+		if ( !Target )
 		{
 			m_pIntroCamera = NULL;
 			return;
 		}
 
-		vecAngles = pTarget->pev->origin - m_pIntroCamera->pev->origin;
-		vecAngles = vecAngles.Normalize();
-		vecAngles = UTIL_VecToAngles( vecAngles );
-		vecAngles.x = -vecAngles.x;
+		CamAngles = Target->pev->origin - m_pIntroCamera->pev->origin;
+		CamAngles = CamAngles.Normalize();
+		CamAngles = UTIL_VecToAngles( CamAngles );
+		CamAngles.x = -CamAngles.x;
 
 		UTIL_SetOrigin( pev, m_pIntroCamera->pev->origin );
-		pev->angles = vecAngles;
+		pev->angles = CamAngles;
 		pev->v_angle = pev->angles;
 		pev->velocity = g_vecZero;
 		pev->punchangle = g_vecZero;
@@ -3815,12 +4006,13 @@ bool CBasePlayer::CanPlayerBuy( bool display )
 	// half a minute (Beta 7.0 to 1.0b: 90 seconds; 6.6: 60). Every reason has a
 	// title of the client's now and returns at once; 1.0b copied an English
 	// sentence to a buffer and printed the last one that applied.
+	// Counter-Strike 1.3: at least a quarter of a minute
 	int buyTime = (int)( CVAR_GET_FLOAT( "mp_buytime" ) * 60 );	// Counter-Strike 1.6's name
 
-	if ( buyTime < 30 )
+	if ( buyTime < 15 )
 	{
-		buyTime = 30;
-		CVAR_SET_FLOAT( "mp_buytime", 0.5 );
+		buyTime = 15;
+		CVAR_SET_FLOAT( "mp_buytime", 0.25 );
 	}
 
 	if ( gpGlobals->time - mp->m_flRoundStartTime > buyTime )
@@ -4837,9 +5029,6 @@ void CBasePlayer::PostThink()
 
 	// (Beta 5.0 (leak) checked the zones here; Beta 5.0: UpdateClientData)
 
-	// Track button info so we can detect 'pressed' and 'released' buttons next frame
-	m_afButtonLast = pev->button;
-
 pt_end:
 #if defined( CLIENT_WEAPONS )
 		// Decay timers on weapons
@@ -4875,6 +5064,15 @@ pt_end:
 	m_flNextAttack -= gpGlobals->frametime;
 	if ( m_flNextAttack < -0.001 )
 		m_flNextAttack = -0.001;
+
+	// Counter-Strike 1.3: the buttons are kept here, behind pt_end (a dead player's too), and the
+	// server animates the gait itself (animation.cpp reads the results for the hit boxes)
+	// Track button info so we can detect 'pressed' and 'released' buttons next frame
+	m_afButtonLast = pev->button;
+
+	m_iGaitsequence = pev->gaitsequence;
+
+	StudioProcessGait();
 #else
 	return;
 #endif
@@ -5099,6 +5297,13 @@ void CBasePlayer::WindowCheck( void )
 
 void CBasePlayer::Spawn( void )
 {
+	// Counter-Strike 1.3: the gait starts afresh
+	m_iGaitsequence		= 0;
+	m_flGaitframe		= 0;
+	m_flGaityaw			= 0;
+	m_prevgaitorigin	= Vector( 0, 0, 0 );
+	m_flGaitMovement	= 0;
+
 	pev->classname		= MAKE_STRING("player");
 	pev->health			= 100;
 
@@ -5114,7 +5319,8 @@ void CBasePlayer::Spawn( void )
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_WALK;
 	pev->max_health		= pev->health;
-	pev->flags			= FL_CLIENT;
+	pev->flags		   &= FL_PROXY;	// keep proxy flag sey by engine
+	pev->flags		   |= FL_CLIENT;
 	pev->air_finished	= gpGlobals->time + 12;
 	pev->dmg			= 2;				// initial water damage
 	pev->effects		= 0;
@@ -5333,6 +5539,8 @@ void CBasePlayer::Spawn( void )
 
 	ResetMaxSpeed();
 
+	UTIL_SetOrigin( pev, pev->origin );	// Counter-Strike 1.3
+
 	// Beta 6.0: the VIP: helmet and 200 armour, only the knife (Beta 7.0: and a USP)
 	if ( m_bIsVIP == true )
 	{
@@ -5356,6 +5564,8 @@ void CBasePlayer::Spawn( void )
 			WRITE_STRING( "CT" );
 		else if ( m_iTeam == TEAM_TERRORIST )
 			WRITE_STRING( "TERRORIST" );
+		else if ( m_iTeam == TEAM_SPECTATOR )	// Counter-Strike 1.3
+			WRITE_STRING( "SPECTATOR" );
 		else
 			WRITE_STRING( "UNASSIGNED" );
 	MESSAGE_END();
@@ -5435,11 +5645,12 @@ inline void SetScoreAttrib( CBasePlayer *dest, CBasePlayer *src )
 {
 	int state = ( src->pev->deadflag != DEAD_NO );
 
-	if ( src->m_bHasC4 && dest->m_iTeam == src->m_iTeam )
+	// Counter-Strike 1.3: the spectators see both marks too
+	if ( src->m_bHasC4 && ( dest->m_iTeam == src->m_iTeam || dest->m_iTeam == TEAM_SPECTATOR ) )
 		state |= 2;
 
 	// Beta 6.0: the VIP, to his team
-	if ( src->m_bIsVIP == true && dest->m_iTeam == src->m_iTeam )
+	if ( src->m_bIsVIP == true && ( dest->m_iTeam == src->m_iTeam || dest->m_iTeam == TEAM_SPECTATOR ) )
 		state |= 4;
 
 	// 1.0: only once the message is registered
@@ -5545,21 +5756,23 @@ void CBasePlayer::Reset( void )
 	m_iAccount = 0;
 	AddAccount( -16000, false );
 
-	// Beta 6.5: no armour
-	pev->armorvalue = 0;
-	m_iKevlar = 0;
+	// Counter-Strike 1.3: his ammunition goes at the next spawn (Beta 6.5 to 1.1: no armour)
+	m_fNotKilled = false;
 
 	// Beta 6.0: a counter-terrorist on an escape map starts with 3000 (sic: the
-	// console says the map has no escape zone for a terrorist on one)
+	// console says the map has no escape zone for a terrorist on one).
+	// Counter-Strike 1.3: everybody starts with mp_startmoney (1.1: 3000 and 800)
 	if ( UTIL_FindEntityByClassname( NULL, "func_escapezone" ) && m_iTeam == TEAM_CT )
 	{
 		ALERT( at_console, "This map has an escape zone\n" );
-		AddAccount( 3000, true );
+		CheckStartMoney();
+		AddAccount( (int)startmoney.value, true );
 	}
 	else
 	{
 		ALERT( at_console, "This map DOES NOT have an escape zone\n" );
-		AddAccount( 800, true );
+		CheckStartMoney();
+		AddAccount( (int)startmoney.value, true );
 	}
 
 	MESSAGE_BEGIN( MSG_ALL, gmsgScoreInfo );
@@ -7830,25 +8043,6 @@ void CBasePlayer::SwitchTeam( void )
 	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, ( m_iTeam == TEAM_TERRORIST ) ? "#Game_join_terrorist_auto" : "#Game_join_ct_auto",
 		( pev->netname && STRING( pev->netname )[0] != 0 ) ? STRING( pev->netname ) : "<unconnected>" );
 
-	char *szOldTeam;	// Counter-Strike 1.6's names
-	char *szNewTeam;
-
-	switch ( oldTeam )
-	{
-	case TEAM_TERRORIST:
-		szOldTeam = "TERRORIST";
-		break;
-	case TEAM_CT:
-		szOldTeam = "CT";
-		break;
-	case TEAM_SPECTATOR:
-		szOldTeam = "SPECTATOR";
-		break;
-	default:
-		szOldTeam = "";
-		break;
-	}
-
 	// a counter-terrorist's defuse kit does not change sides with him
 	if ( m_fHasDefuser )
 	{
@@ -7876,14 +8070,10 @@ void CBasePlayer::SwitchTeam( void )
 		}
 	}
 
-	if ( m_iTeam == TEAM_TERRORIST )
-		szNewTeam = "TERRORIST";
-	else if ( m_iTeam == TEAM_CT )
-		szNewTeam = "CT";
-	else if ( m_iTeam == TEAM_SPECTATOR )
-		szNewTeam = "SPECTATOR";
-	else
-		szNewTeam = "UNASSIGNED";
+	// Counter-Strike 1.3: both names are GetTeam's (1.1: a switch for the old team and "UNASSIGNED"
+	// for a new team that is none of the three)
+	char *szOldTeam = GetTeam( oldTeam );	// Counter-Strike 1.6's names
+	char *szNewTeam = GetTeam( m_iTeam );
 
 	UTIL_LogPrintf( "\"%s<%i><%u><%s>\" joined team \"%s\" (auto)\n", STRING( pev->netname ), GETPLAYERUSERID( edict() ), GETPLAYERWONID( edict() ), szOldTeam, szNewTeam );
 }
@@ -8161,4 +8351,281 @@ void CInfoIntermission::Think ( void )
 
 LINK_ENTITY_TO_CLASS( info_intermission, CInfoIntermission );
 
+// Counter-Strike 1.3: four bytes of player.obj's uninitialised data that no code
+// reads or writes (retail has them behind g_pLastTerroristSpawn, at 0x100e0ef0).
+// The 1.3 Linux library has a file-local pstudiohdr of four bytes at that place
+// of player.cpp's data, behind g_pLastTerroristSpawn too: the name is its symbol,
+// the type is the name's usual one, and where in the file it stood is not shown
+// (VC6 orders uninitialised data by a hash of the names).
+static studiohdr_t *pstudiohdr;
 
+/*
+====================
+StudioEstimateGait
+
+====================
+*/
+void CBasePlayer::StudioEstimateGait( void )
+{
+	float dt;
+	Vector est_velocity;
+
+	dt = gpGlobals->frametime;
+	dt = max( 0.0, dt );
+	dt = min( 1.0, dt );
+
+	if (dt == 0)
+	{
+		m_flGaitMovement = 0;
+		return;
+	}
+
+	est_velocity = pev->origin - m_prevgaitorigin;
+	m_prevgaitorigin = pev->origin;
+	m_flGaitMovement = est_velocity.Length();
+	if (dt <= 0 || m_flGaitMovement / dt < 5)
+	{
+		m_flGaitMovement = 0;
+		est_velocity.x = 0;
+		est_velocity.y = 0;
+	}
+
+	if (est_velocity.y == 0 && est_velocity.x == 0)
+	{
+		float flYawDiff = pev->angles.y - m_flGaityaw;
+		flYawDiff = flYawDiff - (int)(flYawDiff / 360) * 360;
+		if (flYawDiff > 180)
+			flYawDiff -= 360;
+		if (flYawDiff < -180)
+			flYawDiff += 360;
+
+		if (dt < 0.25)
+			flYawDiff *= dt * 4;
+		else
+			flYawDiff *= dt;
+
+		m_flGaityaw += flYawDiff;
+		m_flGaityaw = m_flGaityaw - (int)(m_flGaityaw / 360) * 360;
+
+		m_flGaitMovement = 0;
+	}
+	else
+	{
+		m_flGaityaw = (atan2(est_velocity.y, est_velocity.x) * 180 / M_PI);
+		if (m_flGaityaw > 180)
+			m_flGaityaw = 180;
+		if (m_flGaityaw < -180)
+			m_flGaityaw = -180;
+	}
+}
+
+/*
+====================
+StudioPlayerBlend
+
+====================
+*/
+void CBasePlayer::StudioPlayerBlend( int *pBlend, float *pPitch )
+{
+	// calc up/down pointing
+	float range = 45.0;
+
+	*pBlend = (*pPitch * 3);
+
+	if ( *pBlend <= -range )
+	{
+		*pBlend = 255;
+	}
+	else if ( *pBlend >= range )
+	{
+		*pBlend = 0;
+	}
+	else
+	{
+		*pBlend = 255 * ( range - *pBlend ) / ( 2 * range );
+	}
+
+	*pPitch = 0;
+}
+
+/*
+====================
+CalculatePitchBlend
+
+====================
+*/
+void CBasePlayer::CalculatePitchBlend( void )
+{
+	int iBlend;
+	float temp;
+
+	temp = pev->angles.x;
+	StudioPlayerBlend( &iBlend, &temp );
+
+	pev->blending[1] = iBlend;
+	m_flPitch = iBlend;
+}
+
+/*
+====================
+CalculateYawBlend
+
+====================
+*/
+void CBasePlayer::CalculateYawBlend( void )
+{
+	float dt;
+	float flYaw;	 // view direction relative to movement
+
+	dt = gpGlobals->frametime;
+	dt = max( 0.0, dt );
+	dt = min( 1.0, dt );
+
+	StudioEstimateGait();
+
+	// calc side to side turning
+	flYaw = pev->angles.y - m_flGaityaw;
+
+	flYaw = fmod( flYaw, 360.0 );
+
+	if (flYaw < -180)
+	{
+		flYaw = flYaw + 360;
+	}
+	else if (flYaw > 180)
+	{
+		flYaw = flYaw - 360;
+	}
+
+	float maxyaw = 120.0;
+
+	if (flYaw > maxyaw)
+	{
+		m_flGaityaw = m_flGaityaw - 180;
+		m_flGaitMovement = -m_flGaitMovement;
+		flYaw = flYaw - 180;
+	}
+	else if (flYaw < -maxyaw)
+	{
+		m_flGaityaw = m_flGaityaw + 180;
+		m_flGaitMovement = -m_flGaitMovement;
+		flYaw = flYaw + 180;
+	}
+
+	float blend_yaw = ( flYaw / 90.0 ) * 128.0 + 127.0;
+	blend_yaw = min( 255.0, blend_yaw );
+	blend_yaw = max( 0.0, blend_yaw );
+	
+	blend_yaw = 255.0 - blend_yaw;
+
+	pev->blending[0] = (int)(blend_yaw);
+	m_flYaw = blend_yaw;
+}
+
+/*
+====================
+StudioProcessGait
+
+====================
+*/
+void CBasePlayer::StudioProcessGait( void )
+{
+	mstudioseqdesc_t	*pseqdesc;
+	float dt;
+
+	dt = gpGlobals->frametime;
+	dt = max( 0.0, dt );
+	dt = min( 1.0, dt );
+
+	// sic: a stand-in.  Retail keeps dt in a 4-byte slot across the two calls (264 bytes); with dt
+	// used once, as below, the compiler carries the clamp's double instead (an 8-byte slot, 280
+	// bytes).  Measured: a pointer or a reference to dt anywhere in the function gives retail's
+	// code, and so does a second use of dt, even one the optimiser removes (under a local that is
+	// always 0); a use the front end removes (if ( 0 ), an unused local's initialiser, code behind
+	// the return) does not.  Which of these the text had is not shown
+	float *pdt = &dt;
+
+	CalculateYawBlend();
+	CalculatePitchBlend();
+
+	studiohdr_t *pstudiohdr = (studiohdr_t *)GET_MODEL_PTR( ENT(pev) );
+
+	if (!pstudiohdr)
+		return;
+
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + pev->gaitsequence;
+
+	// Calc gait frame
+	if (pseqdesc->linearmovement[0] > 0)
+	{
+		m_flGaitframe += (m_flGaitMovement / pseqdesc->linearmovement[0]) * pseqdesc->numframes;
+	}
+	else
+	{
+		m_flGaitframe += pseqdesc->fps * dt * pev->framerate;
+	}
+
+	// Do modulo
+	m_flGaitframe = m_flGaitframe - (int)(m_flGaitframe / pseqdesc->numframes) * pseqdesc->numframes;
+	if (m_flGaitframe < 0)
+	{
+		m_flGaitframe += pseqdesc->numframes;
+	}
+}
+
+/*
+====================
+GetPlayerPitch
+
+====================
+*/
+float GetPlayerPitch( const edict_t *pEdict )
+{
+	CBasePlayer *pPlayer = NULL;
+
+	if ( pEdict )
+		pPlayer = (CBasePlayer *)CBaseEntity::Instance( VARS( (edict_t *)pEdict ) );
+
+	if ( pPlayer )
+		return pPlayer->m_flPitch;
+
+	return 0;
+}
+
+/*
+====================
+GetPlayerYaw
+
+====================
+*/
+float GetPlayerYaw( const edict_t *pEdict )
+{
+	CBasePlayer *pPlayer = NULL;
+
+	if ( pEdict )
+		pPlayer = (CBasePlayer *)CBaseEntity::Instance( VARS( (edict_t *)pEdict ) );
+
+	if ( pPlayer )
+		return pPlayer->m_flYaw;
+
+	return 0;
+}
+
+/*
+====================
+GetPlayerGaitsequence
+
+====================
+*/
+int GetPlayerGaitsequence( const edict_t *pEdict )
+{
+	CBasePlayer *pPlayer = NULL;
+
+	if ( pEdict )
+		pPlayer = (CBasePlayer *)CBaseEntity::Instance( VARS( (edict_t *)pEdict ) );
+
+	if ( pPlayer )
+		return pPlayer->m_iGaitsequence;
+
+	return 1;
+}

@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -218,7 +218,7 @@ int CHudHealth::Draw(float flTime)
 
 	GetAllPlayersInfo();
 
-	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_HEALTH )
+	if ( (gHUD.m_iHideHUDDisplay & HIDEHUD_HEALTH) || gEngfuncs.IsSpectateOnly() )
 		return 1;
 
 	if ( !gHUD.m_fPlayerDead && m_bDrawRadar == true )
@@ -561,7 +561,7 @@ int CHudRoundTimer::Draw( float flTime )
 		m_flRoundTime = 0;
 	}
 
-	if ( gHUD.m_iHideHUDDisplay & HIDEHUD_TIMER )
+	if ( (gHUD.m_iHideHUDDisplay & HIDEHUD_TIMER) || gEngfuncs.IsSpectateOnly() == 2 )
 		return 1;
 
 	int iTimeLeft = m_flEndTime - flTime;	// name ours
@@ -767,9 +767,9 @@ void CHudHealth :: DrawRadar( float flTime )
 		// the bearing of the team mate, in degrees from 0 to 360
 		float angle = atan( dy / dx );
 		angle = angle * 180 / 3.141592654;
-		if ( dx < 0 && dy < 0 )
+		if ( dx < 0 && dy >= 0 )
 			angle += 180;
-		else if ( dx < 0 && dy >= 0 )
+		else if ( dx < 0 && dy < 0 )
 			angle += 180;
 		else if ( dx >= 0 && dy < 0 )
 			angle += 360;

@@ -96,6 +96,21 @@ typedef struct engine_studio_api_s
 	void			( *GL_SetRenderMode )			( int mode );
 } engine_studio_api_t;
 
+// player: needed by dlls/animation.cpp (the server's bone setup; SDK 2.3's text)
+typedef struct server_studio_api_s
+{
+	// Allocate number*size bytes and zero it
+	void			*( *Mem_Calloc )				( int number, size_t size );
+	// Check to see if pointer is in the cache
+	void			*( *Cache_Check )				( struct cache_user_s *c );
+	// Load file into cache ( can be swapped out on demand )
+	void			( *LoadCacheFile )				( char *path, struct cache_user_s *cu );
+	// Retrieve pointer to studio model data block from a model
+	void			*( *Mod_Extradata )				( struct model_s *mod );
+} server_studio_api_t;
+
+
+// client blending
 typedef struct r_studio_interface_s
 {
 	int				version;
@@ -104,5 +119,24 @@ typedef struct r_studio_interface_s
 } r_studio_interface_t;
 
 extern r_studio_interface_t *pStudioAPI;
+
+// server blending
+// player: needed by dlls/animation.cpp (SDK 2.3's text)
+#define SV_BLENDING_INTERFACE_VERSION 1
+
+typedef struct sv_blending_interface_s
+{
+	int	version;
+
+	void	( *SV_StudioSetupBones )( struct model_s *pModel, 
+					float frame,
+					int sequence,
+					const vec3_t angles,
+					const vec3_t origin,
+					const byte *pcontroller,
+					const byte *pblending,
+					int iBone,
+					const edict_t *pEdict );
+} sv_blending_interface_t;
 
 #endif // R_STUDIOINT_H

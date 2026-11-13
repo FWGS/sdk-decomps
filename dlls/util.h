@@ -413,7 +413,7 @@ extern DLL_GLOBAL int			g_Language;
 #define VEC_VIEW			Vector( 0, 0, 17 )	// Counter-Strike (Beta 5.0 leak to 6.6): 17; Beta 7.0: the SDK's 28; Beta 7.1: 17 again. CBasePlayer::Spawn stores it (pm_shared.c has its own, 17 in Beta 7.1)
 
 #define VEC_DUCK_HULL_MIN	Vector(-16, -16, -18 )
-#define VEC_DUCK_HULL_MAX	Vector( 16,  16,  18)
+#define VEC_DUCK_HULL_MAX	Vector( 16,  16,  32)	// Counter-Strike 1.3: 32 (the knife's hull test in both DLLs); 18 in the SDK and up to 1.1
 #define VEC_DUCK_VIEW		Vector( 0, 0, 12 )
 
 #define SVC_TEMPENTITY		23
@@ -421,6 +421,13 @@ extern DLL_GLOBAL int			g_Language;
 #define SVC_CDTRACK			32
 #define SVC_WEAPONANIM		35
 #define SVC_ROOMTYPE		37
+#define	SVC_HLTV			50
+
+// prxoy director stuff
+#define DRC_EVENT			3	// informs the dircetor about ann important game event
+
+#define DRC_FLAG_PRIO_MASK		0x0F	//	priorities between 0 and 15 (15 most important)
+#define DRC_FLAG_DRAMATIC		(1<<5)
 
 // triggers
 #define	SF_TRIGGER_ALLOWMONSTERS	1// monsters allowed to fire this trigger

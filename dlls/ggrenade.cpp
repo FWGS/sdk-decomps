@@ -226,6 +226,14 @@ void CGrenade::Explode2( TraceResult *pTrace, int bitsDamageType )
 
 	RadiusDamage ( pev, pevOwner, mp->m_flBombRadius, CLASS_NONE, bitsDamageType );	// Beta 6.0: the map's bomb radius (info_map_parameters; 500 by default) (was pev->dmg x 5)
 
+	// Counter-Strike 1.3: tell director about it (the bomb's explosion)
+	MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
+		WRITE_BYTE ( DRC_EVENT );
+		WRITE_SHORT( ENTINDEX( this->edict() ) );
+		WRITE_SHORT( 0 );
+		WRITE_LONG( 15 );
+	MESSAGE_END();
+
 	if ( RANDOM_FLOAT( 0 , 1 ) < 0.5 )
 	{
 		UTIL_DecalTrace( pTrace, DECAL_SCORCH1 );
@@ -541,7 +549,7 @@ void CGrenade::SG_Smoke( void )
 		origin.x = x_old * cos( R_angle ) - y_old * sin( R_angle );
 		origin.y = x_old * sin( R_angle ) + y_old * cos( R_angle );
 
-		origin.z = RANDOM_FLOAT( 0, 500 );
+		origin.z = RANDOM_FLOAT( 0, 25 );	// Counter-Strike 1.3 (1.1: 500)
 
 		PLAYBACK_EVENT_FULL( 0, NULL, m_usEvent, 0.0, pev->origin, (float *)&g_vecZero, origin.x, origin.y, origin.z * 10000, 4, m_bLightSmoke, 6 );
 	}
@@ -1145,7 +1153,7 @@ CGrenade * CGrenade:: ShootSmokeGrenade( entvars_t *pevOwner, Vector vecStart, V
 
 	SET_MODEL(ENT(pGrenade->pev), "models/w_smokegrenade.mdl");
 	pGrenade->pev->dmg = 35;
-	UTIL_SetSize(pGrenade->pev, Vector( 0, 0, 0), Vector(3, 3, 3));
+	// (Counter-Strike 1.3: no UTIL_SetSize here any more)
 
 	return pGrenade;
 }
@@ -1265,6 +1273,14 @@ void CGrenade::C4Think( void )
 			if ( m_pBombDefuser->pev->deadflag == DEAD_NO )
 			{
 				Broadcast( "BOMBDEF" );
+				// Counter-Strike 1.3: tell director about it (the defusal)
+				MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
+					WRITE_BYTE ( DRC_EVENT );
+					WRITE_SHORT( ENTINDEX( this->edict() ) );
+					WRITE_SHORT( 0 );
+					WRITE_LONG( 15 );
+				MESSAGE_END();
+
 				// Beta 6.6: "%s has defused the bomb\n"; Counter-Strike 1.1: the log line's new form
 				UTIL_LogPrintf( "\"%s<%i><%u><CT>\" triggered \"Defused_The_Bomb\"\n", STRING( m_pBombDefuser->pev->netname ), GETPLAYERUSERID( m_pBombDefuser->edict() ), GETPLAYERWONID( m_pBombDefuser->edict() ) );
 				// Beta 5.0: the last beep, still sounding, is stopped

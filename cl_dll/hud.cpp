@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -25,16 +25,65 @@
 #include <stdio.h>
 #include "parsemsg.h"
 #include "hud_servers.h"
+#include "vgui_int.h"
 #include "vgui_TeamFortressViewport.h"
 
 #include "demo.h"
 #include "demo_api.h"
 #include "com_weapons.h"
+#include "vgui_scorepanel.h"
+
+
+
+class CHLVoiceStatusHelper : public IVoiceStatusHelper
+{
+public:
+	virtual void GetPlayerTextColor(int entindex, int color[3])
+	{
+		color[0] = color[1] = color[2] = 255;
+
+		if( entindex >= 0 && entindex < sizeof(g_PlayerExtraInfo)/sizeof(g_PlayerExtraInfo[0]) )
+		{
+			int iTeam = g_PlayerExtraInfo[entindex].teamnumber;
+
+			if ( iTeam >= 0 && iTeam < sizeof(iTeamColors)/sizeof(iTeamColors[0]) )
+			{
+				color[0] = iTeamColors[iTeam][0];
+				color[1] = iTeamColors[iTeam][1];
+				color[2] = iTeamColors[iTeam][2];
+			}
+		}
+	}
+
+	virtual void UpdateCursorState()
+	{
+		gViewPort->UpdateCursorState();
+	}
+
+	virtual int	GetAckIconHeight()
+	{
+		// Counter-Strike 1.3: two lines higher without the suit
+		if ( !(gHUD.m_iWeaponBits & (1<<(WEAPON_SUIT))) )
+			return ScreenHeight - gHUD.m_iFontHeight*5 - 6;
+
+		return ScreenHeight - gHUD.m_iFontHeight*3 - 6;
+	}
+
+	virtual bool			CanShowSpeakerLabels()
+	{
+		if( gViewPort && gViewPort->m_pScoreBoard )
+			return !gViewPort->m_pScoreBoard->isVisible();
+		else
+			return false;
+	}
+};
+static CHLVoiceStatusHelper g_VoiceStatusHelper;
+
 
 extern client_sprite_t *GetSpriteList(client_sprite_t *pList, const char *psz, int iRes, int iCount);
 
 extern cvar_t *sensitivity;
-HWND g_hCheatWindows[20];	// name ours: windows CHud's destructor enables again (nothing fills it in Beta 7.1)
+HWND g_CheatWindows[20];	// name ours: windows CHud's destructor enables again (nothing fills it in Beta 7.1); in 1.3's .bss it stands before g_VoiceStatusHelper, so its name's hash bucket is below 226 (g_hCheatWindows: 564)
 cvar_t *cl_lw = NULL;
 
 void ShutdownInput (void);
@@ -55,6 +104,12 @@ int __MsgFunc_Logo(const char *pszName, int iSize, void *pbuf)
 int __MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf)
 {
 	return gHUD.MsgFunc_ResetHUD(pszName, iSize, pbuf );
+}
+
+int __MsgFunc_ViewMode(const char *pszName, int iSize, void *pbuf)
+{
+	gHUD.MsgFunc_ViewMode( pszName, iSize, pbuf );
+	return 1;
 }
 
 int __MsgFunc_InitHUD(const char *pszName, int iSize, void *pbuf)
@@ -231,6 +286,7 @@ void CHud :: Init( void )
 	HOOK_MESSAGE( ResetHUD );
 	HOOK_MESSAGE( GameMode );
 	HOOK_MESSAGE( InitHUD );
+	HOOK_MESSAGE( ViewMode );
 	HOOK_MESSAGE( SetFOV );
 	HOOK_MESSAGE( Concuss );
 	HOOK_MESSAGE( ReloadSound );
@@ -262,6 +318,7 @@ void CHud :: Init( void )
 	HOOK_MESSAGE( VGUIMenu );
 
 	CVAR_CREATE( "hud_takesshots", "0", FCVAR_ARCHIVE );		// controls whether or not to automatically take screenshots at the end of a round
+
 
 	m_iLogo = 0;
 	m_iFOV = 0;
@@ -301,6 +358,7 @@ void CHud :: Init( void )
 	m_NVG.Init();
 	m_Ammo.Init();
 	m_Health.Init();
+	m_Spectator.Init();
 	m_Geiger.Init();
 	m_Train.Init();
 	m_Battery.Init();
@@ -314,10 +372,10 @@ void CHud :: Init( void )
 	m_Money.Init();
 	m_RoundTimer.Init();
 	m_ProgressBar.Init();
-
 	m_SayText.Init();
 	m_Menu.Init();
-	
+	GetClientVoiceMgr()->Init(&g_VoiceStatusHelper, (vgui::Panel**)&gViewPort);
+
 	ServersInit();
 
 	MsgFunc_ResetHUD(0, 0, NULL );
@@ -326,9 +384,15 @@ void CHud :: Init( void )
 	g_SmokeList.m_flLife = 1.0;
 	m_bGunSmoke = false;
 
-	memset( g_hCheatWindows, 0, sizeof( HWND ) * 21 );	// sic: 21, one more than the array holds (cl_lw follows it)
+	memset( g_CheatWindows, 0, sizeof( g_CheatWindows ) );	// Counter-Strike 1.3: 20 (1.1 cleared 21)
 
 	m_Teamplay = 1;
+}
+
+// Counter-Strike 1.3: the constructor is out of line (retail 0x1002cce0, between Init and the destructor; the SDK
+// has it in the class body)
+CHud :: CHud() : m_iSpriteCount(0), m_pHudList(NULL)
+{
 }
 
 // CHud destructor
@@ -353,9 +417,9 @@ CHud :: ~CHud()
 
 	for ( int i = 0; i <= 20; i++ )	// sic: <= 20, one past the array
 	{
-		if ( g_hCheatWindows[i] )
+		if ( g_CheatWindows[i] )
 		{
-			EnableWindow( g_hCheatWindows[i], TRUE );
+			EnableWindow( g_CheatWindows[i], TRUE );
 			COM_Log( "c:\\cheaters.log", "Windows renabled\n" );
 		}
 	}
@@ -469,6 +533,7 @@ void CHud :: VidInit( void )
 	m_NVG.VidInit();
 	m_Ammo.VidInit();
 	m_Health.VidInit();
+	m_Spectator.VidInit();
 	m_Geiger.VidInit();
 	m_Train.VidInit();
 	m_Battery.VidInit();
@@ -487,6 +552,7 @@ void CHud :: VidInit( void )
 
 	m_flCvarCheckTime = -1;
 	m_flWindowCheckTime = -1;
+	GetClientVoiceMgr()->VidInit();
 }
 
 int CHud::MsgFunc_Logo(const char *pszName,  int iSize, void *pbuf)
@@ -600,11 +666,12 @@ int CHud::MsgFunc_SetFOV(const char *pszName,  int iSize, void *pbuf)
 	int newfov = READ_BYTE();
 	int def_fov = CVAR_GET_FLOAT( "default_fov" );
 
-	int tfc = 0;
-	tfc = HUD_IsGame( "tfc" );
-
-	if ( tfc && cl_lw && cl_lw->value )
-		return 1;
+	//Weapon prediction already takes care of changing the fog. ( g_lastFOV ).
+	if ( HUD_IsGame( "tfc" ) )		// Counter-Strike 1.3: only for Team Fortress
+	{
+		if ( cl_lw && cl_lw->value )
+			return 1;
+	}
 
 	g_lastFOV = newfov;
 

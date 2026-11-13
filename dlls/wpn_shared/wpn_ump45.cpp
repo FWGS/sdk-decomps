@@ -95,9 +95,9 @@ BOOL CUMP45::Deploy( )
 void CUMP45::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		UMP45Fire( m_flAccuracy * 0.14, 0.1, FALSE );
+		UMP45Fire( ( m_flAccuracy ) * 0.14, 0.1, FALSE );	// sic: the parentheses (the Processor Pack compiler's instruction order)
 	else
-		UMP45Fire( m_flAccuracy * 0.04, 0.1, FALSE );
+		UMP45Fire( ( m_flAccuracy ) * 0.04, 0.1, FALSE );
 }
 
 void CUMP45::UMP45Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
@@ -130,14 +130,21 @@ void CUMP45::UMP45Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
+	int flag;
+#if defined( CLIENT_WEAPONS )
+	flag = FEV_NOTHOST;
+#else
+	flag = 0;
+#endif
+
 	Vector vecAiming;
 	vecAiming = gpGlobals->v_forward;
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
 	Vector vecDir;
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_45ACP, 30, 0.82, NULL, false );
+	vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, flSpread, 8192, 1, BULLET_PLAYER_45ACP, 30, 0.82, m_pPlayer->pev, false, m_pPlayer->random_seed );
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireUMP45, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_pPlayer->pev->punchangle.x, m_pPlayer->pev->punchangle.y, (int)(flSpread * 10000), (int)(m_pPlayer->pev->punchangle.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireUMP45, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), FALSE, m_pPlayer->m_bLeftHanded != false );
 
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
 	m_pPlayer->m_iWeaponFlash = DIM_GUN_FLASH;

@@ -149,6 +149,7 @@ CCSTeamMenuPanel::CCSTeamMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wi
 	// Create the Cancel button
 	m_pCancelButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Menu_Cancel" ), TEAMMENU_TOPLEFT_BUTTON_X, YRES(392) - TEAMMENU_BUTTON_SIZE_Y, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, false );
 	m_pCancelButton->setParent( this );
+	m_pCancelButton->setBoundKey( '0' );
 	m_pCancelButton->addActionSignal( new CMenuHandler_TextWindow(HIDE_TEXTWINDOW) );
 	m_pCancelButton->addActionSignal( new CMenuHandler_StringCommandWatch( "slot10", true ) );
 
@@ -229,11 +230,13 @@ void CCSTeamMenuPanel::Update( void )
 			{
 				bTerrorist = false;
 			}
+			else if ( g_PlayerExtraInfo[j].teamnumber == 0 )
+			{
+				bNoTeam = true;
+				bTerrorist = true;
+			}
 			else
 			{
-				if ( g_PlayerExtraInfo[j].teamnumber == 0 )
-					bNoTeam = true;
-
 				bTerrorist = true;
 			}
 		}
@@ -313,8 +316,24 @@ bool CCSTeamMenuPanel::SlotInput( int iSlot )
 	}
 
 	// Otherwise, see if a particular team is selectable
-	if ( (iSlot < 1) || (iSlot == 4) || (iSlot > 6) )
+	if ( (iSlot < 0) || (iSlot == 4) || (iSlot > 6) )
 		return false;
+
+	// Counter-Strike 1.3: key 0 cancels, but not for a player who has no team yet
+	if ( iSlot == 0 )
+	{
+		cl_entity_t *pLocal = gEngfuncs.GetLocalPlayer();	// name ours
+
+		if ( pLocal && g_PlayerInfoList[pLocal->index].thisplayer && g_PlayerExtraInfo[pLocal->index].teamnumber == 0 )
+			return false;
+
+		if ( !(m_pCancelButton->IsNotValid()) )
+		{
+			m_pCancelButton->fireActionSignal();
+			return true;
+		}
+	}
+
 	if ( !m_pButtons[ iSlot ] )
 		return false;
 

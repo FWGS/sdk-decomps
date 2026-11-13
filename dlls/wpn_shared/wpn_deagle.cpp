@@ -111,17 +111,17 @@ void CDEAGLE::DEAGLEFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 		return;
 
 	if ( m_flLastFire == 0 )
-		m_flLastFire = gpGlobals->time;
+		m_flLastFire = UTIL_WeaponTimeBase();
 	else
 	{
-		m_flAccuracy -= ( 0.4 - ( gpGlobals->time - m_flLastFire ) ) * 0.35;
+		m_flAccuracy -= ( 0.4 - ( UTIL_WeaponTimeBase() - m_flLastFire ) ) * 0.35;
 
 		if ( m_flAccuracy > 0.9 )
 			m_flAccuracy = 0.9;
 		else if ( m_flAccuracy < 0.55 )
 			m_flAccuracy = 0.55;
 
-		m_flLastFire = gpGlobals->time;
+		m_flLastFire = UTIL_WeaponTimeBase();
 	}
 
 	if (m_iClip <= 0)
@@ -150,11 +150,18 @@ void CDEAGLE::DEAGLEFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	Vector vecAiming;
 	vecAiming = gpGlobals->v_forward;
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
-	Vector vecDir;	// sic: unused, as in wpn_ak47.cpp; without it the x87 operand order differs from retail's
+	Vector vecDir;
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 2, BULLET_PLAYER_50AE, 54, 0.81, NULL, true );
+	vecDir = m_pPlayer->FireBullets3( vecSrc, vecAiming, flSpread, 4096, 2, BULLET_PLAYER_50AE, 54, 0.81, m_pPlayer->pev, true, m_pPlayer->random_seed );
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireDEAGLE, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, (int)(flSpread * 10000), (int)(m_vecAiming.z * 10000), m_iClip == 0, m_pPlayer->m_bLeftHanded != false );
+	int flag;
+#if defined( CLIENT_WEAPONS )
+	flag = FEV_NOTHOST;
+#else
+	flag = 0;
+#endif
+
+	PLAYBACK_EVENT_FULL( flag, m_pPlayer->edict(), m_usFireDEAGLE, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, (int)(m_pPlayer->pev->punchangle.x * 10000000), (int)(m_pPlayer->pev->punchangle.y * 10000000), m_iClip == 0, m_pPlayer->m_bLeftHanded != false );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

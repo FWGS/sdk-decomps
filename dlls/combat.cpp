@@ -1678,6 +1678,21 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 	ApplyMultiDamage(pev, pevAttacker);
 }
 
+// Counter-Strike 1.3: nothing calls it (retail has the function, 82 bytes, and
+// its statics).  Name, parameter and statics are Counter-Strike 1.6's (combat.cpp
+// line 1856, ahead of FireBullets3); the client's ev_hldm.cpp has a copy.
+char *vstr( float *v )
+{
+	static int idx = 0;
+	static char string[ 16 ][ 1024 ];
+
+	idx++;
+	idx &= 15;
+
+	sprintf( string[ idx ], "%.4f %.4f %.4f", v[0], v[1], v[2] );
+	return string[ idx ];
+}
+
 /*
 ================
 FireBullets3
@@ -1698,7 +1713,7 @@ shot: 9 mm, .50 AE, 5.7 mm and .357 SIG -4 to +6, .45 ACP and 7.62 mm -2 to
 +2, 5.56 mm -3 to +3, .338 -4 to +4 (RANDOM_LONG, so the server alone knows).
 ================
 */
-void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iPenetration, int iBulletType, int iDamage, float flRangeModifier, entvars_t *pevAttacker, bool bPistol )
+Vector CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, float vecSpread, float flDistance, int iPenetration, int iBulletType, int iDamage, float flRangeModifier, entvars_t *pevAttacker, bool bPistol, int shared_rand )
 {
 	int iOriginalPenetration = iPenetration;	// Beta 6.0; no longer read (Beta 6.5)
 	int iPenetrationPower;
@@ -1782,17 +1797,35 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 
 	gMultiDamage.type = DMG_BULLET | DMG_NEVERGIB;
 
-	// get circular gaussian spread
+	// Counter-Strike 1.3: a player's shot takes its two numbers from the seed
+	// he shares with his client, which computes the same deviation (SDK 2.2's
+	// FireBulletsPlayer has these two lines).  Retail bug kept: anything else
+	// that fires runs the old loop on three locals of the else block, which
+	// hide the function's x, y and z, so its bullet takes x and y unset
+	// (retail reads two stack slots the loop's path never writes).
 	float x, y, z;
-	do {
-		x = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
-		y = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
-		z = x*x+y*y;
-	} while (z > 1);
+
+	if ( IsPlayer() )
+	{
+		//Use player's random seed.
+		// get circular gaussian spread
+		x = UTIL_SharedRandomFloat( shared_rand, -0.5, 0.5 ) + UTIL_SharedRandomFloat( shared_rand + 1 , -0.5, 0.5 );
+		y = UTIL_SharedRandomFloat( shared_rand + 2, -0.5, 0.5 ) + UTIL_SharedRandomFloat( shared_rand + 3, -0.5, 0.5 );
+	}
+	else
+	{
+		// get circular gaussian spread
+		float x, y, z;
+		do {
+			x = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
+			y = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
+			z = x*x+y*y;
+		} while (z > 1);
+	}
 
 	Vector vecDir = vecDirShooting +
-					x * vecSpread.x * vecRight +
-					y * vecSpread.y * vecUp;
+					x * vecSpread * vecRight +
+					y * vecSpread * vecUp;
 	Vector vecEnd;
 
 	vecEnd = vecSrc + vecDir * flDistance;
@@ -1912,6 +1945,8 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 
 		ApplyMultiDamage(pev, pevAttacker);
 	}
+
+	return Vector( x * vecSpread, y * vecSpread, 0.0 );
 }
 
 void CBaseEntity :: TraceBleed( float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType )
