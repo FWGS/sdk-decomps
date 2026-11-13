@@ -7,11 +7,15 @@
 #   make_vc6_nativecrt.sh -std MSVCRT.DLL     (vc6std: RTM, Standard edition back end)
 #   make_vc6_nativecrt.sh -sp4 MSVCRT.DLL     (vc6sp4: Service Pack 4, Professional)
 #   make_vc6_nativecrt.sh -sp4std MSVCRT.DLL  (vc6sp4std: SP4, Standard edition back end)
+#   make_vc6_nativecrt.sh -sp5 MSVCRT.DLL     (vc6sp5: Service Pack 5, Professional)
+#   make_vc6_nativecrt.sh -sp5pp MSVCRT.DLL   (vc6sp5pp: SP5 with the Processor Pack)
 #
 # RTM trees: the VC6 CD's OS/SYSTEM/MSVCRT.DLL (6.00.8168.0, 254005 bytes,
 # sha1 11179154ec7375e7dc50f2b349c571d01a8856b9).
 # SP4 trees: the SP4 disc's enu/os/system/msvcrt.dll (6.00.8797.0, 278581
 # bytes, sha1 63a4fcd64ecea975c1b91de04702c68a9f2a3c7d).
+# SP5 trees: SP5's os/system/msvcrt.dll, which is byte for byte SP4's file
+# (the Processor Pack ships no runtime of its own).
 #
 # Wine always maps msvcrt.dll to its builtin, even with a native copy next to
 # the program. So every "msvcrt.dll" import name in the copied EXEs and DLLs
@@ -28,10 +32,12 @@ want=11179154ec7375e7dc50f2b349c571d01a8856b9
 case "${1:-}" in
 -sp4) tree=vc6sp4; want=63a4fcd64ecea975c1b91de04702c68a9f2a3c7d; shift ;;
 -sp4std) tree=vc6sp4std; want=63a4fcd64ecea975c1b91de04702c68a9f2a3c7d; shift ;;
+-sp5) tree=vc6sp5; want=63a4fcd64ecea975c1b91de04702c68a9f2a3c7d; shift ;;
+-sp5pp) tree=vc6sp5pp; want=63a4fcd64ecea975c1b91de04702c68a9f2a3c7d; shift ;;
 -std) tree=vc6std; shift ;;
 -rtm) shift ;;
 esac
-crt=${1:?usage: make_vc6_nativecrt.sh [-std|-sp4|-sp4std] MSVCRT.DLL}
+crt=${1:?usage: make_vc6_nativecrt.sh [-std|-sp4|-sp4std|-sp5|-sp5pp] MSVCRT.DLL}
 have=$(sha1sum "$crt" | cut -d' ' -f1)
 [ "$have" = "$want" ] || { echo "$crt: sha1 $have, expected $want" >&2; exit 1; }
 [ -d "$tc/$tree/VC98/BIN" ] || { echo "no $tc/$tree/VC98/BIN" >&2; exit 1; }

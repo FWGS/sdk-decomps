@@ -11,9 +11,9 @@ Exclude_From_Build and ADD/SUBTRACT CPP overrides, then links with a .map file.
 The compilers run through vc6.sh, vc5.sh and vc4.sh, found next to this file.
 VC_TOOLCHAINS (required) is the toolchain folder of docs/setup.md, with the
 compiler trees and the Wine prefix. VC_WINEPREFIX selects another prefix, for
-example a per-build copy with an extra drive letter (see --drive). VC6_CRT is
-passed on to vc6.sh. Needs only Python 3's standard library, and libfaketime's
-faketime for --link-time.
+example a per-build copy with an extra drive letter (see --drive). VC6_CRT and
+VC5_CRT are passed on to vc6.sh and vc5.sh. Needs only Python 3's standard
+library, and libfaketime's faketime for --link-time.
 
 Flags that only affect IDE bookkeeping (/FD minimal rebuild, /Fr /FR browse
 info, /Gm) are dropped; they don't change generated code. /YX (automatic
@@ -36,9 +36,11 @@ history: the file found no usable .pch); the project's .pch is untouched.
 
 --compiler picks the compiler for every source (vc6, the default, VC6
 Professional as on the CD; vc6std, the same with the Standard edition's back
-end; vc6sp4 and vc6sp4std, VC6 with Service Pack 4; vc5, which is Visual C++
-5.0 with Service Pack 3; vc5-rtm, without service packs; vc42, vc41, vc40 for
-Visual C++ 4.x), and
+end; vc6sp4 and vc6sp4std, VC6 with Service Pack 4; vc6sp5, with Service Pack
+5; vc6sp5pp, SP5 with the Processor Pack; vc5, which is Visual C++ 5.0 with
+Service Pack 3; vc5-rtm, without service packs; vc5-n and vc5-rtm-n, those two
+running on their own release's MSVCRT.DLL whatever VC5_CRT says, which a VC5
+link needs to give a retail file; vc42, vc41, vc40 for Visual C++ 4.x), and
 --compiler-file overrides it per source (a.cpp=vc5,b.cpp=vc6), for a DLL
 whose objects come from two compilers. --linker picks the linker and its
 libraries (default: --compiler's). Each compiler gets its own .pch (the
@@ -59,8 +61,14 @@ TOOLS = {  # compiler name -> wrapper command, .pch/.pdb base name
     "vc6sp4": ([os.path.join(HERE, "vc6.sh"), "-sp4"], "vc60-sp4"),
     "vc6sp4std": ([os.path.join(HERE, "vc6.sh"), "-sp4std"], "vc60-sp4std"),
     "vc6std": ([os.path.join(HERE, "vc6.sh"), "-std"], "vc60-std"),
+    "vc6sp5": ([os.path.join(HERE, "vc6.sh"), "-sp5"], "vc60-sp5"),
+    "vc6sp5pp": ([os.path.join(HERE, "vc6.sh"), "-sp5pp"], "vc60-sp5pp"),
     "vc5": ([os.path.join(HERE, "vc5.sh"), "-sp3"], "vc50"),
     "vc5-rtm": ([os.path.join(HERE, "vc5.sh"), "-rtm"], "vc50-rtm"),
+    # the same two from vc5/<tree>/nativecrt (the release's own MSVCRT.DLL), whatever VC5_CRT says;
+    # a .pch of their own: this script keeps one .pch state per compiler name
+    "vc5-n": (["env", "VC5_CRT=native", os.path.join(HERE, "vc5.sh"), "-sp3"], "vc50-n"),
+    "vc5-rtm-n": (["env", "VC5_CRT=native", os.path.join(HERE, "vc5.sh"), "-rtm"], "vc50-rtm-n"),
     "vc42": ([os.path.join(HERE, "vc4.sh"), "-42"], "vc40"),
     "vc41": ([os.path.join(HERE, "vc4.sh"), "-41"], "vc40-41"),
     "vc40": ([os.path.join(HERE, "vc4.sh"), "-40"], "vc40-40"),

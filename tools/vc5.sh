@@ -9,7 +9,14 @@
 # (case-insensitive, .EXE optional). Pass paths outside the current directory
 # as Z:\...
 #
-# Environment: VC_TOOLCHAINS (required) and VC_WINEPREFIX, as for vc6.sh.
+# Environment: VC_TOOLCHAINS (required) and VC_WINEPREFIX, as for vc6.sh, and
+#   VC5_CRT  wine (default): run the programs in BIN on Wine's builtin msvcrt;
+#            native: run the copy in vc5/{sp3,rtm}/nativecrt, which loads the
+#            MSVCRT.DLL shipped with that release (make_vc5_nativecrt.sh).
+#            A link that has to give a retail file needs native: LINK's
+#            output depends on the runtime's qsort (docs/compilers.md). The
+#            default is the other way round from vc6.sh's because the
+#            compiler alone does not need it.
 set -eu
 
 : "${VC_TOOLCHAINS:?vc5.sh: set VC_TOOLCHAINS to the toolchain folder (docs/setup.md)}"
@@ -35,4 +42,12 @@ export WINEDLLOVERRIDES='mscoree=;mshtml=;winemenubuilder.exe=d;winedbg.exe=d'
 export INCLUDE="$win_tc\\vc5\\$sp\\INCLUDE"
 export LIB="$win_tc\\vc5\\$sp\\LIB"
 
-exec wine "$tc/vc5/$sp/BIN/$tool" "$@"
+bin="$tc/vc5/$sp/BIN"
+case "${VC5_CRT:-wine}" in
+wine) ;;
+native) bin="$tc/vc5/$sp/nativecrt"
+	[ -d "$bin" ] || { echo "vc5.sh: no $bin; run make_vc5_nativecrt.sh (docs/setup.md)" >&2; exit 2; } ;;
+*) echo "vc5.sh: VC5_CRT must be native or wine" >&2; exit 2 ;;
+esac
+
+exec wine "$bin/$tool" "$@"

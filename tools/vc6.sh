@@ -5,6 +5,8 @@
 #   vc6.sh -std CL ...                      (RTM, Standard edition back end, 11.99.8168)
 #   vc6.sh -sp4 CL ...                      (Service Pack 4, Professional, 12.00.8799)
 #   vc6.sh -sp4std CL ...                   (Service Pack 4, Standard edition back end)
+#   vc6.sh -sp5 CL ...                      (Service Pack 5, Professional, 12.00.8966)
+#   vc6.sh -sp5pp CL ...                    (Service Pack 5 with the Processor Pack, 13.00.9044)
 #   vc6.sh LINK /nologo /dll ...
 #
 # The first argument names a program in the tree's VC98/BIN (case-insensitive,
@@ -12,8 +14,8 @@
 #
 # Environment:
 #   VC_TOOLCHAINS  the toolchain folder (required; see docs/setup.md). It holds
-#                  the trees vc6, vc6std, vc6sp4, vc6sp4std and the Wine prefix
-#                  wineprefix.
+#                  the trees vc6, vc6std, vc6sp4, vc6sp4std, vc6sp5, vc6sp5pp
+#                  and the Wine prefix wineprefix.
 #   VC_WINEPREFIX  a Wine prefix to use instead of $VC_TOOLCHAINS/wineprefix,
 #                  e.g. a per-build copy with an extra drive letter.
 #   VC6_CRT        native (default): run the copy of the programs in
@@ -27,9 +29,10 @@ tc=$(cd "$VC_TOOLCHAINS" && pwd)
 win_tc="Z:$(printf '%s' "$tc" | sed 's|/|\\|g')"
 
 tree=vc6
-case "${1:-}" in -sp4) tree=vc6sp4; shift ;; -sp4std) tree=vc6sp4std; shift ;; -std) tree=vc6std; shift ;; -rtm) shift ;; esac
+case "${1:-}" in -sp4) tree=vc6sp4; shift ;; -sp4std) tree=vc6sp4std; shift ;; -std) tree=vc6std; shift ;;
+-sp5) tree=vc6sp5; shift ;; -sp5pp) tree=vc6sp5pp; shift ;; -rtm) shift ;; esac
 
-tool=$(printf '%s' "${1:?usage: vc6.sh [-rtm|-std|-sp4|-sp4std] TOOL [args...]}" | tr '[:lower:]' '[:upper:]')
+tool=$(printf '%s' "${1:?usage: vc6.sh [-rtm|-std|-sp4|-sp4std|-sp5|-sp5pp] TOOL [args...]}" | tr '[:lower:]' '[:upper:]')
 shift
 case "$tool" in *.EXE) ;; *) tool="$tool.EXE" ;; esac
 
