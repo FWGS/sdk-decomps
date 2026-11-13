@@ -436,6 +436,8 @@ public:
 	void Reset( void );
 	int MsgFunc_Flashlight(const char *pszName,  int iSize, void *pbuf );
 	int MsgFunc_FlashBat(const char *pszName,  int iSize, void *pbuf );
+	int MsgFunc_WClose(const char *pszName,  int iSize, void *pbuf );
+	int MsgFunc_WClose2(const char *pszName,  int iSize, void *pbuf );
 	
 private:
 	HSPRITE m_hSprite1;
@@ -784,6 +786,7 @@ public:
 	int m_HUD_number_0;
 
 	float m_flCvarCheckTime;	// name ours
+	float m_flWindowCheckTime;	// name ours: VidInit sets it to -1 with m_flCvarCheckTime; nothing reads it in Beta 7.1
 	bool m_bGunSmoke;			// name ours: the gunsmoke command toggles it
 	float m_flTexSort;			// name ours: gl_texsort as Init found it
 	float m_flZMax;				// name ours: gl_zmax as Init found it
@@ -804,7 +807,8 @@ extern CHud gHUD;
 // than in ours: the objects that build their own precompiled headers place the headers' inline
 // functions by its size.  It was 141 lines until util_vector.h got
 // RotateVectorZ, Counter-Strike 1.6's inline function (402 bytes with this compiler);
-// with it Beta 6.5 takes 60 to 63 lines, 6.6 60 to 65, 7.0 and 7.1 59 to 61.  Nothing calls this.
+// with it Beta 6.5 takes 60 to 63 lines, 6.6 60 to 65, 7.0 and 7.1 59 to 61 (full builds against
+// retail's SHA-256).  Nothing calls this.
 inline void b65_hud_unknown( void )
 {
 	;
@@ -952,6 +956,7 @@ public:
 
 extern CTempList g_ShellList;	// name ours
 extern CTempList g_SmokeList;	// name ours
+extern int g_iShotsFired;		// name ours (ammo.cpp): the fire events count the local player's shots
 
 bool CheckModelBounds( void );	// name ours (model_check.cpp)
 extern TeamFortressViewport *gViewPort;

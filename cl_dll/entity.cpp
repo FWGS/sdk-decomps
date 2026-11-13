@@ -36,12 +36,21 @@ HUD_AddEntity
 	Return 0 to filter entity from visible list for rendering
 ========================
 */
+int g_iUser4[ 64 ];	// name ours: each player's iuser4 from the server (HUD_ProcessPlayerState)
+
 int DLLEXPORT HUD_AddEntity( int type, struct cl_entity_s *ent, const char *modelname )
 {
 	switch ( type )
 	{
 	case ET_NORMAL:
 	case ET_PLAYER:
+		// a player the server flags in iuser4 is drawn where the server last put him, not interpolated
+		if ( ent->player && g_iUser4[ ent->index ] )
+		{
+			ent->origin = ent->curstate.origin;
+			ent->angles = ent->curstate.angles;
+		}
+		break;
 	case ET_BEAM:
 	case ET_TEMPENTITY:
 	case ET_FRAGMENTED:
@@ -84,6 +93,8 @@ playerstate structure
 */
 void DLLEXPORT HUD_ProcessPlayerState( struct entity_state_s *dst, const struct entity_state_s *src )
 {
+	g_iUser4[ src->number ] = src->iuser4;
+
 	// Copy in network data
 	VectorCopy( src->origin, dst->origin );
 	VectorCopy( src->angles, dst->angles );
@@ -152,6 +163,7 @@ void DLLEXPORT HUD_TxferPredictionData ( struct entity_state_s *ps, const struct
 	ps->flFallVelocity			= pps->flFallVelocity;
 	ps->iStepLeft				= pps->iStepLeft;
 	ps->playerclass				= pps->playerclass;
+	ps->iuser4					= pps->iuser4;
 
 	pcd->viewmodel				= ppcd->viewmodel;
 	pcd->m_iId					= ppcd->m_iId;

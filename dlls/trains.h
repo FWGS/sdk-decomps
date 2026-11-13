@@ -129,9 +129,9 @@ private:
 };
 
 // Counter-Strike Beta 7.0: the drivable vehicle (vehicle.cpp), written from
-// CFuncTrackTrain. Member names are Counter-Strike 1.6's (its class has the
-// six corner vectors, the surface normal, the direction and the driver as
-// members too; Beta 7.0's Next keeps them as locals).
+// CFuncTrackTrain. Member names are Counter-Strike 1.6's (Beta 7.0's Next kept
+// the six corner vectors, the surface normal and the direction as locals;
+// from Beta 7.1 they are members, and the class is 1.6's, 0x150 bytes).
 class CFuncVehicle : public CBaseEntity
 {
 public:
@@ -149,6 +149,10 @@ public:
 
 	void		NextThink( float thinkTime, BOOL alwaysThink );
 	int			Classify( void );
+
+	void CollisionDetection( void );	// Counter-Strike Beta 7.1 (Linux symbols): Next's parts
+	void TerrainFollowing( void );
+	void CheckTurning( void );
 
 	void SetTrack( CPathTrack *track ) { m_ppath = track->Nearest(pev->origin); }
 	void SetControls( entvars_t *pevControls );
@@ -192,6 +196,17 @@ public:
 	float		m_flLastNormalZ;
 	float		m_flCanTurnNow;
 	float		m_flUpdateSound;
+	// Counter-Strike Beta 7.1: Next is split up, and what its parts share are members
+	// (0xe8 to 0x148; names and order are Counter-Strike 1.6's)
+	Vector		m_vFrontLeft;
+	Vector		m_vFront;
+	Vector		m_vFrontRight;
+	Vector		m_vBackLeft;
+	Vector		m_vBack;
+	Vector		m_vBackRight;
+	Vector		m_vSurfaceNormal;
+	Vector		m_vVehicleDirection;
+	CBasePlayer	*m_pDriver;			// 0x148: set by the player's code (player.cpp), cleared by Restart
 
 private:
 	unsigned short m_usAdjustPitch;

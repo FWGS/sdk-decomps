@@ -169,6 +169,7 @@ void CMAC10::Reload( void )
 	m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
 	m_flAccuracy = 0;
+	m_iShotsFired = 0;
 }
 
 void CMAC10::WeaponIdle( void )

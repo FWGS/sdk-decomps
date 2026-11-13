@@ -274,6 +274,7 @@ void CShotgunMenuPanel::Update()
 {
 	int	 iYPos = CLASSMENU_TOPLEFT_BUTTON_Y;
 	int iMapType;
+	bool bTerrorist;
 
 	const char *pszMapName = gEngfuncs.pfnGetLevelName();
 
@@ -286,6 +287,12 @@ void CShotgunMenuPanel::Update()
 	else if ( !strncmp( pszMapName, "maps/es_", 8 ) )
 		iMapType = 4;
 
+	for ( int j = 1; j < MAX_PLAYERS; j++ )
+	{
+		if ( g_PlayerInfoList[j].thisplayer )
+			bTerrorist = ( g_PlayerExtraInfo[j].teamnumber == 1 );
+	}
+
 	// Cycle through the rest of the buttons
 	for (int i = 0; i <= 1; i++)
 	{
@@ -297,7 +304,7 @@ void CShotgunMenuPanel::Update()
 		{
 			m_pButtons[i]->setVisible( true );
 
-			if ( iMapType == 1 )
+			if ( iMapType == 1 && bTerrorist == true )
 				m_pButtons[i]->setVisible( false );
 
 			m_pButtons[i]->setPos( CLASSMENU_TOPLEFT_BUTTON_X, iYPos );

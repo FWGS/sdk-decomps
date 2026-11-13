@@ -125,7 +125,7 @@ void CC4::PrimaryAttack( void )
 		}
 		else
 		{
-			ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "C4 must be activated at a Bomb Target." );
+			ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "#C4_Plant_At_Bomb_Spot" );
 			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.0;
 			return;
 		}
@@ -142,7 +142,7 @@ void CC4::PrimaryAttack( void )
 			}
 			else if ( !( m_pPlayer->m_signals.m_iState & 2 ) )
 			{
-				ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Arming Sequence Canceled.\nC4 can only be placed at a Bomb Target." );
+				ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "#C4_Arming_Cancelled" );
 				m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.5;
 				m_bStartedArming = false;
 
@@ -185,7 +185,7 @@ void CC4::PrimaryAttack( void )
 			else
 				CGrenade::ShootSatchelCharge( m_pPlayer->pev, tr.vecEndPos + tr.vecPlaneNormal * 5, Vector( 0, 0, 0 ) );
 
-			UTIL_ClientPrintAll( HUD_PRINTCENTER, "The bomb has been planted!" );
+			UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Bomb_Planted" );
 			UTIL_LogPrintf( "%s planted the bomb\n", STRING( m_pPlayer->pev->netname ) );
 			EMIT_SOUND( edict(), CHAN_WEAPON, "weapons/c4_plant.wav", VOL_NORM, ATTN_NORM );
 
@@ -202,7 +202,7 @@ void CC4::PrimaryAttack( void )
 			}
 			else
 			{
-				ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "C4 must be activated at a Bomb Target." );
+				ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "#C4_Activated_At_Bomb_Spot" );
 				m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.0;
 				return;
 			}

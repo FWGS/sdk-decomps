@@ -80,7 +80,7 @@ typedef struct hull_s
 #define STUCK_MOVEDOWN -1
 #define VEC_HULL_MIN		-36
 #define VEC_HULL_MAX		36
-#define VEC_VIEW			28
+#define VEC_VIEW			17
 #define	STOP_EPSILON	0.1
 
 #define CTEXTURESMAX		512			// max number of textures loaded
@@ -97,6 +97,7 @@ typedef struct hull_s
 #define CHAR_TEX_COMPUTER	'P'
 #define CHAR_TEX_GLASS		'Y'
 #define CHAR_TEX_FLESH		'F'
+#define CHAR_TEX_SNOW		'N'			// Counter-Strike, name ours (pm_materials.h has it too)
 
 #define STEP_CONCRETE	0		// default step sound
 #define STEP_METAL		1		// metal floor
@@ -107,6 +108,7 @@ typedef struct hull_s
 #define STEP_SLOSH		6		// shallow liquid puddle
 #define STEP_WADE		7		// wading in liquid
 #define STEP_LADDER		8		// climbing ladder
+#define STEP_SNOW		9		// snow (Counter-Strike, name ours)
 
 #define PLAYER_FATAL_FALL_SPEED		1024// approx 60 feet
 #define PLAYER_MAX_SAFE_FALL_SPEED	580// approx 20 feet
@@ -350,6 +352,17 @@ void PM_PlayStepSound( int step, float fvol )
 		case 3:	pmove->PM_PlaySound( CHAN_BODY, "player/pl_dirt4.wav", fvol, ATTN_NORM, 0, PITCH_NORM );	break;
 		}
 		break;
+	case STEP_SNOW:
+		switch(irand)
+		{
+		// right foot
+		case 0:	pmove->PM_PlaySound( CHAN_BODY, "player/pl_snow1.wav", fvol, ATTN_NORM, 0, PITCH_NORM );	break;
+		case 1:	pmove->PM_PlaySound( CHAN_BODY, "player/pl_snow3.wav", fvol, ATTN_NORM, 0, PITCH_NORM );	break;
+		// left foot
+		case 2:	pmove->PM_PlaySound( CHAN_BODY, "player/pl_snow2.wav", fvol, ATTN_NORM, 0, PITCH_NORM );	break;
+		case 3:	pmove->PM_PlaySound( CHAN_BODY, "player/pl_snow4.wav", fvol, ATTN_NORM, 0, PITCH_NORM );	break;
+		}
+		break;
 	case STEP_VENT:
 		switch(irand)
 		{
@@ -445,6 +458,7 @@ int PM_MapTextureTypeStepType(char chTextureType)
 		case CHAR_TEX_GRATE: return STEP_GRATE;	
 		case CHAR_TEX_TILE: return STEP_TILE;
 		case CHAR_TEX_SLOSH: return STEP_SLOSH;
+		case CHAR_TEX_SNOW: return STEP_SNOW;
 	}
 }
 

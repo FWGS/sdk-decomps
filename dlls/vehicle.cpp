@@ -1,29 +1,36 @@
 /***
 *
-*	Counter-Strike Beta 7.0, vehicle.cpp: the drivable vehicle (func_vehicle,
+*	Counter-Strike Beta 7.1, vehicle.cpp: the drivable vehicle (func_vehicle,
 *	CFuncVehicle, declared in trains.h) and the volume its driver stands in
 *	(func_vehiclecontrols, CFuncVehicleControls). Written from the SDK's
 *	CFuncTrackTrain (plats.cpp) and retail's code; function names and their
-*	order are Beta 7.0's Linux symbols, member and local names Counter-Strike
-*	1.6's where its debug information has them (1.6 keeps the six corner
-*	points, the surface normal and the direction as members and has Next's
-*	parts as CheckTurning, CollisionDetection and TerrainFollowing; here they
-*	are locals and one function).
+*	order are Beta 7.1's Linux symbols, member and local names Counter-Strike
+*	1.6's where its debug information has them. Since Beta 7.1 the six corner
+*	points, the surface normal and the direction are members and Next's parts
+*	are CheckTurning, CollisionDetection and TerrainFollowing, as in 1.6
+*	(Beta 7.0 had them as locals of one function).
 *
 *	The vehicle does not follow its path_track after Find has put it on the
 *	first one. The driver's Use( USE_SET ) values below 10 are the throttle
 *	(forward, brake and reverse by a table of steps), 20 and 30 steer. Next
-*	thinks every 0.25 s (0.1 s in the air): it keeps the wheel off walls,
-*	limits the speed in a turn, lets wheel and throttle fall back, takes the
-*	ground's normal from a trace below, slides along or bounces off walls
-*	ahead, turns towards the direction the ground and the wheel give, and
-*	falls when there is no ground.
+*	thinks every 0.1 s: CheckTurning keeps the wheel off walls and limits the
+*	speed in a turn, wheel and throttle fall back, TerrainFollowing takes the
+*	ground's normal from a trace below, CollisionDetection slides along or
+*	bounces off walls ahead, and the vehicle turns towards the direction the
+*	ground and the wheel give or falls when there is no ground.
 *
 *	Retail's oddities kept: KeyValue tests "width" without an else after
 *	"length" (a length key ends as not handled); Spawn sets m_acceleration to
 *	5 whatever the map said; the turn-time chain's first test is always true;
 *	the second UTIL_VecToAngles' result is unused; m_flLastNormalZ is only
-*	written; the save table is the train's twelve fields.
+*	written; the save table is the train's twelve fields (none of the
+*	vehicle's own members is saved); Blocked keeps Beta 7.0's lines behind a
+*	return; of the six wall traces only the front left one stops at monsters
+*	and only the back left one looks whether it hit another vehicle (and only
+*	prints that).
+*
+*	CollisionDetection and Next each carry a stand-in (marked sic) for text
+*	that makes no code but that VC6's inline expansion shows was there.
 *
 ****/
 #include "extdll.h"
@@ -33,7 +40,7 @@
 #include "saverestore.h"
 
 // The SDK's Fix and FixupAngles under new names. They stand first in the file:
-// Beta 7.0's Linux library has them ahead of Save and Restore, and retail's
+// the Linux library has them ahead of Save and Restore, and retail's
 // image has them after Next (their first user) but before the out-of-line
 // Vector::operator==, the order VC6 gives only when their text is this early.
 static float Fix2( float angle )
@@ -141,13 +148,18 @@ void CFuncVehicle :: NextThink( float thinkTime, BOOL alwaysThink )
 
 void CFuncVehicle :: Blocked( CBaseEntity *pOther )
 {
-	ALERT( at_console, "Something is blocking us\n" );
-
 	entvars_t	*pevOther = pOther->pev;
 
 	// Blocker is on-ground on the train
 	if ( FBitSet( pevOther->flags, FL_ONGROUND ) && VARS(pevOther->groundentity) == pev )
 	{
+		// Counter-Strike Beta 7.1: a rider takes the vehicle's velocity. Beta 7.0's lines stay
+		// behind the return: retail's inlining of Blocked is that of the function with
+		// them (without them the Vector operators come out as for a function 40 to 56
+		// size units shorter), and Counter-Strike 1.6 still has deltaSpeed.
+		pevOther->velocity = pev->velocity;
+		return;
+
 		float deltaSpeed = fabs(pev->speed);
 		if ( deltaSpeed > 50 )
 			deltaSpeed = 50;
@@ -300,7 +312,7 @@ void CFuncVehicle :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 
 #define VEHICLE_STARTPITCH	60
 #define VEHICLE_MAXPITCH	200
-#define VEHICLE_MAXSPEED	1000	// approx max speed for sound pitch calculation
+#define VEHICLE_MAXSPEED	1500	// approx max speed for sound pitch calculation (Beta 7.0: 1000)
 
 void CFuncVehicle :: StopSound( void )
 {
@@ -332,6 +344,9 @@ void CFuncVehicle :: UpdateSound( void )
 
 	flpitch = VEHICLE_STARTPITCH + (abs(pev->speed) * (VEHICLE_MAXPITCH - VEHICLE_STARTPITCH) / VEHICLE_MAXSPEED);
 
+	if ( flpitch > 200 )
+		flpitch = 200;
+
 	if (!m_soundPlaying)
 	{
 		// play startup sound for train
@@ -360,68 +375,26 @@ void CFuncVehicle :: UpdateSound( void )
 }
 
 
-void CFuncVehicle :: Next( void )
+void CFuncVehicle :: CheckTurning( void )
 {
-	Vector vGravityVector;
-	vGravityVector = g_vecZero;		// declared, then assigned: with the stand-in below, the form that gives retail's x87 operand order
-
-	UTIL_MakeVectors( pev->angles );
-
-	Vector forward = (gpGlobals->v_forward * -1) * (m_length / 2);
-	Vector right = (gpGlobals->v_right * -1) * (m_width / 2);
-	Vector up = gpGlobals->v_up * 16;
-
-	Vector vFrontLeft = pev->origin + forward - right + up;
-	Vector vFrontRight = pev->origin + forward + right + up;
-	Vector vFront = pev->origin + forward + up;
-	Vector vBackLeft = pev->origin - forward - right + up;
-	Vector vBackRight = pev->origin - forward + right + up;
-	Vector vBack = pev->origin - forward + up;
-
-	float time = 0.25;
+	float maxspeed;
 	TraceResult tr;
 
-	// sic: a stand-in for text of Next that makes no code. Retail expands the
-	// Vector operators as a function about 660 units longer than the visible
-	// statements does (VC6's inline budget), and orders two x87 operand pairs
-	// as with about 20 more locals: 94 dead stores (93 to 96 fit, 92 and 97 do
-	// not) to 20 dead locals (20 or 21 fit, 19 and 22 do not). What the text
-	// was (more locals, dead statements) the image cannot say.
-	int iStandIn0, iStandIn1, iStandIn2, iStandIn3, iStandIn4, iStandIn5, iStandIn6, iStandIn7, iStandIn8, iStandIn9,
-		iStandIn10, iStandIn11, iStandIn12, iStandIn13, iStandIn14, iStandIn15, iStandIn16, iStandIn17, iStandIn18, iStandIn19;
-	iStandIn0 = 0; iStandIn1 = 0; iStandIn2 = 0; iStandIn3 = 0; iStandIn4 = 0;
-	iStandIn5 = 0; iStandIn6 = 0; iStandIn7 = 0; iStandIn8 = 0; iStandIn9 = 0;
-	iStandIn10 = 0; iStandIn11 = 0; iStandIn12 = 0; iStandIn13 = 0; iStandIn14 = 0;
-	iStandIn15 = 0; iStandIn16 = 0; iStandIn17 = 0; iStandIn18 = 0; iStandIn19 = 0;
-	iStandIn0 = 0; iStandIn1 = 0; iStandIn2 = 0; iStandIn3 = 0; iStandIn4 = 0;
-	iStandIn5 = 0; iStandIn6 = 0; iStandIn7 = 0; iStandIn8 = 0; iStandIn9 = 0;
-	iStandIn10 = 0; iStandIn11 = 0; iStandIn12 = 0; iStandIn13 = 0; iStandIn14 = 0;
-	iStandIn15 = 0; iStandIn16 = 0; iStandIn17 = 0; iStandIn18 = 0; iStandIn19 = 0;
-	iStandIn0 = 0; iStandIn1 = 0; iStandIn2 = 0; iStandIn3 = 0; iStandIn4 = 0;
-	iStandIn5 = 0; iStandIn6 = 0; iStandIn7 = 0; iStandIn8 = 0; iStandIn9 = 0;
-	iStandIn10 = 0; iStandIn11 = 0; iStandIn12 = 0; iStandIn13 = 0; iStandIn14 = 0;
-	iStandIn15 = 0; iStandIn16 = 0; iStandIn17 = 0; iStandIn18 = 0; iStandIn19 = 0;
-	iStandIn0 = 0; iStandIn1 = 0; iStandIn2 = 0; iStandIn3 = 0; iStandIn4 = 0;
-	iStandIn5 = 0; iStandIn6 = 0; iStandIn7 = 0; iStandIn8 = 0; iStandIn9 = 0;
-	iStandIn10 = 0; iStandIn11 = 0; iStandIn12 = 0; iStandIn13 = 0; iStandIn14 = 0;
-	iStandIn15 = 0; iStandIn16 = 0; iStandIn17 = 0; iStandIn18 = 0; iStandIn19 = 0;
-	iStandIn0 = 0; iStandIn1 = 0; iStandIn2 = 0; iStandIn3 = 0; iStandIn4 = 0;
-	iStandIn5 = 0; iStandIn6 = 0; iStandIn7 = 0; iStandIn8 = 0; iStandIn9 = 0;
-	iStandIn10 = 0; iStandIn11 = 0; iStandIn12 = 0; iStandIn13 = 0;
+	bool bTurnIntoWall = false;
 
 	// don't steer into a wall
 	if ( m_iTurnAngle < 0 )
 	{
 		if ( pev->speed > 0 )
 		{
-			UTIL_TraceLine( vFrontRight, vFrontRight - (gpGlobals->v_right * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
+			UTIL_TraceLine( m_vFrontRight, m_vFrontRight - (gpGlobals->v_right * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
 
 			if ( tr.flFraction != 1.0 )
 				m_iTurnAngle = 1;
 		}
 		else if ( pev->speed < 0 )
 		{
-			UTIL_TraceLine( vBackLeft, vBackLeft + (gpGlobals->v_right * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
+			UTIL_TraceLine( m_vBackLeft, m_vBackLeft + (gpGlobals->v_right * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
 
 			if ( tr.flFraction != 1.0 )
 				m_iTurnAngle = 1;
@@ -431,14 +404,14 @@ void CFuncVehicle :: Next( void )
 	{
 		if ( pev->speed > 0 )
 		{
-			UTIL_TraceLine( vFrontLeft, vFrontLeft + (gpGlobals->v_right * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
+			UTIL_TraceLine( m_vFrontLeft, m_vFrontLeft + (gpGlobals->v_right * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
 
 			if ( tr.flFraction != 1.0 )
 				m_iTurnAngle = -1;
 		}
 		else if ( pev->speed < 0 )
 		{
-			UTIL_TraceLine( vBackRight, vBackRight - (gpGlobals->v_right * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
+			UTIL_TraceLine( m_vBackRight, m_vBackRight - (gpGlobals->v_right * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
 
 			if ( tr.flFraction != 1.0 )
 				m_iTurnAngle = -1;
@@ -448,7 +421,6 @@ void CFuncVehicle :: Next( void )
 	// slow down in a turn
 	if ( pev->speed > 0 )
 	{
-		float maxspeed;
 		int iTurnAngle = abs( m_iTurnAngle );
 
 		if ( iTurnAngle > 4 )
@@ -462,8 +434,7 @@ void CFuncVehicle :: Next( void )
 			{
 				float flTurnTime = gpGlobals->time - m_flTurnStartTime;
 
-				// retail's order: the first test is always true, and without it
-				// maxspeed would stay unset below 1.2 s
+				// retail's order: the first test is always true
 				if ( flTurnTime >= 0.0 )
 					maxspeed = m_speed * 0.98;
 				else if ( flTurnTime > 0.3 )
@@ -492,6 +463,197 @@ void CFuncVehicle :: Next( void )
 		if ( maxspeed < pev->speed )
 			pev->speed -= m_speed / 10;
 	}
+}
+
+
+void CFuncVehicle :: CollisionDetection( void )
+{
+	TraceResult tr;
+	bool bHitSomething = false;
+
+	// sic: a stand-in for text of CollisionDetection that makes no code. Retail
+	// expands the Vector operators here as a function 164 to 171 units larger
+	// than the text below gets expanded (VC6 gives a function twice its own
+	// size to spend on inline expansion and counts what the optimizer later
+	// removes). A dead store counts 4: 41 and 42 of them give retail's bytes,
+	// 40 and 43 do not (bHitSomething, a local Counter-Strike 1.6 has, counts
+	// as one more: without it 42 and 43 fit). What stood here is not known;
+	// Blocked shows the kind, old lines left behind a return.
+	int iStandIn;
+	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
+	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
+	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
+	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
+	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
+	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
+	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
+
+	if ( pev->speed < 0 )
+	{
+		UTIL_TraceLine( m_vBackLeft, m_vBackLeft + (gpGlobals->v_forward * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
+
+		if ( tr.flFraction != 1.0 )
+		{
+			if ( DotProduct( tr.vecPlaneNormal, gpGlobals->v_forward * -1 ) < 0.7 && tr.vecPlaneNormal.z < 0.1 )
+			{
+				m_vSurfaceNormal = tr.vecPlaneNormal;
+				m_vSurfaceNormal.z = 0;
+				pev->speed *= 0.99;
+			}
+			else if ( tr.vecPlaneNormal.z < 0.65 || tr.fStartSolid )
+				pev->speed *= -1;
+			else
+				m_vSurfaceNormal = tr.vecPlaneNormal;
+
+			CBaseEntity *pHit = CBaseEntity::Instance( tr.pHit );
+
+			if ( pHit && pHit->Classify() == CLASS_VEHICLE )
+				ALERT( at_console, "I hit another vehicle\n" );
+		}
+		else
+		{
+			UTIL_TraceLine( m_vBackRight, m_vBackRight + (gpGlobals->v_forward * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
+
+			if ( tr.flFraction != 1.0 )
+			{
+				if ( DotProduct( tr.vecPlaneNormal, gpGlobals->v_forward * -1 ) < 0.7 && tr.vecPlaneNormal.z < 0.1 )
+				{
+					m_vSurfaceNormal = tr.vecPlaneNormal;
+					m_vSurfaceNormal.z = 0;
+					pev->speed *= 0.99;
+				}
+				else if ( tr.vecPlaneNormal.z < 0.65 || tr.fStartSolid )
+					pev->speed *= -1;
+				else
+					m_vSurfaceNormal = tr.vecPlaneNormal;
+			}
+			else
+			{
+				UTIL_TraceLine( m_vBack, m_vBack + (gpGlobals->v_forward * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
+
+				if ( tr.flFraction != 1.0 )
+				{
+					if ( DotProduct( tr.vecPlaneNormal, gpGlobals->v_forward * -1 ) < 0.7 && tr.vecPlaneNormal.z < 0.1 )
+					{
+						m_vSurfaceNormal = tr.vecPlaneNormal;
+						m_vSurfaceNormal.z = 0;
+						pev->speed *= 0.99;
+					}
+					else if ( tr.vecPlaneNormal.z < 0.65 || tr.fStartSolid )
+						pev->speed *= -1;
+					else
+						m_vSurfaceNormal = tr.vecPlaneNormal;
+				}
+			}
+		}
+	}
+	else if ( pev->speed > 0 )
+	{
+		UTIL_TraceLine( m_vFrontLeft, m_vFrontLeft - (gpGlobals->v_forward * 16), dont_ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
+
+		if ( tr.flFraction != 1.0 )
+		{
+			if ( DotProduct( tr.vecPlaneNormal, gpGlobals->v_forward * -1 ) > -0.7 && tr.vecPlaneNormal.z < 0.1 )
+			{
+				m_vSurfaceNormal = tr.vecPlaneNormal;
+				m_vSurfaceNormal.z = 0;
+				pev->speed *= 0.99;
+			}
+			else if ( tr.vecPlaneNormal.z < 0.65 || tr.fStartSolid )
+				pev->speed *= -1;
+			else
+				m_vSurfaceNormal = tr.vecPlaneNormal;
+		}
+		else
+		{
+			UTIL_TraceLine( m_vFrontRight, m_vFrontRight - (gpGlobals->v_forward * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
+
+			if ( tr.flFraction != 1.0 )
+			{
+				if ( DotProduct( tr.vecPlaneNormal, gpGlobals->v_forward * -1 ) > -0.7 && tr.vecPlaneNormal.z < 0.1 )
+				{
+					m_vSurfaceNormal = tr.vecPlaneNormal;
+					m_vSurfaceNormal.z = 0;
+					pev->speed *= 0.99;
+				}
+				else if ( tr.vecPlaneNormal.z < 0.65 || tr.fStartSolid )
+					pev->speed *= -1;
+				else
+					m_vSurfaceNormal = tr.vecPlaneNormal;
+			}
+			else
+			{
+				UTIL_TraceLine( m_vFront, m_vFront - (gpGlobals->v_forward * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
+
+				if ( tr.flFraction != 1.0 )
+				{
+					if ( DotProduct( tr.vecPlaneNormal, gpGlobals->v_forward * -1 ) > -0.7 && tr.vecPlaneNormal.z < 0.1 )
+					{
+						m_vSurfaceNormal = tr.vecPlaneNormal;
+						m_vSurfaceNormal.z = 0;
+						pev->speed *= 0.99;
+					}
+					else if ( tr.vecPlaneNormal.z < 0.65 || tr.fStartSolid )
+						pev->speed *= -1;
+					else
+						m_vSurfaceNormal = tr.vecPlaneNormal;
+				}
+			}
+		}
+	}
+}
+
+
+void CFuncVehicle :: TerrainFollowing( void )
+{
+	TraceResult tr;
+
+	// the ground under the vehicle
+	UTIL_TraceLine( pev->origin, pev->origin + Vector( 0, 0, (m_height + 48) * -1 ), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
+
+	if ( tr.flFraction != 1.0 )
+	{
+		m_vSurfaceNormal = tr.vecPlaneNormal;
+	}
+	else if ( tr.fInWater )
+	{
+		m_vSurfaceNormal = Vector( 0, 0, 1 );
+	}
+}
+
+
+void CFuncVehicle :: Next( void )
+{
+	Vector vGravityVector = g_vecZero;
+
+	UTIL_MakeVectors( pev->angles );
+
+	Vector forward = (gpGlobals->v_forward * -1) * (m_length / 2);
+	Vector right = (gpGlobals->v_right * -1) * (m_width / 2);
+	Vector up = gpGlobals->v_up * 16;
+
+	m_vFrontLeft = pev->origin + forward - right + up;
+	m_vFrontRight = pev->origin + forward + right + up;
+	m_vFront = pev->origin + forward + up;
+	m_vBackLeft = pev->origin - forward - right + up;
+	m_vBackRight = pev->origin - forward + right + up;
+	m_vBack = pev->origin - forward + up;
+
+	m_vSurfaceNormal = g_vecZero;
+
+	CheckTurning();
+
+	float time = 0.1;
+
+	// sic: a stand-in for text of Next that makes no code. Two more locals than
+	// the text below has give retail's x87 operand order in the two cross
+	// products (one leaves 8 instructions in another order, three leave 6),
+	// and 12 to 28 more units of size give its choice of expanded operators:
+	// with the two initialised, 1 to 5 further dead stores fit, none and 6 do
+	// not. What stood here is not known. Beta 7.0's larger stand-in, its
+	// declared-then-assigned vGravityVector and its gotos are not needed here.
+	int iStandIn0 = 0, iStandIn1 = 0;
+	iStandIn0 = 0; iStandIn1 = 0; iStandIn0 = 0;
 
 	if ( m_flSteeringWheelDecay < gpGlobals->time )
 	{
@@ -528,251 +690,96 @@ void CFuncVehicle :: Next( void )
 		m_iTurnAngle = 0;
 		pev->avelocity = g_vecZero;
 		pev->velocity = g_vecZero;
-	}
-	else
-	{
-		Vector vSurfaceNormal = g_vecZero;
-
-		// the ground under the vehicle
-		UTIL_TraceLine( pev->origin, pev->origin + Vector( 0, 0, (m_height + 48) * -1 ), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
-
-		if ( tr.flFraction != 1.0 )
-		{
-			vSurfaceNormal = tr.vecPlaneNormal;
-		}
-		else if ( tr.fInWater )
-		{
-			vSurfaceNormal = Vector( 0, 0, 1 );
-		}
-		else if ( tr.fStartSolid )
-		{
-			pev->velocity.z = 0;
-			pev->velocity = pev->velocity + Vector( 0, 0, 250 );
-			return;
-		}
-
-		// walls in the way: a trace from the two rear corners and the middle of the
-		// back when reversing, from the front ones when driving forward; the first
-		// that hits decides: slide along a wall hit at an angle, bounce off a
-		// steep one, take a slope's normal.
-		// sic: the forward branches leave by explicit jumps where the backward ones
-		// fall out of their if/else. Retail keeps one copy of each of the six
-		// handlers' common tails, and which copy tells the forms apart: the
-		// slide and bounce branches of the forward handlers and the end of one
-		// of the two blocks are jumps of their own (measured over the 2,048
-		// combinations of the nine forward exits and the two block ends: 48
-		// give retail's code, all with these). The jump's spelling (goto and
-		// the label) is ours.
-		if ( pev->speed < 0 )
-		{
-			UTIL_TraceLine( vBackLeft, vBackLeft + (gpGlobals->v_forward * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
-
-			if ( tr.flFraction != 1.0 )
-			{
-				if ( DotProduct( tr.vecPlaneNormal, gpGlobals->v_forward * -1 ) < 0.7 && tr.vecPlaneNormal.z < 0.1 )
-				{
-					vSurfaceNormal = tr.vecPlaneNormal;
-					vSurfaceNormal.z = 0;
-					pev->speed *= 0.99;
-				}
-				else if ( tr.vecPlaneNormal.z < 0.65 )
-					pev->speed *= -1;
-				else
-					vSurfaceNormal = tr.vecPlaneNormal;
-			}
-			else
-			{
-				UTIL_TraceLine( vBackRight, vBackRight + (gpGlobals->v_forward * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
-
-				if ( tr.flFraction != 1.0 )
-				{
-					if ( DotProduct( tr.vecPlaneNormal, gpGlobals->v_forward * -1 ) < 0.7 && tr.vecPlaneNormal.z < 0.1 )
-					{
-						vSurfaceNormal = tr.vecPlaneNormal;
-						vSurfaceNormal.z = 0;
-						pev->speed *= 0.99;
-					}
-					else if ( tr.vecPlaneNormal.z < 0.65 )
-						pev->speed *= -1;
-					else
-						vSurfaceNormal = tr.vecPlaneNormal;
-				}
-				else
-				{
-					UTIL_TraceLine( vBack, vBack + (gpGlobals->v_forward * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
-
-					if ( tr.flFraction != 1.0 )
-					{
-						if ( DotProduct( tr.vecPlaneNormal, gpGlobals->v_forward * -1 ) < 0.7 && tr.vecPlaneNormal.z < 0.1 )
-						{
-							vSurfaceNormal = tr.vecPlaneNormal;
-							vSurfaceNormal.z = 0;
-							pev->speed *= 0.99;
-						}
-						else if ( tr.vecPlaneNormal.z < 0.65 )
-							pev->speed *= -1;
-						else
-							vSurfaceNormal = tr.vecPlaneNormal;
-					}
-				}
-			}
-		}
-		else if ( pev->speed > 0 )
-		{
-			UTIL_TraceLine( vFrontLeft, vFrontLeft - (gpGlobals->v_forward * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
-
-			if ( tr.flFraction != 1.0 )
-			{
-				if ( DotProduct( tr.vecPlaneNormal, gpGlobals->v_forward * -1 ) > -0.7 && tr.vecPlaneNormal.z < 0.1 )
-				{
-					vSurfaceNormal = tr.vecPlaneNormal;
-					vSurfaceNormal.z = 0;
-					pev->speed *= 0.99;
-					goto walls_done;
-				}
-				else if ( tr.vecPlaneNormal.z < 0.65 )
-				{
-					pev->speed *= -1;
-					goto walls_done;
-				}
-				else
-					vSurfaceNormal = tr.vecPlaneNormal;
-			}
-			else
-			{
-				UTIL_TraceLine( vFrontRight, vFrontRight - (gpGlobals->v_forward * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
-
-				if ( tr.flFraction != 1.0 )
-				{
-					if ( DotProduct( tr.vecPlaneNormal, gpGlobals->v_forward * -1 ) > -0.7 && tr.vecPlaneNormal.z < 0.1 )
-					{
-						vSurfaceNormal = tr.vecPlaneNormal;
-						vSurfaceNormal.z = 0;
-						pev->speed *= 0.99;
-						goto walls_done;
-					}
-					else if ( tr.vecPlaneNormal.z < 0.65 )
-					{
-						pev->speed *= -1;
-						goto walls_done;
-					}
-					else
-						vSurfaceNormal = tr.vecPlaneNormal;
-				}
-				else
-				{
-					UTIL_TraceLine( vFront, vFront - (gpGlobals->v_forward * 16), ignore_monsters, dont_ignore_glass, ENT(pev), &tr );
-
-					if ( tr.flFraction != 1.0 )
-					{
-						if ( DotProduct( tr.vecPlaneNormal, gpGlobals->v_forward * -1 ) > -0.7 && tr.vecPlaneNormal.z < 0.1 )
-						{
-							vSurfaceNormal = tr.vecPlaneNormal;
-							vSurfaceNormal.z = 0;
-							pev->speed *= 0.99;
-							goto walls_done;
-						}
-						else if ( tr.vecPlaneNormal.z < 0.65 )
-						{
-							pev->speed *= -1;
-							goto walls_done;
-						}
-						else
-							vSurfaceNormal = tr.vecPlaneNormal;
-					}
-				}
-			}
-			goto walls_done;
-		}
-walls_done:
-
-		Vector vVehicleDirection;
-
-		if ( vSurfaceNormal != g_vecZero )
-		{
-			// on the ground: follow the surface
-			Vector vTargetAngle, vAngle;
-			float vx, vy;
-
-			vVehicleDirection = CrossProduct( vSurfaceNormal, gpGlobals->v_forward );
-			vVehicleDirection = CrossProduct( vSurfaceNormal, vVehicleDirection );
-
-			vTargetAngle = UTIL_VecToAngles( vVehicleDirection );
-			vTargetAngle.y += 180;
-
-			vAngle = pev->angles;
-
-			if ( m_iTurnAngle != 0 )
-				vTargetAngle.y += m_iTurnAngle;
-
-			// !!!  All of this crap has to be done to make the angles not wrap around, revisit this.
-			FixupAngles2( vTargetAngle );
-			FixupAngles2( vAngle );
-
-			vx = UTIL_AngleDistance( vTargetAngle.x, vAngle.x );
-			vy = UTIL_AngleDistance( vTargetAngle.y, vAngle.y );
-
-			if ( vx > 10 )
-				vx = 10;
-			else if ( vx < -10 )
-				vx = -10;
-
-			if ( vy > 10 )
-				vy = 10;
-			else if ( vy < -10 )
-				vy = -10;
-
-			pev->avelocity.y = (int)(vy * 10);
-			pev->avelocity.x = (int)(vx * 10);
-
-			m_flLaunchTime = -1;
-			m_flLastNormalZ = vSurfaceNormal.z;
-		}
-		else
-		{
-			// in the air
-			time = 0.1;
-
-			if ( m_flLaunchTime == -1 )
-			{
-				m_flLaunchTime = gpGlobals->time;
-				vGravityVector = Vector( 0, 0, 0 );
-				pev->velocity = pev->velocity * 1.5;
-			}
-			else
-			{
-				float flAirTime = gpGlobals->time - m_flLaunchTime;
-
-				vGravityVector = Vector( 0, 0, flAirTime * -35 );
-
-				if ( vGravityVector.z < -400 )
-					vGravityVector.z = -400;
-			}
-
-			vVehicleDirection = gpGlobals->v_forward * -1;
-		}
-
-		UTIL_VecToAngles( vVehicleDirection );	// result unused in retail
-
-		if ( m_flUpdateSound < gpGlobals->time )
-		{
-			UpdateSound();
-			m_flUpdateSound = gpGlobals->time + 0.5;
-		}
-
-		if ( vSurfaceNormal != g_vecZero )
-		{
-			ALERT( at_console, "vSurfaceNormal = %f  %f  %f\n", vSurfaceNormal.x, vSurfaceNormal.y, vSurfaceNormal.z );
-			pev->velocity = pev->speed * vVehicleDirection.Normalize();
-		}
-		else
-		{
-			pev->velocity = pev->velocity + vGravityVector;
-		}
 
 		SetThink( Next );
 		NextThink( pev->ltime + time, TRUE );
+		return;
 	}
+
+	TerrainFollowing();
+	CollisionDetection();
+
+	if ( m_vSurfaceNormal != g_vecZero )
+	{
+		// on the ground: follow the surface
+		Vector vTargetAngle, vAngle;
+		float vx, vy;
+
+		m_vVehicleDirection = CrossProduct( m_vSurfaceNormal, gpGlobals->v_forward );
+		m_vVehicleDirection = CrossProduct( m_vSurfaceNormal, m_vVehicleDirection );
+
+		vTargetAngle = UTIL_VecToAngles( m_vVehicleDirection );
+		vTargetAngle.y += 180;
+
+		vAngle = pev->angles;
+
+		if ( m_iTurnAngle != 0 )
+			vTargetAngle.y += m_iTurnAngle;
+
+		// !!!  All of this crap has to be done to make the angles not wrap around, revisit this.
+		FixupAngles2( vTargetAngle );
+		FixupAngles2( vAngle );
+
+		vx = UTIL_AngleDistance( vTargetAngle.x, vAngle.x );
+		vy = UTIL_AngleDistance( vTargetAngle.y, vAngle.y );
+
+		if ( vx > 10 )
+			vx = 10;
+		else if ( vx < -10 )
+			vx = -10;
+
+		if ( vy > 10 )
+			vy = 10;
+		else if ( vy < -10 )
+			vy = -10;
+
+		pev->avelocity.y = (int)(vy * 10);
+		pev->avelocity.x = (int)(vx * 10);
+
+		m_flLaunchTime = -1;
+		m_flLastNormalZ = m_vSurfaceNormal.z;
+	}
+	else
+	{
+		// in the air
+		if ( m_flLaunchTime == -1 )
+		{
+			m_flLaunchTime = gpGlobals->time;
+			vGravityVector = Vector( 0, 0, 0 );
+			pev->velocity = pev->velocity * 1.5;
+		}
+		else
+		{
+			float flAirTime = gpGlobals->time - m_flLaunchTime;
+
+			vGravityVector = Vector( 0, 0, flAirTime * -35 );
+
+			if ( vGravityVector.z < -400 )
+				vGravityVector.z = -400;
+		}
+
+		m_vVehicleDirection = gpGlobals->v_forward * -1;
+	}
+
+	UTIL_VecToAngles( m_vVehicleDirection );	// result unused in retail
+
+	if ( m_flUpdateSound < gpGlobals->time )
+	{
+		UpdateSound();
+		m_flUpdateSound = gpGlobals->time + 1;
+	}
+
+	if ( m_vSurfaceNormal != g_vecZero )
+	{
+		pev->velocity = pev->speed * m_vVehicleDirection.Normalize();
+	}
+	else
+	{
+		pev->velocity = pev->velocity + vGravityVector;
+	}
+
+	SetThink( Next );
+	NextThink( pev->ltime + time, TRUE );
 }
 
 
@@ -1020,11 +1027,14 @@ void CFuncVehicle :: Restart( void )
 	m_flTurnStartTime = -1;
 	m_flUpdateSound = -1;
 	m_dir = 1;
+	m_pDriver = NULL;
 
 	if ( FStringNull(pev->target) )
 		ALERT( at_console, "Vehicle with no target" );
 
 	UTIL_SetOrigin( pev, pev->oldorigin );
+
+	STOP_SOUND( ENT(pev), CHAN_STATIC, (char*)STRING(pev->noise) );
 
 	NextThink( pev->ltime + 0.1, FALSE );
 	SetThink( Find );

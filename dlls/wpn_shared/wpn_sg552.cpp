@@ -84,6 +84,7 @@ int CSG552::GetItemInfo(ItemInfo *p)
 BOOL CSG552::Deploy( )
 {
 	m_flAccuracy = 0.2;
+	m_iShotsFired = 0;
 	m_iShellOn = 1;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
@@ -116,9 +117,9 @@ void CSG552::SecondaryAttack( void )
 void CSG552::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		SG552Fire( m_flAccuracy * 0.45, 0.0825, FALSE );
+		SG552Fire( 0.035 + ( 0.35 * m_flAccuracy ), 0.0825, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
-		SG552Fire( m_flAccuracy * 0.09, 0.0825, FALSE );
+		SG552Fire( 0.035 + ( 0.075 * m_flAccuracy ), 0.0825, FALSE );
 	else if ( m_pPlayer->pev->fov == 90 )
 		SG552Fire( m_flAccuracy * 0.02, 0.0825, FALSE );
 	else
@@ -176,13 +177,13 @@ void CSG552::SG552Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2.0;
 
 	if ( m_pPlayer->pev->velocity.Length2D() > 0 )
-		KickBack( 1.1, 0.45, 0.22, 0.18, 5, 3.5, 6 );
+		KickBack( 1, 0.45, 0.28, 0.04, 4.25, 2.5, 7 );
 	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
 		KickBack( 1.25, 0.45, 0.22, 0.18, 6, 4, 5 );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
-		KickBack( 0.6, 0.35, 0.2, 0.0125, 4, 2, 10 );
+		KickBack( 0.6, 0.35, 0.2, 0.0125, 3.7, 2, 10 );
 	else
-		KickBack( 0.625, 0.375, 0.25, 0.0125, 4.5, 2.25, 9 );
+		KickBack( 0.625, 0.375, 0.25, 0.0125, 4, 2.25, 9 );
 }
 
 void CSG552::Reload( void )

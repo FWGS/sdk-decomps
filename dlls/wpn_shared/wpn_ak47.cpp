@@ -84,6 +84,7 @@ int CAK47::GetItemInfo(ItemInfo *p)
 BOOL CAK47::Deploy( )
 {
 	m_flAccuracy = 0.2;
+	m_iShotsFired = 0;
 	m_iShellOn = 1;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
@@ -99,9 +100,9 @@ void CAK47::SecondaryAttack( void )
 void CAK47::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		AK47Fire( m_flAccuracy * 0.5, 0.0955, FALSE );
+		AK47Fire( 0.04 + ( 0.3 * m_flAccuracy ), 0.0955, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
-		AK47Fire( m_flAccuracy * 0.11, 0.0955, FALSE );
+		AK47Fire( 0.04 + ( 0.07 * m_flAccuracy ), 0.0955, FALSE );
 	else
 		AK47Fire( m_flAccuracy * 0.0275, 0.0955, FALSE );
 }
@@ -113,8 +114,8 @@ void CAK47::AK47Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_flAccuracy = ( ( m_iShotsFired * m_iShotsFired * m_iShotsFired ) / 200 ) + 0.35;
 
-	if ( m_flAccuracy > 1 )
-		m_flAccuracy = 1;
+	if ( m_flAccuracy > 1.25 )
+		m_flAccuracy = 1.25;
 
 	if (m_iClip <= 0)
 	{
@@ -157,7 +158,7 @@ void CAK47::AK47Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.9;
 
 	if ( m_pPlayer->pev->velocity.Length2D() > 0 )
-		KickBack( 1.5, 0.45, 0.25, 0.185, 7, 4, 6 );
+		KickBack( 1.5, 0.45, 0.225, 0.05, 6.5, 2.5, 7 );
 	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
 		KickBack( 2, 1.0, 0.5, 0.35, 9, 6, 5 );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )

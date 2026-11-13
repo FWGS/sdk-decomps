@@ -18,6 +18,7 @@
 // implementation of CHud class
 //
 
+#include <windows.h>
 #include "hud.h"
 #include "cl_util.h"
 #include <string.h>
@@ -28,10 +29,12 @@
 
 #include "demo.h"
 #include "demo_api.h"
+#include "com_weapons.h"
 
 extern client_sprite_t *GetSpriteList(client_sprite_t *pList, const char *psz, int iRes, int iCount);
 
 extern cvar_t *sensitivity;
+HWND g_hCheatWindows[20];	// name ours: windows CHud's destructor enables again (nothing fills it in Beta 7.1)
 cvar_t *cl_lw = NULL;
 
 void ShutdownInput (void);
@@ -321,6 +324,8 @@ void CHud :: Init( void )
 	g_SmokeList.m_flLife = 1.0;
 	m_bGunSmoke = false;
 
+	memset( g_hCheatWindows, 0, sizeof( HWND ) * 21 );	// sic: 21, one more than the array holds (cl_lw follows it)
+
 	m_Teamplay = 1;
 }
 
@@ -342,6 +347,15 @@ CHud :: ~CHud()
 			free( pList );
 		}
 		m_pHudList = NULL;
+	}
+
+	for ( int i = 0; i <= 20; i++ )	// sic: <= 20, one past the array
+	{
+		if ( g_hCheatWindows[i] )
+		{
+			EnableWindow( g_hCheatWindows[i], TRUE );
+			COM_Log( "c:\\cheaters.log", "Windows renabled\n" );
+		}
 	}
 
 	g_ShellList.Expire( 99999 );
@@ -470,6 +484,7 @@ void CHud :: VidInit( void )
 	m_ProgressBar.VidInit();
 
 	m_flCvarCheckTime = -1;
+	m_flWindowCheckTime = -1;
 }
 
 int CHud::MsgFunc_Logo(const char *pszName,  int iSize, void *pbuf)

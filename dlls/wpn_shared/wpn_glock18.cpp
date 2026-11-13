@@ -118,12 +118,12 @@ void CGLOCK18::SecondaryAttack( void )
 {
 	if ( !( m_iWeaponState & WPNSTATE_GLOCK18_BURST_MODE ) )
 	{
-		ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Switched to burst-fire" );
+		ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "#Switch_To_BurstFire" );
 		m_iWeaponState |= WPNSTATE_GLOCK18_BURST_MODE;
 	}
 	else
 	{
-		ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Switched to semi-automatic" );
+		ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "#Switch_To_SemiAuto" );
 		m_iWeaponState &= ~WPNSTATE_GLOCK18_BURST_MODE;
 	}
 

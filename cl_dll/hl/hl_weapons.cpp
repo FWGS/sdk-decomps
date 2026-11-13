@@ -388,7 +388,9 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		if ( m_bDelayFire == true )
 		{
 			m_bDelayFire = false;
-			m_iShotsFired = 20;
+
+			if ( m_iShotsFired < 16 )
+				m_iShotsFired += 4;
 		}
 
 		if ( m_iId == WEAPON_USP || m_iId == WEAPON_GLOCK18 || m_iId == WEAPON_P228 || m_iId == WEAPON_DEAGLE || m_iId == WEAPON_ELITE )
@@ -419,8 +421,9 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 // more of it before CBasePlayer::Killed than the text here gives.  With CBasePlayer's four
 // Vector members (player.h: the implicit constructor of this file's `player` carries their
 // intermediate code) this unused inline gives retail's order with 1 to 12 empty statements in
-// Beta 6.5 (the server job's measurement), 0 to 12 in Beta 6.6 and 1 to 9 in Beta 7.0.  With int
-// arrays in the Vectors' place they took 14 to 40, 26 to 40 and 20 to 36.
+// Beta 6.5 (the server job's measurement), 0 to 12 in Beta 6.6, 1 to 9 in Beta 7.0 and 2 to 19 in
+// Beta 7.1 (full builds).  With int arrays in the Vectors' place they took 14 to 40, 26 to 40,
+// 20 to 36 and 29 or more.
 // Nothing calls it.
 inline void b65_hlweapons_unknown( void )
 {
@@ -855,8 +858,15 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	player.pev->weaponanim = from->client.weaponanim;
 	player.pev->viewmodel = from->client.viewmodel;
 	player.m_flNextAttack = from->client.m_flNextAttack;
-	player.m_bCanShoot = from->client.iuser3 != 0;
-	player.m_bLeftHanded = from->client.iuser4 != 0;
+	int iUser3 = from->client.iuser3;	// name ours
+	if ( iUser3 & 1 )
+		player.m_bCanShoot = true;
+	else
+		player.m_bCanShoot = false;
+	if ( iUser3 & 2 )
+		player.m_bLeftHanded = true;
+	else
+		player.m_bLeftHanded = false;
 
 	// Ammo counts for the client's weapons
 	player.ammo_buckshot	= from->client.ammo_shells;
@@ -957,8 +967,7 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	to->client.vuser3[ 1 ]				= player.ammo_57mm;
 	to->client.vuser3[ 2 ]				= player.ammo_357sig;
 
-	to->client.iuser3					= player.m_bCanShoot;
-	to->client.iuser4					= player.m_bLeftHanded;
+	to->client.iuser3					= iUser3;
 
 	// Make sure that weapon animation matches what the game .dll is telling us
 	//  over the wire ( fixes some animation glitches )

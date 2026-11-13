@@ -2085,7 +2085,7 @@ void CEscapeZone::EscapeTouch( CBaseEntity *pOther )
 				CBasePlayer *pTeammate = (CBasePlayer *)UTIL_PlayerByIndex( i );	// name ours
 
 				if ( pTeammate && !FNullEnt( pTeammate->pev ) && pTeammate->m_iTeam == pPlayer->m_iTeam )
-					ClientPrint( pTeammate->pev, HUD_PRINTCENTER, "Terrorist has escaped!\n" );
+					ClientPrint( pTeammate->pev, HUD_PRINTCENTER, "#Terrorist_Escaped" );
 			}
 		}
 		else if ( pPlayer->m_iTeam == TEAM_CT )

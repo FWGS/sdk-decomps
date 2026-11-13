@@ -334,45 +334,10 @@ CRifleMenuPanel::CRifleMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide
 }
 
 
-//======================================
-// Key inputs for the Class Menu
-bool CRifleMenuPanel::SlotInput( int iSlot )
-{
-	if ( (iSlot < 0) || (iSlot > 9) )
-		return false;
-
-	if ( iSlot == 9 )
-	{
-		if ( !(m_pCancelButton->IsNotValid()) )
-		{
-			m_pCancelButton->fireActionSignal();
-			return true;
-		}
-	}
-
-	if ( !m_pButtons[ iSlot ] )
-		return false;
-
-	if ( !(m_pButtons[ iSlot ]->IsNotValid()) )
-	{
-		m_pButtons[ iSlot ]->fireActionSignal();
-		return true;
-	}
-
-	return false;
-}
-
-//======================================
-// Update the Class menu before opening it
-void CRifleMenuPanel::Open( void )
-{
-	Update();
-	CMenuPanel::Open();
-}
-
-// Update (after SlotInput and Open in this file: with Update ahead of SlotInput,
-// VC6 reloads bTerrorist before iMapType after positioning a button; retail
-// reloads iMapType first, as with SlotInput and Open or Initialize before it)
+// Update (first after the constructor since Beta 7.1: the image keeps the rifle
+// menu's own SlotInput after it, and with Update ahead of SlotInput VC6 reloads
+// bTerrorist before iMapType after positioning a button, as 7.1 does; 7.0 had
+// SlotInput and Open first and the other reload order)
 void CRifleMenuPanel::Update()
 {
 	int	 iYPos = CLASSMENU_TOPLEFT_BUTTON_Y;
@@ -458,6 +423,42 @@ void CRifleMenuPanel::Update()
 	}
 
 	m_pCancelButton->setVisible( true );
+}
+
+//======================================
+// Key inputs for the Class Menu
+bool CRifleMenuPanel::SlotInput( int iSlot )
+{
+	if ( (iSlot < 0) || (iSlot > 9) )
+		return false;
+
+	if ( iSlot == 9 )
+	{
+		if ( !(m_pCancelButton->IsNotValid()) )
+		{
+			m_pCancelButton->fireActionSignal();
+			return true;
+		}
+	}
+
+	if ( !m_pButtons[ iSlot ] )
+		return false;
+
+	if ( !(m_pButtons[ iSlot ]->IsNotValid()) )
+	{
+		m_pButtons[ iSlot ]->fireActionSignal();
+		return true;
+	}
+
+	return false;
+}
+
+//======================================
+// Update the Class menu before opening it
+void CRifleMenuPanel::Open( void )
+{
+	Update();
+	CMenuPanel::Open();
 }
 
 //-----------------------------------------------------------------------------

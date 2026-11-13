@@ -85,6 +85,7 @@ int CM249::GetItemInfo(ItemInfo *p)
 BOOL CM249::Deploy( )
 {
 	m_flAccuracy = 0.2;
+	m_iShotsFired = 0;
 	m_iShellOn = 1;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
@@ -96,9 +97,9 @@ BOOL CM249::Deploy( )
 void CM249::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		M249Fire( m_flAccuracy * 0.65, 0.1, FALSE );
+		M249Fire( 0.045 + ( 0.4 * m_flAccuracy ), 0.1, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
-		M249Fire( m_flAccuracy * 0.2, 0.1, FALSE );
+		M249Fire( 0.045 + ( 0.095 * m_flAccuracy ), 0.1, FALSE );
 	else
 		M249Fire( m_flAccuracy * 0.03, 0.1, FALSE );
 }
@@ -108,10 +109,10 @@ void CM249::M249Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	m_bDelayFire = true;
 	m_iShotsFired++;
 
-	m_flAccuracy = ( ( m_iShotsFired * m_iShotsFired * m_iShotsFired ) / 150 ) + 0.45;
+	m_flAccuracy = ( ( m_iShotsFired * m_iShotsFired * m_iShotsFired ) / 175 ) + 0.4;
 
-	if ( m_flAccuracy > 1.4 )
-		m_flAccuracy = 1.4;
+	if ( m_flAccuracy > 0.9 )
+		m_flAccuracy = 0.9;
 
 	if (m_iClip <= 0)
 	{
@@ -154,13 +155,13 @@ void CM249::M249Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.6;
 
 	if ( m_pPlayer->pev->velocity.Length2D() > 0 )
-		KickBack( 1.8, 0.55, 0.35, 0.1, 5.0, 3.0, 8 );
+		KickBack( 1.1, 0.5, 0.3, 0.06, 4.0, 3.0, 8 );
 	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
 		KickBack( 1.8, 0.65, 0.45, 0.125, 5.0, 3.5, 8 );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
-		KickBack( 0.75, 0.325, 0.25, 0.0375, 4.0, 2.5, 9 );
+		KickBack( 0.75, 0.325, 0.25, 0.025, 3.5, 2.5, 9 );
 	else
-		KickBack( 0.8, 0.35, 0.3, 0.04, 4.5, 3.0, 9 );
+		KickBack( 0.8, 0.35, 0.3, 0.03, 3.75, 3.0, 9 );
 }
 
 void CM249::Reload( void )

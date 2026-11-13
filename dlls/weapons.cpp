@@ -1043,11 +1043,17 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		// no fire buttons down
 
 		// Beta 3.0: after a shot the count of shots fired is set to 20 and
-		// then runs down (the accuracy of the next shot)
+		// then runs down (the accuracy of the next shot).
+		// Beta 7.1: the count is cut to 15 and stands for 0.4 seconds
+		// (Beta 7.0: set to 20; Beta 6.6: to 15)
 		if ( m_bDelayFire == true )
 		{
 			m_bDelayFire = false;
-			m_iShotsFired = 20;	// Beta 7.0 (Beta 6.6: 15; before: 20)
+
+			if ( m_iShotsFired > 15 )
+				m_iShotsFired = 15;
+
+			m_flDecreaseShotsFired = gpGlobals->time + 0.4;
 		}
 
 		m_fFireOnEmpty = FALSE;

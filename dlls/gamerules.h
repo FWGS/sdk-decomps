@@ -424,12 +424,14 @@ public:
 	int m_iNumEscapeRounds;			// 0xac new: rounds played on an escape map; at 8 the teams swap (SwapAllPlayers; Beta 6.5: at 3)
 	int m_iMapVotes[100];			// 0xb0 new in Beta 6.5: the votes each map of the cycle has, map 1 first (VoteMap counts them; Counter-Strike 1.6's name)
 	int m_iLastPick;				// 0x240 new in Beta 6.5: the counter-terrorist PickNextVIP took last (1.6's name)
-	int m_iMaxMapTime;				// 0x244 new in Beta 7.0: mp_timelimit as the constructor found it (1.6's name)
-	// (Beta 7.0's offsets from here on, Beta 6.5's plus 4; Beta 6.1's in brackets)
-	CBasePlayer *m_pCTCommander;	// 0x248 [0xb0] new in Beta 3.0: the counter-terrorists' commander (PickNewCommander)
-	CBasePlayer *m_pTerroristCommander;	// 0x24c [0xb4] the terrorists'
-	CBasePlayer *m_pVIP;			// 0x250 [0xb8] new in Beta 6.0: the VIP (PickNextVIP, MakeVIP)
-	CBasePlayer *m_pVIPQueue[5];	// 0x254 [0xbc] new in Beta 6.0: counter-terrorists waiting to be the VIP (AddToVIPQueue)
+	int m_iMaxMapTime;				// 0x244 new in Beta 7.0: mp_timelimit as the constructor found it, put back at a complete restart (1.6's name). Beta 7.1: no function refers to it
+	int m_iMaxRounds;				// 0x248 new in Beta 7.1: mp_maxrounds, read at a complete restart and by Think (1.6's name)
+	int m_iTotalRoundsPlayed;		// 0x24c new in Beta 7.1: RestartRound counts the rounds; Think changes the map at m_iMaxRounds (1.6's name)
+	// (Beta 7.1's offsets from here on, Beta 7.0's plus 8; Beta 6.1's in brackets)
+	CBasePlayer *m_pCTCommander;	// 0x250 [0xb0] new in Beta 3.0: the counter-terrorists' commander (PickNewCommander)
+	CBasePlayer *m_pTerroristCommander;	// 0x254 [0xb4] the terrorists'
+	CBasePlayer *m_pVIP;			// 0x258 [0xb8] new in Beta 6.0: the VIP (PickNextVIP, MakeVIP)
+	CBasePlayer *m_pVIPQueue[5];	// 0x25c [0xbc] new in Beta 6.0: counter-terrorists waiting to be the VIP (AddToVIPQueue)
 
 	// Beta 6.0 (Linux symbols): team balance, the escape maps' team swap, the VIP
 	void BalanceTeams( void );
@@ -447,17 +449,17 @@ public:
 	void VoteMap( CBasePlayer *player, int iVote );
 
 protected:
-	virtual void ChangeLevel( char *szMap );	// Beta 7.0: the parameter (Linux symbol; its name is ours)
+	virtual void ChangeLevel( void );	// (Beta 7.0 only: a char *szMap parameter; Linux symbols)
 	virtual void GoToIntermission( void );
-	float m_flIntermissionEndTime;	// 0x268 [0xd0]
-	BOOL m_iEndIntermissionButtonHit;	// 0x26c [0xd4]
+	float m_flIntermissionEndTime;	// 0x270 [0xd0]
+	BOOL m_iEndIntermissionButtonHit;	// 0x274 [0xd4]
 	void SendMOTDToClient( edict_t *client );
 
 public:
-	// Beta 5.0 (leak), after the SDK's members (names ours; Beta 7.0's offsets, Beta 6.1's in brackets)
-	BOOL m_bFreezePeriod;			// 0x270 [0xd8] TRUE from RestartRound until Think sees the freeze time run out (IsFreezePeriod)
-	float m_flNextRestartCheck;		// 0x274 [0xdc] when Think reads sv_restartround next (every half second; Beta 6.1: every second)
-	bool m_fGameCommenced;			// 0x278 [0xe0] both teams have had spawnable players (CheckWinConditions; until then a round ends at once)
+	// Beta 5.0 (leak), after the SDK's members (names ours; Beta 7.1's offsets, Beta 6.1's in brackets)
+	BOOL m_bFreezePeriod;			// 0x278 [0xd8] TRUE from RestartRound until Think sees the freeze time run out (IsFreezePeriod)
+	float m_flNextRestartCheck;		// 0x27c [0xdc] when Think reads sv_restartround next (every half second; Beta 6.1: every second)
+	bool m_fGameCommenced;			// 0x280 [0xe0] both teams have had spawnable players (CheckWinConditions; until then a round ends at once)
 };
 
 extern DLL_GLOBAL CGameRules*	g_pGameRules;

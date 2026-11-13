@@ -180,7 +180,7 @@ void DLLEXPORT CAM_Think( void )
 
 	camAngles[ PITCH ] = cam_idealpitch->value;
 	camAngles[ YAW ] = cam_idealyaw->value;
-	dist = cam_idealdist->value;
+	dist = 150;	// cam_idealdist no longer counts
 	//
 	//movement of the camera with the mouse
 	//
@@ -348,7 +348,7 @@ void DLLEXPORT CAM_Think( void )
 		// update ideal
 		cam_idealpitch->value = camAngles[ PITCH ];
 		cam_idealyaw->value = camAngles[ YAW ];
-		cam_idealdist->value = dist;
+		cam_idealdist->value = 150;
 	}
 
 	// Move towards ideal

@@ -227,6 +227,7 @@ WEAPON* WeaponsResource :: GetNextActivePos( int iSlot, int iSlotPos )
 
 
 int giBucketHeight, giBucketWidth, giABHeight, giABWidth; // Ammo Bar width and height
+int g_iShotsFired;	// name ours: the fire events count the local player's shots; the crosshair spreads by it
 
 HSPRITE ghsprBuckets;					// Sprite for top row of weapons menu
 
@@ -935,7 +936,7 @@ int CHudAmmo::Draw(float flTime)
 
 	WEAPON *pw = m_pWeapon; // shorthand
 
-	// the crosshair: four lines that spread while the clip empties
+	// the crosshair: four lines that spread with every shot the fire events count
 	if ( gHUD.m_iFOV >= 90 )
 	{
 		int iGapMin, iGapStep;		// names ours
@@ -955,29 +956,13 @@ int CHudAmmo::Draw(float flTime)
 			iGapMin = 6;
 			iGapStep = 2;
 			break;
-		case 20:
-			iGapMin = 6;
-			iGapStep = 4;
-			break;
 		case 21:
 			iGapMin = 8;
 			iGapStep = 6;
 			break;
-		case 22:
-			iGapMin = 4;
-			iGapStep = 4;
-			break;
 		case 24:
 			iGapMin = 6;
-			iGapStep = 5;
-			break;
-		case 27:
-			iGapMin = 5;
 			iGapStep = 4;
-			break;
-		case 28:
-			iGapMin = 4;
-			iGapStep = 5;
 			break;
 		case 23:
 		case 25:
@@ -987,7 +972,15 @@ int CHudAmmo::Draw(float flTime)
 			break;
 		case 30:
 			iGapMin = 7;
+			iGapStep = 3;
+			break;
+		case 28:
+			iGapMin = 4;
 			iGapStep = 4;
+			break;
+		case 27:
+			iGapMin = 5;
+			iGapStep = 3;
 			break;
 		case 3:
 			iGapMin = 5;
@@ -995,7 +988,11 @@ int CHudAmmo::Draw(float flTime)
 			break;
 		case 5:
 			iGapMin = 9;
-			iGapStep = 5;
+			iGapStep = 4;
+			break;
+		case 20:
+			iGapMin = 6;
+			iGapStep = 3;
 			break;
 		case 6:
 			iGapMin = 6;
@@ -1007,7 +1004,11 @@ int CHudAmmo::Draw(float flTime)
 			break;
 		case 8:
 			iGapMin = 3;
-			iGapStep = 4;
+			iGapStep = 3;
+			break;
+		case 22:
+			iGapMin = 4;
+			iGapStep = 3;
 			break;
 		default:
 			iGapMin = 4;
@@ -1015,33 +1016,38 @@ int CHudAmmo::Draw(float flTime)
 			break;
 		}
 
-		if ( pw->iClip < m_iLastClip )
+		if ( g_iShotsFired > m_iLastClip )
 		{
 			m_flCrossGap += iGapStep;
 			m_iCrossAlpha -= 40;
 
-			if ( m_flCrossGap > 20 )
-				m_flCrossGap = 20;
-			if ( m_iCrossAlpha < 60 )
-				m_iCrossAlpha = 60;
+			if ( m_flCrossGap > 15 )
+				m_flCrossGap = 15;
+			if ( m_iCrossAlpha < 120 )
+				m_iCrossAlpha = 120;
 		}
 		else
 		{
-			m_flCrossGap -= 0.5;
+			m_flCrossGap -= ( m_flCrossGap * 0.013 ) + 0.1;
 			m_iCrossAlpha += 2;
 		}
 
-		m_iLastClip = pw->iClip;
+		if ( g_iShotsFired > 600 )
+			g_iShotsFired = 1;
+
+		m_iLastClip = g_iShotsFired;
 
 		if ( m_flCrossGap < iGapMin )
 			m_flCrossGap = iGapMin;
-		if ( m_iCrossAlpha > 250 )
-			m_iCrossAlpha = 250;
+		if ( m_iCrossAlpha > 255 )
+			m_iCrossAlpha = 255;
 
-		FillRGBA( ScreenWidth / 2 - (int)m_flCrossGap - 5, ScreenHeight / 2, 5, 1, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
-		FillRGBA( ScreenWidth / 2 + (int)m_flCrossGap, ScreenHeight / 2, 5, 1, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
-		FillRGBA( ScreenWidth / 2, ScreenHeight / 2 - (int)m_flCrossGap - 5, 1, 5, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
-		FillRGBA( ScreenWidth / 2, ScreenHeight / 2 + (int)m_flCrossGap, 1, 5, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
+		int iLength = (int)( ( m_flCrossGap - iGapMin ) / 2 ) + 5;	// name ours
+
+		FillRGBA( ScreenWidth / 2 - (int)m_flCrossGap - iLength, ScreenHeight / 2, iLength, 1, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
+		FillRGBA( ScreenWidth / 2 + (int)m_flCrossGap, ScreenHeight / 2, iLength, 1, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
+		FillRGBA( ScreenWidth / 2, ScreenHeight / 2 - (int)m_flCrossGap - iLength, 1, iLength, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
+		FillRGBA( ScreenWidth / 2, ScreenHeight / 2 + (int)m_flCrossGap, 1, iLength, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
 	}
 
 	// SPR_Draw Ammo
@@ -1523,12 +1529,12 @@ int CHudMoney::Draw( float flTime )
 	// classes' inline copy constructors and assignments by the intermediate code before each
 	// of its own functions, so their places among VidInit .. GetSpriteList and vgui::Dar<T>'s
 	// members measure it: 83 to 86 empty statements here give retail's order in Betas 6.5, 6.6
-	// and 7.0 (6.5 alone takes 82 to 86, 6.6 79 to 86, 7.0 83 to 86).  At least 8 of them must
-	// stand before the end of this function (6.6 has App's copy constructor before
-	// MsgFunc_Money); the others give the same order between MsgFunc_BlinkAcct and
-	// GetSpriteList (measured in an unused inline function there), where Counter-Strike 1.6's
-	// ammo.cpp has nothing.  What text it was, the image does not say.
-	//
+	// and 7.0 (6.5 alone takes 82 to 86, 6.6 79 to 86, 7.0 83 to 86); Beta 7.1 takes 84 to 87
+	// (full builds), so 84 to 86 serve the four.  At least 8 of them must stand before the end
+	// of this function (6.6 has App's copy constructor before MsgFunc_Money); the others give
+	// the same order between MsgFunc_BlinkAcct and GetSpriteList (measured in an unused inline
+	// function there), where Counter-Strike 1.6's ammo.cpp has nothing.  What text it was, the
+	// image does not say.
 	;
 	;
 	;

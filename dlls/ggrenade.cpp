@@ -1010,7 +1010,7 @@ void CGrenade::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 			{
 				if ( player->m_fHasDefuser == true )
 				{
-					ClientPrint( player->pev, HUD_PRINTCENTER, "Defusing bomb WITH Defuse kit..." );
+					ClientPrint( player->pev, HUD_PRINTCENTER, "#Defusing_Bomb_With_Defuse_Kit" );
 					EMIT_SOUND( ENT(player->pev), CHAN_ITEM, "weapons/c4_disarm.wav", 1.0, ATTN_NORM );
 					m_pDefuser = pActivator;
 					m_bStartDefuse = true;
@@ -1023,7 +1023,7 @@ void CGrenade::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 				}
 				else
 				{
-					ClientPrint( player->pev, HUD_PRINTCENTER, "Defusing bomb WITHOUT Defuse kit..." );
+					ClientPrint( player->pev, HUD_PRINTCENTER, "#Defusing_Bomb_Without_Defuse_Kit" );
 					EMIT_SOUND( ENT(player->pev), CHAN_ITEM, "weapons/c4_disarm.wav", 1.0, ATTN_NORM );
 					m_pDefuser = pActivator;
 					m_bStartDefuse = true;

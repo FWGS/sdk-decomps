@@ -410,7 +410,7 @@ extern DLL_GLOBAL int			g_Language;
 #define VEC_HUMAN_HULL_MAX	Vector( 16, 16, 72 )
 #define VEC_HUMAN_HULL_DUCK	Vector( 16, 16, 36 )
 
-#define VEC_VIEW			Vector( 0, 0, 28 )	// Counter-Strike (Beta 5.0 leak to 6.6): 17; Beta 7.0: the SDK's 28 again. CBasePlayer::Spawn stores it (pm_shared.c has its own 28)
+#define VEC_VIEW			Vector( 0, 0, 17 )	// Counter-Strike (Beta 5.0 leak to 6.6): 17; Beta 7.0: the SDK's 28; Beta 7.1: 17 again. CBasePlayer::Spawn stores it (pm_shared.c has its own, 17 in Beta 7.1)
 
 #define VEC_DUCK_HULL_MIN	Vector(-16, -16, -18 )
 #define VEC_DUCK_HULL_MAX	Vector( 16,  16,  18)

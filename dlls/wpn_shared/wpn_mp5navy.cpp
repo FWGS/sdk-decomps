@@ -170,6 +170,7 @@ void CMP5N::Reload( void )
 	m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
 	m_flAccuracy = 0;
+	m_iShotsFired = 0;
 }
 
 void CMP5N::WeaponIdle( void )

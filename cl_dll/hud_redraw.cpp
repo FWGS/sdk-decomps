@@ -230,8 +230,6 @@ int CHud :: Redraw( float flTime, int intermission )
 		pszQuit[3] = 't';
 		pszQuit[4] = '\n';
 
-		char szCommand[100];	// name ours
-
 		if ( CVAR_GET_FLOAT( "cl_pitchup" ) != 89 )
 		{
 			ClientCmd( "cl_pitchup 89\n" );
@@ -253,46 +251,8 @@ int CHud :: Redraw( float flTime, int intermission )
 			ClientCmd( pszDisconnect );
 		}
 
-		if ( CVAR_GET_FLOAT( "gl_monolights" ) != 0 )
-		{
-			ClientCmd( "gl_monolights 0\n" );
-			ClientCmd( pszRestart );
-		}
-
 		if ( CVAR_GET_FLOAT( "sensitivity" ) < 1 )
 			ClientCmd( "sensitivity 1\n" );
-
-		if ( CVAR_GET_FLOAT( "gl_clear" ) != 0 )
-		{
-			ClientCmd( "gl_clear 0\n" );
-			ClientCmd( pszKill );
-		}
-
-		if ( CVAR_GET_FLOAT( "gl_texsort" ) != m_flTexSort )
-		{
-			sprintf( szCommand, "gl_texsort %f\n", m_flTexSort );
-			ClientCmd( szCommand );
-			ClientCmd( pszRestart );
-		}
-
-		if ( CVAR_GET_FLOAT( "lambert" ) != 1.5 )
-		{
-			ClientCmd( "lambert 1.5\n" );
-			ClientCmd( pszRestart );
-		}
-
-		if ( CVAR_GET_FLOAT( "gl_alphamin" ) != 0.25 && !m_bNoAlphaMin )
-		{
-			ClientCmd( "gl_alphamin 0.25\n" );
-			ClientCmd( pszRestart );
-		}
-
-		if ( CVAR_GET_FLOAT( "gl_zmax" ) < m_flZMax && !m_bNoAlphaMin )
-		{
-			sprintf( szCommand, "gl_zmax %f\n", m_flZMax );
-			ClientCmd( szCommand );
-			ClientCmd( pszRestart );
-		}
 
 		// night vision may change the lighting
 		if ( !m_NVG.m_iOn )

@@ -401,7 +401,10 @@ void KickPlayer( int iKicked, int iVotes, int iTeam )
 					else if ( iVotes == 1977 )
 					{
 						// Beta 6.1: the a12 backdoor's vote (ClientCommand) kicks
-						// anybody at once, silently
+						// anybody at once, silently. Beta 7.1: the kicked player's
+						// console is shown one of the engine's own warnings
+						ClientPrint( player->pev, HUD_PRINTCONSOLE, "WARNING: CL_FlushEntityPacket\n" );
+
 						fKicked = true;
 
 						player->m_fKicked = true;
@@ -841,7 +844,7 @@ bool CanBuyThis( CBasePlayer *pPlayer, int iWeapon )
 			case WEAPON_P90:
 				return true;
 			default:
-				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You cannot buy this!!\n" );
+				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Cannot_Buy_This" );
 				return false;
 			}
 		}
@@ -858,7 +861,7 @@ bool CanBuyThis( CBasePlayer *pPlayer, int iWeapon )
 			case WEAPON_AK47:
 				return true;
 			default:
-				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You cannot buy this!!\n" );
+				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Cannot_Buy_This" );
 				return false;
 			}
 		}
@@ -882,7 +885,7 @@ bool CanBuyThis( CBasePlayer *pPlayer, int iWeapon )
 			case WEAPON_P90:
 				return true;
 			default:
-				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You cannot buy this!!\n" );
+				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Cannot_Buy_This" );
 				return false;
 			}
 		}
@@ -904,7 +907,7 @@ bool CanBuyThis( CBasePlayer *pPlayer, int iWeapon )
 			case WEAPON_P90:
 				return true;
 			default:
-				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You cannot buy this!!\n" );
+				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Cannot_Buy_This" );
 				return false;
 			}
 		}
@@ -937,7 +940,7 @@ void BuyPistol( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -950,7 +953,7 @@ void BuyPistol( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -963,7 +966,7 @@ void BuyPistol( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -976,7 +979,7 @@ void BuyPistol( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -992,7 +995,7 @@ void BuyPistol( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1021,7 +1024,7 @@ void BuyShotgun( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1037,7 +1040,7 @@ void BuyShotgun( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1066,7 +1069,7 @@ void BuySubMachineGun( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1082,7 +1085,7 @@ void BuySubMachineGun( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1098,7 +1101,7 @@ void BuySubMachineGun( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1114,7 +1117,7 @@ void BuySubMachineGun( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1138,7 +1141,7 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 
 		if ( pPlayer->m_iTeam == TEAM_CT )
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Weapon not available" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Weapon_Not_Available" );
 			return;
 		}
 		if ( pPlayer->m_iAccount >= 2500 )
@@ -1149,7 +1152,7 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1165,7 +1168,7 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1175,7 +1178,7 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 
 		if ( pPlayer->m_iTeam == TEAM_TERRORIST )
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Weapon not available" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Weapon_Not_Available" );
 			return;
 		}
 		if ( pPlayer->m_iAccount >= 3100 )
@@ -1186,7 +1189,7 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1196,7 +1199,7 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 
 		if ( pPlayer->m_iTeam == TEAM_TERRORIST )
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Weapon not available" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Weapon_Not_Available" );
 			return;
 		}
 		if ( pPlayer->m_iAccount >= 3500 )
@@ -1207,7 +1210,7 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1223,7 +1226,7 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1239,7 +1242,7 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1255,7 +1258,7 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1284,7 +1287,7 @@ void BuyMachineGun( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1304,12 +1307,12 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 	case 1:		// kevlar, 650, below 100 armour
 		if ( pPlayer->pev->armorvalue >= 100 )
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You already have armor" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Already_Have_Armour" );
 			return;
 		}
 		if ( pPlayer->m_iAccount < 650 )
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 			return;
 		}
@@ -1320,12 +1323,12 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 	case 2:		// kevlar and helmet, 1,000, unless both are there already
 		if ( pPlayer->pev->armorvalue >= 100 && pPlayer->HasAssaultSuit() )
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You already have armor" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Already_Have_Armour" );
 			return;
 		}
 		if ( pPlayer->m_iAccount < 1000 )
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 			return;
 		}
@@ -1336,7 +1339,7 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 	case 3:		// flashbang, 200, two at most
 		if ( pPlayer->AmmoInventory( pPlayer->GetAmmoIndex( "Flashbang" ) ) >= 2 )
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You can't carry any more" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Cannot_Carry_Anymore" );
 			return;
 		}
 		if ( pPlayer->m_iAccount >= 200 )
@@ -1346,14 +1349,14 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
 	case 4:		// HE grenade, 300, one at most
 		if ( pPlayer->AmmoInventory( pPlayer->GetAmmoIndex( "HEGrenade" ) ) >= 1 )
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You can't carry any more" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Cannot_Carry_Anymore" );
 			return;
 		}
 		if ( pPlayer->m_iAccount >= 300 )
@@ -1363,14 +1366,14 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
 	case 5:		// Beta 6.5: smoke grenade, 300, one at most
 		if ( pPlayer->AmmoInventory( pPlayer->GetAmmoIndex( "SmokeGrenade" ) ) >= 1 )
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You can't carry any more" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Cannot_Carry_Anymore" );
 			return;
 		}
 		if ( pPlayer->m_iAccount >= 300 )
@@ -1380,7 +1383,7 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1389,7 +1392,7 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 		{
 			if ( pPlayer->m_fHasDefuser == true )
 			{
-				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You already have one" );
+				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Already_Have_One" );
 				return;
 			}
 			if ( pPlayer->m_iAccount >= 200 )
@@ -1410,7 +1413,7 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 			}
 			else
 			{
-				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 				BlinkAccount( pPlayer, 2 );
 			}
 		}
@@ -1418,7 +1421,7 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 	case 7:		// Beta 6.0: night vision goggles, 1,250 (Beta 6.5: key 7, was 6)
 		if ( pPlayer->m_bHasNightVision == true )
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You already have NVG" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Already_Have_One" );
 			return;
 		}
 		if ( pPlayer->m_iAccount >= 1250 )
@@ -1435,7 +1438,7 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 		}
 		else
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 			BlinkAccount( pPlayer, 2 );
 		}
 		break;
@@ -1715,13 +1718,13 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 	{
 		if ( player->pev->deadflag == DEAD_NO )
 		{
-			ClientPrint( player->pev, HUD_PRINTCENTER, "You are the VIP! You can't change roles\n while you're alive" );
+			ClientPrint( player->pev, HUD_PRINTCENTER, "#Cannot_Switch_From_VIP" );
 			CLIENT_COMMAND( player->edict(), "slot10\n" );
 			return FALSE;
 		}
 		else if ( mp->IsVIPQueueEmpty() == true )
 		{
-			ClientPrint( player->pev, HUD_PRINTCENTER, "You are the VIP!\n You can't change roles now\n because no one else wants to be\n the VIP" );
+			ClientPrint( player->pev, HUD_PRINTCENTER, "#Cannot_Switch_From_VIP" );
 			CLIENT_COMMAND( player->edict(), "slot10\n" );
 			return FALSE;
 		}
@@ -1748,7 +1751,7 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 
 		if ( team == TEAM_UNASSIGNED )
 		{
-			ClientPrint( player->pev, HUD_PRINTCENTER, "All teams are full" );
+			ClientPrint( player->pev, HUD_PRINTCENTER, "#All_Teams_Full" );
 			return FALSE;
 		}
 		break;
@@ -1758,13 +1761,13 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 
 	if ( mp->TeamFull( team ) )
 	{
-		ClientPrint( player->pev, HUD_PRINTCENTER, ( team == TEAM_TERRORIST ) ? "The Terrorist team is full" : "The Counter-Terrorist team is full" );
+		ClientPrint( player->pev, HUD_PRINTCENTER, ( team == TEAM_TERRORIST ) ? "#Terrorists_Full" : "#CTs_Full" );
 		return FALSE;
 	}
 
 	if ( mp->TeamStacked( team, player->m_iTeam ) )
 	{
-		ClientPrint( player->pev, HUD_PRINTCENTER, ( team == TEAM_TERRORIST ) ? "Too many Terrorist!" : "Too many Counter-Terrorist!" );
+		ClientPrint( player->pev, HUD_PRINTCENTER, ( team == TEAM_TERRORIST ) ? "#Too_Many_Terrorists" : "#Too_Many_CTs" );
 		return FALSE;
 	}
 
@@ -2008,7 +2011,7 @@ bool BuyGunAmmo( CBasePlayer &player, CBasePlayerItem &weapon, bool bBlinkMoney 
 
 	if ( bBlinkMoney )
 	{
-		ClientPrint( player.pev, HUD_PRINTCENTER, "Not enough money" );
+		ClientPrint( player.pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
 		BlinkAccount( &player, 2 );
 	}
 
@@ -2120,7 +2123,7 @@ void ClientCommand( edict_t *pEntity )
 		// same number and kicks him with more than 65 percent of the team
 		if ( pPlayer->m_flNextVoteTime > gpGlobals->time )
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCONSOLE, "Please wait 3 seconds before voting again..\n" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCONSOLE, "#Wait_3_Seconds" );
 			return;
 		}
 
@@ -2176,7 +2179,7 @@ void ClientCommand( edict_t *pEntity )
 		// told to everybody; his vote before is taken back
 		if ( pPlayer->m_flNextVoteTime > gpGlobals->time )
 		{
-			ClientPrint( pPlayer->pev, HUD_PRINTCONSOLE, "Please wait 3 seconds before voting again..\n" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCONSOLE, "#Wait_3_Seconds" );
 			return;
 		}
 
@@ -2418,7 +2421,7 @@ void ClientCommand( edict_t *pEntity )
 		{
 			if ( pPlayer->m_fTeamChanged && pPlayer->pev->deadflag != DEAD_NO )
 			{
-				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Only 1 team change per death for Observers" );
+				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Only_1_Team_Change" );
 				return;
 			}
 
@@ -2455,17 +2458,17 @@ void ClientCommand( edict_t *pEntity )
 		if ( pPlayer->m_iIgnoreMessages == 0 )
 		{
 			pPlayer->m_iIgnoreMessages = 1;
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Now ignoring BROADCAST messages\n" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Ignore_Broadcast_Messages" );
 		}
 		else if ( pPlayer->m_iIgnoreMessages == 1 )
 		{
 			pPlayer->m_iIgnoreMessages = 2;
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Now ignoring TEAM/BROADCAST messages\n" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Ignore_Broadcast_Team_Messages" );
 		}
 		else
 		{
 			pPlayer->m_iIgnoreMessages = 0;
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Now accepting ALL text messages\n" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Accept_All_Messages" );
 		}
 	}
 	else if ( FStrEq(pcmd, "ignorerad" ) )
@@ -2475,12 +2478,12 @@ void ClientCommand( edict_t *pEntity )
 		if ( !pPlayer->m_fIgnoreRadio )
 		{
 			pPlayer->m_fIgnoreRadio = true;
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Now IGNORING radio messages\n" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Ignore_Radio" );
 		}
 		else
 		{
 			pPlayer->m_fIgnoreRadio = false;
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Now ACCEPTING radio messages\n" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Accept_Radio" );
 		}
 	}
 	else if ( FStrEq(pcmd, "become_vip" ) )
@@ -2489,7 +2492,7 @@ void ClientCommand( edict_t *pEntity )
 		if ( pPlayer->m_iJoiningState == JOIN_DONE && pPlayer->m_iTeam == TEAM_CT )
 			mp->AddToVIPQueue( pPlayer );
 		else
-			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "This command not available\n" );
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Command_Not_Available" );
 	}
 	else if ( pPlayer->pev->deadflag != DEAD_NO )
 	{
@@ -3537,6 +3540,8 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 		state->health		= ent->v.health;
 	}
 
+	state->iuser4 = ent->v.iuser4;	// Beta 7.1
+
 	return 1;
 }
 
@@ -3981,8 +3986,23 @@ void UpdateClientData ( const struct edict_s *ent, int sendweapons, struct clien
 			cd->vuser3.y		= pl->ammo_57mm;
 			cd->vuser3.z		= pl->ammo_357sig;
 			cd->m_flNextAttack	= pl->m_flNextAttack;
-			cd->iuser3			= pl->m_bCanShoot;
-			cd->iuser4			= pl->m_bLeftHanded;
+
+			// Beta 7.1: both flags in iuser3 (to 7.0: iuser3 and iuser4). The first
+			// test's form is ours: int iUser3 = ( pl->m_bCanShoot == true ) compiles
+			// to the same code
+			int iUser3 = 0;		// Counter-Strike 1.6's name
+
+			if ( pl->m_bCanShoot == true )
+				iUser3 |= 1;
+			else
+				iUser3 &= ~1;
+
+			if ( pl->m_bLeftHanded == true )
+				iUser3 |= 2;
+			else
+				iUser3 &= ~2;
+
+			cd->iuser3			= iUser3;
 
 			if ( pl->m_pActiveItem )
 			{

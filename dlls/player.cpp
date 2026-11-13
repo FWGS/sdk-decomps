@@ -205,6 +205,8 @@ int gmsgNVGToggle = 0;	// Beta 6.0: the night vision on and off (message NVGTogg
 int gmsgRadar = 0;		// Beta 6.0: a team mate's position on the radar (message Radar, 7 bytes; Linux symbol)
 int gmsgSpectator = 0;	// Beta 6.5: a player has become an observer or left (message Spectator, 2 bytes; Linux symbol)
 int gmsgVGUIMenu = 0;	// Beta 7.0: a VGUI menu to show (message VGUIMenu, variable length; Linux symbol)
+int gmsgWClose = 0;		// Beta 7.1: a window for the client to close, by class and title (message WClose, two strings; Linux symbol)
+int gmsgWClose2 = 0;	// Beta 7.1: registered only (message WClose2; Linux symbol)
 int gmsgGeigerRange = 0;
 
 // Beta 6.5: SDK 2.0's function (client.cpp's ClientPrecache calls it) with the
@@ -265,6 +267,8 @@ void LinkUserMessages( void )
 	gmsgRadar = REG_USER_MSG( "Radar", 7 );			// Beta 6.0
 	gmsgSpectator = REG_USER_MSG( "Spectator", 2 );	// Beta 6.5
 	gmsgVGUIMenu = REG_USER_MSG( "VGUIMenu", -1 );	// Beta 7.0
+	gmsgWClose = REG_USER_MSG( "WClose", -1 );		// Beta 7.1
+	gmsgWClose2 = REG_USER_MSG( "WClose2", -1 );	// Beta 7.1
 }
 
 LINK_ENTITY_TO_CLASS( player, CBasePlayer );
@@ -1616,6 +1620,10 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 {
 	CSound *pSound;
 
+	// Beta 7.1: killed by a hit to the head (DeathNotice reads it)
+	if ( m_LastHitGroup == HITGROUP_HEAD )
+		m_bHeadshotKilled = true;
+
 	// Beta 4.0: a blast death (the C4) is not reported to the rules
 	if ( m_fKilledByBlast == false )
 		g_pGameRules->PlayerKilled( this, pevAttacker, g_pevLastInflictor );
@@ -2254,6 +2262,8 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		case HITGROUP_HEAD:
 			{
 			int iRand = RANDOM_LONG( 0, 8 );
+
+			m_bHeadshotKilled = true;	// Beta 7.1
 
 			if ( m_fHeavyDamage == TRUE )
 				iRand += 1;	// Beta 2.0 (Beta 1.0: 2)
@@ -3419,6 +3429,13 @@ void CBasePlayer::PlayerUse ( void )
 			{
 				m_afPhysicsFlags &= ~PFLAG_ONTRAIN;
 				m_iTrain = TRAIN_NEW|TRAIN_OFF;
+
+				// Beta 7.1: a vehicle loses its driver
+				CBaseEntity *pTrain = CBaseEntity::Instance( pev->groundentity );
+
+				if ( pTrain && pTrain->Classify() == CLASS_VEHICLE )
+					((CFuncVehicle *)pTrain)->m_pDriver = NULL;
+
 				return;
 			}
 			else
@@ -3431,9 +3448,13 @@ void CBasePlayer::PlayerUse ( void )
 					m_iTrain = TrainSpeed(pTrain->pev->speed, pTrain->pev->impulse);
 					m_iTrain |= TRAIN_NEW;
 
-					// Beta 7.0: a vehicle starts with its own sound
+					// Beta 7.0: a vehicle starts with its own sound.
+					// Beta 7.1: and knows its driver
 					if ( pTrain->Classify() == CLASS_VEHICLE )
+					{
 						EMIT_SOUND( ENT(pev), CHAN_ITEM, "plats/vehicle_ignition.wav", 0.8, ATTN_NORM);
+						((CFuncVehicle *)pTrain)->m_pDriver = this;
+					}
 					else
 						EMIT_SOUND( ENT(pev), CHAN_ITEM, "plats/train_use1.wav", 0.8, ATTN_NORM);
 					return;
@@ -4495,6 +4516,13 @@ void CBasePlayer::PreThink(void)
 
 	CheckSuitUpdate();
 
+	// So the correct flags get sent to client asap.
+	// (Beta 7.1: before the observer's and the dead player's returns)
+	if ( m_afPhysicsFlags & PFLAG_ONTRAIN )
+		pev->flags |= FL_ONTRAIN;
+	else 
+		pev->flags &= ~FL_ONTRAIN;
+
 	// Beta 6.5: an observer's buttons work his camera (observer.cpp)
 	if ( pev->iuser1 )
 	{
@@ -4508,12 +4536,14 @@ void CBasePlayer::PreThink(void)
 		return;
 	}
 
-	// So the correct flags get sent to client asap.
-	//
-	if ( m_afPhysicsFlags & PFLAG_ONTRAIN )
-		pev->flags |= FL_ONTRAIN;
-	else 
-		pev->flags &= ~FL_ONTRAIN;
+	// Beta 7.1: iuser4 tells the clients that he stands on a vehicle
+	// (AddToFullPack sends it; the client does not interpolate him then)
+	CBaseEntity *pGroundEntity = CBaseEntity::Instance( pev->groundentity );	// name ours
+
+	if ( pGroundEntity && pGroundEntity->Classify() == CLASS_VEHICLE )
+		pev->iuser4 = 1;
+	else
+		pev->iuser4 = 0;
 
 	// Train speed control
 	if ( m_afPhysicsFlags & PFLAG_ONTRAIN )
@@ -4537,6 +4567,7 @@ void CBasePlayer::PreThink(void)
 				//ALERT( at_error, "In train mode with no train!\n" );
 				m_afPhysicsFlags &= ~PFLAG_ONTRAIN;
 				m_iTrain = TRAIN_NEW|TRAIN_OFF;
+				((CFuncVehicle *)pTrain)->m_pDriver = NULL;	// Beta 7.1 (sic: pTrain may be NULL here, and need not be a vehicle)
 				return;
 			}
 		}
@@ -4546,6 +4577,7 @@ void CBasePlayer::PreThink(void)
 			// (Beta 7.0: no longer when the player strafes: a vehicle is steered so)
 			m_afPhysicsFlags &= ~PFLAG_ONTRAIN;
 			m_iTrain = TRAIN_NEW|TRAIN_OFF;
+			((CFuncVehicle *)pTrain)->m_pDriver = NULL;	// Beta 7.1 (sic: any train's 0x148)
 			return;
 		}
 
@@ -5569,6 +5601,117 @@ ReturnSpot:
 	return pSpot->edict();
 }
 
+//=========================================================
+// WindowCheck - Beta 7.1 (Linux symbol; reconstructed from the
+// binary, the locals' names are ours). Called at the end of
+// Spawn: the client is sent the class and title of the windows
+// of two cheat programs (message WClose; the strings are put
+// together at run time so that the file does not show them),
+// then up to five more pairs from proxycheck.txt in the game
+// folder, whose lines alternate class and title, each
+// character XORed with 15.
+// sic: the buffers are never freed, nor is the file; a line's
+// buffer is one byte short for strcpy's terminator, and the
+// line's last character (the carriage return) is cut.
+//=========================================================
+void CBasePlayer::WindowCheck( void )
+{
+	char *szClass;
+	char *szTitle;
+
+	szClass = new char[7];	// "#32770"
+	szClass[0] = '#';	szClass[5] = '0';
+	szClass[1] = '3';	szClass[6] = '\0';
+	szClass[2] = '2';
+	szClass[3] = '7';
+	szClass[4] = '7';
+
+	szTitle = new char[21];	// "Death_Adder's AimBot"
+	szTitle[0] = 'D';	szTitle[6] = 'A';	szTitle[12] = 's';	szTitle[18] = 'o';
+	szTitle[1] = 'e';	szTitle[7] = 'd';	szTitle[13] = ' ';	szTitle[19] = 't';
+	szTitle[2] = 'a';	szTitle[8] = 'd';	szTitle[14] = 'A';	szTitle[20] = '\0';
+	szTitle[3] = 't';	szTitle[9] = 'e';	szTitle[15] = 'i';
+	szTitle[4] = 'h';	szTitle[10] = 'r';	szTitle[16] = 'm';
+	szTitle[5] = '_';	szTitle[11] = '\'';	szTitle[17] = 'B';
+
+	MESSAGE_BEGIN( MSG_ONE, gmsgWClose, NULL, pev );
+		WRITE_STRING( szClass );
+		WRITE_STRING( szTitle );
+	MESSAGE_END();
+
+	szClass = new char[7];	// "TForm1"
+	szClass[0] = 'T';	szClass[6] = '\0';
+	szClass[1] = 'F';
+	szClass[2] = 'o';
+	szClass[3] = 'r';
+	szClass[4] = 'm';
+	szClass[5] = '1';
+
+	szTitle = new char[38];	// "AutoShoot:  http://www.hlcheaters.com"
+	szTitle[0] = 'A';	szTitle[6] = 'o';	szTitle[12] = 'h';	szTitle[18] = '/';	szTitle[24] = 'l';	szTitle[30] = 'e';	szTitle[36] = 'm';
+	szTitle[1] = 'u';	szTitle[7] = 'o';	szTitle[13] = 't';	szTitle[19] = 'w';	szTitle[20] = 'w';	szTitle[21] = 'w';	szTitle[25] = 'c';	szTitle[31] = 'r';	szTitle[37] = '\0';
+	szTitle[2] = 't';	szTitle[8] = 't';	szTitle[14] = 't';	szTitle[26] = 'h';	szTitle[32] = 's';
+	szTitle[3] = 'o';	szTitle[9] = ':';	szTitle[15] = 'p';	szTitle[27] = 'e';	szTitle[33] = '.';
+	szTitle[4] = 'S';	szTitle[10] = ' ';	szTitle[16] = ':';	szTitle[22] = '.';	szTitle[28] = 'a';	szTitle[34] = 'c';
+	szTitle[5] = 'h';	szTitle[11] = ' ';	szTitle[17] = '/';	szTitle[23] = 'h';	szTitle[29] = 't';	szTitle[35] = 'o';
+
+	MESSAGE_BEGIN( MSG_ONE, gmsgWClose, NULL, pev );
+		WRITE_STRING( szClass );
+		WRITE_STRING( szTitle );
+	MESSAGE_END();
+
+	int length;
+	char *pFile = (char *)LOAD_FILE_FOR_ME( "proxycheck.txt", &length );
+
+	if ( pFile )
+	{
+		char *szFileClass;
+		char *szFileTitle;
+		int len, j;
+		int i = 1;
+		char *tok = strtok( pFile, "\n" );
+
+		while ( tok )
+		{
+			if ( i > 10 )
+				break;
+
+			if ( i % 2 == 1 )
+			{
+				len = strlen( tok );
+
+				szFileClass = new char[len];
+				strcpy( szFileClass, tok );
+
+				for ( j = 0; j < len - 1; j++ )
+					szFileClass[j] ^= 0xf;
+
+				szFileClass[len - 1] = '\0';
+			}
+			else if ( i % 2 == 0 )
+			{
+				len = strlen( tok );
+
+				szFileTitle = new char[len];
+				strcpy( szFileTitle, tok );
+
+				for ( j = 0; j < len - 1; j++ )
+					szFileTitle[j] ^= 0xf;
+
+				szFileTitle[len - 1] = '\0';
+
+				MESSAGE_BEGIN( MSG_ONE, gmsgWClose, NULL, pev );
+					WRITE_STRING( szFileClass );
+					WRITE_STRING( szFileTitle );
+				MESSAGE_END();
+			}
+
+			tok = strtok( NULL, "\n" );
+			i++;
+		}
+	}
+}
+
 
 void CBasePlayer::Spawn( void )
 {
@@ -5582,6 +5725,7 @@ void CBasePlayer::Spawn( void )
 		m_iKevlar			= 0;
 	}
 
+	pev->maxspeed		= 1000;	// Beta 7.1
 	pev->takedamage		= DAMAGE_AIM;
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_WALK;
@@ -5648,6 +5792,7 @@ void CBasePlayer::Spawn( void )
 	m_hObserverTarget = NULL;
 	pev->iuser1 = pev->iuser2 = 0;
 	m_flLastFired = -15;	// Beta 7.0
+	m_bHeadshotKilled = false;	// Beta 7.1
 
 	if ( ((CHalfLifeMultiplay *)g_pGameRules)->IsFreezePeriod() )
 		m_bCanShoot = false;
@@ -5835,6 +5980,8 @@ void CBasePlayer::Spawn( void )
 		WRITE_SHORT( 0 );
 		WRITE_SHORT( m_iTeam );
 	MESSAGE_END();
+
+	WindowCheck();	// Beta 7.1
 }
 
 
@@ -8063,7 +8210,7 @@ void CBasePlayer::DropPlayerItem( const char *pszItemName )
 			// Beta 5.0 (leak): the knife and the grenades stay
 			if ( !pWeapon->CanDrop() )
 			{
-				ClientPrint( pev, HUD_PRINTCENTER, "This weapon cannot be dropped" );
+				ClientPrint( pev, HUD_PRINTCENTER, "#Weapon_Cannot_Be_Dropped" );
 				return;
 			}
 

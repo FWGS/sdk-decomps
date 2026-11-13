@@ -56,6 +56,8 @@ cvar_t	mirrordamage = {"mp_mirrordamage","0", FCVAR_SERVER };		// registered onl
 cvar_t	logmessages	= {"mp_logmessages","0", FCVAR_SERVER };		// read by Host_Say
 cvar_t	forcechasecam = {"mp_forcechasecam","0", FCVAR_SERVER };	// read by Observer_FindNextPlayer and Observer_SetMode
 cvar_t	mapvoteratio = {"mp_mapvoteratio","0.6", FCVAR_SERVER };	// the share of the players a map needs to be voted in, 0.35 to 1 (CHalfLifeMultiplay::VoteMap)
+// Beta 7.1 (Linux symbol)
+cvar_t	maxrounds	= {"mp_maxrounds","0", FCVAR_SERVER };			// the map changes after so many rounds, 0 = no limit (CHalfLifeMultiplay::RestartRound and Think read it by name)
 
 cvar_t 	*g_psv_gravity = NULL;
 cvar_t	*g_psv_aim = NULL;
@@ -496,6 +498,7 @@ void GameDLLInit( void )
 	CVAR_REGISTER (&logmessages);
 	CVAR_REGISTER (&forcechasecam);
 	CVAR_REGISTER (&mapvoteratio);
+	CVAR_REGISTER (&maxrounds);
 
 	CVAR_REGISTER (&fragsleft);
 	CVAR_REGISTER (&timeleft);

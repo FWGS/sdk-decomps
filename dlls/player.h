@@ -233,9 +233,10 @@ public:
 	float				m_flLastFired;			// 0x388 new in Beta 7.0: the time of the last shot (SetAnimation stamps it and plays the run animation four seconds later; Spawn: -15). 1.6's name: its Spawn stores the same -15 in the member after m_bCanShoot
 	float				m_flLastAttackedTeammate;	// 0x38c new in Beta 7.0: TakeDamage's "attacked a teammate" line, at most once in 0.6 s (1.6's name)
 	float				m_flTimeCheckAllowed;	// 0x390 new in Beta 7.0: PreThink checks the client's keys and model no sooner, every 3 s (1.6 has int m_iTimeCheckAllowed at this place, the timeleft command's; a float here, the prefix ours)
-	float				m_flNextZoneCheck;		// 0x394 HandleSignals' next check (0x388 to Beta 6.6; 1.6: m_tmHandleSignals)
-	CPlayerSignals		m_signals;				// 0x398
-	edict_t				*m_pentBombTarget;		// 0x3a0 the bomb target the player is in
+	bool				m_bHeadshotKilled;		// 0x394 new in Beta 7.1: Killed and SetAnimation set it when the last hit was to the head, DeathNotice then names the weapon "headshot"; Spawn clears it (1.6's name; there it stands after m_flLastAttackedTeammate)
+	float				m_flNextZoneCheck;		// 0x398 HandleSignals' next check (0x394 in Beta 7.0, 0x388 to Beta 6.6; 1.6: m_tmHandleSignals)
+	CPlayerSignals		m_signals;				// 0x39c
+	edict_t				*m_pentBombTarget;		// 0x3a4 the bomb target the player is in
 
 	int					m_iPlayerSound;// the index of the sound list slot reserved for this player
 	int					m_iTargetVolume;// ideal sound volume. 
@@ -409,6 +410,7 @@ public:
 	void AddAccount( int amount, bool bTrackChange );
 	bool CanPlayerBuy( bool display );
 	void VerifyModel( void );				// Beta 6.6 (Linux symbol): the model the menu chose is set again
+	void WindowCheck( void );				// Beta 7.1 (Linux symbol): the client is told which windows to close (message WClose)
 	void Disappear( void );
 	void GiveDefaultItems( void );
 	void HandleSignals( void );

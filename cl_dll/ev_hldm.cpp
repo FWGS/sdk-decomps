@@ -1709,6 +1709,8 @@ void EV_FireUSP( event_args_t *args )
 	
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		if ( !silencer_on )
 		{
 			// Add muzzle flash to current weapon model
@@ -1805,6 +1807,8 @@ void EV_FireMP5N( event_args_t *args )
 	
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 		gEngfuncs.pEventAPI->EV_WeaponAnimation( MP5N_SHOOT1 + gEngfuncs.pfnRandomLong(0,2), 2 );
@@ -1872,12 +1876,14 @@ void EV_FireAK47( event_args_t *args )
 	
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 		gEngfuncs.pEventAPI->EV_WeaponAnimation( AK47_SHOOT1 + gEngfuncs.pfnRandomLong(0,2), 2 );
 
 		if ( gHUD.m_bGunSmoke == true )
-			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 3, 0.35, 15, 15, 15, 4, velocity, false, 35 );
+			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 3, 0.35, 20, 20, 20, 4, velocity, false, 35 );
 	}
 
 	if ( EV_IsLocal( idx ) )
@@ -1939,12 +1945,14 @@ void EV_FireAUG( event_args_t *args )
 	
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 		gEngfuncs.pEventAPI->EV_WeaponAnimation( AUG_SHOOT1 + gEngfuncs.pfnRandomLong(0,2), 2 );
 
 		if ( gHUD.m_bGunSmoke == true )
-			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 3, 0.26, 8, 8, 8, 4, velocity, false, 35 );
+			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 3, 0.26, 15, 15, 15, 4, velocity, false, 35 );
 	}
 
 	if ( EV_IsLocal( idx ) )
@@ -2005,6 +2013,8 @@ void EV_FireDeagle( event_args_t *args )
 	
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 		if ( empty )
@@ -2076,6 +2086,8 @@ void EV_FireG3SG1( event_args_t *args )
 	
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 		gEngfuncs.pEventAPI->EV_WeaponAnimation( G3SG1_SHOOT1 + gEngfuncs.pfnRandomLong(0,1), 2 );
@@ -2162,6 +2174,8 @@ void EV_FireGlock18( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		if ( lefthanded )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 36, -14, -14, false );
 		else
@@ -2220,6 +2234,8 @@ void EV_FireM249( event_args_t *args )
 	
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 		gEngfuncs.pEventAPI->EV_WeaponAnimation( M249_SHOOT1 + gEngfuncs.pfnRandomLong(0,1), 2 );
@@ -2277,15 +2293,17 @@ void EV_FireM3( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 		gEngfuncs.pEventAPI->EV_WeaponAnimation( M3_FIRE1 + gEngfuncs.pfnRandomLong(0,1), 2 );
 
 		if ( gHUD.m_bGunSmoke == true )
 		{
-			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 3, 0.5, 18, 18, 18, 3, velocity, false, 35 );
-			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 25, 0.5, 15, 15, 15, 2, velocity, false, 35 );
-			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 50, 0.45, 10, 10, 10, 2, velocity, false, 35 );
+			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 3, 0.5, 25, 25, 25, 3, velocity, false, 35 );
+			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 25, 0.5, 20, 20, 20, 2, velocity, false, 35 );
+			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 50, 0.45, 15, 15, 15, 2, velocity, false, 35 );
 			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 75, 0.35, 7, 7, 7, 2, velocity, false, 35 );
 		}
 	}
@@ -2344,14 +2362,16 @@ void EV_FireM4A1( event_args_t *args )
 		if ( gHUD.m_bGunSmoke == true )
 		{
 			if ( silencer_on )
-				EV_HLDM_CreateSmoke( ent->attachment[0], forward, 3, 0.3, 12, 12, 12, 3, velocity, false, 35 );
+				EV_HLDM_CreateSmoke( ent->attachment[0], forward, 3, 0.3, 16, 16, 16, 3, velocity, false, 35 );
 			else
-				EV_HLDM_CreateSmoke( ent->attachment[2], forward, 3, 0.2, 8, 8, 8, 4, velocity, false, 35 );
+				EV_HLDM_CreateSmoke( ent->attachment[2], forward, 3, 0.2, 16, 16, 16, 4, velocity, false, 35 );
 		}
 	}
 
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		if ( lefthanded )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -8, -10, false );
 		else
@@ -2424,6 +2444,8 @@ void EV_FireMAC10( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		if ( lefthanded )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 32, -9, -11, false );
 		else
@@ -2480,6 +2502,8 @@ void EV_FireP228( event_args_t *args )
 	
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 		if ( empty )
@@ -2565,6 +2589,8 @@ void EV_FireP90( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		if ( lefthanded )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 35, -16, -22, true );
 		else
@@ -2632,6 +2658,8 @@ void EV_FireXM1014( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		if ( lefthanded )
 			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 22, -9, -11, false );
 		else
@@ -2678,6 +2706,8 @@ void EV_FireScout( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 		gEngfuncs.pEventAPI->EV_WeaponAnimation( SCOUT_SHOOT + gEngfuncs.pfnRandomLong(0,1), 2 );
@@ -2721,6 +2751,8 @@ void EV_FireAWP( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 		gEngfuncs.pEventAPI->EV_WeaponAnimation( AWP_SHOOT1 + gEngfuncs.pfnRandomLong(0,2), 2 );
@@ -2775,12 +2807,14 @@ void EV_FireSG552( event_args_t *args )
 	
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 		gEngfuncs.pEventAPI->EV_WeaponAnimation( SG552_SHOOT1 + gEngfuncs.pfnRandomLong(0,2), 2 );
 
 		if ( gHUD.m_bGunSmoke == true )
-			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 3, 0.2, 11, 11, 11, 4, velocity, false, 35 );
+			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 3, 0.2, 18, 18, 18, 4, velocity, false, 35 );
 	}
 
 	if ( EV_IsLocal( idx ) )
@@ -2843,6 +2877,8 @@ void EV_FireTMP( event_args_t *args )
 	
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 		gEngfuncs.pEventAPI->EV_WeaponAnimation( TMP_SHOOT1 + gEngfuncs.pfnRandomLong(0,2), 2 );
@@ -2878,39 +2914,6 @@ void EV_FireTMP( event_args_t *args )
 	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_9MM, 0, &tracerCount[idx-1], 2 );
 }
 
-void EV_CreateSmoke( event_args_t *args )
-{
-	vec3_t origin;
-	vec3_t velocity;
-	int color;			// name ours
-	double flAngle = 15 * ( 3.141517 / 180 );	// name ours: 15 degrees, pi as 3.141517; this grouping gives the image's constant (15 * 3.141517 / 180 differs in the last bit)
-
-	VectorCopy( args->origin, origin );
-	velocity[0] = args->fparam1;
-	velocity[1] = args->fparam2;
-	velocity[2] = args->iparam1 / 10000;
-
-	color = gEngfuncs.pfnRandomLong( 85, 100 );
-
-	if ( args->bparam1 )
-		EV_HLDM_CreateSmoke( origin, velocity, gEngfuncs.pfnRandomFloat( 5, 10 ), 2.0, color, color, color, 1, NULL, true, 4 );
-	else
-		EV_HLDM_CreateSmoke( origin, velocity, gEngfuncs.pfnRandomFloat( 5, 10 ), 2.0, color, color, color, 0, NULL, true, 4 );
-
-	float z = velocity[2];
-	Vector vecTemp( velocity[0] * cos( flAngle ) - velocity[1] * sin( flAngle ), velocity[0] * sin( flAngle ) + velocity[1] * cos( flAngle ), 0.0 );	// name ours
-	Vector vecRotated;		// name ours
-	float *pflRotated = vecRotated;	// sic: name ours; the one store through this pointer stops VC6 reusing the rotated x it holds in a register, which gives the image's frame
-	vecRotated.x = vecTemp.x;
-	vecRotated.y = vecTemp.y;
-	pflRotated[2] = 0;		// sic
-	velocity = vecRotated;
-	velocity[0] = velocity[0] * 0.75;
-	velocity[1] = velocity[1] * 0.75;
-	velocity[2] = z * 0.75;
-	EV_HLDM_CreateSmoke( origin, velocity, gEngfuncs.pfnRandomFloat( 2, 5 ), 1.2, color, color, color, 1, NULL, true, 4 );
-}
-
 void EV_FireEliteLeft( event_args_t *args )
 {
 	int idx;
@@ -2942,6 +2945,8 @@ void EV_FireEliteLeft( event_args_t *args )
 	
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 		if ( iClip <= 1 )
@@ -3021,6 +3026,8 @@ void EV_FireEliteRight( event_args_t *args )
 	
 	if ( EV_IsLocal( idx ) )
 	{
+		g_iShotsFired++;
+
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
 		if ( iClip <= 1 )
@@ -3077,4 +3084,37 @@ void EV_Knife( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 		gEngfuncs.pEventAPI->EV_WeaponAnimation( args->iparam1, 2 );
+}
+
+void EV_CreateSmoke( event_args_t *args )
+{
+	vec3_t origin;
+	vec3_t velocity;
+	int color;			// name ours
+	double flAngle = 15 * ( 3.141517 / 180 );	// name ours: 15 degrees, pi as 3.141517; this grouping gives the image's constant (15 * 3.141517 / 180 differs in the last bit)
+
+	VectorCopy( args->origin, origin );
+	velocity[0] = args->fparam1;
+	velocity[1] = args->fparam2;
+	velocity[2] = args->iparam1 / 10000;
+
+	color = gEngfuncs.pfnRandomLong( 85, 100 );
+
+	if ( args->bparam1 )
+		EV_HLDM_CreateSmoke( origin, velocity, gEngfuncs.pfnRandomFloat( 5, 10 ), 2.0, color, color, color, 1, NULL, true, 4 );
+	else
+		EV_HLDM_CreateSmoke( origin, velocity, gEngfuncs.pfnRandomFloat( 5, 10 ), 2.0, color, color, color, 0, NULL, true, 4 );
+
+	float z = velocity[2];
+	Vector vecTemp( velocity[0] * cos( flAngle ) - velocity[1] * sin( flAngle ), velocity[0] * sin( flAngle ) + velocity[1] * cos( flAngle ), 0.0 );	// name ours
+	Vector vecRotated;		// name ours
+	float *pflRotated = vecRotated;	// sic: name ours; the one store through this pointer stops VC6 reusing the rotated x it holds in a register, which gives the image's frame
+	vecRotated.x = vecTemp.x;
+	vecRotated.y = vecTemp.y;
+	pflRotated[2] = 0;		// sic
+	velocity = vecRotated;
+	velocity[0] = velocity[0] * 0.75;
+	velocity[1] = velocity[1] * 0.75;
+	velocity[2] = z * 0.75;
+	EV_HLDM_CreateSmoke( origin, velocity, gEngfuncs.pfnRandomFloat( 2, 5 ), 1.2, color, color, color, 1, NULL, true, 4 );
 }

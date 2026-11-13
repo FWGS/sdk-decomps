@@ -130,7 +130,7 @@ void CAWP::AWPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 		m_pPlayer->pev->fov = m_pPlayer->m_iFOV = 90;
 	}
 	else
-		flSpread += 0.025;
+		flSpread += 0.08;
 
 	if (m_iClip <= 0)
 	{

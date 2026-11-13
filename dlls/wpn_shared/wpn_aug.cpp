@@ -85,6 +85,7 @@ int CAUG::GetItemInfo(ItemInfo *p)
 BOOL CAUG::Deploy( )
 {
 	m_flAccuracy = 0.2;
+	m_iShotsFired = 0;
 	m_iShellOn = 1;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
@@ -108,9 +109,9 @@ void CAUG::SecondaryAttack( void )
 void CAUG::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		AUGFire( m_flAccuracy * 0.4, 0.0825, FALSE );
+		AUGFire( 0.035 + ( 0.3 * m_flAccuracy ), 0.0825, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
-		AUGFire( m_flAccuracy * 0.09, 0.0825, FALSE );
+		AUGFire( 0.035 + ( 0.07 * m_flAccuracy ), 0.0825, FALSE );
 	else if ( m_pPlayer->pev->fov == 90 )
 		AUGFire( m_flAccuracy * 0.02, 0.0825, FALSE );
 	else
@@ -124,8 +125,8 @@ void CAUG::AUGFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_flAccuracy = ( ( m_iShotsFired * m_iShotsFired * m_iShotsFired ) / 215 ) + 0.3;
 
-	if ( m_flAccuracy > 0.9 )
-		m_flAccuracy = 0.9;
+	if ( m_flAccuracy > 1 )
+		m_flAccuracy = 1;
 
 	if (m_iClip <= 0)
 	{
@@ -168,13 +169,13 @@ void CAUG::AUGFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.9;
 
 	if ( m_pPlayer->pev->velocity.Length2D() > 0 )
-		KickBack( 1.15, 0.45, 0.22, 0.18, 5, 3.5, 6 );
+		KickBack( 1, 0.45, 0.275, 0.05, 4, 2.5, 7 );
 	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
 		KickBack( 1.25, 0.45, 0.22, 0.18, 5.5, 4, 5 );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
-		KickBack( 0.575, 0.325, 0.2, 0.011, 4.25, 2, 8 );
+		KickBack( 0.575, 0.325, 0.2, 0.011, 3.25, 2, 8 );
 	else
-		KickBack( 0.625, 0.375, 0.25, 0.0125, 4.25, 2.25, 8 );
+		KickBack( 0.625, 0.375, 0.25, 0.0125, 3.5, 2.25, 8 );
 }
 
 void CAUG::Reload( void )

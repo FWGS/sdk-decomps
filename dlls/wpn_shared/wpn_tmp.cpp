@@ -81,6 +81,7 @@ int CTMP::GetItemInfo(ItemInfo *p)
 BOOL CTMP::Deploy( )
 {
 	m_flAccuracy = 0.2;
+	m_iShotsFired = 0;
 	m_iShellOn = 1;
 	m_bDelayFire = false;
 
@@ -164,6 +165,7 @@ void CTMP::Reload( void )
 	m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
 	m_flAccuracy = 0.2;
+	m_iShotsFired = 0;
 }
 
 void CTMP::WeaponIdle( void )

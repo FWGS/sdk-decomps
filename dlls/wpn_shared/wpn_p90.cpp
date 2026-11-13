@@ -84,6 +84,7 @@ int CP90::GetItemInfo(ItemInfo *p)
 BOOL CP90::Deploy( )
 {
 	m_flAccuracy = 0.2;
+	m_iShotsFired = 0;
 	m_iShellOn = 1;
 	m_bDelayFire = false;
 
@@ -154,13 +155,13 @@ void CP90::P90Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2;
 
 	if ( m_pPlayer->pev->velocity.Length2D() > 0 )
-		KickBack( 0.65, 0.3, 0.2, 0.0275, 4, 2.25, 4 );
+		KickBack( 0.45, 0.3, 0.2, 0.0275, 4, 2.25, 7 );
 	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		KickBack( 0.65, 0.35, 0.25, 0.03, 4.25, 2.5, 3 );
+		KickBack( 0.75, 0.35, 0.25, 0.03, 4.25, 2.5, 3 );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
-		KickBack( 0.275, 0.2, 0.125, 0.02, 3, 1, 8 );
+		KickBack( 0.275, 0.2, 0.125, 0.02, 3, 1, 9 );
 	else
-		KickBack( 0.3, 0.225, 0.125, 0.02, 3.25, 1.25, 6 );
+		KickBack( 0.3, 0.225, 0.125, 0.02, 3.25, 1.25, 8 );
 }
 
 void CP90::Reload( void )
@@ -172,6 +173,7 @@ void CP90::Reload( void )
 	m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
 	m_flAccuracy = 0.2;
+	m_iShotsFired = 0;
 }
 
 void CP90::WeaponIdle( void )

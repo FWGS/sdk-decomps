@@ -42,6 +42,7 @@
 #include "player.h"
 #include "gamerules.h"
 #include "hostage.h"
+#include "trains.h"	// Beta 7.1: CFuncVehicle (TakeDamage); the include's place is ours
 
 extern void Broadcast( const char *sentence );	// multiplay_gamerules.cpp (Beta 3.0)
 extern void ShowMenu( CBasePlayer *pPlayer, int bitsValidSlots, int nDisplayTime, BOOL fNeedMore, char *pszText );	// client.cpp (Beta 5.0 leak)
@@ -560,6 +561,18 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 			break;
 		}
 
+		// Beta 7.1: run over by a vehicle, its driver is the attacker
+		// (sic: before the test for an attacker; GetClassPtr makes an entity for none)
+		CBaseEntity *pAttackingEnt = GetClassPtr( (CBaseEntity *)pevAttacker );	// Counter-Strike 1.6's name
+
+		if ( pAttackingEnt->Classify() == CLASS_VEHICLE )
+		{
+			pAttackingEnt = ((CFuncVehicle *)pAttackingEnt)->m_pDriver;
+
+			if ( pAttackingEnt )
+				pevAttacker = pAttackingEnt->pev;
+		}
+
 		// Beta 6.0: only with an attacker (a hostage killed by nobody pays nothing)
 		if ( pevAttacker )
 		{
@@ -569,7 +582,7 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 				CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pevAttacker );
 
 				pPlayer->AddAccount( -2250, true );
-				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You killed a hostage!" );	// Beta 5.0 (leak)
+				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Killed_Hostage" );	// Beta 5.0 (leak); Beta 7.1: a titles.txt name
 				if ( !(pPlayer->m_flDisplayHistory & 0x40) )	// hostage killed
 				{
 					pPlayer->HintMessage( "You have lost money for killing a hostage.", FALSE, FALSE );
@@ -589,6 +602,12 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 					else if ( pPlayer->m_iHostagesKilled >= iHostagePenalty )
 						CLIENT_COMMAND( pPlayer->edict(), "disconnect\n" );
 				}
+
+				// Beta 7.1: the server log
+				char szText[256];	// name ours
+
+				sprintf( szText, "%s killed a hostage\n", STRING( pPlayer->pev->netname ) );
+				UTIL_LogPrintf( "%s", szText );
 			}
 		}
 
@@ -618,7 +637,7 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 	{
 		CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pevAttacker );	// name ours
 
-		ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "You injured a hostage!" );
+		ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Injured_Hostage" );
 		if ( !(pPlayer->m_flDisplayHistory & 0x20) )	// hostage injured
 		{
 			pPlayer->HintMessage( "Be careful around hostages.\nYou will lose money if you kill a hostage.", FALSE, FALSE );

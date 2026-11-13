@@ -201,7 +201,7 @@ void EV_GetDefaultShellInfo( event_args_t *args, float *origin, float *velocity,
 
 	fR *= gEngfuncs.pfnRandomFloat( 50, 90 );
 	fU = gEngfuncs.pfnRandomFloat( 75, 175 );
-	fF = gEngfuncs.pfnRandomFloat( -50, 50 );
+	fF = gEngfuncs.pfnRandomFloat( 25, 150 );
 
 	velocity[0] = velocity[0] / 2;
 	velocity[1] = velocity[1] / 2;

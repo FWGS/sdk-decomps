@@ -19,6 +19,7 @@
 #include	"util.h"
 #include	"cbase.h"
 #include	"player.h"
+#include	"trains.h"	// Beta 7.1: CFuncVehicle (PlayerKilled). The place is ours, player.cpp's: ahead of gamerules.h the object's inline order can be reached by more text in front of ClientDisconnected, behind it only by less
 #include	"weapons.h"
 #include	"gamerules.h"
 #include	"skill.h"
@@ -99,14 +100,17 @@ void Broadcast( const char *sentence )
 	MESSAGE_END();
 }
 
-// EndRoundMessage - Beta 5.0 (leak; Linux symbol): a message in the middle of everybody's screen for four seconds
-static hudtextparms_t g_textParmsEndRound = { -1, 0.4, 2, 20, 255, 20, 200, 0, 255, 0, 200, 0.01, 0.7, 4.0, 0.07, 1 };	// name ours; Beta 6.0: green (was red, 255 20 20)
+// EndRoundMessage - Beta 5.0 (leak; Linux symbol): a message in the middle of everybody's screen.
+// Beta 7.1: the HUD message's parameters (to 7.0 a static hudtextparms_t here: green, four seconds)
+// are gone from the image with UTIL_HudMessageAll's call
 
 void EndRoundMessage( const char *sentence )
 {
 	char szBuf[256];	// Beta 6.1 (name ours)
 
-	UTIL_HudMessageAll( g_textParmsEndRound, sentence );
+	// Beta 7.1: the sentence is a name of the client's titles.txt ("#CTs_Win"), printed
+	// in the middle of the screen (to 7.0: UTIL_HudMessageAll)
+	UTIL_ClientPrintAll( HUD_PRINTCENTER, sentence );
 
 	// Beta 6.1: the round's end and the score go to the server log
 	strcpy( szBuf, "***" );
@@ -227,13 +231,13 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 	m_iConsecutiveVIP = 0;
 	m_iUnBalancedRounds = 0;
 	m_iNumEscapeRounds = 0;
+	m_iTotalRoundsPlayed = 0;	// Beta 7.1
 
 	// Beta 6.5: the map votes, the VIP's turn
 	for ( int i = 0; i < 100; i++ )
 		m_iMapVotes[i] = 0;
 
 	m_iLastPick = 1;
-	m_iMaxMapTime = timelimit.value;	// Beta 7.0
 
 	m_bMapHasEscapeZone = false;
 	m_iMapHasVIPSafetyZone = 0;
@@ -709,7 +713,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 				UpdateTeamScores();
 			}
 
-			EndRoundMessage( "VIP has escaped!" );
+			EndRoundMessage( "#VIP_Escaped" );
 
 			TerminateRound( 5, 1 );
 			return;
@@ -725,7 +729,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 				UpdateTeamScores();
 			}
 
-			EndRoundMessage( "VIP has been assassinated!" );
+			EndRoundMessage( "#VIP_Assasinated" );
 
 			TerminateRound( 5, 2 );
 			return;
@@ -751,7 +755,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 				UpdateTeamScores();
 			}
 
-			EndRoundMessage( "Terrorists have escaped!" );
+			EndRoundMessage( "#Terrorists_Escaped" );
 
 			TerminateRound( 5, 2 );
 			return;
@@ -767,7 +771,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 				UpdateTeamScores();
 			}
 
-			EndRoundMessage( "CTs have stopped most of the Ts from escaping!" );
+			EndRoundMessage( "#CTs_PreventEscape" );
 
 			TerminateRound( 5, 1 );
 			return;
@@ -786,7 +790,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 			UpdateTeamScores();
 		}
 
-		EndRoundMessage( "Target successfully bombed!" );
+		EndRoundMessage( "#Target_Bombed" );
 
 		TerminateRound( 5, 2 );
 		return;
@@ -803,7 +807,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 			UpdateTeamScores();
 		}
 
-		EndRoundMessage( "Bomb successfully defused!" );
+		EndRoundMessage( "#Bomb_Defused" );
 
 		TerminateRound( 5, 1 );
 		return;
@@ -843,7 +847,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 			UpdateTeamScores();
 		}
 
-		EndRoundMessage( "Counter-Terrorists WIN" );
+		EndRoundMessage( "#CTs_Win" );
 
 		TerminateRound( 5, 1 );
 		return;
@@ -863,14 +867,14 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 			UpdateTeamScores();
 		}
 
-		EndRoundMessage( "Terrorists WIN" );
+		EndRoundMessage( "#Terrorists_Win" );
 
 		TerminateRound( 5, 2 );
 		return;
 	}
 	else if ( NumAliveCT == 0 && NumAliveTerrorist == 0 )
 	{
-		EndRoundMessage( "Round DRAW" );
+		EndRoundMessage( "#Round_Draw" );
 		Broadcast( "rounddraw" );
 		TerminateRound( 5, 3 );
 		return;
@@ -904,7 +908,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 				UpdateTeamScores();
 			}
 
-			EndRoundMessage( "All hostages rescued!\nCounter-Terrorists WIN" );
+			EndRoundMessage( "#All_Hostages_Rescued" );
 
 			TerminateRound( 5, 1 );
 		}
@@ -1056,6 +1060,8 @@ void CHalfLifeMultiplay::BalanceTeams( void )
 //=========================================================
 void CHalfLifeMultiplay::RestartRound( void )
 {
+	m_iTotalRoundsPlayed++;	// Beta 7.1
+
 	// Beta 6.0: the movement settings, every round
 	CVAR_SET_FLOAT( "sv_accelerate", 5 );
 	CVAR_SET_FLOAT( "sv_friction", 4 );
@@ -1076,13 +1082,16 @@ void CHalfLifeMultiplay::RestartRound( void )
 		m_iUnBalancedRounds = 0;
 
 	if ( CVAR_GET_FLOAT( "mp_autoteambalance" ) != 0 && m_iUnBalancedRounds == 1 )
-		UTIL_ClientPrintAll( HUD_PRINTCENTER, "*** Auto-Team Balance next round ***" );	// Beta 6.5's words
+		UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Auto_Team_Balance_Next_Round" );	// Beta 7.1: a titles.txt name (6.5's words: "*** Auto-Team Balance next round ***")
 
 	if ( m_fCompleteReset )
 	{
-		// Beta 7.0: the time limit is the map's first again (a vote for the
-		// map being played lengthens it)
-		timelimit.value = m_iMaxMapTime;
+		// Beta 7.1: the minutes played so far are added to the time limit
+		// (Beta 7.0 set it back to m_iMaxMapTime, the map's first), the rounds
+		// are counted from zero and mp_maxrounds is read
+		timelimit.value += (int)( gpGlobals->time / 60 );
+		m_iTotalRoundsPlayed = 0;
+		m_iMaxRounds = (int)CVAR_GET_FLOAT( "mp_maxrounds" );
 
 		m_iNumTerroristWins = 0;
 		m_iNumCTWins = 0;
@@ -1455,7 +1464,7 @@ bool CHalfLifeMultiplay::AddToVIPQueue( CBasePlayer *toAdd )
 		}
 	}
 
-	ClientPrint( toAdd->pev, HUD_PRINTCENTER, "All 5 slots of the queue have been filled up!\n" );
+	ClientPrint( toAdd->pev, HUD_PRINTCENTER, "#All_VIP_Slots_Full" );
 	return false;
 }
 
@@ -1664,14 +1673,24 @@ void CHalfLifeMultiplay :: Think ( void )
 		{
 			if ( m_iEndIntermissionButtonHit  // check that someone has pressed a key, or the max intermission time is over
 				|| ((m_flIntermissionEndTime + MAX_INTERMISSION_TIME) < gpGlobals->time) ) 
-				ChangeLevel( NULL ); // intermission is over
+				ChangeLevel(); // intermission is over
 		}
 		return;
 	}
 
 	float flTimeLimit = timelimit.value * 60;
 
-	if ( flTimeLimit != 0 && gpGlobals->time >= flTimeLimit )
+	// Beta 7.1: with mp_maxrounds set, the map ends after so many rounds
+	// and the time limit does not count
+	if ( m_iMaxRounds == 0 )
+	{
+		if ( flTimeLimit != 0 && gpGlobals->time >= flTimeLimit )
+		{
+			GoToIntermission();
+			return;
+		}
+	}
+	else if ( m_iTotalRoundsPlayed >= m_iMaxRounds )
 	{
 		GoToIntermission();
 		return;
@@ -1768,7 +1787,7 @@ void CHalfLifeMultiplay :: Think ( void )
 			TerminateRound( 5, 1 );
 
 			m_iNumCTWins++;
-			EndRoundMessage( "CTs win!!! Target has been saved!" );
+			EndRoundMessage( "#Target_Saved" );
 			UpdateTeamScores();
 		}
 		else if ( UTIL_FindEntityByClassname( NULL, "hostage_entity" ) != NULL )
@@ -1778,7 +1797,7 @@ void CHalfLifeMultiplay :: Think ( void )
 			TerminateRound( 5, 2 );
 
 			m_iNumTerroristWins++;
-			EndRoundMessage( "Terrorists win! Hostages have not been rescued!" );
+			EndRoundMessage( "#Hostages_Not_Rescued" );
 			UpdateTeamScores();
 		}
 		else if ( m_bMapHasEscapeZone == true )
@@ -1787,7 +1806,7 @@ void CHalfLifeMultiplay :: Think ( void )
 			TerminateRound( 5, 1 );
 
 			m_iNumCTWins++;
-			EndRoundMessage( "CTs win! Terrorists have not escaped!" );
+			EndRoundMessage( "#Terrorists_Not_Escaped" );
 			UpdateTeamScores();
 		}
 		else if ( m_iMapHasVIPSafetyZone == 1 )
@@ -1797,7 +1816,7 @@ void CHalfLifeMultiplay :: Think ( void )
 			TerminateRound( 5, 2 );
 
 			m_iNumTerroristWins++;
-			EndRoundMessage( "Terrorists win! VIP has not escaped!" );
+			EndRoundMessage( "#VIP_Not_Escaped" );
 			UpdateTeamScores();
 		}
 
@@ -1871,20 +1890,113 @@ void CHalfLifeMultiplay :: Think ( void )
 
 		if ( CVAR_GET_FLOAT( "sv_stopspeed" ) != 75 )
 			CVAR_SET_FLOAT( "sv_stopspeed", 75 );
+
+		m_iMaxRounds = (int)CVAR_GET_FLOAT( "mp_maxrounds" );	// Beta 7.1
 	}
 
-	// sic: 26 empty statements, a stand-in for intermediate code the image
+	// sic: 116 empty statements, a stand-in for intermediate code the image
 	// cannot give. VC6 places the inline functions of gamerules.h among this
-	// file's own functions by the intermediate code in front of each. Beta 7.0's
-	// multiplay_gamerules.obj has retail's order (IsTeamplay and GetGameDescription
-	// ahead of UpdateGameMode, the other CGameRules inlines behind InitHUD) only
-	// when the file is compiled on the .pch it wrote itself and its text has 120
-	// to 145 bytes more intermediate code before UpdateGameMode than the
-	// statements here give: 24 to 29 empty statements fit, 23 and 30 do not.
-	// Beta 6.6's object, in another /YX state, asked for 15 to 75 bytes before
-	// FlPlayerFallDamage (eight statements at InitHUD's end there); Beta 7.0's
-	// is the same with and without those, so they are not here. What the text
-	// was (source lines, dead text) is not known; the place is ours.
+	// file's own functions by the intermediate code in front of each. Beta 7.1's
+	// multiplay_gamerules.obj (the file writing its own .pch) has GetTeamID ahead
+	// of ClientDisconnected and PlayTextureSounds behind it. With trains.h
+	// included ahead of gamerules.h, as here, that takes 535 to 625 bytes more
+	// intermediate code before ClientDisconnected than the text gives: 107 to 125
+	// empty statements fit, 106 and 126 do not. (trains.h is 642 bytes of header
+	// code; included behind gamerules.h the text would need no filler but 20 to
+	// 105 bytes less than it has. The include's place and this number go
+	// together; neither can be told from the image.) Beta 7.0's object asked for
+	// 24 to 29 statements in another /YX state, Beta 6.6's for 3 to 15 at
+	// InitHUD's end. What the text was is not known; the place is ours.
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
 	;
 	;
 	;
@@ -2331,8 +2443,10 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 	DeathNotice( pVictim, pKiller, pInflictor );
 
 	pVictim->m_iDeaths += 1;
+	pVictim->m_afPhysicsFlags &= ~PFLAG_ONTRAIN;	// Beta 7.1: he lets go of a train's or vehicle's controls
 	pVictim->m_fNotKilled = false;
 	pVictim->m_bEscaped = false;	// Beta 6.5
+	pVictim->m_iTrain = 0xc0;	// Beta 7.1: TRAIN_NEW | TRAIN_OFF, which only player.cpp defines
 
 	// Beta 6.5: his view is his own again
 	SET_VIEW( pVictim->edict(), pVictim->edict() );
@@ -2345,6 +2459,18 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 	CBaseEntity *ktmp = CBaseEntity::Instance( pKiller );
 	if ( ktmp && (ktmp->Classify() == CLASS_PLAYER) )
 		peKiller = (CBasePlayer*)ktmp;
+	else if ( ktmp && ktmp->Classify() == CLASS_VEHICLE )
+	{
+		// Beta 7.1: run over by a vehicle, the kill is its driver's
+		CBasePlayer *pDriver = ((CFuncVehicle *)ktmp)->m_pDriver;	// name ours
+
+		if ( pDriver )
+		{
+			pKiller = pDriver->pev;
+			peKiller = pDriver;
+			ktmp = pDriver;
+		}
+	}
 
 	FireTargets( "game_playerdie", pVictim, pVictim, USE_TOGGLE, 0 );
 
@@ -2367,13 +2493,13 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 			pKillerPlayer->AddAccount( -3300, true );
 			pKillerPlayer->m_iTeamKills++;
 			pKillerPlayer->m_bJustKilledTeammate = true;	// Beta 6.1: he sits the next round out (RoundRespawn)
-			ClientPrint( pKillerPlayer->pev, HUD_PRINTCENTER, "You killed a teammate!" );
+			ClientPrint( pKillerPlayer->pev, HUD_PRINTCENTER, "#Killed_Teammate" );
 			UTIL_LogPrintf( "%s killed a teammate\n", STRING( pKillerPlayer->pev->netname ) );	// Beta 6.6
 			ClientPrint( pKillerPlayer->pev, HUD_PRINTCONSOLE, UTIL_VarArgs( "Teammate kills: %i of 3\n", pKillerPlayer->m_iTeamKills ) );
 
 			if ( pKillerPlayer->m_iTeamKills == 3 && CVAR_GET_FLOAT( "mp_autokick" ) != 0 )
 			{
-				ClientPrint( pKillerPlayer->pev, HUD_PRINTCONSOLE, "You are being banned from the server for killing teammates\n" );
+				ClientPrint( pKillerPlayer->pev, HUD_PRINTCONSOLE, "#Banned_For_Killing_Teamates" );
 
 				int iUserID = GETPLAYERUSERID( pKillerPlayer->edict() );	// name ours
 				if ( iUserID != -1 )
@@ -2513,6 +2639,13 @@ void CHalfLifeMultiplay::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, 
 		killer_weapon_name += 8;
 	else if ( strncmp( killer_weapon_name, "func_", 5 ) == 0 )
 		killer_weapon_name += 5;
+
+	// Beta 7.1: a kill by a hit to the head is shown, and logged, as "headshot"
+	if ( pVictim->m_bHeadshotKilled == true )
+	{
+		ALERT( at_console, "Got a headshot!\n" );
+		killer_weapon_name = "headshot";
+	}
 
 	MESSAGE_BEGIN( MSG_ALL, gmsgDeathMsg );
 		WRITE_BYTE( killer_index );						// the killer
@@ -3273,8 +3406,8 @@ void CHalfLifeMultiplay::DisplayMaps( CBasePlayer *player, int iVote )
 			return;
 		}
 
-		// Beta 7.0: the map cycle goes on after the voted map
-		ChangeLevel( szNewMap );
+		// (Beta 7.0 only: ChangeLevel( szNewMap ) first, to leave the map
+		// cycle standing after the voted map)
 		CHANGE_LEVEL( szNewMap, NULL );
 	}
 }
@@ -3301,7 +3434,7 @@ void CHalfLifeMultiplay::VoteMap( CBasePlayer *player, int iVote )
 
 	if ( gpGlobals->time < 180 )	// Beta 7.0: three minutes (to 6.6: five)
 	{
-		ClientPrint( player->pev, HUD_PRINTTALK, "You cannot vote within 3 minutes of a new map\n" );	// Beta 6.6: to the chat (was the centre)
+		ClientPrint( player->pev, HUD_PRINTTALK, "#Cannot_Vote_Map" );	// Beta 6.6: to the chat (was the centre)
 		return;
 	}
 
@@ -3358,7 +3491,7 @@ ChangeLevel
 Server is changing to a new level, check mapcycle.txt for map name and setup info
 ==============
 */
-void CHalfLifeMultiplay :: ChangeLevel( char *szMap )
+void CHalfLifeMultiplay :: ChangeLevel( void )
 {
 	static char szPreviousMapCycleFile[ 256 ];
 	static mapcycle_t mapcycle;
@@ -3439,24 +3572,8 @@ void CHalfLifeMultiplay :: ChangeLevel( char *szMap )
 				}
 			}
 
-			// Beta 7.0: asked for a map by name (DisplayMaps, a won vote), the
-			// cycle is searched for it and left standing after it; the level
-			// is not changed here then (below)
-			if ( szMap )
-			{
-				if ( !strcmp( item->mapname, szMap ) )
-				{
-					ALERT( at_console, "Found map!! %s\n", item->mapname );
-					found = TRUE;
-					keeplooking = FALSE;
-				}
-				else
-				{
-					ALERT( at_console, "Comparing [%s] to map [%s]\n", szMap, item->mapname );
-					keeplooking = TRUE;
-				}
-			}
-
+			// (Beta 7.0 only: asked for a map by name, the cycle was searched
+			// for it here; Beta 7.1 is the SDK's function again)
 			if ( keeplooking )
 				continue;
 
@@ -3486,7 +3603,7 @@ void CHalfLifeMultiplay :: ChangeLevel( char *szMap )
 
 	g_fGameOver = TRUE;
 
-	// (Beta 7.0: the "CHANGE LEVEL: %s" line is gone)
+	ALERT( at_console, "CHANGE LEVEL: %s\n", szNextMap );
 	if ( minplayers || maxplayers )
 	{
 		ALERT( at_console, "PLAYER COUNT:  min %i max %i current %i\n", minplayers, maxplayers, curplayers );
@@ -3496,13 +3613,10 @@ void CHalfLifeMultiplay :: ChangeLevel( char *szMap )
 		ALERT( at_console, "RULES:  %s\n", szRules );
 	}
 	
-	if ( !szMap )
+	CHANGE_LEVEL( szNextMap, NULL );
+	if ( strlen( szCommands ) > 0 )
 	{
-		CHANGE_LEVEL( szNextMap, NULL );
-		if ( strlen( szCommands ) > 0 )
-		{
-			SERVER_COMMAND( szCommands );
-		}
+		SERVER_COMMAND( szCommands );
 	}
 }
 

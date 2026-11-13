@@ -269,6 +269,9 @@ int CHudDeathNotice :: MsgFunc_DeathMsg( const char *pszName, int iSize, void *p
 		}
 		else
 		{
+			if ( !strcmp( killedwith+2, "headshot" ) )
+				ConsolePrint( "*** " );
+
 			ConsolePrint( rgDeathNoticeList[i].szKiller );
 			ConsolePrint( " killed " );
 			ConsolePrint( rgDeathNoticeList[i].szVictim );
@@ -286,6 +289,9 @@ int CHudDeathNotice :: MsgFunc_DeathMsg( const char *pszName, int iSize, void *p
 
 			ConsolePrint( killedwith+2 ); // skip over the "d_" part
 		}
+
+		if ( !strcmp( killedwith+2, "headshot" ) )
+			ConsolePrint( " ***" );
 
 		ConsolePrint( "\n" );
 	}
