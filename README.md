@@ -43,7 +43,7 @@ builds reproduce (Counter-Strike's 40 are in
 | They Hunger `einar.dll` | `0b9c21c87dab0eec02b323eaab434cf77a2f69982bbf0a3f3f6a316fa95159d3` |
 | They Hunger `client.dll` | `09e8de1a62f4f1fae32b040678fc5b97fe5ba8f20ec44db14b29aedcf37db105` |
 
-What the two remaining DLLs still lack:
+What the four remaining DLLs still lack:
 
 - **Wanted! `wanted.dll`:** every function but one is identical at retail's
   address. In `CBot::Wander` the compiler emits one floating-point multiply

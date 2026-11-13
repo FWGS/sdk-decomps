@@ -565,6 +565,21 @@ Python 3.14.10, 7-Zip 26.04 and cabextract 1.11:
   identical DLLs byte for byte, the Wanted! server and the Gunman
   Chronicles client with their known hashes.
 
+Also on 2026-11-14, the pages in [rebuild/](rebuild/README.md) were
+followed as written, every command block in order: the shared page into a
+new, empty toolchain folder and a new Wine prefix (with the downloads
+already on disk, so the `curl` lines were skipped and the files checked by
+SHA-256), then each mod's page from a fresh clone of the repository. The
+seven trees came out identical file for file to the ones used throughout
+(`check_toolchains.sh`), and every mod's DLLs came out as its page says:
+every DLL that is identical to retail came out identical (SHA-256 and
+`cmp`), and the Wanted! server, the Gunman Chronicles client and the
+Counter-Strike 1.4 and 1.5 clients with their known hashes. The retail
+files of They Hunger, Wanted! and Counter-Strike Beta 1.0 were unpacked or
+cloned as the pages say; those of Point of View, T2DEF and Gunman
+Chronicles, which need the mods' installers, were copied in. All 27
+Counter-Strike tags one after another took 45 minutes.
+
 Not tested:
 - **Other Wine versions.** The T2DEF server is linked on Wine's builtin
   `msvcrt.dll`, and its import table depends on how that `qsort` orders
