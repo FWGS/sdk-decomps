@@ -200,7 +200,8 @@ void CC4::PrimaryAttack( void )
 				CGrenade::ShootSatchelCharge( m_pPlayer->pev, tr.vecEndPos + tr.vecPlaneNormal * 5, Vector( 0, 0, 0 ) );
 
 			UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Bomb_Planted" );
-			UTIL_LogPrintf( "%s planted the bomb\n", STRING( m_pPlayer->pev->netname ) );
+			UTIL_LogPrintf( "\"%s<%i><%u><TERRORIST>\" triggered \"Planted_The_Bomb\"\n", STRING( m_pPlayer->pev->netname ),
+				GETPLAYERUSERID( m_pPlayer->edict() ), GETPLAYERWONID( m_pPlayer->edict() ) );
 			EMIT_SOUND( edict(), CHAN_WEAPON, "weapons/c4_plant.wav", VOL_NORM, ATTN_NORM );
 
 			m_pPlayer->pev->body = 0;

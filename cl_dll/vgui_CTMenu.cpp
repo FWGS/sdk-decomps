@@ -84,7 +84,7 @@ CCTMenuPanel::CCTMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int t
 	pSchemes->getBgColor( hTitleScheme, r, g, b, a );
 	pLabel->setBgColor( r, g, b, a );
 	pLabel->setContentAlignment( vgui::Label::a_west );
-	pLabel->setText(gHUD.m_TextMessage.BufferedLocaliseTextString("CT Model Selection"));
+	pLabel->setText(gHUD.m_TextMessage.BufferedLocaliseTextString("#Title_ct_model_selection"));
 
 	// Create the Scroll panel
 	m_pScrollPanel = new CTFScrollPanel( CLASSMENU_WINDOW_X, CLASSMENU_WINDOW_Y, CLASSMENU_WINDOW_SIZE_X, CLASSMENU_WINDOW_SIZE_Y );
@@ -112,28 +112,28 @@ CCTMenuPanel::CCTMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int t
 		switch ( i )
 		{
 		case 0:
-			m_pButtons[i] = new CommandButton( "Seal Team 6", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Seal_Team_6" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		case 1:
-			m_pButtons[i] = new CommandButton( "GSG-9", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#GSG_9" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot2" );
 			break;
 		case 2:
-			m_pButtons[i] = new CommandButton( "SAS", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#SAS" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot3" );
 			break;
 		case 3:
-			m_pButtons[i] = new CommandButton( "GIGN", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#GIGN" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot4" );
 			break;
 		case 4:
 			iYPos += CLASSMENU_BUTTON_SIZE_Y + CLASSMENU_BUTTON_SPACER_Y;
-			m_pButtons[i] = new CommandButton( "AUTO-SELECT", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Auto_Select" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot5" );
 			break;
 		default:
-			m_pButtons[i] = new CommandButton( "Seal Team 6", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Seal_Team_6" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		}
@@ -161,22 +161,22 @@ CCTMenuPanel::CCTMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int t
 		switch ( i )
 		{
 		case 0:
-			sprintf( sz, "US Seal Team 6 (DEVGRU)" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Title_seal_team" ) );
 			break;
 		case 1:
-			sprintf( sz, "German GSG-9" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Title_gsg9" ) );
 			break;
 		case 2:
-			sprintf( sz, "UK Special Air Service" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Title_sas" ) );
 			break;
 		case 3:
-			sprintf( sz, "French GIGN" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Title_gign" ) );
 			break;
 		case 4:
-			sprintf( sz, "AUTO SELECT" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Auto_Select" ) );
 			break;
 		default:
-			sprintf( sz, "US Seal Team 6 (DEVGRU)" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Title_seal_team" ) );
 			break;
 		}
 
@@ -258,7 +258,7 @@ CCTMenuPanel::CCTMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int t
 			break;
 		}
 
-		char *cText = "Class Description not available.";
+		char *cText = CHudTextMessage::BufferedLocaliseTextString( "#Class_descr_not_avail" );
 		char *pfile = (char*)gEngfuncs.COM_LoadFile( sz, 5, NULL );
 		if (pfile)
 			cText = pfile;

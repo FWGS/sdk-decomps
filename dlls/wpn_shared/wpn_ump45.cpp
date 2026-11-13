@@ -95,7 +95,7 @@ BOOL CUMP45::Deploy( )
 void CUMP45::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		UMP45Fire( m_flAccuracy * 0.1, 0.1, FALSE );
+		UMP45Fire( m_flAccuracy * 0.14, 0.1, FALSE );
 	else
 		UMP45Fire( m_flAccuracy * 0.04, 0.1, FALSE );
 }
@@ -150,10 +150,10 @@ void CUMP45::UMP45Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2;
 
-	if ( m_pPlayer->pev->velocity.Length2D() > 0 )
+	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
+		KickBack( 0.125, 0.65, 0.55, 0.0475, 5.5, 4, 10 );
+	else if ( m_pPlayer->pev->velocity.Length2D() > 0 )
 		KickBack( 0.55, 0.3, 0.225, 0.03, 3.5, 2.5, 10 );
-	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		KickBack( 0.75, 0.45, 0.35, 0.0375, 4.5, 3.0, 10 );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
 		KickBack( 0.25, 0.175, 0.125, 0.02, 2.25, 1.25, 10 );
 	else

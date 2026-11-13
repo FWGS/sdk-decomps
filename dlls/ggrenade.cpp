@@ -1010,6 +1010,8 @@ void CGrenade::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 			{
 				if ( player->m_fHasDefuser == true )
 				{
+					// Counter-Strike 1.1: a line in the server's log, here and below
+					UTIL_LogPrintf( "\"%s<%i><%u><CT>\" triggered \"Begin_Bomb_Defuse_With_Kit\"\n", STRING( player->pev->netname ), GETPLAYERUSERID( player->edict() ), GETPLAYERWONID( player->edict() ) );
 					ClientPrint( player->pev, HUD_PRINTCENTER, "#Defusing_Bomb_With_Defuse_Kit" );
 					EMIT_SOUND( ENT(player->pev), CHAN_ITEM, "weapons/c4_disarm.wav", 1.0, ATTN_NORM );
 					m_pBombDefuser = pActivator;
@@ -1023,6 +1025,7 @@ void CGrenade::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 				}
 				else
 				{
+					UTIL_LogPrintf( "\"%s<%i><%u><CT>\" triggered \"Begin_Bomb_Defuse_Without_Kit\"\n", STRING( player->pev->netname ), GETPLAYERUSERID( player->edict() ), GETPLAYERWONID( player->edict() ) );
 					ClientPrint( player->pev, HUD_PRINTCENTER, "#Defusing_Bomb_Without_Defuse_Kit" );
 					EMIT_SOUND( ENT(player->pev), CHAN_ITEM, "weapons/c4_disarm.wav", 1.0, ATTN_NORM );
 					m_pBombDefuser = pActivator;
@@ -1262,7 +1265,8 @@ void CGrenade::C4Think( void )
 			if ( m_pBombDefuser->pev->deadflag == DEAD_NO )
 			{
 				Broadcast( "BOMBDEF" );
-				UTIL_LogPrintf( "%s has defused the bomb\n", STRING( m_pBombDefuser->pev->netname ) );	// Beta 6.6
+				// Beta 6.6: "%s has defused the bomb\n"; Counter-Strike 1.1: the log line's new form
+				UTIL_LogPrintf( "\"%s<%i><%u><CT>\" triggered \"Defused_The_Bomb\"\n", STRING( m_pBombDefuser->pev->netname ), GETPLAYERUSERID( m_pBombDefuser->edict() ), GETPLAYERWONID( m_pBombDefuser->edict() ) );
 				// Beta 5.0: the last beep, still sounding, is stopped
 				UTIL_EmitAmbientSound( ENT(pev), pev->origin, "weapons/c4_beep5.wav", 0, ATTN_NONE, SND_STOP, 0 );
 				EMIT_SOUND(ENT(m_pBombDefuser->pev), CHAN_WEAPON, "weapons/c4_disarmed.wav", 1.0, ATTN_NORM);

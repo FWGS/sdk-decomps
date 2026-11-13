@@ -84,7 +84,7 @@ CTerroristMenuPanel::CTerroristMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 	pSchemes->getBgColor( hTitleScheme, r, g, b, a );
 	pLabel->setBgColor( r, g, b, a );
 	pLabel->setContentAlignment( vgui::Label::a_west );
-	pLabel->setText(gHUD.m_TextMessage.BufferedLocaliseTextString("Terrorist Model Selection"));
+	pLabel->setText(gHUD.m_TextMessage.BufferedLocaliseTextString("#Title_terrorist_model_selection"));
 
 	// Create the Scroll panel
 	m_pScrollPanel = new CTFScrollPanel( CLASSMENU_WINDOW_X, CLASSMENU_WINDOW_Y, CLASSMENU_WINDOW_SIZE_X, CLASSMENU_WINDOW_SIZE_Y );
@@ -112,28 +112,28 @@ CTerroristMenuPanel::CTerroristMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 		switch ( i )
 		{
 		case 0:
-			m_pButtons[i] = new CommandButton( "Phoenix Connexion", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Phoenix_Connexion" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		case 1:
-			m_pButtons[i] = new CommandButton( "L337 Krew", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#L337_Krew" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot2" );
 			break;
 		case 2:
-			m_pButtons[i] = new CommandButton( "Arctic Avengers", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Arctic_Avengers" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot3" );
 			break;
 		case 3:
-			m_pButtons[i] = new CommandButton( "Guerilla Warfare", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Guerilla_Warfare" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot4" );
 			break;
 		case 4:
 			iYPos += CLASSMENU_BUTTON_SIZE_Y + CLASSMENU_BUTTON_SPACER_Y;
-			m_pButtons[i] = new CommandButton( "AUTO-SELECT", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Auto_Select" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot5" );
 			break;
 		default:
-			m_pButtons[i] = new CommandButton( "Phoenix Connexion", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Phoenix_Connexion" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		}
@@ -161,22 +161,22 @@ CTerroristMenuPanel::CTerroristMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 		switch ( i )
 		{
 		case 0:
-			sprintf( sz, "Phoenix Connexion" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Phoenix_Connexion" ) );
 			break;
 		case 1:
-			sprintf( sz, "L337 Krew" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#L337_Krew" ) );
 			break;
 		case 2:
-			sprintf( sz, "Arctic Avengers" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Arctic_Avengers" ) );
 			break;
 		case 3:
-			sprintf( sz, "Guerilla Warfare" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Guerilla_Warfare" ) );
 			break;
 		case 4:
-			sprintf( sz, "AUTO SELECT" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Auto_Select" ) );
 			break;
 		default:
-			sprintf( sz, "Phoenix Connexion" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Phoenix_Connexion" ) );
 			break;
 		}
 
@@ -258,7 +258,7 @@ CTerroristMenuPanel::CTerroristMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 			break;
 		}
 
-		char *cText = "Class Description not available.";
+		char *cText = CHudTextMessage::BufferedLocaliseTextString( "#Class_descr_not_avail" );
 		char *pfile = (char*)gEngfuncs.COM_LoadFile( sz, 5, NULL );
 		if (pfile)
 			cText = pfile;

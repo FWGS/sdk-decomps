@@ -162,7 +162,7 @@ void CAWP::AWPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
 	Vector vecDir;	// sic: unused, as in wpn_ak47.cpp; without it the x87 operand order differs from retail's
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 3, BULLET_PLAYER_338MAG, 200, 0.99, NULL, true );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 3, BULLET_PLAYER_338MAG, 115, 0.99, NULL, true );
 
 	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireAWP, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, flSpread, m_vecAiming.y, (int)(flSpread * 10000), (int)(m_vecAiming.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
 

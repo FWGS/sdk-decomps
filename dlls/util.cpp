@@ -937,6 +937,7 @@ void UTIL_ShowMessage( const char *pString, CBaseEntity *pEntity )
 
 	MESSAGE_BEGIN( MSG_ONE, gmsgHudText, NULL, pEntity->edict() );
 	WRITE_STRING( pString );
+	WRITE_BYTE( 0 );	// Counter-Strike 1.1: HudText carries a byte behind the string (1 marks a hint: CHintMessageQueue::Update)
 	MESSAGE_END();
 }
 

@@ -95,7 +95,7 @@ BOOL CMAC10::Deploy( )
 void CMAC10::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		MAC10Fire( m_flAccuracy * 0.15, 0.07, FALSE );
+		MAC10Fire( m_flAccuracy * 0.175, 0.07, FALSE );
 	else
 		MAC10Fire( m_flAccuracy * 0.03, 0.07, FALSE );
 }
@@ -150,10 +150,10 @@ void CMAC10::MAC10Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2.0;
 
-	if ( m_pPlayer->pev->velocity.Length2D() > 0 )
+	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
+		KickBack( 1.3, 0.55, 0.4, 0.05, 4.75, 3.75, 5 );
+	else if ( m_pPlayer->pev->velocity.Length2D() > 0 )
 		KickBack( 0.9, 0.45, 0.25, 0.035, 3.5, 2.75, 7 );
-	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		KickBack( 1.2, 0.45, 0.3, 0.04, 3.75, 2.75, 7 );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
 		KickBack( 0.75, 0.4, 0.175, 0.03, 2.75, 2.5, 10 );
 	else

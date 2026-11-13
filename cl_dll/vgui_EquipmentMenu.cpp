@@ -84,7 +84,7 @@ CEquipmentMenuPanel::CEquipmentMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 	pSchemes->getBgColor( hTitleScheme, r, g, b, a );
 	pLabel->setBgColor( r, g, b, a );
 	pLabel->setContentAlignment( vgui::Label::a_west );
-	pLabel->setText(gHUD.m_TextMessage.BufferedLocaliseTextString("Equipment Selection"));
+	pLabel->setText(gHUD.m_TextMessage.BufferedLocaliseTextString("#Title_equipment_selection"));
 
 	// Create the Scroll panel
 	m_pScrollPanel = new CTFScrollPanel( CLASSMENU_WINDOW_X, CLASSMENU_WINDOW_Y, CLASSMENU_WINDOW_SIZE_X, CLASSMENU_WINDOW_SIZE_Y );
@@ -112,35 +112,35 @@ CEquipmentMenuPanel::CEquipmentMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 		switch ( i )
 		{
 		case 0:
-			m_pButtons[i] = new CommandButton( "Kevlar", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Kevlar" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		case 1:
-			m_pButtons[i] = new CommandButton( "Kevlar+Helmet", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Kevlar_Helmet" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot2" );
 			break;
 		case 2:
-			m_pButtons[i] = new CommandButton( "Flashbang", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Flashbang" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot3" );
 			break;
 		case 3:
-			m_pButtons[i] = new CommandButton( "HE Grenade", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#HE_Grenade" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot4" );
 			break;
 		case 4:
-			m_pButtons[i] = new CommandButton( "Smoke Grenade", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Smoke_Grenade" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot5" );
 			break;
 		case 5:
-			m_pButtons[i] = new CommandButton( "Defusal Kit", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Defusal_Kit" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot6" );
 			break;
 		case 6:
-			m_pButtons[i] = new CommandButton( "NightVision", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#NightVision" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot7" );
 			break;
 		default:
-			m_pButtons[i] = new CommandButton( "Kevlar", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Kevlar" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		}
@@ -168,31 +168,31 @@ CEquipmentMenuPanel::CEquipmentMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 		switch ( i )
 		{
 		case 0:
-			sprintf( sz, "Kevlar Vest" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Kevlar_Vest" ) );
 			break;
 		case 1:
-			sprintf( sz, "Kevlar Vest + Ballistic Helmet" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Kevlar_Vest_Ballistic_Helmet" ) );
 			break;
 		case 2:
-			sprintf( sz, "Flashbang" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Flashbang" ) );
 			break;
 		case 3:
-			sprintf( sz, "High-Explosive Grenade" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#High_Explosive_Grenade" ) );
 			break;
 		case 4:
-			sprintf( sz, "Smoke Grenade" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Smoke_Grenade" ) );
 			break;
 		case 5:
-			sprintf( sz, "Bomb Defusal Kit" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Bomb_Defusal_Kit" ) );
 			break;
 		case 6:
-			sprintf( sz, "Nightvision Goggles" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Nightvision_Goggles" ) );
 			break;
 		case 7:
 			sprintf( sz, " " );
 			break;
 		default:
-			sprintf( sz, "Kevlar Vest" );
+			sprintf( sz, CHudTextMessage::BufferedLocaliseTextString( "#Kevlar_Vest" ) );
 			break;
 		}
 
@@ -290,7 +290,7 @@ CEquipmentMenuPanel::CEquipmentMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 			break;
 		}
 
-		char *cText = "Class Description not available.";
+		char *cText = CHudTextMessage::BufferedLocaliseTextString( "#Class_descr_not_avail" );
 		char *pfile = (char*)gEngfuncs.COM_LoadFile( sz, 5, NULL );
 		if (pfile)
 			cText = pfile;
@@ -327,7 +327,7 @@ CEquipmentMenuPanel::CEquipmentMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 	}
 
 	// Create the Cancel button
-	m_pCancelButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "CANCEL" ), CLASSMENU_TOPLEFT_BUTTON_X, YRES(392) - CLASSMENU_BUTTON_SIZE_Y, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, false );
+	m_pCancelButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Menu_Cancel" ), CLASSMENU_TOPLEFT_BUTTON_X, YRES(392) - CLASSMENU_BUTTON_SIZE_Y, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, false );
 	m_pCancelButton->setParent( this );
 	m_pCancelButton->addActionSignal( new CMenuHandler_TextWindow(HIDE_TEXTWINDOW) );
 	m_pCancelButton->addActionSignal( new CMenuHandler_StringCommandWatch( "slot10", true ) );

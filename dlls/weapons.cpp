@@ -1765,12 +1765,17 @@ void CWeaponBox::Touch( CBaseEntity *pOther )
 		{
 			if ( !strcmp( STRING( pItem->pev->classname ), "weapon_c4" ) )
 			{
+				// Counter-Strike 1.1: the player's pointer is tested first (1.0b: last,
+				// after its uses), and the finder is told and the log written
+				if ( !pPlayer )
+					return;
 				if ( pPlayer->m_iTeam != TEAM_TERRORIST )
 					return;
 				if ( pPlayer->pev->deadflag != DEAD_NO )
 					return;
-				if ( !pPlayer )
-					return;
+
+				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Got_bomb" );
+				UTIL_LogPrintf( "\"%s<%i><%u><TERRORIST>\" triggered \"Got_The_Bomb\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERWONID( pPlayer->edict() ) );
 
 				pPlayer->m_bHasC4 = true;
 				pPlayer->SetBombIcon( FALSE );

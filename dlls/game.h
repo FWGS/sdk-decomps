@@ -20,9 +20,6 @@ extern void GameDLLInit( void );
 
 
 extern cvar_t	displaysoundlist;
-extern cvar_t	mapcyclefile;
-extern cvar_t	servercfgfile;
-extern cvar_t	lservercfgfile;
 
 // multiplayer server rules
 extern cvar_t	fraglimit;

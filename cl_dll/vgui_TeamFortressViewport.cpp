@@ -476,7 +476,6 @@ TeamFortressViewport::TeamFortressViewport(int x,int y,int wide,int tall) : Pane
 	m_pCurrentCommandMenu = NULL;
 
 	CVAR_CREATE( "hud_classautokill", "1", FCVAR_ARCHIVE );		// controls whether or not to suicide immediately on TF class switch
-	CVAR_CREATE( "hud_takesshots", "0", FCVAR_ARCHIVE );		// controls whether or not to automatically take screenshots at the end of a round
 
 	Initialize();
 	addInputSignal( new CViewPortInputHandler );
@@ -2316,7 +2315,10 @@ int TeamFortressViewport::MsgFunc_MOTD( const char *pszName, int iSize, void *pb
 	BEGIN_READ( pbuf, iSize );
 
 	m_iGotAllMOTD = READ_BYTE();
-	strncat( m_szMOTD, READ_STRING(), sizeof(m_szMOTD) - strlen(m_szMOTD) );
+
+	int roomInArray = sizeof(m_szMOTD) - strlen(m_szMOTD) - 1;
+
+	strncat( m_szMOTD, READ_STRING(), roomInArray >= 0 ? roomInArray : 0 );
 	m_szMOTD[ sizeof(m_szMOTD)-1 ] = '\0';
 
 	if ( m_iGotAllMOTD )

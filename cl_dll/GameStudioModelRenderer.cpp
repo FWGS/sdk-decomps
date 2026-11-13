@@ -143,7 +143,7 @@ void CGameStudioModelRenderer::StudioSetupBones ( void )
 		int playerNum = m_pCurrentEntity->index - 1;
 
 		// A jump that starts now starts at its first frame
-		if ( m_nPlayerGaitSequences[ playerNum ] != 5 && m_pPlayerInfo->gaitsequence == 5 )
+		if ( m_nPlayerGaitSequences[ playerNum ] != 6 && m_pPlayerInfo->gaitsequence == 6 )
 		{
 			m_pPlayerInfo->gaitframe = 0.0;
 		}
@@ -153,7 +153,7 @@ void CGameStudioModelRenderer::StudioSetupBones ( void )
 
 	f = StudioEstimateFrame( pseqdesc );
 
-	if ( m_pPlayerInfo->gaitsequence == 2 )
+	if ( m_pPlayerInfo->gaitsequence == 3 )
 	{
 		if ( m_pCurrentEntity->curstate.blending[0] <= 26 )
 		{
@@ -300,29 +300,29 @@ void CGameStudioModelRenderer::StudioSetupBones ( void )
 
 					StudioCalcRotations( pos1b, q1b, pseqdesc, panim, m_pCurrentEntity->latched.prevframe );
 
-					panim += m_pStudioHeader->numbones;
+					panim = LookupAnimation( pseqdesc, 1 );
 					StudioCalcRotations( pos2, q2, pseqdesc, panim, m_pCurrentEntity->latched.prevframe );
 
-					panim += m_pStudioHeader->numbones * 2;
+					panim = LookupAnimation( pseqdesc, 3 );
 					StudioCalcRotations( pos3, q3, pseqdesc, panim, m_pCurrentEntity->latched.prevframe );
 
-					panim += m_pStudioHeader->numbones;
+					panim = LookupAnimation( pseqdesc, 4 );
 					StudioCalcRotations( pos4, q4, pseqdesc, panim, m_pCurrentEntity->latched.prevframe );
 				}
 				else
 				{
 					t = 2.0 * ( t - 127.0 );
 
-					panim += m_pStudioHeader->numbones * 3;
+					panim = LookupAnimation( pseqdesc, 3 );
 					StudioCalcRotations( pos1b, q1b, pseqdesc, panim, m_pCurrentEntity->latched.prevframe );
 
-					panim += m_pStudioHeader->numbones;
+					panim = LookupAnimation( pseqdesc, 4 );
 					StudioCalcRotations( pos2, q2, pseqdesc, panim, m_pCurrentEntity->latched.prevframe );
 
-					panim += m_pStudioHeader->numbones * 2;
+					panim = LookupAnimation( pseqdesc, 6 );
 					StudioCalcRotations( pos3, q3, pseqdesc, panim, m_pCurrentEntity->latched.prevframe );
 
-					panim += m_pStudioHeader->numbones;
+					panim = LookupAnimation( pseqdesc, 7 );
 					StudioCalcRotations( pos4, q4, pseqdesc, panim, m_pCurrentEntity->latched.prevframe );
 				}
 			}
@@ -334,32 +334,32 @@ void CGameStudioModelRenderer::StudioSetupBones ( void )
 				{
 					t = ( t * 2.0 );
 
-					panim += m_pStudioHeader->numbones;
+					panim = LookupAnimation( pseqdesc, 1 );
 					StudioCalcRotations( pos1b, q1b, pseqdesc, panim, m_pCurrentEntity->latched.prevframe );
 
-					panim += m_pStudioHeader->numbones;
+					panim = LookupAnimation( pseqdesc, 2 );
 					StudioCalcRotations( pos2, q2, pseqdesc, panim, m_pCurrentEntity->latched.prevframe );
 
-					panim += m_pStudioHeader->numbones * 2;
+					panim = LookupAnimation( pseqdesc, 4 );
 					StudioCalcRotations( pos3, q3, pseqdesc, panim, m_pCurrentEntity->latched.prevframe );
 
-					panim += m_pStudioHeader->numbones;
+					panim = LookupAnimation( pseqdesc, 5 );
 					StudioCalcRotations( pos4, q4, pseqdesc, panim, m_pCurrentEntity->latched.prevframe );
 				}
 				else
 				{
 					t = 2.0 * ( t - 127.0 );
 
-					panim += m_pStudioHeader->numbones * 4;
+					panim = LookupAnimation( pseqdesc, 4 );
 					StudioCalcRotations( pos1b, q1b, pseqdesc, panim, m_pCurrentEntity->latched.prevframe );
 
-					panim += m_pStudioHeader->numbones;
+					panim = LookupAnimation( pseqdesc, 5 );
 					StudioCalcRotations( pos2, q2, pseqdesc, panim, m_pCurrentEntity->latched.prevframe );
 
-					panim += m_pStudioHeader->numbones * 2;
+					panim = LookupAnimation( pseqdesc, 7 );
 					StudioCalcRotations( pos3, q3, pseqdesc, panim, m_pCurrentEntity->latched.prevframe );
 
-					panim += m_pStudioHeader->numbones;
+					panim = LookupAnimation( pseqdesc, 8 );
 					StudioCalcRotations( pos4, q4, pseqdesc, panim, m_pCurrentEntity->latched.prevframe );
 				}
 			}
@@ -393,7 +393,7 @@ void CGameStudioModelRenderer::StudioSetupBones ( void )
 	pbones = (mstudiobone_t *)((byte *)m_pStudioHeader + m_pStudioHeader->boneindex);
 
 	// calc gait animation
-	if ( m_pPlayerInfo && m_pCurrentEntity->curstate.sequence < 82 )
+	if ( m_pPlayerInfo && m_pCurrentEntity->curstate.sequence < 85 && m_pCurrentEntity->curstate.sequence != 8 && m_pCurrentEntity->curstate.sequence != 9 )
 	{
 		int copy = 1;
 
@@ -439,7 +439,10 @@ void CGameStudioModelRenderer::StudioSetupBones ( void )
 			if ( IEngineStudio.IsHardware() )
 			{
 				ConcatTransforms ((*m_protationmatrix), bonematrix, (*m_pbonetransform)[i]);
-				ConcatTransforms ((*m_protationmatrix), bonematrix, (*m_plighttransform)[i]);
+
+				// MatrixCopy should be faster...
+				//ConcatTransforms ((*m_protationmatrix), bonematrix, (*m_plighttransform)[i]);
+				MatrixCopy( (*m_pbonetransform)[i], (*m_plighttransform)[i] );
 			}
 			else
 			{

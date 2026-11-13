@@ -51,7 +51,7 @@ typedef struct {
 
 #define MAX_PLAYER_NAME_LENGTH		32
 
-#define	MAX_MOTD_LENGTH				1024
+#define	MAX_MOTD_LENGTH				1536
 
 //
 //-----------------------------------------------------
@@ -249,6 +249,9 @@ protected:
 	int m_iStatusValues[MAX_STATUSBAR_VALUES];  // an array of values for use in the status bar
 
 	int m_bReparseString; // set to TRUE whenever the m_szStatusBar needs to be recalculated
+
+	// an array of colors...one color for each line
+	float *m_pflNameColors[MAX_STATUSBAR_LINES];
 };
 
 //
@@ -505,7 +508,7 @@ public:
 	int	XPosition( float x, int width, int lineWidth );
 	int YPosition( float y, int height );
 
-	void MessageAdd( const char *pName, float time );
+	void MessageAdd( const char *pName, float time, int hintMessage );
 	void MessageDrawScan( client_textmessage_t *pMessage, float time );
 	void MessageScanStart( void );
 	void MessageScanNextChar( void );
@@ -810,7 +813,7 @@ extern CHud gHUD;
 // RotateVectorZ, Counter-Strike 1.6's inline function, which is 435 bytes of what this stood for
 // (1.3 needs nothing here).  With it this version takes
 //
-// 58 only (57 and 59 do not) lines here (full builds against retail's SHA-256).  Nothing calls this.
+// 56 to 59 lines here (full builds against retail's SHA-256).  Nothing calls this.
 inline void b65_hud_unknown( void )
 {
 	;
@@ -966,10 +969,16 @@ extern int g_iTeamNumber;
 extern int g_iUser1;
 extern int g_iUser2;
 
-// sic: one declared name that Counter-Strike 1.0's headers had and this text has not (the enum's own; Counter-Strike 1.1
-// has seven enumerators in it).  With RotateVectorZ's seven names in util_vector.h the constructors of
-// CMessageWindowPanel and CClassMenuPanel and CRifleMenuPanel::Update compile to retail's code with 1 or 11 to 15
-// more names up to here (0, 2 to 7, 10, 58, 59, 61 do not; it was 0, 8, 18 to 22 .. before)
+// sic: seven declared names that Counter-Strike 1.1's headers had and this text has not. The constructors of
+// CMessageWindowPanel and CClassMenuPanel and CRifleMenuPanel::Update compile to retail's code in the release build
+// with 5 to 8, 11 or 12 names here (5 to 14 built; it was 15 before RotateVectorZ's seven names)
 enum r11_hud_unknown_e
 {
+	R11_HUD_UNKNOWN0,
+	R11_HUD_UNKNOWN1,
+	R11_HUD_UNKNOWN2,
+	R11_HUD_UNKNOWN3,
+	R11_HUD_UNKNOWN4,
+	R11_HUD_UNKNOWN5,
+	R11_HUD_UNKNOWN6,
 };

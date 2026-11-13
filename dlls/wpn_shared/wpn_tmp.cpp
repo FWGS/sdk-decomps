@@ -94,7 +94,7 @@ BOOL CTMP::Deploy( )
 void CTMP::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		TMPFire( m_flAccuracy * 0.3, 0.07, FALSE );
+		TMPFire( m_flAccuracy * 0.15, 0.07, FALSE );
 	else
 		TMPFire( m_flAccuracy * 0.03, 0.07, FALSE );
 }
@@ -146,10 +146,10 @@ void CTMP::TMPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2;
 
-	if ( m_pPlayer->pev->velocity.Length2D() > 0 )
+	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
+		KickBack( 1.1, 0.5, 0.35, 0.045, 4.5, 3.5, 6 );
+	else if ( m_pPlayer->pev->velocity.Length2D() > 0 )
 		KickBack( 0.8, 0.4, 0.2, 0.03, 3, 2.5, 7 );
-	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		KickBack( 1, 0.4, 0.25, 0.035, 3.5, 2.5, 7 );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
 		KickBack( 0.7, 0.35, 0.125, 0.025, 2.5, 2, 10 );
 	else

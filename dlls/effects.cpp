@@ -669,14 +669,20 @@ void CLightning::StrikeThink( void )
 
 	if ( pStart != NULL && pEnd != NULL )
 	{
+		// Counter-Strike 1.1: SDK 2.2's text (the ring test stood inside the
+		// message, which it left open)
+		if ( IsPointEntity( pStart ) || IsPointEntity( pEnd ) )
+		{
+			if ( pev->spawnflags & SF_BEAM_RING)
+			{
+				// don't work
+				return;
+			}
+		}
+
 		MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
 			if ( IsPointEntity( pStart ) || IsPointEntity( pEnd ) )
 			{
-				if ( pev->spawnflags & SF_BEAM_RING)
-				{
-					// don't work
-					return;
-				}
 				if ( !IsPointEntity( pEnd ) )	// One point entity must be in pEnd
 				{
 					CBaseEntity *pTemp;
@@ -1263,18 +1269,11 @@ void CSprite::Spawn( void )
 
 
 // Counter-Strike 1.0b: a new round turns the sprite on or off as the map had
-// it (Spawn's lines)
+// it (Spawn's lines: solid, movetype, effects and frame cleared, then TurnOff
+// for a named sprite without SF_SPRITE_STARTON, else TurnOn).
+// Counter-Strike 1.1: the function is still there and does nothing (one ret)
 void CSprite::Restart( void )
 {
-	pev->solid			= SOLID_NOT;
-	pev->movetype		= MOVETYPE_NONE;
-	pev->effects		= 0;
-	pev->frame			= 0;
-
-	if ( pev->targetname && !(pev->spawnflags & SF_SPRITE_STARTON) )
-		TurnOff();
-	else
-		TurnOn();
 }
 
 

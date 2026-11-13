@@ -53,6 +53,8 @@ int MapTextureTypeStepType(char chTextureType);
 // the world node graph
 extern CGraph	WorldGraph;
 
+extern cvar_t playerid;	// Counter-Strike 1.1: game.cpp's mp_playerid (declared here in Counter-Strike 1.6 too)
+
 #define	PLAYER_WALLJUMP_SPEED 300 // how fast we can spring off walls
 #define PLAYER_LONGJUMP_SPEED 350 // how fast we longjump
 
@@ -208,6 +210,7 @@ int gmsgSpectator = 0;	// Beta 6.5: a player has become an observer or left (mes
 int gmsgVGUIMenu = 0;	// Beta 7.0: a VGUI menu to show (message VGUIMenu, variable length; Linux symbol)
 int gmsgWClose = 0;		// Beta 7.1: a window for the client to close, by class and title (message WClose, two strings; Linux symbol)
 int gmsgWClose2 = 0;	// Beta 7.1: registered only (message WClose2; Linux symbol)
+int gmsgAllowSpec = 0;	// Counter-Strike 1.1: the value of allow_spectators for the team menu (message AllowSpec, 1 byte; Linux symbol)
 int gmsgGeigerRange = 0;
 
 // Beta 6.5: SDK 2.0's function (client.cpp's ClientPrecache calls it) with the
@@ -270,6 +273,7 @@ void LinkUserMessages( void )
 	gmsgVGUIMenu = REG_USER_MSG( "VGUIMenu", -1 );	// Beta 7.0
 	gmsgWClose = REG_USER_MSG( "WClose", -1 );		// Beta 7.1
 	gmsgWClose2 = REG_USER_MSG( "WClose2", -1 );	// Beta 7.1
+	gmsgAllowSpec = REG_USER_MSG( "AllowSpec", 1 );	// Counter-Strike 1.1
 }
 
 LINK_ENTITY_TO_CLASS( player, CBasePlayer );
@@ -278,25 +282,6 @@ LINK_ENTITY_TO_CLASS( player, CBasePlayer );
 // 1.0 wrote them character by character from client.cpp's 36 letter globals,
 // which this file no longer names; 1.0b's image does not have them)
 
-//=========================================================
-// TeamPrint - Beta 7.0 (Linux symbol): a chat line to every
-// player of a team (TakeDamage's "attacked a teammate")
-//=========================================================
-void TeamPrint( int team, const char *text )
-{
-	CBaseEntity *pEntity = NULL;
-
-	while ( ( pEntity = UTIL_FindEntityByClassname( pEntity, "player" ) ) != NULL )
-	{
-		if ( FNullEnt( pEntity->edict() ) )
-			break;
-
-		CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pEntity->pev );
-
-		if ( pPlayer->m_iTeam == team )
-			ClientPrint( pPlayer->pev, HUD_PRINTTALK, text );
-	}
-}
 
 //=========================================================
 // GetCSModelName - Beta 5.0 (leak) (Linux symbol): the world
@@ -425,18 +410,15 @@ void CBasePlayer::SetPlayerModel( BOOL HasC4 )
 // "%!MRAD_..." themselves) sent to him with his own entity
 // index (sic, as Beta 3.0's); then the radio sprite over the
 // speaker's head, for each of them alone.
+// Counter-Strike 1.1: the chat line is the client's "#Game_radio"
+// with the speaker's name and msg_verbose (a "#..." title of the
+// client's too) as its arguments; 1.0b built "%s (RADIO): %s\n"
+// here with UTIL_VarArgs.
 //=========================================================
 void CBasePlayer::Radio( const char *msg_id, const char *msg_verbose )
 {
 	if ( !IsPlayer() )
 		return;
-
-	// Beta 6.0: a radio call without text (msg_verbose NULL) sends only the
-	// sound (sic: szMessage is not set then, and not used)
-	char *szMessage;	// name ours
-
-	if ( msg_verbose )
-		szMessage = UTIL_VarArgs( "%s (RADIO): %s\n", STRING( pev->netname ), msg_verbose );
 
 	CBaseEntity *pPlayer = NULL;
 	pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
@@ -448,8 +430,9 @@ void CBasePlayer::Radio( const char *msg_id, const char *msg_verbose )
 
 			if ( player->pev->deadflag == DEAD_NO && player->m_iTeam == m_iTeam && !player->m_fIgnoreRadio )
 			{
+				// Beta 6.0: a radio call without text (msg_verbose NULL) sends only the sound
 				if ( msg_verbose )
-					ClientPrint( pPlayer->pev, HUD_PRINTTALK, szMessage );
+					ClientPrint( pPlayer->pev, HUD_PRINTTALK, "#Game_radio", STRING( pev->netname ), msg_verbose );
 
 				// Beta 6.0: the speaker's index (the client's radar blinks him; Beta 5.2 sent the hearer's)
 				MESSAGE_BEGIN( MSG_ONE, gmsgSendAudio, NULL, pPlayer->pev );
@@ -724,7 +707,10 @@ void CBasePlayer :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector 
 			break;
 		}
 
-		if ( bShouldBleed == true )
+		// Counter-Strike 1.1: a team mate's hit draws no blood when friendly fire is off
+		CBasePlayer *pAttacker = (CBasePlayer *)CBaseEntity::Instance( pevAttacker );
+
+		if ( ( CVAR_GET_FLOAT( "mp_friendlyfire" ) != 0 || m_iTeam != pAttacker->m_iTeam ) && bShouldBleed == true )
 		{
 			// Beta 6.0: a spray of blood out of the wound as well (Beta 6.5: with a console line)
 			ALERT( at_console, "Should Bleed\n" );
@@ -900,33 +886,33 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 			if ( !( m_flDisplayHistory & 0x200 ) )
 			{
 				m_flDisplayHistory |= 0x200;
-				pAttacker->HintMessage( "Try not to injure your teammates.\n", FALSE, FALSE );
+				pAttacker->HintMessage( "#Hint_try_not_to_injure_teammates", FALSE, FALSE );
 			}
 
 			// Beta 7.0: the attacker's team reads it in the chat, at most once in
 			// 0.6 seconds (6.6: "You injured a teammate!" in the middle of the
-			// attacker's screen). Counter-Strike 1.0b: the text is written to a
-			// static buffer (7.0 to 1.0 allocated 255 bytes at every such hit
-			// and never freed them). .bss has 256 bytes for it (253 to 256 give
-			// that), between g_pLastCTSpawn and g_pLastTerroristSpawn: VC6 orders
-			// uninitialised data by a hash of the name, a function's static by
-			// its decorated name, so the name (ours) is one whose hash falls
-			// between those two (szText's does not).
-			// sic: the pointer is a stand-in. With the array used directly the
-			// code is retail's but for the order of the three squares in the
-			// Length() of the push below (z, x, y; retail and 1.0 have x, y, z):
-			// that order follows the number of locals the function has, and
-			// retail's needs one more than the array alone leaves (this pointer,
-			// or 1 to 9 unused initialised ints at the top, measured; none: not)
-			static char szBuf[255];	// name ours
-			char *szText = szBuf;	// name ours
-
-			sprintf( szText, "%s attacked a teammate\n", STRING( pAttacker->pev->netname ) );
-
+			// attacker's screen). Counter-Strike 1.1: the client's title
+			// "#Game_teammate_attack" with the attacker's name, sent here to
+			// every player of the victim's team (1.0b: "%s attacked a teammate\n"
+			// written to a static buffer and passed to TeamPrint, which 1.1 no
+			// longer has). The locals' names are Counter-Strike 1.6's.
 			if ( ( pAttacker->m_flLastAttackedTeammate + 0.6 ) < gpGlobals->time )
 			{
 				pAttacker->m_flLastAttackedTeammate = gpGlobals->time;
-				TeamPrint( pAttacker->m_iTeam, szText );
+
+				CBaseEntity *pBasePlayer = NULL;
+				CBasePlayer *basePlayer;
+
+				while ( ( pBasePlayer = UTIL_FindEntityByClassname( pBasePlayer, "player" ) ) != NULL )
+				{
+					if ( FNullEnt( pBasePlayer->edict() ) )
+						break;
+
+					basePlayer = GetClassPtr( (CBasePlayer *)pBasePlayer->pev );
+
+					if ( basePlayer->m_iTeam == m_iTeam )
+						ClientPrint( basePlayer->pev, HUD_PRINTTALK, "#Game_teammate_attack", STRING( pAttacker->pev->netname ) );
+				}
 			}
 		}
 
@@ -1617,6 +1603,22 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 
 	SetThink(PlayerDeathThink);
 	pev->nextthink = gpGlobals->time + 0.1;
+	pev->solid = SOLID_NOT;	// Counter-Strike 1.1
+
+	// Counter-Strike 1.1: mp_fadetoblack blacks the dead player's screen out in
+	// three seconds and keeps it so
+	if ( CVAR_GET_FLOAT( "mp_fadetoblack" ) != 0 )
+	{
+		UTIL_ScreenFade( this, Vector( 0, 0, 0 ), 3, 3, 255, FFADE_OUT | FFADE_STAYOUT );
+		m_afPhysicsFlags |= PFLAG_OBSERVER;
+	}
+
+	// Counter-Strike 1.1: the team killer killed at the round's start is told why
+	if ( m_bPunishedForTK )
+	{
+		m_bPunishedForTK = false;
+		HintMessage( "#Hint_cannot_play_because_tk", TRUE, TRUE );
+	}
 
 	// UNDONE: Put this in, but add FFADE_PERMANENT and make fade time 8.8 instead of 4.12
 	// UTIL_ScreenFade( edict(), Vector(128,0,0), 6, 15, 255, FFADE_OUT | FFADE_MODULATE );
@@ -2278,7 +2280,7 @@ void CBasePlayer::WaterMove()
 {
 	int air;
 
-	if (pev->movetype == MOVETYPE_NOCLIP)
+	if (pev->movetype == MOVETYPE_NOCLIP || pev->movetype == MOVETYPE_NONE)	// Counter-Strike 1.1: nor for a player who does not move (an observer)
 		return;
 
 	if (pev->health < 0)
@@ -2565,6 +2567,9 @@ void CBasePlayer::MakeVIP( void )
 
 	g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "vip" );
 
+	// Counter-Strike 1.1: a line in the server's log
+	UTIL_LogPrintf( "\"%s<%i><%u><CT>\" triggered \"Became_VIP\"\n", STRING( pev->netname ), GETPLAYERUSERID( edict() ), GETPLAYERWONID( edict() ) );
+
 	m_iTeam = TEAM_CT;
 	m_bIsVIP = true;
 	((CHalfLifeMultiplay *)g_pGameRules)->m_pVIP = this;
@@ -2685,6 +2690,8 @@ void CBasePlayer::JoiningThink( void )
 					WRITE_STRING( "CT" );
 				else if ( m_iTeam == TEAM_TERRORIST )
 					WRITE_STRING( "TERRORIST" );
+				else if ( m_iTeam == TEAM_SPECTATOR )	// Counter-Strike 1.1
+					WRITE_STRING( "SPECTATOR" );
 				else
 					WRITE_STRING( "UNASSIGNED" );
 			MESSAGE_END();
@@ -2896,6 +2903,10 @@ void CBasePlayer::PlayerDeathThink(void)
 		return;
 	}
 
+	// Counter-Strike 1.1: the body stays where it has come to lie
+	if ( pev->movetype != MOVETYPE_NONE && ( pev->flags & FL_ONGROUND ) )
+		pev->movetype = MOVETYPE_NONE;
+
 	// Beta 5.0 (leak): the time of death is when the body comes to rest
 	if (pev->deadflag == DEAD_DYING)
 	{
@@ -2911,14 +2922,16 @@ void CBasePlayer::PlayerDeathThink(void)
 	BOOL fAnyButtonDown = (pev->button & ~IN_SCORE );
 	
 	// three seconds after his death, a player who is not observing yet goes to the dead camera
+	// Counter-Strike 1.1: not with mp_forcechasecam 2 nor with mp_fadetoblack
 	if ( g_pGameRules->IsMultiplayer() && ( gpGlobals->time > (m_fDeadTime + 3) ) && !(m_afPhysicsFlags & PFLAG_OBSERVER) )
 	{
 		// go to dead camera. 
-		StartDeathCam();
+		if ( CVAR_GET_FLOAT( "mp_forcechasecam" ) != 2 && CVAR_GET_FLOAT( "mp_fadetoblack" ) == 0 )
+			StartDeathCam();
 	}
 
 	// wait for all buttons released
-	if ( pev->deadflag == DEAD_DEAD && m_iTeam != TEAM_UNASSIGNED )
+	if ( pev->deadflag == DEAD_DEAD && m_iTeam != TEAM_UNASSIGNED && m_iTeam != TEAM_SPECTATOR )	// Counter-Strike 1.1: nor a spectator
 	{
 		if (fAnyButtonDown)
 			return;
@@ -2953,14 +2966,15 @@ void CBasePlayer::PlayerDeathThink(void)
 void CBasePlayer::RoundRespawn( void )
 {
 	// Beta 6.1: a team killer sits the next round out ("new TK 1 round
-	// time-out penalty"): he is made to kill himself as he respawns (sic: the
-	// hint says "/n" for a new line)
+	// time-out penalty"): he is made to kill himself as he respawns
 	// Beta 6.5: only when mp_tkpunish is set
+	// Counter-Strike 1.1: Killed shows the hint (1.0b: here, "You're not
+	// allowed to play this round because/n you TK'ed last round")
 	if ( m_bJustKilledTeammate == true && CVAR_GET_FLOAT( "mp_tkpunish" ) != 0.0 )
 	{
 		m_bJustKilledTeammate = false;
 		CLIENT_COMMAND( edict(), "kill\n" );
-		HintMessage( "You're not allowed to play this round because/n you TK'ed last round", TRUE, TRUE );
+		m_bPunishedForTK = true;
 	}
 
 	if ( m_iMenu != Menu_ChooseAppearance )
@@ -3228,10 +3242,10 @@ void CBasePlayer::HostageUsed( void )
 	switch ( m_iTeam )
 	{
 	case TEAM_TERRORIST:
-		HintMessage( "You may USE the hostage again to\nstop him from following.", FALSE, FALSE );
+		HintMessage( "#Hint_use_hostage_to_stop_him", FALSE, FALSE );	// Counter-Strike 1.1: the hints are titles of the client's
 		break;
 	case TEAM_CT:
-		HintMessage( "Lead the hostage to the rescue point!\nYou may USE the hostage again to\nstop him from following.", FALSE, FALSE );
+		HintMessage( "#Hint_lead_hostage_to_rescue_point", FALSE, FALSE );
 		break;
 	}
 
@@ -3791,43 +3805,49 @@ void CBasePlayer::UpdatePath( void )
 //=========================================================
 bool CBasePlayer::CanPlayerBuy( bool display )
 {
-	char szMessage[72];	// name ours; Counter-Strike 1.0b: the frame has 72 bytes for it (69 to 72 give the same frame; 1.0: 60, the longest message's length)
-	bool retval = true;	// name ours. Beta 6.5 sets it (Beta 6.1 left it unset when nothing forbade buying)
-
 	// 1.0: the training rules decide alone (the buy zone's signal)
 	if ( !g_pGameRules->IsMultiplayer() )
 		return ((CHalfLifeTraining *)g_pGameRules)->PlayerCanBuy( this );
 
-	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// name ours
+	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// Counter-Strike 1.6's name
 
-	if ( gpGlobals->time - mp->m_flRoundStartTime > 90 )	// Beta 7.0 (6.6: 60)
+	// Counter-Strike 1.1: the buying time is mp_buytime, in minutes, and at least
+	// half a minute (Beta 7.0 to 1.0b: 90 seconds; 6.6: 60). Every reason has a
+	// title of the client's now and returns at once; 1.0b copied an English
+	// sentence to a buffer and printed the last one that applied.
+	int buyTime = (int)( CVAR_GET_FLOAT( "mp_buytime" ) * 60 );	// Counter-Strike 1.6's name
+
+	if ( buyTime < 30 )
 	{
-		strcpy( szMessage, "90 seconds have passed... You can't buy anything now!\n" );
-		retval = false;
+		buyTime = 30;
+		CVAR_SET_FLOAT( "mp_buytime", 0.5 );
+	}
+
+	if ( gpGlobals->time - mp->m_flRoundStartTime > buyTime )
+	{
+		if ( display == true )
+			ClientPrint( pev, HUD_PRINTCENTER, "#Cant_buy", UTIL_dtos1( buyTime ) );
+		return false;
 	}
 
 	if ( m_bIsVIP )
 	{
-		strcpy( szMessage, "You are the VIP... You can't buy anything!\n" );
-		retval = false;
+		if ( display == true )
+			ClientPrint( pev, HUD_PRINTCENTER, "#VIP_cant_buy" );
+		return false;
 	}
 
 	if ( mp->m_bCTCantBuy == true && m_iTeam == TEAM_CT )
 	{
-		strcpy( szMessage, "The CTs aren't allowed to buy anything on this map!\n" );
-		retval = false;
+		if ( display == true )
+			ClientPrint( pev, HUD_PRINTCENTER, "#CT_cant_buy" );
+		return false;
 	}
 
 	if ( mp->m_bTCantBuy == true && m_iTeam == TEAM_TERRORIST )
 	{
-		strcpy( szMessage, "The Terrorists aren't allowed to buy anything on this map!\n" );
-		retval = false;
-	}
-
-	if ( !retval )
-	{
 		if ( display == true )
-			ClientPrint( pev, HUD_PRINTCENTER, szMessage );
+			ClientPrint( pev, HUD_PRINTCENTER, "#Terrorist_cant_buy" );
 		return false;
 	}
 
@@ -3933,7 +3953,7 @@ void CBasePlayer::PreThink(void)
 
 		if ( gpGlobals->time - m_flLastActivity > ((CHalfLifeMultiplay *)g_pGameRules)->m_flMaxIdlePeriod && CVAR_GET_FLOAT( "mp_autokick" ) != 0 )
 		{
-			UTIL_ClientPrintAll( HUD_PRINTCONSOLE, "%s has been idle for too long and has been kicked.\n", STRING( pev->netname ) );
+			UTIL_ClientPrintAll( HUD_PRINTCONSOLE, "#Game_idle_kick", STRING( pev->netname ) );	// Counter-Strike 1.1: a title (1.0b: "%s has been idle for too long and has been kicked.\n")
 			SERVER_COMMAND( UTIL_VarArgs( "kick %s\n", STRING( pev->netname ) ) );
 			m_flLastActivity = gpGlobals->time;
 		}
@@ -4102,14 +4122,14 @@ void CBasePlayer::PreThink(void)
 	// Beta 6.0: only when he can buy (sic: CanPlayerBuy( false ) never says yes, see there)
 	if ( !( m_flDisplayHistory & 0x2 ) && CanPlayerBuy( false ) == true )	// buy key
 	{
-		HintMessage( "Press the BUY key to purchase items.", FALSE, FALSE );
+		HintMessage( "#Hint_press_buy_to_purchase", FALSE, FALSE );	// Counter-Strike 1.1: a title
 		m_flDisplayHistory |= 0x2;
 	}
 
 	if ( m_bHasC4 && !( m_flDisplayHistory & 0x1000 ) )	// have the bomb
 	{
 		m_flDisplayHistory |= 0x1000;
-		HintMessage( "You have the bomb!\nFind the target zone or DROP\nthe bomb for another Terrorist.", FALSE, FALSE );
+		HintMessage( "#Hint_you_have_the_bomb", FALSE, FALSE );	// Counter-Strike 1.1: a title
 	}
 }
 /* Time based Damage works as follows: 
@@ -4918,7 +4938,7 @@ edict_t *EntSelectSpawnPoint( CBaseEntity *pPlayer )
 	// Beta 6.0: the VIP starts at the info_vip_start, or as a counter-terrorist
 	else if ( g_pGameRules->IsDeathmatch() && ((CBasePlayer *)pPlayer)->m_bIsVIP == true )
 	{
-		ALERT( at_console, "Looking for a VIP spawn point\n" );
+		// (Counter-Strike 1.1: the three "Looking for a ... spawn point" console lines of Beta 6.0 are gone)
 		pSpot = UTIL_FindEntityByClassname( NULL, "info_vip_start" );
 		if ( !FNullEnt( pSpot ) )
 			goto ReturnSpot;
@@ -4929,7 +4949,6 @@ edict_t *EntSelectSpawnPoint( CBaseEntity *pPlayer )
 	else if ( g_pGameRules->IsDeathmatch() && ((CBasePlayer *)pPlayer)->m_iTeam == TEAM_CT )
 	{
 CTSpawn:
-		ALERT( at_console, "Looking for a CT spawn point\n" );	// Beta 6.0
 		pSpot = g_pLastCTSpawn;
 		pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_start" );
 		if ( FNullEnt( pSpot ) )  // skip over the null point
@@ -4973,7 +4992,6 @@ CTSpawn:
 	}
 	else if ( g_pGameRules->IsDeathmatch() && ((CBasePlayer *)pPlayer)->m_iTeam == TEAM_TERRORIST )
 	{
-		ALERT( at_console, "Looking for a TERRORIST spawn point\n" );	// Beta 6.0
 		pSpot = g_pLastTerroristSpawn;
 		pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_deathmatch" );
 		if ( FNullEnt( pSpot ) )  // skip over the null point
@@ -5320,7 +5338,7 @@ void CBasePlayer::Spawn( void )
 	{
 		m_iKevlar = 2;
 		pev->armorvalue = 200;
-		HintMessage( "You are the VIP\n Make your way to the safety zones!\n", TRUE, TRUE );	// Counter-Strike 1.0b: bOverride (1.0: FALSE)
+		HintMessage( "#Hint_you_are_the_vip", TRUE, TRUE );	// Counter-Strike 1.0b: bOverride (1.0: FALSE); 1.1: the client's title
 		RemoveAllItems( FALSE );
 		GiveNamedItem( "weapon_knife" );
 		// Beta 7.0: and a USP with one magazine
@@ -5352,6 +5370,9 @@ void CBasePlayer::Spawn( void )
 	MESSAGE_END();
 
 	WindowCheck();	// Beta 7.1
+
+	// Counter-Strike 1.1: Killed's fade to black (mp_fadetoblack) is taken off
+	UTIL_ScreenFade( this, Vector( 0, 0, 0 ), 0.001, 0, 0, 0 );
 }
 
 
@@ -6169,7 +6190,7 @@ inline void BombTargetFlash_Set( CBasePlayer *player )
 	if ( player->m_bHasC4 && !( player->m_flDisplayHistory & 0x10000 ) )	// in the target zone
 	{
 		player->m_flDisplayHistory |= 0x10000;
-		player->HintMessage( "You are in the target zone.\nSelect the bomb in your inventory\nand plant it by holding FIRE!", FALSE, FALSE );
+		player->HintMessage( "#Hint_you_are_in_targetzone", FALSE, FALSE );	// Counter-Strike 1.1: the zone hints are titles
 	}
 
 	player->SetBombIcon( TRUE );
@@ -6196,7 +6217,7 @@ inline void RescueZoneIcon_Set( CBasePlayer *player )
 	if ( player->m_iTeam == TEAM_CT && !( player->m_flDisplayHistory & 0x20000 ) )	// in a rescue zone
 	{
 		player->m_flDisplayHistory |= 0x20000;
-		player->HintMessage( "You are in a hostage rescue zone.\nFind the hostages and bring them here!", FALSE, FALSE );
+		player->HintMessage( "#Hint_hostage_rescue_zone", FALSE, FALSE );
 	}
 }
 
@@ -6228,7 +6249,7 @@ inline void EscapeZoneIcon_Set( CBasePlayer *player )
 	if ( player->m_iTeam == TEAM_CT && !( player->m_flDisplayHistory & 0x40000 ) )	// in an escape zone
 	{
 		player->m_flDisplayHistory |= 0x40000;
-		player->HintMessage( "You are in a terrorist escape zone.\nPrevent the terrorists from getting here!", FALSE, FALSE );
+		player->HintMessage( "#Hint_terrorist_escape_zone", FALSE, FALSE );
 	}
 }
 
@@ -6260,12 +6281,12 @@ inline void VIP_SafetyZoneIcon_Set( CBasePlayer *player )
 	if ( player->m_iTeam == TEAM_CT && !( player->m_flDisplayHistory & 0x80000 ) )	// in a VIP safety zone
 	{
 		player->m_flDisplayHistory |= 0x80000;
-		player->HintMessage( "You are in a VIP escape zone.\nEscort the VIP to any one of these zones!", TRUE, FALSE );
+		player->HintMessage( "#Hint_ct_vip_zone", TRUE, FALSE );
 	}
 	else if ( player->m_iTeam == TEAM_TERRORIST && !( player->m_flDisplayHistory & 0x80000 ) )
 	{
 		player->m_flDisplayHistory |= 0x80000;
-		player->HintMessage( "You are in a VIP escape zone.\nPrevent the VIP from reaching any one of these zones", TRUE, FALSE );
+		player->HintMessage( "#Hint_terrorist_vip_zone", TRUE, FALSE );
 	}
 }
 
@@ -6940,10 +6961,11 @@ void CBasePlayer :: UpdateClientData( void )
 	{
 		CBasePlayerWeapon *pWeapon = (CBasePlayerWeapon *)m_pActiveItem;
 
-		if ( ( pWeapon->iFlags() & ITEM_FLAG_EXHAUSTIBLE ) && !AmmoInventory( pWeapon->m_iPrimaryAmmoType ) && !pWeapon->m_iClip )
+		// Counter-Strike 1.1: a weapon that is not used up (1.0b asked for one that is, a grenade)
+		if ( !( pWeapon->iFlags() & ITEM_FLAG_EXHAUSTIBLE ) && !AmmoInventory( pWeapon->m_iPrimaryAmmoType ) && !pWeapon->m_iClip )
 		{
 			m_flDisplayHistory |= 0x8000;	// out of ammunition
-			HintMessage( "You are out of ammunition.\nReturn to a buy zone to purchase more.\n", FALSE, FALSE );
+			HintMessage( "#Hint_out_of_ammo", FALSE, FALSE );
 		}
 	}
 
@@ -7393,7 +7415,7 @@ void CBasePlayer::UpdateStatusBar()
 
 		if ( pTarget && !FNullEnt( pTarget->edict() ) )
 		{
-			strcpy( sbuf1, "1 %c1: %p2\n2  Health: %i3%%" );
+			strcpy( sbuf1, "1 %c1: %p2\n2  %h: %i3%%" );	// Counter-Strike 1.1: %h, the client's word for "Health"
 			newSBarState[ SBAR_ID_TARGETNAME ] = ENTINDEX( pTarget->edict() );
 			newSBarState[ SBAR_ID_TARGETTYPE ] = ( pTarget->m_iTeam == m_iTeam ) ? SBAR_TARGETTYPE_TEAMMATE : SBAR_TARGETTYPE_ENEMY;
 			newSBarState[ SBAR_ID_TARGETHEALTH ] = pTarget->pev->health * 100 / pTarget->pev->max_health;
@@ -7435,30 +7457,42 @@ void CBasePlayer::UpdateStatusBar()
 
 					if ( m_iTeam != ((CBasePlayer *)pEntity)->m_iTeam && !pev->iuser1 )	// Beta 6.5: IsObserver (Beta 6.1: FL_SPECTATOR)
 					{
-						strcpy( sbuf1, "1 %c1: %p2" );
+						// Counter-Strike 1.1: mp_playerid 1 or 2 hides an enemy's name,
+						// 2 a team mate's and a hostage's too (not from an observer)
+						// (the observer test is the one two lines up again: no code)
+						if ( ( playerid.value == 1 || playerid.value == 2 ) && !pev->iuser1 )
+							strcpy( sbuf1, " " );
+						else
+							strcpy( sbuf1, "1 %c1: %p2" );
 
 						if ( !( m_flDisplayHistory & 0x100 ) )	// enemy spotted
 						{
 							m_flDisplayHistory |= 0x100;
-							HintMessage( "You have spotted an enemy.", FALSE, FALSE );
+							HintMessage( "#Hint_spotted_an_enemy", FALSE, FALSE );
 						}
 					}
 					else
 					{
 						// teammates (and spectators) see the health
-						strcpy( sbuf1, "1 %c1: %p2\n2  Health: %i3%%" );
+						if ( playerid.value == 2 && !pev->iuser1 )
+							strcpy( sbuf1, " " );
+						else
+							strcpy( sbuf1, "1 %c1: %p2\n2  %h: %i3%%" );
 						newSBarState[ SBAR_ID_TARGETHEALTH ] = 100 * ( pEntity->pev->health / pEntity->pev->max_health );
 
 						if ( !( m_flDisplayHistory & 0x80 ) && !( pev->flags & FL_SPECTATOR ) )	// friend spotted
 						{
 							m_flDisplayHistory |= 0x80;
-							HintMessage( "You have spotted a friend.", FALSE, FALSE );
+							HintMessage( "#Hint_spotted_a_friend", FALSE, FALSE );
 						}
 					}
 				}
 				else if ( pEntity->Classify() == CLASS_HUMAN_PASSIVE )
 				{
-					strcpy( sbuf1, "1 %c1  Health: %i3%%" );
+					if ( playerid.value == 2 && !pev->iuser1 )
+						strcpy( sbuf1, " " );
+					else
+						strcpy( sbuf1, "1 %c1  %h: %i3%%" );
 					newSBarState[ SBAR_ID_TARGETTYPE ] = SBAR_TARGETTYPE_HOSTAGE;
 					newSBarState[ SBAR_ID_TARGETHEALTH ] = 100 * ( pEntity->pev->health / pEntity->pev->max_health );
 
@@ -7470,17 +7504,17 @@ void CBasePlayer::UpdateStatusBar()
 						switch ( m_iTeam )
 						{
 						case TEAM_TERRORIST:
-							HintMessage( "Prevent the Counter-terrorists from\nrescuing the hostages!", TRUE, FALSE );
+							HintMessage( "#Hint_prevent_hostage_rescue", TRUE, FALSE );
 							break;
 						case TEAM_CT:
-							HintMessage( "Rescue the hostages for money!", TRUE, FALSE );
+							HintMessage( "#Hint_rescue_the_hostages", TRUE, FALSE );
 							break;
 						}
 					}
 					else if ( !( m_flDisplayHistory & 0x8 ) && tr.flFraction <= 0.1 )
 					{
 						m_flDisplayHistory |= 0x4 | 0x8;
-						HintMessage( "Press USE to get the hostage to follow you.", FALSE, FALSE );
+						HintMessage( "#Hint_press_use_so_hostage_will_follow", FALSE, FALSE );
 					}
 				}
 
@@ -7621,7 +7655,12 @@ void CBasePlayer::DropPlayerItem( const char *pszItemName )
 				MESSAGE_END();
 
 				if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_flRestartRoundTime == 0 )
-					UTIL_ClientPrintAll( HUD_PRINTCENTER, "%s dropped the bomb\n", STRING( pev->netname ) );	// Beta 5.0 (the leak: "The bomb was dropped by %s")
+				{
+					// Beta 5.0: "%s dropped the bomb\n" (the leak: "The bomb was dropped by %s");
+					// Counter-Strike 1.1: the client's title, and a line in the server's log
+					UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Game_bomb_drop", STRING( pev->netname ) );
+					UTIL_LogPrintf( "\"%s<%i><%u><TERRORIST>\" triggered \"Dropped_The_Bomb\"\n", STRING( pev->netname ), GETPLAYERUSERID( edict() ), GETPLAYERWONID( edict() ) );
+				}
 			}
 
 			CWeaponBox *pWeaponBox = (CWeaponBox *)CBaseEntity::Create( "weaponbox", pev->origin + gpGlobals->v_forward * 10, pev->angles, edict() );
@@ -7713,6 +7752,8 @@ BOOL CBasePlayer::HasNamedPlayerItem( const char *pszItemName )
 //=========================================================
 void CBasePlayer::SwitchTeam( void )
 {
+	int oldTeam = m_iTeam;	// Counter-Strike 1.1 (1.6's name)
+
 	if ( m_iTeam == TEAM_CT )
 	{
 		m_iTeam = TEAM_TERRORIST;
@@ -7769,6 +7810,82 @@ void CBasePlayer::SwitchTeam( void )
 			break;
 		}
 	}
+
+	// Counter-Strike 1.1: everything from here on. Everybody learns the new team
+	MESSAGE_BEGIN( MSG_ALL, gmsgTeamInfo );
+		WRITE_BYTE( entindex() );
+		if ( m_iTeam == TEAM_CT )
+			WRITE_STRING( "CT" );
+		else if ( m_iTeam == TEAM_TERRORIST )
+			WRITE_STRING( "TERRORIST" );
+		else if ( m_iTeam == TEAM_SPECTATOR )
+			WRITE_STRING( "SPECTATOR" );
+		else
+			WRITE_STRING( "UNASSIGNED" );
+	MESSAGE_END();
+
+	if ( m_iTeam != TEAM_UNASSIGNED )
+		SetScoreboardAttributes();
+
+	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, ( m_iTeam == TEAM_TERRORIST ) ? "#Game_join_terrorist_auto" : "#Game_join_ct_auto",
+		( pev->netname && STRING( pev->netname )[0] != 0 ) ? STRING( pev->netname ) : "<unconnected>" );
+
+	char *szOldTeam;	// Counter-Strike 1.6's names
+	char *szNewTeam;
+
+	switch ( oldTeam )
+	{
+	case TEAM_TERRORIST:
+		szOldTeam = "TERRORIST";
+		break;
+	case TEAM_CT:
+		szOldTeam = "CT";
+		break;
+	case TEAM_SPECTATOR:
+		szOldTeam = "SPECTATOR";
+		break;
+	default:
+		szOldTeam = "";
+		break;
+	}
+
+	// a counter-terrorist's defuse kit does not change sides with him
+	if ( m_fHasDefuser )
+	{
+		m_fHasDefuser = false;
+		pev->body = 0;
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, pev );
+			WRITE_BYTE( 0 );
+			WRITE_STRING( "defuser" );
+		MESSAGE_END();
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, pev );
+			WRITE_SHORT( 0 );
+		MESSAGE_END();
+
+		for ( int i = 0; i < MAX_ITEM_TYPES; i++ )
+		{
+			m_pActiveItem = m_rgpPlayerItems[ i ];
+
+			if ( m_pActiveItem && FClassnameIs( m_pActiveItem->pev, "item_thighpack" ) )
+			{
+				m_pActiveItem->Drop();
+				m_rgpPlayerItems[ i ] = NULL;
+			}
+		}
+	}
+
+	if ( m_iTeam == TEAM_TERRORIST )
+		szNewTeam = "TERRORIST";
+	else if ( m_iTeam == TEAM_CT )
+		szNewTeam = "CT";
+	else if ( m_iTeam == TEAM_SPECTATOR )
+		szNewTeam = "SPECTATOR";
+	else
+		szNewTeam = "UNASSIGNED";
+
+	UTIL_LogPrintf( "\"%s<%i><%u><%s>\" joined team \"%s\" (auto)\n", STRING( pev->netname ), GETPLAYERUSERID( edict() ), GETPLAYERWONID( edict() ), szOldTeam, szNewTeam );
 }
 
 // Beta 5.0 (leak): kevlar and helmet, with armor left

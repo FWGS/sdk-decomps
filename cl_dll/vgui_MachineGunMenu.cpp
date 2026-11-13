@@ -84,7 +84,7 @@ CMachineGunMenuPanel::CMachineGunMenuPanel(int iTrans, int iRemoveMe, int x,int 
 	pSchemes->getBgColor( hTitleScheme, r, g, b, a );
 	pLabel->setBgColor( r, g, b, a );
 	pLabel->setContentAlignment( vgui::Label::a_west );
-	pLabel->setText(gHUD.m_TextMessage.BufferedLocaliseTextString("MachineGun Selection"));
+	pLabel->setText(gHUD.m_TextMessage.BufferedLocaliseTextString("#Title_machinegun_selection"));
 
 	// Create the Scroll panel
 	m_pScrollPanel = new CTFScrollPanel( CLASSMENU_WINDOW_X, CLASSMENU_WINDOW_Y, CLASSMENU_WINDOW_SIZE_X, CLASSMENU_WINDOW_SIZE_Y );
@@ -209,7 +209,7 @@ CMachineGunMenuPanel::CMachineGunMenuPanel(int iTrans, int iRemoveMe, int x,int 
 			break;
 		}
 
-		char *cText = "Class Description not available.";
+		char *cText = CHudTextMessage::BufferedLocaliseTextString( "#Class_descr_not_avail" );
 		char *pfile = (char*)gEngfuncs.COM_LoadFile( sz, 5, NULL );
 		if (pfile)
 			cText = pfile;
@@ -246,7 +246,7 @@ CMachineGunMenuPanel::CMachineGunMenuPanel(int iTrans, int iRemoveMe, int x,int 
 	}
 
 	// Create the Cancel button
-	m_pCancelButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "CANCEL" ), CLASSMENU_TOPLEFT_BUTTON_X, YRES(392) - CLASSMENU_BUTTON_SIZE_Y, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, false );
+	m_pCancelButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Menu_Cancel" ), CLASSMENU_TOPLEFT_BUTTON_X, YRES(392) - CLASSMENU_BUTTON_SIZE_Y, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, false );
 	m_pCancelButton->setParent( this );
 	m_pCancelButton->setBoundKey( '0' );
 	m_pCancelButton->addActionSignal( new CMenuHandler_TextWindow(HIDE_TEXTWINDOW) );

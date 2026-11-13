@@ -55,13 +55,43 @@ extern int gmsgNVGToggle;	// Beta 6.0 (player.cpp)
 extern int gmsgVGUIMenu;	// Beta 7.0 (player.cpp)
 extern void Broadcast( const char *sentence );	// multiplay_gamerules.cpp (Beta 3.0)
 extern cvar_t timelimit;	// game.cpp (Beta 6.6: the timeleft command; CS 1.6 declares it here too)
+extern cvar_t allow_spectators;	// game.cpp (Counter-Strike 1.1)
+extern int gmsgMoney;		// player.cpp
+extern int gmsgScoreInfo;
+extern int gmsgSpectator;
 
 // (Counter-Strike 1.0b: the 36 letter and digit globals g_a to g_0 that stood
 // here from Beta 7.0 to 1.0, from which the model names and commands were put
 // together at run time, are gone: retail's .data has this file's tables
 // directly behind cbase.cpp's strings)
 
+// Counter-Strike 1.1 (Linux symbols): when the time limit ends the map (CHalfLifeMultiplay::Think
+// sets it, the timeleft command reads it) and the time of the last complete restart (RestartRound)
+float g_flTimeLimit = 0;
+float g_flResetTime = 0;
+
 void LinkUserMessages( void );
+
+// GetTeam - Counter-Strike 1.1: a team's name for the log lines, as in multiplay_gamerules.cpp (1.6
+// declares that file's function at this place; 1.1 has no such function in either library, and this
+// file's callers have the switch in them too, so the text is here as well)
+inline char *GetTeam( int teamNo )
+{
+	switch ( teamNo )
+	{
+	case TEAM_TERRORIST:
+		return "TERRORIST";
+	case TEAM_CT:
+		return "CT";
+	case TEAM_SPECTATOR:
+		return "SPECTATOR";
+	default:
+		break;
+	}
+
+	return "";
+}
+
 /*
  * used by kill command and disconnect command
  * ROBIN: Moved here from player.cpp, to allow multiple player models
@@ -112,12 +142,9 @@ void ClientDisconnect( edict_t *pEntity )
 	if (g_fGameOver)
 		return;
 
-	char text[256];
-	sprintf( text, "- %s has left the game\n", STRING(pEntity->v.netname) );
-	MESSAGE_BEGIN( MSG_BROADCAST, gmsgSayText, NULL );	// Beta 6.0: unreliable (was MSG_ALL)
-		WRITE_BYTE( ENTINDEX(pEntity) );
-		WRITE_STRING( text );
-	MESSAGE_END();
+	// Counter-Strike 1.1: a title of the client with the name (to 1.0b the text
+	// "- %s has left the game\n" as a SayText message)
+	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, "#Game_disconnected", STRING(pEntity->v.netname) );
 
 	CSound *pSound;
 	pSound = CSoundEnt::SoundPointerForIndex( CSoundEnt::ClientSoundIndex( pEntity ) );
@@ -255,7 +282,8 @@ int CountTeams( void )
 
 		// Beta 5.0 (leak): the players in a team
 		// Beta 6.5: the dormant flag is tested as a bit
-		if ( player->m_iTeam != TEAM_UNASSIGNED && !( pPlayer->pev->flags & FL_DORMANT ) )
+		// Counter-Strike 1.1: nor the spectators
+		if ( player->m_iTeam != TEAM_UNASSIGNED && !( pPlayer->pev->flags & FL_DORMANT ) && player->m_iTeam != TEAM_SPECTATOR )
 		{
 			if ( player->m_iTeam == TEAM_CT )
 				iNumCT++;
@@ -339,7 +367,6 @@ int CountTeamPlayers( int iTeam )
 //=========================================================
 void KickPlayer( int iKicked, int iVotes, int iTeam )
 {
-	char message[120];
 	bool fKicked = false;	// name ours
 	CBaseEntity *pPlayer = NULL;
 
@@ -361,9 +388,8 @@ void KickPlayer( int iKicked, int iVotes, int iTeam )
 
 						player->m_fKicked = true;
 
-						strcpy( message, "Kicked " );
-						strcat( message, STRING( pPlayer->pev->netname ) );
-						UTIL_ClientPrintAll( HUD_PRINTCENTER, message );
+						// (Counter-Strike 1.1: a title with the name; 1.0b: "Kicked " and the name)
+						UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Game_kicked", STRING( pPlayer->pev->netname ) );
 
 						if ( iUserID != -1 )
 							SERVER_COMMAND( UTIL_VarArgs( "kick # %d\n", iUserID ) );
@@ -453,6 +479,8 @@ inline void UpdateTeamInfo( CBasePlayer *pPlayer, int iTeam )
 			WRITE_STRING( "CT" );
 		else if ( iTeam == TEAM_TERRORIST )
 			WRITE_STRING( "TERRORIST" );
+		else if ( iTeam == TEAM_SPECTATOR )	// Counter-Strike 1.1
+			WRITE_STRING( "SPECTATOR" );
 		else
 			WRITE_STRING( "UNASSIGNED" );
 	MESSAGE_END();
@@ -584,7 +612,7 @@ void ClientPutInServer( edict_t *pEntity )
 			*pApersand = ' ';
 	}
 
-	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, UTIL_VarArgs( "%s connected\n", ( sName[0] != 0 ) ? sName : "<unconnected>" ) );
+	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, "#Game_connected", ( sName[0] != 0 ) ? sName : "<unconnected>" );	// (Counter-Strike 1.1: a title; 1.0b: UTIL_VarArgs( "%s connected\n", ... ))
 }
 
 //// HOST_SAY
@@ -608,8 +636,12 @@ void Host_Say( edict_t *pEntity, int teamonly )
 	entvars_t *pev = &pEntity->v;
 	CBasePlayer *player = GetClassPtr((CBasePlayer *)pev);
 
-	// one line in 0.66 seconds (up to Beta 6.5: one a second)
-	if ( player->m_flLastSay != 0.0 && gpGlobals->time - player->m_flLastSay < 0.66 )
+	// one line in 0.66 seconds (up to Beta 6.5: one a second).
+	// sic: the parentheses around the difference. They make no code here, but VC6 keeps
+	// them as a node of the tree, and the count of such nodes ahead of the first
+	// player->pev (period 4) decides how the log line's STRING at the end is added:
+	// with them retail's 1,343 bytes, without them pStringBase in esi and 1,345
+	if ( player->m_flLastSay != 0.0 && ( gpGlobals->time - player->m_flLastSay ) < 0.66 )
 		return;
 
 	player->m_flLastSay = gpGlobals->time;
@@ -756,9 +788,32 @@ void Host_Say( edict_t *pEntity, int teamonly )
 	// echo to server console
 	g_engfuncs.pfnServerPrint( text );
 
-	// Beta 6.5: and to the log, if the server wants it
+	// Beta 6.5: and to the log, if the server wants it.
+	// Counter-Strike 1.1: SDK 2.2's log line, with the team's name in the place of
+	// the model (1.0b: UTIL_LogPrintf( "%s", text )). temp and szTeam are
+	// Counter-Strike 1.6's names
 	if ( CVAR_GET_FLOAT( "mp_logmessages" ) != 0 )
-		UTIL_LogPrintf( "%s", text );	// Beta 7.0: through a format (6.6 passed the text as the format)
+	{
+		char *temp = ( teamonly == 1 ) ? "say_team" : "say";
+		char *szTeam;
+
+		if ( player->m_iTeam == TEAM_TERRORIST )
+			szTeam = "TERRORIST";
+		else if ( player->m_iTeam == TEAM_CT )
+			szTeam = "CT";
+		else if ( player->m_iTeam == TEAM_SPECTATOR )
+			szTeam = "SPECTATOR";
+		else
+			szTeam = "UNASSIGNED";
+
+		UTIL_LogPrintf( "\"%s<%i><%u><%s>\" %s \"%s\"\n", 
+			STRING( player->pev->netname ), 
+			GETPLAYERUSERID( player->edict() ),
+			GETPLAYERWONID( player->edict() ),
+			szTeam,
+			temp,
+			p );
+	}
 }
 
 
@@ -1463,7 +1518,7 @@ void BuyItem( CBasePlayer *pPlayer, int iSlot )
 		{
 			if ( !( pPlayer->m_flDisplayHistory & 0x100000 ) )
 			{
-				pPlayer->HintMessage( "Press the NIGHTVISION key to turn on/off nightvision goggles.\n Nightvision can be adjusted by typing:\n +nvgadjust\n-nvgadjust\nat the console.", FALSE, FALSE );
+				pPlayer->HintMessage( "#Hint_use_nightvision", FALSE, FALSE );
 				pPlayer->m_flDisplayHistory |= 0x100000;
 			}
 
@@ -1613,8 +1668,9 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 //=========================================================
 BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 {
-	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// name ours
-	int team;	// name ours
+	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// (1.6's names)
+	int team;
+	edict_t *pentSpawnSpot;
 
 	// Beta 6.0: the VIP stays a counter-terrorist while alive, and when dead
 	// as long as nobody waits to be the VIP
@@ -1659,6 +1715,60 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 			return FALSE;
 		}
 		break;
+	case 6:
+		// Counter-Strike 1.1: the spectators, when allow_spectators is set; a living
+		// player only during the freeze time. He loses his items and his money, his
+		// score is sent as zero and he becomes an observer at a spawn point
+		if ( allow_spectators.value != 0 )
+		{
+			if ( !((CHalfLifeMultiplay *)g_pGameRules)->IsFreezePeriod() && player->pev->deadflag == DEAD_NO )
+			{
+				ClientPrint( player->pev, HUD_PRINTCENTER, "#Cannot_Be_Spectator" );
+				CLIENT_COMMAND( player->edict(), "slot10\n" );
+				return FALSE;
+			}
+
+			if ( player->m_iTeam != TEAM_UNASSIGNED && player->pev->deadflag == DEAD_NO )
+				ClientKill( player->edict() );
+
+			player->RemoveAllItems( TRUE );
+			player->m_bHasC4 = false;
+			player->m_iTeam = TEAM_SPECTATOR;
+			player->m_iJoiningState = JOIN_CHOOSING;
+			player->pev->frags = 0;
+			player->m_iAccount = 0;
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgMoney, NULL, player->edict() );
+				WRITE_LONG( player->m_iAccount );
+				WRITE_BYTE( 0 );
+			MESSAGE_END();
+
+			MESSAGE_BEGIN( MSG_BROADCAST, gmsgScoreInfo );
+				WRITE_BYTE( ENTINDEX( player->edict() ) );
+				WRITE_SHORT( player->pev->frags );
+				WRITE_SHORT( player->m_iDeaths );
+				WRITE_SHORT( 0 );
+				WRITE_SHORT( 0 );
+			MESSAGE_END();
+
+			player->m_pIntroCamera = NULL;
+			UpdateTeamInfo( player, -1 );
+
+			pentSpawnSpot = g_pGameRules->GetPlayerSpawnSpot( player );
+			player->StartObserver( VARS( pentSpawnSpot )->origin, VARS( pentSpawnSpot )->angles );
+
+			MESSAGE_BEGIN( MSG_ALL, gmsgSpectator );
+				WRITE_BYTE( ENTINDEX( player->edict() ) );
+				WRITE_BYTE( 1 );
+			MESSAGE_END();
+			return TRUE;
+		}
+		else
+		{
+			ClientPrint( player->pev, HUD_PRINTCENTER, "#Cannot_Be_Spectator" );
+			CLIENT_COMMAND( player->edict(), "slot10\n" );
+			return FALSE;
+		}
 	default:
 		return FALSE;
 	}
@@ -1678,6 +1788,7 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 	if ( player->IsCommander() )
 		mp->PickNewCommander( player->m_iTeam );
 
+	int oldTeam = player->m_iTeam;	// Counter-Strike 1.1, for the log (1.6's name)
 	player->m_iTeam = team;
 
 	switch ( team )
@@ -1699,14 +1810,33 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 
 	UpdateTeamInfo( player, -1 );
 
-	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, UTIL_VarArgs( ( team == TEAM_TERRORIST ) ? "%s is joining the Terrorist force\n" : "%s is joining the Counter-Terrorist force\n",
-		( player->pev->netname && STRING(player->pev->netname)[0] != 0 ) ? STRING(player->pev->netname) : "unconnected" ) );
+	// Counter-Strike 1.1: titles of the client with the name (1.0b: "%s is joining the
+	// Terrorist force\n" and "... Counter-Terrorist force\n" through UTIL_VarArgs, the
+	// nameless "unconnected")
+	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, ( team == TEAM_TERRORIST ) ? "#Game_join_terrorist" : "#Game_join_ct",
+		( player->pev->netname && STRING(player->pev->netname)[0] != 0 ) ? STRING(player->pev->netname) : "<unconnected>" );
 
-	// Beta 6.6: the server's log
+	// Beta 6.6: the server's log. Counter-Strike 1.1: the standard log format's line,
+	// with the team he leaves (1.0b: "%s is joining the TERRORIST force\n" or "... CT force\n").
+	// szOldTeam and szNewTeam are 1.6's names
+	char *szOldTeam = GetTeam( oldTeam );
+	char *szNewTeam;
+
 	if ( team == TEAM_TERRORIST )
-		UTIL_LogPrintf( "%s is joining the TERRORIST force\n", STRING( player->pev->netname ) );
+		szNewTeam = "TERRORIST";
+	else if ( team == TEAM_CT )
+		szNewTeam = "CT";
+	else if ( team == TEAM_SPECTATOR )
+		szNewTeam = "SPECTATOR";
 	else
-		UTIL_LogPrintf( "%s is joining the CT force\n", STRING( player->pev->netname ) );
+		szNewTeam = "UNASSIGNED";
+
+	UTIL_LogPrintf( "\"%s<%i><%u><%s>\" joined team \"%s\"\n", 
+		STRING( player->pev->netname ), 
+		GETPLAYERUSERID( player->edict() ),
+		GETPLAYERWONID( player->edict() ),
+		szOldTeam,
+		szNewTeam );
 
 	return TRUE;
 }
@@ -1716,6 +1846,9 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 // RadioA to RadioC); each message is a sentence and a text
 // (CBasePlayer::Radio). At most one a second and a half, 60 a
 // life.
+// Counter-Strike 1.1: the texts are titles of the client
+// ("#Cover_me"; 1.0b: the words themselves, "Cover me!\n"),
+// and so is the night vision goggles' hint in BuyItem
 //=========================================================
 void Radio1( CBasePlayer *player, int slot )
 {
@@ -1727,22 +1860,22 @@ void Radio1( CBasePlayer *player, int slot )
 		switch ( slot )
 		{
 		case 1:
-			player->Radio( "%!MRAD_COVERME", "Cover me!\n" );
+			player->Radio( "%!MRAD_COVERME", "#Cover_me" );
 			break;
 		case 2:
-			player->Radio( "%!MRAD_TAKEPOINT", "You Take the Point.\n" );
+			player->Radio( "%!MRAD_TAKEPOINT", "#You_take_the_point" );
 			break;
 		case 3:
-			player->Radio( "%!MRAD_POSITION", "Hold This Position.\n" );
+			player->Radio( "%!MRAD_POSITION", "#Hold_this_position" );
 			break;
 		case 4:		// Beta 6.0 (was "Circle Around Back.")
-			player->Radio( "%!MRAD_REGROUP", "Regroup Team.\n" );
+			player->Radio( "%!MRAD_REGROUP", "#Regroup_team" );
 			break;
 		case 5:
-			player->Radio( "%!MRAD_FOLLOWME", "Follow Me.\n" );
+			player->Radio( "%!MRAD_FOLLOWME", "#Follow_me" );
 			break;
 		case 6:		// Beta 6.0 (was "Meet at the Rendezvous Point.")
-			player->Radio( "%!MRAD_HITASSIST", "Taking Fire.. Need Assistance!.\n" );
+			player->Radio( "%!MRAD_HITASSIST", "#Taking_fire" );
 			break;
 		}
 	}
@@ -1758,22 +1891,22 @@ void Radio2( CBasePlayer *player, int slot )
 		switch ( slot )
 		{
 		case 1:
-			player->Radio( "%!MRAD_GO", "Go go go!\n" );
+			player->Radio( "%!MRAD_GO", "#Go_go_go" );
 			break;
 		case 2:
-			player->Radio( "%!MRAD_FALLBACK", "Team, fall back!\n" );
+			player->Radio( "%!MRAD_FALLBACK", "#Team_fall_back" );
 			break;
 		case 3:
-			player->Radio( "%!MRAD_STICKTOG", "Stick together, team.\n" );
+			player->Radio( "%!MRAD_STICKTOG", "#Stick_together_team" );
 			break;
 		case 4:
-			player->Radio( "%!MRAD_GETINPOS", "Get in position and wait for my go.\n" );
+			player->Radio( "%!MRAD_GETINPOS", "#Get_in_position_and_wait" );
 			break;
 		case 5:
-			player->Radio( "%!MRAD_STORMFRONT", "Storm the Front!\n" );
+			player->Radio( "%!MRAD_STORMFRONT", "#Storm_the_front" );
 			break;
 		case 6:
-			player->Radio( "%!MRAD_REPORTIN", "Report in, team.\n" );
+			player->Radio( "%!MRAD_REPORTIN", "#Report_in_team" );
 			break;
 		}
 	}
@@ -1790,33 +1923,33 @@ void Radio3( CBasePlayer *player, int slot )
 		{
 		case 1:
 			if ( RANDOM_LONG( 0, 1 ) )
-				player->Radio( "%!MRAD_AFFIRM", "Affirmative.\n" );
+				player->Radio( "%!MRAD_AFFIRM", "#Affirmative" );
 			else
-				player->Radio( "%!MRAD_ROGER", "Roger that.\n" );
+				player->Radio( "%!MRAD_ROGER", "#Roger_that" );
 			break;
 		case 2:
-			player->Radio( "%!MRAD_ENEMYSPOT", "Enemy spotted.\n" );
+			player->Radio( "%!MRAD_ENEMYSPOT", "#Enemy_spotted" );
 			break;
 		case 3:
-			player->Radio( "%!MRAD_BACKUP", "Need backup.\n" );
+			player->Radio( "%!MRAD_BACKUP", "#Need_backup" );
 			break;
 		case 4:
-			player->Radio( "%!MRAD_CLEAR", "Sector clear.\n" );
+			player->Radio( "%!MRAD_CLEAR", "#Sector_clear" );
 			break;
 		case 5:
-			player->Radio( "%!MRAD_INPOS", "I'm in position.\n" );
+			player->Radio( "%!MRAD_INPOS", "#In_position" );
 			break;
 		case 6:
-			player->Radio( "%!MRAD_REPRTINGIN", "Reporting in.\n" );
+			player->Radio( "%!MRAD_REPRTINGIN", "#Reporting_in" );
 			break;
 		case 7:
-			player->Radio( "%!MRAD_BLOW", "Get out of there, it's gonna blow!\n" );
+			player->Radio( "%!MRAD_BLOW", "#Get_out_of_there" );
 			break;
 		case 8:
-			player->Radio( "%!MRAD_NEGATIVE", "Negative.\n" );
+			player->Radio( "%!MRAD_NEGATIVE", "#Negative" );
 			break;
 		case 9:		// Beta 6.0
-			player->Radio( "%!MRAD_ENEMYDOWN", "Enemy down.\n" );
+			player->Radio( "%!MRAD_ENEMYDOWN", "#Enemy_down" );
 			break;
 		}
 	}
@@ -2039,16 +2172,11 @@ void ClientCommand( edict_t *pEntity )
 		if ( strlen( CMD_ARGV(1) ) <= 10 )
 		{
 			int iVote = atoi( CMD_ARGV(1) );
-			char szText[100];
-			char szNumber[12];	// 9 to 12 bytes by the frame
 
-			strcpy( szText, "Vote casted against player #" );
-			itoa( iVote, szNumber, 10 );
-			strcat( szText, szNumber );
-
-			// Beta 6.1: the a12 backdoor's votes are not announced
+			// Beta 6.1: the a12 backdoor's votes are not announced.
+			// Counter-Strike 1.1: a title with the number (1.0b: "Vote casted against player #" and the number)
 			if ( !pPlayer->m_bVoteKicksAtOnce )
-				UTIL_ClientPrintAll( HUD_PRINTCENTER, szText );
+				UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Game_vote_cast", UTIL_dtos1( iVote ) );
 
 			pPlayer->m_iCurrentKickVote = iVote;
 
@@ -2095,15 +2223,14 @@ void ClientCommand( edict_t *pEntity )
 		if ( strlen( CMD_ARGV(1) ) <= 5 )
 		{
 			int iVote = atoi( CMD_ARGV(1) );
-			char szText[100];	// name ours; Beta 6.6: 100 bytes (6.5: 40), one stack slot with the vote's and timeleft's buffers
 
 			// Beta 7.0: no vote for a map below 1, and no vote before is
 			// taken back (6.6's test let 0 through and decremented m_iMapVotes[-1])
 			if ( iVote < 1 )
 				return;
 
-			sprintf( szText, "%s voted for Map #%i\n", STRING( pPlayer->pev->netname ), iVote );
-			UTIL_ClientPrintAll( HUD_PRINTCENTER, szText );
+			// (Counter-Strike 1.1: a title; 1.0b: "%s voted for Map #%i\n")
+			UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Game_voted_for_map", STRING( pPlayer->pev->netname ), UTIL_dtos1( iVote ) );
 
 			if ( pPlayer->m_iMapVote <= 100 && pPlayer->m_iMapVote >= 1 )
 			{
@@ -2120,17 +2247,40 @@ void ClientCommand( edict_t *pEntity )
 	{
 		// Beta 6.6: the time left on the map, to his chat (Beta 6.5's hidden
 		// f17 command, which stood here, and its give command are gone)
-		int iTimeRemaining = (int)( timelimit.value * 60 - gpGlobals->time );
+		// Counter-Strike 1.1: counted to g_flTimeLimit, which CHalfLifeMultiplay::Think and
+		// RestartRound work out from the last complete restart (1.0b: to timelimit.value * 60);
+		// a title of the client with the minutes and the two-digit seconds, and another one
+		// when there is no time limit (1.0b: "Time Remaining:  %i:%.2i\n"). secs and temp
+		// are Counter-Strike 1.6's names
+		if ( CVAR_GET_FLOAT( "mp_timelimit" ) != 0 )
+		{
+			int iTimeRemaining = (int)( g_flTimeLimit - gpGlobals->time );
 
-		if ( iTimeRemaining < 0 )	// Beta 7.0
-			iTimeRemaining = 0;
+			if ( iTimeRemaining < 0 )	// Beta 7.0
+				iTimeRemaining = 0;
 
-		int iMinutes = iTimeRemaining / 60;
-		int iSeconds = iTimeRemaining % 60;
-		char szText[100];	// name ours; the frame has one 100-byte slot for this and the two buffers above
+			int iMinutes = iTimeRemaining / 60;
+			int iSeconds = iTimeRemaining % 60;
+			char secs[5];
+			char *temp = UTIL_dtos2( iSeconds );
 
-		sprintf( szText, "Time Remaining:  %i:%.2i\n", iMinutes, iSeconds );	// Counter-Strike 1.0b: the seconds with two digits (1.0: "%i:%i")
-		ClientPrint( pPlayer->pev, HUD_PRINTTALK, szText );
+			if ( iSeconds < 10 )
+			{
+				secs[0] = '0';
+				secs[1] = temp[0];
+				secs[2] = 0;
+			}
+			else
+			{
+				secs[0] = temp[0];
+				secs[1] = temp[1];
+				secs[2] = 0;
+			}
+
+			ClientPrint( pPlayer->pev, HUD_PRINTTALK, "#Game_timelimit", UTIL_dtos1( iMinutes ), secs );
+		}
+		else
+			ClientPrint( pPlayer->pev, HUD_PRINTTALK, "#Game_no_timelimit" );
 	}
 	else if ( FStrEq(pcmd, "listplayers" ) )
 	{
@@ -2334,14 +2484,23 @@ void ClientCommand( edict_t *pEntity )
 
 			// Beta 6.0: a counter-terrorist on an assassination map may queue
 			// to be the VIP (key 3)
+			// Counter-Strike 1.1: key 6, the spectators, for the dead and during the freeze time
 			if ( mp->m_iMapHasVIPSafetyZone == 1 && pPlayer->m_iJoiningState == JOIN_DONE && pPlayer->m_iTeam == TEAM_CT )
 			{
-				ShowVGUIMenu( pPlayer, 2, 0x217, "#IG_VIP_Team_Select" );
+				if ( !((CHalfLifeMultiplay *)g_pGameRules)->IsFreezePeriod() && pPlayer->pev->deadflag == DEAD_NO )
+					ShowVGUIMenu( pPlayer, 2, 0x217, "#IG_VIP_Team_Select" );
+				else
+					ShowVGUIMenu( pPlayer, 2, 0x237, "#IG_VIP_Team_Select_Spect" );
+
 				pPlayer->m_iMenu = Menu_ChooseTeam;
 				return;
 			}
 
-			ShowVGUIMenu( pPlayer, 2, 0x213, "#IG_Team_Select" );
+			if ( !((CHalfLifeMultiplay *)g_pGameRules)->IsFreezePeriod() && pPlayer->pev->deadflag == DEAD_NO )
+				ShowVGUIMenu( pPlayer, 2, 0x213, "#IG_Team_Select" );
+			else
+				ShowVGUIMenu( pPlayer, 2, 0x233, "#IG_Team_Select_Spect" );
+
 			pPlayer->m_iMenu = Menu_ChooseTeam;
 		}
 	}
@@ -2399,7 +2558,10 @@ void ClientCommand( edict_t *pEntity )
 		if ( pPlayer->m_iJoiningState == JOIN_DONE && pPlayer->m_iTeam == TEAM_CT )
 			mp->AddToVIPQueue( pPlayer );
 		else
+		{
 			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Command_Not_Available" );
+			return;	// (Counter-Strike 1.1's code needs this return: without it the block shares the tail of votemap's "#Wait_3_Seconds" block, which retail's does not)
+		}
 	}
 	else if ( pPlayer->pev->deadflag != DEAD_NO )
 	{
@@ -2515,7 +2677,16 @@ void ClientCommand( edict_t *pEntity )
 	else
 	{
 		// tell the user they entered an unknown command
-		ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, UTIL_VarArgs( "Unknown command: %s\n", pcmd ) );
+		// (Counter-Strike 1.1: SDK 2.2's text, the message a title of the client)
+		char command[128];
+
+		// check the length of the command (prevents crash)
+		// max total length is 192 ...and we're adding a string below ("Unknown command: %s\n")
+		strncpy( command, pcmd, 127 );
+		command[127] = '\0';
+
+		// tell the user they entered an unknown command
+		ClientPrint( &pEntity->v, HUD_PRINTCONSOLE, "#Game_unknown_command", command );
 	}
 }
 
@@ -2575,7 +2746,14 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 			WRITE_STRING( text );
 		MESSAGE_END();
 
-		UTIL_LogPrintf( "\"%s<%i>\" changed name to \"%s<%i>\"\n", STRING( pEntity->v.netname ), GETPLAYERUSERID( pEntity ), g_engfuncs.pfnInfoKeyValue( infobuffer, "name" ), GETPLAYERUSERID( pEntity ) );
+		// Counter-Strike 1.1: SDK 2.2's log line, with the team's name in the place of the model
+		// (1.0b: "\"%s<%i>\" changed name to \"%s<%i>\"\n")
+		UTIL_LogPrintf( "\"%s<%i><%u><%s>\" changed name to \"%s\"\n", 
+			STRING( pEntity->v.netname ), 
+			GETPLAYERUSERID( pEntity ), 
+			GETPLAYERWONID( pEntity ),
+			GetTeam( pPlayer->m_iTeam ), 
+			g_engfuncs.pfnInfoKeyValue( infobuffer, "name" ) );
 	}
 
 	// (Beta 7.0: the lefthand key is no longer read here)
@@ -2916,8 +3094,8 @@ void ClientPrecache( void )
 
 	// Beta 6.6: the player models are precached here, and the client's files must
 	// keep within these bounds (vMin, vMax: Counter-Strike 1.6's names)
-	Vector vMin( -38, -22, -41 );	// Counter-Strike 1.0 (Beta 7.1: 48, 36, 58)
-	Vector vMax( 38, 22, 41 );
+	Vector vMin( -38, -24, -41 );	// Counter-Strike 1.0 (Beta 7.1: 48, 36, 58); Counter-Strike 1.1: 24 wide (1.0b: 22)
+	Vector vMax( 38, 24, 41 );
 
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player.mdl" );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/leet/leet.mdl" );

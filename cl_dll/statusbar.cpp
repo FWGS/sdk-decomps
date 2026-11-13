@@ -31,6 +31,9 @@ DECLARE_MESSAGE( m_StatusBar, StatusValue );
 
 #define STATUSBAR_ID_LINE		1
 
+float *GetClientColor( int clientIndex );
+extern float g_ColorYellow[3];
+
 int CHudStatusBar :: Init( void )
 {
 	gHUD.AddHudElem( this );
@@ -54,8 +57,10 @@ int CHudStatusBar :: VidInit( void )
 
 void CHudStatusBar :: Reset( void )
 {
+	int i = 0;
+
 	m_iFlags &= ~HUD_ACTIVE;  // start out inactive
-	for ( int i = 0; i < MAX_STATUSBAR_LINES; i++ )
+	for ( i = 0; i < MAX_STATUSBAR_LINES; i++ )
 		m_szStatusText[i][0] = 0;
 	memset( m_iStatusValues, 0, sizeof m_iStatusValues );
 
@@ -63,6 +68,10 @@ void CHudStatusBar :: Reset( void )
 
 	for ( i = 0; i < 32; i++ )
 		g_PlayerExtraInfo[i].health_time = 0;
+
+	// reset our colors for the status bar lines (yellow is default)
+	for ( i = 0; i < MAX_STATUSBAR_LINES; i++ )
+		m_pflNameColors[i] = g_ColorYellow;
 }
 
 void CHudStatusBar :: ParseStatusString( int line_num )
@@ -129,6 +138,7 @@ void CHudStatusBar :: ParseStatusString( int line_num )
 
 						// get the string to substitute in place of the %XX
 						char szRepString[MAX_PLAYER_NAME_LENGTH];
+						client_textmessage_t *tempMessage;
 						switch ( valtype )
 						{
 						case 'p':  // player name
@@ -137,6 +147,7 @@ void CHudStatusBar :: ParseStatusString( int line_num )
 							{
 								strncpy( szRepString, g_PlayerInfoList[indexval].name, MAX_PLAYER_NAME_LENGTH );
 								gHUD.m_Health.m_iPlayerTarget = indexval;
+								m_pflNameColors[line_num] = GetClientColor( indexval );
 							}
 							else
 							{
@@ -148,17 +159,36 @@ void CHudStatusBar :: ParseStatusString( int line_num )
 							g_PlayerExtraInfo[gHUD.m_Health.m_iPlayerTarget].health = indexval;
 							sprintf( szRepString, "%d", indexval );
 							break;
-						case 'c':  // relation to the player (letter and name ours)
+						case 'h':  // the word "Health", localised
+							tempMessage = TextMessageGet( "Health" );
+							if ( tempMessage )
+								strcpy( szRepString, tempMessage->pMessage );
+							else
+								strcpy( szRepString, "Health" );
+							break;
+						case 'c':  // relation to the player, localised
 							switch ( indexval )
 							{
 							case 1:
-								strcpy( szRepString, "Friend" );
+								tempMessage = TextMessageGet( "Friend" );
+								if ( tempMessage )
+									strcpy( szRepString, tempMessage->pMessage );
+								else
+									strcpy( szRepString, "Friend" );
 								break;
 							case 2:
-								strcpy( szRepString, "Enemy" );
+								tempMessage = TextMessageGet( "Enemy" );
+								if ( tempMessage )
+									strcpy( szRepString, tempMessage->pMessage );
+								else
+									strcpy( szRepString, "Enemy" );
 								break;
 							case 3:
-								strcpy( szRepString, "Hostage" );
+								tempMessage = TextMessageGet( "Hostage" );
+								if ( tempMessage )
+									strcpy( szRepString, tempMessage->pMessage );
+								else
+									strcpy( szRepString, "Hostage" );
 								break;
 							}
 							break;
@@ -186,7 +216,10 @@ int CHudStatusBar :: Draw( float fTime )
 	if ( m_bReparseString )
 	{
 		for ( int i = 0; i < MAX_STATUSBAR_LINES; i++ )
+		{
+			m_pflNameColors[i] = g_ColorYellow;
 			ParseStatusString( i );
+		}
 		m_bReparseString = FALSE;
 	}
 
@@ -214,6 +247,9 @@ int CHudStatusBar :: Draw( float fTime )
 			x = max( 0, max(2, (ScreenWidth - TextWidth)) / 2 );
 			y = (ScreenHeight / 2) + (TextHeight*CVAR_GET_FLOAT("hud_centerid"));
 		}
+
+		if ( m_pflNameColors[i] )
+			gEngfuncs.pfnDrawSetTextColor( m_pflNameColors[i][0], m_pflNameColors[i][1], m_pflNameColors[i][2] );
 
 		DrawConsoleString( x, y, m_szStatusBar[i] );
 	}

@@ -269,7 +269,8 @@ void CHostage::IdleThink( void )
 				{
 					pev->deadflag = DEAD_RESPAWNABLE;	// rescued
 					pPlayer->AddAccount( 1000, true );
-					UTIL_LogPrintf( "%s has rescued a hostage\n", STRING( pPlayer->pev->netname ) );	// Beta 6.6
+					// Beta 6.6: "%s has rescued a hostage\n"; Counter-Strike 1.1: the log line's new form
+					UTIL_LogPrintf( "\"%s<%i><%u><CT>\" triggered \"Rescued_A_Hostage\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERWONID( pPlayer->edict() ) );
 					Remove();
 					((CHalfLifeMultiplay *)g_pGameRules)->m_iHostagesRescued++;
 					((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
@@ -652,7 +653,7 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 				ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Killed_Hostage" );	// Beta 5.0 (leak); Beta 7.1: a titles.txt name
 				if ( !(pPlayer->m_flDisplayHistory & 0x40) )	// hostage killed
 				{
-					pPlayer->HintMessage( "You have lost money for killing a hostage.", FALSE, FALSE );
+					pPlayer->HintMessage( "#Hint_lost_money", FALSE, FALSE );	// Counter-Strike 1.1: the hints are titles of the client's
 					pPlayer->m_flDisplayHistory |= 0x40;
 				}
 
@@ -669,16 +670,14 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 					pPlayer->m_iHostagesKilled++;
 
 					if ( pPlayer->m_iHostagesKilled == iHostagePenalty - 1 )
-						pPlayer->HintMessage( "If you kill one more hostage, you will be removed from the server.", TRUE, FALSE );
+						pPlayer->HintMessage( "#Hint_removed_for_next_hostage_killed", TRUE, FALSE );
 					else if ( pPlayer->m_iHostagesKilled >= iHostagePenalty )
 						CLIENT_COMMAND( pPlayer->edict(), "disconnect\n" );
 				}
 
-				// Beta 7.1: the server log
-				char szText[256];	// name ours
-
-				sprintf( szText, "%s killed a hostage\n", STRING( pPlayer->pev->netname ) );
-				UTIL_LogPrintf( "%s", szText );
+				// Beta 7.1: the server log ("%s killed a hostage\n" by way of a buffer);
+				// Counter-Strike 1.1: the log line's new form, at once
+				UTIL_LogPrintf( "\"%s<%i><%u><%s>\" triggered \"Killed_A_Hostage\"\n", STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERWONID( pPlayer->edict() ), ( pPlayer->m_iTeam == TEAM_CT ) ? "CT" : "TERRORIST" );
 			}
 		}
 
@@ -693,7 +692,7 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 		((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
 
 		if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander != NULL )
-			((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander->Radio( "%!MRAD_HOSDOWN", "Hostage down.\n" );
+			((CHalfLifeMultiplay *)g_pGameRules)->m_pCTCommander->Radio( "%!MRAD_HOSDOWN", "#Hostage_down" );
 
 		return 0;
 	}
@@ -711,7 +710,7 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 		ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Injured_Hostage" );
 		if ( !(pPlayer->m_flDisplayHistory & 0x20) )	// hostage injured
 		{
-			pPlayer->HintMessage( "Be careful around hostages.\nYou will lose money if you kill a hostage.", FALSE, FALSE );
+			pPlayer->HintMessage( "#Hint_careful_around_hostages", FALSE, FALSE );
 			pPlayer->m_flDisplayHistory |= 0x20;
 		}
 	}
@@ -773,7 +772,8 @@ void CHostage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 				m_fTouched = TRUE;
 				((CHalfLifeMultiplay *)g_pGameRules)->m_iAccountCT += 100;
 				((CBasePlayer *)pActivator)->AddAccount( 150, true );
-				UTIL_LogPrintf( "%s touched a hostage\n", STRING( pActivator->pev->netname ) );	// Beta 6.6
+				// Beta 6.6: "%s touched a hostage\n"; Counter-Strike 1.1: the log line's new form
+				UTIL_LogPrintf( "\"%s<%i><%u><CT>\" triggered \"Touched_A_Hostage\"\n", STRING( pActivator->pev->netname ), GETPLAYERUSERID( pActivator->edict() ), GETPLAYERWONID( pActivator->edict() ) );
 			}
 		}
 

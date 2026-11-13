@@ -59,6 +59,8 @@ int CHudSayText :: Init( void )
 
 	CVAR_CREATE( "hud_saytext_time", "5", 0 );
 
+	m_iFlags |= HUD_INTERMISSION; // is always drawn during an intermission
+
 	return 1;
 }
 

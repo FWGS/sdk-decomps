@@ -413,6 +413,7 @@ public:
 	virtual void paintBackground();
 
 	CSchemeManager *GetSchemeManager( void ) { return &m_SchemeManager; }
+	ScorePanel *GetScoreBoard( void ) { return m_pScoreBoard; }	// SDK 2.2's line; nothing in 1.1 calls it
 
 	void *operator new( size_t stAllocateBlock );
 
@@ -1226,8 +1227,8 @@ public:
 	CTransparentPanel	*m_pTeamWindow;
 	Label				*m_pMapTitle;
 	TextPanel			*m_pBriefing;
-	TextPanel			*m_pTeamInfoPanel[6];
-	CommandButton		*m_pButtons[6];
+	TextPanel			*m_pTeamInfoPanel[7];
+	CommandButton		*m_pButtons[7];
 	bool				m_bUpdatedMapName;
 	CommandButton		*m_pCancelButton;
 

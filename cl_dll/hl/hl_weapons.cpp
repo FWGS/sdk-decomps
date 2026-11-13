@@ -41,6 +41,9 @@ struct cl_entity_s *GetViewEntity( void );
 static entvars_t	ev[ 32 ];
 static int			num_ents = 0;
 
+// Counter-Strike 1.1: set from iuser3 bit 0 with m_bCanShoot (name and place Counter-Strike 1.6's, line 49)
+int g_iFreezeTimeOver;
+
 // The entity we'll use to represent the local client
 static CBasePlayer	player;
 
@@ -1008,9 +1011,15 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	player.m_flNextAttack = from->client.m_flNextAttack;
 	int iUser3 = from->client.iuser3;	// name ours
 	if ( iUser3 & 1 )
+	{
 		player.m_bCanShoot = true;
+		g_iFreezeTimeOver = 1;
+	}
 	else
+	{
 		player.m_bCanShoot = false;
+		g_iFreezeTimeOver = 0;
+	}
 	if ( iUser3 & 2 )
 		player.m_bLeftHanded = true;
 	else

@@ -86,6 +86,7 @@ typedef enum
 #define TEAM_UNASSIGNED		0
 #define TEAM_TERRORIST		1
 #define TEAM_CT				2
+#define TEAM_SPECTATOR		3	// Counter-Strike 1.1: a spectator (allow_spectators; TeamInfo's "SPECTATOR"; name ours)
 
 // Counter-Strike: the menu a player has open (CBasePlayer::m_iMenu; client.cpp's
 // menuselect). Menu_Buy to Menu_BuyItem are retail's names: the enum's text, two
@@ -234,6 +235,7 @@ public:
 	float				m_flLastAttackedTeammate;	// 0x38c new in Beta 7.0: TakeDamage's "attacked a teammate" line, at most once in 0.6 s (1.6's name)
 	float				m_flTimeCheckAllowed;	// 0x390 new in Beta 7.0: PreThink checks the client's keys and model no sooner, every 3 s (1.6 has int m_iTimeCheckAllowed at this place, the timeleft command's; a float here, the prefix ours)
 	bool				m_bHeadshotKilled;		// 0x394 new in Beta 7.1: Killed and SetAnimation set it when the last hit was to the head, DeathNotice then names the weapon "headshot"; Spawn clears it (1.6's name; there it stands after m_flLastAttackedTeammate)
+	bool				m_bPunishedForTK;		// 0x395 new in Counter-Strike 1.1: set when a team killer is kept out of a round; Killed then shows the hint "#Hint_cannot_play_because_tk" and clears it (1.6's name, after m_bHeadshotKilled there too)
 	float				m_flNextZoneCheck;		// 0x398 HandleSignals' next check (0x394 in Beta 7.0, 0x388 to Beta 6.6; 1.6: m_tmHandleSignals)
 	CPlayerSignals		m_signals;				// 0x39c
 	edict_t				*m_pentCurBombTarget;	// 0x3a4 the bomb target the player is in (Counter-Strike 1.6's name; CC4::Use clears it around the plant)

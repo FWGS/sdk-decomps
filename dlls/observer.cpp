@@ -29,36 +29,10 @@ void CBasePlayer::Observer_FindNextPlayer( bool bReverse )
 	m_hObserverTarget = NULL;
 	int iDir = bReverse ? -1 : 1; 
 
-	if ( CVAR_GET_FLOAT( "mp_forcechasecam" ) == 0 )
-	{
-		// anybody who is in the game
-		do
-		{
-			iCurrent += iDir;
-
-			// Loop through the clients
-			if (iCurrent > gpGlobals->maxClients)
-				iCurrent = 1;
-			if (iCurrent < 1)
-				iCurrent = gpGlobals->maxClients;
-
-			CBaseEntity *pEnt = UTIL_PlayerByIndex( iCurrent );
-			if ( !pEnt )
-				continue;
-			if ( pEnt == this )
-				continue;
-			if ( pEnt->has_disconnected )
-				continue;
-			// Don't spec observers or players who haven't picked a class yet
-			if ( ((CBasePlayer*)pEnt)->pev->iuser1 || (pEnt->pev->effects & EF_NODRAW) )
-				continue;
-
-			m_hObserverTarget = pEnt;
-			break;
-
-		} while ( iCurrent != iStart );
-	}
-	else
+	// Counter-Strike 1.1: a spectator (allow_spectators) may watch anybody
+	// whatever mp_forcechasecam says, and the two loops stand the other way
+	// round (1.0b: if ( ... == 0 ) anybody, else team mates)
+	if ( CVAR_GET_FLOAT( "mp_forcechasecam" ) != 0 && m_iTeam != TEAM_SPECTATOR )
 	{
 		// mp_forcechasecam: team mates only
 		do
@@ -82,6 +56,35 @@ void CBasePlayer::Observer_FindNextPlayer( bool bReverse )
 			if ( ((CBasePlayer*)pEnt)->pev->iuser1 || (pEnt->pev->effects & EF_NODRAW) )
 				continue;
 			if ( ((CBasePlayer*)pEnt)->m_iTeam != m_iTeam )
+				continue;
+
+			m_hObserverTarget = pEnt;
+			break;
+
+		} while ( iCurrent != iStart );
+	}
+	else
+	{
+		// anybody who is in the game
+		do
+		{
+			iCurrent += iDir;
+
+			// Loop through the clients
+			if (iCurrent > gpGlobals->maxClients)
+				iCurrent = 1;
+			if (iCurrent < 1)
+				iCurrent = gpGlobals->maxClients;
+
+			CBaseEntity *pEnt = UTIL_PlayerByIndex( iCurrent );
+			if ( !pEnt )
+				continue;
+			if ( pEnt == this )
+				continue;
+			if ( pEnt->has_disconnected )
+				continue;
+			// Don't spec observers or players who haven't picked a class yet
+			if ( ((CBasePlayer*)pEnt)->pev->iuser1 || (pEnt->pev->effects & EF_NODRAW) )
 				continue;
 
 			m_hObserverTarget = pEnt;
@@ -154,46 +157,37 @@ void CBasePlayer::Observer_SetMode( int iMode )
 	// Changing to Roaming?
 	if ( iMode == OBS_ROAMING )
 	{
-		if ( CVAR_GET_FLOAT( "mp_forcechasecam" ) == 0 )
-		{
-			pev->iuser1 = OBS_ROAMING;
-			pev->iuser2 = 0;
-
-			MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pev );
-				WRITE_BYTE( 1 );
-			MESSAGE_END();
-
-			ClientPrint( pev, HUD_PRINTCENTER, "#Spec_Mode3" );
-			return;
-		}
-
 		// mp_forcechasecam: no free flight while there is somebody to follow
-		if ( m_hObserverTarget == NULL )
-			Observer_FindNextPlayer( false );
-
-		if (m_hObserverTarget)
+		// Counter-Strike 1.1: a spectator (allow_spectators) flies freely
+		// whatever the cvar says; the free flight stands once in the text
+		// (1.0b: twice, the first for mp_forcechasecam 0)
+		if ( CVAR_GET_FLOAT( "mp_forcechasecam" ) != 0 && m_iTeam != TEAM_SPECTATOR )
 		{
-			pev->iuser1 = OBS_CHASE_LOCKED;
-			pev->iuser2 = ENTINDEX( m_hObserverTarget->edict() );
+			if ( m_hObserverTarget == NULL )
+				Observer_FindNextPlayer( false );
 
-			MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pev );
-				WRITE_BYTE( 0 );
-			MESSAGE_END();
+			if (m_hObserverTarget)
+			{
+				pev->iuser1 = OBS_CHASE_LOCKED;
+				pev->iuser2 = ENTINDEX( m_hObserverTarget->edict() );
 
-			ClientPrint( pev, HUD_PRINTCENTER, "#Spec_Mode1" );
-		}
-		else
-		{
-			pev->iuser1 = OBS_ROAMING;
-			pev->iuser2 = 0;
+				MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pev );
+					WRITE_BYTE( 0 );
+				MESSAGE_END();
 
-			MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pev );
-				WRITE_BYTE( 1 );
-			MESSAGE_END();
-
-			ClientPrint( pev, HUD_PRINTCENTER, "#Spec_Mode3" );
+				ClientPrint( pev, HUD_PRINTCENTER, "#Spec_Mode1" );
+				return;
+			}
 		}
 
+		pev->iuser1 = OBS_ROAMING;
+		pev->iuser2 = 0;
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgCrosshair, NULL, pev );
+			WRITE_BYTE( 1 );
+		MESSAGE_END();
+
+		ClientPrint( pev, HUD_PRINTCENTER, "#Spec_Mode3" );
 		return;
 	}
 

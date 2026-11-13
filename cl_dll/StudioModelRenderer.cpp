@@ -906,7 +906,10 @@ void CStudioModelRenderer::StudioSetupBones ( void )
 			if ( IEngineStudio.IsHardware() )
 			{
 				ConcatTransforms ((*m_protationmatrix), bonematrix, (*m_pbonetransform)[i]);
-				ConcatTransforms ((*m_protationmatrix), bonematrix, (*m_plighttransform)[i]);
+
+				// MatrixCopy should be faster...
+				//ConcatTransforms ((*m_protationmatrix), bonematrix, (*m_plighttransform)[i]);
+				MatrixCopy( (*m_pbonetransform)[i], (*m_plighttransform)[i] );
 			}
 			else
 			{
@@ -1014,7 +1017,10 @@ void CStudioModelRenderer::StudioMergeBones ( model_t *m_pSubModel )
 				if ( IEngineStudio.IsHardware() )
 				{
 					ConcatTransforms ((*m_protationmatrix), bonematrix, (*m_pbonetransform)[i]);
-					ConcatTransforms ((*m_protationmatrix), bonematrix, (*m_plighttransform)[i]);
+
+					// MatrixCopy should be faster...
+					//ConcatTransforms ((*m_protationmatrix), bonematrix, (*m_plighttransform)[i]);
+					MatrixCopy( (*m_pbonetransform)[i], (*m_plighttransform)[i] );
 				}
 				else
 				{

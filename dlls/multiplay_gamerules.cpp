@@ -96,57 +96,113 @@ void Broadcast( const char *sentence )
 	MESSAGE_END();
 }
 
+// GetTeam - Counter-Strike 1.1: a team's name for the log lines. The name, the parameter's and the place
+// are Counter-Strike 1.6's, where it is a function of its own; 1.1 has none in either library, only the
+// switch in its callers
+inline char *GetTeam( int teamNo )
+{
+	switch ( teamNo )
+	{
+	case TEAM_TERRORIST:
+		return "TERRORIST";
+	case TEAM_CT:
+		return "CT";
+	case TEAM_SPECTATOR:
+		return "SPECTATOR";
+	default:
+		break;
+	}
+
+	return "";
+}
+
 // EndRoundMessage - Beta 5.0 (leak; Linux symbol): a message in the middle of everybody's screen.
 // Beta 7.1: the HUD message's parameters (to 7.0 a static hudtextparms_t here: green, four seconds)
-// are gone from the image with UTIL_HudMessageAll's call
+// are gone from the image with UTIL_HudMessageAll's call.
+// Counter-Strike 1.1: the log lines are the standard log format's. A second parameter says which
+// end it is (1.6's name; the numbers have no names there either): 1 target bombed, 2 VIP escaped,
+// 3 VIP assassinated, 4 terrorists escaped, 5 CTs prevented the escape, 7 bomb defused, 8 CTs win,
+// 9 terrorists win, 10 round draw, 11 all hostages rescued, 12 target saved, 13 hostages not
+// rescued, 14 terrorists not escaped, 15 VIP not escaped (6 is not used). It picks the team that
+// "triggered" the sentence; the sentence is logged without its '#'. Locals' names are 1.6's.
 
-void EndRoundMessage( const char *sentence )
+void EndRoundMessage( const char *sentence, int event )
 {
-	char szBuf[256];	// Beta 6.1 (name ours)
+	char *team = NULL;
+	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;
+	const char *message = &sentence[1];
+	int teamTriggered = 1;
 
 	// Beta 7.1: the sentence is a name of the client's titles.txt ("#CTs_Win"), printed
 	// in the middle of the screen (to 7.0: UTIL_HudMessageAll)
 	UTIL_ClientPrintAll( HUD_PRINTCENTER, sentence );
 
-	// Beta 6.1: the round's end and the score go to the server log
-	strcpy( szBuf, "***" );
-	strcat( szBuf, sentence );
-	strcat( szBuf, "***\n" );
-	UTIL_LogPrintf( szBuf );
-
-	if ( g_pGameRules )
+	switch ( event )
 	{
-		// (Beta 7.0's words, the stray '-' too; to 6.6 "CT wins = %i\nTerrorist wins = %i\n")
-		sprintf( szBuf, "*** CT wins = %i ***\n*** Terrorist wins = %i -***\n", ((CHalfLifeMultiplay *)g_pGameRules)->m_iNumCTWins, ((CHalfLifeMultiplay *)g_pGameRules)->m_iNumTerroristWins );
-		UTIL_LogPrintf( szBuf );
+	case 1:
+	case 3:
+	case 4:
+	case 9:
+	case 13:
+	case 15:
+		team = "TERRORIST";
+		break;
+
+	case 2:
+	case 5:
+	case 6:
+	case 7:
+	case 8:
+	case 11:
+	case 12:
+	case 14:
+		team = "CT";
+		break;
+
+	default:
+		teamTriggered = 0;
+		break;
 	}
+
+	if ( mp )
+	{
+		if ( teamTriggered == 1 )
+			UTIL_LogPrintf( "Team \"%s\" triggered \"%s\" (CT \"%i\") (T \"%i\")\n", team, message, mp->m_iNumCTWins, mp->m_iNumTerroristWins );
+		else
+			UTIL_LogPrintf( "World triggered \"%s\" (CT \"%i\") (T \"%i\")\n", message, mp->m_iNumCTWins, mp->m_iNumTerroristWins );
+	}
+
+	UTIL_LogPrintf( "World triggered \"Round_End\"\n" );
 }
 
 // ReadMultiplayCvars - Beta 5.0 (Linux symbol): the round time, C4 timer, freeze time and team limit from their cvars,
 // each clamped and the cvar set back to the clamp. sic: a round time under 3 minutes becomes 1, a freeze time over 15
-// seconds sets mp_roundtime to 9; a team limit under 1 (the cvar set to 0) means 20, no limit
+// seconds sets mp_roundtime to 9; a team limit under 1 (the cvar set to 0) means 20, no limit.
+// Counter-Strike 1.1: m_iRoundTime is in seconds, so mp_roundtime can have a fraction; 1 to 9 minutes
+// (1.0b: whole minutes, 3 to 9, less became 1). The freeze time is 0 to 60 seconds (1.0b: 0 to 15), and its
+// clamp sets its own cvar
 static void ReadMultiplayCvars( CHalfLifeMultiplay *mp )
 {
-	mp->m_iRoundTime = (int)CVAR_GET_FLOAT( "mp_roundtime" );
+	mp->m_iRoundTime = (int)( CVAR_GET_FLOAT( "mp_roundtime" ) * 60 );
 	mp->m_iC4Timer = (int)CVAR_GET_FLOAT( "mp_c4timer" );
 	mp->m_iFreezeTime = (int)CVAR_GET_FLOAT( "mp_freezetime" );
 	mp->m_iLimitTeams = (int)CVAR_GET_FLOAT( "mp_limitteams" );
 
-	if ( mp->m_iRoundTime > 9 )
+	if ( mp->m_iRoundTime > 540 )
 	{
 		CVAR_SET_FLOAT( "mp_roundtime", 9 );
-		mp->m_iRoundTime = 9;
+		mp->m_iRoundTime = 540;
 	}
-	else if ( mp->m_iRoundTime < 3 )
+	else if ( mp->m_iRoundTime < 60 )
 	{
 		CVAR_SET_FLOAT( "mp_roundtime", 1 );
-		mp->m_iRoundTime = 1;
+		mp->m_iRoundTime = 60;
 	}
 
-	if ( mp->m_iFreezeTime > 15 )
+	if ( mp->m_iFreezeTime > 60 )
 	{
-		CVAR_SET_FLOAT( "mp_roundtime", 9 );
-		mp->m_iFreezeTime = 15;
+		CVAR_SET_FLOAT( "mp_freezetime", 60 );
+		mp->m_iFreezeTime = 60;
 	}
 	else if ( mp->m_iFreezeTime < 0 )
 	{
@@ -179,6 +235,11 @@ static void ReadMultiplayCvars( CHalfLifeMultiplay *mp )
 
 void TerminateRound( float tmDelay, int iWinStatus );
 
+extern cvar_t allow_spectators;	// game.cpp (Counter-Strike 1.1)
+extern float g_flTimeLimit;		// client.cpp (Counter-Strike 1.1)
+extern float g_flResetTime;		// client.cpp (Counter-Strike 1.1)
+extern int gmsgAllowSpec;		// player.cpp (Counter-Strike 1.1)
+
 //*********************************************************
 // Rules for the half-life multiplayer game.
 //*********************************************************
@@ -187,6 +248,7 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 {
 	RefreshSkillData();
 	m_flIntermissionEndTime = 0;
+	m_flIntermissionStartTime = 0;	// Counter-Strike 1.1
 	m_flRestartRoundTime = 0;
 	m_iAccountCT = 0;
 	m_iAccountTerrorist = 0;
@@ -227,8 +289,23 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 	m_iConsecutiveVIP = 0;
 	m_iUnBalancedRounds = 0;
 	m_iNumEscapeRounds = 0;
-	m_iMaxRounds = CVAR_GET_FLOAT( "mp_maxrounds" );	// Counter-Strike 1.0 (Beta 7.1 read it only at a complete restart)
+	m_iMaxRounds = (int)CVAR_GET_FLOAT( "mp_maxrounds" );	// Counter-Strike 1.0 (Beta 7.1 read it only at a complete restart)
+
+	// Counter-Strike 1.1: not negative; and the rounds a team may win (mp_winlimit)
+	if ( m_iMaxRounds < 0 )
+	{
+		m_iMaxRounds = 0;
+		CVAR_SET_FLOAT( "mp_maxrounds", 0 );
+	}
+
 	m_iTotalRoundsPlayed = 0;	// Beta 7.1
+	m_iMaxRoundsWon = (int)CVAR_GET_FLOAT( "mp_winlimit" );
+
+	if ( m_iMaxRoundsWon < 0 )
+	{
+		m_iMaxRoundsWon = 0;
+		CVAR_SET_FLOAT( "mp_winlimit", 0 );
+	}
 
 	// Beta 6.5: the map votes, the VIP's turn
 	for ( int i = 0; i < 100; i++ )
@@ -241,6 +318,8 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 	m_fMapHasBombZone = false;
 	m_fMapHasRescueZone = false;
 
+	m_iStoredSpectValue = (int)allow_spectators.value;	// Counter-Strike 1.1: Think tells the clients when it changes
+
 	m_pVIPQueue[0] = m_pVIPQueue[1] = m_pVIPQueue[2] = m_pVIPQueue[3] = m_pVIPQueue[4] = NULL;
 
 	// Beta 4.0: no high-detail player models
@@ -251,7 +330,7 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 	ReadMultiplayCvars( this );
 
 	m_iFreezeTime += 2;
-	m_flMaxIdlePeriod = m_iRoundTime * 120;
+	m_flMaxIdlePeriod = m_iRoundTime * 2;	// (the round time is in seconds now)
 	m_iRoundTimeSecs = m_iFreezeTime;
 	
 	// 11/8/98
@@ -272,7 +351,8 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 		{
 			char szCommand[256];
 			
-			// Beta 6.0: the dedicated server says nothing (the listen server still does)
+			// (Beta 6.0 to Counter-Strike 1.0b: the dedicated server said nothing)
+			ALERT( at_console, "Executing dedicated server config file\n" );
 			sprintf( szCommand, "exec %s\n", servercfgfile );
 			SERVER_COMMAND( szCommand );
 		}
@@ -530,6 +610,9 @@ void CHalfLifeMultiplay::GiveC4( void )
 				player->SetBombIcon( FALSE );
 				player->pev->body = 1;
 				m_pTerroristCommander = player;
+
+				// Counter-Strike 1.1: the carrier goes to the log
+				UTIL_LogPrintf( "\"%s<%i><%u><TERRORIST>\" triggered \"Spawned_With_The_Bomb\"\n", STRING( player->pev->netname ), GETPLAYERUSERID( player->edict() ), GETPLAYERWONID( player->edict() ) );
 			}
 		}
 		pPlayer = UTIL_FindEntityByClassname( pPlayer, "player" );
@@ -644,7 +727,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 	{
 		CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
 
-		if ( pPlayer->pev->flags != FL_DORMANT && player->m_iTeam != TEAM_UNASSIGNED )
+		if ( pPlayer->pev->flags != FL_DORMANT && player->m_iTeam != TEAM_UNASSIGNED && player->m_iTeam != TEAM_SPECTATOR )	// Counter-Strike 1.1: nor the spectators
 		{
 			switch ( player->m_iTeam )
 			{
@@ -680,11 +763,11 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 
 	if ( !m_iNumSpawnableTerrorist || !m_iNumSpawnableCT )
 	{
-		UTIL_ClientPrintAll( HUD_PRINTCONSOLE, "Scoring will not start until both teams have players.\n" );
+		UTIL_ClientPrintAll( HUD_PRINTCONSOLE, "#Game_scoring" );	// Counter-Strike 1.1: a title (was "Scoring will not start until both teams have players.\n")
 
 		if ( !m_fGameCommenced )
 		{
-			UTIL_LogPrintf( "*** First player has joined the server. Game Commencing! ***\n" );
+			UTIL_LogPrintf( "World triggered \"Game_Commencing\"\n" );	// (1.0b: "*** First player has joined the server. Game Commencing! ***\n")
 			TerminateRound( 0, 3 );
 			m_fGameCommenced = true;
 			return;
@@ -710,7 +793,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 				UpdateTeamScores();
 			}
 
-			EndRoundMessage( "#VIP_Escaped" );
+			EndRoundMessage( "#VIP_Escaped", 2 );
 
 			TerminateRound( 5, 1 );
 			return;
@@ -726,7 +809,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 				UpdateTeamScores();
 			}
 
-			EndRoundMessage( "#VIP_Assasinated" );
+			EndRoundMessage( "#VIP_Assassinated", 3 );
 
 			TerminateRound( 5, 2 );
 			return;
@@ -752,7 +835,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 				UpdateTeamScores();
 			}
 
-			EndRoundMessage( "#Terrorists_Escaped" );
+			EndRoundMessage( "#Terrorists_Escaped", 4 );
 
 			TerminateRound( 5, 2 );
 			return;
@@ -768,7 +851,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 				UpdateTeamScores();
 			}
 
-			EndRoundMessage( "#CTs_PreventEscape" );
+			EndRoundMessage( "#CTs_PreventEscape", 5 );
 
 			TerminateRound( 5, 1 );
 			return;
@@ -787,7 +870,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 			UpdateTeamScores();
 		}
 
-		EndRoundMessage( "#Target_Bombed" );
+		EndRoundMessage( "#Target_Bombed", 1 );
 
 		TerminateRound( 5, 2 );
 		return;
@@ -804,7 +887,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 			UpdateTeamScores();
 		}
 
-		EndRoundMessage( "#Bomb_Defused" );
+		EndRoundMessage( "#Bomb_Defused", 7 );
 
 		TerminateRound( 5, 1 );
 		return;
@@ -844,7 +927,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 			UpdateTeamScores();
 		}
 
-		EndRoundMessage( "#CTs_Win" );
+		EndRoundMessage( "#CTs_Win", 8 );
 
 		TerminateRound( 5, 1 );
 		return;
@@ -864,14 +947,14 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 			UpdateTeamScores();
 		}
 
-		EndRoundMessage( "#Terrorists_Win" );
+		EndRoundMessage( "#Terrorists_Win", 9 );
 
 		TerminateRound( 5, 2 );
 		return;
 	}
 	else if ( NumAliveCT == 0 && NumAliveTerrorist == 0 )
 	{
-		EndRoundMessage( "#Round_Draw" );
+		EndRoundMessage( "#Round_Draw", 10 );
 		Broadcast( "rounddraw" );
 		TerminateRound( 5, 3 );
 		return;
@@ -905,7 +988,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 				UpdateTeamScores();
 			}
 
-			EndRoundMessage( "#All_Hostages_Rescued" );
+			EndRoundMessage( "#All_Hostages_Rescued", 11 );
 
 			TerminateRound( 5, 1 );
 		}
@@ -1087,10 +1170,35 @@ void CHalfLifeMultiplay::RestartRound( void )
 		// (Beta 7.0 set it back to m_iMaxMapTime, the map's first), the rounds
 		// are counted from zero and mp_maxrounds is read. Counter-Strike 1.0b:
 		// the cvar is read by name, and the time added to it is not cut to
-		// whole minutes (1.0: timelimit.value += (int)( gpGlobals->time / 60 ))
-		timelimit.value = ( CVAR_GET_FLOAT( "mp_timelimit" ) * 60 + gpGlobals->time ) / 60;
+		// whole minutes (1.0: timelimit.value += (int)( gpGlobals->time / 60 )).
+		// Counter-Strike 1.1: the cvar is left alone (a negative one set to 0);
+		// the time of the reset is kept and the limit's end worked out for
+		// client.cpp's timeleft command (Think does the same every frame);
+		// mp_maxrounds and mp_winlimit are read as the constructor reads them
+		if ( CVAR_GET_FLOAT( "mp_timelimit" ) < 0 )
+			CVAR_SET_FLOAT( "mp_timelimit", 0 );
+
+		g_flResetTime = gpGlobals->time;
+
+		if ( timelimit.value != 0 )
+			g_flTimeLimit = gpGlobals->time + CVAR_GET_FLOAT( "mp_timelimit" ) * 60;
+
 		m_iTotalRoundsPlayed = 0;
 		m_iMaxRounds = (int)CVAR_GET_FLOAT( "mp_maxrounds" );
+
+		if ( m_iMaxRounds < 0 )
+		{
+			m_iMaxRounds = 0;
+			CVAR_SET_FLOAT( "mp_maxrounds", 0 );
+		}
+
+		m_iMaxRoundsWon = (int)CVAR_GET_FLOAT( "mp_winlimit" );
+
+		if ( m_iMaxRoundsWon < 0 )
+		{
+			m_iMaxRoundsWon = 0;
+			CVAR_SET_FLOAT( "mp_winlimit", 0 );
+		}
 
 		m_iNumTerroristWins = 0;
 		m_iNumCTWins = 0;
@@ -1115,7 +1223,7 @@ void CHalfLifeMultiplay::RestartRound( void )
 	// Beta 5.0: the cvars as the constructor reads them; the idle limit from the clamped round time
 	ReadMultiplayCvars( this );
 
-	m_flMaxIdlePeriod = m_iRoundTime * 120;
+	m_flMaxIdlePeriod = m_iRoundTime * 2;	// (Counter-Strike 1.1: the round time is in seconds)
 	m_iRoundTimeSecs = m_iFreezeTime;
 
 	// Beta 6.0: the map's info_map_parameters say who may buy and the bomb radius
@@ -1279,7 +1387,7 @@ void CHalfLifeMultiplay::RestartRound( void )
 		{
 			CBasePlayer *player = GetClassPtr( (CBasePlayer *)pPlayer->pev );
 
-			if ( player->m_iTeam != TEAM_UNASSIGNED )
+			if ( player->m_iTeam != TEAM_UNASSIGNED && player->m_iTeam != TEAM_SPECTATOR )	// (Counter-Strike 1.1: nor the spectators)
 			{
 				if ( player->m_bHasC4 == true )
 					player->DropPlayerItem( "weapon_c4" );
@@ -1313,6 +1421,7 @@ void CHalfLifeMultiplay::RestartRound( void )
 		GiveC4();
 
 	m_flIntermissionEndTime = 0;
+	m_flIntermissionStartTime = 0;	// Counter-Strike 1.1
 	m_flRestartRoundTime = 0;
 	m_iAccountCT = 0;
 	m_iAccountTerrorist = 0;
@@ -1327,6 +1436,8 @@ void CHalfLifeMultiplay::RestartRound( void )
 
 // longest the intermission can last, in seconds
 #define MAX_INTERMISSION_TIME		120
+
+extern cvar_t mp_chattime;	// (SDK 2.2's line; Counter-Strike 1.1)
 
 //=========================================================
 // TeamFull - Beta 5.0 (leak): a team has as many players as
@@ -1360,14 +1471,15 @@ BOOL CHalfLifeMultiplay::TeamStacked( int newTeam_id, int curTeam_id )
 
 	switch ( newTeam_id )
 	{
+	// (Counter-Strike 1.1: a spectator leaves no team either)
 	case TEAM_TERRORIST:
-		if ( curTeam_id != TEAM_UNASSIGNED )
+		if ( curTeam_id != TEAM_UNASSIGNED && curTeam_id != TEAM_SPECTATOR )
 			return ( m_iNumTerrorist + 1 ) > ( m_iLimitTeams + m_iNumCT - 1 );
 		else
 			return ( m_iNumTerrorist + 1 ) > ( m_iLimitTeams + m_iNumCT );
 
 	case TEAM_CT:
-		if ( curTeam_id != TEAM_UNASSIGNED )
+		if ( curTeam_id != TEAM_UNASSIGNED && curTeam_id != TEAM_SPECTATOR )
 			return ( m_iNumCT + 1 ) > ( m_iLimitTeams + m_iNumTerrorist - 1 );
 		else
 			return ( m_iNumCT + 1 ) > ( m_iLimitTeams + m_iNumTerrorist );
@@ -1432,7 +1544,6 @@ bool CHalfLifeMultiplay::IsVIPQueueEmpty( void )
 //=========================================================
 bool CHalfLifeMultiplay::AddToVIPQueue( CBasePlayer *toAdd )
 {
-	char text[256];	// name ours
 	int i;
 
 	IsVIPQueueEmpty();
@@ -1444,8 +1555,8 @@ bool CHalfLifeMultiplay::AddToVIPQueue( CBasePlayer *toAdd )
 	{
 		if ( m_pVIPQueue[i] == toAdd )
 		{
-			sprintf( text, "You are already in position %i of 5\n", i + 1 );
-			ClientPrint( toAdd->pev, HUD_PRINTCENTER, text );
+			// Counter-Strike 1.1: titles of the client (1.0b: "You are already in position %i of 5\n")
+			ClientPrint( toAdd->pev, HUD_PRINTCENTER, "#Game_in_position", UTIL_dtos1( i + 1 ) );
 			return false;
 		}
 	}
@@ -1457,8 +1568,7 @@ bool CHalfLifeMultiplay::AddToVIPQueue( CBasePlayer *toAdd )
 			m_pVIPQueue[i] = toAdd;
 			StackVIPQueue();
 
-			sprintf( text, "You have been added to position %i of 5\n", i + 1 );
-			ClientPrint( toAdd->pev, HUD_PRINTCENTER, text );
+			ClientPrint( toAdd->pev, HUD_PRINTCENTER, "#Game_added_position", UTIL_dtos1( i + 1 ) );	// (1.0b: "You have been added to position %i of 5\n")
 			return true;
 		}
 	}
@@ -1615,32 +1725,73 @@ void CHalfLifeMultiplay :: Think ( void )
 
 	if ( g_fGameOver )   // someone else quit the game already
 	{
+		// Counter-Strike 1.1 (SDK 2.2's text, the start time a member here): the
+		// intermission lasts mp_chattime seconds, 10 to 120
+		// bounds check
+		int time = (int)CVAR_GET_FLOAT( "mp_chattime" );
+		if ( time < 10 )
+			CVAR_SET_STRING( "mp_chattime", "10" );
+		else if ( time > MAX_INTERMISSION_TIME )
+			CVAR_SET_STRING( "mp_chattime", UTIL_dtos1( MAX_INTERMISSION_TIME ) );
+
+		m_flIntermissionEndTime = m_flIntermissionStartTime + mp_chattime.value;
+
+		// check to see if we should change levels now
 		if ( m_flIntermissionEndTime < gpGlobals->time )
 		{
 			if ( m_iEndIntermissionButtonHit  // check that someone has pressed a key, or the max intermission time is over
-				|| ((m_flIntermissionEndTime + MAX_INTERMISSION_TIME) < gpGlobals->time) ) 
+				|| ( ( m_flIntermissionStartTime + MAX_INTERMISSION_TIME ) < gpGlobals->time) ) 
 				ChangeLevel(); // intermission is over
 		}
 		return;
 	}
 
-	float flTimeLimit = timelimit.value * 60;
+	// Counter-Strike 1.1: the time limit counts from the last complete restart
+	// (g_flResetTime; client.cpp's timeleft command reads g_flTimeLimit) and no
+	// longer gives way to mp_maxrounds; a negative one is set to 0. The map also
+	// ends when a team has won mp_winlimit rounds. (1.0b: with mp_maxrounds set
+	// the time limit did not count; no console line for the time limit)
+	float fTimeLimit = CVAR_GET_FLOAT( "mp_timelimit" );
 
-	// Beta 7.1: with mp_maxrounds set, the map ends after so many rounds
-	// and the time limit does not count
-	if ( m_iMaxRounds == 0 )
+	if ( fTimeLimit < 0 )
 	{
-		if ( flTimeLimit != 0 && gpGlobals->time >= flTimeLimit )
+		CVAR_SET_FLOAT( "mp_timelimit", 0 );
+	}
+	else if ( fTimeLimit != 0 )
+	{
+		g_flTimeLimit = g_flResetTime + fTimeLimit * 60;
+
+		if ( gpGlobals->time >= g_flTimeLimit )
 		{
+			ALERT( at_console, "Changing maps because time limit has been met\n" );
 			GoToIntermission();
 			return;
 		}
 	}
-	else if ( m_iTotalRoundsPlayed >= m_iMaxRounds )
+
+	// Beta 7.1: with mp_maxrounds set, the map ends after so many rounds
+	if ( m_iMaxRounds != 0 && m_iTotalRoundsPlayed >= m_iMaxRounds )
 	{
 		ALERT( at_console, "Changing maps due to maximum rounds have been met\n" );	// Counter-Strike 1.0
 		GoToIntermission();
 		return;
+	}
+
+	if ( m_iMaxRoundsWon != 0 && ( m_iNumCTWins >= m_iMaxRoundsWon || m_iNumTerroristWins >= m_iMaxRoundsWon ) )
+	{
+		ALERT( at_console, "Changing maps...one team has won the specified number of rounds\n" );
+		GoToIntermission();
+		return;
+	}
+
+	// Counter-Strike 1.1: the clients are told when allow_spectators changes
+	if ( m_iStoredSpectValue != allow_spectators.value )
+	{
+		m_iStoredSpectValue = (int)allow_spectators.value;
+
+		MESSAGE_BEGIN( MSG_ALL, gmsgAllowSpec );
+			WRITE_BYTE( (int)allow_spectators.value );
+		MESSAGE_END();
 	}
 
 	if ( IsFreezePeriod() )
@@ -1651,8 +1802,10 @@ void CHalfLifeMultiplay :: Think ( void )
 		// team (heard by his team), the escape and assassination maps' own
 		if ( TimeRemaining() <= 0 )
 		{
-			char CT_sentence[40];	// names ours
+			char CT_sentence[40];	// (1.6's names)
 			char T_sentence[40];
+
+			UTIL_LogPrintf( "World triggered \"Round_Start\"\n" );	// Counter-Strike 1.1
 
 			m_bFreezePeriod = FALSE;
 
@@ -1688,16 +1841,17 @@ void CHalfLifeMultiplay :: Think ( void )
 			}
 
 			m_flRoundStartTime = gpGlobals->time;
-			m_iRoundTimeSecs = m_iRoundTime * 60;
+			m_iRoundTimeSecs = m_iRoundTime;	// (Counter-Strike 1.1: in seconds already)
 
-			bool bCTPlayed = false;	// names ours
+			bool bCTPlayed = false;	// (1.6's names)
 			bool bTPlayed = false;
 
 			for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 			{
 				CBasePlayer *plr = (CBasePlayer *)UTIL_PlayerByIndex( i );
 
-				if ( plr && plr->pev->flags != FL_DORMANT && plr->m_iJoiningState == JOIN_DONE )
+				// (Counter-Strike 1.1: not the spectators)
+				if ( plr && plr->pev->flags != FL_DORMANT && plr->m_iJoiningState == JOIN_DONE && plr->m_iTeam != TEAM_SPECTATOR )
 				{
 					if ( plr->m_iTeam == TEAM_CT && !bCTPlayed )
 					{
@@ -1734,7 +1888,7 @@ void CHalfLifeMultiplay :: Think ( void )
 			TerminateRound( 5, 1 );
 
 			m_iNumCTWins++;
-			EndRoundMessage( "#Target_Saved" );
+			EndRoundMessage( "#Target_Saved", 12 );
 			UpdateTeamScores();
 		}
 		else if ( UTIL_FindEntityByClassname( NULL, "hostage_entity" ) != NULL )
@@ -1744,7 +1898,7 @@ void CHalfLifeMultiplay :: Think ( void )
 			TerminateRound( 5, 2 );
 
 			m_iNumTerroristWins++;
-			EndRoundMessage( "#Hostages_Not_Rescued" );
+			EndRoundMessage( "#Hostages_Not_Rescued", 13 );
 			UpdateTeamScores();
 		}
 		else if ( m_bMapHasEscapeZone == true )
@@ -1753,7 +1907,7 @@ void CHalfLifeMultiplay :: Think ( void )
 			TerminateRound( 5, 1 );
 
 			m_iNumCTWins++;
-			EndRoundMessage( "#Terrorists_Not_Escaped" );
+			EndRoundMessage( "#Terrorists_Not_Escaped", 14 );
 			UpdateTeamScores();
 		}
 		else if ( m_iMapHasVIPSafetyZone == 1 )
@@ -1763,7 +1917,7 @@ void CHalfLifeMultiplay :: Think ( void )
 			TerminateRound( 5, 2 );
 
 			m_iNumTerroristWins++;
-			EndRoundMessage( "#VIP_Not_Escaped" );
+			EndRoundMessage( "#VIP_Not_Escaped", 15 );
 			UpdateTeamScores();
 		}
 
@@ -1800,27 +1954,31 @@ void CHalfLifeMultiplay :: Think ( void )
 
 	// Beta 5.0 (leak): sv_restartround N restarts the round in N seconds
 	// (at most 10), the scores zeroed. Beta 5.0: "The game will restart in N
-	// SECOND(S)", on the screen and in every console
+	// SECOND(S)", on the screen and in every console.
+	// Counter-Strike 1.1: the client's title "#Game_will_restart_in" with the
+	// number and the unit; the restart and the teams' scores go to the log
+	// (1.0b sent the text through EndRoundMessage)
 	if ( gpGlobals->time > m_flNextRestartCheck )
 	{
-		int iRestartDelay = (int)CVAR_GET_FLOAT( "sv_restartround" );	// name ours
+		int iRestartDelay = (int)CVAR_GET_FLOAT( "sv_restartround" );	// (1.6's name)
 
 		if ( iRestartDelay > 0 )
 		{
-			const char *szUnit;	// name ours
-			char *szMessage;	// name ours
-
 			if ( iRestartDelay > 10 )
 				iRestartDelay = 10;
 
-			if ( iRestartDelay == 1 )
-				szUnit = "SECOND";
-			else
-				szUnit = "SECONDS";
+			UTIL_LogPrintf( "World triggered \"Restart_Round_(%i_%s)\"\n", iRestartDelay, ( iRestartDelay == 1 ) ? "second" : "seconds" );
 
-			szMessage = UTIL_VarArgs( "The game will restart in %i %s\n", iRestartDelay, szUnit );
-			EndRoundMessage( szMessage );
-			UTIL_ClientPrintAll( HUD_PRINTCONSOLE, szMessage );
+			CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// (1.6's name)
+
+			if ( mp )
+			{
+				UTIL_LogPrintf( "Team \"CT\" scored \"%i\" with \"%i\" players\n", mp->m_iNumCTWins, mp->m_iNumCT );
+				UTIL_LogPrintf( "Team \"TERRORIST\" scored \"%i\" with \"%i\" players\n", mp->m_iNumTerroristWins, mp->m_iNumTerrorist );
+			}
+
+			UTIL_ClientPrintAll( HUD_PRINTCENTER, "#Game_will_restart_in", UTIL_dtos1( iRestartDelay ), ( iRestartDelay == 1 ) ? "SECOND" : "SECONDS" );
+			UTIL_ClientPrintAll( HUD_PRINTCONSOLE, "#Game_will_restart_in", UTIL_dtos1( iRestartDelay ), ( iRestartDelay == 1 ) ? "SECOND" : "SECONDS" );
 			m_flRestartRoundTime = gpGlobals->time + iRestartDelay;
 			m_fCompleteReset = true;
 			CVAR_SET_FLOAT( "sv_restartround", 0 );
@@ -1839,9 +1997,24 @@ void CHalfLifeMultiplay :: Think ( void )
 			CVAR_SET_FLOAT( "sv_stopspeed", 75 );
 
 		m_iMaxRounds = (int)CVAR_GET_FLOAT( "mp_maxrounds" );	// Beta 7.1
+
+		// Counter-Strike 1.1: as the constructor
+		if ( m_iMaxRounds < 0 )
+		{
+			m_iMaxRounds = 0;
+			CVAR_SET_FLOAT( "mp_maxrounds", 0 );
+		}
+
+		m_iMaxRoundsWon = (int)CVAR_GET_FLOAT( "mp_winlimit" );
+
+		if ( m_iMaxRoundsWon < 0 )
+		{
+			m_iMaxRoundsWon = 0;
+			CVAR_SET_FLOAT( "mp_winlimit", 0 );
+		}
 	}
 
-	// sic: 154 empty statements (Counter-Strike 1.0; Beta 7.1: 116), a stand-in for intermediate code the image
+	// sic: 122 empty statements (Counter-Strike 1.1; 1.0 and 1.0b: 154; Beta 7.1: 116), a stand-in for intermediate code the image
 	// cannot give. VC6 places the inline functions of gamerules.h among this
 	// file's own functions by the intermediate code in front of each. Beta 7.1's
 	// multiplay_gamerules.obj (the file writing its own .pch) has GetTeamID ahead
@@ -1860,38 +2033,10 @@ void CHalfLifeMultiplay :: Think ( void )
 	// not (698 to 947 bytes of intermediate code more before GetNextBestWeapon
 	// than the text gives, by the offsets; with trains.h behind gamerules.h it
 	// would be 56 to 305).
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
-	;
+	// Counter-Strike 1.1 (the same state; Think and the functions before it are
+	// longer): retail's object has ShouldAutoAim, IsMultiplayer, ClientCommand,
+	// IsDeathmatch, IsCoOp in that order ahead of FShouldSwitchWeapon and
+	// GetTeamIndex behind it; 117 to 126 statements fit, 116 and 127 do not.
 	;
 	;
 	;
@@ -2155,7 +2300,8 @@ void CHalfLifeMultiplay :: UpdateGameMode( CBasePlayer *pPlayer )
 void CHalfLifeMultiplay :: InitHUD( CBasePlayer *pl )
 {
 	// Beta 5.0 (leak): no "has joined the game" for the others any more
-	UTIL_LogPrintf( "\"%s<%i>\" has entered the game\n",  STRING( pl->pev->netname ), GETPLAYERUSERID( pl->edict() ) );
+	// Counter-Strike 1.1: the standard log format's line, with the WON id and no team yet (1.0b: "\"%s<%i>\" has entered the game\n")
+	UTIL_LogPrintf( "\"%s<%i><%u><>\" entered the game\n",  STRING( pl->pev->netname ), GETPLAYERUSERID( pl->edict() ), GETPLAYERWONID( pl->edict() ) );
 
 	UpdateGameMode( pl );
 
@@ -2200,6 +2346,11 @@ void CHalfLifeMultiplay :: InitHUD( CBasePlayer *pl )
 		WRITE_SHORT( m_iNumCTWins );
 	MESSAGE_END();
 
+	// Counter-Strike 1.1: whether the team menu offers the spectators
+	MESSAGE_BEGIN( MSG_ONE, gmsgAllowSpec, NULL, pl->edict() );
+		WRITE_BYTE( (int)allow_spectators.value );
+	MESSAGE_END();
+
 	if ( g_fGameOver )
 	{
 		MESSAGE_BEGIN( MSG_ONE, SVC_INTERMISSION, NULL, pl->edict() );
@@ -2221,6 +2372,8 @@ void CHalfLifeMultiplay :: InitHUD( CBasePlayer *pl )
 					WRITE_STRING( "CT" );
 				else if ( plr->m_iTeam == TEAM_TERRORIST )
 					WRITE_STRING( "TERRORIST" );
+				else if ( plr->m_iTeam == TEAM_SPECTATOR )	// Counter-Strike 1.1
+					WRITE_STRING( "SPECTATOR" );
 				else
 					WRITE_STRING( "UNASSIGNED" );
 			MESSAGE_END();
@@ -2262,7 +2415,10 @@ void CHalfLifeMultiplay :: ClientDisconnected( edict_t *pClient )
 				m_iMapVotes[ pPlayer->m_iMapVote - 1 ]--;
 
 			FireTargets( "game_playerleave", pPlayer, pPlayer, USE_TOGGLE, 0 );
-			UTIL_LogPrintf( "\"%s<%i>\" disconnected\n",  STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ) );
+
+			// Counter-Strike 1.1: with the WON id and the team (team is 1.6's name)
+			char *team = GetTeam( pPlayer->m_iTeam );
+			UTIL_LogPrintf( "\"%s<%i><%u><%s>\" disconnected\n",  STRING( pPlayer->pev->netname ), GETPLAYERUSERID( pPlayer->edict() ), GETPLAYERWONID( pPlayer->edict() ), team );
 
 			pPlayer->RemoveAllItems( TRUE );// destroy all of the players weapons and items
 
@@ -2352,7 +2508,13 @@ void CHalfLifeMultiplay :: PlayerThink( CBasePlayer *pPlayer )
 	// Beta 5.0 (leak): a joining player gets the team menu
 	if ( pPlayer->m_iMenu != Menu_ChooseTeam && pPlayer->m_iJoiningState == JOIN_TEAM_MENU )
 	{
-		ShowVGUIMenu( pPlayer, 2, 0x13, "#Team_Select" );	// Beta 5.0: keys 1, 2 and 5 (the leak: 1 to 3); Beta 7.0: VGUI menu 2
+		// Beta 5.0: keys 1, 2 and 5 (the leak: 1 to 3); Beta 7.0: VGUI menu 2.
+		// Counter-Strike 1.1: key 6, the spectators, with allow_spectators
+		if ( allow_spectators.value != 0 )
+			ShowVGUIMenu( pPlayer, 2, 0x33, "#Team_Select_Spect" );
+		else
+			ShowVGUIMenu( pPlayer, 2, 0x13, "#Team_Select" );
+
 		pPlayer->m_iMenu = Menu_ChooseTeam;
 		pPlayer->m_iJoiningState = JOIN_CHOOSING;
 	}
@@ -2485,8 +2647,8 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 			pKillerPlayer->m_iTeamKills++;
 			pKillerPlayer->m_bJustKilledTeammate = true;	// Beta 6.1: he sits the next round out (RoundRespawn)
 			ClientPrint( pKillerPlayer->pev, HUD_PRINTCENTER, "#Killed_Teammate" );
-			UTIL_LogPrintf( "%s killed a teammate\n", STRING( pKillerPlayer->pev->netname ) );	// Beta 6.6
-			ClientPrint( pKillerPlayer->pev, HUD_PRINTCONSOLE, UTIL_VarArgs( "Teammate kills: %i of 3\n", pKillerPlayer->m_iTeamKills ) );
+			// (Counter-Strike 1.1: Beta 6.6's log line "%s killed a teammate\n" is gone; the count is a title, 1.0b: "Teammate kills: %i of 3\n")
+			ClientPrint( pKillerPlayer->pev, HUD_PRINTCONSOLE, "#Game_teammate_kills", UTIL_dtos1( pKillerPlayer->m_iTeamKills ) );
 
 			if ( pKillerPlayer->m_iTeamKills == 3 && CVAR_GET_FLOAT( "mp_autokick" ) != 0 )
 			{
@@ -2500,7 +2662,7 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 			if ( !( pKillerPlayer->m_flDisplayHistory & ( 1 << 10 ) ) )	// the team kill hint
 			{
 				pKillerPlayer->m_flDisplayHistory |= ( 1 << 10 );
-				pKillerPlayer->HintMessage( "Careful!\nKilling teammates will not be tolerated!", FALSE, FALSE );
+				pKillerPlayer->HintMessage( "#Hint_careful_around_teammates", FALSE, FALSE );	// Counter-Strike 1.1: the hints are titles
 			}
 		}
 		else
@@ -2512,9 +2674,10 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 			// Beta 6.5: 2,500 for the VIP
 			if ( pVictim->m_bIsVIP == true )
 			{
-				pKillerPlayer->HintMessage( "You have been rewarded $2500 for killing the VIP!", TRUE, FALSE );
+				pKillerPlayer->HintMessage( "#Hint_reward_for_killing_vip", TRUE, FALSE );
 				pKillerPlayer->AddAccount( 2500, true );
-				UTIL_LogPrintf( "%s assasinated the VIP\n", STRING( pKillerPlayer->pev->netname ) );	// Beta 6.6
+				// Beta 6.6; Counter-Strike 1.1: the standard log format's line (1.0b: "%s assasinated the VIP\n")
+				UTIL_LogPrintf( "\"%s<%i><%u><TERRORIST>\" triggered \"Assassinated_The_VIP\"\n", STRING( pKillerPlayer->pev->netname ), GETPLAYERUSERID( pKillerPlayer->edict() ), GETPLAYERWONID( pKillerPlayer->edict() ) );
 			}
 			else
 				pKillerPlayer->AddAccount( 300, true );
@@ -2522,7 +2685,7 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 			if ( !( pKillerPlayer->m_flDisplayHistory & ( 1 << 11 ) ) )	// the enemy kill hint
 			{
 				pKillerPlayer->m_flDisplayHistory |= ( 1 << 11 );
-				pKillerPlayer->HintMessage( "You killed an Enemy!\nWin the round by eliminating\nthe opposing force.", FALSE, FALSE );
+				pKillerPlayer->HintMessage( "#Hint_win_round_by_killing_enemy", FALSE, FALSE );
 			}
 		}
 		
@@ -2653,33 +2816,50 @@ void CHalfLifeMultiplay::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, 
 	else if ( !strcmp( killer_weapon_name, "gauss" ) )
 		killer_weapon_name = tau;
 
-	// Beta 6.5: the log names the victim's team
+	// Beta 6.5: the log names the victim's team.
+	// Counter-Strike 1.1: the standard log format's lines (SDK 2.2's words), with the
+	// WON ids and both teams; who is not a counter-terrorist is logged as a terrorist.
+	// The locals' names are Counter-Strike 1.6's
 	if ( pVictim->pev == pKiller )  
 	{  // killed self
-		if ( pVictim->m_iTeam == TEAM_CT )
-			UTIL_LogPrintf( "\"[CT] %s<%i>\" killed self with %s\n",  STRING( pVictim->pev->netname ), GETPLAYERUSERID( pVictim->edict() ), killer_weapon_name );
-		else
-			UTIL_LogPrintf( "\"[TERRORIST] %s<%i>\" killed self with %s\n",  STRING( pVictim->pev->netname ), GETPLAYERUSERID( pVictim->edict() ), killer_weapon_name );
+		char *team = ( pVictim->m_iTeam == TEAM_CT ) ? "CT" : "TERRORIST";
+
+		UTIL_LogPrintf( "\"%s<%i><%u><%s>\" committed suicide with \"%s\"\n",  
+			STRING( pVictim->pev->netname ), 
+			GETPLAYERUSERID( pVictim->edict() ),
+			GETPLAYERWONID( pVictim->edict() ),
+			team,
+			killer_weapon_name );
 	}
 	else if ( pKiller->flags & FL_CLIENT )
 	{
-		char team[20];	// (Counter-Strike 1.6 has a char *team here; the size is the frame's)
+		CBasePlayer *pPlayer = (CBasePlayer *)CBaseEntity::Instance( pKiller );
 
-		if ( pVictim->m_iTeam == TEAM_CT )
-			strcpy( team, "[CT]" );
-		else
-			strcpy( team, "[TERRORIST]" );
+		char *VictimTeam = ( pVictim->m_iTeam == TEAM_CT ) ? "CT" : "TERRORIST";
+		char *KillerTeam = ( pPlayer->m_iTeam == TEAM_CT ) ? "CT" : "TERRORIST";
 
-		UTIL_LogPrintf( "\"%s<%i>\" killed \"%s %s<%i>\" with %s\n",  STRING( pKiller->netname ),
+		UTIL_LogPrintf( "\"%s<%i><%u><%s>\" killed \"%s<%i><%u><%s>\" with \"%s\"\n",  
+			STRING( pKiller->netname ),
 			GETPLAYERUSERID( ENT(pKiller) ),
-			team,
+			GETPLAYERWONID( ENT(pKiller) ),
+			KillerTeam,
 			STRING( pVictim->pev->netname ),
 			GETPLAYERUSERID( pVictim->edict() ),
+			GETPLAYERWONID( pVictim->edict() ),
+			VictimTeam,
 			killer_weapon_name );
 	}
 	else
-	{  // killed by the world
-		UTIL_LogPrintf( "\"%s<%i>\" killed by world with %s\n",  STRING( pVictim->pev->netname ), GETPLAYERUSERID( pVictim->edict() ), killer_weapon_name );
+	{ 
+		// killed by the world
+		char *team = ( pVictim->m_iTeam == TEAM_CT ) ? "CT" : "TERRORIST";
+
+		UTIL_LogPrintf( "\"%s<%i><%u><%s>\" committed suicide with \"%s\" (world)\n",
+			STRING( pVictim->pev->netname ), 
+			GETPLAYERUSERID( pVictim->edict() ), 
+			GETPLAYERWONID( pVictim->edict() ),
+			team,
+			killer_weapon_name );
 	}
 
 	CheckWinConditions();
@@ -2983,10 +3163,29 @@ void CHalfLifeMultiplay :: GoToIntermission( void )
 	if ( g_fGameOver )
 		return;  // intermission has already been triggered, so ignore.
 
+	// Counter-Strike 1.1: the teams' scores go to the log (mp is 1.6's name)
+	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;
+
+	if ( mp )
+	{
+		UTIL_LogPrintf( "Team \"CT\" scored \"%i\" with \"%i\" players\n", mp->m_iNumCTWins, mp->m_iNumCT );
+		UTIL_LogPrintf( "Team \"TERRORIST\" scored \"%i\" with \"%i\" players\n", mp->m_iNumTerroristWins, mp->m_iNumTerrorist );
+	}
+
 	MESSAGE_BEGIN(MSG_ALL, SVC_INTERMISSION);
 	MESSAGE_END();
 
-	m_flIntermissionEndTime = gpGlobals->time + INTERMISSION_TIME;
+	// (SDK 2.2's text, the start time a member here; 1.0b: gpGlobals->time + INTERMISSION_TIME, 6 seconds)
+	// bounds check
+	int time = (int)CVAR_GET_FLOAT( "mp_chattime" );
+	if ( time < 10 )
+		CVAR_SET_STRING( "mp_chattime", "10" );
+	else if ( time > MAX_INTERMISSION_TIME )
+		CVAR_SET_STRING( "mp_chattime", UTIL_dtos1( MAX_INTERMISSION_TIME ) );
+
+	m_flIntermissionEndTime = gpGlobals->time + ( (int)mp_chattime.value );
+	m_flIntermissionStartTime = gpGlobals->time;
+
 	g_fGameOver = TRUE;
 	m_iEndIntermissionButtonHit = FALSE;
 
@@ -3362,8 +3561,7 @@ void CHalfLifeMultiplay::DisplayMaps( CBasePlayer *player, int iVote )
 	char *mapcfile = (char*)CVAR_GET_STRING( "mapcyclefile" );
 	mapcycle_item_s *item;
 	int iCount = 0;
-	char szNewMap[40];	// (1.6: char *pszNewMap); the sizes are the frame's
-	char text[60];		// name ours
+	char szNewMap[40];	// (1.6: char *pszNewMap); the size is the frame's
 
 	DestroyMapCycle( &mapcycle2 );
 	ReloadMapCycleFile( mapcfile, &mapcycle2 );
@@ -3383,13 +3581,18 @@ void CHalfLifeMultiplay::DisplayMaps( CBasePlayer *player, int iVote )
 
 		iCount++;
 
+		// Counter-Strike 1.1: titles of the client with the number, the map and its
+		// votes (1.0b: "%d :  %s (%i vote)\n" and "... votes)\n" through sprintf)
 		if ( m_iMapVotes[iCount - 1] == 1 )
-			sprintf( text, "%d :  %s (%i vote)\n", iCount, item->mapname, m_iMapVotes[iCount - 1] );
+		{
+			if ( player )
+				ClientPrint( player->pev, HUD_PRINTCONSOLE, "#Vote", UTIL_dtos1( iCount ), item->mapname, UTIL_dtos2( m_iMapVotes[iCount - 1] ) );
+		}
 		else
-			sprintf( text, "%d :  %s (%i votes)\n", iCount, item->mapname, m_iMapVotes[iCount - 1] );
-
-		if ( player )
-			ClientPrint( player->pev, HUD_PRINTCONSOLE, text );
+		{
+			if ( player )
+				ClientPrint( player->pev, HUD_PRINTCONSOLE, "#Votes", UTIL_dtos1( iCount ), item->mapname, UTIL_dtos2( m_iMapVotes[iCount - 1] ) );
+		}
 
 		if ( iCount == iVote )
 			strcpy( szNewMap, item->mapname );
@@ -3426,7 +3629,6 @@ void CHalfLifeMultiplay::VoteMap( CBasePlayer *player, int iVote )
 	int iValidVotes;
 	int iRequiredVotes;
 	int iNumPlayers;
-	char text[76];	// name ours; the size is the frame's
 
 	// Beta 6.6: m_iMapVotes has a hundred counts
 	if ( iVote > 99 )
@@ -3479,8 +3681,8 @@ void CHalfLifeMultiplay::VoteMap( CBasePlayer *player, int iVote )
 	else
 	{
 		DisplayMaps( player, 0 );
-		sprintf( text, "\nRequired Number of votes for a new map = %i\n", iRequiredVotes );
-		ClientPrint( player->pev, HUD_PRINTCONSOLE, text );
+		// (Counter-Strike 1.1: a title; 1.0b: "\nRequired Number of votes for a new map = %i\n")
+		ClientPrint( player->pev, HUD_PRINTCONSOLE, "#Game_required_votes", UTIL_dtos1( iRequiredVotes ) );
 	}
 }
 
@@ -3621,14 +3823,14 @@ void CHalfLifeMultiplay :: ChangeLevel( void )
 }
 
 #define MAX_MOTD_CHUNK	  60
-#define MAX_MOTD_LENGTH   (MAX_MOTD_CHUNK * 4)
+#define MAX_MOTD_LENGTH   1536 // (MAX_MOTD_CHUNK * 4)
 
 void CHalfLifeMultiplay :: SendMOTDToClient( edict_t *client )
 {
 	// read from the MOTD.txt file
 	int length, char_count = 0;
 	char *pFileList;
-	char *aFileList = pFileList = (char*)LOAD_FILE_FOR_ME( "motd.txt", &length );
+	char *aFileList = pFileList = (char*)LOAD_FILE_FOR_ME( (char *)CVAR_GET_STRING( "motdfile" ), &length );	// (SDK 2.2's line; 1.0b: "motd.txt")
 
 	// Send the message of the day
 	// read it chunk-by-chunk,  and send it in parts

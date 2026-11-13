@@ -261,6 +261,8 @@ void CHud :: Init( void )
 	// VGUI Menus
 	HOOK_MESSAGE( VGUIMenu );
 
+	CVAR_CREATE( "hud_takesshots", "0", FCVAR_ARCHIVE );		// controls whether or not to automatically take screenshots at the end of a round
+
 	m_iLogo = 0;
 	m_iFOV = 0;
 

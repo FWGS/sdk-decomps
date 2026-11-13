@@ -19,9 +19,7 @@
 
 
 cvar_t	displaysoundlist = {"displaysoundlist","0"};
-cvar_t  mapcyclefile = {"mapcyclefile","mapcycle.txt"};
-cvar_t  servercfgfile = {"servercfgfile","server.cfg"};
-cvar_t  lservercfgfile = {"lservercfgfile","listenserver.cfg"};
+// (Counter-Strike 1.1, as SDK 2.2: mapcyclefile, servercfgfile and lservercfgfile are the engine's)
 
 // multiplayer server rules
 cvar_t	fragsleft	= {"mp_fragsleft","0", FCVAR_SERVER | FCVAR_UNLOGGED };	  // Don't spam console/log files/users with this changing
@@ -41,7 +39,8 @@ cvar_t	flashlight	= {"mp_flashlight","0", FCVAR_SERVER };
 cvar_t	decalfrequency = {"decalfrequency","30", FCVAR_SERVER };
 cvar_t	allowmonsters={"mp_allowmonsters","0", FCVAR_SERVER };
 // Counter-Strike Beta 4.0 and 5.0 (leak) (names from the Linux symbols)
-cvar_t	roundtime	= {"mp_roundtime","5", FCVAR_SERVER };			// minutes, 3 to 9 (CHalfLifeMultiplay)
+cvar_t	roundtime	= {"mp_roundtime","5", FCVAR_SERVER };			// minutes, 3 to 9 (CHalfLifeMultiplay); Counter-Strike 1.1: 1 to 9
+cvar_t	buytime		= {"mp_buytime","1.5", FCVAR_SERVER };			// Counter-Strike 1.1 (Linux symbol): minutes of a round in which the players may buy
 cvar_t	freezetime	= {"mp_freezetime","6", FCVAR_SERVER };			// Beta 5.0 (leak): seconds the players stand still at a round's start, 0 to 15
 cvar_t	c4timer		= {"mp_c4timer","45", FCVAR_SERVER };			// seconds, 10 to 90 (Beta 4.1: 35 by default, Beta 5.0 leak: 45)
 cvar_t	ghostfrequency = {"mp_ghostfrequency","0.1", FCVAR_SERVER };	// Beta 5.0 (leak): how often an observer's view of the other ghosts is updated
@@ -58,6 +57,13 @@ cvar_t	forcechasecam = {"mp_forcechasecam","0", FCVAR_SERVER };	// read by Obser
 cvar_t	mapvoteratio = {"mp_mapvoteratio","0.6", FCVAR_SERVER };	// the share of the players a map needs to be voted in, 0.35 to 1 (CHalfLifeMultiplay::VoteMap)
 // Beta 7.1 (Linux symbol)
 cvar_t	maxrounds	= {"mp_maxrounds","0", FCVAR_SERVER };			// the map changes after so many rounds, 0 = no limit (CHalfLifeMultiplay::RestartRound and Think read it by name)
+// Counter-Strike 1.1 (Linux symbols)
+cvar_t	winlimit	= {"mp_winlimit","0", FCVAR_SERVER };			// the map changes when a team has won so many rounds, 0 = no limit
+cvar_t	fadetoblack	= {"mp_fadetoblack","0", FCVAR_SERVER };
+cvar_t	playerid	= {"mp_playerid","0", FCVAR_SERVER };
+cvar_t	allow_spectators = {"allow_spectators","1.0", FCVAR_SERVER };
+
+cvar_t  mp_chattime = {"mp_chattime","10", FCVAR_SERVER };	// SDK 2.2: seconds of the intermission, 10 to 120
 
 cvar_t 	*g_psv_gravity = NULL;
 cvar_t	*g_psv_aim = NULL;
@@ -475,9 +481,6 @@ void GameDLLInit( void )
 	g_footsteps = CVAR_GET_POINTER( "mp_footsteps" );
 
 	CVAR_REGISTER (&displaysoundlist);
-	CVAR_REGISTER (&mapcyclefile);
-	CVAR_REGISTER (&servercfgfile);
-	CVAR_REGISTER (&lservercfgfile);
 
 	CVAR_REGISTER (&timelimit);
 	CVAR_REGISTER (&friendlyfire);
@@ -485,6 +488,7 @@ void GameDLLInit( void )
 	CVAR_REGISTER (&decalfrequency);
 	CVAR_REGISTER (&allowmonsters);
 	CVAR_REGISTER (&roundtime);
+	CVAR_REGISTER (&buytime);
 	CVAR_REGISTER (&freezetime);
 	CVAR_REGISTER (&c4timer);
 	CVAR_REGISTER (&ghostfrequency);
@@ -499,6 +503,11 @@ void GameDLLInit( void )
 	CVAR_REGISTER (&forcechasecam);
 	CVAR_REGISTER (&mapvoteratio);
 	CVAR_REGISTER (&maxrounds);
+	CVAR_REGISTER (&winlimit);
+	CVAR_REGISTER (&fadetoblack);
+	CVAR_REGISTER (&playerid);
+	CVAR_REGISTER (&allow_spectators);
+	CVAR_REGISTER (&mp_chattime);
 
 	CVAR_REGISTER (&fragsleft);
 	CVAR_REGISTER (&timeleft);

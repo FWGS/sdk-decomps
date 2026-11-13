@@ -413,15 +413,48 @@ int CHudMessage::Draw( float fTime )
 }
 
 
-void CHudMessage::MessageAdd( const char *pName, float time )
+void CHudMessage::MessageAdd( const char *pName, float time, int hintMessage )
 {
 	int i;
+	client_textmessage_t *tempMessage;
 
 	for ( i = 0; i < maxHUDMessages; i++ )
 	{
 		if ( !m_pMessages[i] )
 		{
-			m_pMessages[i] = TextMessageGet( pName );
+			// Trim off a leading # if it's there
+			if ( pName[0] == '#' )
+			{
+				tempMessage = TextMessageGet( pName+1 );
+
+				// a hint message is drawn in the hints' own colours and place, for a time by its length
+				if ( tempMessage && hintMessage )
+				{
+					tempMessage->effect = 2;
+					tempMessage->r1 = 40;
+					tempMessage->g1 = 255;
+					tempMessage->b1 = 40;
+					tempMessage->a1 = 200;
+					tempMessage->r2 = 0;
+					tempMessage->g2 = 255;
+					tempMessage->b2 = 0;
+					tempMessage->a2 = 200;
+					tempMessage->x = -1;		// Centered
+					tempMessage->y = 0.7;
+					tempMessage->fadein = 0.01;
+					tempMessage->fadeout = 0.7;
+					tempMessage->fxtime = 0.07;
+					tempMessage->holdtime = 5;
+
+					tempMessage->holdtime = strlen( tempMessage->pMessage ) / 25;
+					if ( tempMessage->holdtime < 1 )
+						tempMessage->holdtime = 1;
+				}
+			}
+			else
+				tempMessage = TextMessageGet( pName );
+
+			m_pMessages[i] = tempMessage;
 			m_startTime[i] = time;
 			return;
 		}
@@ -434,8 +467,9 @@ int CHudMessage::MsgFunc_HudText( const char *pszName,  int iSize, void *pbuf )
 	BEGIN_READ( pbuf, iSize );
 
 	char *pString = READ_STRING();
+	int hintMessage = READ_BYTE();
 
-	MessageAdd( pString, gHUD.m_flTime );
+	MessageAdd( pString, gHUD.m_flTime, hintMessage );
 	// Remember the time -- to fix up level transitions
 	m_parms.time = gHUD.m_flTime;
 

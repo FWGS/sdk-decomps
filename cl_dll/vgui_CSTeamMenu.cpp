@@ -26,6 +26,8 @@
 #include "cl_util.h"
 #include "vgui_TeamFortressViewport.h"
 
+extern int g_iFreezeTimeOver;
+
 // Team Menu Dimensions
 #define TEAMMENU_TITLE_X				XRES(40)
 #define TEAMMENU_TITLE_Y				YRES(32)
@@ -101,10 +103,10 @@ CCSTeamMenuPanel::CCSTeamMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wi
 	pSchemes->getBgColor( hTeamWindowText, r, g, b, a );
 	m_pBriefing->setBgColor( r, g, b, a );
 
-	m_pBriefing->setText("Map Description not available.");
+	m_pBriefing->setText( gHUD.m_TextMessage.BufferedLocaliseTextString("#Map_descr_not_avail") );
 	
 	// Team Menu buttons
-	for (int i = 1; i <= 5; i++)
+	for (int i = 1; i <= 6; i++)
 	{
 		char sz[256]; 
 
@@ -123,6 +125,13 @@ CCSTeamMenuPanel::CCSTeamMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wi
 			m_pButtons[5]->setText( gHUD.m_TextMessage.BufferedLocaliseTextString("#Team_AutoAssign") );
 			m_pButtons[5]->setVisible( true );
 		}
+		// So does the Spectate button
+		else if (i == 6)
+		{
+			m_pButtons[6]->setBoundKey( '6' );
+			m_pButtons[6]->setText( gHUD.m_TextMessage.BufferedLocaliseTextString("#Menu_Spectate") );
+			m_pButtons[6]->setVisible( true );
+		}
 
 		// Create the Signals
 		sprintf(sz, "slot%d", i);
@@ -138,7 +147,7 @@ CCSTeamMenuPanel::CCSTeamMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wi
 	}
 
 	// Create the Cancel button
-	m_pCancelButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "CANCEL" ), TEAMMENU_TOPLEFT_BUTTON_X, YRES(392) - TEAMMENU_BUTTON_SIZE_Y, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, false );
+	m_pCancelButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Menu_Cancel" ), TEAMMENU_TOPLEFT_BUTTON_X, YRES(392) - TEAMMENU_BUTTON_SIZE_Y, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, false );
 	m_pCancelButton->setParent( this );
 	m_pCancelButton->addActionSignal( new CMenuHandler_TextWindow(HIDE_TEXTWINDOW) );
 	m_pCancelButton->addActionSignal( new CMenuHandler_StringCommandWatch( "slot10", true ) );
@@ -236,11 +245,11 @@ void CCSTeamMenuPanel::Update( void )
 		if (m_pButtons[i])
 		{
 			if ( i == 1 )
-				m_pButtons[i]->setText( "Terrorist Forces" );
+				m_pButtons[i]->setText( gHUD.m_TextMessage.BufferedLocaliseTextString("#Terrorist_Forces") );
 			else if ( i == 2 )
-				m_pButtons[i]->setText( "Counter-Terrorist Forces" );
+				m_pButtons[i]->setText( gHUD.m_TextMessage.BufferedLocaliseTextString("#CT_Forces") );
 			else if ( i == 3 )
-				m_pButtons[i]->setText( "VIP" );
+				m_pButtons[i]->setText( gHUD.m_TextMessage.BufferedLocaliseTextString("#VIP") );
 
 			// bound key replacement
 			char sz[32]; 
@@ -270,6 +279,19 @@ void CCSTeamMenuPanel::Update( void )
 	iYPos += TEAMMENU_BUTTON_SIZE_Y + TEAMMENU_BUTTON_SPACER_Y;
 	m_pButtons[5]->setPos( TEAMMENU_TOPLEFT_BUTTON_X, iYPos );
 
+	// The Spectate button: only when the server allows it and the round has not begun
+	if ( gViewPort->GetAllowSpectators() )
+	{
+		if ( g_iFreezeTimeOver == 0 )
+			m_pButtons[6]->setVisible( true );
+		else
+			m_pButtons[6]->setVisible( false );
+	}
+	else
+	{
+		m_pButtons[6]->setVisible( false );
+	}
+
 	// If the player is already in a team, make the cancel button visible
 	if ( bNoTeam == true )
 		m_pCancelButton->setVisible( false );
@@ -291,7 +313,7 @@ bool CCSTeamMenuPanel::SlotInput( int iSlot )
 	}
 
 	// Otherwise, see if a particular team is selectable
-	if ( (iSlot < 1) || (iSlot > 3) )
+	if ( (iSlot < 1) || (iSlot == 4) || (iSlot > 6) )
 		return false;
 	if ( !m_pButtons[ iSlot ] )
 		return false;
@@ -328,7 +350,7 @@ void CCSTeamMenuPanel::paintBackground()
 void CCSTeamMenuPanel::SetActiveInfo( int iInput )
 {
 	// Remove all the Info panels and bring up the specified one
-	for (int i = 1; i <= 5; i++)
+	for (int i = 1; i <= 6; i++)
 	{
 		m_pButtons[i]->setArmed( false );
 		m_pTeamInfoPanel[i]->setVisible( false );

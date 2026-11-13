@@ -66,7 +66,7 @@ int ScoreColorsBG[5][3] =
 	{ 0, 0, 0 },
 	{ 220, 51, 38 },
 	{ 66, 114, 247 },
-	{ 236, 212, 48 },
+	{ 0, 0, 0 },
 	{ 68, 199, 42 },
 };
 
@@ -75,7 +75,7 @@ int ScoreColorsFG[5][3] =
 	{ 255, 255, 255 },
 	{ 215, 151, 146 },
 	{ 170, 193, 251 },
-	{ 227, 203, 46 },
+	{ 255, 255, 255 },
 	{ 143, 215, 142 },
 };
 
@@ -194,14 +194,17 @@ Panel* ScoreTablePanel::getCellRenderer(int column,int row,bool columnSelected,b
 			if ( m_iIsATeam[row] == TEAM_YES )
 			{
 				if (team_info->players == 1)
-					sprintf(sz, "%s (1 player)", sz );
+					sprintf(sz, "%s %s", sz, CHudTextMessage::BufferedLocaliseTextString( "#Player" ) );
 				else
-					sprintf(sz, "%s (%d players)", sz, team_info->players );
+					sprintf(sz, "%s (%d %s)", sz, team_info->players, CHudTextMessage::BufferedLocaliseTextString( "#Player_plural" ) );
 			}
 			break;
 		case 1:
 			if ( m_iIsATeam[row] == TEAM_YES )
-				sprintf(sz, "WINS = %d",  team_info->frags );
+			{
+				char *pszWins = CHudTextMessage::BufferedLocaliseTextString( "#WINS" );	// name ours
+				sprintf(sz, "%s = %d", pszWins, team_info->frags );
+			}
 			break;
 		case 4:
 			if ( m_iIsATeam[row] == TEAM_YES )
@@ -224,16 +227,16 @@ Panel* ScoreTablePanel::getCellRenderer(int column,int row,bool columnSelected,b
 			if ( g_PlayerExtraInfo[ m_iSortedRows[row] ].dead == true )
 			{
 				m_pLabel->setBgColor( 175, 50, 50, 156 );
-				sprintf(sz, "DEAD");
+				sprintf(sz, CHudTextMessage::BufferedLocaliseTextString( "#DEAD" ) );
 			}
 			else if ( g_PlayerExtraInfo[ m_iSortedRows[row] ].has_c4 == 1 || g_PlayerExtraInfo[ m_iSortedRows[row] ].is_vip == 1 )
 			{
 				m_pLabel->setBgColor( 50, 50, 200, 156 );
 
 				if ( g_PlayerExtraInfo[ m_iSortedRows[row] ].has_c4 == 1 )
-					sprintf(sz, "BOMB");
+					sprintf(sz, CHudTextMessage::BufferedLocaliseTextString( "#BOMB" ) );
 				else
-					sprintf(sz, "VIP");
+					sprintf(sz, CHudTextMessage::BufferedLocaliseTextString( "#VIP" ) );
 			}
 			else
 			{
@@ -267,7 +270,7 @@ ScorePanel::ScorePanel(int x,int y,int wide,int tall) : Panel(x,y,wide,tall)
 	setBorder( new LineBorder( Color(255 * 0.7,170 * 0.7,0,0) ) );
 	setBgColor( 0,0,0, 100 );
 
-	m_pTitleLabel = new Label( "  SCORES", 0,0, wide, SBOARD_TITLE_SIZE_Y );
+	m_pTitleLabel = new Label( CHudTextMessage::BufferedLocaliseTextString( "#SCORES" ), 0,0, wide, SBOARD_TITLE_SIZE_Y );
 	m_pTitleLabel->setBgColor( Scheme::sc_primary2 );
 	m_pTitleLabel->setFgColor( Scheme::sc_primary1 );
 	m_pTitleLabel->setContentAlignment( vgui::Label::a_west );
@@ -352,7 +355,8 @@ void ScorePanel::Update()
 	if (gViewPort->m_szServerName)
 	{
 		char sz[MAX_SERVERNAME_LENGTH + 16];
-		sprintf(sz, "  SCORES: %s", gViewPort->m_szServerName );
+		char *pszScores = CHudTextMessage::BufferedLocaliseTextString( "#SCORES" );	// name ours
+		sprintf(sz, "%s: %s", pszScores, gViewPort->m_szServerName );
 		m_pTitleLabel->setText(sz);
 	}
 

@@ -430,7 +430,11 @@ public:
 	int m_iMaxMapTime;				// 0x244 new in Beta 7.0: mp_timelimit as the constructor found it, put back at a complete restart (1.6's name). Beta 7.1: no function refers to it
 	int m_iMaxRounds;				// 0x248 new in Beta 7.1: mp_maxrounds, read at a complete restart and by Think (1.6's name); Counter-Strike 1.0: the constructor reads it too
 	int m_iTotalRoundsPlayed;		// 0x24c new in Beta 7.1: RestartRound counts the rounds; Think changes the map at m_iMaxRounds (1.6's name)
-	// (Beta 7.1's offsets from here on, Beta 7.0's plus 8; Beta 6.1's in brackets)
+	// Counter-Strike 1.1: two members more here and one behind m_flIntermissionEndTime (the class grows from
+	// 0x284 to 0x290; 1.6's names and order)
+	int m_iMaxRoundsWon;			// 0x250 new in 1.1: mp_winlimit as the constructor and a complete restart read it; Think changes the map when a team has won that many rounds
+	int m_iStoredSpectValue;		// 0x254 new in 1.1: allow_spectators as the constructor found it
+	// (Counter-Strike 1.1's offsets from here on are the comments' plus 8: Beta 7.1's offsets, Beta 7.0's plus 8; Beta 6.1's in brackets)
 	CBasePlayer *m_pCTCommander;	// 0x250 [0xb0] new in Beta 3.0: the counter-terrorists' commander (PickNewCommander)
 	CBasePlayer *m_pTerroristCommander;	// 0x254 [0xb4] the terrorists'
 	CBasePlayer *m_pVIP;			// 0x258 [0xb8] new in Beta 6.0: the VIP (PickNextVIP, MakeVIP)
@@ -454,8 +458,9 @@ public:
 protected:
 	virtual void ChangeLevel( void );	// (Beta 7.0 only: a char *szMap parameter; Linux symbols)
 	virtual void GoToIntermission( void );
-	float m_flIntermissionEndTime;	// 0x270 [0xd0]
-	BOOL m_iEndIntermissionButtonHit;	// 0x274 [0xd4]
+	float m_flIntermissionEndTime;	// 0x270 [0xd0] (Counter-Strike 1.1: 0x278)
+	float m_flIntermissionStartTime;	// 0x27c new in Counter-Strike 1.1: the time of GoToIntermission (1.6's name)
+	BOOL m_iEndIntermissionButtonHit;	// 0x274 [0xd4] (Counter-Strike 1.1: 0x280, and the members behind it the comments' plus 12)
 	void SendMOTDToClient( edict_t *client );
 
 public:

@@ -65,7 +65,7 @@ CBuyMenuPanel::CBuyMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int
 	pSchemes->getBgColor( hTitleScheme, r, g, b, a );
 	pLabel->setBgColor( r, g, b, a );
 	pLabel->setContentAlignment( vgui::Label::a_west );
-	pLabel->setText(gHUD.m_TextMessage.BufferedLocaliseTextString("Select Category of purchase"));
+	pLabel->setText(gHUD.m_TextMessage.BufferedLocaliseTextString("#Title_select_category_of_purchase"));
 
 	// Create the Info Window
 	m_pTeamWindow  = new CTransparentPanel( 255, TEAMMENU_WINDOW_X, TEAMMENU_WINDOW_Y, TEAMMENU_WINDOW_SIZE_X, TEAMMENU_WINDOW_SIZE_Y );
@@ -82,39 +82,39 @@ CBuyMenuPanel::CBuyMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int
 		switch ( i )
 		{
 		case 0:
-			m_pButtons[i] = new CommandButton( "Pistols", TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Pistols" ), TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		case 1:
-			m_pButtons[i] = new CommandButton( "Shotguns", TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Shotguns" ), TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot2" );
 			break;
 		case 2:
-			m_pButtons[i] = new CommandButton( "SMG's", TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#SMGs" ), TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot3" );
 			break;
 		case 3:
-			m_pButtons[i] = new CommandButton( "Rifles", TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Rifles" ), TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot4" );
 			break;
 		case 4:
-			m_pButtons[i] = new CommandButton( "MachineGuns", TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#MachineGuns" ), TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot5" );
 			break;
 		case 5:
-			m_pButtons[i] = new CommandButton( "Prim. Ammo", TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Prim_Ammo" ), TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot6" );
 			break;
 		case 6:
-			m_pButtons[i] = new CommandButton( "Sec. Ammo", TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Sec_Ammo" ), TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot7" );
 			break;
 		case 7:
-			m_pButtons[i] = new CommandButton( "Equipment", TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Equipment" ), TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot8" );
 			break;
 		default:
-			m_pButtons[i] = new CommandButton( "Pistols", TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Pistols" ), TEAMMENU_TOPLEFT_BUTTON_X, iYPos, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		}
@@ -139,7 +139,7 @@ CBuyMenuPanel::CBuyMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int
 	}
 
 	// Create the Cancel button
-	m_pCancelButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "CANCEL" ), TEAMMENU_TOPLEFT_BUTTON_X, YRES(392) - TEAMMENU_BUTTON_SIZE_Y, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, false );
+	m_pCancelButton = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Menu_Cancel" ), TEAMMENU_TOPLEFT_BUTTON_X, YRES(392) - TEAMMENU_BUTTON_SIZE_Y, TEAMMENU_BUTTON_SIZE_X, TEAMMENU_BUTTON_SIZE_Y, false );
 	m_pCancelButton->setParent( this );
 	m_pCancelButton->setBoundKey( '0' );
 	m_pCancelButton->addActionSignal( new CMenuHandler_TextWindow(HIDE_TEXTWINDOW) );
@@ -175,31 +175,31 @@ void CBuyMenuPanel::Update( void )
 			switch ( i )
 			{
 			case 0:
-				m_pTeamInfoPanel[i]->setText( "Buy Pistols" );
+				m_pTeamInfoPanel[i]->setText( CHudTextMessage::BufferedLocaliseTextString( "#Buy_pistols" ) );
 				break;
 			case 1:
-				m_pTeamInfoPanel[i]->setText( "Buy Shotguns" );
+				m_pTeamInfoPanel[i]->setText( CHudTextMessage::BufferedLocaliseTextString( "#Buy_shotguns" ) );
 				break;
 			case 2:
-				m_pTeamInfoPanel[i]->setText( "Buy Sub-Machine Guns" );
+				m_pTeamInfoPanel[i]->setText( CHudTextMessage::BufferedLocaliseTextString( "#Buy_smgs" ) );
 				break;
 			case 3:
-				m_pTeamInfoPanel[i]->setText( "Buy Rifles" );
+				m_pTeamInfoPanel[i]->setText( CHudTextMessage::BufferedLocaliseTextString( "#Buy_rifles" ) );
 				break;
 			case 4:
-				m_pTeamInfoPanel[i]->setText( "Buy Machine Guns" );
+				m_pTeamInfoPanel[i]->setText( CHudTextMessage::BufferedLocaliseTextString( "#Buy_machineguns" ) );
 				break;
 			case 5:
-				m_pTeamInfoPanel[i]->setText( "Buy Primary Ammo" );
+				m_pTeamInfoPanel[i]->setText( CHudTextMessage::BufferedLocaliseTextString( "#Buy_prim_ammo" ) );
 				break;
 			case 6:
-				m_pTeamInfoPanel[i]->setText( "Buy Secondary Ammo" );
+				m_pTeamInfoPanel[i]->setText( CHudTextMessage::BufferedLocaliseTextString( "#Buy_sec_ammo" ) );
 				break;
 			case 7:
-				m_pTeamInfoPanel[i]->setText( "Buy Equipment" );
+				m_pTeamInfoPanel[i]->setText( CHudTextMessage::BufferedLocaliseTextString( "#Buy_equipment" ) );
 				break;
 			default:
-				m_pTeamInfoPanel[i]->setText( "Buy Pistols" );
+				m_pTeamInfoPanel[i]->setText( CHudTextMessage::BufferedLocaliseTextString( "#Buy_pistols" ) );
 				break;
 			}
 		}

@@ -89,6 +89,7 @@ void UTIL_ClientPrintAll( int,char const *,char const *,char const *,char const 
 void ClientPrint( entvars_t *client, int msg_dest, const char *msg_name, const char *param1, const char *param2, const char *param3, const char *param4 ) { }
 Vector UTIL_GetAimVector( edict_t* pent, float flSpeed ) { return g_vecZero; }
 void UTIL_TraceHull( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, int hullNumber, edict_t *pentIgnore, TraceResult *ptr ) { }
+void DecalGunshot( TraceResult *pTrace, int iBulletType, bool ClientOnly, entvars_t *pShooter, bool bHitMetal ) { }
 float TEXTURETYPE_PlaySound(TraceResult *ptr,  Vector vecSrc, Vector vecEnd, int iBulletType) { return 0.0; }
 void Broadcast( const char *sentence ) { }
 
@@ -234,7 +235,6 @@ void ApplyMultiDamage(entvars_t *pevInflictor, entvars_t *pevAttacker ) { }
 void AddMultiDamage( entvars_t *pevInflictor, CBaseEntity *pEntity, float flDamage, int bitsDamageType) { }
 void SpawnBlood(Vector vecSpot, int bloodColor, float flDamage) { }
 int DamageDecal( CBaseEntity *pEntity, int bitsDamageType ) { return 0; }
-void DecalGunshot( TraceResult *pTrace, int iBulletType, bool ClientOnly, entvars_t *pShooter, bool bHitMetal ) { }
 void EjectBrass ( const Vector &vecOrigin, const Vector &vecVelocity, float rotation, int model, int soundtype ) { }
 void AddAmmoNameToAmmoRegistry( const char *szAmmoname ) { }
 int CBasePlayerItem::Restore( class CRestore & ) { return 1; }

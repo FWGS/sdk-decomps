@@ -7,7 +7,8 @@
 *	Up to eight hints wait in a ring; every five seconds at most PreThink's
 *	Update shows the next on the HUD (channel 1, green, 4 seconds, typed
 *	out; Beta 6.0: a second per 25 characters, at least one, and the static
-*	tp is a local set at each call, no symbol in Beta 6.0's Linux library).
+*	tp is a local set at each call, no symbol in Beta 6.0's Linux library;
+*	Counter-Strike 1.1: sent as a HudText message, the client draws it).
 *	Reset empties the ring at Spawn.
 *
 ****/
@@ -32,27 +33,11 @@ void CHintMessageQueue::Reset( void )
 
 void CHintMessageQueue::Update( CBaseEntity &player )
 {
-	// Beta 6.0: the parameters are set at each call (Beta 5.2: a static table),
-	// and a hint stays a second per 25 characters, at least one
-	hudtextparms_t tp;	// name ours
-
-	tp.x = -1;
-	tp.y = 0.7;
-	tp.effect = 2;
-	tp.r1 = 40;
-	tp.g1 = 255;
-	tp.b1 = 40;
-	tp.a1 = 200;
-	tp.r2 = 0;
-	tp.g2 = 255;
-	tp.b2 = 0;
-	tp.a2 = 200;
-	tp.fadeinTime = 0.01;
-	tp.fadeoutTime = 0.7;
-	tp.holdTime = 5;
-	tp.fxTime = 0.07;
-	tp.channel = 1;
-
+	// Counter-Strike 1.1: the hint goes out as a HudText message of its own
+	// making, the string (a "#Hint_..." title of the client's now) and a byte 1
+	// (UTIL_ShowMessage writes 0 there), cut at 499 characters. Beta 6.0 to
+	// 1.0b drew it here with UTIL_HudMessage: green, typed out, a second per
+	// 25 characters.
 	if ( gpGlobals->time > m_flNextMessage && m_iMessages )
 	{
 		m_rgpszMessages[ m_iShown ] = NULL;
@@ -62,12 +47,20 @@ void CHintMessageQueue::Update( CBaseEntity &player )
 
 		if ( m_rgpszMessages[ m_iShown ] )
 		{
-			tp.holdTime = strlen( m_rgpszMessages[ m_iShown ] ) / 25;
-
-			if ( tp.holdTime < 1 )
-				tp.holdTime = 1;
-
-			UTIL_HudMessage( &player, tp, m_rgpszMessages[ m_iShown ] );
+			MESSAGE_BEGIN( MSG_ONE, gmsgHudText, NULL, player.pev );
+				if ( strlen( m_rgpszMessages[ m_iShown ] ) < 500 )
+				{
+					WRITE_STRING( m_rgpszMessages[ m_iShown ] );
+				}
+				else
+				{
+					char tmp[500];
+					strncpy( tmp, m_rgpszMessages[ m_iShown ], 499 );
+					tmp[499] = 0;
+					WRITE_STRING( tmp );
+				}
+				WRITE_BYTE( 1 );
+			MESSAGE_END();
 		}
 	}
 }

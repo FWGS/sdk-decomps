@@ -937,88 +937,45 @@ int CHudAmmo::Draw(float flTime)
 	WEAPON *pw = m_pWeapon; // shorthand
 
 	// the crosshair: four lines that spread with every shot the fire events count
-	if ( gHUD.m_iFOV >= 90 )
+	if ( gHUD.m_iFOV >= 90 && pw->iId != 18 && pw->iId != 24 && pw->iId != 3 && pw->iId != 13 )
 	{
-		int iGapMin, iGapStep;		// names ours
+		int iDistance, iDeltaDistance;		// names Counter-Strike 1.6's (DrawCrosshair)
 
 		switch ( pw->iId )
 		{
-		case 1:
-		case 4:
-		case 16:
-		case 17:
-		case 18:
-		case 26:
-			iGapMin = 8;
-			iGapStep = 3;
-			break;
-		case 19:
-			iGapMin = 6;
-			iGapStep = 2;
-			break;
-		case 21:
-			iGapMin = 8;
-			iGapStep = 6;
-			break;
-		case 24:
-			iGapMin = 6;
-			iGapStep = 4;
-			break;
-		case 23:
-		case 25:
-		case 29:
-			iGapMin = 7;
-			iGapStep = 3;
-			break;
-		case 30:
-			iGapMin = 7;
-			iGapStep = 3;
-			break;
-		case 28:
-			iGapMin = 4;
-			iGapStep = 4;
-			break;
-		case 27:
-			iGapMin = 5;
-			iGapStep = 3;
-			break;
-		case 3:
-			iGapMin = 5;
-			iGapStep = 3;
-			break;
-		case 5:
-			iGapMin = 9;
-			iGapStep = 4;
-			break;
-		case 20:
-			iGapMin = 6;
-			iGapStep = 3;
-			break;
-		case 6:
-			iGapMin = 6;
-			iGapStep = 3;
-			break;
-		case 7:
-			iGapMin = 9;
-			iGapStep = 3;
-			break;
-		case 8:
-			iGapMin = 3;
-			iGapStep = 3;
-			break;
-		case 22:
-			iGapMin = 4;
-			iGapStep = 3;
-			break;
+		case 1: iDistance = 8; iDeltaDistance = 3; break;
+		case 4: iDistance = 8; iDeltaDistance = 3; break;
+		case 11: iDistance = 8; iDeltaDistance = 3; break;
+		case 16: iDistance = 8; iDeltaDistance = 3; break;
+		case 17: iDistance = 8; iDeltaDistance = 3; break;
+		case 18: iDistance = 8; iDeltaDistance = 3; break;
+		case 26: iDistance = 8; iDeltaDistance = 3; break;
+		case 19: iDistance = 6; iDeltaDistance = 2; break;
+		case 21: iDistance = 8; iDeltaDistance = 6; break;
+		case 24: iDistance = 6; iDeltaDistance = 4; break;
+		case 28: iDistance = 4; iDeltaDistance = 4; break;
+		case 23: iDistance = 7; iDeltaDistance = 3; break;
+		case 25: iDistance = 7; iDeltaDistance = 3; break;
+		case 29: iDistance = 7; iDeltaDistance = 3; break;
+		case 30: iDistance = 7; iDeltaDistance = 3; break;
+		case 5: iDistance = 9; iDeltaDistance = 4; break;
+		case 7: iDistance = 9; iDeltaDistance = 3; break;
+		case 8: iDistance = 3; iDeltaDistance = 3; break;
+		case 6: iDistance = 6; iDeltaDistance = 3; break;
+		case 12: iDistance = 6; iDeltaDistance = 3; break;
+		case 20: iDistance = 6; iDeltaDistance = 3; break;
+		case 3: iDistance = 5; iDeltaDistance = 3; break;
+		case 13: iDistance = 5; iDeltaDistance = 3; break;
+		case 27: iDistance = 5; iDeltaDistance = 3; break;
 		default:
-			iGapMin = 4;
-			iGapStep = 3;
+			iDistance = 4;
+			iDeltaDistance = 3;
 			break;
 		}
 
 		if ( g_iShotsFired > m_iLastClip )
 		{
-			m_flCrossGap += iGapStep;
+			m_flCrossGap += iDeltaDistance;
 			m_iCrossAlpha -= 40;
 
 			if ( m_flCrossGap > 15 )
@@ -1037,12 +994,12 @@ int CHudAmmo::Draw(float flTime)
 
 		m_iLastClip = g_iShotsFired;
 
-		if ( m_flCrossGap < iGapMin )
-			m_flCrossGap = iGapMin;
+		if ( m_flCrossGap < iDistance )
+			m_flCrossGap = iDistance;
 		if ( m_iCrossAlpha > 255 )
 			m_iCrossAlpha = 255;
 
-		int iLength = (int)( ( m_flCrossGap - iGapMin ) / 2 ) + 5;	// name ours
+		int iLength = (int)( ( m_flCrossGap - iDistance ) / 2 ) + 5;	// name ours
 
 		FillRGBA( ScreenWidth / 2 - (int)m_flCrossGap - iLength, ScreenHeight / 2, iLength, 1, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );
 		FillRGBA( ScreenWidth / 2 + (int)m_flCrossGap, ScreenHeight / 2, iLength, 1, m_iCrossR, m_iCrossG, m_iCrossB, m_iCrossAlpha );

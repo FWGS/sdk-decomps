@@ -436,6 +436,7 @@ class CItemThighPack : public CItem
 		{
 			pPlayer->m_fHasDefuser = true;
 			pPlayer->pev->body = 1;
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Got_defuser" );	// Counter-Strike 1.1
 
 			MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, pPlayer->pev );
 				WRITE_BYTE( 1 );
