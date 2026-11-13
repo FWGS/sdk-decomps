@@ -53,7 +53,6 @@ void CXM1014::Precache( void )
 	PRECACHE_MODEL("models/v_xm1014.mdl");
 	PRECACHE_MODEL("models/v_xm1014_r.mdl");
 	PRECACHE_MODEL("models/w_xm1014.mdl");
-	PRECACHE_MODEL("models/p_xm1014.mdl");
 
 	m_iShellLate = m_iShell = PRECACHE_MODEL ("models/shotgunshell.mdl");// shotgun shell
 

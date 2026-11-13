@@ -52,7 +52,6 @@ void CSG552::Precache( void )
 	PRECACHE_MODEL("models/v_sg552.mdl");
 	PRECACHE_MODEL("models/v_sg552_r.mdl");
 	PRECACHE_MODEL("models/w_sg552.mdl");
-	PRECACHE_MODEL("models/p_sg552.mdl");
 
 	PRECACHE_SOUND("weapons/sg552-1.wav");
 	PRECACHE_SOUND("weapons/sg552-2.wav");
@@ -164,7 +163,7 @@ void CSG552::SG552Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 33, 0.955, NULL, false );
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireSG552, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, (int)(flSpread * 10000), (int)(m_vecAiming.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireSG552, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_pPlayer->pev->punchangle.x, m_pPlayer->pev->punchangle.y, (int)(flSpread * 10000), (int)(m_pPlayer->pev->punchangle.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

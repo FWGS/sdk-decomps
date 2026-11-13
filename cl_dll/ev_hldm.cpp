@@ -344,6 +344,8 @@ void EV_SmokeTouch( struct tempent_s *te, struct pmtrace_s *ptr )
 	te->entity.baseline.origin = vecNew;
 }
 
+static char szBlackSmoke[25];	// name ours: the black smoke sprite's name, built a character at a time (25 to 28 bytes fit before tracerCount)
+
 // name ours: a smoke puff tempent
 void EV_HLDM_CreateSmoke( float *origin, float *dir, int speed, float scale, int r, int g, int b, int iSmokeType, float *base_velocity, bool bWind, int framerate )
 {
@@ -368,17 +370,89 @@ void EV_HLDM_CreateSmoke( float *origin, float *dir, int speed, float scale, int
 	}
 	else if ( iSmokeType == 0 || iSmokeType == 1 )
 	{
-		switch ( gEngfuncs.pfnRandomLong( 0, 3 ) )
+		if ( iSmokeType > 70 )
 		{
-		case 0:	model = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/black_smoke1.spr" ); break;
-		case 1:	model = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/black_smoke2.spr" ); break;
-		case 2:	model = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/black_smoke3.spr" ); break;
-		case 3:	model = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/black_smoke4.spr" ); break;
-		default: model = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/black_smoke1.spr" ); break;
+			gEngfuncs.Con_Printf( "sprites/black_smoke1.spr" );
+			gEngfuncs.Con_Printf( "sprites/black_smoke2.spr" );
+			gEngfuncs.Con_Printf( "sprites/black_smoke3.spr" );
+			gEngfuncs.Con_Printf( "sprites/black_smoke4.spr" );
+			gEngfuncs.Con_Printf( "sprites/fast_wallpuff1.spr" );
 		}
 
+		szBlackSmoke[0] = 's';
+		szBlackSmoke[1] = 'p';
+		szBlackSmoke[2] = 'r';
+		szBlackSmoke[3] = 'i';
+		szBlackSmoke[4] = 't';
+		szBlackSmoke[5] = 'e';
+		szBlackSmoke[6] = 's';
+		szBlackSmoke[7] = '/';
+		szBlackSmoke[8] = 'b';
+		szBlackSmoke[9] = 'l';
+		szBlackSmoke[10] = 'a';
+		szBlackSmoke[11] = 'c';
+		szBlackSmoke[12] = 'k';
+		szBlackSmoke[13] = '_';
+		szBlackSmoke[14] = 's';
+		szBlackSmoke[15] = 'm';
+		szBlackSmoke[16] = 'o';
+		szBlackSmoke[17] = 'k';
+		szBlackSmoke[18] = 'e';
+		szBlackSmoke[19] = '1';
+		szBlackSmoke[20] = '.';
+		szBlackSmoke[21] = 's';
+		szBlackSmoke[22] = 'p';
+		szBlackSmoke[23] = 'r';
+		szBlackSmoke[24] = 0;
+
+		switch ( gEngfuncs.pfnRandomLong( 0, 3 ) )
+		{
+		case 1:	szBlackSmoke[19] = '2'; break;
+		case 2:	szBlackSmoke[19] = '3'; break;
+		case 3:	szBlackSmoke[19] = '4'; break;
+		case 0:	szBlackSmoke[19] = '1'; break;
+		default:	szBlackSmoke[19] = '1'; break;
+		}
+
+		model = gEngfuncs.pEventAPI->EV_FindModelIndex( szBlackSmoke );
+
 		if ( CVAR_GET_FLOAT( "fastsprites" ) > 1 )
-			model = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/fast_wallpuff1.spr" );
+		{
+			char szFastSmoke[27];	// name ours (27 or 28 bytes give the image's frame)
+
+			szFastSmoke[0] = 's';
+			szFastSmoke[1] = 'p';
+			szFastSmoke[2] = 'r';
+			szFastSmoke[3] = 'i';
+			szFastSmoke[4] = 't';
+			szFastSmoke[5] = 'e';
+			szFastSmoke[6] = 's';
+			szFastSmoke[7] = '/';
+			szFastSmoke[8] = 'f';
+			szFastSmoke[9] = 'a';
+			szFastSmoke[10] = 's';
+			szFastSmoke[11] = 't';
+			szFastSmoke[12] = '_';
+			szFastSmoke[13] = 'w';
+			szFastSmoke[14] = 'a';
+			szFastSmoke[15] = 'l';
+			szFastSmoke[16] = 'l';
+			szFastSmoke[17] = 'p';
+			szFastSmoke[18] = 'u';
+			szFastSmoke[19] = 'f';
+			szFastSmoke[20] = 'f';
+			szFastSmoke[21] = '1';
+			szFastSmoke[22] = '.';
+			szFastSmoke[23] = 's';
+			szFastSmoke[24] = 'p';
+			szFastSmoke[25] = 'r';
+			szFastSmoke[26] = 0;
+
+			model = gEngfuncs.pEventAPI->EV_FindModelIndex( szFastSmoke );
+		}
+
+		if ( !model )
+			model = 293;
 	}
 	else if ( iSmokeType == 3 )
 	{
@@ -1661,6 +1735,10 @@ void EV_FireMP5N( event_args_t *args )
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
+	angles[0] += args->fparam1;
+	angles[1] += args->fparam2;
+	angles[2] += args->iparam2 / 10000.1;
+
 	AngleVectors( angles, forward, right, up );
 
 	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/pshell.mdl");// brass shell
@@ -1724,6 +1802,10 @@ void EV_FireAK47( event_args_t *args )
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
+	angles[0] += args->fparam1;
+	angles[1] += args->fparam2;
+	angles[2] += args->iparam2 / 10000.1;
+
 	AngleVectors( angles, forward, right, up );
 
 	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/rshell.mdl");// brass shell
@@ -1759,10 +1841,8 @@ void EV_FireAK47( event_args_t *args )
 
 	EV_GetGunPosition( args, vecSrc, origin );
 
+	VectorCopy( forward, vecAiming );
 	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	vecAiming[0] = args->fparam1;
-	vecAiming[1] = args->fparam2;
-	vecAiming[2] = args->iparam2 / 10000.1;
 	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_762MM, 0, &tracerCount[idx-1], 2 );
 }
 
@@ -1788,6 +1868,10 @@ void EV_FireAUG( event_args_t *args )
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
+
+	angles[0] += args->fparam1;
+	angles[1] += args->fparam2;
+	angles[2] += args->iparam2 / 10000.1;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -1825,10 +1909,8 @@ void EV_FireAUG( event_args_t *args )
 
 	EV_GetGunPosition( args, vecSrc, origin );
 
+	VectorCopy( forward, vecAiming );
 	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	vecAiming[0] = args->fparam1;
-	vecAiming[1] = args->fparam2;
-	vecAiming[2] = args->iparam2 / 10000.1;
 	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_556MM, 0, &tracerCount[idx-1], 2 );
 }
 
@@ -2068,6 +2150,10 @@ void EV_FireM249( event_args_t *args )
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
+	angles[0] += args->fparam1;
+	angles[1] += args->fparam2;
+	angles[2] += args->iparam2 / 10000.1;
+
 	AngleVectors( angles, forward, right, up );
 
 	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/rshell.mdl");// brass shell
@@ -2104,10 +2190,8 @@ void EV_FireM249( event_args_t *args )
 
 	EV_GetGunPosition( args, vecSrc, origin );
 
+	VectorCopy( forward, vecAiming );
 	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	vecAiming[0] = args->fparam1;
-	vecAiming[1] = args->fparam2;
-	vecAiming[2] = args->iparam2 / 10000.1;
 	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_556MM, 0, &tracerCount[idx-1], 2 );
 }
 
@@ -2180,6 +2264,10 @@ void EV_FireM4A1( event_args_t *args )
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
+	angles[0] += args->fparam1;
+	angles[1] += args->fparam2;
+	angles[2] += args->iparam2 / 10000.1;
+
 	AngleVectors( angles, forward, right, up );
 
 	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/rshell.mdl");// brass shell
@@ -2228,10 +2316,8 @@ void EV_FireM4A1( event_args_t *args )
 
 	EV_GetGunPosition( args, vecSrc, origin );
 
+	VectorCopy( forward, vecAiming );
 	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	vecAiming[0] = args->fparam1;
-	vecAiming[1] = args->fparam2;
-	vecAiming[2] = args->iparam2 / 10000.1;
 	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_556MM, 0, &tracerCount[idx-1], 2 );
 }
 
@@ -2257,6 +2343,10 @@ void EV_FireMAC10( event_args_t *args )
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
+
+	angles[0] += args->fparam1;
+	angles[1] += args->fparam2;
+	angles[2] += args->iparam2 / 10000.1;
 
 	AngleVectors( angles, forward, right, up );
 
@@ -2395,6 +2485,10 @@ void EV_FireP90( event_args_t *args )
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
+	angles[0] += args->fparam1;
+	angles[1] += args->fparam2;
+	angles[2] += args->iparam2 / 10000.1;
+
 	AngleVectors( angles, forward, right, up );
 
 	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/rshell.mdl");// brass shell
@@ -2431,10 +2525,8 @@ void EV_FireP90( event_args_t *args )
 
 	EV_GetGunPosition( args, vecSrc, origin );
 
+	VectorCopy( forward, vecAiming );
 	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	vecAiming[0] = args->fparam1;
-	vecAiming[1] = args->fparam2;
-	vecAiming[2] = args->iparam2 / 10000.1;
 	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_57MM, 0, &tracerCount[idx-1], 2 );
 }
 
@@ -2613,6 +2705,10 @@ void EV_FireSG552( event_args_t *args )
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
 
+	angles[0] += args->fparam1;
+	angles[1] += args->fparam2;
+	angles[2] += args->iparam2 / 10000.1;
+
 	AngleVectors( angles, forward, right, up );
 
 	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/rshell.mdl");// brass shell
@@ -2649,10 +2745,8 @@ void EV_FireSG552( event_args_t *args )
 
 	EV_GetGunPosition( args, vecSrc, origin );
 
+	VectorCopy( forward, vecAiming );
 	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
-	vecAiming[0] = args->fparam1;
-	vecAiming[1] = args->fparam2;
-	vecAiming[2] = args->iparam2 / 10000.1;
 	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_556MM, 0, &tracerCount[idx-1], 2 );
 }
 
@@ -2678,6 +2772,10 @@ void EV_FireTMP( event_args_t *args )
 	VectorCopy( args->origin, origin );
 	VectorCopy( args->velocity, velocity );
 	VectorCopy( args->angles, angles );
+
+	angles[0] += args->fparam1;
+	angles[1] += args->fparam2;
+	angles[2] += args->iparam2 / 10000.1;
 
 	AngleVectors( angles, forward, right, up );
 

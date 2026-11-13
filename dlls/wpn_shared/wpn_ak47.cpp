@@ -52,7 +52,6 @@ void CAK47::Precache( void )
 	PRECACHE_MODEL("models/v_ak47.mdl");
 	PRECACHE_MODEL("models/v_ak47_r.mdl");
 	PRECACHE_MODEL("models/w_ak47.mdl");
-	PRECACHE_MODEL("models/p_ak47.mdl");
 
 	PRECACHE_SOUND("weapons/ak47-1.wav");
 	PRECACHE_SOUND("weapons/ak47-2.wav");
@@ -142,7 +141,7 @@ void CAK47::AK47Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_762MM, 37, 0.98, NULL, false );
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireAK47, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, (int)(flSpread * 10000), (int)(m_vecAiming.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireAK47, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_pPlayer->pev->punchangle.x, m_pPlayer->pev->punchangle.y, (int)(flSpread * 10000), (int)(m_pPlayer->pev->punchangle.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
 
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
 	m_pPlayer->m_iWeaponFlash = BRIGHT_GUN_FLASH;

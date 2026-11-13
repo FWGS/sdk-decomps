@@ -52,7 +52,6 @@ void CMP5N::Precache( void )
 	PRECACHE_MODEL("models/v_mp5.mdl");
 	PRECACHE_MODEL("models/v_mp5_r.mdl");
 	PRECACHE_MODEL("models/w_mp5.mdl");
-	PRECACHE_MODEL("models/p_mp5.mdl");
 
 	PRECACHE_SOUND("weapons/mp5-1.wav");
 	PRECACHE_SOUND("weapons/mp5-2.wav");
@@ -139,7 +138,7 @@ void CMP5N::MP5NFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 26, 0.84, NULL, false );
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireMP5N, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, (int)(flSpread * 10000), (int)(m_vecAiming.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireMP5N, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_pPlayer->pev->punchangle.x, m_pPlayer->pev->punchangle.y, (int)(flSpread * 10000), (int)(m_pPlayer->pev->punchangle.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
 
 	m_pPlayer->m_iWeaponVolume = NORMAL_GUN_VOLUME;
 	m_pPlayer->m_iWeaponFlash = DIM_GUN_FLASH;

@@ -62,7 +62,6 @@ void CUSP::Precache( void )
 	PRECACHE_MODEL("models/v_usp.mdl");
 	PRECACHE_MODEL("models/v_usp_r.mdl");
 	PRECACHE_MODEL("models/w_usp.mdl");
-	PRECACHE_MODEL("models/p_usp.mdl");
 
 	PRECACHE_SOUND("weapons/usp1.wav");
 	PRECACHE_SOUND("weapons/usp2.wav");

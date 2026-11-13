@@ -817,7 +817,6 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 		pCurrent->m_iShotsFired			= pfrom->m_fInZoom;
 		pCurrent->m_iWeaponState		= pfrom->m_iWeaponState;
 		pCurrent->m_flLastFire			= pfrom->m_fAimedDamage;
-		pCurrent->m_vecAiming			= from->client.vuser1;
 		pCurrent->m_iPrimaryAmmoType	= (int)from->client.vuser4[ 0 ];
 		player.m_rgAmmo[ pCurrent->m_iPrimaryAmmoType ] = (int)from->client.vuser4[ 1 ];
 	}
@@ -846,6 +845,7 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	player.pev->deadflag = from->client.deadflag;
 	player.pev->waterlevel = from->client.waterlevel;
 	player.pev->maxspeed    = from->client.maxspeed;
+	player.pev->punchangle = from->client.punchangle;
 	player.pev->fov = from->client.fov;
 	player.pev->weaponanim = from->client.weaponanim;
 	player.pev->viewmodel = from->client.viewmodel;
@@ -939,6 +939,7 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	to->client.weaponanim				= player.pev->weaponanim;
 	to->client.m_flNextAttack			= player.m_flNextAttack;
 	to->client.maxspeed					= player.pev->maxspeed;
+	to->client.punchangle				= player.pev->punchangle;
 
 	to->client.ammo_shells				= player.ammo_buckshot;
 	to->client.ammo_nails				= player.ammo_9mm;
@@ -985,7 +986,6 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 		pto->m_iWeaponState				= pCurrent->m_iWeaponState;
 		pto->m_fInZoom					= pCurrent->m_iShotsFired;
 		pto->m_fAimedDamage				= pCurrent->m_flLastFire;
-		to->client.vuser1				= pCurrent->m_vecAiming;
 		to->client.vuser4[ 0 ]			= pCurrent->m_iPrimaryAmmoType;
 		to->client.vuser4[ 1 ]			= player.m_rgAmmo[ pCurrent->m_iPrimaryAmmoType ];
 

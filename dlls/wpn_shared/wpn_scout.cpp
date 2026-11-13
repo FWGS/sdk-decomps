@@ -51,7 +51,6 @@ void CSCOUT::Precache( void )
 	PRECACHE_MODEL("models/v_scout.mdl");
 	PRECACHE_MODEL("models/v_scout_r.mdl");
 	PRECACHE_MODEL("models/w_scout.mdl");
-	PRECACHE_MODEL("models/p_scout.mdl");
 
 	PRECACHE_SOUND("weapons/scout_fire-1.wav");
 	PRECACHE_SOUND("weapons/scout_bolt.wav");

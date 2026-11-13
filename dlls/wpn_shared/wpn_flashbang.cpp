@@ -49,10 +49,8 @@ void CFlashbang::Spawn( )
 
 void CFlashbang::Precache( void )
 {
-	PRECACHE_MODEL("models/w_flashbang.mdl");
 	PRECACHE_MODEL("models/v_flashbang_r.mdl");
 	PRECACHE_MODEL("models/v_flashbang.mdl");
-	PRECACHE_MODEL("models/p_flashbang.mdl");
 
 	PRECACHE_SOUND("weapons/flashbang-1.wav");
 	PRECACHE_SOUND("weapons/flashbang-2.wav");

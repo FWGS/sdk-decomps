@@ -52,7 +52,6 @@ void CTMP::Precache( void )
 	PRECACHE_MODEL("models/v_tmp.mdl");
 	PRECACHE_MODEL("models/v_tmp_r.mdl");
 	PRECACHE_MODEL("models/w_tmp.mdl");
-	PRECACHE_MODEL("models/p_tmp.mdl");
 
 	PRECACHE_SOUND("weapons/tmp-1.wav");
 	PRECACHE_SOUND("weapons/tmp-2.wav");
@@ -136,7 +135,7 @@ void CTMP::TMPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_9MM, 20, 0.85, NULL, false );
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireTMP, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, (int)(flSpread * 10000), (int)(m_vecAiming.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireTMP, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_pPlayer->pev->punchangle.x, m_pPlayer->pev->punchangle.y, (int)(flSpread * 10000), (int)(m_pPlayer->pev->punchangle.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

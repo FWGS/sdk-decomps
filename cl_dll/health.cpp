@@ -112,7 +112,22 @@ int CHudHealth::VidInit(void)
 	giDmgWidth = gHUD.GetSpriteRect(m_HUD_dmg_bio).bottom - gHUD.GetSpriteRect(m_HUD_dmg_bio).top;
 
 	int iRadar = gHUD.GetSpriteIndex( "radar" );	// names ours
-	m_prcRadar = &gHUD.GetSpriteRect( iRadar );
+	if ( ScreenWidth >= 640 )
+	{
+		m_prcRadar = &gHUD.GetSpriteRect( iRadar );
+		m_prcRadar->left = 0;
+		m_prcRadar->top = 0;
+		m_prcRadar->right = 128;
+		m_prcRadar->bottom = 128;
+	}
+	else
+	{
+		m_prcRadar = &gHUD.GetSpriteRect( iRadar );
+		m_prcRadar->left = 0;
+		m_prcRadar->top = 0;
+		m_prcRadar->right = 64;
+		m_prcRadar->bottom = 64;
+	}
 	m_hRadar = gHUD.GetSprite( iRadar );
 
 	int iRadarBg = gHUD.GetSpriteIndex( "radarback" );
@@ -799,6 +814,7 @@ void CHudHealth :: DrawRadar( float flTime )
 				r = 185;
 				g = 20;
 				b = 20;
+				dot *= 2;
 			}
 			else
 			{

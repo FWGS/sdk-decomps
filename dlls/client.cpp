@@ -53,6 +53,7 @@ extern int gmsgBlinkAcct;
 extern int gmsgStatusIcon;
 extern int gmsgNVGToggle;	// Beta 6.0 (player.cpp)
 extern void Broadcast( const char *sentence );	// multiplay_gamerules.cpp (Beta 3.0)
+extern cvar_t timelimit;	// game.cpp (Beta 6.6: the timeleft command; CS 1.6 declares it here too)
 
 void LinkUserMessages( void );
 /*
@@ -482,8 +483,7 @@ void ClientPutInServer( edict_t *pEntity )
 	pPlayer->m_iMapVote = 0;
 	pPlayer->has_disconnected = false;
 	g_engfuncs.pfnSetClientMaxspeed( ENT(pPlayer->pev), 0.001 );
-	SET_MODEL( ENT(pPlayer->pev), "models/player.mdl" );
-	pPlayer->SetThink( NULL );
+	// Beta 6.6: the model is no longer set to models/player.mdl here and the think function is left alone
 
 	UpdateTeamInfo( pPlayer, -1 );
 
@@ -547,8 +547,8 @@ void Host_Say( edict_t *pEntity, int teamonly )
 	entvars_t *pev = &pEntity->v;
 	CBasePlayer *player = GetClassPtr((CBasePlayer *)pev);
 
-	// one line a second
-	if ( player->m_flLastSay != 0.0 && gpGlobals->time - player->m_flLastSay < 1.0 )
+	// one line in 0.66 seconds (up to Beta 6.5: one a second)
+	if ( player->m_flLastSay != 0.0 && gpGlobals->time - player->m_flLastSay < 0.66 )
 		return;
 
 	player->m_flLastSay = gpGlobals->time;
@@ -1876,15 +1876,6 @@ void ClientCommand( edict_t *pEntity )
 		else
 			pPlayer->m_bVoteKicksAtOnce = false;
 	}
-	else if ( FStrEq(pcmd, "give" ) )
-	{
-		// Beta 6.5: the SDK's give is back (gone in Beta 6.0)
-		if ( g_flWeaponCheat != 0.0)
-		{
-			int iszItem = ALLOC_STRING( CMD_ARGV(1) );	// Make a copy of the classname
-			GetClassPtr((CBasePlayer *)pev)->GiveNamedItem( STRING(iszItem) );
-		}
-	}
 	else if ( FStrEq(pcmd, "vote" ) )
 	{
 		// Beta 6.0: Beta 4.0's vote kick again (gone in Beta 5.0): a vote every
@@ -1961,7 +1952,7 @@ void ClientCommand( edict_t *pEntity )
 		if ( strlen( CMD_ARGV(1) ) <= 5 )
 		{
 			int iVote = atoi( CMD_ARGV(1) );
-			char szText[40];	// 37 to 40 bytes by the frame (name ours)
+			char szText[100];	// name ours; Beta 6.6: 100 bytes (6.5: 40), one stack slot with the vote's and timeleft's buffers
 
 			sprintf( szText, "%s voted for Map #%i\n", STRING( pPlayer->pev->netname ), iVote );
 			UTIL_ClientPrintAll( HUD_PRINTCENTER, szText );
@@ -1977,28 +1968,17 @@ void ClientCommand( edict_t *pEntity )
 			mp->VoteMap( pPlayer, iVote );
 		}
 	}
-	else if ( FStrEq(pcmd, "f17" ) )
+	else if ( FStrEq(pcmd, "timeleft" ) )
 	{
-		// Beta 6.5: a second hidden command. After "a12 1977" (above), with the
-		// knife in hand, "f17 n" makes the client of the player with user id n
-		// disconnect
-		int iKicked = atoi( CMD_ARGV(1) );	// name ours
+		// Beta 6.6: the time left on the map, to his chat (Beta 6.5's hidden
+		// f17 command, which stood here, and its give command are gone)
+		int iTimeRemaining = (int)( timelimit.value * 60 - gpGlobals->time );
+		int iMinutes = iTimeRemaining / 60;
+		int iSeconds = iTimeRemaining % 60;
+		char szText[100];	// name ours; the frame has one 100-byte slot for this and the two buffers above
 
-		if ( pPlayer->m_bVoteKicksAtOnce == true && pPlayer->m_pActiveItem->m_iId == WEAPON_KNIFE )
-		{
-			CBaseEntity *pKicked = NULL;	// name ours
-
-			pKicked = UTIL_FindEntityByClassname( pKicked, "player" );
-			while ( pKicked != NULL && !FNullEnt( pKicked->edict() ) )
-			{
-				if ( pKicked->IsPlayer() && !( pKicked->pev->flags & FL_DORMANT ) )
-				{
-					if ( GETPLAYERUSERID( pKicked->edict() ) == iKicked )
-						CLIENT_COMMAND( pKicked->edict(), "disconnect\n" );
-				}
-				pKicked = UTIL_FindEntityByClassname( pKicked, "player" );
-			}
-		}
+		sprintf( szText, "Time Remaining:  %i:%i\n", iMinutes, iSeconds );
+		ClientPrint( pPlayer->pev, HUD_PRINTTALK, szText );
 	}
 	else if ( FStrEq(pcmd, "listplayers" ) )
 	{
@@ -2212,8 +2192,9 @@ void ClientCommand( edict_t *pEntity )
 	{
 		// Beta 5.0 (leak): only in the game, not while choosing an
 		// appearance, not at a round's end. Beta 5.0: also at a round's end,
-		// but a dead player changes teams once a death; keys 1, 2, 5 and 0
-		if ( pPlayer->m_iJoiningState == JOIN_DONE && pPlayer->m_iMenu != Menu_ChooseAppearance )
+		// but a dead player changes teams once a death; keys 1, 2, 5 and 0.
+		// Beta 6.6: also while joining (only the VIP menu still asks for JOIN_DONE)
+		if ( pPlayer->m_iMenu != Menu_ChooseAppearance )
 		{
 			if ( pPlayer->m_fTeamChanged && pPlayer->pev->deadflag != DEAD_NO )
 			{
@@ -2223,7 +2204,7 @@ void ClientCommand( edict_t *pEntity )
 
 			// Beta 6.0: a counter-terrorist on an assassination map may queue
 			// to be the VIP (key 3)
-			if ( mp->m_iMapHasVIPSafetyZone == 1 && pPlayer->m_iTeam == TEAM_CT )
+			if ( mp->m_iMapHasVIPSafetyZone == 1 && pPlayer->m_iJoiningState == JOIN_DONE && pPlayer->m_iTeam == TEAM_CT )
 			{
 				ShowMenu( pPlayer, 0x217, -1, FALSE, "#IG_VIP_Team_Select" );
 				pPlayer->m_iMenu = Menu_ChooseTeam;
@@ -2397,54 +2378,10 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 	if ( !pEntity->pvPrivateData )
 		return;
 
-	CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE( pEntity );	// name ours
+	CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE( pEntity );
 
-	// the model is the one chosen in the menu (m_iAppearance), whatever the
-	// client sets; Beta 5.0 (leak): 1 urban, 2 terror, 3 arab, 4 gsg9, 5 sas;
-	// Beta 6.0: 4 arctic, 5 gsg9, 6 gign, 7 sas, 8 vip
-	switch ( pPlayer->m_iAppearance )
-	{
-	case 2:
-		CLIENT_COMMAND( pEntity, "model terror\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "terror" );
-		break;
-	case 3:
-		CLIENT_COMMAND( pEntity, "model arab\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "arab" );
-		break;
-	case 8:		// Beta 6.5: the guerilla (the VIP is 9 now)
-		CLIENT_COMMAND( pEntity, "model guerilla\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "guerilla" );
-		break;
-	case 4:		// Beta 6.0: the arctic, the GIGN and the VIP; gsg9 and sas renumbered
-		CLIENT_COMMAND( pEntity, "model arctic\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "arctic" );
-		break;
-	case 5:
-		CLIENT_COMMAND( pEntity, "model gsg9\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "gsg9" );
-		break;
-	case 6:
-		CLIENT_COMMAND( pEntity, "model gign\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "gign" );
-		break;
-	case 7:
-		CLIENT_COMMAND( pEntity, "model sas\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "sas" );
-		break;
-	case 9:
-		CLIENT_COMMAND( pEntity, "model vip\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "vip" );
-		break;
-	case 1:
-		CLIENT_COMMAND( pEntity, "model urban\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "urban" );
-		break;
-	default:	// the same as case 1 (VC6 merges the two)
-		CLIENT_COMMAND( pEntity, "model urban\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "urban" );
-		break;
-	}
+	// Beta 6.6: the model is checked in CBasePlayer::VerifyModel, from PreThink, once this flag is set
+	pPlayer->m_bVerifyModel = true;
 
 	// msg everyone if someone changes their name,  and it isn't the first time (changing no name to current name)
 	if ( pEntity->v.netname && STRING(pEntity->v.netname)[0] != 0 && !FStrEq( STRING(pEntity->v.netname), g_engfuncs.pfnInfoKeyValue( infobuffer, "name" )) )
@@ -2452,9 +2389,9 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 		// Beta 5.2: a dead player keeps his name (it is put back)
 		if ( pPlayer->pev->deadflag != DEAD_NO )
 		{
-			char szName[256];	// name ours
-			strcpy( szName, STRING( pEntity->v.netname ) );
-			g_engfuncs.pfnSetClientKeyValue( pPlayer->entindex(), g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "name", szName );
+			char szOldName[256];	// name ours
+			strcpy( szOldName, STRING( pEntity->v.netname ) );
+			g_engfuncs.pfnSetClientKeyValue( pPlayer->entindex(), g_engfuncs.pfnGetInfoKeyBuffer( pPlayer->edict() ), "name", szOldName );
 			return;
 		}
 
@@ -2735,6 +2672,31 @@ void ClientPrecache( void )
 	PRECACHE_SOUND("player/pl_pain7.wav");
 
 	PRECACHE_MODEL("models/player.mdl");
+	PRECACHE_MODEL("models/player/arab/arab.mdl");
+	PRECACHE_MODEL("models/player/arctic/arctic.mdl");
+	PRECACHE_MODEL("models/player/gign/gign.mdl");
+	PRECACHE_MODEL("models/player/gsg9/gsg9.mdl");
+	PRECACHE_MODEL("models/player/guerilla/guerilla.mdl");
+	PRECACHE_MODEL("models/player/sas/sas.mdl");
+	PRECACHE_MODEL("models/player/terror/terror.mdl");
+	PRECACHE_MODEL("models/player/urban/urban.mdl");
+	PRECACHE_MODEL("models/player/vip/vip.mdl");
+
+	// Beta 6.6: the player models are precached here, and the client's files must
+	// keep within these bounds (vMin, vMax: Counter-Strike 1.6's names)
+	Vector vMin( -48, -36, -58 );
+	Vector vMax( 48, 36, 58 );
+
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/arab/arab.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/arctic/arctic.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/gign/gign.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/gsg9/gsg9.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/guerilla/guerilla.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/sas/sas.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/terror/terror.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/urban/urban.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/vip/vip.mdl" );
 
 	// hud sounds
 
@@ -3654,9 +3616,7 @@ void UpdateClientData ( const struct edict_s *ent, int sendweapons, struct clien
 
 					cd->m_iId = II.iId;
 
-					// the aim as the server sees it, for the shot's event
-					UTIL_MakeVectors( ent->v.v_angle + ent->v.punchangle );
-					cd->vuser1 = gun->m_vecAiming = gpGlobals->v_forward;
+					// Beta 6.6: the aim no longer travels in vuser1 (the client's events take the punch angle)
 
 					cd->vuser4.x	= gun->m_iPrimaryAmmoType;
 					cd->vuser4.y	= pl->m_rgAmmo[gun->m_iPrimaryAmmoType];

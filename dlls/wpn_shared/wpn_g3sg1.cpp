@@ -51,7 +51,6 @@ void CG3SG1::Precache( void )
 	PRECACHE_MODEL("models/v_g3sg1.mdl");
 	PRECACHE_MODEL("models/v_g3sg1_r.mdl");
 	PRECACHE_MODEL("models/w_g3sg1.mdl");
-	PRECACHE_MODEL("models/p_g3sg1.mdl");
 
 	PRECACHE_SOUND("weapons/g3sg1-1.wav");
 	PRECACHE_SOUND("weapons/g3sg1_slide.wav");

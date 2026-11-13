@@ -59,7 +59,6 @@ void CGLOCK18::Precache( void )
 	PRECACHE_MODEL("models/v_glock18.mdl");
 	PRECACHE_MODEL("models/v_glock18_r.mdl");
 	PRECACHE_MODEL("models/w_glock18.mdl");
-	PRECACHE_MODEL("models/p_glock18.mdl");
 
 	PRECACHE_SOUND("weapons/glock18-1.wav");
 	PRECACHE_SOUND("weapons/glock18-2.wav");
@@ -96,7 +95,8 @@ int CGLOCK18::GetItemInfo(ItemInfo *p)
 BOOL CGLOCK18::Deploy( )
 {
 	m_bBurstFire = false;
-	m_iBurstShotsFired = 10;
+	m_iBurstShotsFired = 0;
+	m_flNextBurstShot = 0;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
 	{

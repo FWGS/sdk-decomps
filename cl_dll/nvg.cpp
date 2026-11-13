@@ -37,9 +37,66 @@ void CHudNVG :: Reset( void )
 	m_iAlpha = 110;
 }
 
+CHudNVG :: ~CHudNVG()
+{
+	delete m_prcScope[0][0];
+	delete m_prcScope[0][1];
+	delete m_prcScope[0][2];
+	delete m_prcScope[0][3];
+	delete m_prcScope[0][4];
+	delete m_prcScope[0][5];
+	delete m_prcScope[0][6];
+	delete m_prcScope[0][7];
+	delete m_prcScope[1][0];
+	delete m_prcScope[1][1];
+	delete m_prcScope[1][2];
+	delete m_prcScope[1][3];
+	delete m_prcScope[1][4];
+	delete m_prcScope[1][5];
+	delete m_prcScope[1][6];
+	delete m_prcScope[1][7];
+	delete m_prcScope[2][0];
+	delete m_prcScope[2][1];
+	delete m_prcScope[2][2];
+	delete m_prcScope[2][3];
+	delete m_prcScope[2][4];
+	delete m_prcScope[2][5];
+	delete m_prcScope[2][6];
+	delete m_prcScope[2][7];
+	delete m_prcHorizontal;
+	delete m_prcVertical;
+}
+
 int CHudNVG :: VidInit( void )
 {
 	int tl, t, tr, l, r, bl, b, br;		// names ours
+
+	m_prcScope[0][0] = new wrect_t;
+	m_prcScope[0][1] = new wrect_t;
+	m_prcScope[0][2] = new wrect_t;
+	m_prcScope[0][3] = new wrect_t;
+	m_prcScope[0][4] = new wrect_t;
+	m_prcScope[0][5] = new wrect_t;
+	m_prcScope[0][6] = new wrect_t;
+	m_prcScope[0][7] = new wrect_t;
+	m_prcScope[1][0] = new wrect_t;
+	m_prcScope[1][1] = new wrect_t;
+	m_prcScope[1][2] = new wrect_t;
+	m_prcScope[1][3] = new wrect_t;
+	m_prcScope[1][4] = new wrect_t;
+	m_prcScope[1][5] = new wrect_t;
+	m_prcScope[1][6] = new wrect_t;
+	m_prcScope[1][7] = new wrect_t;
+	m_prcScope[2][0] = new wrect_t;
+	m_prcScope[2][1] = new wrect_t;
+	m_prcScope[2][2] = new wrect_t;
+	m_prcScope[2][3] = new wrect_t;
+	m_prcScope[2][4] = new wrect_t;
+	m_prcScope[2][5] = new wrect_t;
+	m_prcScope[2][6] = new wrect_t;
+	m_prcScope[2][7] = new wrect_t;
+	m_prcHorizontal = new wrect_t;
+	m_prcVertical = new wrect_t;
 
 	tl = gHUD.GetSpriteIndex( "top_left" );
 	t = gHUD.GetSpriteIndex( "top" );
@@ -50,23 +107,47 @@ int CHudNVG :: VidInit( void )
 	b = gHUD.GetSpriteIndex( "bottom" );
 	br = gHUD.GetSpriteIndex( "bottom_right" );
 
-	m_prcScope[0][0] = &gHUD.GetSpriteRect( tl );
-	m_prcScope[0][1] = &gHUD.GetSpriteRect( t );
-	m_prcScope[0][2] = &gHUD.GetSpriteRect( tr );
-	m_prcScope[0][3] = &gHUD.GetSpriteRect( l );
-	m_prcScope[0][4] = &gHUD.GetSpriteRect( r );
-	m_prcScope[0][5] = &gHUD.GetSpriteRect( bl );
-	m_prcScope[0][6] = &gHUD.GetSpriteRect( b );
-	m_prcScope[0][7] = &gHUD.GetSpriteRect( br );
+	m_prcScope[0][0]->left = 0;
+	m_prcScope[0][0]->top = 0;
+	m_prcScope[0][0]->right = 192;
+	m_prcScope[0][0]->bottom = 112;
+	m_prcScope[0][1]->left = 0;
+	m_prcScope[0][1]->top = 0;
+	m_prcScope[0][1]->right = 256;
+	m_prcScope[0][1]->bottom = 112;
+	m_prcScope[0][2]->left = 0;
+	m_prcScope[0][2]->top = 0;
+	m_prcScope[0][2]->right = 192;
+	m_prcScope[0][2]->bottom = 112;
+	m_prcScope[0][3]->left = 0;
+	m_prcScope[0][3]->top = 0;
+	m_prcScope[0][3]->right = 192;
+	m_prcScope[0][3]->bottom = 256;
+	m_prcScope[0][4]->left = 0;
+	m_prcScope[0][4]->top = 0;
+	m_prcScope[0][4]->right = 192;
+	m_prcScope[0][4]->bottom = 256;
+	m_prcScope[0][5]->left = 0;
+	m_prcScope[0][5]->top = 0;
+	m_prcScope[0][5]->right = 192;
+	m_prcScope[0][5]->bottom = 112;
+	m_prcScope[0][6]->left = 0;
+	m_prcScope[0][6]->top = 0;
+	m_prcScope[0][6]->right = 256;
+	m_prcScope[0][6]->bottom = 112;
+	m_prcScope[0][7]->left = 0;
+	m_prcScope[0][7]->top = 0;
+	m_prcScope[0][7]->right = 192;
+	m_prcScope[0][7]->bottom = 112;
 
-	m_hScope[0] = gHUD.GetSprite( tl );
-	m_hScope[1] = gHUD.GetSprite( t );
-	m_hScope[2] = gHUD.GetSprite( tr );
-	m_hScope[3] = gHUD.GetSprite( l );
-	m_hScope[4] = gHUD.GetSprite( r );
-	m_hScope[5] = gHUD.GetSprite( bl );
-	m_hScope[6] = gHUD.GetSprite( b );
-	m_hScope[7] = gHUD.GetSprite( br );
+	m_hScope[0] = SPR_Load( "sprites/top_left.spr" );
+	m_hScope[1] = SPR_Load( "sprites/top.spr" );
+	m_hScope[2] = SPR_Load( "sprites/top_right.spr" );
+	m_hScope[3] = SPR_Load( "sprites/left.spr" );
+	m_hScope[4] = SPR_Load( "sprites/right.spr" );
+	m_hScope[5] = SPR_Load( "sprites/bottom_left.spr" );
+	m_hScope[6] = SPR_Load( "sprites/bottom.spr" );
+	m_hScope[7] = SPR_Load( "sprites/bottom_right.spr" );
 
 	int tl2, t2, tr2, l2, r2, bl2, b2, br2;
 
@@ -79,23 +160,47 @@ int CHudNVG :: VidInit( void )
 	b2 = gHUD.GetSpriteIndex( "bottom2" );
 	br2 = gHUD.GetSpriteIndex( "bottom_right2" );
 
-	m_prcScope[1][0] = &gHUD.GetSpriteRect( tl2 );
-	m_prcScope[1][1] = &gHUD.GetSpriteRect( t2 );
-	m_prcScope[1][2] = &gHUD.GetSpriteRect( tr2 );
-	m_prcScope[1][3] = &gHUD.GetSpriteRect( l2 );
-	m_prcScope[1][4] = &gHUD.GetSpriteRect( r2 );
-	m_prcScope[1][5] = &gHUD.GetSpriteRect( bl2 );
-	m_prcScope[1][6] = &gHUD.GetSpriteRect( b2 );
-	m_prcScope[1][7] = &gHUD.GetSpriteRect( br2 );
+	m_prcScope[1][0]->left = 0;
+	m_prcScope[1][0]->top = 0;
+	m_prcScope[1][0]->right = 256;
+	m_prcScope[1][0]->bottom = 172;
+	m_prcScope[1][1]->left = 0;
+	m_prcScope[1][1]->top = 0;
+	m_prcScope[1][1]->right = 256;
+	m_prcScope[1][1]->bottom = 172;
+	m_prcScope[1][2]->left = 0;
+	m_prcScope[1][2]->top = 0;
+	m_prcScope[1][2]->right = 256;
+	m_prcScope[1][2]->bottom = 172;
+	m_prcScope[1][3]->left = 0;
+	m_prcScope[1][3]->top = 0;
+	m_prcScope[1][3]->right = 256;
+	m_prcScope[1][3]->bottom = 256;
+	m_prcScope[1][4]->left = 0;
+	m_prcScope[1][4]->top = 0;
+	m_prcScope[1][4]->right = 256;
+	m_prcScope[1][4]->bottom = 256;
+	m_prcScope[1][5]->left = 0;
+	m_prcScope[1][5]->top = 0;
+	m_prcScope[1][5]->right = 256;
+	m_prcScope[1][5]->bottom = 172;
+	m_prcScope[1][6]->left = 0;
+	m_prcScope[1][6]->top = 0;
+	m_prcScope[1][6]->right = 256;
+	m_prcScope[1][6]->bottom = 172;
+	m_prcScope[1][7]->left = 0;
+	m_prcScope[1][7]->top = 0;
+	m_prcScope[1][7]->right = 256;
+	m_prcScope[1][7]->bottom = 172;
 
-	m_hScope2[0] = gHUD.GetSprite( tl2 );
-	m_hScope2[1] = gHUD.GetSprite( t2 );
-	m_hScope2[2] = gHUD.GetSprite( tr2 );
-	m_hScope2[3] = gHUD.GetSprite( l2 );
-	m_hScope2[4] = gHUD.GetSprite( r2 );
-	m_hScope2[5] = gHUD.GetSprite( bl2 );
-	m_hScope2[6] = gHUD.GetSprite( b2 );
-	m_hScope2[7] = gHUD.GetSprite( br2 );
+	m_hScope2[0] = SPR_Load( "sprites/top_left2.spr" );
+	m_hScope2[1] = SPR_Load( "sprites/top2.spr" );
+	m_hScope2[2] = SPR_Load( "sprites/top_right2.spr" );
+	m_hScope2[3] = SPR_Load( "sprites/left2.spr" );
+	m_hScope2[4] = SPR_Load( "sprites/right2.spr" );
+	m_hScope2[5] = SPR_Load( "sprites/bottom_left2.spr" );
+	m_hScope2[6] = SPR_Load( "sprites/bottom2.spr" );
+	m_hScope2[7] = SPR_Load( "sprites/bottom_right2.spr" );
 
 	int tl3, t3, tr3, l3, r3, bl3, b3, br3;
 
@@ -108,32 +213,62 @@ int CHudNVG :: VidInit( void )
 	b3 = gHUD.GetSpriteIndex( "bottom3" );
 	br3 = gHUD.GetSpriteIndex( "bottom_right3" );
 
-	m_prcScope[2][0] = &gHUD.GetSpriteRect( tl3 );
-	m_prcScope[2][1] = &gHUD.GetSpriteRect( t3 );
-	m_prcScope[2][2] = &gHUD.GetSpriteRect( tr3 );
-	m_prcScope[2][3] = &gHUD.GetSpriteRect( l3 );
-	m_prcScope[2][4] = &gHUD.GetSpriteRect( r3 );
-	m_prcScope[2][5] = &gHUD.GetSpriteRect( bl3 );
-	m_prcScope[2][6] = &gHUD.GetSpriteRect( b3 );
-	m_prcScope[2][7] = &gHUD.GetSpriteRect( br3 );
+	m_prcScope[2][0]->left = 0;
+	m_prcScope[2][0]->top = 0;
+	m_prcScope[2][0]->right = 256;
+	m_prcScope[2][0]->bottom = 256;
+	m_prcScope[2][1]->left = 0;
+	m_prcScope[2][1]->top = 0;
+	m_prcScope[2][1]->right = 256;
+	m_prcScope[2][1]->bottom = 256;
+	m_prcScope[2][2]->left = 0;
+	m_prcScope[2][2]->top = 0;
+	m_prcScope[2][2]->right = 256;
+	m_prcScope[2][2]->bottom = 256;
+	m_prcScope[2][3]->left = 0;
+	m_prcScope[2][3]->top = 0;
+	m_prcScope[2][3]->right = 256;
+	m_prcScope[2][3]->bottom = 256;
+	m_prcScope[2][4]->left = 0;
+	m_prcScope[2][4]->top = 0;
+	m_prcScope[2][4]->right = 256;
+	m_prcScope[2][4]->bottom = 256;
+	m_prcScope[2][5]->left = 0;
+	m_prcScope[2][5]->top = 0;
+	m_prcScope[2][5]->right = 256;
+	m_prcScope[2][5]->bottom = 256;
+	m_prcScope[2][6]->left = 0;
+	m_prcScope[2][6]->top = 0;
+	m_prcScope[2][6]->right = 256;
+	m_prcScope[2][6]->bottom = 256;
+	m_prcScope[2][7]->left = 0;
+	m_prcScope[2][7]->top = 0;
+	m_prcScope[2][7]->right = 256;
+	m_prcScope[2][7]->bottom = 256;
 
-	m_hScope3[0] = gHUD.GetSprite( tl3 );
-	m_hScope3[1] = gHUD.GetSprite( t3 );
-	m_hScope3[2] = gHUD.GetSprite( tr3 );
-	m_hScope3[3] = gHUD.GetSprite( l3 );
-	m_hScope3[4] = gHUD.GetSprite( r3 );
-	m_hScope3[5] = gHUD.GetSprite( bl3 );
-	m_hScope3[6] = gHUD.GetSprite( b3 );
-	m_hScope3[7] = gHUD.GetSprite( br3 );
+	m_hScope3[0] = SPR_Load( "sprites/top_left3.spr" );
+	m_hScope3[1] = SPR_Load( "sprites/top3.spr" );
+	m_hScope3[2] = SPR_Load( "sprites/top_right3.spr" );
+	m_hScope3[3] = SPR_Load( "sprites/left3.spr" );
+	m_hScope3[4] = SPR_Load( "sprites/right3.spr" );
+	m_hScope3[5] = SPR_Load( "sprites/bottom_left3.spr" );
+	m_hScope3[6] = SPR_Load( "sprites/bottom3.spr" );
+	m_hScope3[7] = SPR_Load( "sprites/bottom_right3.spr" );
 
 	int h = gHUD.GetSpriteIndex( "horizontal" );	// names ours
 	int v = gHUD.GetSpriteIndex( "vertical" );
 
-	m_prcHorizontal = &gHUD.GetSpriteRect( h );
-	m_prcVertical = &gHUD.GetSpriteRect( v );
+	m_prcHorizontal->left = 0;
+	m_prcHorizontal->top = 0;
+	m_prcHorizontal->right = 256;
+	m_prcHorizontal->bottom = 32;
+	m_prcVertical->left = 0;
+	m_prcVertical->top = 0;
+	m_prcVertical->right = 40;
+	m_prcVertical->bottom = 256;
 
-	m_hHorizontal = gHUD.GetSprite( h );
-	m_hVertical = gHUD.GetSprite( v );
+	m_hHorizontal = SPR_Load( "sprites/horizontal.spr" );
+	m_hVertical = SPR_Load( "sprites/vertical.spr" );
 
 	return 1;
 }
@@ -234,20 +369,20 @@ int CHudNVG :: Draw( float flTime )
 			SPR_DrawHoles( 0, cx + 128, cy + 128, m_prcScope[0][7] );
 		}
 
-		// the black bands around the scope (the 1024 case is never reached)
-		if ( ScreenWidth >= 800 )
-		{
-			left = cx - 384;
-			right = cx + 384;
-			top = cy - 300;
-			bottom = cy + 300;
-		}
-		else if ( ScreenWidth >= 1024 )
+		// the black bands around the scope
+		if ( ScreenWidth >= 1024 )
 		{
 			left = cx - 384;
 			right = cx + 384;
 			top = cy - 384;
 			bottom = cy + 384;
+		}
+		else if ( ScreenWidth >= 800 )
+		{
+			left = cx - 384;
+			right = cx + 384;
+			top = cy - 300;
+			bottom = cy + 300;
 		}
 
 		if ( ScreenWidth > 640 )
@@ -257,7 +392,7 @@ int CHudNVG :: Draw( float flTime )
 			int x, k;
 			int y = top - 32;
 
-			if ( ScreenHeight > 768 )
+			if ( ScreenWidth > 1024 )
 			{
 				for ( ; y > 0; y -= 32 )
 				{

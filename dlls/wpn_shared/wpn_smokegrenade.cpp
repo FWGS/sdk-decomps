@@ -49,10 +49,8 @@ void CSmokeGrenade::Spawn( )
 
 void CSmokeGrenade::Precache( void )
 {
-	PRECACHE_MODEL("models/w_smokegrenade.mdl");
 	PRECACHE_MODEL("models/v_smokegrenade_r.mdl");
 	PRECACHE_MODEL("models/v_smokegrenade.mdl");
-	PRECACHE_MODEL("models/p_smokegrenade.mdl");
 
 	PRECACHE_SOUND("weapons/pinpull.wav");
 	PRECACHE_SOUND("weapons/sg_explode.wav");

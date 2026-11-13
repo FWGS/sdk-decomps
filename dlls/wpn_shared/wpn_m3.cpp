@@ -53,7 +53,6 @@ void CM3::Precache( void )
 	PRECACHE_MODEL("models/v_m3.mdl");
 	PRECACHE_MODEL("models/v_m3_r.mdl");
 	PRECACHE_MODEL("models/w_m3.mdl");
-	PRECACHE_MODEL("models/p_m3.mdl");
 
 	m_iShellLate = m_iShell = PRECACHE_MODEL ("models/shotgunshell.mdl");// shotgun shell
 

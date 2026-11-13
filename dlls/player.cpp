@@ -234,7 +234,7 @@ void LinkUserMessages( void )
 	gmsgShowGameTitle = REG_USER_MSG("GameTitle", 1);
 	gmsgDeathMsg = REG_USER_MSG( "DeathMsg", -1 );
 	gmsgScoreAttrib = REG_USER_MSG( "ScoreAttrib", 2 );	// Beta 5.0 (leak)
-	gmsgScoreInfo = REG_USER_MSG( "ScoreInfo", 5 );
+	gmsgScoreInfo = REG_USER_MSG( "ScoreInfo", 9 );	// Beta 6.6: two more shorts (was 5)
 	gmsgTeamInfo = REG_USER_MSG( "TeamInfo", -1 );  // sets the name of a player's team
 	gmsgTeamScore = REG_USER_MSG( "TeamScore", -1 );  // sets the score of a team on the scoreboard
 	gmsgGameMode = REG_USER_MSG( "GameMode", 1 );
@@ -2271,8 +2271,7 @@ void CBasePlayer::RemoveLevelText( void )
 {
 	ResetMenu();
 
-	if ( ((CHalfLifeMultiplay *)g_pGameRules)->m_iMapHasCameras == 1 )
-		UTIL_ScreenFade( this, Vector( 0, 0, 0 ), 0.5, 0.5, 0, 0 );
+	// Beta 6.6: no screen fade on a map with intro cameras any more
 }
 
 // Beta 5.0 (leak) (Linux symbol): a text shown to pl in the menu space, sent in
@@ -2366,11 +2365,7 @@ void CBasePlayer::JoiningThink( void )
 
 		if ( g_szMapBriefingText[0] && bShowText )
 		{
-			if ( mp->m_iMapHasCameras )
-				UTIL_ScreenFade( this, Vector( 0, 0, 0 ), 0.5, 15.9, 255, FFADE_OUT | FFADE_MODULATE | FFADE_STAYOUT );
-			else
-				UTIL_ScreenFade( this, Vector( 10, 10, 10 ), 0, 0, 255, FFADE_OUT | FFADE_STAYOUT );
-
+			// Beta 6.6: no screen fade any more (here and at JOIN_SPAWN)
 			m_iHideHUD |= HIDEHUD_WEAPONS | HIDEHUD_HEALTH | HIDEHUD_TIMER | HIDEHUD_MONEY;
 			MenuPrint( this, g_szMapBriefingText );
 			m_iJoiningState = JOIN_READING_TEXT;
@@ -2411,9 +2406,6 @@ void CBasePlayer::JoiningThink( void )
 		break;
 
 	case JOIN_SPAWN:
-		if ( !mp->m_iMapHasCameras )
-			UTIL_ScreenFade( this, Vector( 0, 0, 0 ), 0, 0, 255, FFADE_IN );
-
 		m_fNotKilled = false;
 		m_fKicked = false;
 		m_iIgnoreMessages = 0;
@@ -3074,6 +3066,8 @@ void CBasePlayer::AddPoints( int score, BOOL bAllowNegativeScore )
 		WRITE_BYTE( ENTINDEX(edict()) );
 		WRITE_SHORT( pev->frags );
 		WRITE_SHORT( m_iDeaths );
+		WRITE_SHORT( 0 );			// Beta 6.6: two more shorts, a zero and the team
+		WRITE_SHORT( m_iTeam );
 	MESSAGE_END();
 }
 
@@ -3539,6 +3533,63 @@ bool CBasePlayer::CanPlayerBuy( bool display )
 	return true;
 }
 
+// Beta 6.6 (Linux symbol): the model is the one chosen in the menu
+// (m_iAppearance), whatever the client sets: his client is told to change
+// it and the server's key is set. Beta 6.5 did this in
+// ClientUserInfoChanged, which now only sets m_bVerifyModel; PreThink calls
+// this while the flag is set. 1 urban, 2 terror, 3 arab, 4 arctic, 5 gsg9,
+// 6 gign, 7 sas, 8 guerilla, 9 vip
+void CBasePlayer::VerifyModel( void )
+{
+	edict_t *pEntity = edict();		// names ours
+
+	switch ( m_iAppearance )
+	{
+	case 2:
+		CLIENT_COMMAND( pEntity, "model terror\n" );
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "terror" );
+		break;
+	case 3:
+		CLIENT_COMMAND( pEntity, "model arab\n" );
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "arab" );
+		break;
+	case 8:
+		CLIENT_COMMAND( pEntity, "model guerilla\n" );
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "guerilla" );
+		break;
+	case 4:
+		CLIENT_COMMAND( pEntity, "model arctic\n" );
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "arctic" );
+		break;
+	case 5:
+		CLIENT_COMMAND( pEntity, "model gsg9\n" );
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "gsg9" );
+		break;
+	case 6:
+		CLIENT_COMMAND( pEntity, "model gign\n" );
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "gign" );
+		break;
+	case 7:
+		CLIENT_COMMAND( pEntity, "model sas\n" );
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "sas" );
+		break;
+	case 9:
+		CLIENT_COMMAND( pEntity, "model vip\n" );
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "vip" );
+		break;
+	case 1:
+		CLIENT_COMMAND( pEntity, "model urban\n" );
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "urban" );
+		break;
+	default:	// the same as case 1 (VC6 merges the two)
+		CLIENT_COMMAND( pEntity, "model urban\n" );
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "urban" );
+		break;
+	}
+
+	m_bVerifyModel = false;
+}
+
 void CBasePlayer::PreThink(void)
 {
 	int buttonsChanged = (m_afButtonLast ^ pev->button);	// These buttons have changed this frame
@@ -3557,6 +3608,10 @@ void CBasePlayer::PreThink(void)
 
 	if ( m_iJoiningState != JOIN_DONE )
 		JoiningThink();
+
+	// Beta 6.6: the model check, after a change of the client's keys
+	if ( m_bVerifyModel == true )
+		VerifyModel();
 
 	// fire or secondary fire takes the map's text away (and does nothing else); Beta 6.5: no longer jump
 	if ( m_fShowingLevelText == true && ( m_afButtonPressed & ( IN_ATTACK | IN_ATTACK2 ) ) )
@@ -4907,6 +4962,15 @@ void CBasePlayer::Spawn( void )
 		else
 			WRITE_STRING( "UNASSIGNED" );
 	MESSAGE_END();
+
+	// Beta 6.6: and his score, with the team
+	MESSAGE_BEGIN( MSG_ALL, gmsgScoreInfo );
+		WRITE_BYTE( ENTINDEX(edict()) );
+		WRITE_SHORT( pev->frags );
+		WRITE_SHORT( m_iDeaths );
+		WRITE_SHORT( 0 );
+		WRITE_SHORT( m_iTeam );
+	MESSAGE_END();
 }
 
 
@@ -5088,6 +5152,8 @@ void CBasePlayer::Reset( void )
 		WRITE_BYTE( ENTINDEX(edict()) );
 		WRITE_SHORT( 0 );
 		WRITE_SHORT( 0 );
+		WRITE_SHORT( 0 );			// Beta 6.6
+		WRITE_SHORT( m_iTeam );
 	MESSAGE_END();
 }
 

@@ -315,12 +315,6 @@ void CHud :: Init( void )
 	g_SmokeList.m_flLife = 1.0;
 	m_bGunSmoke = false;
 
-	if ( CheckModelBounds() != true )
-	{
-		gEngfuncs.Con_Printf( "***Only Losers cheat!***\n" );
-		ClientCmd( "disconnect\n" );
-	}
-
 	m_Teamplay = 1;
 }
 

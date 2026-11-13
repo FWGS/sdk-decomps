@@ -171,11 +171,10 @@ void DLLEXPORT HUD_TxferPredictionData ( struct entity_state_s *ps, const struct
 	pcd->iuser1					= ppcd->iuser1;
 	pcd->iuser2					= ppcd->iuser2;
 
-	// Counter-Strike: the freeze time and left-hand flags, the aim and the ammo counts
+	// Counter-Strike: the freeze time and left-hand flags, and the ammo counts
 	pcd->iuser3					= ppcd->iuser3;
 	pcd->iuser4					= ppcd->iuser4;
 
-	VectorCopy( ppcd->vuser1, pcd->vuser1 );
 	VectorCopy( ppcd->vuser2, pcd->vuser2 );
 	VectorCopy( ppcd->vuser3, pcd->vuser3 );
 	VectorCopy( ppcd->vuser4, pcd->vuser4 );

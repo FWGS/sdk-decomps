@@ -1924,6 +1924,8 @@ void CHalfLifeMultiplay :: InitHUD( CBasePlayer *pl )
 		WRITE_BYTE( ENTINDEX(pl->edict()) );
 		WRITE_SHORT( 0 );
 		WRITE_SHORT( 0 );
+		WRITE_SHORT( 0 );				// Beta 6.6: two more shorts, a zero and the team
+		WRITE_SHORT( pl->m_iTeam );
 	MESSAGE_END();
 
 	SendMOTDToClient( pl->edict() );
@@ -1940,6 +1942,8 @@ void CHalfLifeMultiplay :: InitHUD( CBasePlayer *pl )
 				WRITE_BYTE( i );	// client number
 				WRITE_SHORT( plr->pev->frags );
 				WRITE_SHORT( plr->m_iDeaths );
+				WRITE_SHORT( 0 );
+				WRITE_SHORT( pl->m_iTeam );	// retail's bug: the new client's own team, for every player
 			MESSAGE_END();
 		}
 	}
@@ -1988,6 +1992,22 @@ void CHalfLifeMultiplay :: InitHUD( CBasePlayer *pl )
 			plr->SetScoreboardAttributes( pl );
 		}
 	}
+
+	// sic: eight empty statements, a stand-in for intermediate code the image
+	// cannot give. Beta 6.6's multiplay_gamerules.obj has CGameRules::GetIndexedTeamName
+	// (gamerules.h) ahead of FlPlayerFallDamage; VC6 places such an inline by the
+	// intermediate code in front of the file's own functions, and retail's text had
+	// 15 to 75 bytes more of it before FlPlayerFallDamage than these statements'
+	// neighbours give (3 to 15 empty statements fit, 2 and 16 do not): source
+	// lines or dead text that make no machine code. Their place is ours.
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
 }
 
 //=========================================================
@@ -2104,6 +2124,10 @@ void CHalfLifeMultiplay :: PlayerThink( CBasePlayer *pPlayer )
 		pPlayer->pev->button = 0;
 		pPlayer->m_afButtonReleased = 0;
 	}
+
+	// Beta 6.6: outside the freeze time a player can shoot
+	if ( !pPlayer->m_bCanShoot && !m_bFreezePeriod )
+		pPlayer->m_bCanShoot = true;
 
 	// Beta 5.0 (leak): a joining player gets the team menu
 	if ( pPlayer->m_iMenu != Menu_ChooseTeam && pPlayer->m_iJoiningState == JOIN_TEAM_MENU )
@@ -2295,6 +2319,8 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 		WRITE_BYTE( ENTINDEX(pVictim->edict()) );
 		WRITE_SHORT( pVictim->pev->frags );
 		WRITE_SHORT( pVictim->m_iDeaths );
+		WRITE_SHORT( 0 );
+		WRITE_SHORT( pVictim->m_iTeam );
 	MESSAGE_END();
 
 	// killers score, if it's a player
@@ -2307,6 +2333,8 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 			WRITE_BYTE( ENTINDEX(PK->edict()) );
 			WRITE_SHORT( PK->pev->frags );
 			WRITE_SHORT( PK->m_iDeaths );
+			WRITE_SHORT( 0 );
+			WRITE_SHORT( PK->m_iTeam );
 		MESSAGE_END();
 
 		// let the killer paint another decal as soon as he'd like.
@@ -3115,7 +3143,16 @@ void CHalfLifeMultiplay::DisplayMaps( CBasePlayer *player, int iVote )
 	}
 
 	if ( szNewMap && iVote )
+	{
+		// Beta 6.6: a vote for the map being played adds thirty minutes to it
+		if ( !strcmp( szNewMap, STRING( gpGlobals->mapname ) ) )
+		{
+			timelimit.value += 30;
+			return;
+		}
+
 		CHANGE_LEVEL( szNewMap, NULL );
+	}
 }
 
 //=========================================================
@@ -3134,9 +3171,13 @@ void CHalfLifeMultiplay::VoteMap( CBasePlayer *player, int iVote )
 	int iNumPlayers;
 	char text[76];	// name ours; the size is the frame's
 
+	// Beta 6.6: m_iMapVotes has a hundred counts
+	if ( iVote > 99 )
+		return;
+
 	if ( gpGlobals->time < 300 )
 	{
-		ClientPrint( player->pev, HUD_PRINTCENTER, "You cannot vote within 5 minutes of a new map\n" );
+		ClientPrint( player->pev, HUD_PRINTTALK, "You cannot vote within 5 minutes of a new map\n" );	// Beta 6.6: to the chat (was the centre)
 		return;
 	}
 

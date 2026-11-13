@@ -42,12 +42,6 @@ int CHud :: MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf )
 	// reset concussion effect
 	m_iConcussionEffect = 0;
 
-	if ( CheckModelBounds() != true )
-	{
-		gEngfuncs.Con_Printf( "***Only Losers cheat!***\n" );
-		ClientCmd( "disconnect\n" );
-	}
-
 	return 1;
 }
 

@@ -52,7 +52,6 @@ void CMAC10::Precache( void )
 	PRECACHE_MODEL("models/v_mac10.mdl");
 	PRECACHE_MODEL("models/v_mac10_r.mdl");
 	PRECACHE_MODEL("models/w_mac10.mdl");
-	PRECACHE_MODEL("models/p_mac10.mdl");
 
 	PRECACHE_SOUND("weapons/mac10-1.wav");
 	PRECACHE_SOUND("weapons/mac10_clipout.wav");
@@ -141,7 +140,7 @@ void CMAC10::MAC10Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_45ACP, 29, 0.82, NULL, false );
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireMAC10, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, (int)(flSpread * 10000), (int)(m_vecAiming.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireMAC10, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_pPlayer->pev->punchangle.x, m_pPlayer->pev->punchangle.y, (int)(flSpread * 10000), (int)(m_pPlayer->pev->punchangle.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

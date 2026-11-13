@@ -52,7 +52,6 @@ void CAWP::Precache( void )
 	PRECACHE_MODEL("models/v_awp.mdl");
 	PRECACHE_MODEL("models/v_awp_r.mdl");
 	PRECACHE_MODEL("models/w_awp.mdl");
-	PRECACHE_MODEL("models/p_awp.mdl");
 
 	PRECACHE_SOUND("weapons/awp1.wav");
 	PRECACHE_SOUND("weapons/boltpull1.wav");
@@ -111,15 +110,15 @@ void CAWP::SecondaryAttack( void )
 void CAWP::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		AWPFire( 0.85, 1.2, FALSE );
+		AWPFire( 0.85, 1.45, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
-		AWPFire( 0.15, 1.2, FALSE );
+		AWPFire( 0.15, 1.45, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 10 )
-		AWPFire( 0.05, 1.2, FALSE );
+		AWPFire( 0.03, 1.45, FALSE );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
-		AWPFire( 0, 1.2, FALSE );
+		AWPFire( 0, 1.45, FALSE );
 	else
-		AWPFire( 0.007, 1.2, FALSE );
+		AWPFire( 0.0025, 1.45, FALSE );
 }
 
 void CAWP::AWPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )

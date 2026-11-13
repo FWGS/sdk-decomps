@@ -52,7 +52,6 @@ void CP90::Precache( void )
 	PRECACHE_MODEL("models/v_p90.mdl");
 	PRECACHE_MODEL("models/v_p90_r.mdl");
 	PRECACHE_MODEL("models/w_p90.mdl");
-	PRECACHE_MODEL("models/p_p90.mdl");
 
 	PRECACHE_SOUND("weapons/p90-1.wav");
 	PRECACHE_SOUND("weapons/p90_clipout.wav");
@@ -99,7 +98,7 @@ void CP90::PrimaryAttack( void )
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
 		P90Fire( m_flAccuracy * 0.4, 0.066, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 170 )
-		P90Fire( m_flAccuracy * 0.15, 0.066, FALSE );
+		P90Fire( m_flAccuracy * 0.115, 0.066, FALSE );
 	else
 		P90Fire( m_flAccuracy * 0.045, 0.066, FALSE );
 }
@@ -109,7 +108,7 @@ void CP90::P90Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	m_bDelayFire = true;
 	m_iShotsFired++;
 
-	m_flAccuracy = ( ( m_iShotsFired * m_iShotsFired * m_iShotsFired ) / 175 ) + 0.45;
+	m_flAccuracy = ( ( m_iShotsFired * m_iShotsFired * m_iShotsFired ) / 195 ) + 0.45;
 
 	if ( m_flAccuracy > 1 )
 		m_flAccuracy = 1;
@@ -144,7 +143,7 @@ void CP90::P90Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_57MM, 22, 0.885, NULL, false );
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireP90, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, (int)(flSpread * 10000), (int)(m_vecAiming.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireP90, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_pPlayer->pev->punchangle.x, m_pPlayer->pev->punchangle.y, (int)(flSpread * 10000), (int)(m_pPlayer->pev->punchangle.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

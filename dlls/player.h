@@ -225,6 +225,7 @@ public:
 	int					m_iHostagesKilled;		// 0x37c new in Beta 6.5 (1.6's name, by its place)
 	int					m_iMapVote;				// 0x380 new in Beta 6.5 (1.6's name, by its place)
 	bool				m_bCanShoot;			// 0x384 cleared in the freeze time, set when the round starts (1.6's name)
+	bool				m_bVerifyModel;			// 0x385 Beta 6.6: ClientUserInfoChanged sets it, VerifyModel clears it (name ours)
 	float				m_flNextZoneCheck;		// 0x388 HandleSignals' next check
 	CPlayerSignals		m_signals;				// 0x38c
 	edict_t				*m_pentBombTarget;		// 0x394 the bomb target the player is in
@@ -400,6 +401,7 @@ public:
 	void SetBombIcon( int bFlash );
 	void AddAccount( int amount, bool bTrackChange );
 	bool CanPlayerBuy( bool display );
+	void VerifyModel( void );				// Beta 6.6 (Linux symbol): the model the menu chose is set again
 	void Disappear( void );
 	void GiveDefaultItems( void );
 	void HandleSignals( void );

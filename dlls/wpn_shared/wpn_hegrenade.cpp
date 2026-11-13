@@ -50,10 +50,8 @@ void CHEGrenade::Spawn( )
 
 void CHEGrenade::Precache( void )
 {
-	PRECACHE_MODEL("models/w_hegrenade.mdl");
 	PRECACHE_MODEL("models/v_hegrenade_r.mdl");
 	PRECACHE_MODEL("models/v_hegrenade.mdl");
-	PRECACHE_MODEL("models/p_hegrenade.mdl");
 
 	PRECACHE_SOUND("weapons/hegrenade-1.wav");
 	PRECACHE_SOUND("weapons/hegrenade-2.wav");

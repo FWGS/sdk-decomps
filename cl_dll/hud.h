@@ -637,6 +637,7 @@ private:
 class CHudNVG: public CHudBase	// name ours: night vision, and the sniper scope
 {
 public:
+	~CHudNVG();
 	int Init( void );
 	int VidInit( void );
 	int Draw( float flTime );
@@ -972,16 +973,4 @@ enum b70_unknown_e
 	B70_UNKNOWN3,
 	B70_UNKNOWN4,
 	B70_UNKNOWN5,
-	B70_UNKNOWN6,
-	B70_UNKNOWN7,
-	B70_UNKNOWN8,
-	B70_UNKNOWN9,
-	B70_UNKNOWN10,
-	B70_UNKNOWN11,
-	B70_UNKNOWN12,
-	B70_UNKNOWN13,
-	B70_UNKNOWN14,
-	B70_UNKNOWN15,
-	B70_UNKNOWN16,
-	B70_UNKNOWN17,
 };

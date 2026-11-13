@@ -52,7 +52,6 @@ void CAUG::Precache( void )
 	PRECACHE_MODEL("models/v_aug.mdl");
 	PRECACHE_MODEL("models/v_aug_r.mdl");
 	PRECACHE_MODEL("models/w_aug.mdl");
-	PRECACHE_MODEL("models/p_aug.mdl");
 
 	PRECACHE_SOUND("weapons/aug-1.wav");
 	PRECACHE_SOUND("weapons/aug_clipout.wav");
@@ -156,7 +155,7 @@ void CAUG::AUGFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 33, 0.96, NULL, false );
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireAUG, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, (int)(flSpread * 10000), (int)(m_vecAiming.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireAUG, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_pPlayer->pev->punchangle.x, m_pPlayer->pev->punchangle.y, (int)(flSpread * 10000), (int)(m_pPlayer->pev->punchangle.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

@@ -460,7 +460,6 @@ void W_Precache(void)
 
 	// used by explosions
 	PRECACHE_MODEL ("models/grenade.mdl");
-	PRECACHE_MODEL ("models/w_c4.mdl");		// Beta 4.0: the planted C4
 	PRECACHE_MODEL ("sprites/explode1.spr");
 
 	PRECACHE_SOUND ("weapons/debris1.wav");// explosion aftermaths
@@ -479,6 +478,142 @@ void W_Precache(void)
 	// Beta 5.0 (leak): what the others hear of a reload (ReloadSound)
 	PRECACHE_SOUND ("weapons/generic_reload.wav");
 
+	// Beta 6.6: every weapon's player model (the weapons' own Precache
+	// functions no longer do it), and with it the planted C4 and the thrown
+	// grenades; a client's file must keep within the bounds given here
+	// (vMin, vMax: Counter-Strike 1.6's names in ClientPrecache)
+	Vector vMin( -15, -4, -26 );
+	Vector vMax( 16, 16, 33 );
+
+	PRECACHE_MODEL( "models/p_ak47.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_ak47.mdl" );
+
+	PRECACHE_MODEL( "models/p_aug.mdl" );
+	vMin = Vector( -19, -10, -14 );
+	vMax = Vector( 25, 11, 15 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_aug.mdl" );
+
+	PRECACHE_MODEL( "models/p_awp.mdl" );
+	vMin = Vector( -12, -34, -26 );
+	vMax = Vector( 12, 26, 26 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_awp.mdl" );
+
+	PRECACHE_MODEL( "models/p_c4.mdl" );
+	vMin = Vector( -13, -8, -14 );
+	vMax = Vector( 13, 8, 14 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_c4.mdl" );
+
+	PRECACHE_MODEL( "models/w_c4.mdl" );
+	vMin = Vector( -5, -9, -5 );
+	vMax = Vector( 5, 8, 5 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/w_c4.mdl" );
+
+	PRECACHE_MODEL( "models/p_deagle.mdl" );
+	vMin = Vector( -12, -9, -26 );
+	vMax = Vector( 12, 7, 26 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_deagle.mdl" );
+
+	PRECACHE_MODEL( "models/p_flashbang.mdl" );
+	PRECACHE_MODEL( "models/w_flashbang.mdl" );
+	vMin = Vector( -10, -6, -21 );
+	vMax = Vector( 10, 6, 21 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_flashbang.mdl" );
+	vMin = Vector( -7, -7, -7 );
+	vMax = Vector( 7, 7, 15 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/w_flashbang.mdl" );
+
+	PRECACHE_MODEL( "models/p_g3sg1.mdl" );
+	vMin = Vector( -20, -12, -26 );
+	vMax = Vector( 20, 9, 44 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_g3sg1.mdl" );
+
+	PRECACHE_MODEL( "models/p_glock18.mdl" );
+	vMin = Vector( -12, -10, -26 );
+	vMax = Vector( 12, 9, 26 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_glock18.mdl" );
+
+	PRECACHE_MODEL( "models/p_hegrenade.mdl" );
+	PRECACHE_MODEL( "models/w_hegrenade.mdl" );
+	vMin = Vector( -10, -6, -21 );
+	vMax = Vector( 10, 6, 21 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_hegrenade.mdl" );
+	vMin = Vector( -7, -7, -7 );
+	vMax = Vector( 7, 7, 15 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/w_hegrenade.mdl" );
+
+	PRECACHE_MODEL( "models/p_knife.mdl" );
+	vMin = Vector( -12, -13, -26 );
+	vMax = Vector( 12, 11, 26 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_knife.mdl" );
+
+	PRECACHE_MODEL( "models/p_m249.mdl" );
+	vMin = Vector( -16, -11, -26 );
+	vMax = Vector( 32, 10, 26 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_m249.mdl" );
+
+	PRECACHE_MODEL( "models/p_m3.mdl" );
+	vMin = Vector( -13, -17, -26 );
+	vMax = Vector( 12, 26, 26 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_m3.mdl" );
+
+	PRECACHE_MODEL( "models/p_m4a1.mdl" );
+	vMin = Vector( -12, -12, -26 );
+	vMax = Vector( 12, 8, 29 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_m4a1.mdl" );
+
+	PRECACHE_MODEL( "models/p_mac10.mdl" );
+	vMin = Vector( -12, -18, -17 );
+	vMax = Vector( 13, 7, 14 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_mac10.mdl" );
+
+	PRECACHE_MODEL( "models/p_mp5.mdl" );
+	vMin = Vector( -12, -12, -26 );
+	vMax = Vector( 26, 8, 26 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_mp5.mdl" );
+
+	PRECACHE_MODEL( "models/p_p228.mdl" );
+	vMin = Vector( -12, -7, -26 );
+	vMax = Vector( 12, 8, 26 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_p228.mdl" );
+
+	PRECACHE_MODEL( "models/p_p90.mdl" );
+	vMin = Vector( -18, -8, -20 );
+	vMax = Vector( 12, 9, 19 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_p90.mdl" );
+
+	PRECACHE_MODEL( "models/p_scout.mdl" );
+	vMin = Vector( -18, -8, -26 );
+	vMax = Vector( 34, 9, 26 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_scout.mdl" );
+
+	PRECACHE_MODEL( "models/p_sg552.mdl" );
+	vMin = Vector( -12, -14, -26 );
+	vMax = Vector( 12, 6, 26 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_sg552.mdl" );
+
+	PRECACHE_MODEL( "models/p_smokegrenade.mdl" );
+	PRECACHE_MODEL( "models/w_smokegrenade.mdl" );
+	vMin = Vector( -10, -6, -21 );
+	vMax = Vector( 10, 6, 21 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_smokegrenade.mdl" );
+	vMin = Vector( -7, -7, -7 );
+	vMax = Vector( 7, 7, 15 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/w_smokegrenade.mdl" );
+
+	PRECACHE_MODEL( "models/p_tmp.mdl" );
+	vMin = Vector( -17, -9, -26 );
+	vMax = Vector( 12, 11, 26 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_tmp.mdl" );
+
+	PRECACHE_MODEL( "models/p_usp.mdl" );
+	vMin = Vector( -12, -10, -26 );
+	vMax = Vector( 18, 7, 26 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_usp.mdl" );
+
+	PRECACHE_MODEL( "models/p_xm1014.mdl" );
+	vMin = Vector( -12, -23, -26 );
+	vMax = Vector( 12, 20, 26 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_xm1014.mdl" );
 }
 
 
@@ -905,7 +1040,7 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		if ( m_bDelayFire == true )
 		{
 			m_bDelayFire = false;
-			m_iShotsFired = 20;
+			m_iShotsFired = 15;	// Beta 6.6 (was 20)
 		}
 
 		m_fFireOnEmpty = FALSE;
@@ -1326,10 +1461,7 @@ int CBasePlayerWeapon::SecondaryAmmoIndex( void )
 
 void CBasePlayerWeapon::Holster( int skiplocal /* = 0 */ )
 { 
-	// the G3/SG-1's scope: clear the screen (Beta 2.0 and 2.1: the AWP's too)
-	if ( m_iId == WEAPON_G3SG1 )
-		UTIL_ScreenFade( m_pPlayer, Vector(20,20,20), 0.5, 0.1, 0, 0 );
-
+	// Beta 6.6: the G3/SG-1's scope no longer fades the screen here
 	m_fInReload = FALSE; // cancel any reload in progress.
 	m_pPlayer->pev->viewmodel = 0; 
 	m_pPlayer->pev->weaponmodel = 0;

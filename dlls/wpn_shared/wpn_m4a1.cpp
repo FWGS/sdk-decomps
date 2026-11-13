@@ -61,7 +61,6 @@ void CM4A1::Precache( void )
 	PRECACHE_MODEL("models/v_m4a1.mdl");
 	PRECACHE_MODEL("models/v_m4a1_r.mdl");
 	PRECACHE_MODEL("models/w_m4a1.mdl");
-	PRECACHE_MODEL("models/p_m4a1.mdl");
 
 	PRECACHE_SOUND("weapons/m4a1-1.wav");
 	PRECACHE_SOUND("weapons/m4a1_unsil-1.wav");
@@ -202,7 +201,7 @@ void CM4A1::M4A1Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_pPlayer->ammo_556nato--;
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireM4A1, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_vecAiming.x, m_vecAiming.y, (int)(flSpread * 10000), (int)(m_vecAiming.z * 10000), ( m_iWeaponState & WPNSTATE_M4A1_SILENCED ) ? true : false, m_pPlayer->m_bLeftHanded != false );
+	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireM4A1, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_pPlayer->pev->punchangle.x, m_pPlayer->pev->punchangle.y, (int)(flSpread * 10000), (int)(m_pPlayer->pev->punchangle.z * 10000), ( m_iWeaponState & WPNSTATE_M4A1_SILENCED ) ? true : false, m_pPlayer->m_bLeftHanded != false );
 
 	m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + flCycleTime;
 

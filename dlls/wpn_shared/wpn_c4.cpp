@@ -56,7 +56,6 @@ void CC4::Spawn( )
 void CC4::Precache( void )
 {
 	PRECACHE_MODEL("models/v_c4.mdl");
-	PRECACHE_MODEL("models/p_c4.mdl");
 	PRECACHE_MODEL("models/w_backpack.mdl");
 
 	PRECACHE_SOUND("weapons/c4_click.wav");

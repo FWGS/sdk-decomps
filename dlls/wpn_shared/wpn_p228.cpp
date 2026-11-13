@@ -53,7 +53,6 @@ void CP228::Precache( void )
 	PRECACHE_MODEL("models/v_p228.mdl");
 	PRECACHE_MODEL("models/v_p228_r.mdl");
 	PRECACHE_MODEL("models/w_p228.mdl");
-	PRECACHE_MODEL("models/p_p228.mdl");
 
 	PRECACHE_SOUND("weapons/p228-1.wav");
 	PRECACHE_SOUND("weapons/p228_clipout.wav");

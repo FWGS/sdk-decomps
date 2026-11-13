@@ -52,7 +52,6 @@ void CDEAGLE::Precache( void )
 	PRECACHE_MODEL("models/v_deagle.mdl");
 	PRECACHE_MODEL("models/v_deagle_r.mdl");
 	PRECACHE_MODEL("models/w_deagle.mdl");
-	PRECACHE_MODEL("models/p_deagle.mdl");
 
 	PRECACHE_SOUND("weapons/deagle-1.wav");
 	PRECACHE_SOUND("weapons/deagle-2.wav");

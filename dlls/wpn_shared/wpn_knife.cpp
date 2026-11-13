@@ -54,7 +54,6 @@ void CKnife::Precache( void )
 	PRECACHE_MODEL("models/v_knife.mdl");
 	PRECACHE_MODEL("models/v_knife_r.mdl");
 	PRECACHE_MODEL("models/w_knife.mdl");
-	PRECACHE_MODEL("models/p_knife.mdl");
 	PRECACHE_SOUND("weapons/knife_deploy1.wav");
 	PRECACHE_SOUND("weapons/knife_hit1.wav");
 	PRECACHE_SOUND("weapons/knife_hit2.wav");
