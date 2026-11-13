@@ -2010,7 +2010,7 @@ void CBombTarget::BombTargetTouch( CBaseEntity *pOther )
 	if ( p->m_bHasC4 == true )
 	{
 		p->m_signals.Signal( 2 );	// at a bomb target
-		p->m_pentBombTarget = edict();
+		p->m_pentCurBombTarget = edict();
 	}
 }
 

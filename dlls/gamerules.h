@@ -425,7 +425,7 @@ public:
 	int m_iMapVotes[100];			// 0xb0 new in Beta 6.5: the votes each map of the cycle has, map 1 first (VoteMap counts them; Counter-Strike 1.6's name)
 	int m_iLastPick;				// 0x240 new in Beta 6.5: the counter-terrorist PickNextVIP took last (1.6's name)
 	int m_iMaxMapTime;				// 0x244 new in Beta 7.0: mp_timelimit as the constructor found it, put back at a complete restart (1.6's name). Beta 7.1: no function refers to it
-	int m_iMaxRounds;				// 0x248 new in Beta 7.1: mp_maxrounds, read at a complete restart and by Think (1.6's name)
+	int m_iMaxRounds;				// 0x248 new in Beta 7.1: mp_maxrounds, read at a complete restart and by Think (1.6's name); Counter-Strike 1.0: the constructor reads it too
 	int m_iTotalRoundsPlayed;		// 0x24c new in Beta 7.1: RestartRound counts the rounds; Think changes the map at m_iMaxRounds (1.6's name)
 	// (Beta 7.1's offsets from here on, Beta 7.0's plus 8; Beta 6.1's in brackets)
 	CBasePlayer *m_pCTCommander;	// 0x250 [0xb0] new in Beta 3.0: the counter-terrorists' commander (PickNewCommander)
@@ -460,6 +460,35 @@ public:
 	BOOL m_bFreezePeriod;			// 0x278 [0xd8] TRUE from RestartRound until Think sees the freeze time run out (IsFreezePeriod)
 	float m_flNextRestartCheck;		// 0x27c [0xdc] when Think reads sv_restartround next (every half second; Beta 6.1: every second)
 	bool m_fGameCommenced;			// 0x280 [0xe0] both teams have had spawnable players (CheckWinConditions; until then a round ends at once)
+};
+
+//=========================================================
+// CHalfLifeTraining - Counter-Strike 1.0: the rules of the training course
+// (training_gamerules.cpp; InstallGameRules makes them when the game is not
+// deathmatch).  Member names and the declarations' order are Counter-Strike 1.6's.
+//=========================================================
+class CHalfLifeTraining : public CHalfLifeMultiplay
+{
+	float FillAccountTime, ServerRestartTime;	// 0x284 when PlayerThink fills the account up to 16000 (0 = not due); 0x288 no function refers to it
+	BOOL fInBuyArea, fVisitedBuyArea;			// 0x28c the player stood in a buy zone last frame; 0x290 the buy zone's money was given once
+	bool fVGUIMenus;							// 0x294 the player's m_bVGUIMenus, kept from his spawn
+
+public:
+	void HostageDied( void );
+	bool PlayerCanBuy( CBasePlayer *pPlayer );
+
+	CHalfLifeTraining();
+
+	virtual BOOL IsMultiplayer( void );
+	virtual BOOL IsDeathmatch( void );
+	virtual void InitHUD( CBasePlayer *pl );
+	virtual edict_t *GetPlayerSpawnSpot( CBasePlayer *pPlayer );
+	virtual void PlayerSpawn( CBasePlayer *pPlayer );
+	virtual int ItemShouldRespawn( CItem *pItem );
+	virtual BOOL FPlayerCanRespawn( CBasePlayer *pPlayer );
+	virtual void PlayerThink( CBasePlayer *pPlayer );
+	virtual void PlayerKilled( CBasePlayer *pVictim, entvars_t *pKiller, entvars_t *pInflictor );
+	virtual void CheckWinConditions( void );
 };
 
 extern DLL_GLOBAL CGameRules*	g_pGameRules;

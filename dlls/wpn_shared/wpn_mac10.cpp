@@ -165,11 +165,13 @@ void CMAC10::Reload( void )
 	if ( m_pPlayer->ammo_45acp <= 0 )
 		return;
 
-	DefaultReload( MAC10_MAX_CLIP, MAC10_RELOAD, 3.15 );
-	m_pPlayer->SetAnimation( PLAYER_RELOAD );
+	if ( DefaultReload( MAC10_MAX_CLIP, MAC10_RELOAD, 3.15 ) )
+	{
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
-	m_flAccuracy = 0;
-	m_iShotsFired = 0;
+		m_flAccuracy = 0;
+		m_iShotsFired = 0;
+	}
 }
 
 void CMAC10::WeaponIdle( void )

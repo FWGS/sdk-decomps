@@ -384,6 +384,7 @@ void W_Precache(void)
 	UTIL_PrecacheOtherWeapon( "weapon_m4a1" );
 	UTIL_PrecacheOtherWeapon( "weapon_sg552" );
 	UTIL_PrecacheOtherWeapon( "weapon_aug" );		// Beta 6.0
+	UTIL_PrecacheOtherWeapon( "weapon_sg550" );	// Counter-Strike 1.0
 	UTIL_PrecacheOther( "ammo_556nato" );
 
 	// shotgun
@@ -394,9 +395,11 @@ void W_Precache(void)
 	// .45
 	UTIL_PrecacheOtherWeapon( "weapon_usp" );
 	UTIL_PrecacheOtherWeapon( "weapon_mac10" );	// Beta 6.0
+	UTIL_PrecacheOtherWeapon( "weapon_ump45" );	// Counter-Strike 1.0
 	UTIL_PrecacheOther( "ammo_45acp" );
 
 	// 5.7mm
+	UTIL_PrecacheOtherWeapon( "weapon_fiveseven" );	// Counter-Strike 1.0
 	UTIL_PrecacheOtherWeapon( "weapon_p90" );
 	UTIL_PrecacheOther( "ammo_57mm" );
 
@@ -483,143 +486,161 @@ void W_Precache(void)
 	// functions no longer do it), and with it the planted C4 and the thrown
 	// grenades; a client's file must keep within the bounds given here
 	// (vMin, vMax: Counter-Strike 1.6's names in ClientPrecache)
-	Vector vMin( -15, -4, -26 );
-	Vector vMax( 16, 16, 33 );
+	Vector vMin( -17, -6, -19 );
+	Vector vMax( 17, 12, 29 );
 
 	PRECACHE_MODEL( "models/p_ak47.mdl" );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_ak47.mdl" );
 
 	PRECACHE_MODEL( "models/p_aug.mdl" );
-	vMin = Vector( -19, -10, -14 );
-	vMax = Vector( 25, 11, 15 );
+	vMin = Vector( -23, -6, -18 );
+	vMax = Vector( 23, 7, 18 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_aug.mdl" );
 
 	PRECACHE_MODEL( "models/p_awp.mdl" );
-	vMin = Vector( -12, -34, -26 );
-	vMax = Vector( 12, 26, 26 );
+	vMin = Vector( -30, -24, -19 );
+	vMax = Vector( 30, 17, 19 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_awp.mdl" );
 
 	PRECACHE_MODEL( "models/p_c4.mdl" );
-	vMin = Vector( -13, -8, -14 );
-	vMax = Vector( 13, 8, 14 );
+	vMin = Vector( -7, -7, -15 );
+	vMax = Vector( 7, 7, 15 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_c4.mdl" );
 
 	PRECACHE_MODEL( "models/w_c4.mdl" );
-	vMin = Vector( -5, -9, -5 );
-	vMax = Vector( 5, 8, 5 );
+	vMin = Vector( -4, -8, -3 );
+	vMax = Vector( 3, 7, 3 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/w_c4.mdl" );
 
 	PRECACHE_MODEL( "models/p_deagle.mdl" );
-	vMin = Vector( -12, -9, -26 );
-	vMax = Vector( 12, 7, 26 );
+	vMin = Vector( -8, -4, -19 );
+	vMax = Vector( 8, 4, 19 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_deagle.mdl" );
 
 	PRECACHE_MODEL( "models/p_flashbang.mdl" );
 	PRECACHE_MODEL( "models/w_flashbang.mdl" );
-	vMin = Vector( -10, -6, -21 );
-	vMax = Vector( 10, 6, 21 );
+	vMin = Vector( -7, -2, -18 );
+	vMax = Vector( 7, 2, 18 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_flashbang.mdl" );
-	vMin = Vector( -7, -7, -7 );
-	vMax = Vector( 7, 7, 15 );
+	vMin = Vector( -5, -5, -5 );
+	vMax = Vector( 5, 5, 14 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/w_flashbang.mdl" );
 
 	PRECACHE_MODEL( "models/p_g3sg1.mdl" );
-	vMin = Vector( -20, -12, -26 );
-	vMax = Vector( 20, 9, 44 );
+	vMin = Vector( -31, -7, -19 );
+	vMax = Vector( 31, 5, 27 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_g3sg1.mdl" );
 
+	// Counter-Strike 1.0: the SG-550; force_model_samebounds, with bounds
+	PRECACHE_MODEL( "models/p_sg550.mdl" );
+	vMin = Vector( -33, -4, -20 );
+	vMax = Vector( 33, 7, 30 );
+	ENGINE_FORCE_UNMODIFIED( force_model_samebounds, (float *)&vMin, (float *)&vMax, "models/p_sg550.mdl" );
+
 	PRECACHE_MODEL( "models/p_glock18.mdl" );
-	vMin = Vector( -12, -10, -26 );
-	vMax = Vector( 12, 9, 26 );
+	vMin = Vector( -8, -5, -18 );
+	vMax = Vector( 8, 4, 18 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_glock18.mdl" );
 
 	PRECACHE_MODEL( "models/p_hegrenade.mdl" );
 	PRECACHE_MODEL( "models/w_hegrenade.mdl" );
-	vMin = Vector( -10, -6, -21 );
-	vMax = Vector( 10, 6, 21 );
+	vMin = Vector( -7, -2, -18 );
+	vMax = Vector( 7, 2, 18 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_hegrenade.mdl" );
-	vMin = Vector( -7, -7, -7 );
-	vMax = Vector( 7, 7, 15 );
+	vMin = Vector( -5, -5, -5 );
+	vMax = Vector( 5, 5, 14 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/w_hegrenade.mdl" );
 
 	PRECACHE_MODEL( "models/p_knife.mdl" );
-	vMin = Vector( -12, -13, -26 );
-	vMax = Vector( 12, 11, 26 );
+	vMin = Vector( -7, -7, -18 );
+	vMax = Vector( 7, 5, 18 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_knife.mdl" );
 
 	PRECACHE_MODEL( "models/p_m249.mdl" );
-	vMin = Vector( -16, -11, -26 );
-	vMax = Vector( 32, 10, 26 );
+	vMin = Vector( -29, -7, -18 );
+	vMax = Vector( 29, 5, 18 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_m249.mdl" );
 
 	PRECACHE_MODEL( "models/p_m3.mdl" );
-	vMin = Vector( -13, -17, -26 );
-	vMax = Vector( 12, 26, 26 );
+	vMin = Vector( -21, -13, -18 );
+	vMax = Vector( 21, 23, 18 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_m3.mdl" );
 
 	PRECACHE_MODEL( "models/p_m4a1.mdl" );
-	vMin = Vector( -12, -12, -26 );
-	vMax = Vector( 12, 8, 29 );
+	vMin = Vector( -22, -8, -19 );
+	vMax = Vector( 22, 4, 25 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_m4a1.mdl" );
 
 	PRECACHE_MODEL( "models/p_mac10.mdl" );
-	vMin = Vector( -12, -18, -17 );
-	vMax = Vector( 13, 7, 14 );
+	vMin = Vector( -10, -6, -18 );
+	vMax = Vector( 10, 4, 18 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_mac10.mdl" );
 
 	PRECACHE_MODEL( "models/p_mp5.mdl" );
-	vMin = Vector( -12, -12, -26 );
-	vMax = Vector( 26, 8, 26 );
+	vMin = Vector( -23, -8, -18 );
+	vMax = Vector( 23, 3, 18 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_mp5.mdl" );
 
+	// Counter-Strike 1.0: the UMP45, as the SG-550
+	PRECACHE_MODEL( "models/p_ump45.mdl" );
+	vMin = Vector( -14, -2, -18 );
+	vMax = Vector( 14, 2, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_samebounds, (float *)&vMin, (float *)&vMax, "models/p_ump45.mdl" );
+
 	PRECACHE_MODEL( "models/p_p228.mdl" );
-	vMin = Vector( -12, -7, -26 );
-	vMax = Vector( 12, 8, 26 );
+	vMin = Vector( -10, -4, -18 );
+	vMax = Vector( 10, 4, 18 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_p228.mdl" );
 
 	PRECACHE_MODEL( "models/p_p90.mdl" );
-	vMin = Vector( -18, -8, -20 );
-	vMax = Vector( 12, 9, 19 );
+	vMin = Vector( -15, -4, -18 );
+	vMax = Vector( 13, 6, 18 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_p90.mdl" );
 
 	PRECACHE_MODEL( "models/p_scout.mdl" );
-	vMin = Vector( -18, -8, -26 );
-	vMax = Vector( 34, 9, 26 );
+	vMin = Vector( -32, -4, -19 );
+	vMax = Vector( 32, 5, 19 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_scout.mdl" );
 
 	PRECACHE_MODEL( "models/p_sg552.mdl" );
-	vMin = Vector( -12, -14, -26 );
-	vMax = Vector( 12, 6, 26 );
+	vMin = Vector( -23, -5, -18 );
+	vMax = Vector( 23, 7, 19 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_sg552.mdl" );
 
 	PRECACHE_MODEL( "models/p_smokegrenade.mdl" );
 	PRECACHE_MODEL( "models/w_smokegrenade.mdl" );
-	vMin = Vector( -10, -6, -21 );
-	vMax = Vector( 10, 6, 21 );
+	vMin = Vector( -7, -2, -18 );
+	vMax = Vector( 7, 2, 18 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_smokegrenade.mdl" );
-	vMin = Vector( -7, -7, -7 );
-	vMax = Vector( 7, 7, 15 );
+	vMin = Vector( -5, -5, -5 );
+	vMax = Vector( 5, 5, 14 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/w_smokegrenade.mdl" );
 
 	PRECACHE_MODEL( "models/p_tmp.mdl" );
-	vMin = Vector( -17, -9, -26 );
-	vMax = Vector( 12, 11, 26 );
+	vMin = Vector( -15, -4, -18 );
+	vMax = Vector( 15, 6, 18 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_tmp.mdl" );
 
 	PRECACHE_MODEL( "models/p_usp.mdl" );
-	vMin = Vector( -12, -10, -26 );
-	vMax = Vector( 18, 7, 26 );
+	vMin = Vector( -13, -4, -18 );
+	vMax = Vector( 13, 3, 18 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_usp.mdl" );
 
-	// Beta 7.0: the Elites, with the USP's box
+	// Beta 7.0: the Elites
 	PRECACHE_MODEL( "models/p_elite.mdl" );
-	vMin = Vector( -12, -10, -26 );
-	vMax = Vector( 18, 7, 26 );
+	vMin = Vector( -10, -4, -20 );
+	vMax = Vector( 10, 4, 20 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_elite.mdl" );
 
+	// Counter-Strike 1.0: the Five-seveN
+	PRECACHE_MODEL( "models/p_fiveseven.mdl" );
+	vMin = Vector( -8, -3, -18 );
+	vMax = Vector( 8, 3, 18 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_fiveseven.mdl" );
+
 	PRECACHE_MODEL( "models/p_xm1014.mdl" );
-	vMin = Vector( -12, -23, -26 );
-	vMax = Vector( 12, 20, 26 );
+	vMin = Vector( -25, -19, -18 );
+	vMax = Vector( 25, 16, 18 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_xm1014.mdl" );
 }
 
@@ -715,7 +736,8 @@ void CBasePlayerItem::Materialize( void )
 	if ( pev->effects & EF_NODRAW )
 	{
 		// changing from invisible state to visible.
-		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "items/suitchargeok1.wav", 1, ATTN_NORM, 0, 150 );
+		if ( g_pGameRules->IsMultiplayer() )	// Counter-Strike 1.0: not in the training course
+			EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "items/suitchargeok1.wav", 1, ATTN_NORM, 0, 150 );
 		pev->effects &= ~EF_NODRAW;
 		pev->effects |= EF_MUZZLEFLASH;
 	}
@@ -724,8 +746,13 @@ void CBasePlayerItem::Materialize( void )
 
 	UTIL_SetOrigin( pev, pev->origin );// link into world.
 	SetTouch (DefaultTouch);
-	SetThink (SUB_Remove);
-	pev->nextthink = gpGlobals->time + 1;	// a weapon nobody picks up is gone after a second (Beta 2.0 and 2.1: 20)
+	if ( g_pGameRules->IsMultiplayer() )	// Counter-Strike 1.0: the training course's weapons stay
+	{
+		SetThink (SUB_Remove);
+		pev->nextthink = gpGlobals->time + 1;	// a weapon nobody picks up is gone after a second (Beta 2.0 and 2.1: 20)
+	}
+	else
+		SetThink (NULL);
 }
 
 //=========================================================
@@ -1030,7 +1057,7 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		m_pPlayer->TabulateAmmo();
 
 		// Beta 5.0 (leak): no shooting in the freeze period at the start of a round
-		if ( g_pGameRules->IsMultiplayer() && !((CHalfLifeMultiplay *)g_pGameRules)->IsFreezePeriod() )
+		if ( ( g_pGameRules->IsMultiplayer() && !((CHalfLifeMultiplay *)g_pGameRules)->IsFreezePeriod() ) || !g_pGameRules->IsMultiplayer() )	// Counter-Strike 1.0: the training course has no freeze time
 			PrimaryAttack();
 	}
 	else if ( m_pPlayer->pev->button & IN_RELOAD && iMaxClip() != WEAPON_NOCLIP && !m_fInReload ) 
@@ -1060,7 +1087,7 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 
 		// Beta 6.5: the pistols forget their shots at once; the others lose
 		// one every 0.0225 seconds (Beta 6.1: one a frame)
-		if ( m_iId == WEAPON_USP || m_iId == WEAPON_GLOCK18 || m_iId == WEAPON_P228 || m_iId == WEAPON_DEAGLE || m_iId == WEAPON_ELITE )	// Beta 7.0: the Elites
+		if ( m_iId == WEAPON_USP || m_iId == WEAPON_GLOCK18 || m_iId == WEAPON_P228 || m_iId == WEAPON_DEAGLE || m_iId == WEAPON_ELITE || m_iId == WEAPON_FIVESEVEN )	// Beta 7.0: the Elites; 1.0: the Five-seveN
 		{
 			m_iShotsFired = 0;
 		}
@@ -1435,7 +1462,7 @@ BOOL CBasePlayerWeapon :: PlayEmptySound( void )
 {
 	// Beta 6.5: a dry-fire click of the weapon's kind (Half-Life's revolver
 	// click before), and m_iPlayEmptySound is no longer cleared
-	if ( m_iId == WEAPON_USP || m_iId == WEAPON_GLOCK18 || m_iId == WEAPON_P228 || m_iId == WEAPON_DEAGLE || m_iId == WEAPON_ELITE )	// Beta 7.0: the Elites
+	if ( m_iId == WEAPON_USP || m_iId == WEAPON_GLOCK18 || m_iId == WEAPON_P228 || m_iId == WEAPON_DEAGLE || m_iId == WEAPON_ELITE || m_iId == WEAPON_FIVESEVEN )	// Beta 7.0: the Elites; 1.0: the Five-seveN
 	{
 		if (m_iPlayEmptySound)
 		{
@@ -1488,8 +1515,11 @@ void CBasePlayerAmmo::Spawn( void )
 	UTIL_SetOrigin( pev, pev->origin );
 
 	SetTouch( DefaultTouch );
-	SetThink( SUB_Remove );
-	pev->nextthink = gpGlobals->time + 2;	// ammo lies around for two seconds (Beta 1.0 and 1.1: five)
+	if ( g_pGameRules->IsMultiplayer() )	// Counter-Strike 1.0: the training course's ammunition stays
+	{
+		SetThink( SUB_Remove );
+		pev->nextthink = gpGlobals->time + 2;	// ammo lies around for two seconds (Beta 1.0 and 1.1: five)
+	}
 }
 
 CBaseEntity* CBasePlayerAmmo::Respawn( void )
@@ -1510,7 +1540,8 @@ void CBasePlayerAmmo::Materialize( void )
 	if ( pev->effects & EF_NODRAW )
 	{
 		// changing from invisible state to visible.
-		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "items/suitchargeok1.wav", 1, ATTN_NORM, 0, 150 );
+		if ( g_pGameRules->IsMultiplayer() )	// Counter-Strike 1.0: not in the training course
+			EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "items/suitchargeok1.wav", 1, ATTN_NORM, 0, 150 );
 		pev->effects &= ~EF_NODRAW;
 		pev->effects |= EF_MUZZLEFLASH;
 	}

@@ -348,6 +348,10 @@ SOURCE=.\subs.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\training_gamerules.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\triggers.cpp
 # End Source File
 # Begin Source File
@@ -389,6 +393,10 @@ SOURCE=.\wpn_shared\wpn_deagle.cpp
 # Begin Source File
 
 SOURCE=.\wpn_shared\wpn_elite.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_fiveseven.cpp
 # End Source File
 # Begin Source File
 
@@ -444,6 +452,10 @@ SOURCE=.\wpn_shared\wpn_scout.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\wpn_shared\wpn_sg550.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\wpn_shared\wpn_sg552.cpp
 # End Source File
 # Begin Source File
@@ -453,6 +465,10 @@ SOURCE=.\wpn_shared\wpn_smokegrenade.cpp
 # Begin Source File
 
 SOURCE=.\wpn_shared\wpn_tmp.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_ump45.cpp
 # End Source File
 # Begin Source File
 

@@ -231,6 +231,7 @@ CHalfLifeMultiplay :: CHalfLifeMultiplay()
 	m_iConsecutiveVIP = 0;
 	m_iUnBalancedRounds = 0;
 	m_iNumEscapeRounds = 0;
+	m_iMaxRounds = CVAR_GET_FLOAT( "mp_maxrounds" );	// Counter-Strike 1.0 (Beta 7.1 read it only at a complete restart)
 	m_iTotalRoundsPlayed = 0;	// Beta 7.1
 
 	// Beta 6.5: the map votes, the VIP's turn
@@ -823,7 +824,7 @@ void CHalfLifeMultiplay::CheckWinConditions( void )
 
 		while ( pC4 )
 		{
-			if ( ((CGrenade *)pC4)->m_bIsC4 == true && !((CGrenade *)pC4)->m_fC4Done )
+			if ( ((CGrenade *)pC4)->m_bIsC4 == true && !((CGrenade *)pC4)->m_bJustBlew )
 				bC4Present = TRUE;
 
 			pC4 = UTIL_FindEntityByClassname( pC4, "grenade" );
@@ -1692,6 +1693,7 @@ void CHalfLifeMultiplay :: Think ( void )
 	}
 	else if ( m_iTotalRoundsPlayed >= m_iMaxRounds )
 	{
+		ALERT( at_console, "Changing maps due to maximum rounds have been met\n" );	// Counter-Strike 1.0
 		GoToIntermission();
 		return;
 	}
@@ -1894,7 +1896,7 @@ void CHalfLifeMultiplay :: Think ( void )
 		m_iMaxRounds = (int)CVAR_GET_FLOAT( "mp_maxrounds" );	// Beta 7.1
 	}
 
-	// sic: 116 empty statements, a stand-in for intermediate code the image
+	// sic: 154 empty statements (Counter-Strike 1.0; Beta 7.1: 116), a stand-in for intermediate code the image
 	// cannot give. VC6 places the inline functions of gamerules.h among this
 	// file's own functions by the intermediate code in front of each. Beta 7.1's
 	// multiplay_gamerules.obj (the file writing its own .pch) has GetTeamID ahead
@@ -1907,6 +1909,50 @@ void CHalfLifeMultiplay :: Think ( void )
 	// together; neither can be told from the image.) Beta 7.0's object asked for
 	// 24 to 29 statements in another /YX state, Beta 6.6's for 3 to 15 at
 	// InitHUD's end. What the text was is not known; the place is ours.
+	// Counter-Strike 1.0 (Visual C++ 6.0 SP4, the same state): retail's object has
+	// CGameRules::IsTeamplay and GetGameDescription ahead of GetNextBestWeapon and
+	// the other nine inlines behind it; 140 to 168 statements fit, 138 and 170 do
+	// not (698 to 947 bytes of intermediate code more before GetNextBestWeapon
+	// than the text gives, by the offsets; with trains.h behind gamerules.h it
+	// would be 56 to 305).
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
 	;
 	;
 	;
@@ -2640,16 +2686,19 @@ void CHalfLifeMultiplay::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, 
 	else if ( strncmp( killer_weapon_name, "func_", 5 ) == 0 )
 		killer_weapon_name += 5;
 
-	// Beta 7.1: a kill by a hit to the head is shown, and logged, as "headshot"
+	// Counter-Strike 1.0: a kill by a hit to the head goes to the clients as a byte of its own
+	// and the weapon keeps its name (Beta 7.1: the weapon's name was "headshot", for the
+	// clients and the log, and the console got "Got a headshot!").  The local's name is
+	// Counter-Strike 1.6's.
+	int iGotHeadshot = 0;
+
 	if ( pVictim->m_bHeadshotKilled == true )
-	{
-		ALERT( at_console, "Got a headshot!\n" );
-		killer_weapon_name = "headshot";
-	}
+		iGotHeadshot = 1;
 
 	MESSAGE_BEGIN( MSG_ALL, gmsgDeathMsg );
 		WRITE_BYTE( killer_index );						// the killer
 		WRITE_BYTE( ENTINDEX(pVictim->edict()) );		// the victim
+		WRITE_BYTE( iGotHeadshot );
 		WRITE_STRING( killer_weapon_name );		// what they were killed by (should this be a string?)
 	MESSAGE_END();
 
@@ -2962,7 +3011,7 @@ BOOL CHalfLifeMultiplay :: PlayFootstepSounds( CBasePlayer *pl, float fvol )
 	if ( g_footsteps && g_footsteps->value == 0 )
 		return FALSE;
 
-	if ( pl->IsOnLadder() || pl->pev->velocity.Length2D() > 190 )	// Beta 6.0: 190 (220)
+	if ( pl->IsOnLadder() || pl->pev->velocity.Length2D() > 135 )	// Counter-Strike 1.0: 135 (Beta 6.0 to 7.1: 190; before: 220)
 		return TRUE;  // only make step sounds in multiplayer if the player is moving fast enough
 
 	return FALSE;

@@ -20,6 +20,11 @@
 *	leader pushes it away by walking into it (Touch), it has to be faced to be
 *	used, follows from 2048 units and backs away from 256.
 *
+*	Counter-Strike 1.0: Half-Life's monster_scientist is a hostage too; the
+*	map's spawn flag 4 makes it collide with func_monsterclip (Spawn); in the
+*	training course (rules that are not multiplayer) IdleThink stops it at a
+*	func_monsterclip and TakeDamage tells the rules of a killed hostage.
+*
 ****/
 
 #include "extdll.h"
@@ -48,6 +53,7 @@ extern void Broadcast( const char *sentence );	// multiplay_gamerules.cpp (Beta 
 extern void ShowMenu( CBasePlayer *pPlayer, int bitsValidSlots, int nDisplayTime, BOOL fNeedMore, char *pszText );	// client.cpp (Beta 5.0 leak)
 
 LINK_ENTITY_TO_CLASS( hostage_entity, CHostage );
+LINK_ENTITY_TO_CLASS( monster_scientist, CHostage );	// Counter-Strike 1.0: Half-Life's scientist is a hostage
 
 void CHostage::Spawn( void )
 {
@@ -63,6 +69,11 @@ void CHostage::Spawn( void )
 	pev->health		= pev->max_health;
 	pev->gravity	= 1.0;
 	pev->view_ofs	= Vector( 0, 0, 12 );	// Beta 6.0
+
+	// Counter-Strike 1.0: the monsters' spawn flag (the SDK's monsters.h:
+	// SF_MONSTER_HITMONSTERCLIP, 4; CBaseMonster::MonsterInit's lines)
+	if ( pev->spawnflags & 4 )
+		pev->flags |= FL_MONSTERCLIP;
 
 	// Beta 5.0: the map may give the hostage a model and a skin
 	if ( pev->skin < 0 )
@@ -159,16 +170,30 @@ void CHostage::IdleThink( void )
 	// are called, which expanded) follows the inliner's budget, twice the
 	// function's size as written: Beta 6.5's code needs 40 to 56 units more
 	// than the visible text has, Beta 6.6's (the same text plus one log
-	// line) exactly 44 (11 unused int locals; 10 and 12 do not fit). This
-	// block, ahead of the function's other inline calls, with the unused
-	// bContinue below, gives retail's bytes in both versions (Beta 6.5's
-	// "== ACT_IDLE" form is 4 units too long for 6.6); the real text is not known.
+	// line) exactly 44 (11 unused int locals; 10 and 12 do not fit). The
+	// Betas' block, "if ( GetActivity() ) SetActivity( ACT_WALK ); else
+	// SetActivity( ACT_IDLE );" ahead of the function's other inline calls,
+	// with the unused bContinue below, gives retail's bytes in both versions
+	// (Beta 6.5's "== ACT_IDLE" form is 4 units too long for 6.6); the real
+	// text is not known.
+	// Counter-Strike 1.0 (Visual C++ 6.0 SP4, the monster clip block added
+	// below): still needed. Measured in its place: 8 to 12 dead stores to one
+	// int give retail's bytes, 7 and 13 do not, none or unused uninitialised
+	// locals do not; without bContinue 73 lines differ. In Counter-Strike 1.1
+	// (the rescue's log line is longer there) the window is one wide: exactly
+	// 9 dead stores give retail's bytes (8 and 10 do not, nor 1 to 7 and 11
+	// to 30), with any form of the new log line's arguments. The Betas'
+	// block is worth 12, the top of 1.0's window, and does not fit 1.1; this
+	// one-armed block is worth the 9 and gives retail's bytes in 1.0, 1.0b
+	// and 1.1 alike (each compiled and compared; so does the same test with
+	// != ACT_IDLE and SetActivity( ACT_IDLE )), and not in Betas 6.6, 7.0 and
+	// 7.1. So the form changes once, in Counter-Strike 1.0; whether the text
+	// really changed then or in 1.1 is not shown. "if ( GetActivity() )"
+	// alone, a bare call, or a local set from it do not fit.
 	if ( 0 )
 	{
-		if ( GetActivity() )
+		if ( GetActivity() == ACT_IDLE )
 			SetActivity( ACT_WALK );
-		else
-			SetActivity( ACT_IDLE );
 	}
 
 	if ( pev->deadflag != DEAD_DEAD )
@@ -424,6 +449,48 @@ void CHostage::IdleThink( void )
 		else
 			m_fStopped = 2;	// no leader near: neither following nor told to stay
 
+		// Counter-Strike 1.0: in the training course a hostage that cannot
+		// walk 32 units ahead is stopped where its box, 10 units wider,
+		// meets a func_monsterclip, and put on the floor when in the air
+		// (from the binary; names ours)
+		Vector vecOrigin = pev->origin;
+
+		if ( !g_pGameRules->IsMultiplayer() )
+		{
+			if ( !WALK_MOVE( ENT( pev ), pev->angles.y, 32, WALKMOVE_CHECKONLY ) )
+			{
+				pev->absmax.x += 10;
+				pev->absmax.y += 10;
+				pev->absmin.x -= 10;
+				pev->absmin.y -= 10;
+
+				CBaseEntity *pEntity = UTIL_FindEntityByClassname( NULL, "func_monsterclip" );
+				while ( pEntity != NULL )
+				{
+					if ( Intersects( pEntity ) )
+					{
+						pev->velocity = g_vecZero;
+
+						if ( !( pev->flags & FL_ONGROUND ) )
+						{
+							pev->origin = vecOrigin;
+							DROP_TO_FLOOR( ENT( pev ) );
+							vecOrigin = pev->origin;
+						}
+					}
+
+					pEntity = UTIL_FindEntityByClassname( pEntity, "func_monsterclip" );
+				}
+
+				pev->absmax.x -= 10;
+				pev->absmax.y -= 10;
+				pev->absmin.x += 10;
+				pev->absmin.y += 10;
+			}
+		}
+
+		pev->origin = vecOrigin;
+
 		if ( gpGlobals->time >= m_flFlinchTime )
 		{
 			if ( pev->velocity.Length() > 120 )
@@ -588,6 +655,10 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 					pPlayer->HintMessage( "You have lost money for killing a hostage.", FALSE, FALSE );
 					pPlayer->m_flDisplayHistory |= 0x40;
 				}
+
+				// Counter-Strike 1.0: the training course is told
+				if ( !g_pGameRules->IsMultiplayer() )
+					((CHalfLifeTraining *)g_pGameRules)->HostageDied();
 
 				// Beta 6.5: mp_hostagepenalty, the number of hostages a terrorist may
 				// kill; one before it he is warned, at it the server drops him

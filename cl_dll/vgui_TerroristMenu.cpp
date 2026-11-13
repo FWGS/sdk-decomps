@@ -124,7 +124,7 @@ CTerroristMenuPanel::CTerroristMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 			strcpy( sz, "slot3" );
 			break;
 		case 3:
-			m_pButtons[i] = new CommandButton( "Gorilla Warface", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( "Guerilla Warfare", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot4" );
 			break;
 		case 4:
@@ -133,7 +133,7 @@ CTerroristMenuPanel::CTerroristMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 			strcpy( sz, "slot5" );
 			break;
 		default:
-			m_pButtons[i] = new CommandButton( "Phoenix Connection", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( "Phoenix Connexion", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		}
@@ -161,7 +161,7 @@ CTerroristMenuPanel::CTerroristMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 		switch ( i )
 		{
 		case 0:
-			sprintf( sz, "Phoenix Connektion" );
+			sprintf( sz, "Phoenix Connexion" );
 			break;
 		case 1:
 			sprintf( sz, "L337 Krew" );
@@ -170,13 +170,13 @@ CTerroristMenuPanel::CTerroristMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 			sprintf( sz, "Arctic Avengers" );
 			break;
 		case 3:
-			sprintf( sz, "Gorilla Warface" );
+			sprintf( sz, "Guerilla Warfare" );
 			break;
 		case 4:
 			sprintf( sz, "AUTO SELECT" );
 			break;
 		default:
-			sprintf( sz, "Phoenix Connektion" );
+			sprintf( sz, "Phoenix Connexion" );
 			break;
 		}
 
@@ -200,7 +200,7 @@ CTerroristMenuPanel::CTerroristMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 				strcpy( sz, "terror" );
 				break;
 			case 1:
-				strcpy( sz, "arab" );
+				strcpy( sz, "leet" );
 				break;
 			case 2:
 				strcpy( sz, "arctic" );
@@ -242,7 +242,7 @@ CTerroristMenuPanel::CTerroristMenuPanel(int iTrans, int iRemoveMe, int x,int y,
 			sprintf( sz, "classes/%s.txt", "terror" );
 			break;
 		case 1:
-			sprintf( sz, "classes/%s.txt", "arab" );
+			sprintf( sz, "classes/%s.txt", "leet" );
 			break;
 		case 2:
 			sprintf( sz, "classes/%s.txt", "arctic" );

@@ -312,8 +312,8 @@ CGameRules *InstallGameRules( void )
 
 	if ( !gpGlobals->deathmatch )
 	{
-		// generic half-life
-		return new CHalfLifeRules;
+		// Counter-Strike 1.0: the training course (training_gamerules.cpp), Half-Life's single player rules no more
+		return new CHalfLifeTraining;
 	}
 	else
 	{

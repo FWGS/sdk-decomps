@@ -76,6 +76,7 @@ typedef enum
 	PLAYER_FLINCH,		// Counter-Strike: SetAnimation's flinches, 7 and 8 from Beta 7.0
 	PLAYER_LARGE_FLINCH,
 	PLAYER_RELOAD,		// Counter-Strike (Beta 7.0): 9, every Reload
+	PLAYER_HOLDBOMB,	// Counter-Strike 1.0: 10, the C4 while it is armed (Counter-Strike 1.6's name)
 } PLAYER_ANIM;
 
 // Counter-Strike: the teams (CBasePlayer::m_iTeam). Names ours. Beta 5.0 (leak):
@@ -236,7 +237,7 @@ public:
 	bool				m_bHeadshotKilled;		// 0x394 new in Beta 7.1: Killed and SetAnimation set it when the last hit was to the head, DeathNotice then names the weapon "headshot"; Spawn clears it (1.6's name; there it stands after m_flLastAttackedTeammate)
 	float				m_flNextZoneCheck;		// 0x398 HandleSignals' next check (0x394 in Beta 7.0, 0x388 to Beta 6.6; 1.6: m_tmHandleSignals)
 	CPlayerSignals		m_signals;				// 0x39c
-	edict_t				*m_pentBombTarget;		// 0x3a4 the bomb target the player is in
+	edict_t				*m_pentCurBombTarget;	// 0x3a4 the bomb target the player is in (Counter-Strike 1.6's name; CC4::Use clears it around the plant)
 
 	int					m_iPlayerSound;// the index of the sound list slot reserved for this player
 	int					m_iTargetVolume;// ideal sound volume. 

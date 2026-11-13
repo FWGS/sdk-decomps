@@ -89,16 +89,16 @@ BOOL CAUG::Deploy( )
 	m_iShellOn = 1;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_aug.mdl", "models/p_aug.mdl", AUG_DRAW, "aug", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_aug.mdl", "models/p_aug.mdl", AUG_DRAW, "carbine", UseDecrement() ? 1 : 0 );
 	else
-		return DefaultDeploy( "models/v_aug_r.mdl", "models/p_aug.mdl", AUG_DRAW, "aug", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_aug_r.mdl", "models/p_aug.mdl", AUG_DRAW, "carbine", UseDecrement() ? 1 : 0 );
 }
 
 void CAUG::SecondaryAttack( void )
 {
 	if ( m_pPlayer->m_iFOV == 90 )
-		m_pPlayer->pev->fov = m_pPlayer->m_iFOV = 45;
-	else if ( m_pPlayer->m_iFOV == 45 )
+		m_pPlayer->pev->fov = m_pPlayer->m_iFOV = 55;
+	else if ( m_pPlayer->m_iFOV == 55 )
 		m_pPlayer->pev->fov = m_pPlayer->m_iFOV = 90;
 	else
 		m_pPlayer->pev->fov = m_pPlayer->m_iFOV = 90;
@@ -156,7 +156,7 @@ void CAUG::AUGFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
 	Vector vecDir;	// sic: unused, as in wpn_ak47.cpp; without it the x87 operand order differs from retail's
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 33, 0.96, NULL, false );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 32, 0.96, NULL, false );
 
 	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireAUG, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_pPlayer->pev->punchangle.x, m_pPlayer->pev->punchangle.y, (int)(flSpread * 10000), (int)(m_pPlayer->pev->punchangle.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
 
@@ -183,19 +183,17 @@ void CAUG::Reload( void )
 	if ( m_pPlayer->ammo_556nato <= 0 )
 		return;
 
-	int iResult = DefaultReload( AUG_MAX_CLIP, AUG_RELOAD, 3.3 );	// name ours
-
-	m_pPlayer->SetAnimation( PLAYER_RELOAD );
-
-	if ( iResult )
+	if ( DefaultReload( AUG_MAX_CLIP, AUG_RELOAD, 3.3 ) )
 	{
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
+
 		if ( m_pPlayer->m_iFOV != 90 )
 			SecondaryAttack();
-	}
 
-	m_flAccuracy = 0;
-	m_iShotsFired = 0;
-	m_bDelayFire = false;
+		m_flAccuracy = 0;
+		m_iShotsFired = 0;
+		m_bDelayFire = false;
+	}
 }
 
 void CAUG::WeaponIdle( void )

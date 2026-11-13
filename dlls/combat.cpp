@@ -1692,6 +1692,10 @@ the material (flDamageModifier, Counter-Strike 1.6's name: 0.5, metal 0.2,
 grate 0.4, vent and computer 0.45, tile 0.3, wood 0.6; 6.6: 0.6 always) and
 half of the distance it had left (6.6: half of the whole); through anything
 else it restarts 42 units on [32] with 75% of what was left [70% of the whole].
+
+Counter-Strike 1.0: the damage is spread at random by bullet type before the
+shot: 9 mm, .50 AE, 5.7 mm and .357 SIG -4 to +6, .45 ACP and 7.62 mm -2 to
++2, 5.56 mm -3 to +3, .338 -4 to +4 (RANDOM_LONG, so the server alone knows).
 ================
 */
 void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iPenetration, int iBulletType, int iDamage, float flRangeModifier, entvars_t *pevAttacker, bool bPistol )
@@ -1708,19 +1712,11 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 	bool bHitMetal = false;	// Beta 6.0: a bullet of this shot hit metal, a grate, a vent or a computer
 	int iSparksAmount;		// Beta 6.0: the sparks of a hit on such a texture; no longer read (Beta 6.5)
 
-	// sic (stand-in): retail's text of this function is longer than what its code shows.
-	// Visual C++ 6.0's inliner gives a function a budget of twice its size as the
-	// front end counted it (dead statements included), and retail's pattern (the
-	// Vector constructors called in the first two statements, everything expanded
-	// in the loop but the last copy of the second branch) needs 98 to 147 units more
-	// than the statements below make: 14 to 21 dead stores (measured: 13 and 22 give
-	// other code; where they stand does not matter). What the text was cannot be
-	// read from the image.
-	// Beta 7.0's text (the damage modifier, the new numbers) takes 13 to 20 (12 and
-	// 21 give other code): the 14 here serve Betas 6.5, 6.6 and 7.0.
-	int iStandIn;
-	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
-	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
+	// Betas 6.5 to 7.1 had a stand-in here (14 dead stores for the inliner's
+	// budget: their code called the Vector constructors of the first two
+	// statements). Counter-Strike 1.0's code has everything expanded, and its
+	// text gives that with none: measured, 0 to 30 dead stores all give
+	// retail's bytes, so the stand-in is gone.
 
 	// the penetration of each bullet (Beta 3.0 had no breaks here, so that
 	// every bullet fell through to 0 and 0; Beta 3.1: "bullet penetration bug
@@ -1731,41 +1727,49 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 		iPenetrationPower = 21;
 		flPenetrationDistance = 800;
 		iSparksAmount = 15;
+		iCurrentDamage += RANDOM_LONG( 0, 10 ) - 4;
 		break;
 	case BULLET_PLAYER_45ACP:
 		iPenetrationPower = 15;
 		flPenetrationDistance = 500;
 		iSparksAmount = 20;
+		iCurrentDamage += RANDOM_LONG( 0, 4 ) - 2;
 		break;
 	case BULLET_PLAYER_50AE:
 		iPenetrationPower = 30;
 		flPenetrationDistance = 1000;
 		iSparksAmount = 20;
+		iCurrentDamage += RANDOM_LONG( 0, 10 ) - 4;
 		break;
 	case BULLET_PLAYER_762MM:
 		iPenetrationPower = 39;
 		flPenetrationDistance = 5000;
 		iSparksAmount = 30;
+		iCurrentDamage += RANDOM_LONG( 0, 4 ) - 2;
 		break;
 	case BULLET_PLAYER_556MM:
 		iPenetrationPower = 35;
 		flPenetrationDistance = 4000;
 		iSparksAmount = 30;
+		iCurrentDamage += RANDOM_LONG( 0, 6 ) - 3;
 		break;
 	case BULLET_PLAYER_338MAG:
 		iPenetrationPower = 45;
 		flPenetrationDistance = 8000;
 		iSparksAmount = 30;
+		iCurrentDamage += RANDOM_LONG( 0, 8 ) - 4;
 		break;
 	case BULLET_PLAYER_57MM:
 		iPenetrationPower = 30;
 		flPenetrationDistance = 2000;
 		iSparksAmount = 20;
+		iCurrentDamage += RANDOM_LONG( 0, 10 ) - 4;
 		break;
 	case BULLET_PLAYER_357SIG:	// Beta 4.0: the P228's
 		iPenetrationPower = 25;
 		flPenetrationDistance = 800;
 		iSparksAmount = 20;
+		iCurrentDamage += RANDOM_LONG( 0, 10 ) - 4;
 		break;
 	default:
 		iPenetrationPower = 0;

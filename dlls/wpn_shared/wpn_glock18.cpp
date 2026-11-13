@@ -97,6 +97,7 @@ BOOL CGLOCK18::Deploy( )
 	m_bBurstFire = false;
 	m_iBurstShotsFired = 0;
 	m_flNextBurstShot = 0;
+	m_flAccuracy = 0.9;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
 	{
@@ -162,10 +163,12 @@ void CGLOCK18::GLOCK18Fire( float flSpread, float flCycleTime, BOOL fUseBurstMod
 		m_flLastFire = gpGlobals->time;
 	else
 	{
-		m_flAccuracy = ( gpGlobals->time - m_flLastFire ) * 0.4 + 0.62;
+		m_flAccuracy -= ( 0.325 - ( gpGlobals->time - m_flLastFire ) ) * 0.275;
 
-		if ( m_flAccuracy > 0.98 )
-			m_flAccuracy = 0.98;
+		if ( m_flAccuracy > 0.9 )
+			m_flAccuracy = 0.9;
+		else if ( m_flAccuracy < 0.6 )
+			m_flAccuracy = 0.6;
 
 		m_flLastFire = gpGlobals->time;
 	}
@@ -223,12 +226,19 @@ void CGLOCK18::Reload( void )
 	if ( m_pPlayer->ammo_9mm <= 0 )
 		return;
 
-	if ( RANDOM_LONG( 0, 1 ) )
-		DefaultReload( GLOCK18_MAX_CLIP, GLOCK18_RELOAD, 2.2 );
-	else
-		DefaultReload( GLOCK18_MAX_CLIP, GLOCK18_RELOAD2, 2.2 );
+	int iResult;
 
-	m_pPlayer->SetAnimation( PLAYER_RELOAD );
+	if ( RANDOM_LONG( 0, 1 ) )
+		iResult = DefaultReload( GLOCK18_MAX_CLIP, GLOCK18_RELOAD, 2.2 );
+	else
+		iResult = DefaultReload( GLOCK18_MAX_CLIP, GLOCK18_RELOAD2, 2.2 );
+
+	if ( iResult )
+	{
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
+
+		m_flAccuracy = 0.9;
+	}
 }
 
 void CGLOCK18::WeaponIdle( void )

@@ -82,9 +82,9 @@ BOOL CHEGrenade::Deploy( )
 	m_flReleaseThrow = -1;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_hegrenade.mdl", "models/p_hegrenade.mdl", HEGRENADE_DRAW, "crowbar", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_hegrenade.mdl", "models/p_hegrenade.mdl", HEGRENADE_DRAW, "grenade", UseDecrement() ? 1 : 0 );
 	else
-		return DefaultDeploy( "models/v_hegrenade_r.mdl", "models/p_hegrenade.mdl", HEGRENADE_DRAW, "crowbar", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_hegrenade_r.mdl", "models/p_hegrenade.mdl", HEGRENADE_DRAW, "grenade", UseDecrement() ? 1 : 0 );
 }
 
 BOOL CHEGrenade::CanHolster( void )

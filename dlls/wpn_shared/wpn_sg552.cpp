@@ -97,10 +97,10 @@ void CSG552::SecondaryAttack( void )
 {
 	if ( m_pPlayer->m_iFOV == 90 )
 	{
-		m_pPlayer->m_iFOV = 45;
-		m_pPlayer->pev->fov = 45;
+		m_pPlayer->m_iFOV = 55;
+		m_pPlayer->pev->fov = 55;
 	}
-	else if ( m_pPlayer->m_iFOV == 45 )
+	else if ( m_pPlayer->m_iFOV == 55 )
 	{
 		m_pPlayer->m_iFOV = 90;
 		m_pPlayer->pev->fov = 90;
@@ -191,17 +191,19 @@ void CSG552::Reload( void )
 	if ( m_pPlayer->ammo_556nato <= 0 )
 		return;
 
-	if ( DefaultReload( SG552_MAX_CLIP, SG552_RELOAD, 3 ) )
+	int iResult = DefaultReload( SG552_MAX_CLIP, SG552_RELOAD, 3 );
+
+	if ( iResult )
 	{
 		if ( m_pPlayer->pev->fov != 90 )
 			SecondaryAttack();
+
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
+
+		m_flAccuracy = 0.2;
+		m_iShotsFired = 0;
+		m_bDelayFire = false;
 	}
-
-	m_pPlayer->SetAnimation( PLAYER_RELOAD );
-
-	m_flAccuracy = 0.2;
-	m_iShotsFired = 0;
-	m_bDelayFire = false;
 }
 
 void CSG552::WeaponIdle( void )

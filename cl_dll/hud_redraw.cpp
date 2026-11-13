@@ -299,6 +299,19 @@ int CHud :: Redraw( float flTime, int intermission )
 		g_SmokeList.m_iMax = CVAR_GET_FLOAT( "max_smokepuffs" );
 
 		m_flCvarCheckTime = flTime + 0.5;
+
+		if ( pszKill )
+			delete pszKill;
+		if ( pszDisconnect )
+			delete pszDisconnect;
+		if ( pszRestart )
+			delete pszRestart;
+		if ( pszQuit )
+			delete pszQuit;
+		if ( pszKernel )
+			delete pszKernel;
+		if ( pszIsDebuggerPresent )
+			delete pszIsDebuggerPresent;
 	}
 
 	return 1;

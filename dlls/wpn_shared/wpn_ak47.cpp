@@ -88,9 +88,9 @@ BOOL CAK47::Deploy( )
 	m_iShellOn = 1;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_ak47.mdl", "models/p_ak47.mdl", AK47_DRAW, "mp5", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_ak47.mdl", "models/p_ak47.mdl", AK47_DRAW, "ak47", UseDecrement() ? 1 : 0 );
 	else
-		return DefaultDeploy( "models/v_ak47_r.mdl", "models/p_ak47.mdl", AK47_DRAW, "mp5", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_ak47_r.mdl", "models/p_ak47.mdl", AK47_DRAW, "ak47", UseDecrement() ? 1 : 0 );
 }
 
 void CAK47::SecondaryAttack( void )
@@ -142,7 +142,7 @@ void CAK47::AK47Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
 	Vector vecDir;	// sic: unused (an SDK leftover); without it the x87 operands of the event's parameters come in another order
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_762MM, 37, 0.98, NULL, false );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_762MM, 36, 0.98, NULL, false );
 
 	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireAK47, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_pPlayer->pev->punchangle.x, m_pPlayer->pev->punchangle.y, (int)(flSpread * 10000), (int)(m_pPlayer->pev->punchangle.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
 
@@ -172,12 +172,13 @@ void CAK47::Reload( void )
 	if ( m_pPlayer->ammo_762nato <= 0 )
 		return;
 
-	DefaultReload( AK47_MAX_CLIP, AK47_RELOAD, 2.45 );
-
-	m_pPlayer->SetAnimation( PLAYER_RELOAD );
-	m_flAccuracy = 0.2;
-	m_iShotsFired = 0;
-	m_bDelayFire = false;
+	if ( DefaultReload( AK47_MAX_CLIP, AK47_RELOAD, 2.45 ) )
+	{
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
+		m_flAccuracy = 0.2;
+		m_iShotsFired = 0;
+		m_bDelayFire = false;
+	}
 }
 
 void CAK47::WeaponIdle( void )

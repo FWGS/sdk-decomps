@@ -162,7 +162,7 @@ void CGrenade::Explode2( TraceResult *pTrace, int bitsDamageType )
 	// (Beta 4.0 and 4.1: within 256 units of an info_bomb_target)
 	mp->m_fTargetBombed = true;
 
-	m_fC4Done = TRUE;
+	m_bJustBlew = TRUE;
 	mp->CheckWinConditions();
 
 	// Pull out of the wall a bit
@@ -913,7 +913,7 @@ CGrenade *CGrenade::ShootContact( entvars_t *pevOwner, Vector vecStart, Vector v
 	pGrenade->SetTouch( ExplodeTouch );
 
 	pGrenade->pev->dmg = gSkillData.plrDmgM203Grenade;
-	pGrenade->m_fC4Done = TRUE;	// Beta 4.0: no bomb
+	pGrenade->m_bJustBlew = TRUE;	// Beta 4.0: no bomb
 
 	return pGrenade;
 }
@@ -940,7 +940,7 @@ CGrenade * CGrenade:: ShootTimed2( entvars_t *pevOwner, Vector vecStart, Vector 
 		
 	pGrenade->pev->sequence = RANDOM_LONG( 3, 6 );
 	pGrenade->pev->framerate = 1.0;
-	pGrenade->m_fC4Done = TRUE;
+	pGrenade->m_bJustBlew = TRUE;
 
 	pGrenade->pev->gravity = 0.55;
 	pGrenade->pev->friction = 0.7;
@@ -979,7 +979,7 @@ CGrenade * CGrenade:: ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector v
 		
 	pGrenade->pev->sequence = RANDOM_LONG( 3, 6 );
 	pGrenade->pev->framerate = 1.0;
-	pGrenade->m_fC4Done = TRUE;	// Beta 4.0: no bomb
+	pGrenade->m_bJustBlew = TRUE;	// Beta 4.0: no bomb
 
 	// Tumble through the air
 	// pGrenade->pev->avelocity.x = -400;
@@ -1012,10 +1012,10 @@ void CGrenade::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 				{
 					ClientPrint( player->pev, HUD_PRINTCENTER, "#Defusing_Bomb_With_Defuse_Kit" );
 					EMIT_SOUND( ENT(player->pev), CHAN_ITEM, "weapons/c4_disarm.wav", 1.0, ATTN_NORM );
-					m_pDefuser = pActivator;
+					m_pBombDefuser = pActivator;
 					m_bStartDefuse = true;
-					m_flDefuseDone = gpGlobals->time + 5.0;
-					m_flNextDefuseCheck = gpGlobals->time + 0.5;
+					m_flDefuseCountDown = gpGlobals->time + 5.0;
+					m_fNextDefuse = gpGlobals->time + 0.5;
 
 					MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, player->pev );
 						WRITE_SHORT( 5 );
@@ -1025,10 +1025,10 @@ void CGrenade::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 				{
 					ClientPrint( player->pev, HUD_PRINTCENTER, "#Defusing_Bomb_Without_Defuse_Kit" );
 					EMIT_SOUND( ENT(player->pev), CHAN_ITEM, "weapons/c4_disarm.wav", 1.0, ATTN_NORM );
-					m_pDefuser = pActivator;
+					m_pBombDefuser = pActivator;
 					m_bStartDefuse = true;
-					m_flDefuseDone = gpGlobals->time + 10.0;
-					m_flNextDefuseCheck = gpGlobals->time + 0.5;
+					m_flDefuseCountDown = gpGlobals->time + 10.0;
+					m_fNextDefuse = gpGlobals->time + 0.5;
 
 					MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, player->pev );
 						WRITE_SHORT( 10 );
@@ -1037,7 +1037,7 @@ void CGrenade::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 			}
 			else
 			{
-				m_flNextDefuseCheck = gpGlobals->time + 0.5;
+				m_fNextDefuse = gpGlobals->time + 0.5;
 			}
 		}
 	}
@@ -1077,29 +1077,29 @@ CGrenade * CGrenade :: ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart,
 	pGrenade->m_flC4Blow = gpGlobals->time + ((CHalfLifeMultiplay *)g_pGameRules)->m_iC4Timer;
 	// Beta 5.0: five beeps in turn, each lasting 10 % less than the last,
 	// the first a quarter of the timer (the leak: one beep, faster and faster)
-	pGrenade->m_flBeepInterval = ((CHalfLifeMultiplay *)g_pGameRules)->m_iC4Timer / 4;
-	pGrenade->m_flNextBeepChange = gpGlobals->time;
+	pGrenade->m_flNextFreqInterval = ((CHalfLifeMultiplay *)g_pGameRules)->m_iC4Timer / 4;
+	pGrenade->m_flNextFreq = gpGlobals->time;
 	pGrenade->m_flNextBeep = gpGlobals->time + 0.5;
-	pGrenade->m_iBeepStep = 0;
-	pGrenade->m_flBeepAttenuation = 0;
-	pGrenade->m_pszBeepSound = NULL;
+	pGrenade->m_iCurWave = 0;
+	pGrenade->m_fAttenu = 0;
+	pGrenade->m_sBeepName = NULL;
 	pGrenade->m_flNextBlink = gpGlobals->time + 2.0;
 	pGrenade->m_bIsC4 = true;
-	pGrenade->m_flNextDefuseCheck = 0;
+	pGrenade->m_fNextDefuse = 0;
 	pGrenade->m_bStartDefuse = false;
 
 	pGrenade->pev->friction = 0.9;
-	pGrenade->m_fC4Done = false;
+	pGrenade->m_bJustBlew = false;
 
 	// the bomb target the planter stands in is used when the C4 goes off
 	CBaseEntity *pOwner = CBaseEntity::Instance( ENT( pevOwner ) );	// name ours
 	if ( pOwner && pOwner->IsPlayer() )
 	{
-		pGrenade->m_pentBombTarget = ((CBasePlayer *)pOwner)->m_pentBombTarget;
+		pGrenade->m_pentCurBombTarget = ((CBasePlayer *)pOwner)->m_pentCurBombTarget;
 		return pGrenade;
 	}
 
-	pGrenade->m_pentBombTarget = NULL;
+	pGrenade->m_pentCurBombTarget = NULL;
 	return pGrenade;
 }
 
@@ -1134,7 +1134,7 @@ CGrenade * CGrenade:: ShootSmokeGrenade( entvars_t *pevOwner, Vector vecStart, V
 		
 	pGrenade->pev->sequence = RANDOM_LONG( 3, 6 );
 	pGrenade->pev->framerate = 1.0;
-	pGrenade->m_fC4Done = TRUE;
+	pGrenade->m_bJustBlew = TRUE;
 
 	pGrenade->pev->gravity = 0.5;
 	pGrenade->pev->friction = 0.8;
@@ -1168,42 +1168,42 @@ void CGrenade::C4Think( void )
 	// Beta 5.0: five beeps, each carrying farther (a smaller attenuation)
 	// than the last, each lasting 10 % less; a beep every 1.4 seconds (the
 	// leak: one beep, faster and louder at every think)
-	if ( gpGlobals->time >= m_flNextBeepChange )
+	if ( gpGlobals->time >= m_flNextFreq )
 	{
-		m_flNextBeepChange = gpGlobals->time + m_flBeepInterval;
-		m_flBeepInterval *= 0.9;
+		m_flNextFreq = gpGlobals->time + m_flNextFreqInterval;
+		m_flNextFreqInterval *= 0.9;
 
-		switch ( m_iBeepStep )
+		switch ( m_iCurWave )
 		{
 		case 0:
-			m_pszBeepSound = "weapons/c4_beep1.wav";
-			m_flBeepAttenuation = 1.5;
+			m_sBeepName = "weapons/c4_beep1.wav";
+			m_fAttenu = 1.5;
 			break;
 		case 1:
-			m_pszBeepSound = "weapons/c4_beep2.wav";
-			m_flBeepAttenuation = 1.0;
+			m_sBeepName = "weapons/c4_beep2.wav";
+			m_fAttenu = 1.0;
 			break;
 		case 2:
-			m_pszBeepSound = "weapons/c4_beep3.wav";
-			m_flBeepAttenuation = 0.8;
+			m_sBeepName = "weapons/c4_beep3.wav";
+			m_fAttenu = 0.8;
 			break;
 		case 3:
-			m_pszBeepSound = "weapons/c4_beep4.wav";
-			m_flBeepAttenuation = 0.5;
+			m_sBeepName = "weapons/c4_beep4.wav";
+			m_fAttenu = 0.5;
 			break;
 		case 4:
-			m_pszBeepSound = "weapons/c4_beep5.wav";
-			m_flBeepAttenuation = 0.2;
+			m_sBeepName = "weapons/c4_beep5.wav";
+			m_fAttenu = 0.2;
 			break;
 		}
 
-		m_iBeepStep++;
+		m_iCurWave++;
 	}
 
 	if ( gpGlobals->time >= m_flNextBeep )
 	{
 		m_flNextBeep = gpGlobals->time + 1.4;
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, m_pszBeepSound, 1.0, m_flBeepAttenuation);
+		EMIT_SOUND(ENT(pev), CHAN_VOICE, m_sBeepName, 1.0, m_fAttenu);
 	}
 
 	// Beta 5.0 (leak): the C4 glows every two seconds
@@ -1226,9 +1226,9 @@ void CGrenade::C4Think( void )
 	if ( m_flC4Blow <= gpGlobals->time )
 	{
 		// Beta 5.0 (leak): the bomb target the C4 was planted in is used
-		if ( m_pentBombTarget )
+		if ( m_pentCurBombTarget )
 		{
-			CBaseEntity *pBombTarget = CBaseEntity::Instance( m_pentBombTarget );	// name ours
+			CBaseEntity *pBombTarget = CBaseEntity::Instance( m_pentCurBombTarget );	// name ours
 			if ( pBombTarget )
 				pBombTarget->Use( CBaseEntity::Instance( pev->owner ), this, USE_TOGGLE, 0 );
 		}
@@ -1241,36 +1241,36 @@ void CGrenade::C4Think( void )
 
 	// Beta 5.0 (leak): the defuser must keep using the C4 (CGrenade::Use); he may
 	// move, crouch or not, and needs no kit
-	if ( m_bStartDefuse == true && m_pDefuser )
+	if ( m_bStartDefuse == true && m_pBombDefuser )
 	{
-		if ( m_flDefuseDone > gpGlobals->time )
+		if ( m_flDefuseCountDown > gpGlobals->time )
 		{
-			if ( m_flNextDefuseCheck < gpGlobals->time )
+			if ( m_fNextDefuse < gpGlobals->time )
 			{
 				// he let go: the progress bar goes and the defusing stops
-				MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, m_pDefuser->pev );
+				MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, m_pBombDefuser->pev );
 					WRITE_BYTE( 0 );
 				MESSAGE_END();
 
-				m_pDefuser = NULL;
+				m_pBombDefuser = NULL;
 				m_bStartDefuse = false;
-				m_flDefuseDone = 0;
+				m_flDefuseCountDown = 0;
 			}
 		}
 		else
 		{
-			if ( m_pDefuser->pev->deadflag == DEAD_NO )
+			if ( m_pBombDefuser->pev->deadflag == DEAD_NO )
 			{
 				Broadcast( "BOMBDEF" );
-				UTIL_LogPrintf( "%s has defused the bomb\n", STRING( m_pDefuser->pev->netname ) );	// Beta 6.6
+				UTIL_LogPrintf( "%s has defused the bomb\n", STRING( m_pBombDefuser->pev->netname ) );	// Beta 6.6
 				// Beta 5.0: the last beep, still sounding, is stopped
 				UTIL_EmitAmbientSound( ENT(pev), pev->origin, "weapons/c4_beep5.wav", 0, ATTN_NONE, SND_STOP, 0 );
-				EMIT_SOUND(ENT(m_pDefuser->pev), CHAN_WEAPON, "weapons/c4_disarmed.wav", 1.0, ATTN_NORM);
+				EMIT_SOUND(ENT(m_pBombDefuser->pev), CHAN_WEAPON, "weapons/c4_disarmed.wav", 1.0, ATTN_NORM);
 				UTIL_Remove( this );
-				m_fC4Done = TRUE;
+				m_bJustBlew = TRUE;
 				((CHalfLifeMultiplay *)g_pGameRules)->m_fBombDefused = true;
 				((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
-				m_pDefuser = NULL;
+				m_pBombDefuser = NULL;
 				m_bStartDefuse = false;
 				return;
 			}
@@ -1278,7 +1278,7 @@ void CGrenade::C4Think( void )
 			// Beta 5.0: a defuser who died at the end lets the next one start
 			// afresh (the leak left the defuse running)
 			m_bStartDefuse = false;
-			m_pDefuser = NULL;
+			m_pBombDefuser = NULL;
 		}
 	}
 }
@@ -1325,6 +1325,29 @@ void CGrenade :: UseSatchelCharges( entvars_t *pevOwner, SATCHELCODE code )
 		pentFind = FIND_ENTITY_BY_CLASSNAME( pentFind, "grenade" );
 	}
 }
+
+// Counter-Strike 1.0: grenades are saved (a planted C4 with its timers, a smoke grenade). The table,
+// field for field with the types and in the order of retail's (the names are in the image)
+TYPEDESCRIPTION	CGrenade::m_SaveData[] = 
+{
+	DEFINE_FIELD( CGrenade, m_fAttenu, FIELD_FLOAT ),
+	DEFINE_FIELD( CGrenade, m_flNextFreq, FIELD_TIME ),
+	DEFINE_FIELD( CGrenade, m_flC4Blow, FIELD_TIME ),
+	DEFINE_FIELD( CGrenade, m_flNextFreqInterval, FIELD_TIME ),
+	DEFINE_FIELD( CGrenade, m_flNextBeep, FIELD_TIME ),
+	DEFINE_FIELD( CGrenade, m_flDefuseCountDown, FIELD_TIME ),
+	DEFINE_FIELD( CGrenade, m_flNextBlink, FIELD_TIME ),
+	DEFINE_FIELD( CGrenade, m_pentCurBombTarget, FIELD_EDICT ),
+	DEFINE_FIELD( CGrenade, m_sBeepName, FIELD_POINTER ),
+	DEFINE_FIELD( CGrenade, m_bIsC4, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CGrenade, m_bStartDefuse, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CGrenade, m_SGSmoke, FIELD_INTEGER ),
+	DEFINE_FIELD( CGrenade, m_bJustBlew, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CGrenade, m_bLightSmoke, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CGrenade, m_usEvent, FIELD_INTEGER ),
+};
+
+IMPLEMENT_SAVERESTORE( CGrenade, CBaseMonster );
 
 //======================end grenade
 

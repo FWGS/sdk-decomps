@@ -84,7 +84,7 @@ int CP228::GetItemInfo(ItemInfo *p)
 
 BOOL CP228::Deploy( )
 {
-	m_flAccuracy = 0.98;
+	m_flAccuracy = 0.9;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
 		return DefaultDeploy( "models/v_p228.mdl", "models/p_p228.mdl", P228_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
@@ -117,11 +117,13 @@ void CP228::P228Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 		m_flLastFire = gpGlobals->time;
 	else
 	{
-		// accuracy grows with the time since the last shot
-		m_flAccuracy = ( gpGlobals->time - m_flLastFire ) * 0.3 + 0.55;
+		// accuracy falls with shots in quick succession and recovers with the time since the last one
+		m_flAccuracy -= ( 0.325 - ( gpGlobals->time - m_flLastFire ) ) * 0.3;
 
-		if ( m_flAccuracy > 0.98 )
-			m_flAccuracy = 0.98;
+		if ( m_flAccuracy > 0.9 )
+			m_flAccuracy = 0.9;
+		else if ( m_flAccuracy < 0.6 )
+			m_flAccuracy = 0.6;
 
 		m_flLastFire = gpGlobals->time;
 	}
@@ -174,10 +176,14 @@ void CP228::Reload( void )
 	if ( m_pPlayer->ammo_357sig <= 0 )
 		return;
 
-	DefaultReload( P228_MAX_CLIP, P228_RELOAD, 2.7 );
-	m_pPlayer->SetAnimation( PLAYER_RELOAD );
+	int iResult = DefaultReload( P228_MAX_CLIP, P228_RELOAD, 2.7 );
 
-	m_flAccuracy = 0.98;
+	if ( iResult )
+	{
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
+
+		m_flAccuracy = 0.9;
+	}
 }
 
 void CP228::WeaponIdle( void )

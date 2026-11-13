@@ -97,6 +97,7 @@ typedef enum {
 	ACT_FLINCH_RIGHTLEG,
 	ACT_FLINCH,				// Counter-Strike: the player's flinch (77; retail's activity_map has it last)
 	ACT_LARGE_FLINCH,		// Counter-Strike (Beta 7.0): the large flinch (78; Counter-Strike 1.6's name; not in activity_map)
+	ACT_HOLDBOMB,			// Counter-Strike 1.0: holding the armed C4 (79; Counter-Strike 1.6's name; retail's activity_map has it after ACT_FLINCH)
 } Activity;
 
 

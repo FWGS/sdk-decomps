@@ -89,9 +89,9 @@ BOOL CP90::Deploy( )
 	m_bDelayFire = false;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_p90.mdl", "models/p_p90.mdl", P90_DRAW, "p90", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_p90.mdl", "models/p_p90.mdl", P90_DRAW, "carbine", UseDecrement() ? 1 : 0 );
 	else
-		return DefaultDeploy( "models/v_p90_r.mdl", "models/p_p90.mdl", P90_DRAW, "p90", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_p90_r.mdl", "models/p_p90.mdl", P90_DRAW, "carbine", UseDecrement() ? 1 : 0 );
 }
 
 void CP90::PrimaryAttack( void )
@@ -142,7 +142,7 @@ void CP90::P90Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
 	Vector vecDir;	// sic: unused (an SDK leftover); without it the x87 operands of the event's parameters come in another order
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_57MM, 20, 0.885, NULL, false );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_57MM, 21, 0.885, NULL, false );
 
 	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireP90, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_pPlayer->pev->punchangle.x, m_pPlayer->pev->punchangle.y, (int)(flSpread * 10000), (int)(m_pPlayer->pev->punchangle.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
 
@@ -169,11 +169,13 @@ void CP90::Reload( void )
 	if ( m_pPlayer->ammo_57mm <= 0 )
 		return;
 
-	DefaultReload( P90_MAX_CLIP, P90_RELOAD, 3.4 );
-	m_pPlayer->SetAnimation( PLAYER_RELOAD );
+	if ( DefaultReload( P90_MAX_CLIP, P90_RELOAD, 3.4 ) )
+	{
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
-	m_flAccuracy = 0.2;
-	m_iShotsFired = 0;
+		m_flAccuracy = 0.2;
+		m_iShotsFired = 0;
+	}
 }
 
 void CP90::WeaponIdle( void )

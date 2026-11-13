@@ -103,7 +103,7 @@ CSMGMenuPanel::CSMGMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int
 	m_pScrollPanel->validate();
 
 	// Create the Class buttons
-	for (int i = 0; i <= 3; i++)
+	for (int i = 0; i <= 4; i++)
 	{
 		char sz[256]; 
 		int iYPos = CLASSMENU_TOPLEFT_BUTTON_Y + ( (CLASSMENU_BUTTON_SIZE_Y + CLASSMENU_BUTTON_SPACER_Y) * i );
@@ -112,23 +112,27 @@ CSMGMenuPanel::CSMGMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int
 		switch ( i )
 		{
 		case 0:
-			m_pButtons[i] = new CommandButton( "MP5/N", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#SubMachineGun" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		case 1:
-			m_pButtons[i] = new CommandButton( "TMP", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#SchmidtMP" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot2" );
 			break;
 		case 2:
-			m_pButtons[i] = new CommandButton( "P90", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#ESC90" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot3" );
 			break;
 		case 3:
-			m_pButtons[i] = new CommandButton( "Mac-10", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Mac10_Short" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot4" );
 			break;
+		case 4:
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#KMUMP45" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			strcpy( sz, "slot5" );
+			break;
 		default:
-			m_pButtons[i] = new CommandButton( "MP5/N", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#SubMachineGun" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		}
@@ -156,19 +160,22 @@ CSMGMenuPanel::CSMGMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int
 		switch ( i )
 		{
 		case 0:
-			sprintf( sz, "Heckler & Koch MP5/Navy" );
+			sprintf( sz, "#mp5navy" );
 			break;
 		case 1:
-			sprintf( sz, "Steyr Tactical Machine Pistol" );
+			sprintf( sz, "#tmp" );
 			break;
 		case 2:
-			sprintf( sz, "Fabrique Nationale P90" );
+			sprintf( sz, "#FNP90" );
 			break;
 		case 3:
-			sprintf( sz, "Ingram Mac-10" );
+			sprintf( sz, "#Mac10" );
+			break;
+		case 4:
+			sprintf( sz, "#UMP45" );
 			break;
 		default:
-			sprintf( sz, "Heckler & Koch MP5/Navy" );
+			sprintf( sz, "#mp5navy" );
 			break;
 		}
 
@@ -199,6 +206,9 @@ CSMGMenuPanel::CSMGMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int
 				break;
 			case 3:
 				strcpy( sz, "mac10" );
+				break;
+			case 4:
+				strcpy( sz, "ump45" );
 				break;
 			default:
 				strcpy( sz, "mp5" );
@@ -242,6 +252,9 @@ CSMGMenuPanel::CSMGMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int
 			break;
 		case 3:
 			sprintf( sz, "classes/%s.txt", "mac10" );
+			break;
+		case 4:
+			sprintf( sz, "classes/%s.txt", "ump45" );
 			break;
 		default:
 			sprintf( sz, "classes/%s.txt", "mp5" );
@@ -320,7 +333,7 @@ void CSMGMenuPanel::Update()
 	}
 
 	// Cycle through the rest of the buttons
-	for (int i = 0; i <= 3; i++)
+	for (int i = 0; i <= 4; i++)
 	{
 		if ( m_pButtons[i]->IsNotValid() )
 		{
@@ -421,7 +434,7 @@ void CSMGMenuPanel::Initialize( void )
 void CSMGMenuPanel::SetActiveInfo( int iInput )
 {
 	// Remove all the Info panels and bring up the specified one
-	for (int i = 0; i <= 3; i++)
+	for (int i = 0; i <= 4; i++)
 	{
 		m_pButtons[i]->setArmed( false );
 		m_pClassInfoPanel[i]->setVisible( false );

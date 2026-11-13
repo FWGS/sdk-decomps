@@ -189,7 +189,7 @@ void respawn(entvars_t* pev, BOOL fCopyCorpse)
 		// respawn player
 		GetClassPtr( (CBasePlayer *)pev)->Spawn( );
 	}
-	else
+	else if ( pev->deadflag > DEAD_NO )	// Counter-Strike 1.0: only for the dead (the training course is a single-player game)
 	{       // restart the entire server
 		SERVER_COMMAND("reload\n");
 	}
@@ -510,6 +510,14 @@ void ClientPutInServer( edict_t *pEntity )
 	pPlayer = GetClassPtr((CBasePlayer *)pev);
 	pPlayer->SetCustomDecalFrames(-1); // Assume none;
 
+	// Counter-Strike 1.0: the training course is a single-player game: no
+	// joining, no team menu, the player spawns at once
+	if ( !g_pGameRules->IsMultiplayer() )
+	{
+		pPlayer->Spawn();
+		return;
+	}
+
 	pPlayer->m_fNotKilled = true;
 	pPlayer->m_fKicked = false;
 	pPlayer->m_iIgnoreMessages = 0;
@@ -823,7 +831,10 @@ inline void DropPrimary( CBasePlayer *pPlayer )
 // terrorists the Scout, MAC-10, AWP, M4A1 (sic), G3/SG-1 and
 // AK-47; elsewhere the counter-terrorists everything but the
 // MAC-10, SG-552 and AK-47, the terrorists everything but the
-// AUG, M4A1 and TMP (parameter names ours)
+// AUG, M4A1 and TMP (parameter names ours). Counter-Strike
+// 1.0: the G3/SG-1 is the terrorists' alone, and theirs only
+// off the assassination maps; the Five-seveN and SG-550 are
+// the counter-terrorists', the UMP45 everybody's
 //=========================================================
 bool CanBuyThis( CBasePlayer *pPlayer, int iWeapon )
 {
@@ -835,12 +846,14 @@ bool CanBuyThis( CBasePlayer *pPlayer, int iWeapon )
 			{
 			case WEAPON_XM1014:
 			case WEAPON_AUG:
+			case WEAPON_FIVESEVEN:	// Counter-Strike 1.0: the three new guns; no G3/SG-1 for the counter-terrorists any more
+			case WEAPON_UMP45:
+			case WEAPON_SG550:
 			case WEAPON_MP5N:
 			case WEAPON_M249:
 			case WEAPON_M3:
 			case WEAPON_M4A1:
 			case WEAPON_TMP:	// Beta 7.0
-			case WEAPON_G3SG1:
 			case WEAPON_P90:
 				return true;
 			default:
@@ -855,9 +868,9 @@ bool CanBuyThis( CBasePlayer *pPlayer, int iWeapon )
 			case WEAPON_SCOUT:
 			case WEAPON_MAC10:
 			case WEAPON_ELITE:	// Beta 7.0
+			case WEAPON_UMP45:	// Counter-Strike 1.0 (and no G3/SG-1)
 			case WEAPON_AWP:
 			case WEAPON_M4A1:
-			case WEAPON_G3SG1:
 			case WEAPON_AK47:
 				return true;
 			default:
@@ -875,13 +888,15 @@ bool CanBuyThis( CBasePlayer *pPlayer, int iWeapon )
 			case WEAPON_SCOUT:
 			case WEAPON_XM1014:
 			case WEAPON_AUG:
+			case WEAPON_FIVESEVEN:	// Counter-Strike 1.0 (and no G3/SG-1)
+			case WEAPON_UMP45:
+			case WEAPON_SG550:
 			case WEAPON_AWP:
 			case WEAPON_MP5N:
 			case WEAPON_M249:
 			case WEAPON_M3:
 			case WEAPON_M4A1:
 			case WEAPON_TMP:
-			case WEAPON_G3SG1:
 			case WEAPON_P90:
 				return true;
 			default:
@@ -897,6 +912,7 @@ bool CanBuyThis( CBasePlayer *pPlayer, int iWeapon )
 			case WEAPON_XM1014:
 			case WEAPON_MAC10:
 			case WEAPON_ELITE:	// Beta 7.0
+			case WEAPON_UMP45:	// Counter-Strike 1.0
 			case WEAPON_AWP:
 			case WEAPON_MP5N:
 			case WEAPON_M249:
@@ -992,6 +1008,22 @@ void BuyPistol( CBasePlayer *pPlayer, int iSlot )
 			DropSecondary( pPlayer );
 			pPlayer->GiveNamedItem( "weapon_elite" );
 			pPlayer->AddAccount( -1000, true );
+		}
+		else
+		{
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
+			BlinkAccount( pPlayer, 2 );
+		}
+		break;
+	case 6:		// Counter-Strike 1.0: the Five-seveN, 750 (counter-terrorists only: CanBuyThis)
+		if ( !CanBuyThis( pPlayer, WEAPON_FIVESEVEN ) )
+			return;
+
+		if ( pPlayer->m_iAccount >= 750 )
+		{
+			DropSecondary( pPlayer );
+			pPlayer->GiveNamedItem( "weapon_fiveseven" );
+			pPlayer->AddAccount( -750, true );
 		}
 		else
 		{
@@ -1114,6 +1146,22 @@ void BuySubMachineGun( CBasePlayer *pPlayer, int iSlot )
 			DropPrimary( pPlayer );
 			pPlayer->GiveNamedItem( "weapon_mac10" );
 			pPlayer->AddAccount( -1400, true );
+		}
+		else
+		{
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
+			BlinkAccount( pPlayer, 2 );
+		}
+		break;
+	case 5:		// Counter-Strike 1.0: the UMP45, 1,700
+		if ( !CanBuyThis( pPlayer, WEAPON_UMP45 ) )
+			return;
+
+		if ( pPlayer->m_iAccount >= 1700 )
+		{
+			DropPrimary( pPlayer );
+			pPlayer->GiveNamedItem( "weapon_ump45" );
+			pPlayer->AddAccount( -1700, true );
 		}
 		else
 		{
@@ -1255,6 +1303,22 @@ void BuyRifle( CBasePlayer *pPlayer, int iSlot )
 			DropPrimary( pPlayer );
 			pPlayer->GiveNamedItem( "weapon_g3sg1" );
 			pPlayer->AddAccount( -5000, true );
+		}
+		else
+		{
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "#Not_Enough_Money" );
+			BlinkAccount( pPlayer, 2 );
+		}
+		break;
+	case 8:		// Counter-Strike 1.0: the SG-550, 4,200 (counter-terrorists only: CanBuyThis)
+		if ( !CanBuyThis( pPlayer, WEAPON_SG550 ) )
+			return;
+
+		if ( pPlayer->m_iAccount >= 4200 )
+		{
+			DropPrimary( pPlayer );
+			pPlayer->GiveNamedItem( "weapon_sg550" );
+			pPlayer->AddAccount( -4200, true );
 		}
 		else
 		{
@@ -1459,7 +1523,7 @@ typedef struct
 
 //=========================================================
 // HandleMenu_ChooseAppearance - Beta 5.0 (leak): the model:
-// terrorists 1 terror, 2 arab; counter-terrorists 1 urban,
+// terrorists 1 terror, 2 leet; counter-terrorists 1 urban,
 // 2 gsg9, 3 sas; a higher key picks one at random (Linux
 // symbol). A joining player is then let in; a player
 // changing teams makes the round's result looked at again.
@@ -1490,20 +1554,20 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 	szTerror[3] = g_r;
 	szTerror[4] = g_o;
 
-	char *szModelArab = new char[12];
-	char *szArab = new char[5];
+	char *szModelLeet = new char[12];
+	char *szLeet = new char[5];
 
-	szModelArab[0] = g_m;	szModelArab[5] = ' ';	szModelArab[10] = '\n';
-	szModelArab[1] = g_o;	szModelArab[6] = g_a;	szModelArab[11] = '\0';
-	szModelArab[2] = g_d;	szModelArab[7] = g_r;
-	szModelArab[3] = g_e;	szModelArab[8] = g_a;
-	szModelArab[4] = g_l;	szModelArab[9] = g_b;
+	szModelLeet[0] = g_m;	szModelLeet[5] = ' ';	szModelLeet[10] = '\n';
+	szModelLeet[1] = g_o;	szModelLeet[6] = g_l;	szModelLeet[11] = '\0';
+	szModelLeet[2] = g_d;	szModelLeet[7] = g_e;
+	szModelLeet[3] = g_e;	szModelLeet[8] = g_e;
+	szModelLeet[4] = g_l;	szModelLeet[9] = g_t;
 
-	szArab[0] = g_a;
-	szArab[1] = g_r;
-	szArab[2] = g_a;
-	szArab[3] = g_b;
-	szArab[4] = '\0';
+	szLeet[0] = g_l;
+	szLeet[1] = g_e;
+	szLeet[2] = g_e;
+	szLeet[3] = g_t;
+	szLeet[4] = '\0';
 
 	char *szModelArctic = new char[14];
 	char *szArctic = new char[7];
@@ -1595,7 +1659,7 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 	szGIGN[4] = '\0';
 
 	// Beta 6.0: the terrorists' arctic (key 3) and the counter-terrorists'
-	// GIGN (key 4); the appearance numbers are 1 urban, 2 terror, 3 arab,
+	// GIGN (key 4); the appearance numbers are 1 urban, 2 terror, 3 leet,
 	// 4 arctic, 5 gsg9, 6 gign, 7 sas
 	switch ( player->m_iTeam )
 	{
@@ -1612,8 +1676,8 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 			break;
 		case 2:
 			appearance.iModel = 3;
-			appearance.pszCommand = szModelArab;
-			appearance.pszModel = szArab;
+			appearance.pszCommand = szModelLeet;
+			appearance.pszModel = szLeet;
 			break;
 		case 3:
 			appearance.iModel = 4;
@@ -1948,9 +2012,12 @@ bool BuyGunAmmo( CBasePlayer &player, CBasePlayerItem &weapon, bool bBlinkMoney 
 		cost = 125;
 		classname = "ammo_338magnum";
 		break;
-	case WEAPON_P90:
-		cost = 50;
-		classname = "ammo_57mm";
+	case WEAPON_GLOCK18:	// (Counter-Strike 1.0: the 9 mm guns stand here, the 5.7 mm ones after the .45s: retail's order of the cases)
+	case WEAPON_MP5N:
+	case WEAPON_TMP:
+	case WEAPON_ELITE:	// Beta 7.0
+		cost = 20;
+		classname = "ammo_9mm";
 		break;
 	case WEAPON_M249:	// Beta 6.1: the box
 		cost = 60;
@@ -1959,6 +2026,7 @@ bool BuyGunAmmo( CBasePlayer &player, CBasePlayerItem &weapon, bool bBlinkMoney 
 	case WEAPON_AUG:	// Beta 6.0
 	case WEAPON_M4A1:
 	case WEAPON_SG552:
+	case WEAPON_SG550:	// Counter-Strike 1.0
 		cost = 60;
 		classname = "ammo_556nato";
 		break;
@@ -1975,15 +2043,14 @@ bool BuyGunAmmo( CBasePlayer &player, CBasePlayerItem &weapon, bool bBlinkMoney 
 		break;
 	case WEAPON_MAC10:	// Beta 6.0
 	case WEAPON_USP:
+	case WEAPON_UMP45:	// Counter-Strike 1.0
 		cost = 25;
 		classname = "ammo_45acp";
 		break;
-	case WEAPON_GLOCK18:
-	case WEAPON_MP5N:
-	case WEAPON_TMP:
-	case WEAPON_ELITE:	// Beta 7.0
-		cost = 20;
-		classname = "ammo_9mm";
+	case WEAPON_P90:
+	case WEAPON_FIVESEVEN:	// Counter-Strike 1.0
+		cost = 50;
+		classname = "ammo_57mm";
 		break;
 	case WEAPON_DEAGLE:
 		cost = 40;
@@ -2270,7 +2337,7 @@ void ClientCommand( edict_t *pEntity )
 				// Beta 7.0: a menu per team (the terrorists' has key 5, the Elites);
 				// the buy menus are VGUI menus 28 to 34 for a client that draws them
 				if ( pPlayer->m_iTeam == TEAM_CT )
-					ShowVGUIMenu( pPlayer, 29, 0x20f, "#CT_BuyPistol" );
+					ShowVGUIMenu( pPlayer, 29, 0x22f, "#CT_BuyPistol" );	// Counter-Strike 1.0: key 6, the Five-seveN
 				else
 					ShowVGUIMenu( pPlayer, 29, 0x21f, "#T_BuyPistol" );
 				pPlayer->m_iMenu = Menu_BuyPistol;
@@ -2288,16 +2355,16 @@ void ClientCommand( edict_t *pEntity )
 				if ( mp->m_iMapHasVIPSafetyZone == 1 )
 				{
 					if ( pPlayer->m_iTeam == TEAM_CT )
-						ShowVGUIMenu( pPlayer, 32, 0x207, "#AS_CT_BuySubMachineGun" );
+						ShowVGUIMenu( pPlayer, 32, 0x217, "#AS_CT_BuySubMachineGun" );
 					else
-						ShowVGUIMenu( pPlayer, 32, 0x208, "#AS_T_BuySubMachineGun" );
+						ShowVGUIMenu( pPlayer, 32, 0x218, "#AS_T_BuySubMachineGun" );
 				}
 				else
 				{
 					if ( pPlayer->m_iTeam == TEAM_CT )
-						ShowVGUIMenu( pPlayer, 32, 0x207, "#CT_BuySubMachineGun" );
+						ShowVGUIMenu( pPlayer, 32, 0x217, "#CT_BuySubMachineGun" );
 					else
-						ShowVGUIMenu( pPlayer, 32, 0x20d, "#T_BuySubMachineGun" );
+						ShowVGUIMenu( pPlayer, 32, 0x21d, "#T_BuySubMachineGun" );
 				}
 				pPlayer->m_iMenu = Menu_BuySubMachineGun;
 				break;
@@ -2305,14 +2372,14 @@ void ClientCommand( edict_t *pEntity )
 				if ( mp->m_iMapHasVIPSafetyZone == 1 )
 				{
 					if ( pPlayer->m_iTeam == TEAM_CT )
-						ShowVGUIMenu( pPlayer, 31, 0x24c, "#AS_CT_BuyRifle" );
+						ShowVGUIMenu( pPlayer, 31, 0x28c, "#AS_CT_BuyRifle" );
 					else
-						ShowVGUIMenu( pPlayer, 31, 0x271, "#AS_T_BuyRifle" );
+						ShowVGUIMenu( pPlayer, 31, 0x231, "#AS_T_BuyRifle" );
 				}
 				else
 				{
 					if ( pPlayer->m_iTeam == TEAM_CT )
-						ShowVGUIMenu( pPlayer, 31, 0x27c, "#CT_BuyRifle" );
+						ShowVGUIMenu( pPlayer, 31, 0x2bc, "#CT_BuyRifle" );
 					else
 						ShowVGUIMenu( pPlayer, 31, 0x273, "#T_BuyRifle" );
 				}
@@ -2930,12 +2997,12 @@ void ClientPrecache( void )
 		ALERT( at_console, "rorret" );
 		ALERT( at_console, "ertorr" );
 		ALERT( at_console, "torerr" );
-		ALERT( at_console, "models/player/arab/arab.mdl" );
-		ALERT( at_console, "model arab\n" );
-		ALERT( at_console, "arab" );
-		ALERT( at_console, "bara" );
-		ALERT( at_console, "raab" );
-		ALERT( at_console, "abra" );
+		ALERT( at_console, "models/player/leet/leet.mdl" );
+		ALERT( at_console, "model leet\n" );
+		ALERT( at_console, "leet" );
+		ALERT( at_console, "teel" );
+		ALERT( at_console, "elet" );
+		ALERT( at_console, "etel" );
 		ALERT( at_console, "models/player/arctic/arctic.mdl" );
 		ALERT( at_console, "model arctic\n" );
 		ALERT( at_console, "arctic" );
@@ -2982,13 +3049,13 @@ void ClientPrecache( void )
 	// Beta 7.0: the nine player models' file names, from the letters (see
 	// g_a); the assignments in retail's order, columns of five rows. The
 	// strings are never freed (retail's)
-	char *szArabModel = new char[28];
+	char *szLeetModel = new char[28];
 
-	szArabModel[0] = g_m;	szArabModel[5] = g_s;	szArabModel[10] = g_y;	szArabModel[15] = g_r;	szArabModel[20] = g_r;	szArabModel[25] = g_d;
-	szArabModel[1] = g_o;	szArabModel[6] = '/';	szArabModel[11] = g_e;	szArabModel[16] = g_a;	szArabModel[21] = g_a;	szArabModel[26] = g_l;
-	szArabModel[2] = g_d;	szArabModel[7] = g_p;	szArabModel[12] = g_r;	szArabModel[17] = g_b;	szArabModel[22] = g_b;	szArabModel[27] = '\0';
-	szArabModel[3] = g_e;	szArabModel[8] = g_l;	szArabModel[13] = '/';	szArabModel[18] = '/';	szArabModel[23] = '.';
-	szArabModel[4] = g_l;	szArabModel[9] = g_a;	szArabModel[14] = g_a;	szArabModel[19] = g_a;	szArabModel[24] = g_m;
+	szLeetModel[0] = g_m;	szLeetModel[5] = g_s;	szLeetModel[10] = g_y;	szLeetModel[15] = g_e;	szLeetModel[20] = g_e;	szLeetModel[25] = g_d;
+	szLeetModel[1] = g_o;	szLeetModel[6] = '/';	szLeetModel[11] = g_e;	szLeetModel[16] = g_e;	szLeetModel[21] = g_e;	szLeetModel[26] = g_l;
+	szLeetModel[2] = g_d;	szLeetModel[7] = g_p;	szLeetModel[12] = g_r;	szLeetModel[17] = g_t;	szLeetModel[22] = g_t;	szLeetModel[27] = '\0';
+	szLeetModel[3] = g_e;	szLeetModel[8] = g_l;	szLeetModel[13] = '/';	szLeetModel[18] = '/';	szLeetModel[23] = '.';
+	szLeetModel[4] = g_l;	szLeetModel[9] = g_a;	szLeetModel[14] = g_l;	szLeetModel[19] = g_l;	szLeetModel[24] = g_m;
 
 	char *szGIGNModel = new char[28];
 
@@ -3055,7 +3122,7 @@ void ClientPrecache( void )
 	szVIPModel[4] = g_l;	szVIPModel[9] = g_a;	szVIPModel[14] = g_v;	szVIPModel[19] = g_i;	szVIPModel[24] = g_l;
 
 	PRECACHE_MODEL("models/player.mdl");
-	PRECACHE_MODEL( szArabModel );
+	PRECACHE_MODEL( szLeetModel );
 	PRECACHE_MODEL( szGIGNModel );
 	PRECACHE_MODEL( szGSG9Model );
 	PRECACHE_MODEL( szGuerillaModel );
@@ -3067,11 +3134,11 @@ void ClientPrecache( void )
 
 	// Beta 6.6: the player models are precached here, and the client's files must
 	// keep within these bounds (vMin, vMax: Counter-Strike 1.6's names)
-	Vector vMin( -48, -36, -58 );
-	Vector vMax( 48, 36, 58 );
+	Vector vMin( -38, -22, -41 );	// Counter-Strike 1.0 (Beta 7.1: 48, 36, 58)
+	Vector vMax( 38, 22, 41 );
 
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player.mdl" );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szArabModel );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szLeetModel );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szGIGNModel );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szGSG9Model );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szGuerillaModel );

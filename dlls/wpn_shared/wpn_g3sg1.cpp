@@ -172,7 +172,13 @@ void CG3SG1::G3SG1Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.8;
 
-	m_pPlayer->pev->punchangle.x -= 2;
+#ifdef CLIENT_DLL
+	m_pPlayer->pev->punchangle.x -= UTIL_SharedRandomFloat( 6, 2.75, 3.25 ) + m_pPlayer->pev->punchangle.x * 0.25f;
+	m_pPlayer->pev->punchangle.y += UTIL_SharedRandomFloat( 6, -1.25, 1.5 );
+#else
+	m_pPlayer->pev->punchangle.x -= RANDOM_FLOAT( 2.75, 3.25 ) + m_pPlayer->pev->punchangle.x * 0.25f;
+	m_pPlayer->pev->punchangle.y += RANDOM_FLOAT( -1.25, 1.5 );
+#endif
 }
 
 void CG3SG1::Reload( void )
@@ -180,12 +186,10 @@ void CG3SG1::Reload( void )
 	if ( m_pPlayer->ammo_762nato <= 0 )
 		return;
 
-	int iResult = DefaultReload( G3SG1_MAX_CLIP, G3SG1_RELOAD, 4.7 );	// name ours
-
-	m_pPlayer->SetAnimation( PLAYER_RELOAD );
-
-	if ( iResult )
+	if ( DefaultReload( G3SG1_MAX_CLIP, G3SG1_RELOAD, 3.5 ) )
 	{
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
+
 		if ( m_pPlayer->pev->fov != 90 )
 		{
 			m_pPlayer->m_iFOV = m_pPlayer->pev->fov = 15;
@@ -213,7 +217,7 @@ void CG3SG1::WeaponIdle( void )
 float CG3SG1::GetMaxSpeed( void )
 {
 	if ( m_pPlayer->m_iFOV != 90 )
-		return 140;
+		return 150;
 
-	return 200;
+	return 210;
 }

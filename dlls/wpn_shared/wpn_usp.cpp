@@ -97,19 +97,19 @@ int CUSP::GetItemInfo(ItemInfo *p)
 
 BOOL CUSP::Deploy( )
 {
-	m_flAccuracy = 0.98;
+	m_flAccuracy = 0.92;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
 	{
 		if ( m_iWeaponState & WPNSTATE_USP_SILENCED )
-			return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_DRAW, "tmp", UseDecrement() ? 1 : 0 );
+			return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
 		else
 			return DefaultDeploy( "models/v_usp.mdl", "models/p_usp.mdl", USP_UNSIL_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
 	}
 	else
 	{
 		if ( m_iWeaponState & WPNSTATE_USP_SILENCED )
-			return DefaultDeploy( "models/v_usp_r.mdl", "models/p_usp.mdl", USP_DRAW, "tmp", UseDecrement() ? 1 : 0 );
+			return DefaultDeploy( "models/v_usp_r.mdl", "models/p_usp.mdl", USP_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
 		else
 			return DefaultDeploy( "models/v_usp_r.mdl", "models/p_usp.mdl", USP_UNSIL_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
 	}
@@ -121,7 +121,7 @@ void CUSP::SecondaryAttack( void )
 	{
 		m_iWeaponState |= WPNSTATE_USP_SILENCED;
 		SendWeaponAnim( USP_ATTACH_SILENCER, UseDecrement() ? 1 : 0 );
-		strcpy( m_pPlayer->m_szAnimExtention, "tmp" );
+		strcpy( m_pPlayer->m_szAnimExtention, "onehanded" );
 	}
 	else
 	{
@@ -174,10 +174,12 @@ void CUSP::USPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 		m_flLastFire = gpGlobals->time;
 	else
 	{
-		m_flAccuracy = ( gpGlobals->time - m_flLastFire ) * 0.4 + 0.6;
+		m_flAccuracy -= ( 0.3 - ( gpGlobals->time - m_flLastFire ) ) * 0.275;
 
-		if ( m_flAccuracy > 0.98 )
-			m_flAccuracy = 0.98;
+		if ( m_flAccuracy > 0.92 )
+			m_flAccuracy = 0.92;
+		else if ( m_flAccuracy < 0.6 )
+			m_flAccuracy = 0.6;
 
 		m_flLastFire = gpGlobals->time;
 	}
@@ -211,6 +213,7 @@ void CUSP::USPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	Vector vecAiming;
 	vecAiming = gpGlobals->v_forward;
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
+	Vector vecDir;	// unused, as in the other fire functions (Counter-Strike 1.6's debug info has the local in each); without it the x87 operands of v_angle + punchangle come in another order
 
 	if ( m_iWeaponState & WPNSTATE_USP_SILENCED )
 		m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 4096, 1, BULLET_PLAYER_45ACP, 30, 0.79, NULL, true );
@@ -233,14 +236,19 @@ void CUSP::Reload( void )
 	if ( m_pPlayer->ammo_45acp <= 0 )
 		return;
 
+	int iResult;
+
 	if ( m_iWeaponState & WPNSTATE_USP_SILENCED )
-		DefaultReload( USP_MAX_CLIP, USP_RELOAD, 2.7 );
+		iResult = DefaultReload( USP_MAX_CLIP, USP_RELOAD, 2.7 );
 	else
-		DefaultReload( USP_MAX_CLIP, USP_UNSIL_RELOAD, 2.7 );
+		iResult = DefaultReload( USP_MAX_CLIP, USP_UNSIL_RELOAD, 2.7 );
 
-	m_pPlayer->SetAnimation( PLAYER_RELOAD );
+	if ( iResult )
+	{
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
-	m_flAccuracy = 0.98;
+		m_flAccuracy = 0.92;
+	}
 }
 
 void CUSP::WeaponIdle( void )

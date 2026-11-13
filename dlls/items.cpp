@@ -164,7 +164,9 @@ void CItem::Materialize( void )
 	if ( pev->effects & EF_NODRAW )
 	{
 		// changing from invisible state to visible.
-		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "items/suitchargeok1.wav", 1, ATTN_NORM, 0, 150 );
+		if ( g_pGameRules->IsMultiplayer() )
+			EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "items/suitchargeok1.wav", 1, ATTN_NORM, 0, 150 );
+
 		pev->effects &= ~EF_NODRAW;
 		pev->effects |= EF_MUZZLEFLASH;
 	}
@@ -179,24 +181,23 @@ class CItemSuit : public CItem
 	void Spawn( void )
 	{ 
 		Precache( );
-		SET_MODEL(ENT(pev), "models/w_suit.mdl");
+		SET_MODEL(ENT(pev), "models/w_kevlar.mdl");
 		CItem::Spawn( );
 	}
 	void Precache( void )
 	{
-		PRECACHE_MODEL ("models/w_suit.mdl");
+		PRECACHE_MODEL ("models/w_kevlar.mdl");
+		PRECACHE_SOUND ("items/tr_kevlar.wav");
 	}
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{
 		if ( pPlayer->pev->weapons & (1<<WEAPON_SUIT) )
 			return FALSE;
 
-		if ( pev->spawnflags & SF_SUIT_SHORTLOGON )
-			EMIT_SOUND_SUIT(pPlayer->edict(), "!HEV_A0");		// short version of suit logon,
-		else
-			EMIT_SOUND_SUIT(pPlayer->edict(), "!HEV_AAx");	// long version of suit logon
+		EMIT_SOUND( pPlayer->edict(), CHAN_VOICE, "items/tr_kevlar.wav", 1, ATTN_NORM );
 
 		pPlayer->pev->weapons |= (1<<WEAPON_SUIT);
+		pPlayer->m_iHideHUD &= ~(HIDEHUD_HEALTH | HIDEHUD_MONEY);
 		return TRUE;
 	}
 };

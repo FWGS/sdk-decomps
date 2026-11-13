@@ -49,9 +49,16 @@ static globalvars_t	Globals;
 
 static CBasePlayerWeapon *g_pWpns[ 32 ];
 
+// Counter-Strike: SDK 2.1 has these four above Game_GetSequence; the order of the dynamic
+// initialisers puts the two vectors here, where Counter-Strike 1.6 has them (lines 66, 67)
+static int g_rseq = 0, g_gaitseq = 0;
+static vec3_t g_clorg, g_clang;
+
 // Counter-Strike's weapon placeholder entities (names ours)
 CUSP	g_USP;
 CELITE	g_ELITE;
+CUMP45	g_UMP45;
+CFiveSeven	g_FIVESEVEN;
 CMP5N	g_MP5N;
 CSG552	g_SG552;
 CAK47	g_AK47;
@@ -62,6 +69,7 @@ CDEAGLE	g_DEAGLE;
 CFlashbang	g_Flashbang;
 CSmokeGrenade	g_SmokeGrenade;
 CG3SG1	g_G3SG1;
+CSG550	g_SG550;
 CGLOCK18	g_GLOCK18;
 CHEGrenade	g_HEGrenade;
 CKnife	g_Knife;
@@ -123,6 +131,133 @@ void HUD_PrepEntity( CBaseEntity *pEntity, CBasePlayer *pWeaponOwner )
 	}
 }
 
+/*
+// FIXME:  In order to predict animations client side, you'll need to work with the following code.
+//  It's not quite working, but it should be of use if you want
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *pmodel - 
+//			*label - 
+// Output : int
+//-----------------------------------------------------------------------------
+int LookupSequence( void *pmodel, const char *label )
+{
+	studiohdr_t *pstudiohdr;
+	
+	pstudiohdr = (studiohdr_t *)pmodel;
+	if (! pstudiohdr)
+		return 0;
+
+	mstudioseqdesc_t	*pseqdesc;
+
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex);
+
+	for (int i = 0; i < pstudiohdr->numseq; i++)
+	{
+		if (stricmp( pseqdesc[i].label, label ) == 0)
+			return i;
+	}
+
+	return -1;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *label - 
+// Output : int CBaseAnimating :: LookupSequence
+//-----------------------------------------------------------------------------
+int CBaseAnimating :: LookupSequence ( const char *label )
+{
+	cl_entity_t *current;
+
+	current = gEngfuncs.GetLocalPlayer();
+	if ( !current || !current->model )
+		return 0;
+
+	return ::LookupSequence( (studiohdr_t *)IEngineStudio.Mod_Extradata( current->model ), label );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *pmodel - 
+//			*pev - 
+//			*pflFrameRate - 
+//			*pflGroundSpeed - 
+//-----------------------------------------------------------------------------
+void GetSequenceInfo( void *pmodel, entvars_t *pev, float *pflFrameRate, float *pflGroundSpeed )
+{
+	studiohdr_t *pstudiohdr;
+	
+	pstudiohdr = (studiohdr_t *)pmodel;
+	if (! pstudiohdr)
+		return;
+
+	mstudioseqdesc_t	*pseqdesc;
+
+	if (pev->sequence >= pstudiohdr->numseq)
+	{
+		*pflFrameRate = 0.0;
+		*pflGroundSpeed = 0.0;
+		return;
+	}
+
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + (int)pev->sequence;
+
+	if (pseqdesc->numframes > 1)
+	{
+		*pflFrameRate = 256 * pseqdesc->fps / (pseqdesc->numframes - 1);
+		*pflGroundSpeed = sqrt( pseqdesc->linearmovement[0]*pseqdesc->linearmovement[0]+ pseqdesc->linearmovement[1]*pseqdesc->linearmovement[1]+ pseqdesc->linearmovement[2]*pseqdesc->linearmovement[2] );
+		*pflGroundSpeed = *pflGroundSpeed * pseqdesc->fps / (pseqdesc->numframes - 1);
+	}
+	else
+	{
+		*pflFrameRate = 256.0;
+		*pflGroundSpeed = 0.0;
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *pmodel - 
+//			*pev - 
+// Output : int
+//-----------------------------------------------------------------------------
+int GetSequenceFlags( void *pmodel, entvars_t *pev )
+{
+	studiohdr_t *pstudiohdr;
+	
+	pstudiohdr = (studiohdr_t *)pmodel;
+	if ( !pstudiohdr || pev->sequence >= pstudiohdr->numseq )
+		return 0;
+
+	mstudioseqdesc_t	*pseqdesc;
+	pseqdesc = (mstudioseqdesc_t *)((byte *)pstudiohdr + pstudiohdr->seqindex) + (int)pev->sequence;
+
+	return pseqdesc->flags;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : 
+//-----------------------------------------------------------------------------
+void CBaseAnimating :: ResetSequenceInfo ( )
+{
+	cl_entity_t *current;
+
+	current = gEngfuncs.GetLocalPlayer();
+	if ( !current || !current->model )
+		return;
+
+	void *pmodel = (studiohdr_t *)IEngineStudio.Mod_Extradata( current->model );
+
+	GetSequenceInfo( pmodel, pev, &m_flFrameRate, &m_flGroundSpeed );
+	m_fSequenceLoops = ((GetSequenceFlags() & STUDIO_LOOPING) != 0);
+	pev->animtime = gpGlobals->time;
+	pev->framerate = 1.0;
+	m_fSequenceFinished = FALSE;
+	m_flLastEventCheck = gpGlobals->time;
+}
+*/
 /*
 =====================
 CBaseEntity :: Killed
@@ -393,7 +528,7 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 				m_iShotsFired += 4;
 		}
 
-		if ( m_iId == WEAPON_USP || m_iId == WEAPON_GLOCK18 || m_iId == WEAPON_P228 || m_iId == WEAPON_DEAGLE || m_iId == WEAPON_ELITE )
+		if ( m_iId == WEAPON_USP || m_iId == WEAPON_GLOCK18 || m_iId == WEAPON_P228 || m_iId == WEAPON_DEAGLE || m_iId == WEAPON_ELITE || m_iId == WEAPON_FIVESEVEN )
 			m_iShotsFired = 0;
 
 		m_fFireOnEmpty = FALSE;
@@ -423,7 +558,8 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 // intermediate code) this unused inline gives retail's order with 1 to 12 empty statements in
 // Beta 6.5 (the server job's measurement), 0 to 12 in Beta 6.6, 1 to 9 in Beta 7.0 and 2 to 19 in
 // Beta 7.1 (full builds).  With int arrays in the Vectors' place they took 14 to 40, 26 to 40,
-// 20 to 36 and 29 or more.
+// 20 to 36 and 29 or more.  Counter-Strike 1.0 takes 6 to 8 (full
+// builds; 5 and 9 do not), with extdll.h's declared names at 8,040.
 // Nothing calls it.
 inline void b65_hlweapons_unknown( void )
 {
@@ -678,6 +814,8 @@ void HUD_InitClientWeapons( void )
 	// Allocate slot(s) for each weapon that we are going to be predicting
 	HUD_PrepEntity( &g_USP	, &player );
 	HUD_PrepEntity( &g_ELITE	, &player );
+	HUD_PrepEntity( &g_UMP45	, &player );
+	HUD_PrepEntity( &g_FIVESEVEN	, &player );
 	HUD_PrepEntity( &g_MP5N	, &player );
 	HUD_PrepEntity( &g_SG552	, &player );
 	HUD_PrepEntity( &g_AK47	, &player );
@@ -688,6 +826,7 @@ void HUD_InitClientWeapons( void )
 	HUD_PrepEntity( &g_Flashbang	, &player );
 	HUD_PrepEntity( &g_SmokeGrenade	, &player );
 	HUD_PrepEntity( &g_G3SG1	, &player );
+	HUD_PrepEntity( &g_SG550	, &player );
 	HUD_PrepEntity( &g_GLOCK18	, &player );
 	HUD_PrepEntity( &g_HEGrenade	, &player );
 	HUD_PrepEntity( &g_Knife	, &player );
@@ -733,6 +872,12 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	case WEAPON_ELITE:
 		pWeapon = &g_ELITE;
 		break;
+	case WEAPON_FIVESEVEN:
+		pWeapon = &g_FIVESEVEN;
+		break;
+	case WEAPON_UMP45:
+		pWeapon = &g_UMP45;
+		break;
 	case WEAPON_MP5N:
 		pWeapon = &g_MP5N;
 		break;
@@ -762,6 +907,9 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 		break;
 	case WEAPON_G3SG1:
 		pWeapon = &g_G3SG1;
+		break;
+	case WEAPON_SG550:
+		pWeapon = &g_SG550;
 		break;
 	case WEAPON_GLOCK18:
 		pWeapon = &g_GLOCK18;
@@ -1054,6 +1202,56 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	g_finalstate = NULL;
 }
 
+// For storing predicted sequence and gaitsequence and origin/angles data
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *seq - 
+//			*gaitseq - 
+//-----------------------------------------------------------------------------
+void Game_GetSequence( int *seq, int *gaitseq )
+{
+	*seq = g_rseq;
+	*gaitseq = g_gaitseq;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : seq - 
+//			gaitseq - 
+//-----------------------------------------------------------------------------
+void Game_SetSequence( int seq, int gaitseq )
+{
+	g_rseq = seq;
+	g_gaitseq = gaitseq;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : o - 
+//			a - 
+//-----------------------------------------------------------------------------
+void Game_SetOrientation( vec3_t o, vec3_t a )
+{
+	g_clorg = o;
+	g_clang = a;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : *o - 
+//			*a - 
+//-----------------------------------------------------------------------------
+void Game_GetOrientation( float *o, float *a )
+{
+	int i;
+	
+	for ( i = 0; i < 3; i++ )
+	{
+		o[ i ] = g_clorg[ i ];
+		a[ i ] = g_clang[ i ];
+	}
+}
+
 /*
 =====================
 HUD_PostRunCmd
@@ -1072,6 +1270,13 @@ void _DLLEXPORT HUD_PostRunCmd( struct local_state_s *from, struct local_state_s
 	HUD_WeaponsPostThink( from, to, cmd, time, random_seed );
 
 	to->client.fov = g_lastFOV;
+
+	// Store of final sequence, etc. for client side animation
+	if ( g_runfuncs )
+	{
+		Game_SetSequence( to->playerstate.sequence, to->playerstate.gaitsequence );
+		Game_SetOrientation( to->playerstate.origin, cmd->viewangles );
+	}
 
 	// All games can use FOV state
 	g_lastFOV = to->client.fov;

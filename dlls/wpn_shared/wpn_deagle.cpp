@@ -83,7 +83,7 @@ int CDEAGLE::GetItemInfo(ItemInfo *p)
 
 BOOL CDEAGLE::Deploy( )
 {
-	m_flAccuracy = 0.875;
+	m_flAccuracy = 0.9;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
 		return DefaultDeploy( "models/v_deagle.mdl", "models/p_deagle.mdl", DEAGLE_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
@@ -114,10 +114,12 @@ void CDEAGLE::DEAGLEFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 		m_flLastFire = gpGlobals->time;
 	else
 	{
-		m_flAccuracy = ( gpGlobals->time - m_flLastFire ) * 0.3 + 0.5;
+		m_flAccuracy -= ( 0.4 - ( gpGlobals->time - m_flLastFire ) ) * 0.35;
 
-		if ( m_flAccuracy > 0.875 )
-			m_flAccuracy = 0.875;
+		if ( m_flAccuracy > 0.9 )
+			m_flAccuracy = 0.9;
+		else if ( m_flAccuracy < 0.55 )
+			m_flAccuracy = 0.55;
 
 		m_flLastFire = gpGlobals->time;
 	}
@@ -170,9 +172,11 @@ void CDEAGLE::Reload( void )
 	if ( m_pPlayer->ammo_50ae <= 0 )
 		return;
 
-	DefaultReload( DEAGLE_MAX_CLIP, DEAGLE_RELOAD, 2.2 );
-	m_pPlayer->SetAnimation( PLAYER_RELOAD );
-	m_flAccuracy = 0.98;
+	if ( DefaultReload( DEAGLE_MAX_CLIP, DEAGLE_RELOAD, 2.2 ) )
+	{
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
+		m_flAccuracy = 0.9;
+	}
 }
 
 void CDEAGLE::WeaponIdle( void )

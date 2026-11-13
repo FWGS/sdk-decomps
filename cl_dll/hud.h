@@ -805,14 +805,14 @@ extern CHud gHUD;
 
 // sic: a stand-in, name ours.  More intermediate code stood in Counter-Strike's headers up to here
 // than in ours: the objects that build their own precompiled headers place the headers' inline
-// functions by its size.  It was 141 lines until util_vector.h got
-// RotateVectorZ, Counter-Strike 1.6's inline function (402 bytes with this compiler);
-// with it Beta 6.5 takes 60 to 63 lines, 6.6 60 to 65, 7.0 and 7.1 59 to 61 (full builds against
-// retail's SHA-256).  Nothing calls this.
+// functions by its size, and only before CTempList does it put CTempList::Add after
+// EV_HLDM_FireBullets.  It was 141 to 145 lines until util_vector.h got
+// RotateVectorZ, Counter-Strike 1.6's inline function, which is 435 bytes of what this stood for
+// (1.3 needs nothing here).  With it this version takes
+//
+// 58 only (57 and 59 do not) lines here (full builds against retail's SHA-256).  Nothing calls this.
 inline void b65_hud_unknown( void )
 {
-	;
-	;
 	;
 	;
 	;
@@ -966,62 +966,10 @@ extern int g_iTeamNumber;
 extern int g_iUser1;
 extern int g_iUser2;
 
-
-// sic: a stand-in, names ours.  Counter-Strike's headers declare more symbols than ours: the MOTD
-// window's and the class menu's constructors (SDK text, unchanged), whose operand order follows
-// the number of names declared before them, compile as retail's only with more declared names at
-// the end of hud.h (an enum of that many members).  With
-// RotateVectorZ in util_vector.h, by full builds: Beta 6.5 18, 19 or 21 to 24; Beta 6.6 5 to 7;
-// Beta 7.0 48, 49, 51 or 52 (55 to 61 before RotateVectorZ); Beta 7.1 44 to 48 (its rifle menu's
-// Update too; 55 to 60 before).  What Counter-Strike declared, the image does not say.
-enum b70_unknown_e
+// sic: one declared name that Counter-Strike 1.0's headers had and this text has not (the enum's own; Counter-Strike 1.1
+// has seven enumerators in it).  With RotateVectorZ's seven names in util_vector.h the constructors of
+// CMessageWindowPanel and CClassMenuPanel and CRifleMenuPanel::Update compile to retail's code with 1 or 11 to 15
+// more names up to here (0, 2 to 7, 10, 58, 59, 61 do not; it was 0, 8, 18 to 22 .. before)
+enum r11_hud_unknown_e
 {
-	B70_UNKNOWN0,
-	B70_UNKNOWN1,
-	B70_UNKNOWN2,
-	B70_UNKNOWN3,
-	B70_UNKNOWN4,
-	B70_UNKNOWN5,
-	B70_UNKNOWN6,
-	B70_UNKNOWN7,
-	B70_UNKNOWN8,
-	B70_UNKNOWN9,
-	B70_UNKNOWN10,
-	B70_UNKNOWN11,
-	B70_UNKNOWN12,
-	B70_UNKNOWN13,
-	B70_UNKNOWN14,
-	B70_UNKNOWN15,
-	B70_UNKNOWN16,
-	B70_UNKNOWN17,
-	B70_UNKNOWN18,
-	B70_UNKNOWN19,
-	B70_UNKNOWN20,
-	B70_UNKNOWN21,
-	B70_UNKNOWN22,
-	B70_UNKNOWN23,
-	B70_UNKNOWN24,
-	B70_UNKNOWN25,
-	B70_UNKNOWN26,
-	B70_UNKNOWN27,
-	B70_UNKNOWN28,
-	B70_UNKNOWN29,
-	B70_UNKNOWN30,
-	B70_UNKNOWN31,
-	B70_UNKNOWN32,
-	B70_UNKNOWN33,
-	B70_UNKNOWN34,
-	B70_UNKNOWN35,
-	B70_UNKNOWN36,
-	B70_UNKNOWN37,
-	B70_UNKNOWN38,
-	B70_UNKNOWN39,
-	B70_UNKNOWN40,
-	B70_UNKNOWN41,
-	B70_UNKNOWN42,
-	B70_UNKNOWN43,
-	B70_UNKNOWN44,
-	B70_UNKNOWN45,
-	B70_UNKNOWN46,
-	B70_UNKNOWN47,
 };

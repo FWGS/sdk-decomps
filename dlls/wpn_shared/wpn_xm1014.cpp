@@ -83,9 +83,9 @@ int CXM1014::GetItemInfo(ItemInfo *p)
 BOOL CXM1014::Deploy( )
 {
 	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_xm1014.mdl", "models/p_xm1014.mdl", XM1014_DRAW, "mp5", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_xm1014.mdl", "models/p_xm1014.mdl", XM1014_DRAW, "m249", UseDecrement() ? 1 : 0 );
 	else
-		return DefaultDeploy( "models/v_xm1014_r.mdl", "models/p_xm1014.mdl", XM1014_DRAW, "mp5", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_xm1014_r.mdl", "models/p_xm1014.mdl", XM1014_DRAW, "m249", UseDecrement() ? 1 : 0 );
 }
 
 void CXM1014::PrimaryAttack()

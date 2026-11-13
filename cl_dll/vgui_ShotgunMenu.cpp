@@ -112,15 +112,15 @@ CShotgunMenuPanel::CShotgunMenuPanel(int iTrans, int iRemoveMe, int x,int y,int 
 		switch ( i )
 		{
 		case 0:
-			m_pButtons[i] = new CommandButton( "M3 Super90", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Leone12" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		case 1:
-			m_pButtons[i] = new CommandButton( "XM1014", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#AutoShotgun" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot2" );
 			break;
 		default:
-			m_pButtons[i] = new CommandButton( "M3 Super90", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Leone12" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		}
@@ -148,13 +148,13 @@ CShotgunMenuPanel::CShotgunMenuPanel(int iTrans, int iRemoveMe, int x,int y,int 
 		switch ( i )
 		{
 		case 0:
-			sprintf( sz, "Benelli M3 Super 90" );
+			sprintf( sz, "#Super90" );
 			break;
 		case 1:
-			sprintf( sz, "Benelli XM1014" );
+			sprintf( sz, "#XM1014" );
 			break;
 		default:
-			sprintf( sz, "Benelli M3 Super 90" );
+			sprintf( sz, "#Super90" );
 			break;
 		}
 

@@ -95,7 +95,7 @@ int CELITE::GetItemInfo(ItemInfo *p)
 
 BOOL CELITE::Deploy( )
 {
-	m_flAccuracy = 0.98;
+	m_flAccuracy = 0.88;
 
 	if ( !( m_iClip % 2 ) )
 		m_iWeaponState |= WPNSTATE_ELITE_LEFT;
@@ -130,10 +130,12 @@ void CELITE::ELITEFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 		m_flLastFire = gpGlobals->time;
 	else
 	{
-		m_flAccuracy = ( gpGlobals->time - m_flLastFire ) * 0.4 + 0.6;
+		m_flAccuracy -= ( 0.325 - ( gpGlobals->time - m_flLastFire ) ) * 0.275;
 
-		if ( m_flAccuracy > 0.98 )
-			m_flAccuracy = 0.98;
+		if ( m_flAccuracy > 0.88 )
+			m_flAccuracy = 0.88;
+		else if ( m_flAccuracy < 0.55 )
+			m_flAccuracy = 0.55;
 
 		m_flLastFire = gpGlobals->time;
 	}
@@ -162,8 +164,7 @@ void CELITE::ELITEFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	Vector vecAiming;
 	vecAiming = gpGlobals->v_forward;
-	Vector vecSrc;
-	vecSrc = m_pPlayer->GetGunPosition( );
+	Vector vecSrc = m_pPlayer->GetGunPosition( );
 
 	if ( m_iWeaponState & WPNSTATE_ELITE_LEFT )
 	{
@@ -202,10 +203,11 @@ void CELITE::Reload( void )
 	if ( m_pPlayer->ammo_9mm <= 0 )
 		return;
 
-	DefaultReload( ELITE_MAX_CLIP, ELITE_RELOAD, 4.5 );
-	m_pPlayer->SetAnimation( PLAYER_RELOAD );
-
-	m_flAccuracy = 0.98;
+	if ( DefaultReload( ELITE_MAX_CLIP, ELITE_RELOAD, 4.5 ) )
+	{
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
+		m_flAccuracy = 0.88;
+	}
 }
 
 void CELITE::WeaponIdle( void )

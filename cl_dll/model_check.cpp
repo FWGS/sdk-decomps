@@ -45,7 +45,7 @@ int g_iModelBounds;	// name ours (hashes after g_ModelBounds: retail's .bss orde
 static char *g_szCheckModels[] =	// name ours
 {
 	"models/player.mdl",
-	"models/player/arab/arab.mdl",
+	"models/player/leet/leet.mdl",
 	"models/player/arctic/arctic.mdl",
 	"models/player/gign/gign.mdl",
 	"models/player/gsg9/gsg9.mdl",

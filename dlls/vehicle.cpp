@@ -36,6 +36,7 @@
 #include "extdll.h"
 #include "util.h"
 #include "cbase.h"
+#include "weapons.h"	// Counter-Strike 1.0: the image shows a header more than Beta 7.1 had (Vector::operator== stands ahead of FixupAngles2 in vehicle.obj: retail's object with this include, 163 bytes off without); which header and where is Counter-Strike 1.6's list
 #include "trains.h"
 #include "saverestore.h"
 

@@ -160,6 +160,7 @@ int CHudDeathNotice :: MsgFunc_DeathMsg( const char *pszName, int iSize, void *p
 
 	int killer = READ_BYTE();
 	int victim = READ_BYTE();
+	int headshot = READ_BYTE();
 
 	char killedwith[32];
 	strcpy( killedwith, "d_" );
@@ -231,7 +232,11 @@ int CHudDeathNotice :: MsgFunc_DeathMsg( const char *pszName, int iSize, void *p
 	}
 
 	// Find the sprite in the list
-	int spr = gHUD.GetSpriteIndex( killedwith );
+	int spr;
+	if ( headshot )
+		spr = gHUD.GetSpriteIndex( "d_headshot" );
+	else
+		spr = gHUD.GetSpriteIndex( killedwith );
 
 	rgDeathNoticeList[i].iId = spr;
 
@@ -269,7 +274,7 @@ int CHudDeathNotice :: MsgFunc_DeathMsg( const char *pszName, int iSize, void *p
 		}
 		else
 		{
-			if ( !strcmp( killedwith+2, "headshot" ) )
+			if ( headshot )
 				ConsolePrint( "*** " );
 
 			ConsolePrint( rgDeathNoticeList[i].szKiller );
@@ -279,7 +284,10 @@ int CHudDeathNotice :: MsgFunc_DeathMsg( const char *pszName, int iSize, void *p
 
 		if ( killedwith && *killedwith && (*killedwith > 13 ) && strcmp( killedwith, "d_world" ) && !rgDeathNoticeList[i].iTeamKill )
 		{
-			ConsolePrint( " with " );
+			if ( headshot )
+				ConsolePrint( " with a headshot from " );
+			else
+				ConsolePrint( " with " );
 
 			// replace the code names with the 'real' names
 			if ( !strcmp( killedwith+2, "egon" ) )
@@ -290,7 +298,7 @@ int CHudDeathNotice :: MsgFunc_DeathMsg( const char *pszName, int iSize, void *p
 			ConsolePrint( killedwith+2 ); // skip over the "d_" part
 		}
 
-		if ( !strcmp( killedwith+2, "headshot" ) )
+		if ( headshot )
 			ConsolePrint( " ***" );
 
 		ConsolePrint( "\n" );

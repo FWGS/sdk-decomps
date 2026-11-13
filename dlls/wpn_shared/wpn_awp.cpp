@@ -87,9 +87,9 @@ int CAWP::GetItemInfo(ItemInfo *p)
 BOOL CAWP::Deploy( )
 {
 	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_awp.mdl", "models/p_awp.mdl", AWP_DRAW, "sniper", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_awp.mdl", "models/p_awp.mdl", AWP_DRAW, "rifle", UseDecrement() ? 1 : 0 );
 	else
-		return DefaultDeploy( "models/v_awp_r.mdl", "models/p_awp.mdl", AWP_DRAW, "sniper", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_awp_r.mdl", "models/p_awp.mdl", AWP_DRAW, "rifle", UseDecrement() ? 1 : 0 );
 }
 
 void CAWP::SecondaryAttack( void )
@@ -182,12 +182,10 @@ void CAWP::Reload( void )
 	if ( m_pPlayer->ammo_338mag <= 0 )
 		return;
 
-	int iResult = DefaultReload( AWP_MAX_CLIP, AWP_RELOAD, 2.5 );	// name ours
-
-	m_pPlayer->SetAnimation( PLAYER_RELOAD );
-
-	if ( iResult )
+	if ( DefaultReload( AWP_MAX_CLIP, AWP_RELOAD, 2.5 ) )
 	{
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
+
 		if ( m_pPlayer->pev->fov != 90 )
 		{
 			m_pPlayer->pev->fov = m_pPlayer->m_iFOV = 10;

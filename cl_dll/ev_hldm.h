@@ -268,6 +268,32 @@ enum elite_e		// names ours
 	ELITE_DRAW,
 };
 
+// Counter-Strike 1.0 (names ours)
+enum fiveseven_e
+{
+	FIVESEVEN_IDLE = 0,
+	FIVESEVEN_SHOOT1,
+	FIVESEVEN_SHOOT2,
+	FIVESEVEN_SHOOT_EMPTY,
+};
+
+enum ump45_e
+{
+	UMP45_IDLE1 = 0,
+	UMP45_RELOAD,
+	UMP45_DRAW,
+	UMP45_SHOOT1,
+	UMP45_SHOOT2,
+	UMP45_SHOOT3,
+};
+
+enum sg550_e
+{
+	SG550_IDLE = 0,
+	SG550_SHOOT1,
+	SG550_SHOOT2,
+};
+
 #define	GAUSS_PRIMARY_CHARGE_VOLUME	256// how loud gauss is while charging
 #define GAUSS_PRIMARY_FIRE_VOLUME	450// how loud gauss is when discharged
 

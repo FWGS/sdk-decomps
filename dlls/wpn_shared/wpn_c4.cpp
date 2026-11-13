@@ -20,6 +20,7 @@
 #include "weapons.h"
 #include "nodes.h"
 #include "player.h"
+#include "gamerules.h"
 
 enum c4_e		// names ours
 {
@@ -45,6 +46,13 @@ void CC4::Spawn( )
 
 	m_iId = WEAPON_C4;
 	m_iDefaultAmmo = C4_DEFAULT_GIVE;
+
+	if ( pev->targetname )
+	{
+		pev->effects |= EF_NODRAW;
+		DROP_TO_FLOOR( ENT(pev) );
+		return;
+	}
 
 	FallInit();// get ready to fall down.
 
@@ -85,7 +93,7 @@ BOOL CC4::Deploy( )
 	m_bStartedArming = false;
 	m_fArmedTime = 0;
 
-	return DefaultDeploy( "models/v_c4.mdl", "models/p_c4.mdl", C4_DRAW, "trip", UseDecrement() ? 1 : 0 );
+	return DefaultDeploy( "models/v_c4.mdl", "models/p_c4.mdl", C4_DRAW, "c4", UseDecrement() ? 1 : 0 );
 }
 
 void CC4::Holster( int skiplocal )
@@ -118,6 +126,7 @@ void CC4::PrimaryAttack( void )
 			m_bBombPlacedAnimation = false;
 
 			SendWeaponAnim( C4_ARM );
+			m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
 			MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, ENT(m_pPlayer->pev) );
 				WRITE_SHORT( 3 );
@@ -138,7 +147,7 @@ void CC4::PrimaryAttack( void )
 			{
 				m_bBombPlacedAnimation = true;
 				SendWeaponAnim( C4_DROP );
-				m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
+				m_pPlayer->SetAnimation( PLAYER_HOLDBOMB );
 			}
 			else if ( !( m_pPlayer->m_signals.m_iState & 2 ) )
 			{
@@ -149,6 +158,8 @@ void CC4::PrimaryAttack( void )
 				MESSAGE_BEGIN( MSG_ONE, gmsgBarTime, NULL, ENT(m_pPlayer->pev) );
 					WRITE_SHORT( 0 );
 				MESSAGE_END();
+
+				m_pPlayer->SetAnimation( PLAYER_HOLDBOMB );
 
 				if ( m_bBombPlacedAnimation == true )
 					SendWeaponAnim( C4_DRAW );
@@ -180,6 +191,9 @@ void CC4::PrimaryAttack( void )
 
 			SendWeaponAnim( C4_IDLE1 );
 
+			if ( pev->speed != 0 && g_pGameRules )
+				((CHalfLifeMultiplay *)g_pGameRules)->m_iC4Timer = (int)pev->speed;
+
 			if ( tr.flFraction == 1.0 )
 				CGrenade::ShootSatchelCharge( m_pPlayer->pev, vecEnd, Vector( 0, 0, 0 ) );
 			else
@@ -203,6 +217,7 @@ void CC4::PrimaryAttack( void )
 			else
 			{
 				ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "#C4_Activated_At_Bomb_Spot" );
+				m_pPlayer->SetAnimation( PLAYER_HOLDBOMB );
 				m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.0;
 				return;
 			}
@@ -241,5 +256,64 @@ void CC4::WeaponIdle( void )
 	else
 	{
 		RetireWeapon();
+	}
+}
+
+void CC4::KeyValue( KeyValueData *pkvd )
+{
+	if ( FStrEq( pkvd->szKeyName, "detonatedelay" ) )
+	{
+		pev->speed = atof( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else if ( FStrEq( pkvd->szKeyName, "detonatetarget" ) )
+	{
+		pev->noise1 = ALLOC_STRING( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else if ( FStrEq( pkvd->szKeyName, "defusetarget" ) )
+	{
+		pev->target = ALLOC_STRING( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else
+		pkvd->fHandled = FALSE;
+}
+
+void CC4::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	if ( m_pPlayer )
+		return;
+
+	CBasePlayer *pPlayer = (CBasePlayer *)UTIL_PlayerByIndex( 1 );
+
+	if ( pPlayer )
+	{
+		edict_t *m_pentOldCurBombTarget = pPlayer->m_pentCurBombTarget;
+		pPlayer->m_pentCurBombTarget = NULL;
+
+		if ( pev->speed != 0 && g_pGameRules )
+			((CHalfLifeMultiplay *)g_pGameRules)->m_iC4Timer = (int)pev->speed;
+
+		EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/c4_plant.wav", VOL_NORM, ATTN_NORM );
+
+		CGrenade::ShootSatchelCharge( pPlayer->pev, pev->origin, Vector( 0, 0, 0 ) );
+
+		CGrenade *pC4 = NULL;
+
+		while ( ( pC4 = (CGrenade *)UTIL_FindEntityByClassname( pC4, "grenade" ) ) != NULL )
+		{
+			if ( pC4->m_bIsC4 && pC4->m_flNextFreq == gpGlobals->time )
+				break;
+		}
+
+		if ( pC4 )
+		{
+			pC4->pev->target = pev->target;
+			pC4->pev->noise1 = pev->noise1;
+		}
+
+		pPlayer->m_pentCurBombTarget = m_pentOldCurBombTarget;
+		SUB_Remove();
 	}
 }

@@ -108,8 +108,8 @@ void CMP5N::MP5NFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_flAccuracy = ( ( m_iShotsFired * m_iShotsFired ) / 220.1 ) + 0.45;
 
-	if ( m_flAccuracy > 1.0 )
-		m_flAccuracy = 1.0;
+	if ( m_flAccuracy > 0.75 )
+		m_flAccuracy = 0.75;
 
 	if (m_iClip <= 0)
 	{
@@ -166,11 +166,13 @@ void CMP5N::Reload( void )
 	if ( m_pPlayer->ammo_9mm <= 0 )
 		return;
 
-	DefaultReload( MP5N_MAX_CLIP, MP5N_RELOAD, 2.63 );
-	m_pPlayer->SetAnimation( PLAYER_RELOAD );
+	if ( DefaultReload( MP5N_MAX_CLIP, MP5N_RELOAD, 2.63 ) )
+	{
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
-	m_flAccuracy = 0;
-	m_iShotsFired = 0;
+		m_flAccuracy = 0;
+		m_iShotsFired = 0;
+	}
 }
 
 void CMP5N::WeaponIdle( void )

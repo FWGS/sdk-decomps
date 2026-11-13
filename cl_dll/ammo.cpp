@@ -1534,7 +1534,8 @@ int CHudMoney::Draw( float flTime )
 	// of this function (6.6 has App's copy constructor before MsgFunc_Money); the others give
 	// the same order between MsgFunc_BlinkAcct and GetSpriteList (measured in an unused inline
 	// function there), where Counter-Strike 1.6's ammo.cpp has nothing.  What text it was, the
-	// image does not say.
+	// image does not say.  Counter-Strike 1.0 takes 85 and
+	// 86 (full builds; 84 and 87 do not).
 	;
 	;
 	;

@@ -103,7 +103,7 @@ CRifleMenuPanel::CRifleMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide
 	m_pScrollPanel->validate();
 
 	// Create the Class buttons
-	for (int i = 0; i <= 6; i++)
+	for (int i = 0; i <= 7; i++)
 	{
 		char sz[256]; 
 		int iYPos = CLASSMENU_TOPLEFT_BUTTON_Y + ( (CLASSMENU_BUTTON_SIZE_Y + CLASSMENU_BUTTON_SPACER_Y) * i );
@@ -112,35 +112,39 @@ CRifleMenuPanel::CRifleMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide
 		switch ( i )
 		{
 		case 0:
-			m_pButtons[i] = new CommandButton( "AK-47", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#AK47" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		case 1:
-			m_pButtons[i] = new CommandButton( "SG-552", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Krieg552" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot2" );
 			break;
 		case 2:
-			m_pButtons[i] = new CommandButton( "M4/A1", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#M4A1_Short" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot3" );
 			break;
 		case 3:
-			m_pButtons[i] = new CommandButton( "Steyr Aug", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Aug" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot4" );
 			break;
 		case 4:
-			m_pButtons[i] = new CommandButton( "Steyr Scout", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Schmidt" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot5" );
 			break;
 		case 5:
-			m_pButtons[i] = new CommandButton( "AW/M", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Magnum" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot6" );
 			break;
 		case 6:
-			m_pButtons[i] = new CommandButton( "G3/SG-1", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#D3AU1" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot7" );
 			break;
+		case 7:
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Krieg550" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			strcpy( sz, "slot8" );
+			break;
 		default:
-			m_pButtons[i] = new CommandButton( "USP Tact", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#AK47" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		}
@@ -168,28 +172,31 @@ CRifleMenuPanel::CRifleMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide
 		switch ( i )
 		{
 		case 0:
-			sprintf( sz, "Avtomat Kalashnikov 47" );
+			sprintf( sz, "#AK47" );
 			break;
 		case 1:
-			sprintf( sz, "Sig SG-552 Commando" );
+			sprintf( sz, "#SG552" );
 			break;
 		case 2:
-			sprintf( sz, "Colt M4/A1" );
+			sprintf( sz, "#M4A1" );
 			break;
 		case 3:
-			sprintf( sz, "Steyr Aug" );
+			sprintf( sz, "#Aug" );
 			break;
 		case 4:
-			sprintf( sz, "Steyr Scout" );
+			sprintf( sz, "#Scout" );
 			break;
 		case 5:
-			sprintf( sz, "Accuracy Int. Arctic Warfare/Magnum (AWM)" );
+			sprintf( sz, "#ArcticWarfareMagnum" );
 			break;
 		case 6:
-			sprintf( sz, "Heckler & Koch G3/SG-1" );
+			sprintf( sz, "#G3SG1" );
+			break;
+		case 7:
+			sprintf( sz, "#SG550" );
 			break;
 		default:
-			sprintf( sz, "Avtomat Kalashnikov 47" );
+			sprintf( sz, "#AK47" );
 			break;
 		}
 
@@ -229,6 +236,9 @@ CRifleMenuPanel::CRifleMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide
 				break;
 			case 6:
 				strcpy( sz, "g3sg1" );
+				break;
+			case 7:
+				strcpy( sz, "sg550" );
 				break;
 			default:
 				strcpy( sz, "ak47" );
@@ -281,6 +291,9 @@ CRifleMenuPanel::CRifleMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide
 			break;
 		case 6:
 			sprintf( sz, "classes/%s.txt", "g3sg1" );
+			break;
+		case 7:
+			sprintf( sz, "classes/%s.txt", "sg550" );
 			break;
 		default:
 			sprintf( sz, "classes/%s.txt", "ak47" );
@@ -362,7 +375,7 @@ void CRifleMenuPanel::Update()
 	}
 
 	// Cycle through the rest of the buttons
-	for (int i = 0; i <= 6; i++)
+	for (int i = 0; i <= 7; i++)
 	{
 		if ( m_pButtons[i]->IsNotValid() )
 		{
@@ -399,7 +412,11 @@ void CRifleMenuPanel::Update()
 					m_pButtons[i]->setVisible( false );
 				break;
 			case 6:
-				if ( bTerrorist == true && iMapType == 1 )
+				if ( ( bTerrorist == true && iMapType == 1 ) || bTerrorist == false )
+					m_pButtons[i]->setVisible( false );
+				break;
+			case 7:
+				if ( bTerrorist == true )
 					m_pButtons[i]->setVisible( false );
 				break;
 			}
@@ -475,7 +492,7 @@ void CRifleMenuPanel::Initialize( void )
 void CRifleMenuPanel::SetActiveInfo( int iInput )
 {
 	// Remove all the Info panels and bring up the specified one
-	for (int i = 0; i <= 6; i++)
+	for (int i = 0; i <= 7; i++)
 	{
 		m_pButtons[i]->setArmed( false );
 		m_pClassInfoPanel[i]->setVisible( false );

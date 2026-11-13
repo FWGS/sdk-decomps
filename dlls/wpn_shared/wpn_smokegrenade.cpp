@@ -81,9 +81,9 @@ BOOL CSmokeGrenade::Deploy( )
 	m_flReleaseThrow = -1;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_smokegrenade.mdl", "models/p_smokegrenade.mdl", SMOKEGRENADE_DRAW, "crowbar", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_smokegrenade.mdl", "models/p_smokegrenade.mdl", SMOKEGRENADE_DRAW, "grenade", UseDecrement() ? 1 : 0 );
 	else
-		return DefaultDeploy( "models/v_smokegrenade_r.mdl", "models/p_smokegrenade.mdl", SMOKEGRENADE_DRAW, "crowbar", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_smokegrenade_r.mdl", "models/p_smokegrenade.mdl", SMOKEGRENADE_DRAW, "grenade", UseDecrement() ? 1 : 0 );
 }
 
 BOOL CSmokeGrenade::CanHolster( void )

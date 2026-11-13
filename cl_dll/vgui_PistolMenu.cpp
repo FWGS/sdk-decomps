@@ -103,7 +103,7 @@ CPistolMenuPanel::CPistolMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wi
 	m_pScrollPanel->validate();
 
 	// Create the Class buttons
-	for (int i = 0; i <= 4; i++)
+	for (int i = 0; i <= 5; i++)
 	{
 		char sz[256]; 
 		int iYPos = CLASSMENU_TOPLEFT_BUTTON_Y + ( (CLASSMENU_BUTTON_SIZE_Y + CLASSMENU_BUTTON_SPACER_Y) * i );
@@ -112,27 +112,31 @@ CPistolMenuPanel::CPistolMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wi
 		switch ( i )
 		{
 		case 0:
-			m_pButtons[i] = new CommandButton( "USP Tact.", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#KM45Tactical" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		case 1:
-			m_pButtons[i] = new CommandButton( "Glock 18", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Sidearm9X19mm" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot2" );
 			break;
 		case 2:
-			m_pButtons[i] = new CommandButton( "Desert Eagle", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#NightHawk" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot3" );
 			break;
 		case 3:
-			m_pButtons[i] = new CommandButton( "P228", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#P228Compact" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot4" );
 			break;
 		case 4:
-			m_pButtons[i] = new CommandButton( "96G Elites", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#Dual40" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot5" );
 			break;
+		case 5:
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#ESFiveSeven" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			strcpy( sz, "slot6" );
+			break;
 		default:
-			m_pButtons[i] = new CommandButton( "USP Tact", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#KM45Tactical" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		}
@@ -160,22 +164,25 @@ CPistolMenuPanel::CPistolMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wi
 		switch ( i )
 		{
 		case 0:
-			sprintf( sz, "H&K USP .45 Tactical" );
+			sprintf( sz, "#USP45" );
 			break;
 		case 1:
-			sprintf( sz, "Glock 18" );
+			sprintf( sz, "#Glock18" );
 			break;
 		case 2:
-			sprintf( sz, "IMI Desert Eagle" );
+			sprintf( sz, "#DesertEagle" );
 			break;
 		case 3:
-			sprintf( sz, "Sig Sauer P-228" );
+			sprintf( sz, "#P228" );
 			break;
 		case 4:
-			sprintf( sz, "(2x) Beretta 96G Elite" );
+			sprintf( sz, "#Beretta96G" );
+			break;
+		case 5:
+			sprintf( sz, "#FiveSeven" );
 			break;
 		default:
-			sprintf( sz, "H&K USP .45 Tactical" );
+			sprintf( sz, "#USP45Tactical" );
 			break;
 		}
 
@@ -209,6 +216,9 @@ CPistolMenuPanel::CPistolMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wi
 				break;
 			case 4:
 				strcpy( sz, "elite" );
+				break;
+			case 5:
+				strcpy( sz, "fiveseven" );
 				break;
 			default:
 				strcpy( sz, "usp" );
@@ -255,6 +265,9 @@ CPistolMenuPanel::CPistolMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wi
 			break;
 		case 4:
 			sprintf( sz, "classes/%s.txt", "elite" );
+			break;
+		case 5:
+			sprintf( sz, "classes/%s.txt", "fiveseven" );
 			break;
 		default:
 			sprintf( sz, "classes/%s.txt", "usp" );
@@ -333,7 +346,7 @@ void CPistolMenuPanel::Update()
 	}
 
 	// Cycle through the rest of the buttons
-	for (int i = 0; i <= 4; i++)
+	for (int i = 0; i <= 5; i++)
 	{
 		if ( m_pButtons[i]->IsNotValid() )
 		{
@@ -343,8 +356,16 @@ void CPistolMenuPanel::Update()
 		{
 			m_pButtons[i]->setVisible( true );
 
-			if ( bTerrorist == false && i == 4 )
-				m_pButtons[i]->setVisible( false );
+			if ( bTerrorist == false )
+			{
+				if ( i == 4 )
+					m_pButtons[i]->setVisible( false );
+			}
+			else if ( bTerrorist == true )
+			{
+				if ( i == 5 )
+					m_pButtons[i]->setVisible( false );
+			}
 
 			m_pButtons[i]->setPos( CLASSMENU_TOPLEFT_BUTTON_X, iYPos );
 			iYPos += CLASSMENU_BUTTON_SIZE_Y + CLASSMENU_BUTTON_SPACER_Y;
@@ -417,7 +438,7 @@ void CPistolMenuPanel::Initialize( void )
 void CPistolMenuPanel::SetActiveInfo( int iInput )
 {
 	// Remove all the Info panels and bring up the specified one
-	for (int i = 0; i <= 4; i++)
+	for (int i = 0; i <= 5; i++)
 	{
 		m_pButtons[i]->setArmed( false );
 		m_pClassInfoPanel[i]->setVisible( false );

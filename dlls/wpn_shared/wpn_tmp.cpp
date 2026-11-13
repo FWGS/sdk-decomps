@@ -86,9 +86,9 @@ BOOL CTMP::Deploy( )
 	m_bDelayFire = false;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_tmp.mdl", "models/p_tmp.mdl", TMP_DRAW, "tmp", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_tmp.mdl", "models/p_tmp.mdl", TMP_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
 	else
-		return DefaultDeploy( "models/v_tmp_r.mdl", "models/p_tmp.mdl", TMP_DRAW, "tmp", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_tmp_r.mdl", "models/p_tmp.mdl", TMP_DRAW, "onehanded", UseDecrement() ? 1 : 0 );
 }
 
 void CTMP::PrimaryAttack( void )
@@ -161,11 +161,13 @@ void CTMP::Reload( void )
 	if ( m_pPlayer->ammo_9mm <= 0 )
 		return;
 
-	DefaultReload( TMP_MAX_CLIP, TMP_RELOAD, 2.12 );
-	m_pPlayer->SetAnimation( PLAYER_RELOAD );
+	if ( DefaultReload( TMP_MAX_CLIP, TMP_RELOAD, 2.12 ) )
+	{
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
-	m_flAccuracy = 0.2;
-	m_iShotsFired = 0;
+		m_flAccuracy = 0.2;
+		m_iShotsFired = 0;
+	}
 }
 
 void CTMP::WeaponIdle( void )

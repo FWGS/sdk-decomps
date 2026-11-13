@@ -93,9 +93,9 @@ BOOL CKnife::Deploy( )
 	EMIT_SOUND( ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/knife_deploy1.wav", 0.3, 2.4 );
 
 	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_knife.mdl", "models/p_knife.mdl", KNIFE_DRAW, "crowbar", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_knife.mdl", "models/p_knife.mdl", KNIFE_DRAW, "knife", UseDecrement() ? 1 : 0 );
 	else
-		return DefaultDeploy( "models/v_knife_r.mdl", "models/p_knife.mdl", KNIFE_DRAW, "crowbar", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_knife_r.mdl", "models/p_knife.mdl", KNIFE_DRAW, "knife", UseDecrement() ? 1 : 0 );
 }
 
 void CKnife::Holster( int skiplocal /* = 0 */ )

@@ -85,9 +85,9 @@ int CM3::GetItemInfo(ItemInfo *p)
 BOOL CM3::Deploy( )
 {
 	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_m3.mdl", "models/p_m3.mdl", M3_DRAW, "mp5", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_m3.mdl", "models/p_m3.mdl", M3_DRAW, "shotgun", UseDecrement() ? 1 : 0 );
 	else
-		return DefaultDeploy( "models/v_m3_r.mdl", "models/p_m3.mdl", M3_DRAW, "mp5", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_m3_r.mdl", "models/p_m3.mdl", M3_DRAW, "shotgun", UseDecrement() ? 1 : 0 );
 }
 
 void CM3::PrimaryAttack()

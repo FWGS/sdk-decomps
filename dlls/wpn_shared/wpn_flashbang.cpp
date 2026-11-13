@@ -80,9 +80,9 @@ BOOL CFlashbang::Deploy( )
 	m_flReleaseThrow = -1;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_flashbang.mdl", "models/p_flashbang.mdl", FLASHBANG_DRAW, "crowbar", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_flashbang.mdl", "models/p_flashbang.mdl", FLASHBANG_DRAW, "grenade", UseDecrement() ? 1 : 0 );
 	else
-		return DefaultDeploy( "models/v_flashbang_r.mdl", "models/p_flashbang.mdl", FLASHBANG_DRAW, "crowbar", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_flashbang_r.mdl", "models/p_flashbang.mdl", FLASHBANG_DRAW, "grenade", UseDecrement() ? 1 : 0 );
 }
 
 BOOL CFlashbang::CanHolster( void )
@@ -150,8 +150,7 @@ void CFlashbang::WeaponIdle( void )
 		else
 			vecSrc = m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16 + gpGlobals->v_right * 12;
 
-		Vector vecThrow;
-		vecThrow = gpGlobals->v_forward * flVel + m_pPlayer->pev->velocity;
+		Vector vecThrow = gpGlobals->v_forward * flVel + m_pPlayer->pev->velocity;
 
 		// the flashbang always goes off 1.5 seconds after the throw
 		float time = 1.5;

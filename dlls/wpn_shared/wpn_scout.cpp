@@ -83,9 +83,9 @@ int CSCOUT::GetItemInfo(ItemInfo *p)
 BOOL CSCOUT::Deploy( )
 {
 	if ( m_pPlayer->m_bLeftHanded == true )
-		return DefaultDeploy( "models/v_scout.mdl", "models/p_scout.mdl", SCOUT_DRAW, "silentsniper", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_scout.mdl", "models/p_scout.mdl", SCOUT_DRAW, "rifle", UseDecrement() ? 1 : 0 );
 	else
-		return DefaultDeploy( "models/v_scout_r.mdl", "models/p_scout.mdl", SCOUT_DRAW, "silentsniper", UseDecrement() ? 1 : 0 );
+		return DefaultDeploy( "models/v_scout_r.mdl", "models/p_scout.mdl", SCOUT_DRAW, "rifle", UseDecrement() ? 1 : 0 );
 }
 
 void CSCOUT::SecondaryAttack( void )
@@ -183,7 +183,9 @@ void CSCOUT::SCOUTFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 void CSCOUT::Reload( void )
 {
-	if ( DefaultReload( SCOUT_MAX_CLIP, SCOUT_RELOAD, 2 ) )
+	int iResult = DefaultReload( SCOUT_MAX_CLIP, SCOUT_RELOAD, 2 );
+
+	if ( iResult )
 	{
 		if ( m_pPlayer->m_iFOV != 90 )
 		{
@@ -191,9 +193,9 @@ void CSCOUT::Reload( void )
 			m_pPlayer->pev->fov = 15;
 			SecondaryAttack();
 		}
-	}
 
-	m_pPlayer->SetAnimation( PLAYER_RELOAD );
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
+	}
 }
 
 void CSCOUT::WeaponIdle( void )

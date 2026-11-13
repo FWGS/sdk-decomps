@@ -76,6 +76,9 @@ void EV_CreateSmoke( struct event_args_s *args );
 void EV_FireEliteLeft( struct event_args_s *args );	// name ours
 void EV_FireEliteRight( struct event_args_s *args );	// name ours
 void EV_Knife( struct event_args_s *args );	// name ours
+void EV_FireFiveSeven( struct event_args_s *args );
+void EV_FireUMP45( struct event_args_s *args );
+void EV_FireSG550( struct event_args_s *args );
 }
 
 #define VECTOR_CONE_1DEGREES Vector( 0.00873, 0.00873, 0.00873 )
@@ -3084,6 +3087,220 @@ void EV_Knife( event_args_t *args )
 
 	if ( EV_IsLocal( idx ) )
 		gEngfuncs.pEventAPI->EV_WeaponAnimation( args->iparam1, 2 );
+}
+
+void EV_FireFiveSeven( event_args_t *args )
+{
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t velocity;
+	int empty;
+	bool lefthanded;	// name ours
+
+	cl_entity_t *ent;
+	vec3_t ShellVelocity;
+	vec3_t ShellOrigin;
+	int shell;
+	vec3_t vecSrc, vecAiming;
+	vec3_t vecSpread;
+	vec3_t up, right, forward;
+
+	ent = GetViewEntity();
+	lefthanded = args->bparam2 != 0;
+	empty = args->bparam1;
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->velocity, velocity );
+	VectorCopy( args->angles, angles );
+
+	AngleVectors( angles, forward, right, up );
+
+	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/pshell.mdl");// brass shell
+	
+	if ( EV_IsLocal( idx ) )
+	{
+		g_iShotsFired++;
+
+		// Add muzzle flash to current weapon model
+		EV_MuzzleFlash();
+		if ( empty )
+			gEngfuncs.pEventAPI->EV_WeaponAnimation( FIVESEVEN_SHOOT_EMPTY, 2 );
+		else
+			gEngfuncs.pEventAPI->EV_WeaponAnimation( FIVESEVEN_SHOOT1 + gEngfuncs.pfnRandomLong(0,1), 2 );
+
+		if ( gHUD.m_bGunSmoke == true )
+		{
+			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 0, 0.25, 10, 10, 10, 3, velocity, false, 35 );
+			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 25, 0.3, 15, 15, 15, 2, velocity, false, 35 );
+			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 50, 0.2, 20, 20, 20, 2, velocity, false, 35 );
+		}
+	}
+
+	if ( EV_IsLocal( idx ) )
+	{
+		if ( lefthanded )
+			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 36, -14, -14, false );
+		else
+			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 36, -14, 14, false );
+
+		ShellVelocity = ShellVelocity * 0.75;
+		ShellVelocity[2] += 35;
+		ShellOrigin = ent->attachment[1];
+	}
+	else
+	{
+		EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -12, 4, false );
+	}
+
+	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL, idx, 4 );
+
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/fiveseven-1.wav", 1, 0.8, 0, 94 + gEngfuncs.pfnRandomLong( 0, 0xf ) );
+
+	EV_GetGunPosition( args, vecSrc, origin );
+	VectorCopy( forward, vecAiming );
+
+	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_57MM, 0, &tracerCount[idx-1], 2 );
+}
+
+void EV_FireUMP45( event_args_t *args )
+{
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t velocity;
+	bool lefthanded;	// name ours
+
+	cl_entity_t *ent;
+	vec3_t ShellVelocity;
+	vec3_t ShellOrigin;
+	int shell;
+	vec3_t vecSrc, vecAiming;
+	vec3_t vecSpread;
+	vec3_t up, right, forward;
+
+	ent = GetViewEntity();
+	lefthanded = args->bparam2 != 0;
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->velocity, velocity );
+	VectorCopy( args->angles, angles );
+
+	angles[0] += args->fparam1;
+	angles[1] += args->fparam2;
+	angles[2] += args->iparam2 / 10000.1;
+
+	AngleVectors( angles, forward, right, up );
+
+	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/pshell.mdl");// brass shell
+	
+	if ( EV_IsLocal( idx ) )
+	{
+		g_iShotsFired++;
+
+		// Add muzzle flash to current weapon model
+		EV_MuzzleFlash();
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( UMP45_SHOOT1 + gEngfuncs.pfnRandomLong(0,2), 2 );
+
+		if ( gHUD.m_bGunSmoke == true )
+			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 3, 0.25, 10, 10, 10, 3, velocity, false, 35 );
+	}
+
+	if ( EV_IsLocal( idx ) )
+	{
+		if ( lefthanded )
+			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 34, -10, -11, false );
+		else
+			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 34, -10, 11, false );
+
+		ShellVelocity[2] -= 50;
+		ShellOrigin = ent->attachment[1];
+	}
+	else
+	{
+		EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -12, 4, false );
+	}
+
+	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL, idx, 13 );
+
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/ump45-1.wav", 1, 0.64, 0, 94 + gEngfuncs.pfnRandomLong( 0, 0xf ) );
+
+	EV_GetGunPosition( args, vecSrc, origin );
+	VectorCopy( forward, vecAiming );
+
+	vecSpread = Vector( args->iparam1 / 10000.1, args->iparam1 / 10000.1, args->iparam1 / 10000.1 );
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_45ACP, 0, &tracerCount[idx-1], 2 );
+}
+
+void EV_FireSG550( event_args_t *args )
+{
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+	vec3_t velocity;
+	bool lefthanded;	// name ours
+
+	cl_entity_t *ent;
+	vec3_t ShellVelocity;
+	vec3_t ShellOrigin;
+	int shell;
+	vec3_t vecSrc, vecAiming;
+	vec3_t vecSpread;
+	vec3_t up, right, forward;
+
+	ent = GetViewEntity();
+	lefthanded = args->bparam2 != 0;
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->velocity, velocity );
+	VectorCopy( args->angles, angles );
+
+	AngleVectors( angles, forward, right, up );
+
+	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/rshell.mdl");// brass shell
+	
+	if ( EV_IsLocal( idx ) )
+	{
+		g_iShotsFired++;
+
+		// Add muzzle flash to current weapon model
+		EV_MuzzleFlash();
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( SG550_SHOOT1 + gEngfuncs.pfnRandomLong(0,1), 2 );
+
+		if ( gHUD.m_bGunSmoke == true )
+		{
+			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 3, 0.3, 35, 35, 35, 4, velocity, false, 35 );
+			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 35, 0.35, 30, 30, 30, 2, velocity, false, 35 );
+			EV_HLDM_CreateSmoke( ent->attachment[0], forward, 70, 0.3, 25, 25, 25, 2, velocity, false, 35 );
+		}
+	}
+
+	if ( EV_IsLocal( idx ) )
+	{
+		if ( lefthanded )
+			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -8, -10, false );
+		else
+			EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 17, -8, 10, false );
+
+		ShellVelocity = ShellVelocity * 1.5;
+		ShellVelocity[2] -= 50;
+		ShellOrigin = ent->attachment[1];
+	}
+	else
+	{
+		EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 20, -12, 4, false );
+	}
+
+	EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHELL, idx, 17 );
+
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/sg550-1.wav", 1, 0.4, 0, 94 + gEngfuncs.pfnRandomLong( 0, 0xf ) );
+
+	EV_GetGunPosition( args, vecSrc, origin );
+	VectorCopy( forward, vecAiming );
+
+	vecSpread = Vector( args->fparam1, args->fparam1, args->fparam1 );
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_556MM, 0, &tracerCount[idx-1], 2 );
 }
 
 void EV_CreateSmoke( event_args_t *args )

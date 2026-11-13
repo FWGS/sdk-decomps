@@ -112,11 +112,11 @@ CMachineGunMenuPanel::CMachineGunMenuPanel(int iTrans, int iRemoveMe, int x,int 
 		switch ( i )
 		{
 		case 0:
-			m_pButtons[i] = new CommandButton( "M249", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#ESM249" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		default:
-			m_pButtons[i] = new CommandButton( "M249", CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
+			m_pButtons[i] = new CommandButton( CHudTextMessage::BufferedLocaliseTextString( "#ESM249" ), CLASSMENU_TOPLEFT_BUTTON_X, iYPos, CLASSMENU_BUTTON_SIZE_X, CLASSMENU_BUTTON_SIZE_Y, true );
 			strcpy( sz, "slot1" );
 			break;
 		}
@@ -144,10 +144,10 @@ CMachineGunMenuPanel::CMachineGunMenuPanel(int iTrans, int iRemoveMe, int x,int 
 		switch ( i )
 		{
 		case 0:
-			sprintf( sz, "Fabrique Nationale M-249 PARA" );
+			sprintf( sz, "#M249" );
 			break;
 		default:
-			sprintf( sz, "Fabrique Nationale M-249 PARA" );
+			sprintf( sz, "#M249" );
 			break;
 		}
 

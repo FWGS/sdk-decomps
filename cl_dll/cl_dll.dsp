@@ -133,6 +133,10 @@ SOURCE=.\hl\hl_weapons.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\studio_util.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\dlls\wpn_shared\wpn_ak47.cpp
 # End Source File
 # Begin Source File
@@ -154,6 +158,10 @@ SOURCE=..\dlls\wpn_shared\wpn_deagle.cpp
 # Begin Source File
 
 SOURCE=..\dlls\wpn_shared\wpn_elite.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\wpn_shared\wpn_fiveseven.cpp
 # End Source File
 # Begin Source File
 
@@ -209,6 +217,10 @@ SOURCE=..\dlls\wpn_shared\wpn_scout.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\dlls\wpn_shared\wpn_sg550.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\dlls\wpn_shared\wpn_sg552.cpp
 # End Source File
 # Begin Source File
@@ -218,6 +230,10 @@ SOURCE=..\dlls\wpn_shared\wpn_smokegrenade.cpp
 # Begin Source File
 
 SOURCE=..\dlls\wpn_shared\wpn_tmp.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\wpn_shared\wpn_ump45.cpp
 # End Source File
 # Begin Source File
 
@@ -275,6 +291,10 @@ SOURCE=.\events.cpp
 # Begin Source File
 
 SOURCE=.\flashlight.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\GameStudioModelRenderer.cpp
 # End Source File
 # Begin Source File
 
@@ -363,6 +383,10 @@ SOURCE=.\status_icons.cpp
 # Begin Source File
 
 SOURCE=.\statusbar.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\StudioModelRenderer.cpp
 # End Source File
 # Begin Source File
 
@@ -506,6 +530,10 @@ SOURCE=.\eventscripts.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\GameStudioModelRenderer.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\health.h
 # End Source File
 # Begin Source File
@@ -555,6 +583,14 @@ SOURCE=..\pm_shared\pm_movevars.h
 # Begin Source File
 
 SOURCE=..\pm_shared\pm_shared.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\studio_util.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\StudioModelRenderer.h
 # End Source File
 # Begin Source File
 

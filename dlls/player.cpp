@@ -124,6 +124,7 @@ TYPEDESCRIPTION	CBasePlayer::m_playerSaveData[] =
 	DEFINE_FIELD( CBasePlayer, m_iHideHUD, FIELD_INTEGER ),
 	DEFINE_FIELD( CBasePlayer, m_iFOV, FIELD_INTEGER ),
 	DEFINE_FIELD( CBasePlayer, m_flDisplayHistory, FIELD_INTEGER ),	// Beta 5.0 (leak)
+	DEFINE_FIELD( CBasePlayer, m_iJoiningState, FIELD_INTEGER ),	// 1.0
 	
 	//DEFINE_FIELD( CBasePlayer, m_fDeadTime, FIELD_FLOAT ), // only used in multiplayer games
 	//DEFINE_FIELD( CBasePlayer, m_fGameHUDInitialized, FIELD_INTEGER ), // only used in multiplayer games
@@ -318,6 +319,7 @@ static char *GetCSModelName( int item_id )
 	case WEAPON_AWP:		modelName = "models/w_awp.mdl"; break;
 	case WEAPON_DEAGLE:		modelName = "models/w_deagle.mdl"; break;
 	case WEAPON_G3SG1:		modelName = "models/w_g3sg1.mdl"; break;
+	case WEAPON_SG550:		modelName = "models/w_sg550.mdl"; break;	// 1.0
 	case WEAPON_GLOCK18:	modelName = "models/w_glock18.mdl"; break;
 	case WEAPON_M249:		modelName = "models/w_m249.mdl"; break;
 	case WEAPON_M3:			modelName = "models/w_m3.mdl"; break;
@@ -328,7 +330,9 @@ static char *GetCSModelName( int item_id )
 	case WEAPON_TMP:		modelName = "models/w_tmp.mdl"; break;
 	case WEAPON_USP:		modelName = "models/w_usp.mdl"; break;
 	case WEAPON_ELITE:		modelName = "models/w_elite.mdl"; break;	// Beta 7.0
+	case WEAPON_FIVESEVEN:	modelName = "models/w_fiveseven.mdl"; break;	// 1.0
 	case WEAPON_P90:		modelName = "models/w_p90.mdl"; break;
+	case WEAPON_UMP45:		modelName = "models/w_ump45.mdl"; break;	// 1.0
 	case WEAPON_MAC10:		modelName = "models/w_mac10.mdl"; break;	// Beta 6.0
 	case WEAPON_P228:		modelName = "models/w_p228.mdl"; break;
 	case WEAPON_SCOUT:		modelName = "models/w_scout.mdl"; break;
@@ -349,7 +353,7 @@ static char *GetCSModelName( int item_id )
 //=========================================================
 // SetPlayerModel - Beta 5.0 (leak) (Linux symbol): the model
 // of the player's appearance (m_iAppearance; Beta 6.5: 1
-// urban, 2 terror, 3 arab, 4 arctic, 5 gsg9, 6 gign, 7 sas,
+// urban, 2 terror, 3 leet, 4 arctic, 5 gsg9, 6 gign, 7 sas,
 // 8 guerilla, 9 vip; anything else urban). The C4 carrier's
 // flag picks between the same two models (sic); each arm of
 // that test holds both statements: with inline expansion on,
@@ -376,20 +380,20 @@ void CBasePlayer::SetPlayerModel( BOOL HasC4 )
 	szTerror[3] = g_r;
 	szTerror[4] = g_o;
 
-	char *szModelArab = new char[12];
-	char *szArab = new char[5];
+	char *szModelLeet = new char[12];
+	char *szLeet = new char[5];
 
-	szModelArab[0] = g_m;	szModelArab[5] = ' ';	szModelArab[10] = '\n';
-	szModelArab[1] = g_o;	szModelArab[6] = g_a;	szModelArab[11] = '\0';
-	szModelArab[2] = g_d;	szModelArab[7] = g_r;
-	szModelArab[3] = g_e;	szModelArab[8] = g_a;
-	szModelArab[4] = g_l;	szModelArab[9] = g_b;
+	szModelLeet[0] = g_m;	szModelLeet[5] = ' ';	szModelLeet[10] = '\n';
+	szModelLeet[1] = g_o;	szModelLeet[6] = g_l;	szModelLeet[11] = '\0';
+	szModelLeet[2] = g_d;	szModelLeet[7] = g_e;
+	szModelLeet[3] = g_e;	szModelLeet[8] = g_e;
+	szModelLeet[4] = g_l;	szModelLeet[9] = g_t;
 
-	szArab[0] = g_a;
-	szArab[1] = g_r;
-	szArab[2] = g_a;
-	szArab[3] = g_b;
-	szArab[4] = '\0';
+	szLeet[0] = g_l;
+	szLeet[1] = g_e;
+	szLeet[2] = g_e;
+	szLeet[3] = g_t;
+	szLeet[4] = '\0';
 
 	char *szModelArctic = new char[14];
 	char *szArctic = new char[7];
@@ -516,13 +520,13 @@ void CBasePlayer::SetPlayerModel( BOOL HasC4 )
 	case 3:
 		if ( HasC4 )
 		{
-			CLIENT_COMMAND( edict(), szModelArab );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szArab );
+			CLIENT_COMMAND( edict(), szModelLeet );
+			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szLeet );
 		}
 		else
 		{
-			CLIENT_COMMAND( edict(), szModelArab );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szArab );
+			CLIENT_COMMAND( edict(), szModelLeet );
+			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szLeet );
 		}
 		break;
 	// Beta 6.0: the arctic terrorists and the GIGN are new, the VIP has a model
@@ -1106,8 +1110,13 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		case WEAPON_M3:
 			flRatio *= 1;
 			break;
-		case WEAPON_M4A1:	// Beta 6.0 (Beta 5.2: 1.55)
-			flRatio *= 1.375;
+		// Counter-Strike 1.0: the cases with one number stand together (the
+		// order of retail's blocks). M4A1 1.4 (Beta 7.1: 1.375), SG-552 and
+		// AUG 1.4 (1.45), P90 1.5 (1.35); new: Five-seveN 1.5, SG-550 1.45
+		case WEAPON_AUG:
+		case WEAPON_M4A1:
+		case WEAPON_SG552:
+			flRatio *= 1.4;
 			break;
 		case WEAPON_AWP:
 			flRatio *= 1.95;
@@ -1118,39 +1127,29 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		case WEAPON_G3SG1:
 			flRatio *= 1.65;
 			break;
+		case WEAPON_SG550:
+			flRatio *= 1.45;
+			break;
 		case WEAPON_M249:
+		case WEAPON_DEAGLE:
+		case WEAPON_FIVESEVEN:
+		case WEAPON_P90:
 			flRatio *= 1.5;
 			break;
-		case WEAPON_DEAGLE:
-			flRatio *= 1.5;
+		case WEAPON_GLOCK18:
+		case WEAPON_ELITE:	// Beta 7.0
+			flRatio *= 1.05;
 			break;
 		case WEAPON_AK47:	// Beta 6.0 (Beta 5.2: 1.65)
 			flRatio *= 1.55;
 			break;
-		case WEAPON_SG552:	// Beta 6.0 (Beta 5.2: 1.55)
-			flRatio *= 1.45;
-			break;
-		case WEAPON_AUG:	// Beta 6.0
-			flRatio *= 1.45;
-			break;
-		case WEAPON_GLOCK18:
-			flRatio *= 1.05;
-			break;
-		case WEAPON_ELITE:	// Beta 7.0
-			flRatio *= 1.05;
-			break;
-		case WEAPON_P90:	// Beta 3.1: the M3's 0.4 is gone (the default 0.5); Beta 6.0 1.35 (Beta 5.2: 1.4)
-			flRatio *= 1.35;
-			break;
 		case WEAPON_MAC10:	// Beta 6.0
 			flRatio *= 0.95;
-			break;
-		case WEAPON_KNIFE:	// Beta 3.1
-			flRatio *= 1.7;
 			break;
 		case WEAPON_P228:	// Beta 4.0 (Beta 4.1: 1.3, was 1.4; Beta 5.0 leak: 1.4 again; Beta 6.0: 1.25)
 			flRatio *= 1.25;
 			break;
+		case WEAPON_KNIFE:	// Beta 3.1
 		case WEAPON_SCOUT:	// Beta 4.0 (Beta 6.0: 1.7, was 1.6)
 			flRatio *= 1.7;
 			break;
@@ -1165,7 +1164,7 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		// did that for every damage, before the player was known to be alive
 		if ( !FBitSet( pev->flags, FL_DUCKING ) &&
 			 ( iGunType == WEAPON_M3 || iGunType == WEAPON_M4A1 || iGunType == WEAPON_AUG || iGunType == WEAPON_AWP || iGunType == WEAPON_G3SG1 ||
-			   iGunType == WEAPON_DEAGLE || iGunType == WEAPON_AK47 || iGunType == WEAPON_SG552 || iGunType == WEAPON_SCOUT ) )
+			   iGunType == WEAPON_DEAGLE || iGunType == WEAPON_AK47 || iGunType == WEAPON_SG552 || iGunType == WEAPON_SCOUT || iGunType == WEAPON_SG550 ) )	// 1.0: the SG-550
 		{
 			if ( pev->velocity.Length() < 300 )
 			{
@@ -1817,14 +1816,22 @@ BOOL CBasePlayer::IsCommander( void )
 // Set the activity based on an event or current state
 // Counter-Strike Beta 7.0: the second attack (ref_shoot2_/crouch_shoot2_) and
 // the reload (reload_<weapon>) are animated like the first attack; a shot
-// stamps m_flLastFired, and a player running faster than 190 who has not shot
-// for four seconds gets run_<weapon> (activity ACT_RUN) where the model has
-// it; the large flinch (lflinch_*, 2.3 seconds); more death animations.
+// stamps m_flLastFired, and a player running who has not shot for four
+// seconds gets run_<weapon> (activity ACT_RUN) where the model has it.
+// Counter-Strike 1.0, for the new player models (nine-way blending in the
+// client): jumps are animated (the gait is the hop or leap sequence while the
+// body aims, shoots or reloads; it stays until another activity resets it),
+// running starts at 135 (Beta 7.1: 190), the flinches are two sequences
+// (head_flinch, gut_flinch) and no longer timed here, the deaths go by
+// activity (ACT_DIE_HEADSHOT, ...) and four sequences (left, right,
+// crouch_die), holding the armed C4 (PLAYER_HOLDBOMB) aims, a standing
+// player's gait is ACT_IDLE (deep_idle).
 void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 {
 	int animDesired;
 	float speed;
 	char szAnim[64];
+	int hopSeq, leapSeq;	// Counter-Strike 1.6's names
 
 	// Beta 6.0: nothing to animate without a model (a player who has disappeared)
 	if ( !pev->modelindex )
@@ -1842,14 +1849,37 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		playerAnim = PLAYER_IDLE;
 	}
 
+	hopSeq = LookupActivity( ACT_HOP );
+	leapSeq = LookupActivity( ACT_LEAP );
+
 	switch (playerAnim) 
 	{
 	case PLAYER_JUMP:
-		m_IdealActivity = ACT_HOP;
+		switch( m_Activity )
+		{
+		case ACT_HOVER:
+		case ACT_SWIM:
+		case ACT_DIESIMPLE:
+			m_IdealActivity = m_Activity;
+			break;
+		default:
+			m_IdealActivity = ACT_HOP;
+			break;
+		}
 		break;
 	
 	case PLAYER_SUPERJUMP:
-		m_IdealActivity = ACT_LEAP;
+		switch( m_Activity )
+		{
+		case ACT_HOVER:
+		case ACT_SWIM:
+		case ACT_DIESIMPLE:
+			m_IdealActivity = m_Activity;
+			break;
+		default:
+			m_IdealActivity = ACT_LEAP;
+			break;
+		}
 		break;
 	
 	case PLAYER_DIE:
@@ -1862,8 +1892,6 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		{
 		case ACT_HOVER:
 		case ACT_SWIM:
-		case ACT_HOP:
-		case ACT_LEAP:
 		case ACT_DIESIMPLE:
 			m_IdealActivity = m_Activity;
 			break;
@@ -1879,8 +1907,6 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		{
 		case ACT_HOVER:
 		case ACT_SWIM:
-		case ACT_HOP:
-		case ACT_LEAP:
 		case ACT_DIESIMPLE:
 			m_IdealActivity = m_Activity;
 			break;
@@ -1896,8 +1922,6 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		{
 		case ACT_HOVER:
 		case ACT_SWIM:
-		case ACT_HOP:
-		case ACT_LEAP:
 		case ACT_DIESIMPLE:
 			m_IdealActivity = m_Activity;
 			break;
@@ -1926,28 +1950,45 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		}
 		break;
 
+	// Counter-Strike 1.0: the C4 while it is armed
+	case PLAYER_HOLDBOMB:
+		m_IdealActivity = ACT_HOLDBOMB;
+		break;
+
 	case PLAYER_FLINCH:
-		if ( m_flNextFlinchTime > gpGlobals->time )
-			return;
 		m_IdealActivity = ACT_FLINCH;
 		break;
 
 	// Beta 7.0: the flinch of a hit that pushes the player (TakeDamage)
 	case PLAYER_LARGE_FLINCH:
-		if ( m_flNextFlinchTime > gpGlobals->time )
-			return;
 		m_IdealActivity = ACT_LARGE_FLINCH;
 		break;
 	}
 
 	switch (m_IdealActivity)
 	{
-	case ACT_RANGE_ATTACK1:
-		m_flLastFired = gpGlobals->time;	// Beta 7.0
-		if ( FBitSet( pev->flags, FL_DUCKING ) )	// crouching
-			strcpy( szAnim, "crouch_shoot_" );
-		else
+	// Counter-Strike 1.0: a jump keeps the upper body's animation and sets
+	// the gait
+	case ACT_HOP:
+	case ACT_LEAP:
+		if ( m_Activity == m_IdealActivity)
+			return;
+
+		switch ( m_Activity )
+		{
+		case ACT_RANGE_ATTACK1:
 			strcpy( szAnim, "ref_shoot_" );
+			break;
+		case ACT_RANGE_ATTACK2:
+			strcpy( szAnim, "ref_shoot2_" );
+			break;
+		case ACT_RELOAD:
+			strcpy( szAnim, "ref_reload_" );
+			break;
+		default:
+			strcpy( szAnim, "ref_aim_" );
+			break;
+		}
 		strcat( szAnim, m_szAnimExtention );
 		animDesired = LookupSequence( szAnim );
 		if (animDesired == -1)
@@ -1963,10 +2004,30 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 			pev->effects |= EF_NOINTERP;
 		}
 
+		if ( m_IdealActivity == ACT_LEAP )
+			pev->gaitsequence = LookupActivity( ACT_LEAP );
+		else
+			pev->gaitsequence = LookupActivity( ACT_HOP );
+
 		m_Activity = m_IdealActivity;
+		break;
+
+	case ACT_RANGE_ATTACK1:
+		m_flLastFired = gpGlobals->time;	// Beta 7.0
+		if ( FBitSet( pev->flags, FL_DUCKING ) )	// crouching
+			strcpy( szAnim, "crouch_shoot_" );
+		else
+			strcpy( szAnim, "ref_shoot_" );
+		strcat( szAnim, m_szAnimExtention );
+		animDesired = LookupSequence( szAnim );
+		if (animDesired == -1)
+			animDesired = 0;
 
 		pev->sequence		= animDesired;
+		pev->frame			= 0;
 		ResetSequenceInfo( );
+
+		m_Activity = m_IdealActivity;
 		break;
 
 	// Beta 7.0: the second gun
@@ -1981,25 +2042,20 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		if (animDesired == -1)
 			animDesired = 0;
 
-		if ( pev->sequence != animDesired || !m_fSequenceLoops )
-		{
-			pev->frame = 0;
-		}
-
-		if (!m_fSequenceLoops)
-		{
-			pev->effects |= EF_NOINTERP;
-		}
+		pev->sequence		= animDesired;
+		pev->frame			= 0;
+		ResetSequenceInfo( );
 
 		m_Activity = m_IdealActivity;
-
-		pev->sequence		= animDesired;
-		ResetSequenceInfo( );
 		break;
 
-	// Beta 7.0: reload_<weapon>
+	// Beta 7.0: reload_<weapon>. Counter-Strike 1.0: ref_reload_<weapon>,
+	// crouch_reload_<weapon>
 	case ACT_RELOAD:
-		strcpy( szAnim, "reload_" );
+		if ( FBitSet( pev->flags, FL_DUCKING ) )	// crouching
+			strcpy( szAnim, "crouch_reload_" );
+		else
+			strcpy( szAnim, "ref_reload_" );
 		strcat( szAnim, m_szAnimExtention );
 		animDesired = LookupSequence( szAnim );
 		if (animDesired == -1)
@@ -2016,19 +2072,32 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		}
 
 		m_Activity = m_IdealActivity;
+		break;
 
-		pev->sequence		= animDesired;
-		ResetSequenceInfo( );
+	// Counter-Strike 1.0
+	case ACT_HOLDBOMB:
+		if ( FBitSet( pev->flags, FL_DUCKING ) )	// crouching
+			strcpy( szAnim, "crouch_aim_" );
+		else
+			strcpy( szAnim, "ref_aim_" );
+		strcat( szAnim, m_szAnimExtention );
+		animDesired = LookupSequence( szAnim );
+		if (animDesired == -1)
+			animDesired = 0;
+
+		m_Activity = m_IdealActivity;
 		break;
 
 	case ACT_WALK:
 		if ( ( m_Activity != ACT_RANGE_ATTACK1 || m_fSequenceFinished ) &&
 			 ( m_Activity != ACT_RANGE_ATTACK2 || m_fSequenceFinished ) &&
+			 ( m_Activity != ACT_FLINCH || m_fSequenceFinished ) &&
+			 ( m_Activity != ACT_LARGE_FLINCH || m_fSequenceFinished ) &&
 			 ( m_Activity != ACT_RELOAD || m_fSequenceFinished ) )
 		{
 			// Beta 7.0: running, four seconds after the last shot: run_<weapon>
 			// for the whole body where the model has it
-			if ( speed > 190 && m_flLastFired + 4 < gpGlobals->time )
+			if ( speed > 135 && m_flLastFired + 4 < gpGlobals->time )
 			{
 				strcpy( szAnim, "run_" );
 				strcat( szAnim, m_szAnimExtention );
@@ -2069,141 +2138,49 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		{
 			animDesired = pev->sequence;
 		}
+
+		// Counter-Strike 1.0 (sic: the run branch's gait is overwritten)
+		if ( speed > 135 )
+			pev->gaitsequence = LookupActivity( ACT_RUN );
+		else
+			pev->gaitsequence = LookupActivity( ACT_WALK );
 		break;
 
+	// Counter-Strike 1.0: one of two sequences, by the hit's place
 	case ACT_FLINCH:
-		m_Activity = m_IdealActivity;
-
-		switch ( m_LastHitGroup )
-		{
-		case HITGROUP_GENERIC:	// Beta 5.0 (leak): before the head (the code's order)
-		case HITGROUP_CHEST:
-			if ( m_fHeavyDamage == TRUE )
-				animDesired = LookupSequence( "flinch_stomach1" );
-			else
-				animDesired = LookupSequence( "sflinch_stomach1" );
-			break;
-
-		case HITGROUP_HEAD:
-			if ( m_fHeavyDamage == TRUE )
-				animDesired = LookupSequence( "flinch_head1" );
-			else
-				animDesired = LookupSequence( "sflinch_head1" );
-			break;
-
-		case HITGROUP_STOMACH:
-			if ( m_fHeavyDamage == TRUE )
-				animDesired = LookupSequence( "flinch_stomach1" );
-			else
-				animDesired = LookupSequence( "sflinch_stomach2" );
-			break;
-
-		case HITGROUP_LEFTARM:
-			if ( m_fHeavyDamage == TRUE )
-				animDesired = LookupSequence( "flinch_leftarm1" );
-			else
-				animDesired = LookupSequence( "sflinch_leftarm1" );
-			break;
-
-		case HITGROUP_RIGHTARM:
-			if ( m_fHeavyDamage == TRUE )
-				animDesired = LookupSequence( "flinch_rightarm1" );
-			else
-				animDesired = LookupSequence( "sflinch_rightarm1" );
-			break;
-
-		case HITGROUP_LEFTLEG:
-			if ( m_fHeavyDamage == TRUE )
-				animDesired = LookupSequence( "flinch_leftleg1" );
-			else
-				animDesired = LookupSequence( "sflinch_leftleg1" );
-			break;
-
-		case HITGROUP_RIGHTLEG:
-			if ( m_fHeavyDamage == TRUE )
-				animDesired = LookupSequence( "flinch_rightleg1" );
-			else
-				animDesired = LookupSequence( "sflinch_rightleg1" );
-			break;
-
-		default:	// Counter-Strike Beta 2.0
-			animDesired = LookupSequence( "sflinch_stomach1" );
-			break;
-		}
-
-		if ( FBitSet( pev->flags, FL_DUCKING ) )
-		{
-			if ( RANDOM_LONG( 0, 1 ) )
-				animDesired = LookupSequence( "flinch_crouch1" );
-			else
-				animDesired = LookupSequence( "flinch_crouch2" );
-		}
-
-		if ( m_fHeavyDamage == TRUE )
-		{
-			m_flNextFlinchTime = gpGlobals->time + 0.1;
-			m_flFlinchTime = gpGlobals->time + 1.2;
-		}
-		else
-		{
-			m_flNextFlinchTime = gpGlobals->time + 0.1;
-			m_flFlinchTime = gpGlobals->time + 0.5;
-		}
-
-		pev->gaitsequence = 0;
-		pev->sequence		= animDesired;
-		pev->frame			= 0;
-		ResetSequenceInfo( );
-		return;
-
-	// Beta 7.0: the large flinch, 2.3 seconds, with a console line
 	case ACT_LARGE_FLINCH:
 		m_Activity = m_IdealActivity;
 
 		switch ( m_LastHitGroup )
 		{
 		case HITGROUP_GENERIC:
-			animDesired = LookupSequence( "lflinch_stomach1" );
+			if ( RANDOM_LONG( 0, 1 ) )
+				animDesired = LookupSequence( "head_flinch" );
+			else
+				animDesired = LookupSequence( "gut_flinch" );
 			break;
 
 		case HITGROUP_HEAD:
-			animDesired = LookupSequence( "lflinch_head1" );
-			break;
-
 		case HITGROUP_CHEST:
-			if ( RANDOM_LONG( 0, 1 ) )
-				animDesired = LookupSequence( "lflinch_chest1" );
-			else
-				animDesired = LookupSequence( "lflinch_chest2" );
+			animDesired = LookupSequence( "head_flinch" );
 			break;
 
 		case HITGROUP_STOMACH:
-			animDesired = LookupSequence( "lflinch_stomach1" );
-			break;
-
 		case HITGROUP_LEFTARM:
-			animDesired = LookupSequence( "lflinch_leftarm1" );
-			break;
-
 		case HITGROUP_RIGHTARM:
-			animDesired = LookupSequence( "lflinch_rightarm1" );
+		case HITGROUP_LEFTLEG:
+		case HITGROUP_RIGHTLEG:
+			animDesired = LookupSequence( "gut_flinch" );
 			break;
 
 		default:
-			animDesired = LookupSequence( "lflinch_stomach1" );
+			animDesired = LookupSequence( "gut_flinch" );
 			break;
 		}
 
-		ALERT( at_console, "Playing Flinch Animation!\n" );
-
-		m_flNextFlinchTime = gpGlobals->time + 0.5;
-		m_flFlinchTime = gpGlobals->time + 2.3;
-
-		pev->gaitsequence = 0;
-		pev->sequence		= animDesired;
-		pev->frame			= 0;
-		ResetSequenceInfo( );
-		return;
+		if (animDesired == -1)
+			animDesired = 0;
+		break;
 
 	case ACT_DIESIMPLE:
 		if ( m_Activity == m_IdealActivity)
@@ -2213,48 +2190,46 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		m_iUnused15C = 0;
 		m_iDeathThrow = 0;
 
-		// the death animation goes by where the last hit was. Beta 7.0: more
-		// animations, picked by switches in which every second case lacks its
-		// break (sic: the first LookupSequence of each pair is wasted)
+		// the death animation goes by where the last hit was. Counter-Strike
+		// 1.0: by activity (the model's weights choose among its sequences)
 		switch ( m_LastHitGroup )
 		{
 		case HITGROUP_GENERIC:
-			// Beta 3.0: one of five deaths at random (Beta 7.0: of nine)
 			switch ( RANDOM_LONG( 0, 8 ) )
 			{
 			case 0:
-				animDesired = LookupSequence( "die_head1" );
+				animDesired = LookupActivity( ACT_DIE_HEADSHOT );
 				m_iDeathThrow = 2;
 				break;
 			case 1:
-				m_iDeathThrow = 3;
-				animDesired = LookupSequence( "die_rightarm1" );
+				animDesired = LookupActivity( ACT_DIE_GUTSHOT );
 				break;
 			case 2:
-				animDesired = LookupSequence( "die_legs1" );
+				animDesired = LookupActivity( ACT_DIE_BACKSHOT );
+				m_iDeathThrow = 3;
 				break;
 			case 3:
-				animDesired = LookupSequence( "die_legs2" );
+				animDesired = LookupActivity( ACT_DIESIMPLE );
 				break;
 			case 4:
-				animDesired = LookupSequence( "die_backwards" );
+				animDesired = LookupActivity( ACT_DIEBACKWARD );
 				m_iDeathThrow = 3;
 				break;
 			case 5:
-				animDesired = LookupSequence( "die_legs3" );
+				animDesired = LookupActivity( ACT_DIEFORWARD );
+				m_iDeathThrow = 1;
 				break;
 			case 6:
-				animDesired = LookupSequence( "die_chest2" );
+				animDesired = LookupActivity( ACT_DIE_CHESTSHOT );
 				break;
 			case 7:
-				animDesired = LookupSequence( "die_stomach1" );
+				animDesired = LookupActivity( ACT_DIE_GUTSHOT );
 				break;
 			case 8:
-				animDesired = LookupSequence( "die_legs4" );
+				animDesired = LookupActivity( ACT_DIE_HEADSHOT );
 				break;
 			default:
-				animDesired = LookupSequence( "die_backwards" );
-				m_iDeathThrow = 3;
+				animDesired = LookupActivity( ACT_DIESIMPLE );
 				break;
 			}
 			break;
@@ -2268,192 +2243,59 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 			if ( m_fHeavyDamage == TRUE )
 				iRand += 1;	// Beta 2.0 (Beta 1.0: 2)
 
-			if ( iRand == 0 )
-				animDesired = LookupSequence( "headshot" );
-			else if ( iRand == 1 || iRand == 2 )
+			if ( iRand == 1 || iRand == 2 )
 			{
-				animDesired = LookupSequence( "die_head1" );
 				m_iDeathThrow = 2;
+				animDesired = LookupActivity( ACT_DIE_HEADSHOT );
 			}
 			else if ( iRand == 3 || iRand == 4 )
 			{
-				animDesired = LookupSequence( "die_head2" );
 				m_iDeathThrow = 1;
+				animDesired = LookupActivity( ACT_DIE_HEADSHOT );
 			}
 			else if ( iRand == 5 || iRand == 6 )
 			{
-				animDesired = LookupSequence( "die_head3" );
 				m_iDeathThrow = 3;
+				animDesired = LookupActivity( ACT_DIE_HEADSHOT );
 			}
 			else
 			{
-				animDesired = LookupSequence( "die_head4" );
 				m_iDeathThrow = 0;
+				animDesired = LookupActivity( ACT_DIE_HEADSHOT );
 			}
 			}
 			break;
 
 		case HITGROUP_CHEST:
-			switch ( RANDOM_LONG( 0, 6 ) )
-			{
-			case 0:
-				animDesired = LookupSequence( "die_stomach1" );
-			case 1:
-				animDesired = LookupSequence( "die_stomach1" );
-				break;
-			case 2:
-				animDesired = LookupSequence( "die_chest1" );
-			case 3:
-				animDesired = LookupSequence( "die_chest1" );
-				break;
-			case 4:
-				animDesired = LookupSequence( "die_chest2" );
-			case 5:
-				animDesired = LookupSequence( "die_chest2" );
-				break;
-			case 6:
-				animDesired = LookupSequence( "gutshot" );
-				break;
-			default:
-				animDesired = LookupSequence( "die_chest1" );
-				break;
-			}
-			m_iDeathThrow = 0;
+			animDesired = LookupActivity( ACT_DIE_CHESTSHOT );
 			break;
 
 		case HITGROUP_STOMACH:
-			switch ( RANDOM_LONG( 0, 4 ) )
-			{
-			case 0:
-				animDesired = LookupSequence( "die_backwards" );
-				m_iDeathThrow = 3;
-				break;
-			case 1:
-				animDesired = LookupSequence( "die_stomach1" );
-			case 2:
-				animDesired = LookupSequence( "die_stomach1" );
-				break;
-			case 3:
-				animDesired = LookupSequence( "die_stomach2" );
-			case 4:
-				animDesired = LookupSequence( "die_stomach2" );
-				break;
-			default:
-				animDesired = LookupSequence( "die_stomach2" );
-				break;
-			}
+			animDesired = LookupActivity( ACT_DIE_GUTSHOT );
 			break;
 
 		case HITGROUP_LEFTARM:
-			switch ( RANDOM_LONG( 0, 5 ) )
-			{
-			case 0:
-				animDesired = LookupSequence( "die_leftarm1" );
-			case 1:
-				animDesired = LookupSequence( "die_leftarm1" );
-				break;
-			case 2:
-				animDesired = LookupSequence( "die_leftarm2" );
-			case 3:
-				animDesired = LookupSequence( "die_leftarm2" );
-				m_iDeathThrow = 3;
-				break;
-			case 4:
-				animDesired = LookupSequence( "die_leftarm3" );
-			case 5:
-				animDesired = LookupSequence( "die_leftarm3" );
-				break;
-			default:
-				animDesired = LookupSequence( "die_leftarm1" );
-				break;
-			}
+			animDesired = LookupSequence( "left" );
 			break;
 
 		case HITGROUP_RIGHTARM:
-			if ( RANDOM_LONG( 0, 1 ) )
-			{
-				m_iDeathThrow = 3;
-				animDesired = LookupSequence( "die_rightarm1" );
-			}
-			else
-			{
-				m_iDeathThrow = 6;
-				animDesired = LookupSequence( "die_rightarm2" );
-			}
+			m_iDeathThrow = RANDOM_LONG( 0, 1 ) ? 3 : 6;
+			animDesired = LookupSequence( "right" );
 			break;
 
 		case HITGROUP_LEFTLEG:
-			switch ( RANDOM_LONG( 0, 8 ) )
-			{
-			case 0:
-				animDesired = LookupSequence( "die_legs1" );
-			case 1:
-				animDesired = LookupSequence( "die_legs1" );
-				break;
-			case 2:
-				animDesired = LookupSequence( "die_legs2" );
-			case 3:
-				animDesired = LookupSequence( "die_legs2" );
-				break;
-			case 4:
-				animDesired = LookupSequence( "die_legs3" );
-			case 5:
-				animDesired = LookupSequence( "die_legs3" );
-				break;
-			case 6:
-				animDesired = LookupSequence( "die_legs4" );
-			case 7:
-				animDesired = LookupSequence( "die_legs4" );
-				break;
-			case 8:
-				animDesired = LookupSequence( "die_forward" );
-				break;
-			default:
-				animDesired = LookupSequence( "die_legs3" );
-				break;
-			}
-			break;
-
 		case HITGROUP_RIGHTLEG:
-			switch ( RANDOM_LONG( 0, 8 ) )
-			{
-			case 0:
-				animDesired = LookupSequence( "die_legs1" );
-			case 1:
-				animDesired = LookupSequence( "die_legs1" );
-				break;
-			case 2:
-				animDesired = LookupSequence( "die_legs2" );
-			case 3:
-				animDesired = LookupSequence( "die_legs2" );
-				break;
-			case 4:
-				animDesired = LookupSequence( "die_legs3" );
-			case 5:
-				animDesired = LookupSequence( "die_legs3" );
-				break;
-			case 6:
-				animDesired = LookupSequence( "die_legs4" );
-			case 7:
-				animDesired = LookupSequence( "die_legs4" );
-				break;
-			case 8:
-				animDesired = LookupSequence( "die_forward" );
-				break;
-			default:
-				animDesired = LookupSequence( "die_legs3" );
-				break;
-			}
+			animDesired = LookupActivity( ACT_DIESIMPLE );
 			break;
 
-		default:	// Counter-Strike Beta 2.0
-			animDesired = LookupSequence( "die_forwards" );
+		default:
+			animDesired = LookupActivity( ACT_DIESIMPLE );
 			break;
 		}
 
 		if ( FBitSet( pev->flags, FL_DUCKING ) )
 		{
-			animDesired = LookupSequence( "die_crouch1" );
+			animDesired = LookupSequence( "crouch_die" );
 			m_iDeathThrow = 2;
 		}
 		else if ( m_fKilledByBlast == true || m_fKilledByHEGrenade == true )
@@ -2462,17 +2304,20 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 			UTIL_MakeVectors( pev->angles );
 
 			if ( DotProduct( gpGlobals->v_forward, m_vecBlastDir ) > 0 )
-				animDesired = LookupSequence( "die_leftarm2" );
+				animDesired = LookupSequence( "left" );
 			else if ( RANDOM_LONG( 0, 1 ) )
-				animDesired = LookupSequence( "die_crouch1" );
+				animDesired = LookupSequence( "crouch_die" );
 			else
-				animDesired = LookupSequence( "die_head3" );
+				animDesired = LookupActivity( ACT_DIE_HEADSHOT );
 
 			if ( m_fKilledByBlast == true )
 				m_iDeathThrow = 4;
 			else if ( m_fKilledByHEGrenade == true )
 				m_iDeathThrow = 5;
 		}
+
+		if (animDesired == -1)
+			animDesired = 0;
 
 		// Already using the desired animation?
 		if (pev->sequence == animDesired)
@@ -2485,9 +2330,7 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		return;
 
 	case ACT_HOVER:
-	case ACT_LEAP:
 	case ACT_SWIM:
-	case ACT_HOP:
 	default:
 		if ( m_Activity == m_IdealActivity)
 			return;
@@ -2505,56 +2348,59 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		return;
 	}
 
-	if ( FBitSet( pev->flags, FL_DUCKING ) )
+	// Counter-Strike 1.0: a jump's gait stays
+	if ( pev->gaitsequence != hopSeq && pev->gaitsequence != leapSeq )
 	{
-		if ( speed == 0)
+		if ( FBitSet( pev->flags, FL_DUCKING ) )
 		{
-			pev->gaitsequence	= LookupActivity( ACT_CROUCHIDLE );
-			// pev->gaitsequence	= LookupActivity( ACT_CROUCH );
-		}
-		else
-		{
-			pev->gaitsequence	= LookupActivity( ACT_CROUCH );
-		}
-	}
-	else if ( speed > 190 )	// Beta 6.0: the run animation from 190 (Beta 5.2: 220)
-	{
-		// Beta 7.0: as in the ACT_WALK case above
-		if ( m_flLastFired + 4 < gpGlobals->time )
-		{
-			strcpy( szAnim, "run_" );
-			strcat( szAnim, m_szAnimExtention );
-			animDesired = LookupSequence( szAnim );
-			if ( animDesired == -1 )
+			if ( speed == 0)
 			{
-				if ( FBitSet( pev->flags, FL_DUCKING ) )	// crouching
-					strcpy( szAnim, "crouch_aim_" );
-				else
-					strcpy( szAnim, "ref_aim_" );
-				strcat( szAnim, m_szAnimExtention );
-				animDesired = LookupSequence( szAnim );
-				if (animDesired == -1)
-					animDesired = 0;
-				m_Activity = ACT_RUN;
-				pev->gaitsequence = LookupActivity( ACT_RUN );
+				pev->gaitsequence	= LookupActivity( ACT_CROUCHIDLE );
+				// pev->gaitsequence	= LookupActivity( ACT_CROUCH );
 			}
 			else
 			{
-				m_Activity = ACT_RUN;
-				pev->gaitsequence = animDesired;
+				pev->gaitsequence	= LookupActivity( ACT_CROUCH );
 			}
 		}
+		else if ( speed > 135 )	// Beta 6.0: the run animation from 190 (Beta 5.2: 220); Counter-Strike 1.0: 135
+		{
+			// Beta 7.0: as in the ACT_WALK case above. Counter-Strike 1.0: not
+			// while flinching (sic: no check of the second lookup's result)
+			if ( m_flLastFired + 4 < gpGlobals->time && m_Activity != ACT_FLINCH && m_Activity != ACT_LARGE_FLINCH )
+			{
+				strcpy( szAnim, "run_" );
+				strcat( szAnim, m_szAnimExtention );
+				animDesired = LookupSequence( szAnim );
+				if ( animDesired == -1 )
+				{
+					if ( FBitSet( pev->flags, FL_DUCKING ) )	// crouching
+						strcpy( szAnim, "crouch_aim_" );
+					else
+						strcpy( szAnim, "ref_aim_" );
+					strcat( szAnim, m_szAnimExtention );
+					animDesired = LookupSequence( szAnim );
+					m_Activity = ACT_RUN;
+					pev->gaitsequence = LookupActivity( ACT_RUN );
+				}
+				else
+				{
+					m_Activity = ACT_RUN;
+					pev->gaitsequence = animDesired;
+				}
+			}
+			else
+				pev->gaitsequence	= LookupActivity( ACT_RUN );
+		}
+		else if (speed > 0)
+		{
+			pev->gaitsequence	= LookupActivity( ACT_WALK );
+		}
 		else
-			pev->gaitsequence	= LookupActivity( ACT_RUN );
-	}
-	else if (speed > 0)
-	{
-		pev->gaitsequence	= LookupActivity( ACT_WALK );
-	}
-	else
-	{
-		// pev->gaitsequence	= LookupActivity( ACT_WALK );
-		pev->gaitsequence	= LookupSequence( "deep_idle" );
+		{
+			// pev->gaitsequence	= LookupActivity( ACT_WALK );
+			pev->gaitsequence	= LookupActivity( ACT_IDLE );
+		}
 	}
 
 
@@ -2758,10 +2604,12 @@ void CBasePlayer::ThrowPrimary( void )
 {
 	ThrowWeapon( "weapon_m249" );
 	ThrowWeapon( "weapon_g3sg1" );
+	ThrowWeapon( "weapon_sg550" );	// 1.0
 	ThrowWeapon( "weapon_awp" );
 	ThrowWeapon( "weapon_mp5navy" );
 	ThrowWeapon( "weapon_tmp" );
 	ThrowWeapon( "weapon_p90" );
+	ThrowWeapon( "weapon_ump45" );	// 1.0
 	ThrowWeapon( "weapon_m4a1" );
 	ThrowWeapon( "weapon_m3" );
 	ThrowWeapon( "weapon_sg552" );	// sic: not the AK-47
@@ -4104,9 +3952,14 @@ void CBasePlayer::UpdatePath( void )
 //=========================================================
 bool CBasePlayer::CanPlayerBuy( bool display )
 {
-	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// name ours
 	char szMessage[60];	// name ours; 60 bytes, the longest message's length (the frame says so)
 	bool retval = true;	// name ours. Beta 6.5 sets it (Beta 6.1 left it unset when nothing forbade buying)
+
+	// 1.0: the training rules decide alone (the buy zone's signal)
+	if ( !g_pGameRules->IsMultiplayer() )
+		return ((CHalfLifeTraining *)g_pGameRules)->PlayerCanBuy( this );
+
+	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// name ours
 
 	if ( gpGlobals->time - mp->m_flRoundStartTime > 90 )	// Beta 7.0 (6.6: 60)
 	{
@@ -4146,7 +3999,7 @@ bool CBasePlayer::CanPlayerBuy( bool display )
 // (m_iAppearance), whatever the client sets: his client is told to change
 // it and the server's key is set. Beta 6.5 did this in
 // ClientUserInfoChanged, which now only sets m_bVerifyModel; PreThink calls
-// this while the flag is set. 1 urban, 2 terror, 3 arab, 4 arctic, 5 gsg9,
+// this while the flag is set. 1 urban, 2 terror, 3 leet, 4 arctic, 5 gsg9,
 // 6 gign, 7 sas, 8 guerilla, 9 vip
 // Beta 7.0: the two strings of the player's appearance are put together at
 // run time (see g_a; the pointers of the other eight pairs stay unset), and
@@ -4157,7 +4010,7 @@ bool CBasePlayer::CanPlayerBuy( bool display )
 void CBasePlayer::VerifyModel( void )
 {
 	char *szModelTerror, *szTerror;
-	char *szModelArab, *szArab;
+	char *szModelLeet, *szLeet;
 	char *szModelArctic, *szArctic;
 	char *szModelGuerilla, *szGuerilla;
 	char *szModelUrban, *szUrban;
@@ -4185,20 +4038,20 @@ void CBasePlayer::VerifyModel( void )
 	}
 	else if ( m_iAppearance == 3 )
 	{
-		szModelArab = new char[12];
-		szArab = new char[5];
+		szModelLeet = new char[12];
+		szLeet = new char[5];
 
-		szModelArab[0] = g_m;	szModelArab[5] = ' ';	szModelArab[10] = '\n';
-		szModelArab[1] = g_o;	szModelArab[6] = g_a;	szModelArab[11] = '\0';
-		szModelArab[2] = g_d;	szModelArab[7] = g_r;
-		szModelArab[3] = g_e;	szModelArab[8] = g_a;
-		szModelArab[4] = g_l;	szModelArab[9] = g_b;
+		szModelLeet[0] = g_m;	szModelLeet[5] = ' ';	szModelLeet[10] = '\n';
+		szModelLeet[1] = g_o;	szModelLeet[6] = g_l;	szModelLeet[11] = '\0';
+		szModelLeet[2] = g_d;	szModelLeet[7] = g_e;
+		szModelLeet[3] = g_e;	szModelLeet[8] = g_e;
+		szModelLeet[4] = g_l;	szModelLeet[9] = g_t;
 
-		szArab[0] = g_a;
-		szArab[1] = g_r;
-		szArab[2] = g_a;
-		szArab[3] = g_b;
-		szArab[4] = '\0';
+		szLeet[0] = g_l;
+		szLeet[1] = g_e;
+		szLeet[2] = g_e;
+		szLeet[3] = g_t;
+		szLeet[4] = '\0';
 	}
 	else if ( m_iAppearance == 4 )
 	{
@@ -4340,10 +4193,10 @@ void CBasePlayer::VerifyModel( void )
 		}
 		break;
 	case 3:
-		if ( strcmp( model, szArab ) )
+		if ( strcmp( model, szLeet ) )
 		{
-			CLIENT_COMMAND( pEntity, szModelArab );
-			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szArab );
+			CLIENT_COMMAND( pEntity, szModelLeet );
+			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szLeet );
 		}
 		break;
 	case 8:
@@ -5029,6 +4882,10 @@ void CBasePlayer::SetSuitUpdate(char *name, int fgroup, int iNoRepeatTime)
 	int isentence;
 	int iempty = -1;
 	
+	// Counter-Strike 1.0: no HEV voice any more (retail's function is one
+	// return; the training course would be the single-player game that
+	// reaches the lines below)
+	return;
 	
 	// Ignore suit updates if no suit
 	if ( !(pev->weapons & (1<<WEAPON_SUIT)) )
@@ -5359,7 +5216,11 @@ void CBasePlayer::PostThink()
 	if ( IsAlive() )
 	{
 		if (!pev->velocity.x && !pev->velocity.y)
-			SetAnimation( PLAYER_IDLE );
+		{
+			// 1.0: not while the gait is sequence 5
+			if ( pev->gaitsequence != 5 )
+				SetAnimation( PLAYER_IDLE );
+		}
 		else if ((pev->velocity.x || pev->velocity.y) && (FBitSet(pev->flags, FL_ONGROUND)))
 			SetAnimation( PLAYER_WALK );
 		else if (pev->waterlevel > 1)
@@ -5743,7 +5604,7 @@ void CBasePlayer::Spawn( void )
 	m_fLongJump			= FALSE;// no longjump module. 
 	m_iClientFOV		= -1; // make sure fov reset is sent
 	m_fHasAssaultSuit	= FALSE;
-	m_pentBombTarget	= NULL;
+	m_pentCurBombTarget	= NULL;
 
 	// Beta 6.5: SDK 2.0's friction, gravity and physics keys (no long jump;
 	// pm_shared's "hl" flag), after Counter-Strike's lines
@@ -5833,6 +5694,8 @@ void CBasePlayer::Spawn( void )
 				pev->viewmodel = MAKE_STRING( "models/v_g3sg1.mdl" );
 			else if ( m_pActiveItem->m_iId == WEAPON_SCOUT )
 				pev->viewmodel = MAKE_STRING( "models/v_scout.mdl" );
+			else if ( m_pActiveItem->m_iId == WEAPON_SG550 )	// 1.0
+				pev->viewmodel = MAKE_STRING( "models/v_sg550.mdl" );
 		}
 		else
 		{
@@ -5842,6 +5705,8 @@ void CBasePlayer::Spawn( void )
 				pev->viewmodel = MAKE_STRING( "models/v_g3sg1_r.mdl" );
 			else if ( m_pActiveItem->m_iId == WEAPON_SCOUT )
 				pev->viewmodel = MAKE_STRING( "models/v_scout_r.mdl" );
+			else if ( m_pActiveItem->m_iId == WEAPON_SG550 )	// 1.0
+				pev->viewmodel = MAKE_STRING( "models/v_sg550_r.mdl" );
 		}
 	}
 
@@ -6051,10 +5916,14 @@ inline void SetScoreAttrib( CBasePlayer *dest, CBasePlayer *src )
 	if ( src->m_bIsVIP == true && dest->m_iTeam == src->m_iTeam )
 		state |= 4;
 
-	MESSAGE_BEGIN( MSG_ONE, gmsgScoreAttrib, NULL, dest->edict() );
-		WRITE_BYTE( src->entindex() );
-		WRITE_BYTE( state );
-	MESSAGE_END();
+	// 1.0: only once the message is registered
+	if ( gmsgScoreAttrib )
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgScoreAttrib, NULL, dest->edict() );
+			WRITE_BYTE( src->entindex() );
+			WRITE_BYTE( state );
+		MESSAGE_END();
+	}
 }
 
 // Beta 5.0 (leak): this player's marks to one player, or to all
@@ -6129,6 +5998,14 @@ int CBasePlayer::Restore( CRestore &restore )
 	// Beta 5.0 (leak): after a saved game most hints come again
 	m_flDisplayHistory &= ~( 0x4 | 0x8 | 0x10 | 0x20 | 0x80 | 0x100 | 0x200 | 0x800 | 0x8000 | 0x10000 | 0x20000 | 0x40000 | 0x80000 );	// Beta 5.0 to 5.2: 0x40000 stayed; Beta 6.0: the escape and VIP zone hints (0x40000, 0x80000) come again too
 	SetScoreboardAttributes();
+
+	// 1.0: VGUI menus unless the client's key says 0 (names ours)
+	char *infobuffer = g_engfuncs.pfnGetInfoKeyBuffer( edict() );
+	char *value = g_engfuncs.pfnInfoKeyValue( infobuffer, "vgui_menus" );
+
+	m_bVGUIMenus = true;
+	if ( value && value[0] == '0' )
+		m_bVGUIMenus = false;
 
 	return status;
 }
@@ -8045,12 +7922,13 @@ void CBasePlayer::UpdateStatusBar()
 
 				if ( pEntity->Classify() == CLASS_PLAYER )
 				{
-					CBasePlayer *pPlayer = (CBasePlayer *)pEntity;
-
+					// Counter-Strike 1.0: no local for the player (Counter-Strike 1.6 has
+					// none either; the count of locals orders the x87 operands of
+					// v_angle + punchangle above, which is how the image shows it)
 					newSBarState[ SBAR_ID_TARGETNAME ] = ENTINDEX( pEntity->edict() );
-					newSBarState[ SBAR_ID_TARGETTYPE ] = ( pPlayer->m_iTeam == m_iTeam ) ? SBAR_TARGETTYPE_TEAMMATE : SBAR_TARGETTYPE_ENEMY;
+					newSBarState[ SBAR_ID_TARGETTYPE ] = ( ((CBasePlayer *)pEntity)->m_iTeam == m_iTeam ) ? SBAR_TARGETTYPE_TEAMMATE : SBAR_TARGETTYPE_ENEMY;
 
-					if ( m_iTeam != pPlayer->m_iTeam && !pev->iuser1 )	// Beta 6.5: IsObserver (Beta 6.1: FL_SPECTATOR)
+					if ( m_iTeam != ((CBasePlayer *)pEntity)->m_iTeam && !pev->iuser1 )	// Beta 6.5: IsObserver (Beta 6.1: FL_SPECTATOR)
 					{
 						strcpy( sbuf1, "1 %c1: %p2" );
 
@@ -8322,7 +8200,7 @@ BOOL CBasePlayer::HasNamedPlayerItem( const char *pszItemName )
 // SwitchTeam - Beta 6.0 (Linux symbol): the player goes over
 // to the other team with a model of the other side (an
 // escape map's teams swap, SwapAllPlayers): urban becomes
-// arab, sas arctic, the rest terror; terror becomes gsg9,
+// leet, sas arctic, the rest terror; terror becomes gsg9,
 // arctic sas, the rest urban. Beta 7.0: the names are copied
 // from buffers put together at run time (see g_a), all nine
 // pairs built and none freed; the guerilla's two are still
@@ -8347,20 +8225,20 @@ void CBasePlayer::SwitchTeam( void )
 	szTerror[3] = g_r;
 	szTerror[4] = g_o;
 
-	char *szModelArab = new char[12];
-	char *szArab = new char[5];
+	char *szModelLeet = new char[12];
+	char *szLeet = new char[5];
 
-	szModelArab[0] = g_m;	szModelArab[5] = ' ';	szModelArab[10] = '\n';
-	szModelArab[1] = g_o;	szModelArab[6] = g_a;	szModelArab[11] = '\0';
-	szModelArab[2] = g_d;	szModelArab[7] = g_r;
-	szModelArab[3] = g_e;	szModelArab[8] = g_a;
-	szModelArab[4] = g_l;	szModelArab[9] = g_b;
+	szModelLeet[0] = g_m;	szModelLeet[5] = ' ';	szModelLeet[10] = '\n';
+	szModelLeet[1] = g_o;	szModelLeet[6] = g_l;	szModelLeet[11] = '\0';
+	szModelLeet[2] = g_d;	szModelLeet[7] = g_e;
+	szModelLeet[3] = g_e;	szModelLeet[8] = g_e;
+	szModelLeet[4] = g_l;	szModelLeet[9] = g_t;
 
-	szArab[0] = g_a;
-	szArab[1] = g_r;
-	szArab[2] = g_a;
-	szArab[3] = g_b;
-	szArab[4] = '\0';
+	szLeet[0] = g_l;
+	szLeet[1] = g_e;
+	szLeet[2] = g_e;
+	szLeet[3] = g_t;
+	szLeet[4] = '\0';
 
 	char *szModelArctic = new char[14];
 	char *szArctic = new char[7];
@@ -8474,8 +8352,8 @@ void CBasePlayer::SwitchTeam( void )
 		{
 		case 1:
 			m_iAppearance = 3;
-			strcpy( szCommand, szModelArab );
-			strcpy( szModel, szArab );
+			strcpy( szCommand, szModelLeet );
+			strcpy( szModel, szLeet );
 			break;
 		case 5:
 			m_iAppearance = 2;

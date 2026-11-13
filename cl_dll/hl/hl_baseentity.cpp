@@ -35,6 +35,9 @@ int gmsgBarTime = 0;
 enginefuncs_t g_engfuncs;
 globalvars_t  *gpGlobals;
 
+class CGameRules;
+CGameRules *g_pGameRules = NULL;
+
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
 
 // Counter-Strike: two stubs nothing calls; Valve's 1.6 build has them at this place too, and the
@@ -103,6 +106,8 @@ void CGrenade::Spawn( void ) { }
 CGrenade *CGrenade::ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time ) { return NULL; }
 CGrenade *CGrenade::ShootTimed2( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time, int iTeam ) { return NULL; }
 CGrenade *CGrenade::ShootSmokeGrenade( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time, unsigned short usEvent ) { return NULL; }
+int CGrenade::Save( CSave &save ) { return 1; }
+int CGrenade::Restore( CRestore &restore ) { return 1; }
 CGrenade *CGrenade::ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity ) { return NULL; }
 
 CBaseEntity* CBaseMonster :: CheckTraceHullAttack( float flDist, int iDamage, int iDmgType ) { return NULL; }

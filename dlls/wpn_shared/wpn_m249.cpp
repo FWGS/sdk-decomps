@@ -142,7 +142,7 @@ void CM249::M249Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
 	Vector vecDir;	// sic: unused (an SDK leftover); without it the x87 operands of the event's parameters come in another order
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 35, 0.97, NULL, false );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 2, BULLET_PLAYER_556MM, 32, 0.97, NULL, false );
 
 	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireM249, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_pPlayer->pev->punchangle.x, m_pPlayer->pev->punchangle.y, (int)(flSpread * 10000), (int)(m_pPlayer->pev->punchangle.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
 
@@ -169,12 +169,16 @@ void CM249::Reload( void )
 	if ( m_pPlayer->ammo_556natobox <= 0 )
 		return;
 
-	DefaultReload( M249_MAX_CLIP, M249_RELOAD, 4.7 );
-	m_pPlayer->SetAnimation( PLAYER_RELOAD );
+	int iResult = DefaultReload( M249_MAX_CLIP, M249_RELOAD, 4.7 );
 
-	m_flAccuracy = 0.2;
-	m_bDelayFire = false;
-	m_iShotsFired = 0;
+	if ( iResult )
+	{
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
+
+		m_flAccuracy = 0.2;
+		m_bDelayFire = false;
+		m_iShotsFired = 0;
+	}
 }
 
 void CM249::WeaponIdle( void )

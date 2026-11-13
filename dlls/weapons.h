@@ -72,32 +72,38 @@ public:
 	void EXPORT C4Think( void );
 	void EXPORT C4Touch( CBaseEntity *pOther );
 
-	// Counter-Strike's members (0x174 to 0x1bc; the class is 0x1c0 bytes).  Names: Beta 6.1's
-	// reconstruction's (ours) but m_bStartDefuse, m_bIsC4 and the three after m_pentBombTarget, which
-	// are Counter-Strike 1.6's (debug information), placed by its order.
+	// Counter-Strike's members (0x174 to 0x1bc; the class is 0x1c0 bytes).  Names: retail 1.0's own for
+	// the fifteen its save table lists (CGrenade::m_SaveData in ggrenade.cpp: the names are in the image);
+	// Counter-Strike 1.6's (debug information, by its order) for the six others, marked (1.6).
 	bool m_bStartDefuse;			// 0x174 a CT is defusing the planted C4
 	bool m_bIsC4;					// 0x175 a planted C4: it can be used (ObjectCaps) and defused (Use)
-	CBaseEntity *m_pDefuser;		// 0x178 the one defusing
-	float m_flDefuseDone;			// 0x17c when the defusing is done
+	CBaseEntity *m_pBombDefuser;	// 0x178 the one defusing (1.6)
+	float m_flDefuseCountDown;		// 0x17c when the defusing is done
 	float m_flC4Blow;				// 0x180 when the C4 goes off
-	float m_flBeepInterval;			// 0x184
+	float m_flNextFreqInterval;		// 0x184 the time between two beeps
 	float m_flNextBeep;				// 0x188
-	float m_flNextBeepChange;		// 0x18c
-	const char *m_pszBeepSound;		// 0x190
-	float m_flBeepAttenuation;		// 0x194
+	float m_flNextFreq;				// 0x18c when the beeps get faster next
+	const char *m_sBeepName;		// 0x190
+	float m_fAttenu;				// 0x194 the beep's attenuation
 	float m_flNextBlink;			// 0x198
-	float m_flNextDefuseCheck;		// 0x19c
-	bool m_fC4Done;					// 0x1a0
-	int m_iTeam;					// 0x1a4 the thrower's team
-	int m_iBeepStep;				// 0x1a8
-	edict_t *m_pentBombTarget;		// 0x1ac the bomb target the planter stood in
+	float m_fNextDefuse;			// 0x19c (1.6)
+	bool m_bJustBlew;				// 0x1a0
+	int m_iTeam;					// 0x1a4 the thrower's team (1.6)
+	int m_iCurWave;					// 0x1a8 (1.6)
+	edict_t *m_pentCurBombTarget;	// 0x1ac the bomb target the planter stood in
 	int m_SGSmoke;					// 0x1b0 the smoke grenade's (Beta 6.5)
-	int m_angle;					// 0x1b4
+	int m_angle;					// 0x1b4 (1.6)
 	unsigned short m_usEvent;		// 0x1b8 the smoke grenade's event (ShootSmokeGrenade's last parameter)
 	bool m_bLightSmoke;				// 0x1ba another smoke grenade went off within 250 units: thinner smoke, fewer puffs
-	bool m_bDetonated;				// 0x1bb the smoke grenade has gone off
+	bool m_bDetonated;				// 0x1bb the smoke grenade has gone off (1.6)
 
 	BOOL m_fRegisteredSound;// whether or not this grenade has issued its DANGER sound to the world sound list yet.
+
+	// Counter-Strike 1.0: grenades are saved (the 1.0 server has CGrenade::Save and Restore; Beta 7.1's
+	// has not).  Declared here, after the members, as in Counter-Strike 1.6.
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
 };
 
 
@@ -119,6 +125,9 @@ public:
 #define WEAPON_AUG				8
 #define WEAPON_SMOKEGRENADE		9
 #define WEAPON_ELITE			10	// Counter-Strike (Beta 7.0): the Elite's Spawn (name ours)
+#define WEAPON_FIVESEVEN		11	// Counter-Strike 1.0
+#define WEAPON_UMP45			12
+#define WEAPON_SG550			13
 #define WEAPON_USP				16
 #define WEAPON_GLOCK18			17
 #define WEAPON_AWP				18
@@ -167,6 +176,9 @@ public:
 #define FLASHBANG_WEIGHT	1
 #define DEAGLE_WEIGHT		7
 #define ELITE_WEIGHT		5
+#define FIVESEVEN_WEIGHT	5
+#define UMP45_WEIGHT		25
+#define SG550_WEIGHT		20
 #define SG552_WEIGHT		25
 #define AK47_WEIGHT			25
 #define KNIFE_WEIGHT		0
@@ -196,6 +208,9 @@ public:
 #define FLASHBANG_MAX_CARRY		2
 #define DEAGLE_MAX_CARRY		35		// "50AE"
 #define ELITE_MAX_CARRY			120		// "9mm"
+#define FIVESEVEN_MAX_CARRY		100		// "57mm"
+#define UMP45_MAX_CARRY			100		// "45ACP"
+#define SG550_MAX_CARRY			90		// "556Nato"
 #define SG552_MAX_CARRY			90		// "556Nato"
 #define AK47_MAX_CARRY			90		// "762Nato"
 #define P90_MAX_CARRY			100		// "57mm"
@@ -208,7 +223,7 @@ public:
 #define AMMO_762NATOBOX_GIVE	30
 #define AMMO_762NATOBOX_MAX		90
 #define AMMO_45ACPBOX_GIVE		12
-#define AMMO_45ACPBOX_MAX		90
+#define AMMO_45ACPBOX_MAX		100		// rules: needed by C45ACPAmmo::AddAmmo (1.0: 100, Beta 7.1: 90)
 #define AMMO_338MAGNUMBOX_GIVE	10
 #define AMMO_338MAGNUMBOX_MAX	30
 #define AMMO_50AEBOX_GIVE		7
@@ -245,6 +260,9 @@ public:
 #define G3SG1_MAX_CLIP			20
 #define DEAGLE_MAX_CLIP			7
 #define ELITE_MAX_CLIP			30
+#define FIVESEVEN_MAX_CLIP		20
+#define UMP45_MAX_CLIP			25
+#define SG550_MAX_CLIP			30
 #define SG552_MAX_CLIP			30
 #define AK47_MAX_CLIP			30
 #define P90_MAX_CLIP			50
@@ -272,6 +290,9 @@ public:
 #define FLASHBANG_DEFAULT_GIVE		1
 #define DEAGLE_DEFAULT_GIVE			7
 #define ELITE_DEFAULT_GIVE			30
+#define FIVESEVEN_DEFAULT_GIVE		20
+#define UMP45_DEFAULT_GIVE			25
+#define SG550_DEFAULT_GIVE			30
 #define SG552_DEFAULT_GIVE			30
 #define AK47_DEFAULT_GIVE			30
 #define P90_DEFAULT_GIVE			50
@@ -769,6 +790,8 @@ public:
 	BOOL Deploy( void );
 	void Holster( int skiplocal );
 	void WeaponIdle( void );
+	void KeyValue( KeyValueData *pkvd );
+	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	float GetMaxSpeed( void ) { return 250; }
 	virtual BOOL UseDecrement( void ) { return TRUE; }
@@ -1173,6 +1196,73 @@ public:
 	int m_iShell;
 	unsigned short m_usFireELITE_LEFT;	// name ours
 	unsigned short m_usFireELITE_RIGHT;	// name ours
+};
+
+// Counter-Strike 1.0: the Five-seveN, the UMP45 and the SG-550 (class and member names: the Linux
+// library's symbols and Counter-Strike 1.6's debug information; its class order)
+class CFiveSeven : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 2; }
+	int GetItemInfo(ItemInfo *p);
+
+	void PrimaryAttack( void );
+	void FiveSevenFire( float flSpread, float flCycleTime, BOOL fUseAutoAim );
+	BOOL Deploy( void );
+	void Reload( void );
+	void WeaponIdle( void );
+
+	float GetMaxSpeed( void ) { return 250; }
+	virtual BOOL UseDecrement( void ) { return TRUE; }
+
+	int m_iShell;
+	unsigned short m_usFireFiveSeven;
+};
+
+class CUMP45 : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 1; }
+	int GetItemInfo(ItemInfo *p);
+
+	void PrimaryAttack( void );
+	void UMP45Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim );
+	BOOL Deploy( void );
+	void Reload( void );
+	void WeaponIdle( void );
+
+	float GetMaxSpeed( void ) { return 250; }
+	virtual BOOL UseDecrement( void ) { return TRUE; }
+
+	int m_iShell;
+	int iShellOn;
+	unsigned short m_usFireUMP45;
+};
+
+class CSG550 : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 1; }
+	int GetItemInfo(ItemInfo *p);
+
+	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void SG550Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim );
+	BOOL Deploy( void );
+	void Reload( void );
+	void WeaponIdle( void );
+
+	float GetMaxSpeed( void );
+	virtual BOOL UseDecrement( void ) { return TRUE; }
+
+	int m_iShell;
+	unsigned short m_usFireSG550;
 };
 
 
