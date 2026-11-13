@@ -1262,6 +1262,7 @@ void CGrenade::C4Think( void )
 			if ( m_pDefuser->pev->deadflag == DEAD_NO )
 			{
 				Broadcast( "BOMBDEF" );
+				UTIL_LogPrintf( "%s has defused the bomb\n", STRING( m_pDefuser->pev->netname ) );	// Beta 6.6
 				// Beta 5.0: the last beep, still sounding, is stopped
 				UTIL_EmitAmbientSound( ENT(pev), pev->origin, "weapons/c4_beep5.wav", 0, ATTN_NONE, SND_STOP, 0 );
 				EMIT_SOUND(ENT(m_pDefuser->pev), CHAN_WEAPON, "weapons/c4_disarmed.wav", 1.0, ATTN_NORM);

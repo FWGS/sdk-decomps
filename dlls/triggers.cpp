@@ -2077,6 +2077,7 @@ void CEscapeZone::EscapeTouch( CBaseEntity *pOther )
 			pPlayer->m_bEscaped = true;
 			// Beta 6.5: he stays where he is (Beta 6.0 and 6.1: Disappear); the round may be over
 			((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
+			UTIL_LogPrintf( "%s has escaped\n", STRING( pPlayer->pev->netname ) );	// Beta 6.6
 
 			// Beta 6.1: his team is told ("prisoners are notified when someone escapes")
 			for ( int i = 1; i <= gpGlobals->maxClients; i++ )

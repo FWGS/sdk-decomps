@@ -2251,6 +2251,7 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 			pKillerPlayer->m_iTeamKills++;
 			pKillerPlayer->m_bJustKilledTeammate = true;	// Beta 6.1: he sits the next round out (RoundRespawn)
 			ClientPrint( pKillerPlayer->pev, HUD_PRINTCENTER, "You killed a teammate!" );
+			UTIL_LogPrintf( "%s killed a teammate\n", STRING( pKillerPlayer->pev->netname ) );	// Beta 6.6
 			ClientPrint( pKillerPlayer->pev, HUD_PRINTCONSOLE, UTIL_VarArgs( "Teammate kills: %i of 3\n", pKillerPlayer->m_iTeamKills ) );
 
 			if ( pKillerPlayer->m_iTeamKills == 3 && CVAR_GET_FLOAT( "mp_autokick" ) != 0 )
@@ -2276,6 +2277,7 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 			{
 				pKillerPlayer->HintMessage( "You have been rewarded $2500 for killing the VIP!", TRUE, FALSE );
 				pKillerPlayer->AddAccount( 2500, true );
+				UTIL_LogPrintf( "%s assasinated the VIP\n", STRING( pKillerPlayer->pev->netname ) );	// Beta 6.6
 			}
 			else
 				pKillerPlayer->AddAccount( 300, true );

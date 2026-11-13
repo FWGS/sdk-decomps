@@ -1567,6 +1567,12 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, UTIL_VarArgs( ( team == TEAM_TERRORIST ) ? "%s is joining the Terrorist force\n" : "%s is joining the Counter-Terrorist force\n",
 		( player->pev->netname && STRING(player->pev->netname)[0] != 0 ) ? STRING(player->pev->netname) : "unconnected" ) );
 
+	// Beta 6.6: the server's log
+	if ( team == TEAM_TERRORIST )
+		UTIL_LogPrintf( "%s is joining the TERRORIST force\n", STRING( player->pev->netname ) );
+	else
+		UTIL_LogPrintf( "%s is joining the CT force\n", STRING( player->pev->netname ) );
+
 	return TRUE;
 }
 
@@ -2379,9 +2385,24 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 		return;
 
 	CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE( pEntity );
+	char szName[256];
 
 	// Beta 6.6: the model is checked in CBasePlayer::VerifyModel, from PreThink, once this flag is set
 	pPlayer->m_bVerifyModel = true;
+
+	// Beta 6.6: no '%' in a name
+	const char *szBufferName = g_engfuncs.pfnInfoKeyValue( infobuffer, "name" );	// CS 1.6's local
+
+	strncpy( szName, szBufferName, 255 );
+	szName[255] = 0;
+
+	for ( char *pPct = szName; pPct != NULL && *pPct != 0; pPct++ )
+	{
+		if ( *pPct == '%' )
+			*pPct = ' ';
+	}
+
+	g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), infobuffer, "name", szName );
 
 	// msg everyone if someone changes their name,  and it isn't the first time (changing no name to current name)
 	if ( pEntity->v.netname && STRING(pEntity->v.netname)[0] != 0 && !FStrEq( STRING(pEntity->v.netname), g_engfuncs.pfnInfoKeyValue( infobuffer, "name" )) )

@@ -243,6 +243,7 @@ void CHostage::IdleThink( void )
 				{
 					pev->deadflag = DEAD_RESPAWNABLE;	// rescued
 					pPlayer->AddAccount( 1000, true );
+					UTIL_LogPrintf( "%s has rescued a hostage\n", STRING( pPlayer->pev->netname ) );	// Beta 6.6
 					Remove();
 					((CHalfLifeMultiplay *)g_pGameRules)->m_iHostagesRescued++;
 					((CHalfLifeMultiplay *)g_pGameRules)->CheckWinConditions();
@@ -677,6 +678,7 @@ void CHostage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 				m_fTouched = TRUE;
 				((CHalfLifeMultiplay *)g_pGameRules)->m_iAccountCT += 100;
 				((CBasePlayer *)pActivator)->AddAccount( 150, true );
+				UTIL_LogPrintf( "%s touched a hostage\n", STRING( pActivator->pev->netname ) );	// Beta 6.6
 			}
 		}
 

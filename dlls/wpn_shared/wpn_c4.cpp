@@ -184,6 +184,7 @@ void CC4::PrimaryAttack( void )
 				CGrenade::ShootSatchelCharge( m_pPlayer->pev, tr.vecEndPos + tr.vecPlaneNormal * 5, Vector( 0, 0, 0 ) );
 
 			UTIL_ClientPrintAll( HUD_PRINTCENTER, "The bomb has been planted!" );
+			UTIL_LogPrintf( "%s planted the bomb\n", STRING( m_pPlayer->pev->netname ) );	// Beta 6.6: in the server, linked 2000-06-21; the client, linked 2000-06-19, was built before this line existed (the client's release recipe builds it without the line)
 			EMIT_SOUND( edict(), CHAN_WEAPON, "weapons/c4_plant.wav", VOL_NORM, ATTN_NORM );
 
 			m_pPlayer->pev->body = 0;
