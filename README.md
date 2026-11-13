@@ -1,11 +1,12 @@
 # Half-Life mods, rebuilt byte for byte
 
-This repository holds C++ source for the game DLLs of five Half-Life mods,
+This repository holds C++ source for the game DLLs of six Half-Life mods,
 reconstructed from the shipped binaries. Each tree compiles with the original
-compiler, Visual C++ 6.0, back into the retail files. For eight of the ten
-DLLs, the rebuilt file is identical to the retail one, byte for byte. That
-includes the headers, time stamps, debug record and padding, so the SHA-256
-matches.
+compiler back into the retail files: Visual C++ 6.0 for five mods, and for
+Counter-Strike, from its first beta in 1999 to version 1.5 in 2002, the five
+compilers it went through. Of the 50 distinct DLLs, 46 rebuild identical to
+the retail ones, byte for byte. That includes the headers, time stamps,
+debug record and padding, so the SHA-256 matches.
 
 Each mod lives on its own branch. `main` holds this summary, the
 documentation and the build tools.
@@ -13,7 +14,10 @@ documentation and the build tools.
 ## Status
 
 Verified with fresh release builds, by SHA-256 and `cmp` against the retail
-files: They Hunger on 2026-11-11, the other four mods on 2026-11-01.
+files: Counter-Strike on 2026-11-14, every tag. The shared build tools
+changed for it, so the other five mods' DLLs were rebuilt the same day from
+fresh clones of their branches: the eight identical ones byte for byte
+again, and the two others with their known hashes.
 
 | Mod | Branch | Server DLL | Client DLL | Details |
 |---|---|---|---|---|
@@ -22,8 +26,11 @@ files: They Hunger on 2026-11-11, the other four mods on 2026-11-01.
 | Wanted! 1.5 | [`wanted`](../../tree/wanted) | `wanted.dll`: 810 of 1,122,380 bytes differ | `client.dll`: **identical** | [docs/wanted.md](docs/wanted.md) |
 | Gunman Chronicles | [`gunman-chronicles`](../../tree/gunman-chronicles) | `gunman.dll`: **identical** | `client.dll`: 152,034 of 565,248 bytes differ | [docs/gunman-chronicles.md](docs/gunman-chronicles.md) |
 | They Hunger (episodes 1 to 3) | [`they-hunger`](../../tree/they-hunger) | `einar.dll`: **identical** | `client.dll`: **identical** | [docs/they-hunger.md](docs/they-hunger.md) |
+| Counter-Strike, Beta 1.0 to 1.5 (27 tags) | [`counter-strike`](../../tree/counter-strike) | `mp.dll`: **all 23 identical** | `client.dll`: **15 of 17 identical**; 1.4 and 1.5 not | [docs/counter-strike.md](docs/counter-strike.md) |
 
-SHA-256 of the retail files, which the identical builds reproduce:
+SHA-256 of the retail files of the first five mods, which the identical
+builds reproduce (Counter-Strike's 40 are in
+[its page](docs/counter-strike.md#status)):
 
 | File | SHA-256 |
 |---|---|
@@ -47,6 +54,11 @@ What the two remaining DLLs still lack:
   retail's addresses. The linker's identical-code folding keeps a different
   copy of some identical functions. Which copy it keeps depends on dead code
   that the retail binary doesn't record.
+- **Counter-Strike 1.4 and 1.5 `client.dll`:** these ship in the engine's
+  packed format, not as PE files; the rebuilt DLL is packed the same way and
+  compared. 18 functions differ from retail in the order of their
+  instructions only, and no compiler tried gives that order, so the files
+  are not identical. The work on them stopped there.
 
 ## What "identical" takes
 
@@ -61,6 +73,11 @@ Identical code is not enough. A DLL also records how it was built:
 The release scripts rebuild all of that. [docs/reproducing.md](docs/reproducing.md)
 explains each part.
 
+Counter-Strike's betas add Visual C++ 5.0, whose code depends on how many
+declarations a file has seen, and releases built on top of an earlier
+release's build folder; [docs/counter-strike.md](docs/counter-strike.md)
+explains what that took.
+
 Where the binary doesn't say what the source was, the trees contain a marked
 stand-in. Examples: a function nothing calls, an empty object file, a
 `// sic` line that steers the compiler. So "identical" is a statement about
@@ -70,11 +87,15 @@ list every stand-in with the evidence for it.
 ## Rebuilding
 
 You need:
-- the Visual C++ discs ([docs/compilers.md](docs/compilers.md));
+- the Visual C++ discs ([docs/compilers.md](docs/compilers.md)), and for
+  Counter-Strike also Visual C++ 5.0 and VC6's Service Pack 5 and Processor
+  Pack;
 - Wine, libfaketime and Python 3;
 - the retail game files, if you want to compare them yourself.
 
-[docs/setup.md](docs/setup.md) builds the toolchain folder. Then, for example:
+[docs/rebuild/](docs/rebuild/README.md) has the steps as exact commands,
+per mod; [docs/setup.md](docs/setup.md) explains the toolchain folder they
+build. Then, for example:
 
 ```sh
 git worktree add ../pov point-of-view
@@ -82,14 +103,31 @@ VC_TOOLCHAINS=/path/to/toolchains tools/release/point-of-view.sh ../pov ../pov-b
 ```
 
 The script prints each built file's SHA-256 next to retail's.
+Counter-Strike's script takes the release's tag first, because several
+releases continue an earlier one's build:
+
+```sh
+git worktree add ../cs-1.0 cstrike-1.0
+VC_TOOLCHAINS=/path/to/toolchains tools/release/counter-strike.sh cstrike-1.0 ../cs-1.0 ../cs-1.0-build
+```
 
 ## Documentation
 
+- [docs/rebuild/](docs/rebuild/README.md): step by step, with exact commands, how to rebuild each mod's DLLs and check them.
 - [docs/compilers.md](docs/compilers.md): which compiler and linker built each DLL, and where they come from.
 - [docs/setup.md](docs/setup.md): setting up the compilers under Wine.
 - [docs/reproducing.md](docs/reproducing.md): what a DLL holds besides its code, and how each part is rebuilt.
 - [docs/vc6-notes.md](docs/vc6-notes.md): what we learned about Visual C++ 6.0's compiler and linker while matching.
-- Per mod: [Point of View](docs/point-of-view.md), [T2DEF](docs/t2def.md), [Wanted!](docs/wanted.md), [Gunman Chronicles](docs/gunman-chronicles.md), [They Hunger](docs/they-hunger.md).
+- Per mod: [Point of View](docs/point-of-view.md), [T2DEF](docs/t2def.md), [Wanted!](docs/wanted.md), [Gunman Chronicles](docs/gunman-chronicles.md), [They Hunger](docs/they-hunger.md), [Counter-Strike](docs/counter-strike.md).
+
+## Thanks
+
+- **Ch0wW**, for archiving the historical versions of Counter-Strike, from
+  Beta 1.0 on: <https://github.com/Ch0wW/counterstrike-betas>. The
+  Counter-Strike reconstruction starts from those files.
+- **oxiKKK**, for the decryptor of the engine's packed DLL format, which
+  documents how Counter-Strike 1.4's and 1.5's `client.dll` are stored:
+  <https://github.com/oxiKKK/goldsource-dll-decryptor>.
 
 ## Not included
 

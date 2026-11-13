@@ -1,11 +1,15 @@
 # Compilers
 
-All ten DLLs were built with Microsoft Visual C++ 6.0 (VC6), in three
-variants: the Professional edition as first released, the Standard edition
-as first released, and the Standard edition with Service Pack 4. This page
-says which variant built which DLL, how that is known, where each variant
-comes from, and which files of it matter. [setup.md](setup.md) turns the
-discs into the toolchain folder.
+The ten DLLs of the first five mods were built with Microsoft Visual C++ 6.0
+(VC6), in three variants: the Professional edition as first released, the
+Standard edition as first released, and the Standard edition with Service
+Pack 4. Counter-Strike's 40 DLLs, from 1999 to 2002, span five compilers:
+Visual C++ 5.0 as first released, then VC6 as first released, with Service
+Pack 4, with Service Pack 5, and with Service Pack 5 and the Processor Pack;
+[Counter-Strike](#counter-strike) has them. This page says which variant
+built which DLL, how that is known, where each variant comes from, and which
+files of it matter. [setup.md](setup.md) turns the discs into the toolchain
+folder.
 
 A VC6 compile runs four programs. `CL.EXE` is the driver: it reads the
 options and calls the passes. `C1.DLL` (C) or `C1XX.DLL` (C++) is the front
@@ -169,17 +173,130 @@ objects come out identical with either runtime.
 | They Hunger `einar.dll` | VC6 CD's | Rebuilds identical on it (`/debug`, so no folding; one import DLL). Whether the builtin gives the same import order is not recorded. |
 | They Hunger `client.dll` | VC6 CD's | Rebuilds identical on it. On the builtin, functions change places inside two import lists (14 of `vgui.dll`'s 542 thunks, 11 of KERNEL32's 65); the build we tried it on differed from retail in 216,849 bytes. |
 
+## Counter-Strike
+
+Counter-Strike's game DLLs went through five compilers in three years. The
+23 distinct servers (`mp.dll`) and 17 distinct clients (`client.dll`) from
+Beta 1.0 to 1.5 group like this ([counter-strike.md](counter-strike.md) has
+the releases):
+
+| Releases | DLLs | Compiler | `CL` | Back end | `LINK` | C runtime library | Runtime LINK ran on | Tree |
+|---|---|---|---|---|---|---|---|---|
+| Betas 1.0 to 4.1 | 8 servers, 4 clients | Visual C++ 5.0 Professional as on the CD | 11.00.7022 | `C2.EXE` 11.00 | 5.00.7022 | VC5's `LIBCMT.LIB` | VC5's `MSVCRT.DLL` 5.00.7022 | `vc5/rtm`, `VC5_CRT=native` |
+| Beta 5.0 (leak) to 7.1 | 9 servers, 8 clients | VC6 Professional as on the CD | 12.00.8168 | `C2.DLL` 12.00.8168 | 6.00.8168 | the CD's `LIBCMT.LIB` | the CD's `MSVCRT.DLL` 6.00.8168 | `vc6` |
+| 1.0, 1.0b, 1.1 | 3 servers, 2 clients | VC6 Professional, Service Pack 4 | 12.00.8804 | `C2.DLL` 12.00.8799 | 6.00.8447 | SP4's `LIBCMT.LIB` (8797) | SP4's `MSVCRT.DLL` 6.00.8797 | `vc6sp4` |
+| 1.3, server | 1 server | VC6 Professional, Service Pack 5 | 12.00.8804 | `C2.DLL` 12.00.8966 | 6.00.8447 | SP5's `LIBCMT.LIB` (8047) | SP5's `MSVCRT.DLL` (SP4's file) | `vc6sp5` |
+| 1.3 client, 1.4, 1.5 | 2 servers, 3 clients | VC6 SP5 with the Processor Pack | 12.00.8804 | `C2.DLL` 13.00.9044 | 6.00.8447 | SP5's `LIBCMT.LIB` (8047) | SP5's `MSVCRT.DLL` | `vc6sp5pp` |
+
+The front ends are the trees' own: `C1.DLL` and `C1XX.DLL` "11.00" in VC5,
+12.00.8168 on the VC6 CD, 12.00.8867 in SP4, and in SP5 `C1.DLL` 12.00.8867
+with `C1XX.DLL` 12.00.8964. One source of the 1.4 and 1.5 clients,
+`cl_dll/steam_wrap.c`, is compiled by `vc6sp5` without the Processor Pack:
+retail's code of it is VC6 code without the pack's instruction scheduling
+(the CD's, SP4's and SP5's back ends give the same bytes for it; SP5 is our
+choice).
+
+All 38 PE files among the 40 rebuild byte for byte with the tree named. The
+1.4 and 1.5 clients are not PE files but the engine's packed form of one;
+they do not rebuild byte for byte: 18 of their functions come out in
+another order of instructions than retail's, below.
+
+### How each compiler is known
+
+**Visual C++ 5.0 (Betas 1.0 to 4.1).** The PE header says linker 5.00, and
+there is no Rich header. Visual Studio 97 Service Pack 3's linker is 5.10
+and writes one; Service Packs 1 and 2 ship linker 5.02.7132 (by the list in
+[oxiKKK's MSVC toolchain catalog](https://github.com/oxiKKK/msvc-toolchain-catalog)).
+So linker 5.00 means the compiler as on the CD. VC5's objects carry no
+`@comp.id` stamp, so nothing else in the file names the compiler; the
+rebuilds confirm it. With Service Pack 3's compiler passes, five functions
+of Beta 1.0's client come out differently.
+
+**VC6 and its service packs (Beta 5.0 leak to 1.5).** Every PE file from
+the leaked Beta 5.0 on has a Rich header. The betas' show C and C++ objects
+of build 8168 and LINK 6.00.8168, as in the first five mods; from 1.0 on the
+builds are later ones. For example, product ID, build and count:
+
+| DLL | Compiler objects | C runtime and libraries | Linker |
+|---|---|---|---|
+| Beta 5.0 leak `mp.dll` | C 8168 ×110, C++ 8168 ×78 | MASM 7299 ×31, AliasObj 7291 ×2, Linker 5.12 8034 ×3, Import0 ×75 | 6.00 8168 ×1 |
+| Beta 6.5 `client.dll` | C 8168 ×131, C++ 8168 ×85 | MASM ×30, AliasObj ×2, Linker 5.12 ×9, Import0 ×636 | 6.00 8168 ×3 |
+| 1.0 `mp.dll` | **C 8799 ×3, C++ 8799 ×76**; C 8797 ×109, C++ 8797 ×8 | MASM ×31, AliasObj ×3, Linker 5.12 ×3, Import0 ×75 | 6.00 **8447** ×1 |
+| 1.0 `client.dll` | **C 8799 ×3, C++ 8799 ×91**; C 8797 ×129, C++ 8797 ×11 | MASM ×33, AliasObj ×2, Linker 5.12 ×9, Linker 6.00 8168 ×2, Import0 ×640 | 6.00 8447 ×1 |
+| 1.3 `mp.dll` | **C 8966 ×3, C++ 8966 ×77**; C 8047 ×112, C++ 8047 ×8 | MASM ×32, AliasObj ×3, Linker 5.12 ×3, Import0 ×76 | 6.00 8447 ×1 |
+| 1.3 `client.dll` | **ID 48 9044 ×3, ID 49 9044 ×102**; C 8047 ×133, C++ 8047 ×11 | MASM ×33, AliasObj ×3, Linker 5.12 ×9, Import0 ×647 | 6.00 8447 ×3 |
+| 1.4 `mp.dll` (1.5 the same) | **ID 48 9044 ×3, ID 49 9044 ×77**; C 8047 ×112, C++ 8047 ×3 | MASM ×31, AliasObj ×3, Linker 5.12 ×3, Import0 ×73 | 6.00 8447 ×1 |
+
+How to read it:
+- **8799, 8966, 9044.** The back end's build: Service Pack 4's `C2.DLL` is
+  12.00.8799, Service Pack 5's 12.00.8966. The Processor Pack's back end
+  (13.00.9044) stamps its objects with product IDs 48 (C) and 49 (C++)
+  instead of VC6's 10 and 11. All three were measured by compiling a test
+  file with each tree.
+- **8797 and 8047.** The C runtime library's objects carry the build
+  Microsoft compiled it with: 8797 in SP4's `LIBCMT.LIB`, 8047 in SP5's
+  (503 C objects and 22 C++ objects in each of SP5's `LIBC.LIB` and
+  `LIBCMT.LIB`). The Processor Pack ships no runtime library.
+- **SP5 without the pack.** The 1.3 server's objects are 8966, its client's
+  9044: the two DLLs of 1.3 were compiled by two compilers.
+
+**The 1.4 and 1.5 clients** keep no PE header and so no Rich header. Their
+code is the Processor Pack's in most objects; they contain SP5's
+`LIBCMT.LIB` (479 of their 482 runtime functions are its code) and only
+exception-handling tables of VC6's format. But 18 functions
+(`ev_hldm.cpp`'s fire events, both renderers' `StudioFxTransform`,
+`CHud::Init`, `CHudAmmo::Draw`, `CHudHealth::DrawRadar` and seven more)
+have an order of instructions that none of the compilers tried gives:
+- every VC6 back end above, with single compiler switches, every pair and
+  the likely triples of them;
+- the first Processor Pack, for SP4 (2000; `C2.DLL` 13.00.8943, found in
+  the "Visual Studio Processor Pack" folder of the Xbox XDK 4361 package
+  on archive.org, item `xbox-sdks`): byte for byte the same code as 9044;
+- Visual C++ .NET 2002 (13.00.9466; archive.org item `X08-65717`) with
+  VC6's headers and libraries: its code calls `__ftol2`, which the client
+  never does, and it matches far fewer functions;
+- the 2001 builds of the 13.00 compiler in the Windows XP DDK (13.00.9176)
+  and the Xbox XDKs 3424, 3521, 3729 and 3911 (13.00.9175, 9176, 9210,
+  9254).
+
+None of these is needed to rebuild anything here.
+[counter-strike.md](counter-strike.md) has the measurements.
+
+### The runtime LINK ran on
+
+As with VC6 above, LINK 5.00 sorts with the C runtime's `qsort`, and the
+order it gives equal elements reaches the image. On Wine's builtin
+`msvcrt.dll`, Beta 1.0's client links into a file that differs from retail
+in 24,717 bytes (other kept copies of identical functions, another import
+order), and Beta 1.0's server orders two imports differently and leaves
+stray bytes in the reserved field of its MISC debug record. On VC5's own
+`MSVCRT.DLL` (5.00.7022) both are retail's files. Only LINK needs it: the
+compiler's objects are the same on either runtime. LINK 5.00 gives retail's
+client on 5.00.7022, on Service Pack 3's 5.00.7303 and on the VC6 CD's
+6.00.8168 alike. `tools/vc5.sh` runs on Wine's runtime unless `VC5_CRT` is
+`native`; the release scripts use `build_dsp.py --compiler vc5-rtm-n`,
+which always runs the `nativecrt` copy.
+
+The VC6 builds of Counter-Strike run on each tree's own `MSVCRT.DLL`
+(`vc6.sh`'s default), and all rebuild byte for byte that way. Whether Wine's
+builtin gives the same files was not recorded for them.
+
 ## Where the compilers come from
 
 Three discs from the Internet Archive. Both editions of VC6 as first
 released are on two CDs of February 1999; Service Pack 4 is on a disc of
-August 2000. [setup.md](setup.md) has the steps.
+August 2000. Counter-Strike needs three more downloads: Service Pack 5 and
+the Processor Pack (2001), and the Visual C++ 5.0 disc of Visual Studio 97
+Professional (1997). [setup.md](setup.md) has the steps.
 
 | Disc | archive.org item, file | SHA-256 of the file | SHA-1 (archive.org) |
 |---|---|---|---|
 | Visual C++ 6.0 Professional Edition, English retail CD (part no. X04-58170, matrix BR11577-103) | [`X04-58170`](https://archive.org/details/X04-58170), `1999-02_X04-58170_X04-58170_VCP600ENU1.7z` | `4e3fa95110e263fe4a42fe151b3f5208d414db72c006beee999a76c6c0ed4261` | `7d476db1e8eaebe5733fbe95cb7a6bd01132c479` |
 | Visual C++ 6.0 Learning Edition, English (X04-58202, matrix BR11678-353) | [`X04-58202`](https://archive.org/details/X04-58202), `1999-02_X04-58202_X04-58202_VCL600ENU1.7z` | `7ed8ad7ebdbc29e8c1512c6530d267dd48804ac1860344191c99cb7234c3d9c3` | `cec6f224387bb9121f4d91c10818847738647973` |
 | Visual Studio 6.0 Service Pack 4 (X05-86594, matrix X05-86829) | [`X05-86594`](https://archive.org/details/X05-86594), `2000-08_X05-86594_X05-86829_vs6sp4.7z` | `d67c8795c59fcbf0d67c468cb747bc28a9f15cb88a532896c1449e1e6da7251a` | `7ba4001a8e6a3af8f9807d85471b5ea83000eae8` |
+| Visual Studio 6.0 Service Pack 5 (2001), a self-extracting cabinet | [`vs6sp5`](https://archive.org/details/vs6sp5), `vs6sp5.exe` | `10a834041223ad21181c0e87c0a90930d976498556af2e8f959a044101e6a604` | `6af12fb3e2c7c271be67c9c9833c63b82bb7b9bf` |
+| Visual C++ 6.0 Processor Pack for Service Pack 5, a self-extracting cabinet | [`vcpp5`](https://archive.org/details/vcpp5), `vcpp5.exe` | `96817df1bb0cb58e5b1d0fbcc5b993a63548182add1fbff66365401203ecfb6c` | `d62465c0e3215086f0f4745253402378ad823d54` |
+| Visual Studio 97 Professional, disc 3 (Visual C++ 5.0) | [`microsoft-visual-studio-97-professional-edition-disc-3`](https://archive.org/details/microsoft-visual-studio-97-professional-edition-disc-3), `Microsoft Visual Studio 97 Professional Edition - Disc 3.iso` | `99101fb01f564ba9cc50cbcbf862c334cd1be16a2e8c277cb81f9a500cb6413f` | `a3ade9b0681ffab34f058a7991f6b7aa25d342e1` |
 
 What each tree takes from them:
 
@@ -188,14 +305,18 @@ What each tree takes from them:
 | `vc6` | The Professional CD's `VC98/BIN`, `VC98/INCLUDE`, `VC98/LIB`, plus `MSPDB60.DLL`, `MSOBJ10.DLL` and `MSDIS110.DLL` from its `COMMON/MSDEV98/BIN`. `nativecrt` uses the CD's `OS/SYSTEM/MSVCRT.DLL`. |
 | `vc6std` | `vc6` with `C2.DLL` and `CL.EXE` from the Learning Edition CD (11.99.8168), the only two files in which its `VC98/BIN` differs from the Professional CD's. That `C2.DLL` is the Standard edition's back end: its objects carry the Standard stamps. `nativecrt` uses the Professional CD's `MSVCRT.DLL` (the two CDs' copies are identical). |
 | `vc6sp4std` | `vc6` with SP4's English VC files (`enu/vc98/bin`, `include`, `lib`, and `enu/common/msdev98/bin/msdis110.dll`), and SP4's Standard back end `enu/os/system/msse.dll` as `C2.DLL`. `nativecrt` uses SP4's `enu/os/system/msvcrt.dll`. |
-| `vc6sp4` | The same with the Professional back end `enu/os/system/msvcep.dll` as `C2.DLL`. Not used by these five mods. |
+| `vc6sp4` | The same with the Professional back end `enu/os/system/msvcep.dll` as `C2.DLL`. Counter-Strike 1.0 to 1.1. |
+| `vc6sp5` | `vc6` with SP5's VC files (`vc98/bin`, `include`, `lib` of its cabinets, English only, so without an `enu/` level), its Professional back end `os/system/msvcep.dll` as `C2.DLL` (12.00.8966) and `VB98/msdis110.dll` as `MSDIS110.DLL`. SP5 is cumulative: it carries every file `vc6sp4` takes from SP4. `nativecrt` uses SP5's `os/system/msvcrt.dll`, which is SP4's file. The Counter-Strike 1.3 server, and `steam_wrap.c` in the 1.4 and 1.5 clients. |
+| `vc6sp5pp` | `vc6sp5` with the files the Processor Pack's `vcpp.inf` puts into `VC98`: `C2.DLL` 13.00.9044 and MASM 6.15 (`ML.EXE`, `ML.ERR`, `H2INC.EXE`, `H2INC.ERR`) in `BIN`; the intrinsic headers, `MALLOC.H` and `FPIEEE.H` in `INCLUDE`. SP5 carries the same `C2.DLL` as `os/system/vcpp.dll`. The Counter-Strike 1.3 client, 1.4 and 1.5. |
+| `vc5/rtm` | The disc's `DEVSTUDIO/VC/BIN`, `INCLUDE` and `LIB` (without `BIN/WIN95` and `BIN/WINNT`), plus `MSPDB50.DLL`, `MSDIS100.DLL`, `RC.EXE`, `RCDLL.DLL` from `DEVSTUDIO/SHAREDIDE/BIN` and `MSVCP50.DLL` from `DEVSTUDIO/VC/REDIST` in `BIN`. `nativecrt` uses `DEVSTUDIO/VC/REDIST/MSVCRT.DLL`. Counter-Strike Betas 1.0 to 4.1. |
 
 The C runtime DLLs the `nativecrt` copies run on:
 
 | File | Version | Size | SHA-1 | SHA-256 |
 |---|---|---|---|---|
 | VC6 CD `OS/SYSTEM/MSVCRT.DLL` (1998-06-17) | 6.00.8168.0 | 254,005 | `11179154ec7375e7dc50f2b349c571d01a8856b9` | `fb6260b07c05bdbcb6928156da514be5b6b69f095b335692ba46c561d85bd5f8` |
-| SP4 `enu/os/system/msvcrt.dll` | 6.00.8797.0 | 278,581 | `63a4fcd64ecea975c1b91de04702c68a9f2a3c7d` | `887eb5ce93edb7192ca3e9220f07f9ca0f94db02af5862ebcbdfcb852db99fd1` |
+| SP4 `enu/os/system/msvcrt.dll`, SP5 `os/system/msvcrt.dll` | 6.00.8797.0 | 278,581 | `63a4fcd64ecea975c1b91de04702c68a9f2a3c7d` | `887eb5ce93edb7192ca3e9220f07f9ca0f94db02af5862ebcbdfcb852db99fd1` |
+| VC5 disc `DEVSTUDIO/VC/REDIST/MSVCRT.DLL` (1997-01-23) | 5.00.7022 | 271,632 | `56c58e43281a14356bc038280bc4ac4267a9a581` | `d398de0da85572ae6e40254f93ffe0ab0bc4bfcb77681b4a0c358493552707bb` |
 
 ## The files that matter
 
@@ -210,6 +331,9 @@ SHA-256 of the sorted list of the SHA-256 sums of all its files:
 | `vc6std` | `807d9e2fe7f1b179b4670d8298b3a326b8e97c16ccd3422e57d50bb472b134d2` |
 | `vc6sp4std` | `359ffb6276ad76d1fa0bd32ecba3f876a3d12a626d03ea953cc91b5be3eb587d` |
 | `vc6sp4` | `f2461043c1ec4f62fd775bd81911ca8a6e69d240ed834b79002f9869794d00ff` |
+| `vc6sp5` | `a9c0ecd8b48d124d592c58e979fee23a03033d1f7abedc2f7a07d0a6766a30ac` |
+| `vc6sp5pp` | `6a9e4308740d03c55a4b751c6f184a892cc2d3e78d16a532d35dfb9c15b627b8` |
+| `vc5/rtm` (`BIN`, `INCLUDE`, `LIB` and `nativecrt`) | `a129b7cd4bba11a6c3fced02f684c00f5267fc5579c7599adcfb5956746c9699` |
 
 The files that make the code and the image, as on the discs (`VC98/BIN`,
 `VC98/LIB`):
@@ -230,6 +354,33 @@ The files that make the code and the image, as on the discs (`VC98/BIN`,
 | `WINMM.LIB` (clients) | `bb098679a802afdbc6fdaac03dfe1ea81453a36f6d4768b1c1cd092b1dbe9342` | | as `vc6` |
 | `WSOCK32.LIB` (clients) | `3ac0ae32d0c9ea77813db7f4d2ea8eba23ae420b40a24845cbe36f6702fca4ba` | | as `vc6` |
 
+Counter-Strike's trees, the same files (`vc6sp4` differs from `vc6sp4std`
+only in `C2.DLL`; `OLDNAMES.LIB`, `KERNEL32.LIB`, `USER32.LIB`,
+`WINMM.LIB` and `WSOCK32.LIB` of the three VC6 trees are the CD's, as above;
+`MSPDB60.DLL` is the CD's in every VC6 tree):
+
+| File | `vc6sp4` | `vc6sp5` | `vc6sp5pp` |
+|---|---|---|---|
+| `CL.EXE` | 12.00.8804, as `vc6sp4std` | as `vc6sp4` | as `vc6sp4` |
+| `C1.DLL` | 12.00.8867, as `vc6sp4std` | as `vc6sp4` | as `vc6sp4` |
+| `C1XX.DLL` | 12.00.8867, as `vc6sp4std` | 12.00.8964 `f014b3bee650224adf6cb44e51f0eeac5abbf5da666fa299d5250b2f3d1937c6` | as `vc6sp5` |
+| `C2.DLL` | 12.00.8799 `5649bd68ed833fcf4396c4a0a834e94ab1ec162316b3cbc3d8a9beabdc54e517` | 12.00.8966 `d50100ac2380d58f3f6f756961fb1319d35f5248e5fa6cafb866ca657e5dda4a` | 13.00.9044 `6c8e3988a5ccd69a9f9829b5c7512848d71c018b8d24be3928d7b00b5f79f231` |
+| `LINK.EXE` | 6.00.8447, as `vc6sp4std` | as `vc6sp4` | as `vc6sp4` |
+| `LIBCMT.LIB` | as `vc6sp4std` | `28b9f04962378ec4668072f37d7fd2835cd6cacc17b40cf22002c57bd8e76714` | as `vc6sp5` |
+
+| File | `vc5/rtm` |
+|---|---|
+| `CL.EXE` | 11.00.7022 `bf9f9c74f756fed96e13f7f9a4273495c7dde0a1fb968e3ef6d760ad6d73dfeb` |
+| `C1.DLL` | 11.00 `e519dfe6f45cc0503b7aac43d125b2f156305269b89f0dc765c40d29627c0943` |
+| `C1XX.DLL` | 11.00 `fea1e9fbbc2d204202f1a5ea61e5a938b17a92acda57e16dd53d4ec01c9d186b` |
+| `C2.EXE` (the back end is a program in VC5) | 11.00 `6d1406af5f62647347cfa7175cd7e108b838d6841a546396f29252198a14d73d` |
+| `LINK.EXE` | 5.00.7022 `279544809e6353c8e622eb88aea94e86b0258f3c4b8a976373bf4d68a41b63e1` |
+| `MSPDB50.DLL` | 5.00.7022 `06aaaca9c928bdef790259c9c30328529e10d1ec2f77da09c4ff74de7734fe69` |
+| `LIBCMT.LIB` | `7e161e461fd97f6fd5a8e6c1fdb5c7ec1b408e75bfacbc1c226f7556ccd1995b` |
+| `OLDNAMES.LIB` | `56190b253c7c5f127569cd1dc037e27600f42e4952f558e7ab1966cbb98cb1d6` |
+| `KERNEL32.LIB` | `095f231e13cb3e6a6c4913d33ca8048506011034c89774b6ba0857466abba3cf` |
+| `USER32.LIB`, `WINMM.LIB`, `WSOCK32.LIB` (clients) | `5badb752dbcd6355a666d5b88aa9fd5e27291c16edc76f1b5258468d994f1809`, `a996cf8e569b6f2dd0a478119a57c325733af545ffee2e6c6fa7dba40bfba260`, `0f94040eb6fba0408841b9d5e12d307deca926dbbb251b4eaad4fcafeb1719c7` |
+
 The copies that actually run (`nativecrt`, `msvcrt.dll` imports renamed to
 `MSVCRX.dll`). The T2DEF server runs `vc6std/VC98/BIN` unpatched instead
 (`VC6_CRT=wine`).
@@ -249,6 +400,9 @@ branch: SDK 2.0's in Point of View, Wanted!, Gunman Chronicles and They
 Hunger (`df1d49f874c87ba1fbcfe0d164bec90d7940e81341c01c001a701b85ef46677a`;
 SDK 2.1, They Hunger's base, ships the same file), SDK 2.2's in T2DEF
 (`2f3a070def04fb0d542c1a10c2cc005d18d15fdd32d547a91e0c8e43bfb99785`).
+Counter-Strike's VGUI clients link SDK 2.0's from Beta 6.5 to 1.1, SDK
+2.2's in 1.3 and SDK 2.3's in 1.4 and 1.5
+(`5124e919ad7a5c0583753d4e41a834026596da940c7b6879c04b56afb76cdf49`).
 
 Besides the toolchain, the build reproduces what the image records about
 the build itself: the PDB path, the link time, the PDB's age and the build

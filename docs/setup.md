@@ -1,15 +1,16 @@
 # Setting up the toolchain
 
 The release scripts in `tools/release/` rebuild each mod's DLLs with the
-compilers that made them, Visual C++ 6.0 in three variants, run under Wine
-on Linux. This page builds the folder those scripts need, from the original
+compilers that made them, run under Wine on Linux: Visual C++ 6.0 in five
+variants, and for Counter-Strike's early betas Visual C++ 5.0. This page builds the folder those scripts need, from the original
 Microsoft discs, and the Wine prefix to run the compilers in. It ends with a
 first build.
 
 Everything here was tested on Linux x86-64 with Wine 11.0, libfaketime
 0.9.12 and Python 3.14 (see [What was tested](#what-was-tested)).
 [compilers.md](compilers.md) says which compiler built which DLL and how
-that is known.
+that is known. The same steps as bare commands, with one page per mod, are
+in [rebuild/](rebuild/README.md).
 
 ## What you need
 
@@ -20,11 +21,14 @@ that is known.
   sets the clock that the linker reads, so the time stamps in the image are
   retail's.
 - Python 3. Tested: 3.14. The tools use only the standard library.
-- 7-Zip (`7z`), to unpack the downloads and read the disc images.
+- 7-Zip (`7z`), to unpack the downloads and read the disc images, and
+  `cabextract` for the two Service Pack 5 downloads (tested: 1.11).
 - GNU coreutils (`cp`, `sha256sum`, `timeout`), `cmp`, `git`, and a POSIX
-  shell for the scripts.
-- Disk space: about 1 GB for the downloads, 1 GB of temporary space while
-  unpacking a disc, 330 MB for the compilers, 340 MB for the Wine prefix,
+  shell for the scripts. Counter-Strike's script takes earlier releases'
+  sources from the repository by tag, so it needs `git` and a clone with the
+  tags.
+- Disk space: about 1.8 GB for the downloads, 1 GB of temporary space while
+  unpacking a disc, 560 MB for the compilers, 340 MB for the Wine prefix,
   and up to 400 MB for each build folder (a server build copies the prefix).
 
 The discs and the retail DLLs are not in this repository (copyright). The
@@ -47,20 +51,32 @@ $VC_TOOLCHAINS/
     nativecrt/      copy of VC98/BIN that runs on the CD's own MSVCRT.DLL
   vc6std/       the same with the Standard edition's compiler back end (11.99.8168)
   vc6sp4std/    VC6 with Service Pack 4, Standard edition back end (11.99.8799)
-  vc6sp4/       VC6 with Service Pack 4, Professional (12.00.8799); optional
+  vc6sp4/       VC6 with Service Pack 4, Professional (12.00.8799)
+  vc6sp5/       VC6 with Service Pack 5, Professional (12.00.8966)
+  vc6sp5pp/     the same with the Processor Pack's back end (13.00.9044)
+  vc5/rtm/      Visual C++ 5.0 Professional as on the CD (11.00.7022)
+    BIN/ INCLUDE/ LIB/ nativecrt/
   wineprefix/   the Wine prefix (64-bit)
 ```
 
 | Tree | Builds |
 |---|---|
-| `vc6` | Point of View, Wanted!, Gunman Chronicles and They Hunger, server and client |
+| `vc6` | Point of View, Wanted!, Gunman Chronicles and They Hunger, server and client; Counter-Strike Beta 5.0 (leak) to 7.1 |
 | `vc6std` | the T2DEF server |
 | `vc6sp4std` | the T2DEF client |
-| `vc6sp4` | none of the five mods; made in the same step, so it is included |
+| `vc6sp4` | Counter-Strike 1.0, 1.0b and 1.1 |
+| `vc6sp5` | the Counter-Strike 1.3 server, and one source of the 1.4 and 1.5 clients |
+| `vc6sp5pp` | the Counter-Strike 1.3 client, 1.4 and 1.5 |
+| `vc5/rtm` | Counter-Strike Betas 1.0 to 4.1 |
 
-The wrappers `tools/vc5.sh` and `tools/vc4.sh` run Visual C++ 5.0 and 4.x
-from `vc5/` and `vc4/` in the same folder. None of the five mods needs them;
-see [Older compilers](#older-compilers-optional).
+The first five mods need only the first three trees: steps 2.1 to 2.3 and
+the matching lines of step 3. Counter-Strike needs `vc6`, `vc6sp4` and the
+three trees of steps 2.4 to 2.6.
+
+The wrapper `tools/vc5.sh` runs Visual C++ 5.0 from `vc5/` and
+`tools/vc4.sh` Visual C++ 4.x from `vc4/`, in the same folder. Only
+`vc5/rtm` is needed; the others are in
+[Older compilers](#older-compilers-optional).
 
 ## 1. Download the discs
 
@@ -71,6 +87,9 @@ Three disc images from the Internet Archive, one file each:
 | Visual C++ 6.0 Professional, English retail CD, 1999-02, part no. X04-58170 | [`X04-58170`](https://archive.org/details/X04-58170) | `1999-02_X04-58170_X04-58170_VCP600ENU1.7z` | 435,242,369 |
 | Visual C++ 6.0 Learning Edition, English, 1999-02, part no. X04-58202 | [`X04-58202`](https://archive.org/details/X04-58202) | `1999-02_X04-58202_X04-58202_VCL600ENU1.7z` | 196,626,810 |
 | Visual Studio 6.0 Service Pack 4, 2000-08, part no. X05-86594 (matrix X05-86829) | [`X05-86594`](https://archive.org/details/X05-86594) | `2000-08_X05-86594_X05-86829_vs6sp4.7z` | 374,501,304 |
+| Visual Studio 6.0 Service Pack 5 (2001; Counter-Strike only) | [`vs6sp5`](https://archive.org/details/vs6sp5) | `vs6sp5.exe` | 136,410,832 |
+| Visual C++ 6.0 Processor Pack for Service Pack 5 (Counter-Strike only) | [`vcpp5`](https://archive.org/details/vcpp5) | `vcpp5.exe` | 1,180,896 |
+| Visual Studio 97 Professional, disc 3: Visual C++ 5.0 (Counter-Strike only) | [`microsoft-visual-studio-97-professional-edition-disc-3`](https://archive.org/details/microsoft-visual-studio-97-professional-edition-disc-3) | `Microsoft Visual Studio 97 Professional Edition - Disc 3.iso`; save it as `vs97-pro-disc3.iso` | 655,605,760 |
 
 Check them:
 
@@ -79,6 +98,9 @@ Check them:
 | `…VCP600ENU1.7z` | `4e3fa95110e263fe4a42fe151b3f5208d414db72c006beee999a76c6c0ed4261` | `7d476db1e8eaebe5733fbe95cb7a6bd01132c479` | `495caefab7a0a3e461a5840f4ebdc64c` |
 | `…VCL600ENU1.7z` | `7ed8ad7ebdbc29e8c1512c6530d267dd48804ac1860344191c99cb7234c3d9c3` | `cec6f224387bb9121f4d91c10818847738647973` | `53787fef30debef314bd36f2b7992545` |
 | `…vs6sp4.7z` | `d67c8795c59fcbf0d67c468cb747bc28a9f15cb88a532896c1449e1e6da7251a` | `7ba4001a8e6a3af8f9807d85471b5ea83000eae8` | `aa8654befa6a002947fc180b1bbaf59f` |
+| `vs6sp5.exe` | `10a834041223ad21181c0e87c0a90930d976498556af2e8f959a044101e6a604` | `6af12fb3e2c7c271be67c9c9833c63b82bb7b9bf` | `971e5b1791ee90e6f397ec7fae520ba9` |
+| `vcpp5.exe` | `96817df1bb0cb58e5b1d0fbcc5b993a63548182add1fbff66365401203ecfb6c` | `d62465c0e3215086f0f4745253402378ad823d54` | `574e04a0bc863e8e1e8e28606da9d12f` |
+| `vs97-pro-disc3.iso` | `99101fb01f564ba9cc50cbcbf862c334cd1be16a2e8c277cb81f9a500cb6413f` | `a3ade9b0681ffab34f058a7991f6b7aa25d342e1` | `bf71b8fc2d23c5de13734b189dc341cb` |
 
 The SHA-1 and MD5 values are the ones archive.org lists for the files.
 
@@ -198,6 +220,93 @@ cp $S/os/system/msvcep.dll "$VC_TOOLCHAINS/vc6sp4/VC98/BIN/C2.DLL"
 Expected: `265814 sectors; input md5 2afffb48728d1717be52ce265bd73c3f`.
 `enu/os/system/msvcrt.dll` is SP4's C runtime DLL (6.00.8797.0), for step 3.
 
+Steps 2.4 to 2.6 are for Counter-Strike only.
+
+### 2.4 Service Pack 5: `vc6sp5`
+
+`vs6sp5.exe` is a self-extracting cabinet; `cabextract` unpacks it without
+running it. Inside are setup's files and a ten-part cabinet set,
+`VS6sp51.cab` to `VS6sp510.cab`, which `cabextract` follows from its first
+part. The files have lower-case names and, the package being English only,
+no `enu/` level. `vc6sp5` is a copy of `vc6` with SP5's
+`vc98/{bin,include,lib}` copied over under upper-case names. SP5 is
+cumulative: it has every file `vc6sp4` takes from SP4.
+
+Like SP4, SP5 has no file called `C2.DLL`; setup installs one of several
+disguised files under that name, chosen by edition. The Professional one is
+`os/system/msvcep.dll` (12.00.8966). LINK's disassembler `MSDIS110.DLL`
+lies in the set as `VB98/msdis110.dll`.
+
+```sh
+cabextract -q -d vs6sp5 -F 'VS6sp5*.cab' "$DL/vs6sp5.exe"
+cabextract -q -d vs6sp5 -F 'vc98/bin/*' -F 'vc98/include/*' -F 'vc98/lib/*' \
+    -F VB98/msdis110.dll -F os/system/msvcep.dll -F os/system/msvcrt.dll vs6sp5/VS6sp51.cab
+rm vs6sp5/*.cab
+mkdir -p "$VC_TOOLCHAINS/vc6sp5"
+cp -r "$VC_TOOLCHAINS/vc6/VC98" "$VC_TOOLCHAINS/vc6sp5/"
+for d in BIN INCLUDE LIB; do
+    for f in vs6sp5/vc98/$(echo $d | tr A-Z a-z)/*; do
+        cp "$f" "$VC_TOOLCHAINS/vc6sp5/VC98/$d/$(basename "$f" | tr a-z A-Z)"
+    done
+done
+cp vs6sp5/os/system/msvcep.dll "$VC_TOOLCHAINS/vc6sp5/VC98/BIN/C2.DLL"
+cp vs6sp5/VB98/msdis110.dll "$VC_TOOLCHAINS/vc6sp5/VC98/BIN/MSDIS110.DLL"
+```
+
+`vs6sp5/os/system/msvcrt.dll` is SP5's C runtime DLL, the same file as
+SP4's (6.00.8797.0), for step 3.
+
+### 2.5 The Processor Pack: `vc6sp5pp`
+
+`vcpp5.exe` is a self-extracting cabinet too. Its `vcpp.inf` says where the
+files go: into `VC98\Bin` the back end `c2.dll` (13.00.9044) and MASM 6.15
+(`ml.exe`, `ml.err`, `h2inc.exe`, `h2inc.err`); into `VC98\Include` the
+intrinsic headers, `malloc.h` and `fpieee.h`. Two of the headers have short
+names in the package: `emmintrin.h` is `emmint_1.h` and `xmmintrin.h` is
+`xmmint_1.h`. The rest (a C runtime source file, samples, documentation, two
+registry files for the debugger) is not needed. `vc6sp5pp` is a copy of
+`vc6sp5` with these files.
+
+```sh
+cabextract -q -d vcpp5 "$DL/vcpp5.exe"
+mkdir -p "$VC_TOOLCHAINS/vc6sp5pp"
+cp -r "$VC_TOOLCHAINS/vc6sp5/VC98" "$VC_TOOLCHAINS/vc6sp5pp/"
+for f in c2.dll ml.exe ml.err h2inc.exe h2inc.err; do
+    cp "vcpp5/$f" "$VC_TOOLCHAINS/vc6sp5pp/VC98/BIN/$(echo $f | tr a-z A-Z)"
+done
+for f in dvec.h fpieee.h fvec.h ivec.h malloc.h mm3dnow.h mmintrin.h; do
+    cp "vcpp5/$f" "$VC_TOOLCHAINS/vc6sp5pp/VC98/INCLUDE/$(echo $f | tr a-z A-Z)"
+done
+cp vcpp5/emmint_1.h "$VC_TOOLCHAINS/vc6sp5pp/VC98/INCLUDE/EMMINTRIN.H"
+cp vcpp5/xmmint_1.h "$VC_TOOLCHAINS/vc6sp5pp/VC98/INCLUDE/XMMINTRIN.H"
+```
+
+### 2.6 Visual C++ 5.0: `vc5/rtm`
+
+Disc 3 of Visual Studio 97 Professional is a plain ISO image, which 7-Zip
+reads. Its `DEVSTUDIO/VC/{BIN,INCLUDE,LIB}` is the compiler as setup
+installs it, uncompressed: the driver `CL.EXE`, the front ends `C1.DLL` and
+`C1XX.DLL`, the back end `C2.EXE` (a program, not a DLL, in this version)
+and `LINK.EXE`. `BIN/WIN95` and `BIN/WINNT` are not needed. Five files from
+elsewhere on the disc go into `BIN`: `MSPDB50.DLL` (writes the PDB),
+`MSDIS100.DLL` (LINK's disassembler), `RC.EXE` and `RCDLL.DLL` from
+`DEVSTUDIO/SHAREDIDE/BIN`, and `MSVCP50.DLL`, which LINK loads, from
+`DEVSTUDIO/VC/REDIST`.
+
+```sh
+7z x -ovs97 "$DL/vs97-pro-disc3.iso" DEVSTUDIO/VC/BIN DEVSTUDIO/VC/INCLUDE DEVSTUDIO/VC/LIB \
+    DEVSTUDIO/VC/REDIST/MSVCP50.DLL DEVSTUDIO/VC/REDIST/MSVCRT.DLL \
+    DEVSTUDIO/SHAREDIDE/BIN/MSPDB50.DLL DEVSTUDIO/SHAREDIDE/BIN/MSDIS100.DLL \
+    DEVSTUDIO/SHAREDIDE/BIN/RC.EXE DEVSTUDIO/SHAREDIDE/BIN/RCDLL.DLL -r-
+rm -r vs97/DEVSTUDIO/VC/BIN/WIN95 vs97/DEVSTUDIO/VC/BIN/WINNT
+mkdir -p "$VC_TOOLCHAINS/vc5/rtm"
+cp -r vs97/DEVSTUDIO/VC/BIN vs97/DEVSTUDIO/VC/INCLUDE vs97/DEVSTUDIO/VC/LIB "$VC_TOOLCHAINS/vc5/rtm/"
+cp vs97/DEVSTUDIO/SHAREDIDE/BIN/*.* vs97/DEVSTUDIO/VC/REDIST/MSVCP50.DLL "$VC_TOOLCHAINS/vc5/rtm/BIN/"
+```
+
+`vs97/DEVSTUDIO/VC/REDIST/MSVCRT.DLL` is the disc's C runtime DLL
+(5.00.7022), for step 3.
+
 ## 3. The `nativecrt` copies
 
 LINK sorts with the C runtime's `qsort` in two places that reach the image:
@@ -225,11 +334,19 @@ load the disc's runtime. The script checks the DLL's SHA-1 first.
 "$MODS/tools/make_vc6_nativecrt.sh" -std vcp600/OS/SYSTEM/MSVCRT.DLL
 "$MODS/tools/make_vc6_nativecrt.sh" -sp4std vs6sp4/enu/os/system/msvcrt.dll
 "$MODS/tools/make_vc6_nativecrt.sh" -sp4 vs6sp4/enu/os/system/msvcrt.dll
+"$MODS/tools/make_vc6_nativecrt.sh" -sp5 vs6sp5/os/system/msvcrt.dll
+"$MODS/tools/make_vc6_nativecrt.sh" -sp5pp vs6sp5/os/system/msvcrt.dll
+"$MODS/tools/make_vc5_nativecrt.sh" -rtm vs97/DEVSTUDIO/VC/REDIST/MSVCRT.DLL
 ```
+
+(The last three for Counter-Strike.) `make_vc5_nativecrt.sh` does the same
+for `vc5/rtm`: LINK 5.00's output depends on the runtime it runs on as
+VC6's LINK's does ([compilers.md](compilers.md#counter-strike)).
 
 `tools/vc6.sh` runs the programs from `nativecrt` by default. With
 `VC6_CRT=wine` it runs the unpatched `VC98/BIN` on Wine's builtin runtime
-instead. The T2DEF server needs that: its import table has the order
+instead. `tools/vc5.sh` has the opposite default: it runs `nativecrt` only
+with `VC5_CRT=native`; the release script asks for that itself. The T2DEF server needs that: its import table has the order
 Wine's builtin gives, not the 1998 runtime's ([compilers.md](compilers.md)).
 
 Now check the trees. `tools/check_toolchains.sh` compares a digest of all
@@ -239,8 +356,10 @@ files of each tree with the trees that built the retail-identical DLLs:
 "$MODS/tools/check_toolchains.sh"
 ```
 
-It should print `ok` for `vc6`, `vc6std`, `vc6sp4std` and `vc6sp4`. The
-prefix lines come after step 4. Then delete the scratch folder:
+It should print `ok` for `vc6`, `vc6std`, `vc6sp4std` and `vc6sp4`, and,
+with steps 2.4 to 2.6, for `vc6sp5`, `vc6sp5pp` and `vc5/rtm` (it reports
+the trees Counter-Strike needs as missing until then). The prefix lines
+come after step 4. Then delete the scratch folder:
 
 ```sh
 cd && rm -rf "$HOME/vc-unpack"
@@ -353,6 +472,26 @@ Gunman Chronicles client are not identical yet, so their scripts end with
 produce). They Hunger's server takes longer than the others, about five
 minutes here: its script replays 102 more compiles and 73 links.
 
+Counter-Strike's script takes the release's tag first, because some
+releases continue an earlier release's build and the script takes that
+release's source from the repository by its tag. `SRC` must be a checkout
+of the tag in a clone that has the tags:
+
+```sh
+git worktree add ../cs-beta2.1 cstrike-beta2.1
+VC_TOOLCHAINS=$HOME/vc-toolchains tools/release/counter-strike.sh cstrike-beta2.1 ../cs-beta2.1 ../build-cs-beta2.1
+```
+
+Measured here with five builds running at once: 18 to 73 seconds for both
+DLLs of the releases from Beta 6.5 on, 35 to 222 seconds for the other VC6
+betas, and up to eight minutes for the Visual C++ 5.0 betas, whose servers
+replay hundreds of links (Beta 1.0's PDB was written by 1,215; Beta 3.1's
+build replays Betas 2.0, 2.1 and 3.0 first). The server's lines also list
+the build steps. For 1.4 and 1.5 the client ends with `differs from retail`
+and the note that its SHA-256 is the one the release's commit message
+records: those two clients are not identical
+([counter-strike.md](counter-strike.md)).
+
 To compare byte for byte with your own copy of the retail files, set
 `RETAIL` to the mod's folder in the game, the one with `dlls/` and
 `cl_dlls/`:
@@ -381,6 +520,8 @@ export VC_TOOLCHAINS=$HOME/vc-toolchains
 tools/vc6.sh CL /nologo /c /O2 foo.cpp          # VC6 Professional
 tools/vc6.sh -std CL /nologo /c foo.cpp         # Standard edition back end
 tools/vc6.sh -sp4std CL ...                     # SP4, Standard edition
+tools/vc6.sh -sp5pp CL ...                      # SP5 with the Processor Pack
+VC5_CRT=native tools/vc5.sh -rtm LINK ...       # Visual C++ 5.0 as on the CD, its own runtime
 tools/vc6.sh LINK /nologo /dll ...
 ```
 
@@ -408,6 +549,22 @@ byte for byte from a fresh clone of its branch, with the toolchain folder
 used throughout the reconstruction and the same Wine. The steps from the
 downloads were not repeated for it.
 
+Counter-Strike was added on 2026-11-14, with Wine 11.0, libfaketime 0.9.12,
+Python 3.14.10, 7-Zip 26.04 and cabextract 1.11:
+- Steps 2.4 to 2.6 and their lines of step 3, run from the three downloads
+  into a new toolchain folder (with a copy of the `vc6` tree), gave
+  `vc6sp5`, `vc6sp5pp` and `vc5/rtm` identical file for file to the trees
+  used throughout the reconstruction.
+- With the reconstruction's toolchain folder, `counter-strike.sh` built
+  every one of the 27 tags from a fresh clone of the branch: the 38 DLLs
+  that are identical to retail came out byte for byte, and the 1.4 and 1.5
+  clients with the SHA-256 their commit messages record.
+- The shared tools changed for Counter-Strike (`vc5.sh`, `vc6.sh`,
+  `build_dsp.py`, `release/common.sh`), so the five other scripts were run
+  again the same day from fresh clones of their branches: the eight
+  identical DLLs byte for byte, the Wanted! server and the Gunman
+  Chronicles client with their known hashes.
+
 Not tested:
 - **Other Wine versions.** The T2DEF server is linked on Wine's builtin
   `msvcrt.dll`, and its import table depends on how that `qsort` orders
@@ -418,31 +575,37 @@ Not tested:
 
 ## Older compilers (optional)
 
-`tools/vc5.sh` and `tools/vc4.sh` run Visual C++ 5.0 and 4.x, which were
-used to identify the compilers of other mods. None of these five needs
-them. Layout and sources, briefly:
+`tools/vc5.sh` and `tools/vc4.sh` also run Visual C++ 5.0 with Service
+Pack 3 and Visual C++ 4.x, which were used to identify the compilers of
+other mods. None of the six mods needs them (Visual C++ 5.0 as on the CD,
+`vc5/rtm`, is step 2.6). Layout and sources, briefly:
 
 | Tree | Contents | Source (archive.org item / file, SHA-1) |
 |---|---|---|
-| `vc5/rtm/{BIN,INCLUDE,LIB}` | Visual C++ 5.0 Professional (11.00.7022): `DEVSTUDIO/VC/{BIN,INCLUDE,LIB}` without `BIN/WIN95` and `BIN/WINNT`, plus `MSPDB50.DLL`, `MSDIS100.DLL`, `RC.EXE`, `RCDLL.DLL` from `DEVSTUDIO/SHAREDIDE/BIN` and `MSVCP50.DLL` from `VC/REDIST` in `BIN` | `microsoft-visual-studio-97-professional-edition-disc-3`, Visual Studio 97 Professional disc 3, `a3ade9b0681ffab34f058a7991f6b7aa25d342e1` |
 | `vc5/sp3/...` | the same with Visual Studio 97 Service Pack 3's English VC files over it (compiler 11.00.7303, linker 5.10.7303), under the upper-case names | `vs97sp3`, `vs97sp3.zip`, `10a818f34b7223d4cbd2c99efb0e52c9efcd3bfc`; `cabextract` unpacks it once the cabinets are also linked under upper-case names |
 | `vc4/40/{BIN,INCLUDE,LIB}` | Visual C++ 4.0 (10.00.5270): `MSDEV\BIN` (top-level files), `MSDEV\INCLUDE`, `MSDEV\LIB` | `msvc4x` / `MSVC40.iso`, `81e139ac41d76740a6ba6d474355b37ed2e46c66` |
 | `vc4/41/...` | Visual C++ 4.1 (10.10.6038), the same folders of `VC41\MSDEV` | `msvc4x` / `VC_FOR_16.iso`, `2e00df7338b39343a13fc9d5ee36ff86fa21fc33` |
 | `vc4/42/...` | Visual C++ 4.2 Professional (10.20.6166), the same folders | `msft-visual-cplusplus-42` / `MSVC42.iso`, `e8b64d5f25d3d58891a62722cfbec371f870823c` |
 
-These steps were not repeated for this page.
+These steps were not repeated for this page. `make_vc5_nativecrt.sh -sp3`
+makes `vc5/sp3/nativecrt` from Service Pack 3's `msvcrt.dll` (5.00.7303,
+SHA-1 `e1eb5125f645e70ef9190b092a5d0a4bf2d86d61`); no retail file linked by
+its LINK 5.10 was rebuilt with it.
 
 ## Troubleshooting
 
 - `set VC_TOOLCHAINS to the toolchain folder`: the variable is required;
   `tools/` is not the toolchain folder.
 - `no Wine prefix at …`: step 4 was not done for this folder.
-- `no …/nativecrt; run make_vc6_nativecrt.sh`: step 3 is missing for that
-  tree.
+- `no …/nativecrt; run make_vc6_nativecrt.sh` (or `make_vc5_nativecrt.sh`):
+  step 3 is missing for that tree.
 - `C1900: Il mismatch between 'P1' version … and 'P2' version …`: an SP4
   tree without its `C2.DLL` (end of step 2.3).
 - `libfaketime.so.1 not found` (Wanted! server): set `FAKETIME_LIB` to the
   library's path (step 5).
+- `… no tag cstrike-beta2.0 in its repository` (Counter-Strike Betas 2.1,
+  3.0, 3.1 and 6.1): the checkout's repository lacks the tags; `git fetch
+  --tags` in it.
 - A build stops with `FAILED <file>`: the compiler messages are in
   `build.log` next to the output DLL. A compiler that crashes exits with
   code 5.

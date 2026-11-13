@@ -6,14 +6,17 @@ objects went into it, and the order in which the linker met things. Two
 builds of the same source on two machines can differ in every one of these.
 
 This page lists each part of the image that is not code, says how it was
-reproduced for the five mods in this repository, and what to look at when a
-rebuild "differs from retail". How the code itself was matched is in
+reproduced for the first five mods in this repository, and what to look at
+when a rebuild "differs from retail". Counter-Strike adds Visual C++ 5.0,
+PDBs written by hundreds of links, releases that continue an earlier
+release's build, and a packed client format; its page,
+[counter-strike.md](counter-strike.md), describes those. How the code itself was matched is in
 [vc6-notes.md](vc6-notes.md). The compilers are described in
 [compilers.md](compilers.md), the toolchain folder and Wine prefix in
 [setup.md](setup.md), and each mod's own details in
 [point-of-view.md](point-of-view.md), [t2def.md](t2def.md),
-[wanted.md](wanted.md), [gunman-chronicles.md](gunman-chronicles.md) and
-[they-hunger.md](they-hunger.md).
+[wanted.md](wanted.md), [gunman-chronicles.md](gunman-chronicles.md),
+[they-hunger.md](they-hunger.md) and [counter-strike.md](counter-strike.md).
 
 Terms used below:
 
@@ -65,7 +68,7 @@ Terms used below:
 | Image version, base, alignment | PE optional header | the link line and LINK's defaults | [Other header fields](#other-header-fields-and-padding) |
 | Padding | between and after sections | whatever was in LINK's memory | [Other header fields](#other-header-fields-and-padding) |
 
-Retail's values for the ten DLLs:
+Retail's values for the ten DLLs of the first five mods:
 
 | Server | Point of View `hl.dll` | T2DEF `t2def.dll` | Wanted! `wanted.dll` | Gunman Chronicles `gunman.dll` | They Hunger `einar.dll` |
 |---|---|---|---|---|---|

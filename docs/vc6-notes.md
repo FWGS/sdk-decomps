@@ -2,6 +2,8 @@
 
 These are the rules we learned about Visual C++ 6 (VC6) while rebuilding five
 Half-Life mods: first function by function, then whole images byte for byte.
+Counter-Strike, the sixth, taught more, about Visual C++ 5.0 and VC6's
+service packs; [counter-strike.md](counter-strike.md) has those.
 None of this is documented by Microsoft. It is written as a field guide for
 someone matching their own VC6 binary: each rule comes with its evidence, an
 example, and how to use it.
