@@ -2157,7 +2157,12 @@ void TeamFortressViewport::UpdateCursorState()
 		}
 	}
 
-	IN_ResetMouse();
+	// Don't reset mouse in demo playback
+	if ( !gEngfuncs.pDemoAPI->IsPlayingback() )
+	{
+		IN_ResetMouse();
+	}
+
 	g_iVisibleMouse = false;
 	App::getInstance()->setCursorOveride( App::getInstance()->getScheme()->getCursor(Scheme::SchemeCursor::scu_none) );
 }

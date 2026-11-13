@@ -1784,6 +1784,17 @@ void NextLevel( void )
 		pChange->SetThink( CChangeLevel::ExecuteChangeLevel );
 		pChange->pev->nextthink = gpGlobals->time + 0.1;
 	}
+
+	// sic: stand-in (Counter-Strike 1.5). Nothing calls NextLevel and the linker drops it, but its size
+	// counts when the linker picks the kept copy of identical functions: retail 1.5 keeps CG3SG1's
+	// WeaponIdle and CSG550's SecondaryAttack, which the fold model gives only when this function is
+	// 337 to 384 bytes with 16 to 24 relocations. The SDK's text, which the Linux library's code
+	// agrees with, is 325 bytes with 20: both GetClassPtr expansions flat. With six or more inline
+	// calls that make no code behind them the compiler calls CBaseToggle's constructor in the two
+	// expansions: 351 bytes, 22 relocations, no new absolute fixup (the .reloc reserve stays
+	// retail's). Measured as statements `VARS( pent );` here: 5 give 325 bytes, 6 one expansion of
+	// each kind (21 relocations), 7 to 200 this code. What weighed as much in retail is not known.
+	VARS( ENT( VARS( ENT( VARS( ENT( VARS( pent ) ) ) ) ) ) );
 }
 
 

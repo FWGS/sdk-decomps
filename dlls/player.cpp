@@ -57,6 +57,7 @@ extern CGraph	WorldGraph;
 extern cvar_t playerid;	// Counter-Strike 1.1: game.cpp's mp_playerid (declared here in Counter-Strike 1.6 too)
 extern cvar_t logdetail;	// Counter-Strike 1.3: game.cpp's mp_logdetail (LogAttack)
 extern cvar_t startmoney;	// Counter-Strike 1.3: game.cpp's mp_startmoney
+extern cvar_t fadetoblack;	// Counter-Strike 1.5: game.cpp's mp_fadetoblack (Killed)
 
 char *GetTeam( int teamNo );	// Counter-Strike 1.3: multiplay_gamerules.cpp's (declared here in Counter-Strike 1.6 too)
 
@@ -1568,12 +1569,21 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	pev->takedamage		= DAMAGE_NO;	// Beta 6.5
 	pev->flags &= ~FL_ONGROUND;
 
+	// Counter-Strike 1.5: with mp_fadetoblack the dead player's screen goes black in three seconds
+	// and stays so (as to 1.3); else
 	// Counter-Strike 1.4: the death camera: the dead player watches his own body in the free
 	// chase mode, and iuser3 names his killer (pm_shared and the client read it)
-	pev->iuser1 = OBS_CHASE_FREE;
-	pev->iuser2 = ENTINDEX( edict() );
-	pev->iuser3 = ENTINDEX( ENT( pevAttacker ) );
-	m_hObserverTarget = UTIL_PlayerByIndex( pev->iuser3 );
+	if ( fadetoblack.value != 0 )
+	{
+		UTIL_ScreenFade( this, Vector( 0, 0, 0 ), 3, 3, 255, FFADE_OUT | FFADE_STAYOUT );
+	}
+	else
+	{
+		pev->iuser1 = OBS_CHASE_FREE;
+		pev->iuser2 = ENTINDEX( edict() );
+		pev->iuser3 = ENTINDEX( ENT( pevAttacker ) );
+		m_hObserverTarget = UTIL_PlayerByIndex( pev->iuser3 );
+	}
 
 	// Beta 6.5: the scoreboard marks him dead at once (Beta 5.0 (leak)'s
 	// "Throw Direction" console line is gone)

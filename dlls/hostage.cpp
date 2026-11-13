@@ -386,6 +386,7 @@ int CHostage::TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float
 		{
 			pAttacker->AddAccount( -20 * (int)flActualDamage - 500, true );
 			AnnounceDeath( pAttacker );
+			ApplyHostagePenalty( pAttacker );	// Counter-Strike 1.5: mp_hostagepenalty counts again
 		}
 
 		pev->takedamage = DAMAGE_NO;
@@ -544,8 +545,8 @@ void CHostage::AnnounceDeath( CBasePlayer *pAttacker )
 }
 
 // Beta 6.5: mp_hostagepenalty, the number of hostages a terrorist may kill;
-// one before it he is warned, at it the server drops him. Counter-Strike 1.4:
-// nothing calls it (the Windows linker dropped it): written from the Linux library
+// one before it he is warned, at it the server drops him. In Counter-Strike 1.4
+// nothing called it (text from the Linux library); 1.5's TakeDamage calls it again
 void CHostage::ApplyHostagePenalty( CBasePlayer *pAttacker )
 {
 	if ( pAttacker->m_iTeam == TEAM_TERRORIST )

@@ -425,16 +425,6 @@ void V_CalcIntermissionRefdef ( struct ref_params_s *pparams )
 	cl_entity_t	*ent, *view;
 	float		old;
 
-// don't allow cheats in multiplayer
-#if !defined( _DEBUG )
-	if ( pparams->maxclients > 1 )
-	{
-		gEngfuncs.Cvar_SetValue ("scr_ofsx", 0);
-		gEngfuncs.Cvar_SetValue ("scr_ofsy", 0);
-		gEngfuncs.Cvar_SetValue ("scr_ofsz", 0);
-	}
-#endif
-
 	// ent is the player model ( visible when out of body )
 	ent = gEngfuncs.GetLocalPlayer();
 	
@@ -609,7 +599,7 @@ void V_CalcNormalRefdef ( struct ref_params_s *pparams )
 	AngleVectors ( angles, pparams->forward, pparams->right, pparams->up );
 
 	// don't allow cheats in multiplayer
-	if ( pparams->maxclients > 1 )
+	if ( pparams->maxclients <= 1 )
 	{
 		for ( i=0 ; i<3 ; i++ )
 		{

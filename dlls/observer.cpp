@@ -20,15 +20,19 @@ extern int gmsgCrosshair;
 extern int gmsgCurWeapon;
 extern int gmsgSetFOV;
 extern int gmsgStatusIcon;
+extern cvar_t fadetoblack;	// Counter-Strike 1.5: game.cpp's mp_fadetoblack (the declaration's place is ours)
 
 // Counter-Strike 1.4: mp_forcechasecam, and when that is 0 the new
 // mp_forcecamera (1: team mates only, no free flight; 2: only the team
 // mates' own view). Windows has it inline in its two callers.
 int GetForceCamera( void )
 {
-	int retVal;
+	// Counter-Strike 1.5: with mp_fadetoblack only the team mates' own view (the two returns and
+	// the declaration behind the first are Counter-Strike 1.6's lines: code at 38, 39, 41, 43, 44)
+	if ( fadetoblack.value != 0 )
+		return 2;
 
-	retVal = CVAR_GET_FLOAT( "mp_forcechasecam" );
+	int retVal = CVAR_GET_FLOAT( "mp_forcechasecam" );
 
 	if ( !retVal )
 		retVal = CVAR_GET_FLOAT( "mp_forcecamera" );
@@ -306,34 +310,26 @@ void CBasePlayer::Observer_CheckProperties()
 // Attempt to change the observer mode
 void CBasePlayer::Observer_SetMode( int iMode )
 {
-	int forcecamera;
-	int oldMode;
-
 	// Just abort if we're changing to the mode we're already in
 	if ( iMode == pev->iuser1 )
 		return;
 
-	forcecamera = GetForceCamera();
+	int forcecamera = GetForceCamera();
 
 	// is valid mode ?
 	if ( iMode < OBS_CHASE_LOCKED || iMode > OBS_MAP_CHASE )
 		iMode = OBS_IN_EYE;
 
-	oldMode = pev->iuser1;
+	int oldMode = pev->iuser1;	// Counter-Strike 1.6 uses it; no code here
 
 	// a spectator (allow_spectators) does what he likes
 	if ( m_iTeam != TEAM_SPECTATOR )
 	{
-		if ( forcecamera == 1 )
-		{
-			// no free flight
-			if ( iMode == OBS_ROAMING )
-				iMode = OBS_MAP_FREE;
-		}
+		// no free flight with 1, the team mates' own view only with 2
+		if ( forcecamera == 1 && iMode == OBS_ROAMING )
+			iMode = OBS_MAP_FREE;
 		else if ( forcecamera == 2 )
-		{
 			iMode = OBS_IN_EYE;
-		}
 	}
 
 	// verify observer target again
@@ -341,9 +337,17 @@ void CBasePlayer::Observer_SetMode( int iMode )
 	{
 		CBaseEntity *pEnt = m_hObserverTarget;
 
+		// four tests, each with its own statement (Counter-Strike 1.6's lines: tests at 535, 537,
+		// 539 and 541, the statement left at 542). The code is one merged store either way, but the
+		// compiler chooses registers before it merges: with two or three statements 1.5's iMode and
+		// forcecamera exchange ebx and ebp (1.4's code is the same with any number).
 		if ( pEnt == this || !pEnt )
 			m_hObserverTarget = NULL;
-		else if ( pEnt->has_disconnected || ((CBasePlayer*)pEnt)->pev->iuser1 || (pEnt->pev->effects & EF_NODRAW) || ( forcecamera && ((CBasePlayer*)pEnt)->m_iTeam != m_iTeam ) )
+		else if ( pEnt->has_disconnected )
+			m_hObserverTarget = NULL;
+		else if ( ((CBasePlayer*)pEnt)->pev->iuser1 || (pEnt->pev->effects & EF_NODRAW) )
+			m_hObserverTarget = NULL;
+		else if ( forcecamera && ((CBasePlayer*)pEnt)->m_iTeam != m_iTeam )
 			m_hObserverTarget = NULL;
 	}
 

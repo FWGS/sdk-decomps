@@ -62,8 +62,9 @@ cvar_t	logdetail	= {"mp_logdetail","0", FCVAR_SERVER };
 cvar_t	startmoney	= {"mp_startmoney","800", FCVAR_SERVER };
 // Beta 7.1 (Linux symbol)
 cvar_t	maxrounds	= {"mp_maxrounds","0", FCVAR_SERVER };			// the map changes after so many rounds, 0 = no limit (CHalfLifeMultiplay::RestartRound and Think read it by name)
-// Counter-Strike 1.1 (Linux symbols; mp_fadetoblack, which stood behind mp_winlimit, is gone in 1.4)
+// Counter-Strike 1.1 (Linux symbols; mp_fadetoblack was gone in 1.4 and is back in 1.5)
 cvar_t	winlimit	= {"mp_winlimit","0", FCVAR_SERVER };			// the map changes when a team has won so many rounds, 0 = no limit
+cvar_t	fadetoblack	= {"mp_fadetoblack","0", FCVAR_SERVER };	// Counter-Strike 1.5 (as 1.3 had it)
 cvar_t	playerid	= {"mp_playerid","0", FCVAR_SERVER };
 cvar_t	allow_spectators = {"allow_spectators","1.0", FCVAR_SERVER };
 
@@ -519,6 +520,7 @@ void GameDLLInit( void )
 	CVAR_REGISTER (&mapvoteratio);
 	CVAR_REGISTER (&maxrounds);
 	CVAR_REGISTER (&winlimit);
+	CVAR_REGISTER (&fadetoblack);	// Counter-Strike 1.5
 	CVAR_REGISTER (&logdetail);
 	CVAR_REGISTER (&startmoney);
 	CVAR_REGISTER (&playerid);

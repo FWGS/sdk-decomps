@@ -208,9 +208,9 @@ typedef struct cldll_func_dst_s
 	DST_HUD_STUDIO_INTERFACE_FUNC	pStudioInterface;
 } cldll_func_dst_t;
 
-// What the engine hands to F() beside the table.  Counter-Strike 1.4's F() copies 27 words of it
-// and no function of the client reads them: the first 17 members have Counter-Strike 1.6's names
-// (engine/APIProxy.h, modfuncs_s), the count of the unused words behind them is the image's.
+// What the engine hands to F() beside the table.  Counter-Strike 1.5's F() copies 29 words of it (1.4's: 27)
+// and no function of the client reads them: the members are Counter-Strike 1.6's (engine/APIProxy.h,
+// modfuncs_s, 29 words); 1.4's 27 were the first 17 and ten unused words.
 typedef struct modfuncs_s
 {
 	void	(*m_pfnLoadMod)( char *pchModule );
@@ -238,8 +238,12 @@ typedef struct modfuncs_s
 
 	int		m_nVersion;
 
-	int		m_nVoid0;
-	int		m_nVoid1;
+	void	(*m_pfnConnectClient)( int );
+	void	(*m_pfnRecordIP)( unsigned int );
+	void	(*m_pfnPlayerStatus)( unsigned char *, int );
+
+	void	(*m_pfnSetEngineVersion)( int );
+
 	int		m_nVoid2;
 	int		m_nVoid3;
 	int		m_nVoid4;

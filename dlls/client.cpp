@@ -477,7 +477,8 @@ void ProcessKickVote( CBasePlayer *pVotingPlayer, CBasePlayer *pKickPlayer )
 // library has ProcessKickVote in its place)
 
 // Beta 5.0 (leak): the team with fewer players (as CheckWinConditions counted them;
-// Counter-Strike 1.4: either when they are even), else the other one if that is
+// Counter-Strike 1.4: either when they are even; 1.5: then the team with fewer
+// rounds won), else the other one if that is
 // full, else none
 int SelectDefaultTeam( void )
 {
@@ -499,13 +500,25 @@ int SelectDefaultTeam( void )
 	}
 	else
 	{
-		if ( RANDOM_LONG( 0, 1 ) == 0 )
+		// Counter-Strike 1.5: with even teams the one that has won fewer rounds, and only then the coin
+		if ( mp->m_iNumTerroristWins < mp->m_iNumCTWins )
+		{
+			team = TEAM_TERRORIST;
+		}
+		else if ( mp->m_iNumCTWins < mp->m_iNumTerroristWins )
 		{
 			team = TEAM_CT;
 		}
 		else
 		{
-			team = TEAM_TERRORIST;
+			if ( RANDOM_LONG( 0, 1 ) == 0 )
+			{
+				team = TEAM_CT;
+			}
+			else
+			{
+				team = TEAM_TERRORIST;
+			}
 		}
 	}
 

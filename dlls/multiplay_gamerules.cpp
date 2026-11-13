@@ -1577,8 +1577,9 @@ BOOL CHalfLifeMultiplay::IsThereABomber( void )
 //=========================================================
 // IsThereABomb - Counter-Strike 1.4 (Linux symbol; locals'
 // names Counter-Strike 1.6's): a planted C4 or a weapon_c4
-// exists. sic: the walk does not step past a planted C4, so
-// with one in the map the loop does not end (both libraries)
+// exists (1.4, sic: the walk did not step past a planted
+// C4, so with one in the map the loop did not end;
+// Counter-Strike 1.5 stops at the first)
 //=========================================================
 BOOL CHalfLifeMultiplay::IsThereABomb( void )
 {
@@ -1588,7 +1589,7 @@ BOOL CHalfLifeMultiplay::IsThereABomb( void )
 
 	pC4 = (CGrenade *)UTIL_FindEntityByClassname( NULL, "grenade" );
 
-	while ( pC4 )
+	while ( pC4 && !bFoundBomb )	// Counter-Strike 1.5: until one is found (to 1.4 the walk did not end)
 	{
 		if ( !pC4->m_bIsC4 )
 			pC4 = (CGrenade *)UTIL_FindEntityByClassname( pC4, "grenade" );
@@ -1617,6 +1618,7 @@ extern cvar_t sv_restart;	// Counter-Strike 1.4
 extern cvar_t mapvoteratio;	// Counter-Strike 1.4: ProcessMapVote reads the cvar's own value
 extern cvar_t maxrounds;
 extern cvar_t winlimit;
+extern cvar_t fadetoblack;	// Counter-Strike 1.5: FPlayerCanRespawn reads the cvar's own value
 
 //=========================================================
 // TeamFull - Beta 5.0 (leak): a team has as many players as
@@ -2662,8 +2664,8 @@ BOOL CHalfLifeMultiplay :: FPlayerCanRespawn( CBasePlayer *pPlayer )
 {
 	// Beta 5.0 (leak): once a round; not when both teams have players and
 	// the round is more than 20 seconds old; not before an appearance is chosen
-	// Counter-Strike 1.3: the teams are counted here (1.3 only: with mp_fadetoblack a player who is
-	// too late for the round got the black screen at once)
+	// Counter-Strike 1.3: the teams are counted here, and with mp_fadetoblack a player who is too late
+	// for the round gets the black screen at once (not in 1.4; 1.5 reads the cvar's own value)
 	if ( pPlayer->m_iNumSpawns > 0 )
 		return FALSE;
 
@@ -2671,7 +2673,12 @@ BOOL CHalfLifeMultiplay :: FPlayerCanRespawn( CBasePlayer *pPlayer )
 	m_iNumTerrorist = CountTeamPlayers( TEAM_TERRORIST );
 
 	if ( m_iNumTerrorist > 0 && m_iNumCT > 0 && m_flRoundStartTime + 20 < gpGlobals->time )
+	{
+		if ( fadetoblack.value != 0 )
+			UTIL_ScreenFade( pPlayer, Vector( 0, 0, 0 ), 3, 3, 255, FFADE_OUT | FFADE_STAYOUT );
+
 		return FALSE;
+	}
 
 	return pPlayer->m_iMenu != Menu_ChooseAppearance;
 }
