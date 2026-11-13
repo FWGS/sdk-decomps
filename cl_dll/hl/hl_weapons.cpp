@@ -51,6 +51,7 @@ static CBasePlayerWeapon *g_pWpns[ 32 ];
 
 // Counter-Strike's weapon placeholder entities (names ours)
 CUSP	g_USP;
+CELITE	g_ELITE;
 CMP5N	g_MP5N;
 CSG552	g_SG552;
 CAK47	g_AK47;
@@ -390,8 +391,8 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 			m_iShotsFired = 20;
 		}
 
-		if ( m_iShotsFired > 0 )
-			m_iShotsFired--;
+		if ( m_iId == WEAPON_USP || m_iId == WEAPON_GLOCK18 || m_iId == WEAPON_P228 || m_iId == WEAPON_DEAGLE || m_iId == WEAPON_ELITE )
+			m_iShotsFired = 0;
 
 		m_fFireOnEmpty = FALSE;
 
@@ -418,8 +419,8 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 // more of it before CBasePlayer::Killed than the text here gives.  With CBasePlayer's four
 // Vector members (player.h: the implicit constructor of this file's `player` carries their
 // intermediate code) this unused inline gives retail's order with 1 to 12 empty statements in
-// Beta 6.5 (the server job's measurement) and with 0 to 12 in Beta 6.6 (13 does not).  With int
-// arrays in the Vectors' place 6.5 took 14 to 40 and 6.6 26 to 40.
+// Beta 6.5 (the server job's measurement), 0 to 12 in Beta 6.6 and 1 to 9 in Beta 7.0.  With int
+// arrays in the Vectors' place they took 14 to 40, 26 to 40 and 20 to 36.
 // Nothing calls it.
 inline void b65_hlweapons_unknown( void )
 {
@@ -673,6 +674,7 @@ void HUD_InitClientWeapons( void )
 
 	// Allocate slot(s) for each weapon that we are going to be predicting
 	HUD_PrepEntity( &g_USP	, &player );
+	HUD_PrepEntity( &g_ELITE	, &player );
 	HUD_PrepEntity( &g_MP5N	, &player );
 	HUD_PrepEntity( &g_SG552	, &player );
 	HUD_PrepEntity( &g_AK47	, &player );
@@ -724,6 +726,9 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	{
 	case WEAPON_USP:
 		pWeapon = &g_USP;
+		break;
+	case WEAPON_ELITE:
+		pWeapon = &g_ELITE;
 		break;
 	case WEAPON_MP5N:
 		pWeapon = &g_MP5N;

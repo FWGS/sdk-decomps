@@ -626,7 +626,12 @@ int CHudRoundTimer::Draw( float flTime )
 	}
 
 	x = ( ScreenWidth - gHUD.GetSpriteWidth( gHUD.m_HUD_number_0 ) * ( ScreenWidth < 640 ? 5 : 4 ) ) / 2;
-	y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
+
+	// without the suit the timer goes to the top of the screen
+	if ( !( gHUD.m_iWeaponBits & ( 1<<(WEAPON_SUIT) ) ) )
+		y = gHUD.m_iFontHeight;
+	else
+		y = ScreenHeight - gHUD.m_iFontHeight - gHUD.m_iFontHeight / 2;
 
 	// the stopwatch only when there is room for it
 	if ( ScreenWidth >= 400 )

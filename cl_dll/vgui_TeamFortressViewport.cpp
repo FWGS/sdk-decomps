@@ -54,6 +54,11 @@
 #include "vgui_ScorePanel.h"
 
 extern int g_iVisibleMouse;
+
+#define MAX_MENU_STRING	512
+extern char g_szMenuString[MAX_MENU_STRING];
+extern char g_szPrelocalisedMenuString[MAX_MENU_STRING];
+int KB_ConvertString( char *in, char **ppout );
 class CCommandMenu;
 int g_iPlayerClass;
 int g_iTeamNumber;
@@ -532,6 +537,15 @@ TeamFortressViewport::TeamFortressViewport(int x,int y,int wide,int tall) : Pane
 	CreateCommandMenu();
 	CreateServerBrowser();
 	CreateSpectatorMenu();
+	CreateTerroristMenu();
+	CreateCTMenu();
+	CreatePistolMenu();
+	CreateShotgunMenu();
+	CreateEquipmentMenu();
+	CreateMachineGunMenu();
+	CreateRifleMenu();
+	CreateSMGMenu();
+	CreateBuyMenu();
 }
 
 //-----------------------------------------------------------------------------
@@ -547,6 +561,42 @@ void TeamFortressViewport::Initialize( void )
 	if (m_pClassMenu)
 	{
 		m_pClassMenu->Initialize();
+	}
+	if (m_pTerroristMenu)
+	{
+		m_pTerroristMenu->Initialize();
+	}
+	if (m_pCTMenu)
+	{
+		m_pCTMenu->Initialize();
+	}
+	if (m_pPistolMenu)
+	{
+		m_pPistolMenu->Initialize();
+	}
+	if (m_pEquipmentMenu)
+	{
+		m_pEquipmentMenu->Initialize();
+	}
+	if (m_pMachineGunMenu)
+	{
+		m_pMachineGunMenu->Initialize();
+	}
+	if (m_pRifleMenu)
+	{
+		m_pRifleMenu->Initialize();
+	}
+	if (m_pSMGMenu)
+	{
+		m_pSMGMenu->Initialize();
+	}
+	if (m_pShotgunMenu)
+	{
+		m_pShotgunMenu->Initialize();
+	}
+	if (m_pBuyMenu)
+	{
+		m_pBuyMenu->Initialize();
 	}
 	if (m_pScoreBoard)
 	{
@@ -1288,6 +1338,9 @@ void TeamFortressViewport::UpdateSpectatorMenu()
 		if (m_iUser2 > 0)
 		{
 			// Locked onto a target, show the player's name and health
+			if ( g_PlayerExtraInfo[ m_iUser2 ].health < 0 )
+				g_PlayerExtraInfo[ m_iUser2 ].health = 0;
+
 			sprintf(sz, "%s :  %d%(Health)", g_PlayerInfoList[ m_iUser2 ].name, g_PlayerExtraInfo[ m_iUser2 ].health );
 			m_pSpectatorLabel->setText( CHudTextMessage::BufferedLocaliseTextString( sz ) );
 		}
@@ -1503,6 +1556,42 @@ void TeamFortressViewport::ShowVGUIMenu( int iMenu )
 		pNewMenu = ShowClassMenu();
 		break;
 
+	case MENU_TERRORIST:
+		pNewMenu = ShowTerroristMenu();
+		break;
+
+	case MENU_CT:
+		pNewMenu = ShowCTMenu();
+		break;
+
+	case MENU_BUY_PISTOL:
+		pNewMenu = ShowPistolMenu();
+		break;
+
+	case MENU_BUY_SHOTGUN:
+		pNewMenu = ShowShotgunMenu();
+		break;
+
+	case MENU_BUY_ITEM:
+		pNewMenu = ShowEquipmentMenu();
+		break;
+
+	case MENU_BUY_MACHINEGUN:
+		pNewMenu = ShowMachineGunMenu();
+		break;
+
+	case MENU_BUY_RIFLE:
+		pNewMenu = ShowRifleMenu();
+		break;
+
+	case MENU_BUY_SUBMACHINEGUN:
+		pNewMenu = ShowSMGMenu();
+		break;
+
+	case MENU_BUY:
+		pNewMenu = ShowBuyMenu();
+		break;
+
 	default:
 		break;
 	}
@@ -1584,7 +1673,7 @@ CMenuPanel* TeamFortressViewport::ShowTeamMenu()
 void TeamFortressViewport::CreateTeamMenu()
 {
 	// Create the panel
-	m_pTeamMenu = new CTeamMenuPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pTeamMenu = new CCSTeamMenuPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
 	m_pTeamMenu->setParent( this );
 	m_pTeamMenu->setVisible( false );
 }
@@ -1609,6 +1698,204 @@ void TeamFortressViewport::CreateClassMenu()
 	m_pClassMenu = new CClassMenuPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
 	m_pClassMenu->setParent(this);
 	m_pClassMenu->setVisible( false );
+}
+
+//======================================================================================
+// TERRORIST MENU (name ours)
+//======================================================================================
+// Show the Terrorist Menu
+CMenuPanel* TeamFortressViewport::ShowTerroristMenu()
+{
+	// Don't open menus in demo playback
+	if ( gEngfuncs.pDemoAPI->IsPlayingback() )
+		return NULL;
+
+	m_pTerroristMenu->Reset();
+	return m_pTerroristMenu;
+}
+
+void TeamFortressViewport::CreateTerroristMenu()
+{
+	// Create the panel
+	m_pTerroristMenu = new CTerroristMenuPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pTerroristMenu->setParent(this);
+	m_pTerroristMenu->setVisible( false );
+}
+
+//======================================================================================
+// CT MENU (name ours)
+//======================================================================================
+// Show the CT Menu
+CMenuPanel* TeamFortressViewport::ShowCTMenu()
+{
+	// Don't open menus in demo playback
+	if ( gEngfuncs.pDemoAPI->IsPlayingback() )
+		return NULL;
+
+	m_pCTMenu->Reset();
+	return m_pCTMenu;
+}
+
+void TeamFortressViewport::CreateCTMenu()
+{
+	// Create the panel
+	m_pCTMenu = new CCTMenuPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pCTMenu->setParent(this);
+	m_pCTMenu->setVisible( false );
+}
+
+//======================================================================================
+// PISTOL MENU (name ours)
+//======================================================================================
+// Show the Pistol Menu
+CMenuPanel* TeamFortressViewport::ShowPistolMenu()
+{
+	// Don't open menus in demo playback
+	if ( gEngfuncs.pDemoAPI->IsPlayingback() )
+		return NULL;
+
+	m_pPistolMenu->Reset();
+	return m_pPistolMenu;
+}
+
+void TeamFortressViewport::CreatePistolMenu()
+{
+	// Create the panel
+	m_pPistolMenu = new CPistolMenuPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pPistolMenu->setParent(this);
+	m_pPistolMenu->setVisible( false );
+}
+
+//======================================================================================
+// SHOTGUN MENU (name ours)
+//======================================================================================
+// Show the Shotgun Menu
+CMenuPanel* TeamFortressViewport::ShowShotgunMenu()
+{
+	// Don't open menus in demo playback
+	if ( gEngfuncs.pDemoAPI->IsPlayingback() )
+		return NULL;
+
+	m_pShotgunMenu->Reset();
+	return m_pShotgunMenu;
+}
+
+void TeamFortressViewport::CreateShotgunMenu()
+{
+	// Create the panel
+	m_pShotgunMenu = new CShotgunMenuPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pShotgunMenu->setParent(this);
+	m_pShotgunMenu->setVisible( false );
+}
+
+//======================================================================================
+// EQUIPMENT MENU (name ours)
+//======================================================================================
+// Show the Equipment Menu
+CMenuPanel* TeamFortressViewport::ShowEquipmentMenu()
+{
+	// Don't open menus in demo playback
+	if ( gEngfuncs.pDemoAPI->IsPlayingback() )
+		return NULL;
+
+	m_pEquipmentMenu->Reset();
+	return m_pEquipmentMenu;
+}
+
+void TeamFortressViewport::CreateEquipmentMenu()
+{
+	// Create the panel
+	m_pEquipmentMenu = new CEquipmentMenuPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pEquipmentMenu->setParent(this);
+	m_pEquipmentMenu->setVisible( false );
+}
+
+//======================================================================================
+// MACHINEGUN MENU (name ours)
+//======================================================================================
+// Show the MachineGun Menu
+CMenuPanel* TeamFortressViewport::ShowMachineGunMenu()
+{
+	// Don't open menus in demo playback
+	if ( gEngfuncs.pDemoAPI->IsPlayingback() )
+		return NULL;
+
+	m_pMachineGunMenu->Reset();
+	return m_pMachineGunMenu;
+}
+
+void TeamFortressViewport::CreateMachineGunMenu()
+{
+	// Create the panel
+	m_pMachineGunMenu = new CMachineGunMenuPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pMachineGunMenu->setParent(this);
+	m_pMachineGunMenu->setVisible( false );
+}
+
+//======================================================================================
+// RIFLE MENU (name ours)
+//======================================================================================
+// Show the Rifle Menu
+CMenuPanel* TeamFortressViewport::ShowRifleMenu()
+{
+	// Don't open menus in demo playback
+	if ( gEngfuncs.pDemoAPI->IsPlayingback() )
+		return NULL;
+
+	m_pRifleMenu->Reset();
+	return m_pRifleMenu;
+}
+
+void TeamFortressViewport::CreateRifleMenu()
+{
+	// Create the panel
+	m_pRifleMenu = new CRifleMenuPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pRifleMenu->setParent(this);
+	m_pRifleMenu->setVisible( false );
+}
+
+//======================================================================================
+// SMG MENU (name ours)
+//======================================================================================
+// Show the SMG Menu
+CMenuPanel* TeamFortressViewport::ShowSMGMenu()
+{
+	// Don't open menus in demo playback
+	if ( gEngfuncs.pDemoAPI->IsPlayingback() )
+		return NULL;
+
+	m_pSMGMenu->Reset();
+	return m_pSMGMenu;
+}
+
+void TeamFortressViewport::CreateSMGMenu()
+{
+	// Create the panel
+	m_pSMGMenu = new CSMGMenuPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pSMGMenu->setParent(this);
+	m_pSMGMenu->setVisible( false );
+}
+
+//======================================================================================
+// BUY MENU (name ours)
+//======================================================================================
+// Show the Buy Menu
+CMenuPanel* TeamFortressViewport::ShowBuyMenu()
+{
+	// Don't open menus in demo playback
+	if ( gEngfuncs.pDemoAPI->IsPlayingback() )
+		return NULL;
+
+	m_pBuyMenu->Reset();
+	return m_pBuyMenu;
+}
+
+void TeamFortressViewport::CreateBuyMenu()
+{
+	// Create the panel
+	m_pBuyMenu = new CBuyMenuPanel(100, false, 0, 0, ScreenWidth, ScreenHeight);
+	m_pBuyMenu->setParent(this);
+	m_pBuyMenu->setVisible( false );
 }
 
 //======================================================================================
@@ -1812,13 +2099,6 @@ bool TeamFortressViewport::SlotInput( int iSlot )
 // Direct Key Input
 int	TeamFortressViewport::KeyInput( int down, int keynum, const char *pszCurrentBinding )
 {
-	// Enter gets out of Spectator Mode by bringing up the Team Menu
-	if (m_iUser1 && gEngfuncs.Con_IsVisible() == false )
-	{
-		if ( down && (keynum == K_ENTER || keynum == K_KP_ENTER) )
-			ShowVGUIMenu( MENU_TEAM );
-	}
-
 	// Open Text Window?
 	if (m_pCurrentMenu && gEngfuncs.Con_IsVisible() == false)
 	{
@@ -1964,6 +2244,8 @@ int TeamFortressViewport::MsgFunc_Detpack(const char *pszName, int iSize, void *
 
 int TeamFortressViewport::MsgFunc_VGUIMenu(const char *pszName, int iSize, void *pbuf )
 {
+	char *temp = NULL;
+
 	BEGIN_READ( pbuf, iSize );
 
 	int iMenu = READ_BYTE();
@@ -1977,6 +2259,51 @@ int TeamFortressViewport::MsgFunc_VGUIMenu(const char *pszName, int iSize, void 
 
 	// Bring up the menu6
 	ShowVGUIMenu( iMenu );
+
+	// the text menu's own data follows: CHudMenu::MsgFunc_ShowMenu's code, for gHUD.m_Menu
+	gHUD.m_Menu.m_bitsValidSlots = READ_SHORT();
+	int DisplayTime = READ_CHAR();
+	int NeedMore = READ_BYTE();
+
+	if ( DisplayTime > 0 )
+		gHUD.m_Menu.m_flShutoffTime = DisplayTime + gHUD.m_flTime;
+	else
+		gHUD.m_Menu.m_flShutoffTime = -1;
+
+	if ( gHUD.m_Menu.m_bitsValidSlots )
+	{
+		if ( !gHUD.m_Menu.m_fWaitingForMore ) // this is the start of a new menu
+		{
+			strncpy( g_szPrelocalisedMenuString, READ_STRING(), MAX_MENU_STRING );
+		}
+		else
+		{  // append to the current menu string
+			strncat( g_szPrelocalisedMenuString, READ_STRING(), MAX_MENU_STRING - strlen(g_szPrelocalisedMenuString) );
+		}
+		g_szPrelocalisedMenuString[MAX_MENU_STRING-1] = 0;  // ensure null termination (strncat/strncpy does not)
+
+		if ( !NeedMore )
+		{  // we have the whole string, so we can localise it now
+			strcpy( g_szMenuString, gHUD.m_TextMessage.BufferedLocaliseTextString( g_szPrelocalisedMenuString ) );
+
+			// Swap in characters
+			if ( KB_ConvertString( g_szMenuString, &temp ) )
+			{
+				strcpy( g_szMenuString, temp );
+				free( temp );
+			}
+		}
+
+		gHUD.m_Menu.m_fMenuDisplayed = 1;
+		gHUD.m_Menu.m_iFlags |= HUD_ACTIVE;
+	}
+	else
+	{
+		gHUD.m_Menu.m_fMenuDisplayed = 0; // no valid slots means that the menu should be turned off
+		gHUD.m_Menu.m_iFlags &= ~HUD_ACTIVE;
+	}
+
+	gHUD.m_Menu.m_fWaitingForMore = NeedMore;
 
 	return 1;
 }

@@ -163,7 +163,7 @@ void CUSP::PrimaryAttack( void )
 
 void CUSP::USPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 {
-	flCycleTime -= 0.1;
+	flCycleTime -= 0.075;
 
 	m_iShotsFired++;
 
@@ -237,6 +237,8 @@ void CUSP::Reload( void )
 		DefaultReload( USP_MAX_CLIP, USP_RELOAD, 2.7 );
 	else
 		DefaultReload( USP_MAX_CLIP, USP_UNSIL_RELOAD, 2.7 );
+
+	m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
 	m_flAccuracy = 0.98;
 }

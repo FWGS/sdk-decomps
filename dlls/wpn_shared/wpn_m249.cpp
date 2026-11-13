@@ -84,7 +84,7 @@ int CM249::GetItemInfo(ItemInfo *p)
 
 BOOL CM249::Deploy( )
 {
-	m_flAccuracy = 0.95;
+	m_flAccuracy = 0.2;
 	m_iShellOn = 1;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
@@ -96,7 +96,9 @@ BOOL CM249::Deploy( )
 void CM249::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		M249Fire( m_flAccuracy * 0.5, 0.1, FALSE );
+		M249Fire( m_flAccuracy * 0.65, 0.1, FALSE );
+	else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
+		M249Fire( m_flAccuracy * 0.2, 0.1, FALSE );
 	else
 		M249Fire( m_flAccuracy * 0.03, 0.1, FALSE );
 }
@@ -167,8 +169,9 @@ void CM249::Reload( void )
 		return;
 
 	DefaultReload( M249_MAX_CLIP, M249_RELOAD, 4.7 );
+	m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
-	m_flAccuracy = 0;
+	m_flAccuracy = 0.2;
 	m_bDelayFire = false;
 	m_iShotsFired = 0;
 }

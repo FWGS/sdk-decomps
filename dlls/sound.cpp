@@ -263,22 +263,26 @@ void CAmbientGeneric :: Restart( void )
 
 	SetUse ( ToggleUse );
 	
-	m_fActive = TRUE;
+	m_fActive = FALSE;
 
 	UTIL_EmitAmbientSound ( ENT(pev), pev->origin, szSoundFile, 
 			0, 0, SND_STOP, 0);
 
 	InitModulationParms();
 
-	UTIL_EmitAmbientSound ( ENT(pev), pev->origin, szSoundFile, 
-			(m_dpv.vol * 0.01), m_flAttenuation, 0, m_dpv.pitch);
-
 	pev->nextthink = gpGlobals->time + 0.1;
 
+	// Counter-Strike Beta 7.0: only a looping sound is started again
 	if ( FBitSet ( pev->spawnflags, AMBIENT_SOUND_NOT_LOOPING ) )
 		m_fLooping = FALSE;
 	else
+	{
 		m_fLooping = TRUE;
+		m_fActive = TRUE;
+
+		UTIL_EmitAmbientSound ( ENT(pev), pev->origin, szSoundFile, 
+				(m_dpv.vol * 0.01), m_flAttenuation, 0, m_dpv.pitch);
+	}
 }
 
 void CAmbientGeneric :: Precache( void )

@@ -99,7 +99,7 @@ void CG3SG1::SecondaryAttack( void )
 
 	m_pPlayer->ResetMaxSpeed();
 
-	EMIT_SOUND( ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/zoom.wav", 1, ATTN_NORM );
+	EMIT_SOUND( ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/zoom.wav", 0.2, 2.4 );
 	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.3;
 }
 
@@ -180,7 +180,11 @@ void CG3SG1::Reload( void )
 	if ( m_pPlayer->ammo_762nato <= 0 )
 		return;
 
-	if ( DefaultReload( G3SG1_MAX_CLIP, G3SG1_RELOAD, 4.7 ) )
+	int iResult = DefaultReload( G3SG1_MAX_CLIP, G3SG1_RELOAD, 4.7 );	// name ours
+
+	m_pPlayer->SetAnimation( PLAYER_RELOAD );
+
+	if ( iResult )
 	{
 		if ( m_pPlayer->pev->fov != 90 )
 		{

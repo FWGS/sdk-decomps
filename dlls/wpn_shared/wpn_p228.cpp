@@ -106,7 +106,7 @@ void CP228::PrimaryAttack( void )
 
 void CP228::P228Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 {
-	flCycleTime -= 0.075;
+	flCycleTime -= 0.05;
 
 	m_iShotsFired++;
 
@@ -175,6 +175,7 @@ void CP228::Reload( void )
 		return;
 
 	DefaultReload( P228_MAX_CLIP, P228_RELOAD, 2.7 );
+	m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
 	m_flAccuracy = 0.98;
 }

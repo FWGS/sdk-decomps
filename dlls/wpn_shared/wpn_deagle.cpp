@@ -171,6 +171,7 @@ void CDEAGLE::Reload( void )
 		return;
 
 	DefaultReload( DEAGLE_MAX_CLIP, DEAGLE_RELOAD, 2.2 );
+	m_pPlayer->SetAnimation( PLAYER_RELOAD );
 	m_flAccuracy = 0.98;
 }
 

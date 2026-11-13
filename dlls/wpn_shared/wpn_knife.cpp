@@ -35,6 +35,10 @@ enum knife_e {		// names ours
 	KNIFE_ATTACK1HIT,
 	KNIFE_ATTACK2HIT,
 	KNIFE_DRAW,
+	KNIFE_STABHIT,
+	KNIFE_STABMISS,
+	KNIFE_MIDATTACK1HIT,
+	KNIFE_MIDATTACK2HIT,
 };
 
 
@@ -61,7 +65,10 @@ void CKnife::Precache( void )
 	PRECACHE_SOUND("weapons/knife_hit4.wav");
 	PRECACHE_SOUND("weapons/knife_slash1.wav");
 	PRECACHE_SOUND("weapons/knife_slash2.wav");
+	PRECACHE_SOUND("weapons/knife_stab.wav");
 	PRECACHE_SOUND("weapons/knife_hitwall1.wav");
+
+	m_usKnife = PRECACHE_EVENT( 1, "events/knife.sc" );
 }
 
 int CKnife::GetItemInfo(ItemInfo *p)
@@ -83,7 +90,7 @@ int CKnife::GetItemInfo(ItemInfo *p)
 
 BOOL CKnife::Deploy( )
 {
-	EMIT_SOUND( ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/knife_deploy1.wav", 1, ATTN_NORM );
+	EMIT_SOUND( ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/knife_deploy1.wav", 0.3, 2.4 );
 
 	if ( m_pPlayer->m_bLeftHanded == true )
 		return DefaultDeploy( "models/v_knife.mdl", "models/p_knife.mdl", KNIFE_DRAW, "crowbar", UseDecrement() ? 1 : 0 );
@@ -94,6 +101,11 @@ BOOL CKnife::Deploy( )
 void CKnife::Holster( int skiplocal /* = 0 */ )
 {
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
+}
+
+void CKnife::WeaponAnimation( int iAnimation )
+{
+	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usKnife, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, 0.0, 0.0, iAnimation, 2, 3, 4 );
 }
 
 
@@ -152,6 +164,13 @@ void CKnife::PrimaryAttack()
 }
 
 
+void CKnife::SecondaryAttack()
+{
+	Stab( 1 );
+	pev->nextthink = UTIL_WeaponTimeBase() + 0.35;
+}
+
+
 void CKnife::Smack( )
 {
 	DecalGunshot( &m_trHit, BULLET_PLAYER_CROWBAR, false, m_pPlayer->pev, false );
@@ -172,7 +191,7 @@ int CKnife::Swing( int fFirst )
 
 	UTIL_MakeVectors (m_pPlayer->pev->v_angle);
 	Vector vecSrc	= m_pPlayer->GetGunPosition( );
-	Vector vecEnd	= vecSrc + gpGlobals->v_forward * 48;
+	Vector vecEnd	= vecSrc + gpGlobals->v_forward * 65;
 
 	UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, ENT( m_pPlayer->pev ), &tr );
 
@@ -195,14 +214,29 @@ int CKnife::Swing( int fFirst )
 		if (fFirst)
 		{
 			// miss
-			switch( (m_iSwing++) % 2 )
+			if ( m_flNextPrimaryAttack + 0.4 < UTIL_WeaponTimeBase() )
 			{
-			case 0:
-				SendWeaponAnim( KNIFE_ATTACK1HIT ); break;
-			case 1:
-				SendWeaponAnim( KNIFE_ATTACK2HIT ); break;
+				switch( (m_iSwing++) % 2 )
+				{
+				case 0:
+					SendWeaponAnim( KNIFE_ATTACK1HIT ); break;
+				case 1:
+					SendWeaponAnim( KNIFE_ATTACK2HIT ); break;
+				}
 			}
-			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.6;
+			else
+			{
+				switch( (m_iSwing++) % 2 )
+				{
+				case 0:
+					SendWeaponAnim( KNIFE_MIDATTACK1HIT ); break;
+				case 1:
+					SendWeaponAnim( KNIFE_MIDATTACK2HIT ); break;
+				}
+			}
+
+			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.35;
+			m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.5;
 
 			// play wiff or swish sound
 			if ( RANDOM_LONG(0,1) )
@@ -221,31 +255,45 @@ int CKnife::Swing( int fFirst )
 
 		CBaseEntity *pEntity = CBaseEntity::Instance(tr.pHit);
 
-		switch( (m_iSwing++) % 2 )
+		if ( m_flNextPrimaryAttack + 0.4 < UTIL_WeaponTimeBase() )
 		{
-		case 0:
-			SendWeaponAnim( KNIFE_ATTACK1HIT ); break;
-		case 1:
-			SendWeaponAnim( KNIFE_ATTACK2HIT ); break;
+			switch( (m_iSwing++) % 2 )
+			{
+			case 0:
+				SendWeaponAnim( KNIFE_ATTACK1HIT ); break;
+			case 1:
+				SendWeaponAnim( KNIFE_ATTACK2HIT ); break;
+			}
+		}
+		else
+		{
+			switch( (m_iSwing++) % 2 )
+			{
+			case 0:
+				SendWeaponAnim( KNIFE_MIDATTACK1HIT ); break;
+			case 1:
+				SendWeaponAnim( KNIFE_MIDATTACK2HIT ); break;
+			}
 		}
 
 		// player "shoot" animation
 		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
 		ClearMultiDamage( );
-		if ( m_flNextPrimaryAttack + 1 < UTIL_WeaponTimeBase() )
+		if ( m_flNextPrimaryAttack + 0.4 < UTIL_WeaponTimeBase() )
 		{
 			// first swing does full damage
-			pEntity->TraceAttack(m_pPlayer->pev, 40, gpGlobals->v_forward, &tr, DMG_NEVERGIB | DMG_BULLET ); 
+			pEntity->TraceAttack(m_pPlayer->pev, 20, gpGlobals->v_forward, &tr, DMG_NEVERGIB | DMG_BULLET ); 
 		}
 		else
 		{
 			// subsequent swings do less
-			pEntity->TraceAttack(m_pPlayer->pev, 30, gpGlobals->v_forward, &tr, DMG_NEVERGIB | DMG_BULLET ); 
+			pEntity->TraceAttack(m_pPlayer->pev, 15, gpGlobals->v_forward, &tr, DMG_NEVERGIB | DMG_BULLET ); 
 		}	
 		ApplyMultiDamage( m_pPlayer->pev, m_pPlayer->pev );
 
 		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.4;
+		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.5;
 
 		// play thwack, smack, or dong sound
 		float flVol = 1.0;
@@ -267,6 +315,122 @@ int CKnife::Swing( int fFirst )
 				case 3:
 					EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/knife_hit4.wav", 1, ATTN_NORM); break;
 				}
+				m_pPlayer->m_iWeaponVolume = KNIFE_BODYHIT_VOLUME;
+				if (!pEntity->IsAlive() )
+					return TRUE;
+				else
+					flVol = 0.1;
+
+				fHitWorld = FALSE;
+			}
+		}
+
+		// play texture hit sound
+		// UNDONE: Calculate the correct point of intersection when we hit with the hull instead of the line
+
+		if (fHitWorld)
+		{
+			float fvolbar = TEXTURETYPE_PlaySound(&tr, vecSrc, vecSrc + (vecEnd-vecSrc)*2, BULLET_PLAYER_CROWBAR);
+
+			fvolbar = 1;
+
+			// also play knife strike
+			switch( RANDOM_LONG(0,1) )
+			{
+			case 0:
+				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/knife_hitwall1.wav", fvolbar, ATTN_NORM, 0, 98 + RANDOM_LONG(0,3)); 
+				break;
+			case 1:
+				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/knife_hitwall1.wav", fvolbar, ATTN_NORM, 0, 98 + RANDOM_LONG(0,3)); 
+				break;
+			}
+		}
+
+		// delay the decal a bit
+		m_trHit = tr;
+		SetThink( Smack );
+		pev->nextthink = UTIL_WeaponTimeBase() + 0.2;
+
+		m_pPlayer->m_iWeaponVolume = flVol * KNIFE_WALLHIT_VOLUME;
+	}
+	return fDidHit;
+}
+
+
+int CKnife::Stab( int fFirst )
+{
+	int fDidHit = FALSE;
+
+	TraceResult tr;
+
+	UTIL_MakeVectors (m_pPlayer->pev->v_angle);
+	Vector vecSrc	= m_pPlayer->GetGunPosition( );
+	Vector vecEnd	= vecSrc + gpGlobals->v_forward * 32;
+
+	UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, ENT( m_pPlayer->pev ), &tr );
+
+	if ( tr.flFraction >= 1.0 )
+	{
+		UTIL_TraceHull( vecSrc, vecEnd, dont_ignore_monsters, head_hull, ENT( m_pPlayer->pev ), &tr );
+		if ( tr.flFraction < 1.0 )
+		{
+			// Calculate the point of intersection of the line (or hull) and the object we hit
+			// This is and approximation of the "best" intersection
+			CBaseEntity *pHit = CBaseEntity::Instance( tr.pHit );
+			if ( !pHit || pHit->IsBSPModel() )
+				FindHullIntersection( vecSrc, tr, VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX, m_pPlayer->edict() );
+			vecEnd = tr.vecEndPos;	// This is the point on the actual surface (the hull could have hit space)
+		}
+	}
+
+	if ( tr.flFraction >= 1.0 )
+	{
+		if (fFirst)
+		{
+			// miss
+			SendWeaponAnim( KNIFE_STABMISS );
+
+			m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 1;
+			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1;
+
+			// play wiff or swish sound
+			if ( RANDOM_LONG(0,1) )
+				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/knife_slash1.wav", 1, ATTN_NORM, 0, 94);
+			else
+				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/knife_slash2.wav", 1, ATTN_NORM, 0, 94);
+
+			// player "shoot" animation
+			m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
+		}
+	}
+	else
+	{
+		// hit
+		fDidHit = TRUE;
+
+		CBaseEntity *pEntity = CBaseEntity::Instance(tr.pHit);
+
+		SendWeaponAnim( KNIFE_STABHIT );
+
+		// player "shoot" animation
+		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
+
+		ClearMultiDamage( );
+		pEntity->TraceAttack(m_pPlayer->pev, 65, gpGlobals->v_forward, &tr, DMG_NEVERGIB | DMG_BULLET ); 
+		ApplyMultiDamage( m_pPlayer->pev, m_pPlayer->pev );
+
+		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 1.1;
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.1;
+
+		// play thwack, smack, or dong sound
+		float flVol = 1.0;
+		int fHitWorld = TRUE;
+
+		if (pEntity)
+		{
+			if (pEntity->Classify() != CLASS_NONE && pEntity->Classify() != CLASS_MACHINE)
+			{
+				EMIT_SOUND(ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/knife_stab.wav", 1, ATTN_NORM);
 				m_pPlayer->m_iWeaponVolume = KNIFE_BODYHIT_VOLUME;
 				if (!pEntity->IsAlive() )
 					return TRUE;

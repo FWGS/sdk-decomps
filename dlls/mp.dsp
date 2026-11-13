@@ -356,6 +356,10 @@ SOURCE=.\util.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\vehicle.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\weapons.cpp
 # End Source File
 # Begin Source File
@@ -381,6 +385,10 @@ SOURCE=.\wpn_shared\wpn_c4.cpp
 # Begin Source File
 
 SOURCE=.\wpn_shared\wpn_deagle.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\wpn_shared\wpn_elite.cpp
 # End Source File
 # Begin Source File
 

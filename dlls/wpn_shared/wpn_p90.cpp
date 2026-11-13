@@ -83,7 +83,7 @@ int CP90::GetItemInfo(ItemInfo *p)
 
 BOOL CP90::Deploy( )
 {
-	m_flAccuracy = 0;
+	m_flAccuracy = 0.2;
 	m_iShellOn = 1;
 	m_bDelayFire = false;
 
@@ -96,7 +96,7 @@ BOOL CP90::Deploy( )
 void CP90::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		P90Fire( m_flAccuracy * 0.4, 0.066, FALSE );
+		P90Fire( m_flAccuracy * 0.5, 0.066, FALSE );
 	else if ( m_pPlayer->pev->velocity.Length2D() > 170 )
 		P90Fire( m_flAccuracy * 0.115, 0.066, FALSE );
 	else
@@ -108,7 +108,7 @@ void CP90::P90Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	m_bDelayFire = true;
 	m_iShotsFired++;
 
-	m_flAccuracy = ( ( m_iShotsFired * m_iShotsFired * m_iShotsFired ) / 195 ) + 0.45;
+	m_flAccuracy = ( ( m_iShotsFired * m_iShotsFired ) / 175 ) + 0.45;
 
 	if ( m_flAccuracy > 1 )
 		m_flAccuracy = 1;
@@ -141,7 +141,7 @@ void CP90::P90Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	Vector vecSrc = m_pPlayer->GetGunPosition( );
 	Vector vecDir;	// sic: unused (an SDK leftover); without it the x87 operands of the event's parameters come in another order
 
-	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_57MM, 22, 0.885, NULL, false );
+	m_pPlayer->FireBullets3( vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, 1, BULLET_PLAYER_57MM, 20, 0.885, NULL, false );
 
 	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFireP90, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, m_pPlayer->pev->punchangle.x, m_pPlayer->pev->punchangle.y, (int)(flSpread * 10000), (int)(m_pPlayer->pev->punchangle.z * 10000), 5, m_pPlayer->m_bLeftHanded != false );
 
@@ -158,9 +158,9 @@ void CP90::P90Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
 		KickBack( 0.65, 0.35, 0.25, 0.03, 4.25, 2.5, 3 );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
-		KickBack( 0.575, 0.25, 0.125, 0.02, 3.5, 1, 8 );
+		KickBack( 0.275, 0.2, 0.125, 0.02, 3, 1, 8 );
 	else
-		KickBack( 0.6, 0.275, 0.125, 0.02, 3.75, 1.25, 6 );
+		KickBack( 0.3, 0.225, 0.125, 0.02, 3.25, 1.25, 6 );
 }
 
 void CP90::Reload( void )
@@ -169,8 +169,9 @@ void CP90::Reload( void )
 		return;
 
 	DefaultReload( P90_MAX_CLIP, P90_RELOAD, 3.4 );
+	m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
-	m_flAccuracy = 0;
+	m_flAccuracy = 0.2;
 }
 
 void CP90::WeaponIdle( void )

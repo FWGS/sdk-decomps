@@ -120,6 +120,78 @@ public:
 	float		m_flVolume;
 	float		m_flBank;
 	float		m_oldSpeed;
+	float		m_fTurnAngle;				// Counter-Strike Beta 7.0: these three (0xc0 to 0xc8) are Counter-Strike 1.6's names;
+	float		m_flSteeringWheelDecay;		// no code of Beta 7.0 reads them (the vehicle's own are in CFuncVehicle)
+	float		m_flAcceleratorDecay;
+
+private:
+	unsigned short m_usAdjustPitch;
+};
+
+// Counter-Strike Beta 7.0: the drivable vehicle (vehicle.cpp), written from
+// CFuncTrackTrain. Member names are Counter-Strike 1.6's (its class has the
+// six corner vectors, the surface normal, the direction and the driver as
+// members too; Beta 7.0's Next keeps them as locals).
+class CFuncVehicle : public CBaseEntity
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+
+	void Blocked( CBaseEntity *pOther );
+	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void KeyValue( KeyValueData* pkvd );
+
+	void EXPORT Next( void );
+	void EXPORT Find( void );
+	void EXPORT NearestPath( void );
+	void EXPORT DeadEnd( void );
+
+	void		NextThink( float thinkTime, BOOL alwaysThink );
+	int			Classify( void );
+
+	void SetTrack( CPathTrack *track ) { m_ppath = track->Nearest(pev->origin); }
+	void SetControls( entvars_t *pevControls );
+	BOOL OnControls( entvars_t *pev );
+
+	void StopSound ( void );
+	void UpdateSound ( void );
+	
+	static CFuncVehicle *Instance( edict_t *pent );
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+	
+	static	TYPEDESCRIPTION m_SaveData[];
+	virtual int	ObjectCaps( void ) { return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | FCAP_DIRECTIONAL_USE; }
+
+	virtual void	OverrideReset( void );
+
+	void Restart( void );
+
+	CPathTrack	*m_ppath;
+	float		m_length;
+	float		m_width;
+	float		m_height;
+	float		m_speed;
+	float		m_dir;
+	float		m_startSpeed;
+	Vector		m_controlMins;
+	Vector		m_controlMaxs;
+	int			m_soundPlaying;
+	int			m_sounds;
+	int			m_acceleration;
+	float		m_flVolume;
+	float		m_flBank;
+	float		m_oldSpeed;
+	int			m_iTurnAngle;
+	float		m_flSteeringWheelDecay;
+	float		m_flAcceleratorDecay;
+	float		m_flTurnStartTime;
+	float		m_flLaunchTime;
+	float		m_flLastNormalZ;
+	float		m_flCanTurnNow;
+	float		m_flUpdateSound;
 
 private:
 	unsigned short m_usAdjustPitch;

@@ -262,6 +262,11 @@ void CopyToBodyQue(entvars_t *pev)
 	g_pBodyQueueHead = pevHead->owner;
 }
 
+// Counter-Strike Beta 7.0 (Linux symbol ClearQueue__Fv): an empty function, never called
+void ClearQueue( void )
+{
+}
+
 
 CGlobalState::CGlobalState( void )
 {

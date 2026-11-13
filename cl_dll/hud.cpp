@@ -269,6 +269,12 @@ void CHud :: Init( void )
 	cl_lw = gEngfuncs.pfnGetCvarPointer( "cl_lw" );
 	m_pCvarStealMouse = CVAR_CREATE( "hud_capturemouse", "1", FCVAR_ARCHIVE );
 
+	// the renderer's settings at startup, which Redraw holds them to
+	m_flTexSort = CVAR_GET_FLOAT( "gl_texsort" );
+	if ( CVAR_GET_FLOAT( "gl_alphamin" ) == 0 )
+		m_bNoAlphaMin = true;
+	m_flZMax = CVAR_GET_FLOAT( "gl_zmax" );
+
 	m_pSpriteList = NULL;
 
 	// Clear any old HUD list

@@ -154,6 +154,7 @@ void CXM1014::Reload( void )
 	// check to see if we're ready to reload
 	if (m_fInSpecialReload == 0)
 	{
+		m_pPlayer->SetAnimation( PLAYER_RELOAD );
 		SendWeaponAnim( XM1014_START_RELOAD, UseDecrement() ? 1 : 0 );
 		m_fInSpecialReload = 1;
 		m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.55;

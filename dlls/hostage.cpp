@@ -646,8 +646,13 @@ void CHostage::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useT
 
 		// Beta 3.0: the leader's use makes a following hostage stay; any
 		// other use, or a new leader, makes it follow
+		// Beta 7.0: it stays by losing its leader (state 2: no leader within
+		// reach) rather than by the stopped state
 		if ( pActivator == m_hTargetEnt && m_fStopped == FALSE )
-			m_fStopped = TRUE;
+		{
+			m_hTargetEnt = NULL;
+			m_fStopped = 2;
+		}
 		else
 			m_fStopped = FALSE;
 

@@ -96,7 +96,7 @@ int CM4A1::GetItemInfo(ItemInfo *p)
 
 BOOL CM4A1::Deploy( )
 {
-	m_flAccuracy = 0;
+	m_flAccuracy = 0.2;
 	m_bDelayFire = true;
 	m_iShellOn = 1;
 
@@ -141,14 +141,18 @@ void CM4A1::PrimaryAttack( void )
 	if ( !( m_iWeaponState & WPNSTATE_M4A1_SILENCED ) )
 	{
 		if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-			M4A1Fire( m_flAccuracy * 0.25, 0.0875, FALSE );
+			M4A1Fire( m_flAccuracy * 0.35, 0.0875, FALSE );
+		else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
+			M4A1Fire( m_flAccuracy * 0.09, 0.0875, FALSE );
 		else
 			M4A1Fire( m_flAccuracy * 0.02, 0.0875, FALSE );
 	}
 	else
 	{
 		if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-			M4A1Fire( m_flAccuracy * 0.275, 0.0875, FALSE );
+			M4A1Fire( m_flAccuracy * 0.4, 0.0875, FALSE );
+		else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
+			M4A1Fire( m_flAccuracy * 0.09, 0.0875, FALSE );
 		else
 			M4A1Fire( m_flAccuracy * 0.025, 0.0875, FALSE );
 	}
@@ -216,9 +220,9 @@ void CM4A1::M4A1Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
 		KickBack( 1.2, 0.5, 0.23, 0.15, 5.5, 3.5, 6 );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
-		KickBack( 0.55, 0.3, 0.2, 0.0125, 4.5, 2.75, 10 );
+		KickBack( 0.6, 0.3, 0.2, 0.0125, 4.5, 2.75, 7 );
 	else
-		KickBack( 0.6, 0.35, 0.25, 0.015, 4.5, 3.0, 10 );
+		KickBack( 0.65, 0.35, 0.25, 0.015, 4.5, 3.0, 7 );
 }
 
 void CM4A1::Reload( void )
@@ -231,7 +235,9 @@ void CM4A1::Reload( void )
 	else
 		DefaultReload( M4A1_MAX_CLIP, M4A1_RELOAD, 3.05 );
 
-	m_flAccuracy = 0;
+	m_pPlayer->SetAnimation( PLAYER_RELOAD );
+
+	m_flAccuracy = 0.2;
 	m_iShotsFired = 0;
 	m_bDelayFire = false;
 }

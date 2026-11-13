@@ -166,6 +166,7 @@ void CMAC10::Reload( void )
 		return;
 
 	DefaultReload( MAC10_MAX_CLIP, MAC10_RELOAD, 3.15 );
+	m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
 	m_flAccuracy = 0;
 }

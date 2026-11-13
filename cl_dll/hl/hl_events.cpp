@@ -28,6 +28,7 @@ void EV_FirePython( struct event_args_s *args  );
 void EV_FireGauss( struct event_args_s *args  );
 void EV_SpinGauss( struct event_args_s *args  );
 void EV_TrainPitchAdjust( struct event_args_s *args );
+void EV_VehiclePitchAdjust( struct event_args_s *args );
 
 // Counter-Strike (names ours: the SDK's pattern on the event files' names)
 void EV_FireUSP( struct event_args_s *args );
@@ -49,6 +50,9 @@ void EV_FireAWP( struct event_args_s *args );
 void EV_FireSG552( struct event_args_s *args );
 void EV_FireTMP( struct event_args_s *args );
 void EV_CreateSmoke( struct event_args_s *args );
+void EV_FireEliteLeft( struct event_args_s *args );
+void EV_FireEliteRight( struct event_args_s *args );
+void EV_Knife( struct event_args_s *args );
 }
 
 /*
@@ -66,6 +70,8 @@ That was what we were going to do, but we ran out of time...oh well.
 */
 void Game_HookEvents( void )
 {
+	char szCreateSmoke[22];	// name ours: the image spells this event's name out byte by byte
+
 	gEngfuncs.pfnHookEvent( "events/glock1.sc",					EV_FireGlock1 );
 	gEngfuncs.pfnHookEvent( "events/glock2.sc",					EV_FireGlock2 );
 	gEngfuncs.pfnHookEvent( "events/shotgun1.sc",				EV_FireShotGunSingle );
@@ -75,6 +81,7 @@ void Game_HookEvents( void )
 	gEngfuncs.pfnHookEvent( "events/gauss.sc",					EV_FireGauss );
 	gEngfuncs.pfnHookEvent( "events/gaussspin.sc",				EV_SpinGauss );
 	gEngfuncs.pfnHookEvent( "events/train.sc",					EV_TrainPitchAdjust );
+	gEngfuncs.pfnHookEvent( "events/vehicle.sc",				EV_VehiclePitchAdjust );
 	gEngfuncs.pfnHookEvent( "events/usp.sc",					EV_FireUSP );
 	gEngfuncs.pfnHookEvent( "events/mp5n.sc",					EV_FireMP5N );
 	gEngfuncs.pfnHookEvent( "events/ak47.sc",					EV_FireAK47 );
@@ -93,5 +100,30 @@ void Game_HookEvents( void )
 	gEngfuncs.pfnHookEvent( "events/sg552.sc",					EV_FireSG552 );
 	gEngfuncs.pfnHookEvent( "events/tmp.sc",					EV_FireTMP );
 	gEngfuncs.pfnHookEvent( "events/xm1014.sc",					EV_FireXM1014 );
-	gEngfuncs.pfnHookEvent( "events/createsmoke.sc",			EV_CreateSmoke );
+	gEngfuncs.pfnHookEvent( "events/elite_left.sc",				EV_FireEliteLeft );
+	gEngfuncs.pfnHookEvent( "events/elite_right.sc",				EV_FireEliteRight );
+	gEngfuncs.pfnHookEvent( "events/knife.sc",					EV_Knife );
+	szCreateSmoke[0] = 'e';
+	szCreateSmoke[1] = 'v';
+	szCreateSmoke[2] = 'e';
+	szCreateSmoke[3] = 'n';
+	szCreateSmoke[4] = 't';
+	szCreateSmoke[5] = 's';
+	szCreateSmoke[6] = '/';
+	szCreateSmoke[7] = 'c';
+	szCreateSmoke[8] = 'r';
+	szCreateSmoke[9] = 'e';
+	szCreateSmoke[10] = 'a';
+	szCreateSmoke[11] = 't';
+	szCreateSmoke[12] = 'e';
+	szCreateSmoke[13] = 's';
+	szCreateSmoke[14] = 'm';
+	szCreateSmoke[15] = 'o';
+	szCreateSmoke[16] = 'k';
+	szCreateSmoke[17] = 'e';
+	szCreateSmoke[18] = '.';
+	szCreateSmoke[19] = 's';
+	szCreateSmoke[20] = 'c';
+	szCreateSmoke[21] = 0;
+	gEngfuncs.pfnHookEvent( szCreateSmoke,					EV_CreateSmoke );
 }

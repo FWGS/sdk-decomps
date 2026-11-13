@@ -152,13 +152,13 @@ void CMP5N::MP5NFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2;
 
 	if ( m_pPlayer->pev->velocity.Length2D() > 0 )
-		KickBack( 0.6, 0.275, 0.2, 0.03, 3.25, 2.0, 10 );
+		KickBack( 0.5, 0.275, 0.2, 0.03, 3.0, 2.0, 10 );
 	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
 		KickBack( 0.7, 0.375, 0.25, 0.0325, 4.0, 2.0, 10 );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
-		KickBack( 0.275, 0.15, 0.1, 0.015, 2.5, 1.0, 10 );
+		KickBack( 0.225, 0.15, 0.1, 0.015, 2.0, 1.0, 10 );
 	else
-		KickBack( 0.3, 0.175, 0.125, 0.02, 2.75, 1.25, 10 );
+		KickBack( 0.25, 0.175, 0.125, 0.02, 2.25, 1.25, 10 );
 }
 
 void CMP5N::Reload( void )
@@ -167,6 +167,7 @@ void CMP5N::Reload( void )
 		return;
 
 	DefaultReload( MP5N_MAX_CLIP, MP5N_RELOAD, 2.63 );
+	m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
 	m_flAccuracy = 0;
 }

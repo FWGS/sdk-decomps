@@ -402,12 +402,6 @@ void ScorePanel::SortTeams()
 		if ( j > m_iNumTeams )  // player is not in a team, skip to the next guy
 			continue;
 
-		if ( !g_TeamInfo[j].scores_overriden )
-		{
-			g_TeamInfo[j].frags += g_PlayerExtraInfo[i].frags;
-			g_TeamInfo[j].deaths += g_PlayerExtraInfo[i].deaths;
-		}
-
 		g_TeamInfo[j].ping += g_PlayerInfoList[i].ping;
 		g_TeamInfo[j].packetloss += g_PlayerInfoList[i].packetloss;
 

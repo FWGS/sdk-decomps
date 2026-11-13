@@ -108,7 +108,7 @@ void CSCOUT::SecondaryAttack( void )
 
 	m_pPlayer->ResetMaxSpeed();
 
-	EMIT_SOUND( ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/zoom.wav", 1, ATTN_NORM );
+	EMIT_SOUND( ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/zoom.wav", 0.2, 2.4 );
 
 	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.3;
 }
@@ -116,13 +116,13 @@ void CSCOUT::SecondaryAttack( void )
 void CSCOUT::PrimaryAttack( void )
 {
 	if ( m_pPlayer->pev->velocity.Length2D() > 170 )
-		SCOUTFire( 0.075, 1.35, FALSE );
+		SCOUTFire( 0.075, 1.25, FALSE );
 	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		SCOUTFire( 0.1, 1.35, FALSE );
+		SCOUTFire( 0.1, 1.25, FALSE );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
-		SCOUTFire( 0, 1.35, FALSE );
+		SCOUTFire( 0, 1.25, FALSE );
 	else
-		SCOUTFire( 0.007, 1.35, FALSE );
+		SCOUTFire( 0.007, 1.25, FALSE );
 }
 
 void CSCOUT::SCOUTFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
@@ -192,6 +192,8 @@ void CSCOUT::Reload( void )
 			SecondaryAttack();
 		}
 	}
+
+	m_pPlayer->SetAnimation( PLAYER_RELOAD );
 }
 
 void CSCOUT::WeaponIdle( void )

@@ -1683,6 +1683,15 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 FireBullets3
 
 One bullet that loses damage with distance and goes on through what it hits.
+
+Beta 7.0: power 7.62 mm 39 [36], 5.56 mm 35 [45], .338 45 [30], .357 SIG 25
+[30]; 5.7 mm reaches 2000 [2500]. A wall takes the power to 15% (metal), 25%
+(concrete), 50% (grate, vent), 65% (tile), 40% (computer); wood no longer adds
+to it. Behind a wall the bullet keeps a share of its damage that depends on
+the material (flDamageModifier, Counter-Strike 1.6's name: 0.5, metal 0.2,
+grate 0.4, vent and computer 0.45, tile 0.3, wood 0.6; 6.6: 0.6 always) and
+half of the distance it had left (6.6: half of the whole); through anything
+else it restarts 42 units on [32] with 75% of what was left [70% of the whole].
 ================
 */
 void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iPenetration, int iBulletType, int iDamage, float flRangeModifier, entvars_t *pevAttacker, bool bPistol )
@@ -1707,6 +1716,8 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 	// than the statements below make: 14 to 21 dead stores (measured: 13 and 22 give
 	// other code; where they stand does not matter). What the text was cannot be
 	// read from the image.
+	// Beta 7.0's text (the damage modifier, the new numbers) takes 13 to 20 (12 and
+	// 21 give other code): the 14 here serve Betas 6.5, 6.6 and 7.0.
 	int iStandIn;
 	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
 	iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0; iStandIn = 0;
@@ -1732,27 +1743,27 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 		iSparksAmount = 20;
 		break;
 	case BULLET_PLAYER_762MM:
-		iPenetrationPower = 36;
+		iPenetrationPower = 39;
 		flPenetrationDistance = 5000;
 		iSparksAmount = 30;
 		break;
 	case BULLET_PLAYER_556MM:
-		iPenetrationPower = 45;
+		iPenetrationPower = 35;
 		flPenetrationDistance = 4000;
 		iSparksAmount = 30;
 		break;
 	case BULLET_PLAYER_338MAG:
-		iPenetrationPower = 30;
+		iPenetrationPower = 45;
 		flPenetrationDistance = 8000;
 		iSparksAmount = 30;
 		break;
 	case BULLET_PLAYER_57MM:
 		iPenetrationPower = 30;
-		flPenetrationDistance = 2500;
+		flPenetrationDistance = 2000;
 		iSparksAmount = 20;
 		break;
 	case BULLET_PLAYER_357SIG:	// Beta 4.0: the P228's
-		iPenetrationPower = 30;
+		iPenetrationPower = 25;
 		flPenetrationDistance = 800;
 		iSparksAmount = 20;
 		break;
@@ -1782,6 +1793,9 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 
 	vecEnd = vecSrc + vecDir * flDistance;
 
+	// Beta 7.0: what a wall leaves of the damage, by its material (6.6: 0.6)
+	float flDamageModifier = 0.5;
+
 	while ( iPenetration != 0 )
 	{
 		ClearMultiDamage();
@@ -1798,33 +1812,38 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 		case CHAR_TEX_METAL:
 			bSparks = true;
 			bHitMetal = true;
-			iPenetrationPower *= 0.25;
+			iPenetrationPower *= 0.15;
+			flDamageModifier = 0.2;
 			break;
 		case CHAR_TEX_CONCRETE:
-			iPenetrationPower *= 0.35;
+			iPenetrationPower *= 0.25;
 			break;
 		// (grates and vents are two cases of the same text: VC6 merges them, and
 		// retail's frame has bHitMetal's slot where their two stores put it)
 		case CHAR_TEX_GRATE:
 			bSparks = true;
 			bHitMetal = true;
-			iPenetrationPower *= 0.65;
+			iPenetrationPower *= 0.5;
+			flDamageModifier = 0.4;
 			break;
 		case CHAR_TEX_VENT:
 			bSparks = true;
 			bHitMetal = true;
-			iPenetrationPower *= 0.65;
+			iPenetrationPower *= 0.5;
+			flDamageModifier = 0.45;
 			break;
 		case CHAR_TEX_TILE:
-			iPenetrationPower *= 0.75;
+			iPenetrationPower *= 0.65;
+			flDamageModifier = 0.3;
 			break;
 		case CHAR_TEX_COMPUTER:
 			bSparks = true;
 			bHitMetal = true;
 			iPenetrationPower *= 0.4;
+			flDamageModifier = 0.45;
 			break;
 		case CHAR_TEX_WOOD:
-			iPenetrationPower *= 1.5;
+			flDamageModifier = 0.6;
 			break;
 		default:
 			bSparks = false;
@@ -1837,8 +1856,7 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 
 			iPenetration--;
 			flCurrentDistance = tr.flFraction * flDistance;
-			float flDamageModifier = pow( flRangeModifier, flCurrentDistance / 500 );
-			iCurrentDamage *= flDamageModifier;
+			iCurrentDamage *= pow( flRangeModifier, flCurrentDistance / 500 );
 
 			if ( flCurrentDistance > flPenetrationDistance )
 				iPenetration = 0;
@@ -1859,11 +1877,11 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 					DecalGunshot( &tr, iBulletType, false, pev, bHitMetal );
 
 				vecSrc = tr.vecEndPos + vecDir * iPenetrationPower;
-				flDistance *= 0.5;
+				flDistance = ( flDistance - flCurrentDistance ) * 0.5;
 				vecEnd = vecSrc + vecDir * flDistance;
 
 				pEntity->TraceAttack( pevAttacker, iCurrentDamage, vecDir, &tr, DMG_BULLET | DMG_NEVERGIB );
-				iCurrentDamage *= 0.6;
+				iCurrentDamage *= flDamageModifier;
 			}
 			else
 			{
@@ -1877,8 +1895,8 @@ void CBaseEntity::FireBullets3( Vector vecSrc, Vector vecDirShooting, Vector vec
 				else
 					DecalGunshot( &tr, iBulletType, false, pev, bHitMetal );
 
-				vecSrc = tr.vecEndPos + vecDir * 32;
-				flDistance *= 0.7;
+				vecSrc = tr.vecEndPos + vecDir * 42;
+				flDistance = ( flDistance - flCurrentDistance ) * 0.75;
 				vecEnd = vecSrc + vecDir * flDistance;
 
 				pEntity->TraceAttack( pevAttacker, iCurrentDamage, vecDir, &tr, DMG_BULLET | DMG_NEVERGIB );

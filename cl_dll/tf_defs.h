@@ -1129,6 +1129,17 @@ float already_chosen_map;
 
 #define MENU_REFRESH_RATE 			25
 
+// Counter-Strike's VGUI menus (names ours)
+#define MENU_TERRORIST				26
+#define MENU_CT						27
+#define MENU_BUY					28
+#define MENU_BUY_PISTOL				29
+#define MENU_BUY_SHOTGUN			30
+#define MENU_BUY_RIFLE				31
+#define MENU_BUY_SUBMACHINEGUN		32
+#define MENU_BUY_MACHINEGUN			33
+#define MENU_BUY_ITEM				34
+
 //============================
 // Timer Types
 #define TF_TIMER_ANY				0

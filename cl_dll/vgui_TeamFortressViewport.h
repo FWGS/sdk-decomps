@@ -43,6 +43,16 @@ class DragNDropPanel;
 class CTransparentPanel;
 class CClassMenuPanel;
 class CTeamMenuPanel;
+class CTerroristMenuPanel;
+class CCTMenuPanel;
+class CPistolMenuPanel;
+class CShotgunMenuPanel;
+class CEquipmentMenuPanel;
+class CMachineGunMenuPanel;
+class CRifleMenuPanel;
+class CSMGMenuPanel;
+class CBuyMenuPanel;
+class CCSTeamMenuPanel;
 
 char* GetVGUITGAName(const char *pszName);
 BitmapTGA *LoadTGA( const char* pImageName );
@@ -274,6 +284,24 @@ private:
 	CMenuPanel*	 ShowTeamMenu( void );
 	void		 CreateClassMenu( void );
 	CMenuPanel*	 ShowClassMenu( void );
+	void		 CreateTerroristMenu( void );		// name ours
+	CMenuPanel*	 ShowTerroristMenu( void );		// name ours
+	void		 CreateCTMenu( void );		// name ours
+	CMenuPanel*	 ShowCTMenu( void );		// name ours
+	void		 CreatePistolMenu( void );		// name ours
+	CMenuPanel*	 ShowPistolMenu( void );		// name ours
+	void		 CreateShotgunMenu( void );		// name ours
+	CMenuPanel*	 ShowShotgunMenu( void );		// name ours
+	void		 CreateEquipmentMenu( void );		// name ours
+	CMenuPanel*	 ShowEquipmentMenu( void );		// name ours
+	void		 CreateMachineGunMenu( void );		// name ours
+	CMenuPanel*	 ShowMachineGunMenu( void );		// name ours
+	void		 CreateRifleMenu( void );		// name ours
+	CMenuPanel*	 ShowRifleMenu( void );		// name ours
+	void		 CreateSMGMenu( void );		// name ours
+	CMenuPanel*	 ShowSMGMenu( void );		// name ours
+	void		 CreateBuyMenu( void );		// name ours
+	CMenuPanel*	 ShowBuyMenu( void );		// name ours
 	void		 CreateSpectatorMenu( void );
 	
 	// Scheme handler
@@ -391,7 +419,16 @@ public:
 public:
 	// VGUI Menus
 	CMenuPanel		*m_pCurrentMenu;
-	CTeamMenuPanel	*m_pTeamMenu;
+	CCSTeamMenuPanel	*m_pTeamMenu;
+	CTerroristMenuPanel	*m_pTerroristMenu;		// name ours
+	CPistolMenuPanel	*m_pPistolMenu;		// name ours
+	CEquipmentMenuPanel	*m_pEquipmentMenu;		// name ours
+	CMachineGunMenuPanel	*m_pMachineGunMenu;		// name ours
+	CRifleMenuPanel	*m_pRifleMenu;		// name ours
+	CSMGMenuPanel	*m_pSMGMenu;		// name ours
+	CShotgunMenuPanel	*m_pShotgunMenu;		// name ours
+	CCTMenuPanel	*m_pCTMenu;		// name ours
+	CBuyMenuPanel	*m_pBuyMenu;		// name ours
 	CClassMenuPanel	*m_pClassMenu;
 	ScorePanel		*m_pScoreBoard;
 	char			m_szServerName[ MAX_SERVERNAME_LENGTH ];
@@ -1170,6 +1207,334 @@ public:
 	virtual void SetActiveInfo( int iInput );
 	virtual void paintBackground( void );
 
+	virtual void Initialize( void );
+
+	virtual void Reset( void )
+	{
+		CMenuPanel::Reset();
+		m_iCurrentInfo = 0;
+	}
+};
+
+//================================================================
+// Counter-Strike's team menu (name ours): the team menu without the
+// spectate button, and whether the map is an assassination map
+class CCSTeamMenuPanel : public CMenuPanel
+{
+public:
+	ScrollPanel         *m_pScrollPanel;
+	CTransparentPanel	*m_pTeamWindow;
+	Label				*m_pMapTitle;
+	TextPanel			*m_pBriefing;
+	TextPanel			*m_pTeamInfoPanel[6];
+	CommandButton		*m_pButtons[6];
+	bool				m_bUpdatedMapName;
+	CommandButton		*m_pCancelButton;
+
+	int					m_iCurrentInfo;
+	bool				m_bVIPMap;			// name ours: a map whose name starts maps/as_
+
+public:
+	CCSTeamMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall);
+
+	virtual bool SlotInput( int iSlot );
+	virtual void Open( void );
+	virtual void Update( void );
+	virtual void SetActiveInfo( int iInput );
+	virtual void paintBackground( void );
+
+	virtual void Initialize( void );
+
+	virtual void Reset( void )
+	{
+		CMenuPanel::Reset();
+		m_iCurrentInfo = 0;
+	}
+};
+
+//================================================================
+// Counter-Strike's buy menu (name ours): the team menu's shape, a button
+// for each kind of purchase
+class CBuyMenuPanel : public CMenuPanel
+{
+public:
+	ScrollPanel         *m_pScrollPanel;
+	CTransparentPanel	*m_pTeamWindow;
+	TextPanel			*m_pTeamInfoPanel[9];
+	CommandButton		*m_pButtons[9];
+	CommandButton		*m_pCancelButton;
+
+	int					m_iCurrentInfo;
+
+public:
+	CBuyMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall);
+
+	virtual bool SlotInput( int iSlot );
+	virtual void Open( void );
+	virtual void Update( void );
+	virtual void SetActiveInfo( int iInput );
+	virtual void paintBackground( void );
+
+	virtual void Initialize( void );
+
+	virtual void Reset( void )
+	{
+		CMenuPanel::Reset();
+		m_iCurrentInfo = 0;
+	}
+};
+
+//================================================================
+// Counter-Strike's model selection: the class menu's shape, one model per
+// button (names ours)
+class CCTMenuPanel : public CMenuPanel
+{
+private:
+	CTransparentPanel	*m_pClassInfoPanel[PC_LASTCLASS];
+	Label				*m_pPlayers[PC_LASTCLASS];
+	CommandButton		*m_pButtons[PC_LASTCLASS];
+	ScrollPanel			*m_pScrollPanel;
+
+	CImageLabel			*m_pClassImages[PC_LASTCLASS];
+
+	int					m_iCurrentInfo;
+
+	enum { STRLENMAX_PLAYERSONTEAM = 128 };
+	char m_sPlayersOnTeamString[STRLENMAX_PLAYERSONTEAM];
+
+public:
+	CCTMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall);
+
+	virtual bool SlotInput( int iSlot );
+	virtual void Open( void );
+	virtual void Update( void );
+	virtual void SetActiveInfo( int iInput );
+	virtual void Initialize( void );
+
+	virtual void Reset( void )
+	{
+		CMenuPanel::Reset();
+		m_iCurrentInfo = 0;
+	}
+};
+
+class CTerroristMenuPanel : public CMenuPanel
+{
+private:
+	CTransparentPanel	*m_pClassInfoPanel[PC_LASTCLASS];
+	Label				*m_pPlayers[PC_LASTCLASS];
+	CommandButton		*m_pButtons[PC_LASTCLASS];
+	ScrollPanel			*m_pScrollPanel;
+
+	CImageLabel			*m_pClassImages[PC_LASTCLASS];
+
+	int					m_iCurrentInfo;
+
+	enum { STRLENMAX_PLAYERSONTEAM = 128 };
+	char m_sPlayersOnTeamString[STRLENMAX_PLAYERSONTEAM];
+
+public:
+	CTerroristMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall);
+
+	virtual bool SlotInput( int iSlot );
+	virtual void Open( void );
+	virtual void Update( void );
+	virtual void SetActiveInfo( int iInput );
+	virtual void Initialize( void );
+
+	virtual void Reset( void )
+	{
+		CMenuPanel::Reset();
+		m_iCurrentInfo = 0;
+	}
+};
+
+//================================================================
+// Counter-Strike's buy menus for one kind of weapon, and the equipment:
+// the class menu's shape again, the weapon's picture above its text (names ours)
+class CPistolMenuPanel : public CMenuPanel
+{
+private:
+	CTransparentPanel	*m_pClassInfoPanel[PC_LASTCLASS];
+	Label				*m_pPlayers[PC_LASTCLASS];
+	CommandButton		*m_pButtons[PC_LASTCLASS];
+	ScrollPanel			*m_pScrollPanel;
+	CommandButton		*m_pCancelButton;
+
+	CImageLabel			*m_pClassImages[PC_LASTCLASS];
+
+	int					m_iCurrentInfo;
+
+	enum { STRLENMAX_PLAYERSONTEAM = 128 };
+	char m_sPlayersOnTeamString[STRLENMAX_PLAYERSONTEAM];
+
+public:
+	CPistolMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall);
+
+	virtual bool SlotInput( int iSlot );
+	virtual void Open( void );
+	virtual void Update( void );
+	virtual void SetActiveInfo( int iInput );
+	virtual void Initialize( void );
+
+	virtual void Reset( void )
+	{
+		CMenuPanel::Reset();
+		m_iCurrentInfo = 0;
+	}
+};
+
+class CShotgunMenuPanel : public CMenuPanel
+{
+private:
+	CTransparentPanel	*m_pClassInfoPanel[PC_LASTCLASS];
+	Label				*m_pPlayers[PC_LASTCLASS];
+	CommandButton		*m_pButtons[PC_LASTCLASS];
+	ScrollPanel			*m_pScrollPanel;
+	CommandButton		*m_pCancelButton;
+
+	CImageLabel			*m_pClassImages[PC_LASTCLASS];
+
+	int					m_iCurrentInfo;
+
+	enum { STRLENMAX_PLAYERSONTEAM = 128 };
+	char m_sPlayersOnTeamString[STRLENMAX_PLAYERSONTEAM];
+
+public:
+	CShotgunMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall);
+
+	virtual bool SlotInput( int iSlot );
+	virtual void Open( void );
+	virtual void Update( void );
+	virtual void SetActiveInfo( int iInput );
+	virtual void Initialize( void );
+
+	virtual void Reset( void )
+	{
+		CMenuPanel::Reset();
+		m_iCurrentInfo = 0;
+	}
+};
+
+class CSMGMenuPanel : public CMenuPanel
+{
+private:
+	CTransparentPanel	*m_pClassInfoPanel[PC_LASTCLASS];
+	Label				*m_pPlayers[PC_LASTCLASS];
+	CommandButton		*m_pButtons[PC_LASTCLASS];
+	ScrollPanel			*m_pScrollPanel;
+	CommandButton		*m_pCancelButton;
+
+	CImageLabel			*m_pClassImages[PC_LASTCLASS];
+
+	int					m_iCurrentInfo;
+
+	enum { STRLENMAX_PLAYERSONTEAM = 128 };
+	char m_sPlayersOnTeamString[STRLENMAX_PLAYERSONTEAM];
+
+public:
+	CSMGMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall);
+
+	virtual bool SlotInput( int iSlot );
+	virtual void Open( void );
+	virtual void Update( void );
+	virtual void SetActiveInfo( int iInput );
+	virtual void Initialize( void );
+
+	virtual void Reset( void )
+	{
+		CMenuPanel::Reset();
+		m_iCurrentInfo = 0;
+	}
+};
+
+class CRifleMenuPanel : public CMenuPanel
+{
+private:
+	CTransparentPanel	*m_pClassInfoPanel[PC_LASTCLASS];
+	Label				*m_pPlayers[PC_LASTCLASS];
+	CommandButton		*m_pButtons[PC_LASTCLASS];
+	ScrollPanel			*m_pScrollPanel;
+	CommandButton		*m_pCancelButton;
+
+	CImageLabel			*m_pClassImages[PC_LASTCLASS];
+
+	int					m_iCurrentInfo;
+
+	enum { STRLENMAX_PLAYERSONTEAM = 128 };
+	char m_sPlayersOnTeamString[STRLENMAX_PLAYERSONTEAM];
+
+public:
+	CRifleMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall);
+
+	virtual bool SlotInput( int iSlot );
+	virtual void Open( void );
+	virtual void Update( void );
+	virtual void SetActiveInfo( int iInput );
+	virtual void Initialize( void );
+
+	virtual void Reset( void )
+	{
+		CMenuPanel::Reset();
+		m_iCurrentInfo = 0;
+	}
+};
+
+class CMachineGunMenuPanel : public CMenuPanel
+{
+private:
+	CTransparentPanel	*m_pClassInfoPanel[PC_LASTCLASS];
+	Label				*m_pPlayers[PC_LASTCLASS];
+	CommandButton		*m_pButtons[PC_LASTCLASS];
+	ScrollPanel			*m_pScrollPanel;
+	CommandButton		*m_pCancelButton;
+
+	CImageLabel			*m_pClassImages[PC_LASTCLASS];
+
+	int					m_iCurrentInfo;
+
+	enum { STRLENMAX_PLAYERSONTEAM = 128 };
+	char m_sPlayersOnTeamString[STRLENMAX_PLAYERSONTEAM];
+
+public:
+	CMachineGunMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall);
+
+	virtual bool SlotInput( int iSlot );
+	virtual void Open( void );
+	virtual void Update( void );
+	virtual void SetActiveInfo( int iInput );
+	virtual void Initialize( void );
+
+	virtual void Reset( void )
+	{
+		CMenuPanel::Reset();
+		m_iCurrentInfo = 0;
+	}
+};
+
+class CEquipmentMenuPanel : public CMenuPanel
+{
+private:
+	CTransparentPanel	*m_pClassInfoPanel[PC_LASTCLASS];
+	Label				*m_pPlayers[PC_LASTCLASS];
+	CommandButton		*m_pButtons[PC_LASTCLASS];
+	ScrollPanel			*m_pScrollPanel;
+	CommandButton		*m_pCancelButton;
+
+	CImageLabel			*m_pClassImages[PC_LASTCLASS];
+
+	int					m_iCurrentInfo;
+
+	enum { STRLENMAX_PLAYERSONTEAM = 128 };
+	char m_sPlayersOnTeamString[STRLENMAX_PLAYERSONTEAM];
+
+public:
+	CEquipmentMenuPanel(int iTrans, int iRemoveMe, int x,int y,int wide,int tall);
+
+	virtual bool SlotInput( int iSlot );
+	virtual void Open( void );
+	virtual void Update( void );
+	virtual void SetActiveInfo( int iInput );
 	virtual void Initialize( void );
 
 	virtual void Reset( void )

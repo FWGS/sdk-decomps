@@ -711,26 +711,29 @@ void CFuncTrain :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE 
 
 void CFuncTrain :: Wait( void )
 {
-	// Fire the pass target if there is one
-	if ( m_pevCurrentTarget->message )
+	if ( m_pevCurrentTarget != NULL )	// Counter-Strike Beta 7.0: a train without a current target only waits
 	{
-		FireTargets( STRING(m_pevCurrentTarget->message), this, this, USE_TOGGLE, 0 );
-		if ( FBitSet( m_pevCurrentTarget->spawnflags, SF_CORNER_FIREONCE ) )
-			m_pevCurrentTarget->message = 0;
+		// Fire the pass target if there is one
+		if ( m_pevCurrentTarget->message )
+		{
+			FireTargets( STRING(m_pevCurrentTarget->message), this, this, USE_TOGGLE, 0 );
+			if ( FBitSet( m_pevCurrentTarget->spawnflags, SF_CORNER_FIREONCE ) )
+				m_pevCurrentTarget->message = 0;
+		}
+			
+		// need pointer to LAST target.
+		if ( FBitSet (m_pevCurrentTarget->spawnflags , SF_TRAIN_WAIT_RETRIGGER ) || ( pev->spawnflags & SF_TRAIN_WAIT_RETRIGGER ) )
+		{
+			pev->spawnflags |= SF_TRAIN_WAIT_RETRIGGER;
+			// clear the sound channel.
+			if ( pev->noiseMovement )
+				STOP_SOUND( edict(), CHAN_STATIC, (char*)STRING(pev->noiseMovement) );
+			if ( pev->noiseStopMoving )
+				EMIT_SOUND (ENT(pev), CHAN_VOICE, (char*)STRING(pev->noiseStopMoving), m_volume, ATTN_NORM);
+			pev->nextthink = 0;
+			return;
+		}
 	}
-		
-	// need pointer to LAST target.
-	if ( FBitSet (m_pevCurrentTarget->spawnflags , SF_TRAIN_WAIT_RETRIGGER ) || ( pev->spawnflags & SF_TRAIN_WAIT_RETRIGGER ) )
-    {
-		pev->spawnflags |= SF_TRAIN_WAIT_RETRIGGER;
-        // clear the sound channel.
-		if ( pev->noiseMovement )
-			STOP_SOUND( edict(), CHAN_STATIC, (char*)STRING(pev->noiseMovement) );
-		if ( pev->noiseStopMoving )
-			EMIT_SOUND (ENT(pev), CHAN_VOICE, (char*)STRING(pev->noiseStopMoving), m_volume, ATTN_NORM);
-		pev->nextthink = 0;
-        return;
-    }
     
     // ALERT ( at_console, "%f\n", m_flWait );
 

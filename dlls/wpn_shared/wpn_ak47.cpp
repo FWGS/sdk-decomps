@@ -83,7 +83,7 @@ int CAK47::GetItemInfo(ItemInfo *p)
 
 BOOL CAK47::Deploy( )
 {
-	m_flAccuracy = 0;
+	m_flAccuracy = 0.2;
 	m_iShellOn = 1;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
@@ -99,7 +99,9 @@ void CAK47::SecondaryAttack( void )
 void CAK47::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		AK47Fire( m_flAccuracy * 0.35, 0.0955, FALSE );
+		AK47Fire( m_flAccuracy * 0.5, 0.0955, FALSE );
+	else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
+		AK47Fire( m_flAccuracy * 0.11, 0.0955, FALSE );
 	else
 		AK47Fire( m_flAccuracy * 0.0275, 0.0955, FALSE );
 }
@@ -171,7 +173,8 @@ void CAK47::Reload( void )
 
 	DefaultReload( AK47_MAX_CLIP, AK47_RELOAD, 2.45 );
 
-	m_flAccuracy = 0;
+	m_pPlayer->SetAnimation( PLAYER_RELOAD );
+	m_flAccuracy = 0.2;
 	m_iShotsFired = 0;
 	m_bDelayFire = false;
 }

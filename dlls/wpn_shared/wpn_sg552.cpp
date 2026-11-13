@@ -83,7 +83,7 @@ int CSG552::GetItemInfo(ItemInfo *p)
 
 BOOL CSG552::Deploy( )
 {
-	m_flAccuracy = 0;
+	m_flAccuracy = 0.2;
 	m_iShellOn = 1;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
@@ -116,7 +116,9 @@ void CSG552::SecondaryAttack( void )
 void CSG552::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		SG552Fire( m_flAccuracy * 0.25, 0.0825, FALSE );
+		SG552Fire( m_flAccuracy * 0.45, 0.0825, FALSE );
+	else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
+		SG552Fire( m_flAccuracy * 0.09, 0.0825, FALSE );
 	else if ( m_pPlayer->pev->fov == 90 )
 		SG552Fire( m_flAccuracy * 0.02, 0.0825, FALSE );
 	else
@@ -128,7 +130,7 @@ void CSG552::SG552Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	m_bDelayFire = true;
 	m_iShotsFired++;
 
-	m_flAccuracy = ( ( m_iShotsFired * m_iShotsFired * m_iShotsFired ) / 200 ) + 0.3;
+	m_flAccuracy = ( ( m_iShotsFired * m_iShotsFired * m_iShotsFired ) / 220 ) + 0.3;
 
 	if ( m_flAccuracy > 1 )
 		m_flAccuracy = 1;
@@ -174,7 +176,7 @@ void CSG552::SG552Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 2.0;
 
 	if ( m_pPlayer->pev->velocity.Length2D() > 0 )
-		KickBack( 1.15, 0.45, 0.22, 0.18, 5, 3.5, 6 );
+		KickBack( 1.1, 0.45, 0.22, 0.18, 5, 3.5, 6 );
 	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
 		KickBack( 1.25, 0.45, 0.22, 0.18, 6, 4, 5 );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
@@ -194,7 +196,9 @@ void CSG552::Reload( void )
 			SecondaryAttack();
 	}
 
-	m_flAccuracy = 0;
+	m_pPlayer->SetAnimation( PLAYER_RELOAD );
+
+	m_flAccuracy = 0.2;
 	m_iShotsFired = 0;
 	m_bDelayFire = false;
 }

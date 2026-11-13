@@ -118,6 +118,7 @@ public:
 #define WEAPON_MAC10			7
 #define WEAPON_AUG				8
 #define WEAPON_SMOKEGRENADE		9
+#define WEAPON_ELITE			10	// Counter-Strike (Beta 7.0): the Elite's Spawn (name ours)
 #define WEAPON_USP				16
 #define WEAPON_GLOCK18			17
 #define WEAPON_AWP				18
@@ -165,6 +166,7 @@ public:
 #define G3SG1_WEIGHT		20
 #define FLASHBANG_WEIGHT	1
 #define DEAGLE_WEIGHT		7
+#define ELITE_WEIGHT		5
 #define SG552_WEIGHT		25
 #define AK47_WEIGHT			25
 #define KNIFE_WEIGHT		0
@@ -193,6 +195,7 @@ public:
 #define G3SG1_MAX_CARRY			40		// "762Nato"
 #define FLASHBANG_MAX_CARRY		2
 #define DEAGLE_MAX_CARRY		35		// "50AE"
+#define ELITE_MAX_CARRY			120		// "9mm"
 #define SG552_MAX_CARRY			90		// "556Nato"
 #define AK47_MAX_CARRY			90		// "762Nato"
 #define P90_MAX_CARRY			100		// "57mm"
@@ -241,6 +244,7 @@ public:
 #define TMP_MAX_CLIP			30
 #define G3SG1_MAX_CLIP			20
 #define DEAGLE_MAX_CLIP			7
+#define ELITE_MAX_CLIP			30
 #define SG552_MAX_CLIP			30
 #define AK47_MAX_CLIP			30
 #define P90_MAX_CLIP			50
@@ -267,6 +271,7 @@ public:
 #define G3SG1_DEFAULT_GIVE			20
 #define FLASHBANG_DEFAULT_GIVE		1
 #define DEAGLE_DEFAULT_GIVE			7
+#define ELITE_DEFAULT_GIVE			30
 #define SG552_DEFAULT_GIVE			30
 #define AK47_DEFAULT_GIVE			30
 #define P90_DEFAULT_GIVE			50
@@ -400,6 +405,7 @@ public:
 #define WPNSTATE_USP_SILENCED		(1<<0)
 #define WPNSTATE_GLOCK18_BURST_MODE	(1<<1)
 #define WPNSTATE_M4A1_SILENCED		(1<<2)
+#define WPNSTATE_ELITE_LEFT			(1<<3)	// the left gun fires next
 
 class CBasePlayerWeapon : public CBasePlayerItem
 {
@@ -898,18 +904,22 @@ public:
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
+	void SecondaryAttack( void );
 	int Swing( int fFirst );
+	int Stab( int fFirst );
 	void EXPORT SwingAgain( void );
 	void EXPORT Smack( void );
 	BOOL Deploy( void );
 	void Holster( int skiplocal );
+	void WeaponAnimation( int iAnimation );
 
-	float GetMaxSpeed( void ) { return 250; }
+	float GetMaxSpeed( void ) { return 260; }
 	BOOL CanDrop( void ) { return FALSE; }
 	virtual BOOL UseDecrement( void ) { return TRUE; }
 
 	int m_iSwing;
 	TraceResult m_trHit;
+	unsigned short m_usKnife;	// name ours
 };
 
 
@@ -1142,5 +1152,28 @@ public:
 	float m_flPumpTime;
 	unsigned short m_usFireXM1014;	// name ours
 };
+
+class CELITE : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 2; }
+	int GetItemInfo(ItemInfo *p);
+
+	void PrimaryAttack( void );
+	void ELITEFire( float flSpread, float flCycleTime, BOOL fUseAutoAim );
+	BOOL Deploy( void );
+	void Reload( void );
+	void WeaponIdle( void );
+
+	float GetMaxSpeed( void ) { return 250; }
+	virtual BOOL UseDecrement( void ) { return TRUE; }
+
+	int m_iShell;
+	unsigned short m_usFireELITE_LEFT;	// name ours
+	unsigned short m_usFireELITE_RIGHT;	// name ours
+};
+
 
 #endif // WEAPONS_H

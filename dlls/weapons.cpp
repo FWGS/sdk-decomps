@@ -415,6 +415,7 @@ void W_Precache(void)
 	UTIL_PrecacheOtherWeapon( "weapon_glock18" );
 	UTIL_PrecacheOtherWeapon( "weapon_mp5navy" );
 	UTIL_PrecacheOtherWeapon( "weapon_tmp" );
+	UTIL_PrecacheOtherWeapon( "weapon_elite" );	// Beta 7.0
 	UTIL_PrecacheOther( "ammo_9mm" );
 
 	// flashbang
@@ -610,6 +611,12 @@ void W_Precache(void)
 	vMax = Vector( 18, 7, 26 );
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_usp.mdl" );
 
+	// Beta 7.0: the Elites, with the USP's box
+	PRECACHE_MODEL( "models/p_elite.mdl" );
+	vMin = Vector( -12, -10, -26 );
+	vMax = Vector( 18, 7, 26 );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/p_elite.mdl" );
+
 	PRECACHE_MODEL( "models/p_xm1014.mdl" );
 	vMin = Vector( -12, -23, -26 );
 	vMax = Vector( 12, 20, 26 );
@@ -801,8 +808,8 @@ void CBasePlayerItem::DefaultTouch( CBaseEntity *pOther )
 
 	CBasePlayer *pPlayer = (CBasePlayer *)pOther;
 
-	// Beta 6.0: the VIP picks up nothing but a knife
-	if ( m_iId != WEAPON_KNIFE && pPlayer->m_bIsVIP == true )
+	// Beta 6.0: the VIP picks up nothing but a knife (Beta 7.0: and four of the pistols)
+	if ( m_iId != WEAPON_USP && m_iId != WEAPON_GLOCK18 && m_iId != WEAPON_P228 && m_iId != WEAPON_DEAGLE && m_iId != WEAPON_KNIFE && pPlayer->m_bIsVIP == true )
 		return;
 
 	// can I have this? (Beta 5.0 leak: the game rules decide whether the slot is
@@ -1040,14 +1047,14 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		if ( m_bDelayFire == true )
 		{
 			m_bDelayFire = false;
-			m_iShotsFired = 15;	// Beta 6.6 (was 20)
+			m_iShotsFired = 20;	// Beta 7.0 (Beta 6.6: 15; before: 20)
 		}
 
 		m_fFireOnEmpty = FALSE;
 
 		// Beta 6.5: the pistols forget their shots at once; the others lose
 		// one every 0.0225 seconds (Beta 6.1: one a frame)
-		if ( m_iId == WEAPON_USP || m_iId == WEAPON_GLOCK18 || m_iId == WEAPON_P228 || m_iId == WEAPON_DEAGLE )
+		if ( m_iId == WEAPON_USP || m_iId == WEAPON_GLOCK18 || m_iId == WEAPON_P228 || m_iId == WEAPON_DEAGLE || m_iId == WEAPON_ELITE )	// Beta 7.0: the Elites
 		{
 			m_iShotsFired = 0;
 		}
@@ -1422,7 +1429,7 @@ BOOL CBasePlayerWeapon :: PlayEmptySound( void )
 {
 	// Beta 6.5: a dry-fire click of the weapon's kind (Half-Life's revolver
 	// click before), and m_iPlayEmptySound is no longer cleared
-	if ( m_iId == WEAPON_USP || m_iId == WEAPON_GLOCK18 || m_iId == WEAPON_P228 || m_iId == WEAPON_DEAGLE )
+	if ( m_iId == WEAPON_USP || m_iId == WEAPON_GLOCK18 || m_iId == WEAPON_P228 || m_iId == WEAPON_DEAGLE || m_iId == WEAPON_ELITE )	// Beta 7.0: the Elites
 	{
 		if (m_iPlayEmptySound)
 		{

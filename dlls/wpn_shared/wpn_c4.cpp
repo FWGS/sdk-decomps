@@ -178,13 +178,15 @@ void CC4::PrimaryAttack( void )
 			TraceResult tr;
 			UTIL_TraceLine( m_pPlayer->pev->origin, vecEnd, ignore_monsters, edict(), &tr );
 
+			SendWeaponAnim( C4_IDLE1 );
+
 			if ( tr.flFraction == 1.0 )
 				CGrenade::ShootSatchelCharge( m_pPlayer->pev, vecEnd, Vector( 0, 0, 0 ) );
 			else
 				CGrenade::ShootSatchelCharge( m_pPlayer->pev, tr.vecEndPos + tr.vecPlaneNormal * 5, Vector( 0, 0, 0 ) );
 
 			UTIL_ClientPrintAll( HUD_PRINTCENTER, "The bomb has been planted!" );
-			UTIL_LogPrintf( "%s planted the bomb\n", STRING( m_pPlayer->pev->netname ) );	// Beta 6.6: in the server, linked 2000-06-21; the client, linked 2000-06-19, was built before this line existed (the client's release recipe builds it without the line)
+			UTIL_LogPrintf( "%s planted the bomb\n", STRING( m_pPlayer->pev->netname ) );
 			EMIT_SOUND( edict(), CHAN_WEAPON, "weapons/c4_plant.wav", VOL_NORM, ATTN_NORM );
 
 			m_pPlayer->pev->body = 0;

@@ -84,7 +84,7 @@ int CAUG::GetItemInfo(ItemInfo *p)
 
 BOOL CAUG::Deploy( )
 {
-	m_flAccuracy = 0;
+	m_flAccuracy = 0.2;
 	m_iShellOn = 1;
 
 	if ( m_pPlayer->m_bLeftHanded == true )
@@ -108,7 +108,9 @@ void CAUG::SecondaryAttack( void )
 void CAUG::PrimaryAttack( void )
 {
 	if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
-		AUGFire( m_flAccuracy * 0.25, 0.0825, FALSE );
+		AUGFire( m_flAccuracy * 0.4, 0.0825, FALSE );
+	else if ( m_pPlayer->pev->velocity.Length2D() > 140 )
+		AUGFire( m_flAccuracy * 0.09, 0.0825, FALSE );
 	else if ( m_pPlayer->pev->fov == 90 )
 		AUGFire( m_flAccuracy * 0.02, 0.0825, FALSE );
 	else
@@ -122,8 +124,8 @@ void CAUG::AUGFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 
 	m_flAccuracy = ( ( m_iShotsFired * m_iShotsFired * m_iShotsFired ) / 215 ) + 0.3;
 
-	if ( m_flAccuracy > 0.8 )
-		m_flAccuracy = 0.8;
+	if ( m_flAccuracy > 0.9 )
+		m_flAccuracy = 0.9;
 
 	if (m_iClip <= 0)
 	{
@@ -170,9 +172,9 @@ void CAUG::AUGFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
 	else if ( !FBitSet( m_pPlayer->pev->flags, FL_ONGROUND ) )
 		KickBack( 1.25, 0.45, 0.22, 0.18, 5.5, 4, 5 );
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
-		KickBack( 0.525, 0.275, 0.2, 0.011, 4.25, 2, 12 );
+		KickBack( 0.575, 0.325, 0.2, 0.011, 4.25, 2, 8 );
 	else
-		KickBack( 0.575, 0.325, 0.25, 0.0125, 4.25, 2.25, 12 );
+		KickBack( 0.625, 0.375, 0.25, 0.0125, 4.25, 2.25, 8 );
 }
 
 void CAUG::Reload( void )
@@ -180,7 +182,11 @@ void CAUG::Reload( void )
 	if ( m_pPlayer->ammo_556nato <= 0 )
 		return;
 
-	if ( DefaultReload( AUG_MAX_CLIP, AUG_RELOAD, 3.3 ) )
+	int iResult = DefaultReload( AUG_MAX_CLIP, AUG_RELOAD, 3.3 );	// name ours
+
+	m_pPlayer->SetAnimation( PLAYER_RELOAD );
+
+	if ( iResult )
 	{
 		if ( m_pPlayer->m_iFOV != 90 )
 			SecondaryAttack();

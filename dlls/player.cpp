@@ -204,6 +204,7 @@ int gmsgCrosshair = 0;	// Beta 5.0 (Linux symbol): the observers' crosshair on a
 int gmsgNVGToggle = 0;	// Beta 6.0: the night vision on and off (message NVGToggle, 1 byte; Linux symbol)
 int gmsgRadar = 0;		// Beta 6.0: a team mate's position on the radar (message Radar, 7 bytes; Linux symbol)
 int gmsgSpectator = 0;	// Beta 6.5: a player has become an observer or left (message Spectator, 2 bytes; Linux symbol)
+int gmsgVGUIMenu = 0;	// Beta 7.0: a VGUI menu to show (message VGUIMenu, variable length; Linux symbol)
 int gmsgGeigerRange = 0;
 
 // Beta 6.5: SDK 2.0's function (client.cpp's ClientPrecache calls it) with the
@@ -263,9 +264,39 @@ void LinkUserMessages( void )
 	gmsgNVGToggle = REG_USER_MSG( "NVGToggle", 1 );	// Beta 6.0
 	gmsgRadar = REG_USER_MSG( "Radar", 7 );			// Beta 6.0
 	gmsgSpectator = REG_USER_MSG( "Spectator", 2 );	// Beta 6.5
+	gmsgVGUIMenu = REG_USER_MSG( "VGUIMenu", -1 );	// Beta 7.0
 }
 
 LINK_ENTITY_TO_CLASS( player, CBasePlayer );
+
+// Beta 7.0: the 36 characters of client.cpp (Linux symbols). The model names
+// the server sends to a client ("model terror\n") and stores in his keys are
+// no longer string literals: each function that needs them allocates them and
+// writes them character by character from these globals, so that the names
+// cannot be found and changed in the DLL. The buffers are never freed.
+extern char g_a, g_b, g_c, g_d, g_e, g_f, g_g, g_h, g_i, g_j, g_k, g_l, g_m,
+	g_n, g_o, g_p, g_q, g_r, g_s, g_t, g_u, g_v, g_w, g_x, g_y, g_z,
+	g_1, g_2, g_3, g_4, g_5, g_6, g_7, g_8, g_9, g_0;	// client.cpp (Beta 7.0)
+
+//=========================================================
+// TeamPrint - Beta 7.0 (Linux symbol): a chat line to every
+// player of a team (TakeDamage's "attacked a teammate")
+//=========================================================
+void TeamPrint( int team, const char *text )
+{
+	CBaseEntity *pEntity = NULL;
+
+	while ( ( pEntity = UTIL_FindEntityByClassname( pEntity, "player" ) ) != NULL )
+	{
+		if ( FNullEnt( pEntity->edict() ) )
+			break;
+
+		CBasePlayer *pPlayer = GetClassPtr( (CBasePlayer *)pEntity->pev );
+
+		if ( pPlayer->m_iTeam == team )
+			ClientPrint( pPlayer->pev, HUD_PRINTTALK, text );
+	}
+}
 
 //=========================================================
 // GetCSModelName - Beta 5.0 (leak) (Linux symbol): the world
@@ -292,6 +323,7 @@ static char *GetCSModelName( int item_id )
 	case WEAPON_AUG:		modelName = "models/w_aug.mdl"; break;	// Beta 6.0
 	case WEAPON_TMP:		modelName = "models/w_tmp.mdl"; break;
 	case WEAPON_USP:		modelName = "models/w_usp.mdl"; break;
+	case WEAPON_ELITE:		modelName = "models/w_elite.mdl"; break;	// Beta 7.0
 	case WEAPON_P90:		modelName = "models/w_p90.mdl"; break;
 	case WEAPON_MAC10:		modelName = "models/w_mac10.mdl"; break;	// Beta 6.0
 	case WEAPON_P228:		modelName = "models/w_p228.mdl"; break;
@@ -318,39 +350,175 @@ static char *GetCSModelName( int item_id )
 // flag picks between the same two models (sic); each arm of
 // that test holds both statements: with inline expansion on,
 // VC6 merges the arms (leaving retail's dead test) only then.
+// Beta 7.0: the names are no longer literals but buffers put
+// together character by character (see g_a above), all nine
+// pairs on every call and never freed; the guerilla with the
+// C4 still has the two literals. The buffers' names are ours.
 //=========================================================
 void CBasePlayer::SetPlayerModel( BOOL HasC4 )
 {
+	char *szModelTerror = new char[14];
+	char *szTerror = new char[7];
+
+	szModelTerror[0] = g_m;	szModelTerror[5] = ' ';	szModelTerror[10] = g_o;
+	szModelTerror[1] = g_o;	szModelTerror[6] = g_t;	szModelTerror[11] = g_r;
+	szModelTerror[2] = g_d;	szModelTerror[7] = g_e;	szModelTerror[12] = '\n';
+	szModelTerror[3] = g_e;	szModelTerror[8] = g_r;	szModelTerror[13] = '\0';
+	szModelTerror[4] = g_l;	szModelTerror[9] = g_r;
+
+	szTerror[0] = g_t;	szTerror[5] = g_r;
+	szTerror[1] = g_e;	szTerror[6] = '\0';
+	szTerror[2] = g_r;
+	szTerror[3] = g_r;
+	szTerror[4] = g_o;
+
+	char *szModelArab = new char[12];
+	char *szArab = new char[5];
+
+	szModelArab[0] = g_m;	szModelArab[5] = ' ';	szModelArab[10] = '\n';
+	szModelArab[1] = g_o;	szModelArab[6] = g_a;	szModelArab[11] = '\0';
+	szModelArab[2] = g_d;	szModelArab[7] = g_r;
+	szModelArab[3] = g_e;	szModelArab[8] = g_a;
+	szModelArab[4] = g_l;	szModelArab[9] = g_b;
+
+	szArab[0] = g_a;
+	szArab[1] = g_r;
+	szArab[2] = g_a;
+	szArab[3] = g_b;
+	szArab[4] = '\0';
+
+	char *szModelArctic = new char[14];
+	char *szArctic = new char[7];
+
+	szModelArctic[0] = g_m;	szModelArctic[5] = ' ';	szModelArctic[10] = g_i;
+	szModelArctic[1] = g_o;	szModelArctic[6] = g_a;	szModelArctic[11] = g_c;
+	szModelArctic[2] = g_d;	szModelArctic[7] = g_r;	szModelArctic[12] = '\n';
+	szModelArctic[3] = g_e;	szModelArctic[8] = g_c;	szModelArctic[13] = '\0';
+	szModelArctic[4] = g_l;	szModelArctic[9] = g_t;
+
+	szArctic[0] = g_a;	szArctic[5] = g_c;
+	szArctic[1] = g_r;	szArctic[6] = '\0';
+	szArctic[2] = g_c;
+	szArctic[3] = g_t;
+	szArctic[4] = g_i;
+
+	char *szModelGuerilla = new char[16];
+	char *szGuerilla = new char[9];
+
+	szModelGuerilla[0] = g_m;	szModelGuerilla[5] = ' ';	szModelGuerilla[10] = g_i;	szModelGuerilla[15] = '\0';
+	szModelGuerilla[1] = g_o;	szModelGuerilla[6] = g_g;	szModelGuerilla[11] = g_l;
+	szModelGuerilla[2] = g_d;	szModelGuerilla[7] = g_u;	szModelGuerilla[12] = g_l;
+	szModelGuerilla[3] = g_e;	szModelGuerilla[8] = g_e;	szModelGuerilla[13] = g_a;
+	szModelGuerilla[4] = g_l;	szModelGuerilla[9] = g_r;	szModelGuerilla[14] = '\n';
+
+	szGuerilla[0] = g_g;	szGuerilla[5] = g_l;
+	szGuerilla[1] = g_u;	szGuerilla[6] = g_l;
+	szGuerilla[2] = g_e;	szGuerilla[7] = g_a;
+	szGuerilla[3] = g_r;	szGuerilla[8] = '\0';
+	szGuerilla[4] = g_i;
+
+	char *szModelUrban = new char[13];
+	char *szUrban = new char[6];
+
+	szModelUrban[0] = g_m;	szModelUrban[5] = ' ';	szModelUrban[10] = g_n;
+	szModelUrban[1] = g_o;	szModelUrban[6] = g_u;	szModelUrban[11] = '\n';
+	szModelUrban[2] = g_d;	szModelUrban[7] = g_r;	szModelUrban[12] = '\0';
+	szModelUrban[3] = g_e;	szModelUrban[8] = g_b;
+	szModelUrban[4] = g_l;	szModelUrban[9] = g_a;
+
+	szUrban[0] = g_u;	szUrban[5] = '\0';
+	szUrban[1] = g_r;
+	szUrban[2] = g_b;
+	szUrban[3] = g_a;
+	szUrban[4] = g_n;
+
+	char *szModelGSG9 = new char[12];
+	char *szGSG9 = new char[5];
+
+	szModelGSG9[0] = g_m;	szModelGSG9[5] = ' ';	szModelGSG9[10] = '\n';
+	szModelGSG9[1] = g_o;	szModelGSG9[6] = g_g;	szModelGSG9[11] = '\0';
+	szModelGSG9[2] = g_d;	szModelGSG9[7] = g_s;
+	szModelGSG9[3] = g_e;	szModelGSG9[8] = g_g;
+	szModelGSG9[4] = g_l;	szModelGSG9[9] = g_9;
+
+	szGSG9[0] = g_g;
+	szGSG9[1] = g_s;
+	szGSG9[2] = g_g;
+	szGSG9[3] = g_9;
+	szGSG9[4] = '\0';
+
+	char *szModelSAS = new char[11];
+	char *szSAS = new char[4];
+
+	szModelSAS[0] = g_m;	szModelSAS[5] = ' ';	szModelSAS[10] = '\0';
+	szModelSAS[1] = g_o;	szModelSAS[6] = g_s;
+	szModelSAS[2] = g_d;	szModelSAS[7] = g_a;
+	szModelSAS[3] = g_e;	szModelSAS[8] = g_s;
+	szModelSAS[4] = g_l;	szModelSAS[9] = '\n';
+
+	szSAS[0] = g_s;
+	szSAS[1] = g_a;
+	szSAS[2] = g_s;
+	szSAS[3] = '\0';
+
+	char *szModelGIGN = new char[12];
+	char *szGIGN = new char[5];
+
+	szModelGIGN[0] = g_m;	szModelGIGN[5] = ' ';	szModelGIGN[10] = '\n';
+	szModelGIGN[1] = g_o;	szModelGIGN[6] = g_g;	szModelGIGN[11] = '\0';
+	szModelGIGN[2] = g_d;	szModelGIGN[7] = g_i;
+	szModelGIGN[3] = g_e;	szModelGIGN[8] = g_g;
+	szModelGIGN[4] = g_l;	szModelGIGN[9] = g_n;
+
+	szGIGN[0] = g_g;
+	szGIGN[1] = g_i;
+	szGIGN[2] = g_g;
+	szGIGN[3] = g_n;
+	szGIGN[4] = '\0';
+
+	char *szModelVIP = new char[11];
+	char *szVIP = new char[4];
+
+	szModelVIP[0] = g_m;	szModelVIP[5] = ' ';	szModelVIP[10] = '\0';
+	szModelVIP[1] = g_o;	szModelVIP[6] = g_v;
+	szModelVIP[2] = g_d;	szModelVIP[7] = g_i;
+	szModelVIP[3] = g_e;	szModelVIP[8] = g_p;
+	szModelVIP[4] = g_l;	szModelVIP[9] = '\n';
+
+	szVIP[0] = g_v;
+	szVIP[1] = g_i;
+	szVIP[2] = g_p;
+	szVIP[3] = '\0';
 	int clientIndex = entindex();	// name ours
 
 	switch ( m_iAppearance )
 	{
 	case 1:
-		CLIENT_COMMAND( edict(), "model urban\n" );
-		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "urban" );
+		CLIENT_COMMAND( edict(), szModelUrban );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szUrban );
 		break;
 	case 2:
 		if ( HasC4 )
 		{
-			CLIENT_COMMAND( edict(), "model terror\n" );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "terror" );
+			CLIENT_COMMAND( edict(), szModelTerror );
+			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szTerror );
 		}
 		else
 		{
-			CLIENT_COMMAND( edict(), "model terror\n" );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "terror" );
+			CLIENT_COMMAND( edict(), szModelTerror );
+			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szTerror );
 		}
 		break;
 	case 3:
 		if ( HasC4 )
 		{
-			CLIENT_COMMAND( edict(), "model arab\n" );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "arab" );
+			CLIENT_COMMAND( edict(), szModelArab );
+			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szArab );
 		}
 		else
 		{
-			CLIENT_COMMAND( edict(), "model arab\n" );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "arab" );
+			CLIENT_COMMAND( edict(), szModelArab );
+			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szArab );
 		}
 		break;
 	// Beta 6.0: the arctic terrorists and the GIGN are new, the VIP has a model
@@ -359,13 +527,13 @@ void CBasePlayer::SetPlayerModel( BOOL HasC4 )
 	case 4:
 		if ( HasC4 )
 		{
-			CLIENT_COMMAND( edict(), "model arctic\n" );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "arctic" );
+			CLIENT_COMMAND( edict(), szModelArctic );
+			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szArctic );
 		}
 		else
 		{
-			CLIENT_COMMAND( edict(), "model arctic\n" );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "arctic" );
+			CLIENT_COMMAND( edict(), szModelArctic );
+			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szArctic );
 		}
 		break;
 	case 8:
@@ -376,29 +544,29 @@ void CBasePlayer::SetPlayerModel( BOOL HasC4 )
 		}
 		else
 		{
-			CLIENT_COMMAND( edict(), "model guerilla\n" );
-			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "guerilla" );
+			CLIENT_COMMAND( edict(), szModelGuerilla );
+			g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szGuerilla );
 		}
 		break;
 	case 5:
-		CLIENT_COMMAND( edict(), "model gsg9\n" );
-		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "gsg9" );
+		CLIENT_COMMAND( edict(), szModelGSG9 );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szGSG9 );
 		break;
 	case 6:
-		CLIENT_COMMAND( edict(), "model gign\n" );
-		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "gign" );
+		CLIENT_COMMAND( edict(), szModelGIGN );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szGIGN );
 		break;
 	case 7:
-		CLIENT_COMMAND( edict(), "model sas\n" );
-		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "sas" );
+		CLIENT_COMMAND( edict(), szModelSAS );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szSAS );
 		break;
 	case 9:
-		CLIENT_COMMAND( edict(), "model vip\n" );
-		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "vip" );
+		CLIENT_COMMAND( edict(), szModelVIP );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szVIP );
 		break;
 	default:
-		CLIENT_COMMAND( edict(), "model urban\n" );
-		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "urban" );
+		CLIENT_COMMAND( edict(), szModelUrban );
+		g_engfuncs.pfnSetClientKeyValue( clientIndex, g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szUrban );
 		break;
 	}
 }
@@ -762,6 +930,7 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	float flBonus;
 	float flRatio;
 	float flHealthPrev = pev->health;
+	int iGunType;	// Beta 7.0: the attacker's weapon (Counter-Strike 1.6's name)
 
 	flBonus = ARMOR_BONUS;
 	flRatio = ARMOR_RATIO;
@@ -863,17 +1032,6 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		return 0;
 	}
 
-	// slow the player down (Beta 6.0: to half; Beta 5.2: 0.35)
-	m_flVelocityModifier = 0.5;
-
-	// a heavy hit: more than 60 to the head, more than 20 anywhere else
-	if ( ( m_LastHitGroup == HITGROUP_HEAD && flDamage > 60 ) || ( m_LastHitGroup != HITGROUP_HEAD && flDamage > 20 ) )
-		m_fHeavyDamage = TRUE;
-	else
-		m_fHeavyDamage = FALSE;
-
-	SetAnimation( PLAYER_FLINCH );
-
 	// Already dead
 	if ( !IsAlive() )
 		return 0;
@@ -891,18 +1049,31 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 
 		if ( pAttacker->m_iTeam == m_iTeam )
 		{
-			ClientPrint( pAttacker->pev, HUD_PRINTCENTER, "You injured a teammate!\n" );
-
 			// the victim's history decides whether the attacker hears the hint (sic)
 			if ( !( m_flDisplayHistory & 0x200 ) )
 			{
 				m_flDisplayHistory |= 0x200;
 				pAttacker->HintMessage( "Try not to injure your teammates.\n", FALSE, FALSE );
 			}
+
+			// Beta 7.0: the attacker's team reads it in the chat, at most once in
+			// 0.6 seconds (6.6: "You injured a teammate!" in the middle of the
+			// attacker's screen). The text is allocated at every such hit and
+			// never freed (sic)
+			char *szText = new char[255];	// name ours
+
+			sprintf( szText, "%s attacked a teammate\n", STRING( pAttacker->pev->netname ) );
+
+			if ( ( pAttacker->m_flLastAttackedTeammate + 0.6 ) < gpGlobals->time )
+			{
+				pAttacker->m_flLastAttackedTeammate = gpGlobals->time;
+				TeamPrint( pAttacker->m_iTeam, szText );
+			}
 		}
 
+		// Beta 7.0: 35% (6.6: half)
 		if ( pAttacker->m_iTeam == m_iTeam )
-			flDamage *= 0.5;
+			flDamage *= 0.35;
 
 		// Beta 3.0: how much of the damage the armour lets through depends
 		// on the attacker's weapon, a multiple of ARMOR_RATIO
@@ -917,8 +1088,13 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		// Beta 5.0 (leak): no active weapon, the default; the MP5 Navy has
 		// the default's ratio too now (Beta 4.1: 0.45), and so has the TMP,
 		// whose case is gone
+		// Beta 7.0: the weapon's number is kept for the flinch below; without
+		// a weapon it is not set (sic)
 		if ( pAttacker->m_pActiveItem )
-		switch ( pAttacker->m_pActiveItem->m_iId )
+		{
+		iGunType = pAttacker->m_pActiveItem->m_iId;
+
+		switch ( iGunType )
 		{
 		case WEAPON_USP:	// Beta 4.0: times 1, which VC5 folds away; the case keeps its jump-table slot, as retail's (an empty case gets none)
 			flRatio *= 1;
@@ -956,6 +1132,9 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		case WEAPON_GLOCK18:
 			flRatio *= 1.05;
 			break;
+		case WEAPON_ELITE:	// Beta 7.0
+			flRatio *= 1.05;
+			break;
 		case WEAPON_P90:	// Beta 3.1: the M3's 0.4 is gone (the default 0.5); Beta 6.0 1.35 (Beta 5.2: 1.4)
 			flRatio *= 1.35;
 			break;
@@ -971,6 +1150,42 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		case WEAPON_SCOUT:	// Beta 4.0 (Beta 6.0: 1.7, was 1.6)
 			flRatio *= 1.7;
 			break;
+		}
+		}
+
+		// Beta 7.0: a standing player hit by a rifle, a shotgun or the Desert
+		// Eagle is pushed away from the attacker by 170 units a second (while
+		// he moves slower than 300) and slowed to 65%, with the large flinch;
+		// any other hit is 6.6's: slowed to half (Beta 5.2: 0.35), a heavy hit
+		// being more than 60 to the head or more than 20 anywhere else. 6.6
+		// did that for every damage, before the player was known to be alive
+		if ( !FBitSet( pev->flags, FL_DUCKING ) &&
+			 ( iGunType == WEAPON_M3 || iGunType == WEAPON_M4A1 || iGunType == WEAPON_AUG || iGunType == WEAPON_AWP || iGunType == WEAPON_G3SG1 ||
+			   iGunType == WEAPON_DEAGLE || iGunType == WEAPON_AK47 || iGunType == WEAPON_SG552 || iGunType == WEAPON_SCOUT ) )
+		{
+			if ( pev->velocity.Length() < 300 )
+			{
+				Vector attack_velocity;	// Counter-Strike 1.6's name
+
+				attack_velocity = pev->origin - pAttacker->pev->origin;
+				attack_velocity = attack_velocity.Normalize();
+				m_flVelocityModifier = 0.65;
+				attack_velocity = pev->velocity + attack_velocity * 170;
+				pev->velocity = attack_velocity;
+			}
+
+			SetAnimation( PLAYER_LARGE_FLINCH );
+		}
+		else
+		{
+			m_flVelocityModifier = 0.5;
+
+			if ( ( m_LastHitGroup == HITGROUP_HEAD && flDamage > 60 ) || ( m_LastHitGroup != HITGROUP_HEAD && flDamage > 20 ) )
+				m_fHeavyDamage = TRUE;
+			else
+				m_fHeavyDamage = FALSE;
+
+			SetAnimation( PLAYER_FLINCH );
 		}
 	}
 
@@ -1473,6 +1688,13 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 			pev->velocity = ( m_vecBlastDir / m_vecBlastDir.Length() ) * ( 500 - m_vecBlastDir.Length() );
 			pev->velocity.z = ( 350 - m_vecBlastDir.Length() ) * 1.5;
 			break;
+		case 6:		// Beta 7.0: as 3, without the lift
+			if ( !strcmp( STRING( pevAttacker->classname ), "player" ) )
+			{
+				UTIL_MakeVectors( pevAttacker->angles );
+				pev->velocity = gpGlobals->v_forward * RANDOM_FLOAT( 200, 300 );
+			}
+			break;
 		}
 
 		m_iDeathThrow = 0;
@@ -1585,6 +1807,11 @@ BOOL CBasePlayer::IsCommander( void )
 
 
 // Set the activity based on an event or current state
+// Counter-Strike Beta 7.0: the second attack (ref_shoot2_/crouch_shoot2_) and
+// the reload (reload_<weapon>) are animated like the first attack; a shot
+// stamps m_flLastFired, and a player running faster than 190 who has not shot
+// for four seconds gets run_<weapon> (activity ACT_RUN) where the model has
+// it; the large flinch (lflinch_*, 2.3 seconds); more death animations.
 void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 {
 	int animDesired;
@@ -1596,7 +1823,7 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		return;
 
 	// a flinch plays to its end, unless a new flinch comes or the player is dead
-	if ( playerAnim != PLAYER_FLINCH && m_flFlinchTime >= gpGlobals->time && pev->health > 0.0 )
+	if ( playerAnim != PLAYER_FLINCH && playerAnim != PLAYER_LARGE_FLINCH && m_flFlinchTime >= gpGlobals->time && pev->health > 0.0 )
 		return;
 
 	speed = pev->velocity.Length2D();
@@ -1637,6 +1864,41 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 			break;
 		}
 		break;
+
+	// Beta 7.0: the Elites' second gun
+	case PLAYER_ATTACK2:
+		switch( m_Activity )
+		{
+		case ACT_HOVER:
+		case ACT_SWIM:
+		case ACT_HOP:
+		case ACT_LEAP:
+		case ACT_DIESIMPLE:
+			m_IdealActivity = m_Activity;
+			break;
+		default:
+			m_IdealActivity = ACT_RANGE_ATTACK2;
+			break;
+		}
+		break;
+
+	// Beta 7.0: reloading
+	case PLAYER_RELOAD:
+		switch( m_Activity )
+		{
+		case ACT_HOVER:
+		case ACT_SWIM:
+		case ACT_HOP:
+		case ACT_LEAP:
+		case ACT_DIESIMPLE:
+			m_IdealActivity = m_Activity;
+			break;
+		default:
+			m_IdealActivity = ACT_RELOAD;
+			break;
+		}
+		break;
+
 	case PLAYER_IDLE:
 	case PLAYER_WALK:
 		if ( !FBitSet( pev->flags, FL_ONGROUND ) && (m_Activity == ACT_HOP || m_Activity == ACT_LEAP) )	// Still jumping
@@ -1661,31 +1923,19 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 			return;
 		m_IdealActivity = ACT_FLINCH;
 		break;
+
+	// Beta 7.0: the flinch of a hit that pushes the player (TakeDamage)
+	case PLAYER_LARGE_FLINCH:
+		if ( m_flNextFlinchTime > gpGlobals->time )
+			return;
+		m_IdealActivity = ACT_LARGE_FLINCH;
+		break;
 	}
 
 	switch (m_IdealActivity)
 	{
-	case ACT_HOVER:
-	case ACT_LEAP:
-	case ACT_SWIM:
-	case ACT_HOP:
-	default:
-		if ( m_Activity == m_IdealActivity)
-			return;
-		m_Activity = m_IdealActivity;
-
-		animDesired = LookupActivity( m_Activity );
-		// Already using the desired animation?
-		if (pev->sequence == animDesired)
-			return;
-
-		pev->gaitsequence = 0;
-		pev->sequence		= animDesired;
-		pev->frame			= 0;
-		ResetSequenceInfo( );
-		return;
-
 	case ACT_RANGE_ATTACK1:
+		m_flLastFired = gpGlobals->time;	// Beta 7.0
 		if ( FBitSet( pev->flags, FL_DUCKING ) )	// crouching
 			strcpy( szAnim, "crouch_shoot_" );
 		else
@@ -1711,18 +1961,101 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		ResetSequenceInfo( );
 		break;
 
-	case ACT_WALK:
-		if (m_Activity != ACT_RANGE_ATTACK1 || m_fSequenceFinished)
+	// Beta 7.0: the second gun
+	case ACT_RANGE_ATTACK2:
+		m_flLastFired = gpGlobals->time;	// Beta 7.0
+		if ( FBitSet( pev->flags, FL_DUCKING ) )	// crouching
+			strcpy( szAnim, "crouch_shoot2_" );
+		else
+			strcpy( szAnim, "ref_shoot2_" );
+		strcat( szAnim, m_szAnimExtention );
+		animDesired = LookupSequence( szAnim );
+		if (animDesired == -1)
+			animDesired = 0;
+
+		if ( pev->sequence != animDesired || !m_fSequenceLoops )
 		{
-			if ( FBitSet( pev->flags, FL_DUCKING ) )	// crouching
-				strcpy( szAnim, "crouch_aim_" );
+			pev->frame = 0;
+		}
+
+		if (!m_fSequenceLoops)
+		{
+			pev->effects |= EF_NOINTERP;
+		}
+
+		m_Activity = m_IdealActivity;
+
+		pev->sequence		= animDesired;
+		ResetSequenceInfo( );
+		break;
+
+	// Beta 7.0: reload_<weapon>
+	case ACT_RELOAD:
+		strcpy( szAnim, "reload_" );
+		strcat( szAnim, m_szAnimExtention );
+		animDesired = LookupSequence( szAnim );
+		if (animDesired == -1)
+			animDesired = 0;
+
+		if ( pev->sequence != animDesired || !m_fSequenceLoops )
+		{
+			pev->frame = 0;
+		}
+
+		if (!m_fSequenceLoops)
+		{
+			pev->effects |= EF_NOINTERP;
+		}
+
+		m_Activity = m_IdealActivity;
+
+		pev->sequence		= animDesired;
+		ResetSequenceInfo( );
+		break;
+
+	case ACT_WALK:
+		if ( ( m_Activity != ACT_RANGE_ATTACK1 || m_fSequenceFinished ) &&
+			 ( m_Activity != ACT_RANGE_ATTACK2 || m_fSequenceFinished ) &&
+			 ( m_Activity != ACT_RELOAD || m_fSequenceFinished ) )
+		{
+			// Beta 7.0: running, four seconds after the last shot: run_<weapon>
+			// for the whole body where the model has it
+			if ( speed > 190 && m_flLastFired + 4 < gpGlobals->time )
+			{
+				strcpy( szAnim, "run_" );
+				strcat( szAnim, m_szAnimExtention );
+				animDesired = LookupSequence( szAnim );
+				if ( animDesired == -1 )
+				{
+					if ( FBitSet( pev->flags, FL_DUCKING ) )	// crouching
+						strcpy( szAnim, "crouch_aim_" );
+					else
+						strcpy( szAnim, "ref_aim_" );
+					strcat( szAnim, m_szAnimExtention );
+					animDesired = LookupSequence( szAnim );
+					if (animDesired == -1)
+						animDesired = 0;
+					m_Activity = ACT_RUN;
+					pev->gaitsequence = LookupActivity( ACT_RUN );
+				}
+				else
+				{
+					m_Activity = ACT_RUN;
+					pev->gaitsequence = animDesired;
+				}
+			}
 			else
-				strcpy( szAnim, "ref_aim_" );
-			strcat( szAnim, m_szAnimExtention );
-			animDesired = LookupSequence( szAnim );
-			if (animDesired == -1)
-				animDesired = 0;
-			m_Activity = ACT_WALK;
+			{
+				if ( FBitSet( pev->flags, FL_DUCKING ) )	// crouching
+					strcpy( szAnim, "crouch_aim_" );
+				else
+					strcpy( szAnim, "ref_aim_" );
+				strcat( szAnim, m_szAnimExtention );
+				animDesired = LookupSequence( szAnim );
+				if (animDesired == -1)
+					animDesired = 0;
+				m_Activity = ACT_WALK;
+			}
 		}
 		else
 		{
@@ -1815,6 +2148,55 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		ResetSequenceInfo( );
 		return;
 
+	// Beta 7.0: the large flinch, 2.3 seconds, with a console line
+	case ACT_LARGE_FLINCH:
+		m_Activity = m_IdealActivity;
+
+		switch ( m_LastHitGroup )
+		{
+		case HITGROUP_GENERIC:
+			animDesired = LookupSequence( "lflinch_stomach1" );
+			break;
+
+		case HITGROUP_HEAD:
+			animDesired = LookupSequence( "lflinch_head1" );
+			break;
+
+		case HITGROUP_CHEST:
+			if ( RANDOM_LONG( 0, 1 ) )
+				animDesired = LookupSequence( "lflinch_chest1" );
+			else
+				animDesired = LookupSequence( "lflinch_chest2" );
+			break;
+
+		case HITGROUP_STOMACH:
+			animDesired = LookupSequence( "lflinch_stomach1" );
+			break;
+
+		case HITGROUP_LEFTARM:
+			animDesired = LookupSequence( "lflinch_leftarm1" );
+			break;
+
+		case HITGROUP_RIGHTARM:
+			animDesired = LookupSequence( "lflinch_rightarm1" );
+			break;
+
+		default:
+			animDesired = LookupSequence( "lflinch_stomach1" );
+			break;
+		}
+
+		ALERT( at_console, "Playing Flinch Animation!\n" );
+
+		m_flNextFlinchTime = gpGlobals->time + 0.5;
+		m_flFlinchTime = gpGlobals->time + 2.3;
+
+		pev->gaitsequence = 0;
+		pev->sequence		= animDesired;
+		pev->frame			= 0;
+		ResetSequenceInfo( );
+		return;
+
 	case ACT_DIESIMPLE:
 		if ( m_Activity == m_IdealActivity)
 			return;
@@ -1823,12 +2205,14 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		m_iUnused15C = 0;
 		m_iDeathThrow = 0;
 
-		// the death animation goes by where the last hit was
+		// the death animation goes by where the last hit was. Beta 7.0: more
+		// animations, picked by switches in which every second case lacks its
+		// break (sic: the first LookupSequence of each pair is wasted)
 		switch ( m_LastHitGroup )
 		{
 		case HITGROUP_GENERIC:
-			// Beta 3.0: one of five deaths at random
-			switch ( RANDOM_LONG( 0, 4 ) )
+			// Beta 3.0: one of five deaths at random (Beta 7.0: of nine)
+			switch ( RANDOM_LONG( 0, 8 ) )
 			{
 			case 0:
 				animDesired = LookupSequence( "die_head1" );
@@ -1848,6 +2232,18 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 				animDesired = LookupSequence( "die_backwards" );
 				m_iDeathThrow = 3;
 				break;
+			case 5:
+				animDesired = LookupSequence( "die_legs3" );
+				break;
+			case 6:
+				animDesired = LookupSequence( "die_chest2" );
+				break;
+			case 7:
+				animDesired = LookupSequence( "die_stomach1" );
+				break;
+			case 8:
+				animDesired = LookupSequence( "die_legs4" );
+				break;
 			default:
 				animDesired = LookupSequence( "die_backwards" );
 				m_iDeathThrow = 3;
@@ -1857,7 +2253,7 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 
 		case HITGROUP_HEAD:
 			{
-			int iRand = RANDOM_LONG( 0, 6 );
+			int iRand = RANDOM_LONG( 0, 8 );
 
 			if ( m_fHeavyDamage == TRUE )
 				iRand += 1;	// Beta 2.0 (Beta 1.0: 2)
@@ -1874,73 +2270,169 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 				animDesired = LookupSequence( "die_head2" );
 				m_iDeathThrow = 1;
 			}
-			else
+			else if ( iRand == 5 || iRand == 6 )
 			{
 				animDesired = LookupSequence( "die_head3" );
 				m_iDeathThrow = 3;
+			}
+			else
+			{
+				animDesired = LookupSequence( "die_head4" );
+				m_iDeathThrow = 0;
 			}
 			}
 			break;
 
 		case HITGROUP_CHEST:
-			if ( RANDOM_LONG( 0, 3 ) )
+			switch ( RANDOM_LONG( 0, 6 ) )
+			{
+			case 0:
 				animDesired = LookupSequence( "die_stomach1" );
-			else
+			case 1:
+				animDesired = LookupSequence( "die_stomach1" );
+				break;
+			case 2:
+				animDesired = LookupSequence( "die_chest1" );
+			case 3:
+				animDesired = LookupSequence( "die_chest1" );
+				break;
+			case 4:
+				animDesired = LookupSequence( "die_chest2" );
+			case 5:
+				animDesired = LookupSequence( "die_chest2" );
+				break;
+			case 6:
 				animDesired = LookupSequence( "gutshot" );
+				break;
+			default:
+				animDesired = LookupSequence( "die_chest1" );
+				break;
+			}
+			m_iDeathThrow = 0;
 			break;
 
 		case HITGROUP_STOMACH:
-			if ( m_fHeavyDamage == TRUE || RANDOM_LONG( 0, 3 ) == 0 )
+			switch ( RANDOM_LONG( 0, 4 ) )
 			{
+			case 0:
 				animDesired = LookupSequence( "die_backwards" );
 				m_iDeathThrow = 3;
-			}
-			else
+				break;
+			case 1:
 				animDesired = LookupSequence( "die_stomach1" );
+			case 2:
+				animDesired = LookupSequence( "die_stomach1" );
+				break;
+			case 3:
+				animDesired = LookupSequence( "die_stomach2" );
+			case 4:
+				animDesired = LookupSequence( "die_stomach2" );
+				break;
+			default:
+				animDesired = LookupSequence( "die_stomach2" );
+				break;
+			}
 			break;
 
 		case HITGROUP_LEFTARM:
+			switch ( RANDOM_LONG( 0, 5 ) )
 			{
-			int iRand = RANDOM_LONG( 0, 1 );
-
-			if ( m_fHeavyDamage == TRUE || iRand == 0 )
-			{
+			case 0:
+				animDesired = LookupSequence( "die_leftarm1" );
+			case 1:
+				animDesired = LookupSequence( "die_leftarm1" );
+				break;
+			case 2:
+				animDesired = LookupSequence( "die_leftarm2" );
+			case 3:
 				animDesired = LookupSequence( "die_leftarm2" );
 				m_iDeathThrow = 3;
-			}
-			else if ( iRand == 1 )
+				break;
+			case 4:
+				animDesired = LookupSequence( "die_leftarm3" );
+			case 5:
+				animDesired = LookupSequence( "die_leftarm3" );
+				break;
+			default:
 				animDesired = LookupSequence( "die_leftarm1" );
+				break;
 			}
 			break;
 
 		case HITGROUP_RIGHTARM:
-			m_iDeathThrow = 3;
-			animDesired = LookupSequence( "die_rightarm1" );
+			if ( RANDOM_LONG( 0, 1 ) )
+			{
+				m_iDeathThrow = 3;
+				animDesired = LookupSequence( "die_rightarm1" );
+			}
+			else
+			{
+				m_iDeathThrow = 6;
+				animDesired = LookupSequence( "die_rightarm2" );
+			}
 			break;
 
 		case HITGROUP_LEFTLEG:
+			switch ( RANDOM_LONG( 0, 8 ) )
 			{
-			int iRand = RANDOM_LONG( 0, 4 );
-
-			if ( iRand == 0 || iRand == 1 )
+			case 0:
 				animDesired = LookupSequence( "die_legs1" );
-			else if ( iRand == 2 || iRand == 3 )
+			case 1:
+				animDesired = LookupSequence( "die_legs1" );
+				break;
+			case 2:
 				animDesired = LookupSequence( "die_legs2" );
-			else
-				animDesired = LookupSequence( "die_forwards" );
+			case 3:
+				animDesired = LookupSequence( "die_legs2" );
+				break;
+			case 4:
+				animDesired = LookupSequence( "die_legs3" );
+			case 5:
+				animDesired = LookupSequence( "die_legs3" );
+				break;
+			case 6:
+				animDesired = LookupSequence( "die_legs4" );
+			case 7:
+				animDesired = LookupSequence( "die_legs4" );
+				break;
+			case 8:
+				animDesired = LookupSequence( "die_forward" );
+				break;
+			default:
+				animDesired = LookupSequence( "die_legs3" );
+				break;
 			}
 			break;
 
 		case HITGROUP_RIGHTLEG:
+			switch ( RANDOM_LONG( 0, 8 ) )
 			{
-			int iRand = RANDOM_LONG( 0, 4 );
-
-			if ( iRand == 0 || iRand == 1 )
+			case 0:
 				animDesired = LookupSequence( "die_legs1" );
-			else if ( iRand == 2 || iRand == 3 )
+			case 1:
+				animDesired = LookupSequence( "die_legs1" );
+				break;
+			case 2:
 				animDesired = LookupSequence( "die_legs2" );
-			else
-				animDesired = LookupSequence( "die_forwards" );
+			case 3:
+				animDesired = LookupSequence( "die_legs2" );
+				break;
+			case 4:
+				animDesired = LookupSequence( "die_legs3" );
+			case 5:
+				animDesired = LookupSequence( "die_legs3" );
+				break;
+			case 6:
+				animDesired = LookupSequence( "die_legs4" );
+			case 7:
+				animDesired = LookupSequence( "die_legs4" );
+				break;
+			case 8:
+				animDesired = LookupSequence( "die_forward" );
+				break;
+			default:
+				animDesired = LookupSequence( "die_legs3" );
+				break;
 			}
 			break;
 
@@ -1982,6 +2474,25 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 		ResetSequenceInfo( );
 		return;
 
+	case ACT_HOVER:
+	case ACT_LEAP:
+	case ACT_SWIM:
+	case ACT_HOP:
+	default:
+		if ( m_Activity == m_IdealActivity)
+			return;
+		m_Activity = m_IdealActivity;
+
+		animDesired = LookupActivity( m_Activity );
+		// Already using the desired animation?
+		if (pev->sequence == animDesired)
+			return;
+
+		pev->gaitsequence = 0;
+		pev->sequence		= animDesired;
+		pev->frame			= 0;
+		ResetSequenceInfo( );
+		return;
 	}
 
 	if ( FBitSet( pev->flags, FL_DUCKING ) )
@@ -1998,7 +2509,33 @@ void CBasePlayer::SetAnimation( PLAYER_ANIM playerAnim )
 	}
 	else if ( speed > 190 )	// Beta 6.0: the run animation from 190 (Beta 5.2: 220)
 	{
-		pev->gaitsequence	= LookupActivity( ACT_RUN );
+		// Beta 7.0: as in the ACT_WALK case above
+		if ( m_flLastFired + 4 < gpGlobals->time )
+		{
+			strcpy( szAnim, "run_" );
+			strcat( szAnim, m_szAnimExtention );
+			animDesired = LookupSequence( szAnim );
+			if ( animDesired == -1 )
+			{
+				if ( FBitSet( pev->flags, FL_DUCKING ) )	// crouching
+					strcpy( szAnim, "crouch_aim_" );
+				else
+					strcpy( szAnim, "ref_aim_" );
+				strcat( szAnim, m_szAnimExtention );
+				animDesired = LookupSequence( szAnim );
+				if (animDesired == -1)
+					animDesired = 0;
+				m_Activity = ACT_RUN;
+				pev->gaitsequence = LookupActivity( ACT_RUN );
+			}
+			else
+			{
+				m_Activity = ACT_RUN;
+				pev->gaitsequence = animDesired;
+			}
+		}
+		else
+			pev->gaitsequence	= LookupActivity( ACT_RUN );
 	}
 	else if (speed > 0)
 	{
@@ -2307,15 +2844,29 @@ void CBasePlayer::MenuPrint( CBasePlayer *pl, const char *msg )
 // MakeVIP - Beta 6.0 (Linux symbol): the player becomes the
 // VIP of an assassination map: a counter-terrorist with the
 // vip model (appearance 8), the C4 or kit off his model; the
-// game rules count his first round as VIP
+// game rules count his first round as VIP. Beta 7.0: the
+// model's name is put together at run time (see g_a)
 //=========================================================
 void CBasePlayer::MakeVIP( void )
 {
+	char *szModelVIP = new char[11];
+	char *szVIP = new char[4];
+
+	szModelVIP[0] = g_m;	szModelVIP[5] = ' ';	szModelVIP[10] = '\0';
+	szModelVIP[1] = g_o;	szModelVIP[6] = g_v;
+	szModelVIP[2] = g_d;	szModelVIP[7] = g_i;
+	szModelVIP[3] = g_e;	szModelVIP[8] = g_p;
+	szModelVIP[4] = g_l;	szModelVIP[9] = '\n';
+
+	szVIP[0] = g_v;
+	szVIP[1] = g_i;
+	szVIP[2] = g_p;
+	szVIP[3] = '\0';
 	pev->body = 0;
 	m_iAppearance = 9;	// Beta 6.5 (the guerilla took 5)
 
-	CLIENT_COMMAND( edict(), "model vip\n" );
-	g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", "vip" );
+	CLIENT_COMMAND( edict(), szModelVIP );
+	g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szVIP );
 
 	m_iTeam = TEAM_CT;
 	m_bIsVIP = true;
@@ -2326,11 +2877,12 @@ void CBasePlayer::MakeVIP( void )
 //=========================================================
 // JoiningThink - Beta 5.0 (leak) (Linux symbol): a player
 // who has connected but not joined (m_iJoiningState):
-//  start: the map's briefing (g_szMapBriefingText) in the
-//   menu space with the screen faded out and the HUD hidden,
-//   unless the map has none or the client's "dm" key is 0 or
-//   off; the defuser icon cleared; his "ghosts" key (Beta 5.0;
-//   the leak read "ignoreghosts", sic: 0 or off set the flag);
+//  start: (to Beta 6.6: the map's briefing, g_szMapBriefingText,
+//   in the menu space with the HUD hidden, unless the map has
+//   none or the client's "dm" key is 0 or off; Beta 7.0: no
+//   text, the team menu follows at once;) the defuser icon
+//   cleared; his "ghosts" key (Beta 5.0; the leak read
+//   "ignoreghosts", sic: 0 or off set the flag);
 //  reading the text: fire, jump or attack 2 ends it;
 //  the team and appearance menus (PlayerThink, client.cpp);
 //  spawn: the per-player state reset, then spawned, or an
@@ -2363,15 +2915,10 @@ void CBasePlayer::JoiningThink( void )
 				bShowText = FALSE;
 		}
 
-		if ( g_szMapBriefingText[0] && bShowText )
-		{
-			// Beta 6.6: no screen fade any more (here and at JOIN_SPAWN)
-			m_iHideHUD |= HIDEHUD_WEAPONS | HIDEHUD_HEALTH | HIDEHUD_TIMER | HIDEHUD_MONEY;
-			MenuPrint( this, g_szMapBriefingText );
-			m_iJoiningState = JOIN_READING_TEXT;
-		}
-		else
-			m_iJoiningState = JOIN_TEAM_MENU;
+		// Beta 7.0: the briefing is no longer shown here (the client's VGUI
+		// has it): straight to the team menu. The "dm" key is still read
+		// (retail stores the value and does nothing with it)
+		m_iJoiningState = JOIN_TEAM_MENU;
 
 		MESSAGE_BEGIN( MSG_ONE, gmsgStatusIcon, NULL, pev );
 			WRITE_BYTE( 0 );
@@ -2433,6 +2980,25 @@ void CBasePlayer::JoiningThink( void )
 			m_fTeamChanged = false;	// Beta 5.0
 			StartObserver( pev->origin, VARS( mp->GetPlayerSpawnSpot( this ) )->angles );
 			mp->CheckWinConditions();
+
+			// Beta 7.0: everybody learns his team and score, as Spawn tells them
+			MESSAGE_BEGIN( MSG_ALL, gmsgTeamInfo );
+				WRITE_BYTE( entindex() );
+				if ( m_iTeam == TEAM_CT )
+					WRITE_STRING( "CT" );
+				else if ( m_iTeam == TEAM_TERRORIST )
+					WRITE_STRING( "TERRORIST" );
+				else
+					WRITE_STRING( "UNASSIGNED" );
+			MESSAGE_END();
+
+			MESSAGE_BEGIN( MSG_ALL, gmsgScoreInfo );
+				WRITE_BYTE( ENTINDEX(edict()) );
+				WRITE_SHORT( pev->frags );
+				WRITE_SHORT( m_iDeaths );
+				WRITE_SHORT( 0 );
+				WRITE_SHORT( m_iTeam );
+			MESSAGE_END();
 			return;
 		}
 
@@ -2624,6 +3190,13 @@ void CBasePlayer::PlayerDeathThink(void)
 		m_iRespawnFrames++;		// Note, these aren't necessarily real "frames", so behavior is dependent on # of client movement commands
 		if ( m_iRespawnFrames < 120 )   // Animations should be no longer than this
 			return;
+	}
+
+	// Beta 7.0: the death animation plays to its end even after 120 frames
+	if ( !m_fSequenceFinished )
+	{
+		StudioFrameAdvance();
+		return;
 	}
 
 	// Beta 5.0 (leak): the time of death is when the body comes to rest
@@ -2857,7 +3430,12 @@ void CBasePlayer::PlayerUse ( void )
 					m_afPhysicsFlags |= PFLAG_ONTRAIN;
 					m_iTrain = TrainSpeed(pTrain->pev->speed, pTrain->pev->impulse);
 					m_iTrain |= TRAIN_NEW;
-					EMIT_SOUND( ENT(pev), CHAN_ITEM, "plats/train_use1.wav", 0.8, ATTN_NORM);
+
+					// Beta 7.0: a vehicle starts with its own sound
+					if ( pTrain->Classify() == CLASS_VEHICLE )
+						EMIT_SOUND( ENT(pev), CHAN_ITEM, "plats/vehicle_ignition.wav", 0.8, ATTN_NORM);
+					else
+						EMIT_SOUND( ENT(pev), CHAN_ITEM, "plats/train_use1.wav", 0.8, ATTN_NORM);
 					return;
 				}
 			}
@@ -3000,10 +3578,13 @@ void CBasePlayer::Jump()
 		if ( pevGround->flags & FL_CONVEYOR )
 			pev->velocity = pev->velocity + pev->basevelocity;
 
-		// Beta 6.0: a jump off a train keeps the train's velocity
-		if ( !strcmp( "func_tracktrain", STRING( pevGround->classname ) ) || !strcmp( "func_train", STRING( pevGround->classname ) ) )
-			pev->velocity = pev->velocity + pevGround->velocity;
 	}
+
+	// Beta 6.0: a jump off a train keeps the train's velocity. Beta 7.0: off a
+	// vehicle too; its test stands outside the one for the ground's presence
+	// (the function has left by then when there is no ground entity)
+	if ( ( pevGround && ( !strcmp( "func_tracktrain", STRING( pevGround->classname ) ) || !strcmp( "func_train", STRING( pevGround->classname ) ) ) ) || !strcmp( "func_vehicle", STRING( pevGround->classname ) ) )
+		pev->velocity = pev->velocity + pevGround->velocity;
 }
 
 
@@ -3439,6 +4020,13 @@ void CBasePlayer :: UpdateStepSound( void )
 				fvol = fWalking ? 0.2 : 0.5;
 				m_flTimeStepSound = fWalking ? gpGlobals->time + 0.4 : gpGlobals->time + 0.3;
 				break;
+
+			// Beta 7.0: snow has a case of its own, the last (the volume is
+			// not used by anything and leaves no code: the numbers are ours)
+			case CHAR_TEX_SNOW:
+				fvol = fWalking ? 0.2 : 0.5;
+				m_flTimeStepSound = fWalking ? gpGlobals->time + 0.4 : gpGlobals->time + 0.3;
+				break;
 			}
 		}
 		
@@ -3489,7 +4077,7 @@ void CBasePlayer::UpdatePath( void )
 
 //=========================================================
 // CanPlayerBuy - Beta 6.0 (Linux symbol): buying is over 60
-// seconds into the round, the VIP never buys, and
+// seconds into the round (Beta 7.0: 90), the VIP never buys, and
 // info_map_parameters can forbid it to either team; display
 // says why in the centre of the screen
 //=========================================================
@@ -3499,9 +4087,9 @@ bool CBasePlayer::CanPlayerBuy( bool display )
 	char szMessage[60];	// name ours; 60 bytes, the longest message's length (the frame says so)
 	bool retval = true;	// name ours. Beta 6.5 sets it (Beta 6.1 left it unset when nothing forbade buying)
 
-	if ( gpGlobals->time - mp->m_flRoundStartTime > 60 )
+	if ( gpGlobals->time - mp->m_flRoundStartTime > 90 )	// Beta 7.0 (6.6: 60)
 	{
-		strcpy( szMessage, "60 seconds have passed... You can't buy anything now!\n" );
+		strcpy( szMessage, "90 seconds have passed... You can't buy anything now!\n" );
 		retval = false;
 	}
 
@@ -3539,51 +4127,252 @@ bool CBasePlayer::CanPlayerBuy( bool display )
 // ClientUserInfoChanged, which now only sets m_bVerifyModel; PreThink calls
 // this while the flag is set. 1 urban, 2 terror, 3 arab, 4 arctic, 5 gsg9,
 // 6 gign, 7 sas, 8 guerilla, 9 vip
+// Beta 7.0: the two strings of the player's appearance are put together at
+// run time (see g_a; the pointers of the other eight pairs stay unset), and
+// the model is set only when the client's "model" key is another (strcmp):
+// 6.6 sent the command at every call. The guerilla's pair is built and not
+// used: its case compares and sets the literals. The buffers are never freed.
+// case 1 stands second in retail's code; the default repeats it.
 void CBasePlayer::VerifyModel( void )
 {
-	edict_t *pEntity = edict();		// names ours
+	char *szModelTerror, *szTerror;
+	char *szModelArab, *szArab;
+	char *szModelArctic, *szArctic;
+	char *szModelGuerilla, *szGuerilla;
+	char *szModelUrban, *szUrban;
+	char *szModelGSG9, *szGSG9;
+	char *szModelSAS, *szSAS;
+	char *szModelGIGN, *szGIGN;
+	char *szModelVIP, *szVIP;
+
+	if ( m_iAppearance == 2 )
+	{
+		szModelTerror = new char[14];
+		szTerror = new char[7];
+
+		szModelTerror[0] = g_m;	szModelTerror[5] = ' ';	szModelTerror[10] = g_o;
+		szModelTerror[1] = g_o;	szModelTerror[6] = g_t;	szModelTerror[11] = g_r;
+		szModelTerror[2] = g_d;	szModelTerror[7] = g_e;	szModelTerror[12] = '\n';
+		szModelTerror[3] = g_e;	szModelTerror[8] = g_r;	szModelTerror[13] = '\0';
+		szModelTerror[4] = g_l;	szModelTerror[9] = g_r;
+
+		szTerror[0] = g_t;	szTerror[5] = g_r;
+		szTerror[1] = g_e;	szTerror[6] = '\0';
+		szTerror[2] = g_r;
+		szTerror[3] = g_r;
+		szTerror[4] = g_o;
+	}
+	else if ( m_iAppearance == 3 )
+	{
+		szModelArab = new char[12];
+		szArab = new char[5];
+
+		szModelArab[0] = g_m;	szModelArab[5] = ' ';	szModelArab[10] = '\n';
+		szModelArab[1] = g_o;	szModelArab[6] = g_a;	szModelArab[11] = '\0';
+		szModelArab[2] = g_d;	szModelArab[7] = g_r;
+		szModelArab[3] = g_e;	szModelArab[8] = g_a;
+		szModelArab[4] = g_l;	szModelArab[9] = g_b;
+
+		szArab[0] = g_a;
+		szArab[1] = g_r;
+		szArab[2] = g_a;
+		szArab[3] = g_b;
+		szArab[4] = '\0';
+	}
+	else if ( m_iAppearance == 4 )
+	{
+		szModelArctic = new char[14];
+		szArctic = new char[7];
+
+		szModelArctic[0] = g_m;	szModelArctic[5] = ' ';	szModelArctic[10] = g_i;
+		szModelArctic[1] = g_o;	szModelArctic[6] = g_a;	szModelArctic[11] = g_c;
+		szModelArctic[2] = g_d;	szModelArctic[7] = g_r;	szModelArctic[12] = '\n';
+		szModelArctic[3] = g_e;	szModelArctic[8] = g_c;	szModelArctic[13] = '\0';
+		szModelArctic[4] = g_l;	szModelArctic[9] = g_t;
+
+		szArctic[0] = g_a;	szArctic[5] = g_c;
+		szArctic[1] = g_r;	szArctic[6] = '\0';
+		szArctic[2] = g_c;
+		szArctic[3] = g_t;
+		szArctic[4] = g_i;
+	}
+	else if ( m_iAppearance == 8 )
+	{
+		szModelGuerilla = new char[16];
+		szGuerilla = new char[9];
+
+		szModelGuerilla[0] = g_m;	szModelGuerilla[5] = ' ';	szModelGuerilla[10] = g_i;	szModelGuerilla[15] = '\0';
+		szModelGuerilla[1] = g_o;	szModelGuerilla[6] = g_g;	szModelGuerilla[11] = g_l;
+		szModelGuerilla[2] = g_d;	szModelGuerilla[7] = g_u;	szModelGuerilla[12] = g_l;
+		szModelGuerilla[3] = g_e;	szModelGuerilla[8] = g_e;	szModelGuerilla[13] = g_a;
+		szModelGuerilla[4] = g_l;	szModelGuerilla[9] = g_r;	szModelGuerilla[14] = '\n';
+
+		szGuerilla[0] = g_g;	szGuerilla[5] = g_l;
+		szGuerilla[1] = g_u;	szGuerilla[6] = g_l;
+		szGuerilla[2] = g_e;	szGuerilla[7] = g_a;
+		szGuerilla[3] = g_r;	szGuerilla[8] = '\0';
+		szGuerilla[4] = g_i;
+	}
+	else if ( m_iAppearance == 1 )
+	{
+		szModelUrban = new char[13];
+		szUrban = new char[6];
+
+		szModelUrban[0] = g_m;	szModelUrban[5] = ' ';	szModelUrban[10] = g_n;
+		szModelUrban[1] = g_o;	szModelUrban[6] = g_u;	szModelUrban[11] = '\n';
+		szModelUrban[2] = g_d;	szModelUrban[7] = g_r;	szModelUrban[12] = '\0';
+		szModelUrban[3] = g_e;	szModelUrban[8] = g_b;
+		szModelUrban[4] = g_l;	szModelUrban[9] = g_a;
+
+		szUrban[0] = g_u;
+		szUrban[1] = g_r;
+		szUrban[2] = g_b;
+		szUrban[3] = g_a;
+		szUrban[4] = g_n;
+		szUrban[5] = '\0';
+	}
+	else if ( m_iAppearance == 5 )
+	{
+		szModelGSG9 = new char[12];
+		szGSG9 = new char[5];
+
+		szModelGSG9[0] = g_m;	szModelGSG9[5] = ' ';	szModelGSG9[10] = '\n';
+		szModelGSG9[1] = g_o;	szModelGSG9[6] = g_g;	szModelGSG9[11] = '\0';
+		szModelGSG9[2] = g_d;	szModelGSG9[7] = g_s;
+		szModelGSG9[3] = g_e;	szModelGSG9[8] = g_g;
+		szModelGSG9[4] = g_l;	szModelGSG9[9] = g_9;
+
+		szGSG9[0] = g_g;
+		szGSG9[1] = g_s;
+		szGSG9[2] = g_g;
+		szGSG9[3] = g_9;
+		szGSG9[4] = '\0';
+	}
+	else if ( m_iAppearance == 7 )
+	{
+		szModelSAS = new char[11];
+		szSAS = new char[4];
+
+		szModelSAS[0] = g_m;	szModelSAS[5] = ' ';	szModelSAS[10] = '\0';
+		szModelSAS[1] = g_o;	szModelSAS[6] = g_s;
+		szModelSAS[2] = g_d;	szModelSAS[7] = g_a;
+		szModelSAS[3] = g_e;	szModelSAS[8] = g_s;
+		szModelSAS[4] = g_l;	szModelSAS[9] = '\n';
+
+		szSAS[0] = g_s;
+		szSAS[1] = g_a;
+		szSAS[2] = g_s;
+		szSAS[3] = '\0';
+	}
+	else if ( m_iAppearance == 6 )
+	{
+		szModelGIGN = new char[12];
+		szGIGN = new char[5];
+
+		szModelGIGN[0] = g_m;	szModelGIGN[5] = ' ';	szModelGIGN[10] = '\n';
+		szModelGIGN[1] = g_o;	szModelGIGN[6] = g_g;	szModelGIGN[11] = '\0';
+		szModelGIGN[2] = g_d;	szModelGIGN[7] = g_i;
+		szModelGIGN[3] = g_e;	szModelGIGN[8] = g_g;
+		szModelGIGN[4] = g_l;	szModelGIGN[9] = g_n;
+
+		szGIGN[0] = g_g;
+		szGIGN[1] = g_i;
+		szGIGN[2] = g_g;
+		szGIGN[3] = g_n;
+		szGIGN[4] = '\0';
+	}
+	else if ( m_iAppearance == 9 )
+	{
+		szModelVIP = new char[11];
+		szVIP = new char[4];
+
+		szModelVIP[0] = g_m;	szModelVIP[5] = ' ';	szModelVIP[10] = '\0';
+		szModelVIP[1] = g_o;	szModelVIP[6] = g_v;
+		szModelVIP[2] = g_d;	szModelVIP[7] = g_i;
+		szModelVIP[3] = g_e;	szModelVIP[8] = g_p;
+		szModelVIP[4] = g_l;	szModelVIP[9] = '\n';
+
+		szVIP[0] = g_v;
+		szVIP[1] = g_i;
+		szVIP[2] = g_p;
+		szVIP[3] = '\0';
+	}
+
+	char *infobuffer = g_engfuncs.pfnGetInfoKeyBuffer( edict() );
+	char *model = g_engfuncs.pfnInfoKeyValue( infobuffer, "model" );
+	edict_t *pEntity = edict();		// name ours
 
 	switch ( m_iAppearance )
 	{
 	case 2:
-		CLIENT_COMMAND( pEntity, "model terror\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "terror" );
-		break;
-	case 3:
-		CLIENT_COMMAND( pEntity, "model arab\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "arab" );
-		break;
-	case 8:
-		CLIENT_COMMAND( pEntity, "model guerilla\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "guerilla" );
-		break;
-	case 4:
-		CLIENT_COMMAND( pEntity, "model arctic\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "arctic" );
-		break;
-	case 5:
-		CLIENT_COMMAND( pEntity, "model gsg9\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "gsg9" );
-		break;
-	case 6:
-		CLIENT_COMMAND( pEntity, "model gign\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "gign" );
-		break;
-	case 7:
-		CLIENT_COMMAND( pEntity, "model sas\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "sas" );
-		break;
-	case 9:
-		CLIENT_COMMAND( pEntity, "model vip\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "vip" );
+		if ( strcmp( model, szTerror ) )
+		{
+			CLIENT_COMMAND( pEntity, szModelTerror );
+			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szTerror );
+		}
 		break;
 	case 1:
-		CLIENT_COMMAND( pEntity, "model urban\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "urban" );
+		if ( strcmp( model, szUrban ) )
+		{
+			CLIENT_COMMAND( pEntity, szModelUrban );
+			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szUrban );
+		}
 		break;
-	default:	// the same as case 1 (VC6 merges the two)
-		CLIENT_COMMAND( pEntity, "model urban\n" );
-		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "urban" );
+	case 3:
+		if ( strcmp( model, szArab ) )
+		{
+			CLIENT_COMMAND( pEntity, szModelArab );
+			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szArab );
+		}
+		break;
+	case 8:
+		if ( strcmp( model, "guerilla" ) )
+		{
+			CLIENT_COMMAND( pEntity, "model guerilla\n" );
+			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", "guerilla" );
+		}
+		break;
+	case 4:
+		if ( strcmp( model, szArctic ) )
+		{
+			CLIENT_COMMAND( pEntity, szModelArctic );
+			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szArctic );
+		}
+		break;
+	case 5:
+		if ( strcmp( model, szGSG9 ) )
+		{
+			CLIENT_COMMAND( pEntity, szModelGSG9 );
+			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szGSG9 );
+		}
+		break;
+	case 6:
+		if ( strcmp( model, szGIGN ) )
+		{
+			CLIENT_COMMAND( pEntity, szModelGIGN );
+			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szGIGN );
+		}
+		break;
+	case 7:
+		if ( strcmp( model, szSAS ) )
+		{
+			CLIENT_COMMAND( pEntity, szModelSAS );
+			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szSAS );
+		}
+		break;
+	case 9:
+		if ( strcmp( model, szVIP ) )
+		{
+			CLIENT_COMMAND( pEntity, szModelVIP );
+			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szVIP );
+		}
+		break;
+	default:
+		if ( strcmp( model, szUrban ) )
+		{
+			CLIENT_COMMAND( pEntity, szModelUrban );
+			g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), g_engfuncs.pfnGetInfoKeyBuffer( pEntity ), "model", szUrban );
+		}
 		break;
 	}
 
@@ -3609,9 +4398,43 @@ void CBasePlayer::PreThink(void)
 	if ( m_iJoiningState != JOIN_DONE )
 		JoiningThink();
 
-	// Beta 6.6: the model check, after a change of the client's keys
-	if ( m_bVerifyModel == true )
+	// Beta 6.6: the model check, after a change of the client's keys.
+	// Beta 7.0: no more than once in three seconds, and with it the keys
+	// ClientUserInfoChanged reads are read again: lefthand, vgui_menus and
+	// the name, whose '%' become spaces
+	if ( m_bVerifyModel == true && m_flTimeCheckAllowed < gpGlobals->time )
+	{
+		char szName[256];
+		char *infobuffer = g_engfuncs.pfnGetInfoKeyBuffer( edict() );	// names ours
+		char *value = g_engfuncs.pfnInfoKeyValue( infobuffer, "lefthand" );
+
+		if ( value && value[0] != '0' )
+			m_bLeftHanded = true;
+		else
+			m_bLeftHanded = false;
+
+		value = g_engfuncs.pfnInfoKeyValue( infobuffer, "vgui_menus" );
+		if ( value && value[0] != '0' )
+			m_bVGUIMenus = true;
+		else
+			m_bVGUIMenus = false;
+
+		const char *szBufferName = g_engfuncs.pfnInfoKeyValue( infobuffer, "name" );	// as ClientUserInfoChanged's
+
+		strncpy( szName, szBufferName, 255 );
+		szName[255] = 0;
+
+		for ( char *pPct = szName; pPct != NULL && *pPct != 0; pPct++ )
+		{
+			if ( *pPct == '%' )
+				*pPct = ' ';
+		}
+
+		g_engfuncs.pfnSetClientKeyValue( ENTINDEX( edict() ), infobuffer, "name", szName );
+
+		m_flTimeCheckAllowed = gpGlobals->time + 3.0;
 		VerifyModel();
+	}
 
 	// fire or secondary fire takes the map's text away (and does nothing else); Beta 6.5: no longer jump
 	if ( m_fShowingLevelText == true && ( m_afButtonPressed & ( IN_ATTACK | IN_ATTACK2 ) ) )
@@ -3717,9 +4540,10 @@ void CBasePlayer::PreThink(void)
 				return;
 			}
 		}
-		else if ( !FBitSet( pev->flags, FL_ONGROUND ) || FBitSet( pTrain->pev->spawnflags, SF_TRACKTRAIN_NOCONTROL ) || (pev->button & (IN_MOVELEFT|IN_MOVERIGHT) ) )
+		else if ( !FBitSet( pev->flags, FL_ONGROUND ) || FBitSet( pTrain->pev->spawnflags, SF_TRACKTRAIN_NOCONTROL ) )
 		{
 			// Turn off the train if you jump, strafe, or the train controls go dead
+			// (Beta 7.0: no longer when the player strafes: a vehicle is steered so)
 			m_afPhysicsFlags &= ~PFLAG_ONTRAIN;
 			m_iTrain = TRAIN_NEW|TRAIN_OFF;
 			return;
@@ -3727,15 +4551,44 @@ void CBasePlayer::PreThink(void)
 
 		pev->velocity = g_vecZero;
 		vel = 0;
-		if ( m_afButtonPressed & IN_FORWARD )
+
+		// Beta 7.0: a vehicle (func_vehicle) takes the buttons while they are
+		// held, forward and back as a train, left and right as 20 and 30
+		if ( pTrain->Classify() == CLASS_VEHICLE )
 		{
-			vel = 1;
-			pTrain->Use( this, this, USE_SET, (float)vel );
+			if ( pev->button & IN_FORWARD )
+			{
+				vel = 1;
+				pTrain->Use( this, this, USE_SET, (float)vel );
+			}
+			if ( pev->button & IN_BACK )
+			{
+				vel = -1;
+				pTrain->Use( this, this, USE_SET, (float)vel );
+			}
+			if ( pev->button & IN_MOVELEFT )
+			{
+				vel = 20;
+				pTrain->Use( this, this, USE_SET, (float)vel );
+			}
+			if ( pev->button & IN_MOVERIGHT )
+			{
+				vel = 30;
+				pTrain->Use( this, this, USE_SET, (float)vel );
+			}
 		}
-		else if ( m_afButtonPressed & IN_BACK )
+		else
 		{
-			vel = -1;
-			pTrain->Use( this, this, USE_SET, (float)vel );
+			if ( m_afButtonPressed & IN_FORWARD )
+			{
+				vel = 1;
+				pTrain->Use( this, this, USE_SET, (float)vel );
+			}
+			else if ( m_afButtonPressed & IN_BACK )
+			{
+				vel = -1;
+				pTrain->Use( this, this, USE_SET, (float)vel );
+			}
 		}
 
 		if (vel)
@@ -4794,6 +5647,7 @@ void CBasePlayer::Spawn( void )
 	SET_VIEW( ENT(pev), ENT(pev) );
 	m_hObserverTarget = NULL;
 	pev->iuser1 = pev->iuser2 = 0;
+	m_flLastFired = -15;	// Beta 7.0
 
 	if ( ((CHalfLifeMultiplay *)g_pGameRules)->IsFreezePeriod() )
 		m_bCanShoot = false;
@@ -4807,6 +5661,13 @@ void CBasePlayer::Spawn( void )
 		m_bLeftHanded = true;
 	else
 		m_bLeftHanded = false;
+
+	// Beta 7.0: and whether the client wants VGUI menus
+	value = g_engfuncs.pfnInfoKeyValue( infobuffer, "vgui_menus" );
+	if ( value && value[0] != '0' )
+		m_bVGUIMenus = true;
+	else
+		m_bVGUIMenus = false;
 
 	m_SbarString0[0]	= 0;
 	m_SbarString1[0]	= 0;
@@ -4939,7 +5800,7 @@ void CBasePlayer::Spawn( void )
 
 	ResetMaxSpeed();
 
-	// Beta 6.0: the VIP: helmet and 200 armour, only the knife
+	// Beta 6.0: the VIP: helmet and 200 armour, only the knife (Beta 7.0: and a USP)
 	if ( m_bIsVIP == true )
 	{
 		m_iKevlar = 2;
@@ -4947,6 +5808,9 @@ void CBasePlayer::Spawn( void )
 		HintMessage( "You are the VIP\n Make your way to the safety zones!\n", TRUE, FALSE );
 		RemoveAllItems( FALSE );
 		GiveNamedItem( "weapon_knife" );
+		// Beta 7.0: and a USP with one magazine
+		GiveNamedItem( "weapon_usp" );
+		GiveAmmo( 12, "45acp", 48 );
 	}
 
 	SetScoreboardAttributes();
@@ -6653,8 +7517,8 @@ void CBasePlayer :: EnableControl(BOOL fControl)
 //=========================================================
 // ResetMaxSpeed - Beta 5.0 (leak) (Linux symbol): the client's
 // maximum speed: 320 observing, almost none in the round's
-// freeze period, else what the weapon in his hands allows
-// (260 with none)
+// freeze period (Beta 7.0: 1, was 0.001), else what the
+// weapon in his hands allows (260 with none)
 //=========================================================
 void CBasePlayer::ResetMaxSpeed( void )
 {
@@ -6663,7 +7527,7 @@ void CBasePlayer::ResetMaxSpeed( void )
 	if ( pev->iuser1 )	// Beta 6.5: an observer (IsObserver) flies at 900 (Beta 6.1: 350)
 		speed = 900;
 	else if ( g_pGameRules->IsMultiplayer() && ((CHalfLifeMultiplay *)g_pGameRules)->IsFreezePeriod() )
-		speed = 0.001;
+		speed = 1;	// Beta 7.0 (6.6: 0.001)
 	else if ( m_bIsVIP == true )	// Beta 6.0: the VIP walks at 220 (Beta 6.5: 227)
 		speed = 227;
 	else if ( m_pActiveItem )
@@ -7312,10 +8176,146 @@ BOOL CBasePlayer::HasNamedPlayerItem( const char *pszItemName )
 // to the other team with a model of the other side (an
 // escape map's teams swap, SwapAllPlayers): urban becomes
 // arab, sas arctic, the rest terror; terror becomes gsg9,
-// arctic sas, the rest urban
+// arctic sas, the rest urban. Beta 7.0: the names are copied
+// from buffers put together at run time (see g_a), all nine
+// pairs built and none freed; the guerilla's two are still
+// literals. Each team's branch ends with its own two calls:
+// VC6 merges them, but the stack packer has counted both
+// (this gets the frame's first slot only so)
 //=========================================================
 void CBasePlayer::SwitchTeam( void )
 {
+	char *szModelTerror = new char[14];
+	char *szTerror = new char[7];
+
+	szModelTerror[0] = g_m;	szModelTerror[5] = ' ';	szModelTerror[10] = g_o;
+	szModelTerror[1] = g_o;	szModelTerror[6] = g_t;	szModelTerror[11] = g_r;
+	szModelTerror[2] = g_d;	szModelTerror[7] = g_e;	szModelTerror[12] = '\n';
+	szModelTerror[3] = g_e;	szModelTerror[8] = g_r;	szModelTerror[13] = '\0';
+	szModelTerror[4] = g_l;	szModelTerror[9] = g_r;
+
+	szTerror[0] = g_t;	szTerror[5] = g_r;
+	szTerror[1] = g_e;	szTerror[6] = '\0';
+	szTerror[2] = g_r;
+	szTerror[3] = g_r;
+	szTerror[4] = g_o;
+
+	char *szModelArab = new char[12];
+	char *szArab = new char[5];
+
+	szModelArab[0] = g_m;	szModelArab[5] = ' ';	szModelArab[10] = '\n';
+	szModelArab[1] = g_o;	szModelArab[6] = g_a;	szModelArab[11] = '\0';
+	szModelArab[2] = g_d;	szModelArab[7] = g_r;
+	szModelArab[3] = g_e;	szModelArab[8] = g_a;
+	szModelArab[4] = g_l;	szModelArab[9] = g_b;
+
+	szArab[0] = g_a;
+	szArab[1] = g_r;
+	szArab[2] = g_a;
+	szArab[3] = g_b;
+	szArab[4] = '\0';
+
+	char *szModelArctic = new char[14];
+	char *szArctic = new char[7];
+
+	szModelArctic[0] = g_m;	szModelArctic[5] = ' ';	szModelArctic[10] = g_i;
+	szModelArctic[1] = g_o;	szModelArctic[6] = g_a;	szModelArctic[11] = g_c;
+	szModelArctic[2] = g_d;	szModelArctic[7] = g_r;	szModelArctic[12] = '\n';
+	szModelArctic[3] = g_e;	szModelArctic[8] = g_c;	szModelArctic[13] = '\0';
+	szModelArctic[4] = g_l;	szModelArctic[9] = g_t;
+
+	szArctic[0] = g_a;	szArctic[5] = g_c;
+	szArctic[1] = g_r;	szArctic[6] = '\0';
+	szArctic[2] = g_c;
+	szArctic[3] = g_t;
+	szArctic[4] = g_i;
+
+	char *szModelGuerilla = new char[16];
+	char *szGuerilla = new char[9];
+
+	szModelGuerilla[0] = g_m;	szModelGuerilla[5] = ' ';	szModelGuerilla[10] = g_i;	szModelGuerilla[15] = '\0';
+	szModelGuerilla[1] = g_o;	szModelGuerilla[6] = g_g;	szModelGuerilla[11] = g_l;
+	szModelGuerilla[2] = g_d;	szModelGuerilla[7] = g_u;	szModelGuerilla[12] = g_l;
+	szModelGuerilla[3] = g_e;	szModelGuerilla[8] = g_e;	szModelGuerilla[13] = g_a;
+	szModelGuerilla[4] = g_l;	szModelGuerilla[9] = g_r;	szModelGuerilla[14] = '\n';
+
+	szGuerilla[0] = g_g;	szGuerilla[5] = g_l;
+	szGuerilla[1] = g_u;	szGuerilla[6] = g_l;
+	szGuerilla[2] = g_e;	szGuerilla[7] = g_a;
+	szGuerilla[3] = g_r;	szGuerilla[8] = '\0';
+	szGuerilla[4] = g_i;
+
+	char *szModelUrban = new char[13];
+	char *szUrban = new char[6];
+
+	szModelUrban[0] = g_m;	szModelUrban[5] = ' ';	szModelUrban[10] = g_n;
+	szModelUrban[1] = g_o;	szModelUrban[6] = g_u;	szModelUrban[11] = '\n';
+	szModelUrban[2] = g_d;	szModelUrban[7] = g_r;	szModelUrban[12] = '\0';
+	szModelUrban[3] = g_e;	szModelUrban[8] = g_b;
+	szModelUrban[4] = g_l;	szModelUrban[9] = g_a;
+
+	szUrban[0] = g_u;	szUrban[5] = '\0';
+	szUrban[1] = g_r;
+	szUrban[2] = g_b;
+	szUrban[3] = g_a;
+	szUrban[4] = g_n;
+
+	char *szModelGSG9 = new char[12];
+	char *szGSG9 = new char[5];
+
+	szModelGSG9[0] = g_m;	szModelGSG9[5] = ' ';	szModelGSG9[10] = '\n';
+	szModelGSG9[1] = g_o;	szModelGSG9[6] = g_g;	szModelGSG9[11] = '\0';
+	szModelGSG9[2] = g_d;	szModelGSG9[7] = g_s;
+	szModelGSG9[3] = g_e;	szModelGSG9[8] = g_g;
+	szModelGSG9[4] = g_l;	szModelGSG9[9] = g_9;
+
+	szGSG9[0] = g_g;
+	szGSG9[1] = g_s;
+	szGSG9[2] = g_g;
+	szGSG9[3] = g_9;
+	szGSG9[4] = '\0';
+
+	char *szModelSAS = new char[11];
+	char *szSAS = new char[4];
+
+	szModelSAS[0] = g_m;	szModelSAS[5] = ' ';	szModelSAS[10] = '\0';
+	szModelSAS[1] = g_o;	szModelSAS[6] = g_s;
+	szModelSAS[2] = g_d;	szModelSAS[7] = g_a;
+	szModelSAS[3] = g_e;	szModelSAS[8] = g_s;
+	szModelSAS[4] = g_l;	szModelSAS[9] = '\n';
+
+	szSAS[0] = g_s;
+	szSAS[1] = g_a;
+	szSAS[2] = g_s;
+	szSAS[3] = '\0';
+
+	char *szModelGIGN = new char[12];
+	char *szGIGN = new char[5];
+
+	szModelGIGN[0] = g_m;	szModelGIGN[5] = ' ';	szModelGIGN[10] = '\n';
+	szModelGIGN[1] = g_o;	szModelGIGN[6] = g_g;	szModelGIGN[11] = '\0';
+	szModelGIGN[2] = g_d;	szModelGIGN[7] = g_i;
+	szModelGIGN[3] = g_e;	szModelGIGN[8] = g_g;
+	szModelGIGN[4] = g_l;	szModelGIGN[9] = g_n;
+
+	szGIGN[0] = g_g;	szGIGN[4] = '\0';
+	szGIGN[1] = g_i;
+	szGIGN[2] = g_g;
+	szGIGN[3] = g_n;
+
+	char *szModelVIP = new char[11];
+	char *szVIP = new char[4];
+
+	szModelVIP[0] = g_m;	szModelVIP[5] = ' ';	szModelVIP[10] = '\0';
+	szModelVIP[1] = g_o;	szModelVIP[6] = g_v;
+	szModelVIP[2] = g_d;	szModelVIP[7] = g_i;
+	szModelVIP[3] = g_e;	szModelVIP[8] = g_p;
+	szModelVIP[4] = g_l;	szModelVIP[9] = '\n';
+
+	szVIP[0] = g_v;
+	szVIP[1] = g_i;
+	szVIP[2] = g_p;
+	szVIP[3] = '\0';
 	char szCommand[32];	// names ours
 	char szModel[32];
 
@@ -7327,18 +8327,18 @@ void CBasePlayer::SwitchTeam( void )
 		{
 		case 1:
 			m_iAppearance = 3;
-			strcpy( szCommand, "model arab\n" );
-			strcpy( szModel, "arab" );
+			strcpy( szCommand, szModelArab );
+			strcpy( szModel, szArab );
 			break;
 		case 5:
 			m_iAppearance = 2;
-			strcpy( szCommand, "model terror\n" );
-			strcpy( szModel, "terror" );
+			strcpy( szCommand, szModelTerror );
+			strcpy( szModel, szTerror );
 			break;
 		case 7:
 			m_iAppearance = 4;
-			strcpy( szCommand, "model arctic\n" );
-			strcpy( szModel, "arctic" );
+			strcpy( szCommand, szModelArctic );
+			strcpy( szModel, szArctic );
 			break;
 		case 6:		// Beta 6.5: the GIGN becomes a guerilla
 			m_iAppearance = 8;
@@ -7347,10 +8347,13 @@ void CBasePlayer::SwitchTeam( void )
 			break;
 		default:
 			m_iAppearance = 2;
-			strcpy( szCommand, "model terror\n" );
-			strcpy( szModel, "terror" );
+			strcpy( szCommand, szModelTerror );
+			strcpy( szModel, szTerror );
 			break;
 		}
+
+		CLIENT_COMMAND( edict(), szCommand );
+		g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szModel );
 	}
 	else if ( m_iTeam == TEAM_TERRORIST )
 	{
@@ -7360,36 +8363,34 @@ void CBasePlayer::SwitchTeam( void )
 		{
 		case 2:
 			m_iAppearance = 5;
-			strcpy( szCommand, "model gsg9\n" );
-			strcpy( szModel, "gsg9" );
+			strcpy( szCommand, szModelGSG9 );
+			strcpy( szModel, szGSG9 );
 			break;
 		case 3:
 			m_iAppearance = 1;
-			strcpy( szCommand, "model urban\n" );
-			strcpy( szModel, "urban" );
+			strcpy( szCommand, szModelUrban );
+			strcpy( szModel, szUrban );
 			break;
 		case 4:
 			m_iAppearance = 7;
-			strcpy( szCommand, "model sas\n" );
-			strcpy( szModel, "sas" );
+			strcpy( szCommand, szModelSAS );
+			strcpy( szModel, szSAS );
 			break;
 		case 8:		// Beta 6.5: the guerilla becomes GIGN
 			m_iAppearance = 6;
-			strcpy( szCommand, "model gign\n" );
-			strcpy( szModel, "gign" );
+			strcpy( szCommand, szModelGIGN );
+			strcpy( szModel, szGIGN );
 			break;
 		default:
 			m_iAppearance = 1;
-			strcpy( szCommand, "model urban\n" );
-			strcpy( szModel, "urban" );
+			strcpy( szCommand, szModelUrban );
+			strcpy( szModel, szUrban );
 			break;
 		}
-	}
-	else
-		return;
 
-	CLIENT_COMMAND( edict(), szCommand );
-	g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szModel );
+		CLIENT_COMMAND( edict(), szCommand );
+		g_engfuncs.pfnSetClientKeyValue( entindex(), g_engfuncs.pfnGetInfoKeyBuffer( edict() ), "model", szModel );
+	}
 }
 
 // Beta 5.0 (leak): kevlar and helmet, with armor left

@@ -72,7 +72,10 @@ typedef enum
 	PLAYER_SUPERJUMP,
 	PLAYER_DIE,
 	PLAYER_ATTACK1,
-	PLAYER_FLINCH,		// Counter-Strike: 6, SetAnimation's flinch (name ours)
+	PLAYER_ATTACK2,		// Counter-Strike (Beta 7.0): the Elites' second gun (the Counter-Strike names here are 1.6's too)
+	PLAYER_FLINCH,		// Counter-Strike: SetAnimation's flinches, 7 and 8 from Beta 7.0
+	PLAYER_LARGE_FLINCH,
+	PLAYER_RELOAD,		// Counter-Strike (Beta 7.0): 9, every Reload
 } PLAYER_ANIM;
 
 // Counter-Strike: the teams (CBasePlayer::m_iTeam). Names ours. Beta 5.0 (leak):
@@ -226,9 +229,13 @@ public:
 	int					m_iMapVote;				// 0x380 new in Beta 6.5 (1.6's name, by its place)
 	bool				m_bCanShoot;			// 0x384 cleared in the freeze time, set when the round starts (1.6's name)
 	bool				m_bVerifyModel;			// 0x385 Beta 6.6: ClientUserInfoChanged sets it, VerifyModel clears it (name ours)
-	float				m_flNextZoneCheck;		// 0x388 HandleSignals' next check
-	CPlayerSignals		m_signals;				// 0x38c
-	edict_t				*m_pentBombTarget;		// 0x394 the bomb target the player is in
+	bool				m_bVGUIMenus;			// 0x386 new in Beta 7.0: userinfo "vgui_menus", read with the model check in PreThink (1.6's name; it stands after the gait members there)
+	float				m_flLastFired;			// 0x388 new in Beta 7.0: the time of the last shot (SetAnimation stamps it and plays the run animation four seconds later; Spawn: -15). 1.6's name: its Spawn stores the same -15 in the member after m_bCanShoot
+	float				m_flLastAttackedTeammate;	// 0x38c new in Beta 7.0: TakeDamage's "attacked a teammate" line, at most once in 0.6 s (1.6's name)
+	float				m_flTimeCheckAllowed;	// 0x390 new in Beta 7.0: PreThink checks the client's keys and model no sooner, every 3 s (1.6 has int m_iTimeCheckAllowed at this place, the timeleft command's; a float here, the prefix ours)
+	float				m_flNextZoneCheck;		// 0x394 HandleSignals' next check (0x388 to Beta 6.6; 1.6: m_tmHandleSignals)
+	CPlayerSignals		m_signals;				// 0x398
+	edict_t				*m_pentBombTarget;		// 0x3a0 the bomb target the player is in
 
 	int					m_iPlayerSound;// the index of the sound list slot reserved for this player
 	int					m_iTargetVolume;// ideal sound volume. 

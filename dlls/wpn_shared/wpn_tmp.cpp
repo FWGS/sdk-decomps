@@ -80,7 +80,7 @@ int CTMP::GetItemInfo(ItemInfo *p)
 
 BOOL CTMP::Deploy( )
 {
-	m_flAccuracy = 0.95;
+	m_flAccuracy = 0.2;
 	m_iShellOn = 1;
 	m_bDelayFire = false;
 
@@ -161,8 +161,9 @@ void CTMP::Reload( void )
 		return;
 
 	DefaultReload( TMP_MAX_CLIP, TMP_RELOAD, 2.12 );
+	m_pPlayer->SetAnimation( PLAYER_RELOAD );
 
-	m_flAccuracy = 0;
+	m_flAccuracy = 0.2;
 }
 
 void CTMP::WeaponIdle( void )

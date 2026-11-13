@@ -1419,9 +1419,6 @@ int CHudMoney::Draw( float flTime )
 	int r, g, b, x, y, a;
 	int r2, g2, b2;	// names ours
 
-	if ( !( gHUD.m_iWeaponBits & ( 1<<(WEAPON_SUIT) ) ) )
-		return 1;
-
 	UnpackRGB( r, g, b, RGB_YELLOWISH );
 
 	// Has the money changed? Flash it, green for more, red for less
@@ -1494,7 +1491,10 @@ int CHudMoney::Draw( float flTime )
 		return 1;
 
 	x = ScreenWidth - gHUD.GetSpriteWidth( gHUD.m_HUD_number_0 ) * 5 - ( ScreenWidth < 640 ? 12 : 16 );
-	y = ScreenHeight - gHUD.m_iFontHeight * 3;
+	if ( !( gHUD.m_iWeaponBits & ( 1<<(WEAPON_SUIT) ) ) )
+		y = ScreenHeight - gHUD.m_iFontHeight * 5;
+	else
+		y = ScreenHeight - gHUD.m_iFontHeight * 3;
 
 	SPR_Set( gHUD.GetSprite( m_HUD_dollar ), r, g, b );
 	SPR_DrawAdditive( 0, x - gHUD.GetSpriteWidth( m_HUD_dollar ), y, &gHUD.GetSpriteRect( m_HUD_dollar ) );

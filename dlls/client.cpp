@@ -52,8 +52,50 @@ extern int gmsgTeamInfo;
 extern int gmsgBlinkAcct;
 extern int gmsgStatusIcon;
 extern int gmsgNVGToggle;	// Beta 6.0 (player.cpp)
+extern int gmsgVGUIMenu;	// Beta 7.0 (player.cpp)
 extern void Broadcast( const char *sentence );	// multiplay_gamerules.cpp (Beta 3.0)
 extern cvar_t timelimit;	// game.cpp (Beta 6.6: the timeleft command; CS 1.6 declares it here too)
+
+// Beta 7.0: the letters and digits the model names and commands are put
+// together from at run time, so that the DLL holds no "model urban" to find
+// (names from the Linux library; retail's .data has the 36 bytes in this
+// order in front of this file's tables)
+char g_a = 'a';
+char g_b = 'b';
+char g_c = 'c';
+char g_d = 'd';
+char g_e = 'e';
+char g_f = 'f';
+char g_g = 'g';
+char g_h = 'h';
+char g_i = 'i';
+char g_j = 'j';
+char g_k = 'k';
+char g_l = 'l';
+char g_m = 'm';
+char g_n = 'n';
+char g_o = 'o';
+char g_p = 'p';
+char g_q = 'q';
+char g_r = 'r';
+char g_s = 's';
+char g_t = 't';
+char g_u = 'u';
+char g_v = 'v';
+char g_w = 'w';
+char g_x = 'x';
+char g_y = 'y';
+char g_z = 'z';
+char g_1 = '1';
+char g_2 = '2';
+char g_3 = '3';
+char g_4 = '4';
+char g_5 = '5';
+char g_6 = '6';
+char g_7 = '7';
+char g_8 = '8';
+char g_9 = '9';
+char g_0 = '0';
 
 void LinkUserMessages( void );
 /*
@@ -169,6 +211,10 @@ void ClientKill( edict_t *pEntity )
 
 	CBasePlayer *pl = (CBasePlayer*) CBasePlayer::Instance( pev );
 
+	// Beta 7.0: not as an observer
+	if ( pl->pev->iuser1 != 0 )
+		return;
+
 	// Beta 5.0 (leak): not while joining
 	if ( pl->m_iJoiningState != JOIN_DONE )
 		return;
@@ -202,6 +248,25 @@ void ShowMenu( CBasePlayer *pPlayer, int bitsValidSlots, int nDisplayTime, BOOL 
 		WRITE_BYTE( fNeedMore );
 		WRITE_STRING( pszText );
 	MESSAGE_END();
+}
+
+// Beta 7.0 (Linux symbol; the parameters' names are Counter-Strike 1.6's):
+// a client that draws VGUI menus gets the menu's number and keys, any other
+// the text menu
+void ShowVGUIMenu( CBasePlayer *pPlayer, int MenuType, int BitMask, char *szOldMenu )
+{
+	if ( pPlayer->m_bVGUIMenus == true )
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgVGUIMenu, NULL, pPlayer->pev );
+			WRITE_BYTE( MenuType );
+			WRITE_SHORT( BitMask );
+			WRITE_CHAR( -1 );
+			WRITE_BYTE( 0 );
+			WRITE_STRING( " " );
+		MESSAGE_END();
+	}
+	else
+		ShowMenu( pPlayer, BitMask, -1, 0, szOldMenu );
 }
 
 //=========================================================
@@ -482,10 +547,13 @@ void ClientPutInServer( edict_t *pEntity )
 	pPlayer->m_iHostagesKilled = 0;			// Beta 6.5
 	pPlayer->m_iMapVote = 0;
 	pPlayer->has_disconnected = false;
-	g_engfuncs.pfnSetClientMaxspeed( ENT(pPlayer->pev), 0.001 );
-	// Beta 6.6: the model is no longer set to models/player.mdl here and the think function is left alone
+	pPlayer->m_iMenu = Menu_OFF;	// Beta 7.0
+	g_engfuncs.pfnSetClientMaxspeed( ENT(pPlayer->pev), 1 );	// (to Beta 6.6: 0.001)
+	// Beta 7.0: the model and the think function again (as Beta 6.5; 6.6 left both alone)
+	SET_MODEL( ENT(pPlayer->pev), "models/player.mdl" );
+	pPlayer->SetThink( NULL );
 
-	UpdateTeamInfo( pPlayer, -1 );
+	// Beta 7.0: the others no longer hear of him here (UpdateTeamInfo)
 
 	pPlayer->m_pIntroCamera = UTIL_FindEntityByClassname( NULL, "trigger_camera" );
 
@@ -522,8 +590,19 @@ void ClientPutInServer( edict_t *pEntity )
 
 	pPlayer->m_iJoiningState = JOIN_START;
 
-	// Beta 5.0 (leak): everybody hears of him
-	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, UTIL_VarArgs( "%s connected\n", ( pPlayer->pev->netname && STRING(pPlayer->pev->netname)[0] != 0 ) ? STRING(pPlayer->pev->netname) : "<unconnected>" ) );
+	// Beta 5.0 (leak): everybody hears of him. Beta 7.0: his name with every
+	// '%' turned into a space, in a buffer that is never freed (retail's;
+	// the names are Counter-Strike 1.6's, where sName is an array)
+	char *sName = new char[128];
+	strcpy( sName, STRING(pPlayer->pev->netname) );
+
+	for ( char *pApersand = sName; pApersand != NULL && *pApersand != 0; pApersand++ )
+	{
+		if ( *pApersand == '%' )
+			*pApersand = ' ';
+	}
+
+	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, UTIL_VarArgs( "%s connected\n", ( sName[0] != 0 ) ? sName : "<unconnected>" ) );
 }
 
 //// HOST_SAY
@@ -632,6 +711,13 @@ void Host_Say( edict_t *pEntity, int teamonly )
 	if ( (int)strlen(p) > j )
 		p[j] = 0;
 
+	// Beta 7.0: no '%' in what is said (pApersand: Counter-Strike 1.6's name)
+	for ( char *pApersand = p; pApersand != NULL && *pApersand != 0; pApersand++ )
+	{
+		if ( *pApersand == '%' )
+			*pApersand = ' ';
+	}
+
 	strcat( text, p );
 	strcat( text, "\n" );
 
@@ -690,7 +776,7 @@ void Host_Say( edict_t *pEntity, int teamonly )
 
 	// Beta 6.5: and to the log, if the server wants it
 	if ( CVAR_GET_FLOAT( "mp_logmessages" ) != 0 )
-		UTIL_LogPrintf( text );
+		UTIL_LogPrintf( "%s", text );	// Beta 7.0: through a format (6.6 passed the text as the format)
 }
 
 
@@ -750,6 +836,7 @@ bool CanBuyThis( CBasePlayer *pPlayer, int iWeapon )
 			case WEAPON_M249:
 			case WEAPON_M3:
 			case WEAPON_M4A1:
+			case WEAPON_TMP:	// Beta 7.0
 			case WEAPON_G3SG1:
 			case WEAPON_P90:
 				return true;
@@ -764,6 +851,7 @@ bool CanBuyThis( CBasePlayer *pPlayer, int iWeapon )
 			{
 			case WEAPON_SCOUT:
 			case WEAPON_MAC10:
+			case WEAPON_ELITE:	// Beta 7.0
 			case WEAPON_AWP:
 			case WEAPON_M4A1:
 			case WEAPON_G3SG1:
@@ -805,6 +893,7 @@ bool CanBuyThis( CBasePlayer *pPlayer, int iWeapon )
 			case WEAPON_SCOUT:
 			case WEAPON_XM1014:
 			case WEAPON_MAC10:
+			case WEAPON_ELITE:	// Beta 7.0
 			case WEAPON_AWP:
 			case WEAPON_MP5N:
 			case WEAPON_M249:
@@ -884,6 +973,22 @@ void BuyPistol( CBasePlayer *pPlayer, int iSlot )
 			DropSecondary( pPlayer );
 			pPlayer->GiveNamedItem( "weapon_p228" );
 			pPlayer->AddAccount( -600, true );
+		}
+		else
+		{
+			ClientPrint( pPlayer->pev, HUD_PRINTCENTER, "Not enough money" );
+			BlinkAccount( pPlayer, 2 );
+		}
+		break;
+	case 5:		// Beta 7.0: the Dual Elites, 1,000 (terrorists only: CanBuyThis)
+		if ( !CanBuyThis( pPlayer, WEAPON_ELITE ) )
+			return;
+
+		if ( pPlayer->m_iAccount >= 1000 )
+		{
+			DropSecondary( pPlayer );
+			pPlayer->GiveNamedItem( "weapon_elite" );
+			pPlayer->AddAccount( -1000, true );
 		}
 		else
 		{
@@ -1363,6 +1468,129 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 	CHalfLifeMultiplay *mp = (CHalfLifeMultiplay *)g_pGameRules;	// name ours
 	appearance_t appearance;	// name ours
 
+	// Beta 7.0: the eight commands and model names are put together at run
+	// time from the letters (see g_a), all of them at every call, and never
+	// freed (retail's). The assignments stand in retail's order: columns of
+	// five rows
+	char *szModelTerror = new char[14];
+	char *szTerror = new char[7];
+
+	szModelTerror[0] = g_m;	szModelTerror[5] = ' ';	szModelTerror[10] = g_o;
+	szModelTerror[1] = g_o;	szModelTerror[6] = g_t;	szModelTerror[11] = g_r;
+	szModelTerror[2] = g_d;	szModelTerror[7] = g_e;	szModelTerror[12] = '\n';
+	szModelTerror[3] = g_e;	szModelTerror[8] = g_r;	szModelTerror[13] = '\0';
+	szModelTerror[4] = g_l;	szModelTerror[9] = g_r;
+
+	szTerror[0] = g_t;	szTerror[5] = g_r;
+	szTerror[1] = g_e;	szTerror[6] = '\0';
+	szTerror[2] = g_r;
+	szTerror[3] = g_r;
+	szTerror[4] = g_o;
+
+	char *szModelArab = new char[12];
+	char *szArab = new char[5];
+
+	szModelArab[0] = g_m;	szModelArab[5] = ' ';	szModelArab[10] = '\n';
+	szModelArab[1] = g_o;	szModelArab[6] = g_a;	szModelArab[11] = '\0';
+	szModelArab[2] = g_d;	szModelArab[7] = g_r;
+	szModelArab[3] = g_e;	szModelArab[8] = g_a;
+	szModelArab[4] = g_l;	szModelArab[9] = g_b;
+
+	szArab[0] = g_a;
+	szArab[1] = g_r;
+	szArab[2] = g_a;
+	szArab[3] = g_b;
+	szArab[4] = '\0';
+
+	char *szModelArctic = new char[14];
+	char *szArctic = new char[7];
+
+	szModelArctic[0] = g_m;	szModelArctic[5] = ' ';	szModelArctic[10] = g_i;
+	szModelArctic[1] = g_o;	szModelArctic[6] = g_a;	szModelArctic[11] = g_c;
+	szModelArctic[2] = g_d;	szModelArctic[7] = g_r;	szModelArctic[12] = '\n';
+	szModelArctic[3] = g_e;	szModelArctic[8] = g_c;	szModelArctic[13] = '\0';
+	szModelArctic[4] = g_l;	szModelArctic[9] = g_t;
+
+	szArctic[0] = g_a;	szArctic[5] = g_c;
+	szArctic[1] = g_r;	szArctic[6] = '\0';
+	szArctic[2] = g_c;
+	szArctic[3] = g_t;
+	szArctic[4] = g_i;
+
+	char *szModelGuerilla = new char[16];
+	char *szGuerilla = new char[9];
+
+	szModelGuerilla[0] = g_m;	szModelGuerilla[5] = ' ';	szModelGuerilla[10] = g_i;	szModelGuerilla[15] = '\0';
+	szModelGuerilla[1] = g_o;	szModelGuerilla[6] = g_g;	szModelGuerilla[11] = g_l;
+	szModelGuerilla[2] = g_d;	szModelGuerilla[7] = g_u;	szModelGuerilla[12] = g_l;
+	szModelGuerilla[3] = g_e;	szModelGuerilla[8] = g_e;	szModelGuerilla[13] = g_a;
+	szModelGuerilla[4] = g_l;	szModelGuerilla[9] = g_r;	szModelGuerilla[14] = '\n';
+
+	szGuerilla[0] = g_g;	szGuerilla[5] = g_l;
+	szGuerilla[1] = g_u;	szGuerilla[6] = g_l;
+	szGuerilla[2] = g_e;	szGuerilla[7] = g_a;
+	szGuerilla[3] = g_r;	szGuerilla[8] = '\0';
+	szGuerilla[4] = g_i;
+
+	char *szModelUrban = new char[13];
+	char *szUrban = new char[6];
+
+	szModelUrban[0] = g_m;	szModelUrban[5] = ' ';	szModelUrban[10] = g_n;
+	szModelUrban[1] = g_o;	szModelUrban[6] = g_u;	szModelUrban[11] = '\n';
+	szModelUrban[2] = g_d;	szModelUrban[7] = g_r;	szModelUrban[12] = '\0';
+	szModelUrban[3] = g_e;	szModelUrban[8] = g_b;
+	szModelUrban[4] = g_l;	szModelUrban[9] = g_a;
+
+	szUrban[0] = g_u;	szUrban[5] = '\0';
+	szUrban[1] = g_r;
+	szUrban[2] = g_b;
+	szUrban[3] = g_a;
+	szUrban[4] = g_n;
+
+	char *szModelGSG9 = new char[12];
+	char *szGSG9 = new char[5];
+
+	szModelGSG9[0] = g_m;	szModelGSG9[5] = ' ';	szModelGSG9[10] = '\n';
+	szModelGSG9[1] = g_o;	szModelGSG9[6] = g_g;	szModelGSG9[11] = '\0';
+	szModelGSG9[2] = g_d;	szModelGSG9[7] = g_s;
+	szModelGSG9[3] = g_e;	szModelGSG9[8] = g_g;
+	szModelGSG9[4] = g_l;	szModelGSG9[9] = g_9;
+
+	szGSG9[0] = g_g;
+	szGSG9[1] = g_s;
+	szGSG9[2] = g_g;
+	szGSG9[3] = g_9;
+	szGSG9[4] = '\0';
+
+	char *szModelSAS = new char[11];
+	char *szSAS = new char[4];
+
+	szModelSAS[0] = g_m;	szModelSAS[5] = ' ';	szModelSAS[10] = '\0';
+	szModelSAS[1] = g_o;	szModelSAS[6] = g_s;
+	szModelSAS[2] = g_d;	szModelSAS[7] = g_a;
+	szModelSAS[3] = g_e;	szModelSAS[8] = g_s;
+	szModelSAS[4] = g_l;	szModelSAS[9] = '\n';
+
+	szSAS[0] = g_s;
+	szSAS[1] = g_a;
+	szSAS[2] = g_s;
+	szSAS[3] = '\0';
+
+	char *szModelGIGN = new char[12];
+	char *szGIGN = new char[5];
+
+	szModelGIGN[0] = g_m;	szModelGIGN[5] = ' ';	szModelGIGN[10] = '\n';
+	szModelGIGN[1] = g_o;	szModelGIGN[6] = g_g;	szModelGIGN[11] = '\0';
+	szModelGIGN[2] = g_d;	szModelGIGN[7] = g_i;
+	szModelGIGN[3] = g_e;	szModelGIGN[8] = g_g;
+	szModelGIGN[4] = g_l;	szModelGIGN[9] = g_n;
+
+	szGIGN[0] = g_g;
+	szGIGN[1] = g_i;
+	szGIGN[2] = g_g;
+	szGIGN[3] = g_n;
+	szGIGN[4] = '\0';
+
 	// Beta 6.0: the terrorists' arctic (key 3) and the counter-terrorists'
 	// GIGN (key 4); the appearance numbers are 1 urban, 2 terror, 3 arab,
 	// 4 arctic, 5 gsg9, 6 gign, 7 sas
@@ -1376,28 +1604,28 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 		{
 		case 1:
 			appearance.iModel = 2;
-			appearance.pszCommand = "model terror\n";
-			appearance.pszModel = "terror";
+			appearance.pszCommand = szModelTerror;
+			appearance.pszModel = szTerror;
 			break;
 		case 2:
 			appearance.iModel = 3;
-			appearance.pszCommand = "model arab\n";
-			appearance.pszModel = "arab";
+			appearance.pszCommand = szModelArab;
+			appearance.pszModel = szArab;
 			break;
 		case 3:
 			appearance.iModel = 4;
-			appearance.pszCommand = "model arctic\n";
-			appearance.pszModel = "arctic";
+			appearance.pszCommand = szModelArctic;
+			appearance.pszModel = szArctic;
 			break;
-		case 4:		// Beta 6.5
+		case 4:		// Beta 6.5 (Beta 7.0: retail still passes the literals here; its run-time copies go unused)
 			appearance.iModel = 8;
 			appearance.pszCommand = "model guerilla\n";
 			appearance.pszModel = "guerilla";
 			break;
 		default:	// Beta 6.5: the same as case 1 (VC6 merges the two)
 			appearance.iModel = 2;
-			appearance.pszCommand = "model terror\n";
-			appearance.pszModel = "terror";
+			appearance.pszCommand = szModelTerror;
+			appearance.pszModel = szTerror;
 			break;
 		}
 		break;
@@ -1410,28 +1638,28 @@ void HandleMenu_ChooseAppearance( CBasePlayer *player, int slot )
 		{
 		case 1:
 			appearance.iModel = 1;
-			appearance.pszCommand = "model urban\n";
-			appearance.pszModel = "urban";
+			appearance.pszCommand = szModelUrban;
+			appearance.pszModel = szUrban;
 			break;
 		case 2:
 			appearance.iModel = 5;
-			appearance.pszCommand = "model gsg9\n";
-			appearance.pszModel = "gsg9";
+			appearance.pszCommand = szModelGSG9;
+			appearance.pszModel = szGSG9;
 			break;
 		case 3:
 			appearance.iModel = 7;
-			appearance.pszCommand = "model sas\n";
-			appearance.pszModel = "sas";
+			appearance.pszCommand = szModelSAS;
+			appearance.pszModel = szSAS;
 			break;
 		case 4:
 			appearance.iModel = 6;
-			appearance.pszCommand = "model gign\n";
-			appearance.pszModel = "gign";
+			appearance.pszCommand = szModelGIGN;
+			appearance.pszModel = szGIGN;
 			break;
 		default:	// Beta 6.5: the same as case 1
 			appearance.iModel = 1;
-			appearance.pszCommand = "model urban\n";
-			appearance.pszModel = "urban";
+			appearance.pszCommand = szModelUrban;
+			appearance.pszModel = szUrban;
 			break;
 		}
 		break;
@@ -1548,10 +1776,10 @@ BOOL HandleMenu_ChooseTeam( CBasePlayer *player, int slot )
 	switch ( team )
 	{
 	case TEAM_TERRORIST:
-		ShowMenu( player, 0x1f, -1, FALSE, "#Terrorist_Select" );	// keys 1 to 5 (Beta 6.0: the arctic; Beta 6.5: the guerilla)
+		ShowVGUIMenu( player, 26, 0x1f, "#Terrorist_Select" );	// keys 1 to 5 (Beta 6.0: the arctic; Beta 6.5: the guerilla); Beta 7.0: VGUI menu 26
 		break;
 	case TEAM_CT:
-		ShowMenu( player, 0x1f, -1, FALSE, "#CT_Select" );	// keys 1 to 5 (Beta 6.0: the GIGN)
+		ShowVGUIMenu( player, 27, 0x1f, "#CT_Select" );	// keys 1 to 5 (Beta 6.0: the GIGN); Beta 7.0: VGUI menu 27
 		break;
 	}
 
@@ -1717,11 +1945,6 @@ bool BuyGunAmmo( CBasePlayer &player, CBasePlayerItem &weapon, bool bBlinkMoney 
 		cost = 125;
 		classname = "ammo_338magnum";
 		break;
-	case WEAPON_M3:
-	case WEAPON_XM1014:
-		cost = 65;
-		classname = "ammo_buckshot";
-		break;
 	case WEAPON_P90:
 		cost = 50;
 		classname = "ammo_57mm";
@@ -1742,6 +1965,11 @@ bool BuyGunAmmo( CBasePlayer &player, CBasePlayerItem &weapon, bool bBlinkMoney 
 		cost = 80;
 		classname = "ammo_762nato";
 		break;
+	case WEAPON_M3:		// (Beta 7.0: the shotguns stand here; to 6.6 after the AWP)
+	case WEAPON_XM1014:
+		cost = 65;
+		classname = "ammo_buckshot";
+		break;
 	case WEAPON_MAC10:	// Beta 6.0
 	case WEAPON_USP:
 		cost = 25;
@@ -1750,6 +1978,7 @@ bool BuyGunAmmo( CBasePlayer &player, CBasePlayerItem &weapon, bool bBlinkMoney 
 	case WEAPON_GLOCK18:
 	case WEAPON_MP5N:
 	case WEAPON_TMP:
+	case WEAPON_ELITE:	// Beta 7.0
 		cost = 20;
 		classname = "ammo_9mm";
 		break;
@@ -1944,9 +2173,7 @@ void ClientCommand( edict_t *pEntity )
 	else if ( FStrEq(pcmd, "votemap" ) )
 	{
 		// Beta 6.5: a vote for map #n of listmaps, every 3 seconds at most,
-		// told to everybody; his vote before is taken back (sic: the count's
-		// index is the map number less one, and 0, no vote yet, passes the
-		// range test)
+		// told to everybody; his vote before is taken back
 		if ( pPlayer->m_flNextVoteTime > gpGlobals->time )
 		{
 			ClientPrint( pPlayer->pev, HUD_PRINTCONSOLE, "Please wait 3 seconds before voting again..\n" );
@@ -1960,10 +2187,15 @@ void ClientCommand( edict_t *pEntity )
 			int iVote = atoi( CMD_ARGV(1) );
 			char szText[100];	// name ours; Beta 6.6: 100 bytes (6.5: 40), one stack slot with the vote's and timeleft's buffers
 
+			// Beta 7.0: no vote for a map below 1, and no vote before is
+			// taken back (6.6's test let 0 through and decremented m_iMapVotes[-1])
+			if ( iVote < 1 )
+				return;
+
 			sprintf( szText, "%s voted for Map #%i\n", STRING( pPlayer->pev->netname ), iVote );
 			UTIL_ClientPrintAll( HUD_PRINTCENTER, szText );
 
-			if ( pPlayer->m_iMapVote <= 100 && pPlayer->m_iMapVote >= 0 )
+			if ( pPlayer->m_iMapVote <= 100 && pPlayer->m_iMapVote >= 1 )
 			{
 				mp->m_iMapVotes[ pPlayer->m_iMapVote - 1 ]--;
 				if ( mp->m_iMapVotes[ pPlayer->m_iMapVote - 1 ] < 0 )
@@ -1979,6 +2211,10 @@ void ClientCommand( edict_t *pEntity )
 		// Beta 6.6: the time left on the map, to his chat (Beta 6.5's hidden
 		// f17 command, which stood here, and its give command are gone)
 		int iTimeRemaining = (int)( timelimit.value * 60 - gpGlobals->time );
+
+		if ( iTimeRemaining < 0 )	// Beta 7.0
+			iTimeRemaining = 0;
+
 		int iMinutes = iTimeRemaining / 60;
 		int iSeconds = iTimeRemaining % 60;
 		char szText[100];	// name ours; the frame has one 100-byte slot for this and the two buffers above
@@ -1989,33 +2225,6 @@ void ClientCommand( edict_t *pEntity )
 	else if ( FStrEq(pcmd, "listplayers" ) )
 	{
 		ListPlayers( pPlayer );
-	}
-	else if ( FStrEq(pcmd, "nightvision" ) )
-	{
-		// Beta 6.0: the goggles on and off, if bought
-		if ( !pPlayer->m_bHasNightVision )
-			return;
-
-		if ( !pPlayer->m_bNightVisionOn )
-		{
-			EMIT_SOUND( ENT(pPlayer->pev), CHAN_ITEM, "items/nvg_on.wav", RANDOM_FLOAT( 0.92, 1 ), 0.8 );
-
-			MESSAGE_BEGIN( MSG_ONE, gmsgNVGToggle, NULL, pPlayer->pev );
-				WRITE_BYTE( 1 );
-			MESSAGE_END();
-
-			pPlayer->m_bNightVisionOn = true;	// Beta 6.5: Beta 6.1's lambert commands are gone
-		}
-		else
-		{
-			EMIT_SOUND( ENT(pPlayer->pev), CHAN_ITEM, "items/nvg_off.wav", RANDOM_FLOAT( 0.92, 1 ), 0.8 );
-
-			MESSAGE_BEGIN( MSG_ONE, gmsgNVGToggle, NULL, pPlayer->pev );
-				WRITE_BYTE( 0 );
-			MESSAGE_END();
-
-			pPlayer->m_bNightVisionOn = false;
-		}
 	}
 	else if ( FStrEq(pcmd, "menuselect" ) )
 	{
@@ -2036,9 +2245,9 @@ void ClientCommand( edict_t *pEntity )
 				// Beta 5.0: the menu again, keys 1, 2 and 5; in the game with
 				// 0 to close it (the leak: 1 to 3 either way)
 				if ( pPlayer->m_iJoiningState != JOIN_DONE )
-					ShowMenu( pPlayer, 0x13, -1, FALSE, "#Team_Select" );
+					ShowVGUIMenu( pPlayer, 2, 0x13, "#Team_Select" );
 				else
-					ShowMenu( pPlayer, 0x213, -1, FALSE, "#IG_Team_Select" );
+					ShowVGUIMenu( pPlayer, 2, 0x213, "#IG_Team_Select" );
 				pPlayer->m_iMenu = Menu_ChooseTeam;
 			}
 			break;
@@ -2055,32 +2264,37 @@ void ClientCommand( edict_t *pEntity )
 			switch ( iSlot )
 			{
 			case 1:
-				ShowMenu( pPlayer, 0x20f, -1, FALSE, "#BuyPistol" );
+				// Beta 7.0: a menu per team (the terrorists' has key 5, the Elites);
+				// the buy menus are VGUI menus 28 to 34 for a client that draws them
+				if ( pPlayer->m_iTeam == TEAM_CT )
+					ShowVGUIMenu( pPlayer, 29, 0x20f, "#CT_BuyPistol" );
+				else
+					ShowVGUIMenu( pPlayer, 29, 0x21f, "#T_BuyPistol" );
 				pPlayer->m_iMenu = Menu_BuyPistol;
 				break;
 			case 2:
 				// Beta 6.0: an assassination map's menus leave out what the
 				// team may not buy (CanBuyThis)
 				if ( mp->m_iMapHasVIPSafetyZone == 1 && pPlayer->m_iTeam == TEAM_TERRORIST )
-					ShowMenu( pPlayer, 0x200, -1, FALSE, "#AS_BuyShotgun" );
+					ShowVGUIMenu( pPlayer, 30, 0x200, "#AS_BuyShotgun" );
 				else
-					ShowMenu( pPlayer, 0x203, -1, FALSE, "#BuyShotgun" );
+					ShowVGUIMenu( pPlayer, 30, 0x203, "#BuyShotgun" );
 				pPlayer->m_iMenu = Menu_BuyShotgun;
 				break;
 			case 3:
 				if ( mp->m_iMapHasVIPSafetyZone == 1 )
 				{
 					if ( pPlayer->m_iTeam == TEAM_CT )
-						ShowMenu( pPlayer, 0x207, -1, FALSE, "#AS_CT_BuySubMachineGun" );
+						ShowVGUIMenu( pPlayer, 32, 0x207, "#AS_CT_BuySubMachineGun" );
 					else
-						ShowMenu( pPlayer, 0x208, -1, FALSE, "#AS_T_BuySubMachineGun" );
+						ShowVGUIMenu( pPlayer, 32, 0x208, "#AS_T_BuySubMachineGun" );
 				}
 				else
 				{
 					if ( pPlayer->m_iTeam == TEAM_CT )
-						ShowMenu( pPlayer, 0x207, -1, FALSE, "#CT_BuySubMachineGun" );
+						ShowVGUIMenu( pPlayer, 32, 0x207, "#CT_BuySubMachineGun" );
 					else
-						ShowMenu( pPlayer, 0x20d, -1, FALSE, "#T_BuySubMachineGun" );
+						ShowVGUIMenu( pPlayer, 32, 0x20d, "#T_BuySubMachineGun" );
 				}
 				pPlayer->m_iMenu = Menu_BuySubMachineGun;
 				break;
@@ -2088,24 +2302,24 @@ void ClientCommand( edict_t *pEntity )
 				if ( mp->m_iMapHasVIPSafetyZone == 1 )
 				{
 					if ( pPlayer->m_iTeam == TEAM_CT )
-						ShowMenu( pPlayer, 0x24c, -1, FALSE, "#AS_CT_BuyRifle" );
+						ShowVGUIMenu( pPlayer, 31, 0x24c, "#AS_CT_BuyRifle" );
 					else
-						ShowMenu( pPlayer, 0x271, -1, FALSE, "#AS_T_BuyRifle" );
+						ShowVGUIMenu( pPlayer, 31, 0x271, "#AS_T_BuyRifle" );
 				}
 				else
 				{
 					if ( pPlayer->m_iTeam == TEAM_CT )
-						ShowMenu( pPlayer, 0x27c, -1, FALSE, "#CT_BuyRifle" );
+						ShowVGUIMenu( pPlayer, 31, 0x27c, "#CT_BuyRifle" );
 					else
-						ShowMenu( pPlayer, 0x273, -1, FALSE, "#T_BuyRifle" );
+						ShowVGUIMenu( pPlayer, 31, 0x273, "#T_BuyRifle" );
 				}
 				pPlayer->m_iMenu = Menu_BuyRifle;
 				break;
 			case 5:
 				if ( mp->m_iMapHasVIPSafetyZone == 1 && pPlayer->m_iTeam == TEAM_TERRORIST )
-					ShowMenu( pPlayer, 0x200, -1, FALSE, "#AS_T_BuyMachineGun" );
+					ShowVGUIMenu( pPlayer, 33, 0x200, "#AS_T_BuyMachineGun" );
 				else
-					ShowMenu( pPlayer, 0x201, -1, FALSE, "#BuyMachineGun" );
+					ShowVGUIMenu( pPlayer, 33, 0x201, "#BuyMachineGun" );
 				pPlayer->m_iMenu = Menu_BuyMachineGun;
 				break;
 			case 6:
@@ -2141,12 +2355,12 @@ void ClientCommand( edict_t *pEntity )
 					if ( mp->m_fMapHasBombTarget == true )
 					{
 						if ( pPlayer->m_iTeam == TEAM_CT )
-							ShowMenu( pPlayer, 0x27f, -1, FALSE, "#DCT_BuyItem" );
+							ShowVGUIMenu( pPlayer, 34, 0x27f, "#DCT_BuyItem" );
 						else
-							ShowMenu( pPlayer, 0x25f, -1, FALSE, "#DT_BuyItem" );
+							ShowVGUIMenu( pPlayer, 34, 0x25f, "#DT_BuyItem" );
 					}
 					else
-						ShowMenu( pPlayer, 0x25f, -1, FALSE, "#BuyItem" );
+						ShowVGUIMenu( pPlayer, 34, 0x25f, "#BuyItem" );
 					pPlayer->m_iMenu = Menu_BuyItem;
 				}
 				break;
@@ -2212,12 +2426,12 @@ void ClientCommand( edict_t *pEntity )
 			// to be the VIP (key 3)
 			if ( mp->m_iMapHasVIPSafetyZone == 1 && pPlayer->m_iJoiningState == JOIN_DONE && pPlayer->m_iTeam == TEAM_CT )
 			{
-				ShowMenu( pPlayer, 0x217, -1, FALSE, "#IG_VIP_Team_Select" );
+				ShowVGUIMenu( pPlayer, 2, 0x217, "#IG_VIP_Team_Select" );
 				pPlayer->m_iMenu = Menu_ChooseTeam;
 				return;
 			}
 
-			ShowMenu( pPlayer, 0x213, -1, FALSE, "#IG_Team_Select" );
+			ShowVGUIMenu( pPlayer, 2, 0x213, "#IG_Team_Select" );
 			pPlayer->m_iMenu = Menu_ChooseTeam;
 		}
 	}
@@ -2281,6 +2495,33 @@ void ClientCommand( edict_t *pEntity )
 	{
 		// the dead have no other command
 	}
+	else if ( FStrEq(pcmd, "nightvision" ) )
+	{
+		// Beta 6.0: the goggles on and off, if bought (Beta 7.0: for the living only; the test stood before menuselect)
+		if ( !pPlayer->m_bHasNightVision )
+			return;
+
+		if ( !pPlayer->m_bNightVisionOn )
+		{
+			EMIT_SOUND( ENT(pPlayer->pev), CHAN_ITEM, "items/nvg_on.wav", RANDOM_FLOAT( 0.92, 1 ), 0.8 );
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgNVGToggle, NULL, pPlayer->pev );
+				WRITE_BYTE( 1 );
+			MESSAGE_END();
+
+			pPlayer->m_bNightVisionOn = true;	// Beta 6.5: Beta 6.1's lambert commands are gone
+		}
+		else
+		{
+			EMIT_SOUND( ENT(pPlayer->pev), CHAN_ITEM, "items/nvg_off.wav", RANDOM_FLOAT( 0.92, 1 ), 0.8 );
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgNVGToggle, NULL, pPlayer->pev );
+				WRITE_BYTE( 0 );
+			MESSAGE_END();
+
+			pPlayer->m_bNightVisionOn = false;
+		}
+	}
 	else if ( FStrEq(pcmd, "radio1" ) )
 	{
 		// Beta 5.0 (leak): three radio menus, open until a key is pressed
@@ -2340,12 +2581,12 @@ void ClientCommand( edict_t *pEntity )
 			if ( mp->m_fMapHasBombTarget == true )
 			{
 				if ( pPlayer->m_iTeam == TEAM_CT )
-					ShowMenu( pPlayer, 0x27f, -1, FALSE, "#DCT_BuyItem" );
+					ShowVGUIMenu( pPlayer, 34, 0x27f, "#DCT_BuyItem" );
 				else
-					ShowMenu( pPlayer, 0x25f, -1, FALSE, "#DT_BuyItem" );
+					ShowVGUIMenu( pPlayer, 34, 0x25f, "#DT_BuyItem" );
 			}
 			else
-				ShowMenu( pPlayer, 0x25f, -1, FALSE, "#BuyItem" );
+				ShowVGUIMenu( pPlayer, 34, 0x25f, "#BuyItem" );
 			pPlayer->m_iMenu = Menu_BuyItem;
 		}
 	}
@@ -2353,7 +2594,7 @@ void ClientCommand( edict_t *pEntity )
 	{
 		if ( pPlayer->m_signals.GetState() & 1 )
 		{
-			ShowMenu( pPlayer, 0x2ff, -1, FALSE, "#Buy" );
+			ShowVGUIMenu( pPlayer, 28, 0x2ff, "#Buy" );
 			pPlayer->m_iMenu = Menu_Buy;
 		}
 	}
@@ -2385,24 +2626,11 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 		return;
 
 	CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE( pEntity );
-	char szName[256];
 
 	// Beta 6.6: the model is checked in CBasePlayer::VerifyModel, from PreThink, once this flag is set
 	pPlayer->m_bVerifyModel = true;
 
-	// Beta 6.6: no '%' in a name
-	const char *szBufferName = g_engfuncs.pfnInfoKeyValue( infobuffer, "name" );	// CS 1.6's local
-
-	strncpy( szName, szBufferName, 255 );
-	szName[255] = 0;
-
-	for ( char *pPct = szName; pPct != NULL && *pPct != 0; pPct++ )
-	{
-		if ( *pPct == '%' )
-			*pPct = ' ';
-	}
-
-	g_engfuncs.pfnSetClientKeyValue( ENTINDEX( pEntity ), infobuffer, "name", szName );
+	// (Beta 7.0: Beta 6.6's '%' filter on the name is gone from here)
 
 	// msg everyone if someone changes their name,  and it isn't the first time (changing no name to current name)
 	if ( pEntity->v.netname && STRING(pEntity->v.netname)[0] != 0 && !FStrEq( STRING(pEntity->v.netname), g_engfuncs.pfnInfoKeyValue( infobuffer, "name" )) )
@@ -2426,12 +2654,7 @@ void ClientUserInfoChanged( edict_t *pEntity, char *infobuffer )
 		UTIL_LogPrintf( "\"%s<%i>\" changed name to \"%s<%i>\"\n", STRING( pEntity->v.netname ), GETPLAYERUSERID( pEntity ), g_engfuncs.pfnInfoKeyValue( infobuffer, "name" ), GETPLAYERUSERID( pEntity ) );
 	}
 
-	// Beta 6.0: the lefthand key picks the view models
-	char *value = g_engfuncs.pfnInfoKeyValue( infobuffer, "lefthand" );	// name ours
-	if ( value && value[0] != '0' )
-		pPlayer->m_bLeftHanded = true;
-	else
-		pPlayer->m_bLeftHanded = false;
+	// (Beta 7.0: the lefthand key is no longer read here)
 
 	g_pGameRules->ClientUserInfoChanged( GetClassPtr((CBasePlayer *)&pEntity->v), infobuffer );
 }
@@ -2672,6 +2895,7 @@ void ClientPrecache( void )
 	PRECACHE_SOUND("debris/wood3.wav");
 
 	PRECACHE_SOUND("plats/train_use1.wav");		// use a train
+	PRECACHE_SOUND("plats/vehicle_ignition.wav");	// Beta 7.0
 
 	PRECACHE_SOUND("buttons/spark5.wav");		// hit computer texture
 	PRECACHE_SOUND("buttons/spark6.wav");
@@ -2692,16 +2916,151 @@ void ClientPrecache( void )
 	PRECACHE_SOUND("player/pl_pain6.wav");
 	PRECACHE_SOUND("player/pl_pain7.wav");
 
+	// Beta 7.0: never true. The block only puts the model names, and
+	// scrambled copies of them, into the DLL for whoever searches it; the
+	// names that are used are put together at run time below
+	if ( RANDOM_LONG( 10, 20 ) < 0 )
+	{
+		ALERT( at_console, "models/player/terror/terror.mdl" );
+		ALERT( at_console, "model terror\n" );
+		ALERT( at_console, "terror" );
+		ALERT( at_console, "rorret" );
+		ALERT( at_console, "ertorr" );
+		ALERT( at_console, "torerr" );
+		ALERT( at_console, "models/player/arab/arab.mdl" );
+		ALERT( at_console, "model arab\n" );
+		ALERT( at_console, "arab" );
+		ALERT( at_console, "bara" );
+		ALERT( at_console, "raab" );
+		ALERT( at_console, "abra" );
+		ALERT( at_console, "models/player/arctic/arctic.mdl" );
+		ALERT( at_console, "model arctic\n" );
+		ALERT( at_console, "arctic" );
+		ALERT( at_console, "citcra" );
+		ALERT( at_console, "ctacri" );
+		ALERT( at_console, "cicart" );
+		ALERT( at_console, "models/player/guerilla/guerilla.mdl" );
+		ALERT( at_console, "model guerilla\n" );
+		ALERT( at_console, "guerilla" );
+		ALERT( at_console, "allireug" );
+		ALERT( at_console, "irlaguel" );
+		ALERT( at_console, "eulagrli" );
+		ALERT( at_console, "models/player/urban/urban.mdl" );
+		ALERT( at_console, "model urban\n" );
+		ALERT( at_console, "urban" );
+		ALERT( at_console, "nabru" );
+		ALERT( at_console, "buanr" );
+		ALERT( at_console, "nurab" );
+		ALERT( at_console, "models/player/gsg9/gsg9.mdl" );
+		ALERT( at_console, "model gsg9\n" );
+		ALERT( at_console, "gsg9" );
+		ALERT( at_console, "9gsg" );
+		ALERT( at_console, "sg9g" );
+		ALERT( at_console, "gg9s" );
+		ALERT( at_console, "models/player/sas/sas.mdl" );
+		ALERT( at_console, "model sas\n" );
+		ALERT( at_console, "sas" );
+		ALERT( at_console, "ass" );
+		ALERT( at_console, "ssa" );
+		ALERT( at_console, "models/player/gign/gign.mdl" );
+		ALERT( at_console, "model gign\n" );
+		ALERT( at_console, "gign" );
+		ALERT( at_console, "ngig" );
+		ALERT( at_console, "igng" );
+		ALERT( at_console, "nigg" );
+		ALERT( at_console, "models/player/vip/vip.mdl" );
+		ALERT( at_console, "model vip\n" );
+		ALERT( at_console, "vip" );
+		ALERT( at_console, "piv" );
+		ALERT( at_console, "ipv" );
+		ALERT( at_console, "vpi" );
+	}
+
+	// Beta 7.0: the nine player models' file names, from the letters (see
+	// g_a); the assignments in retail's order, columns of five rows. The
+	// strings are never freed (retail's)
+	char *szArabModel = new char[28];
+
+	szArabModel[0] = g_m;	szArabModel[5] = g_s;	szArabModel[10] = g_y;	szArabModel[15] = g_r;	szArabModel[20] = g_r;	szArabModel[25] = g_d;
+	szArabModel[1] = g_o;	szArabModel[6] = '/';	szArabModel[11] = g_e;	szArabModel[16] = g_a;	szArabModel[21] = g_a;	szArabModel[26] = g_l;
+	szArabModel[2] = g_d;	szArabModel[7] = g_p;	szArabModel[12] = g_r;	szArabModel[17] = g_b;	szArabModel[22] = g_b;	szArabModel[27] = '\0';
+	szArabModel[3] = g_e;	szArabModel[8] = g_l;	szArabModel[13] = '/';	szArabModel[18] = '/';	szArabModel[23] = '.';
+	szArabModel[4] = g_l;	szArabModel[9] = g_a;	szArabModel[14] = g_a;	szArabModel[19] = g_a;	szArabModel[24] = g_m;
+
+	char *szGIGNModel = new char[28];
+
+	szGIGNModel[0] = g_m;	szGIGNModel[5] = g_s;	szGIGNModel[10] = g_y;	szGIGNModel[15] = g_i;	szGIGNModel[20] = g_i;	szGIGNModel[25] = g_d;
+	szGIGNModel[1] = g_o;	szGIGNModel[6] = '/';	szGIGNModel[11] = g_e;	szGIGNModel[16] = g_g;	szGIGNModel[21] = g_g;	szGIGNModel[26] = g_l;
+	szGIGNModel[2] = g_d;	szGIGNModel[7] = g_p;	szGIGNModel[12] = g_r;	szGIGNModel[17] = g_n;	szGIGNModel[22] = g_n;	szGIGNModel[27] = '\0';
+	szGIGNModel[3] = g_e;	szGIGNModel[8] = g_l;	szGIGNModel[13] = '/';	szGIGNModel[18] = '/';	szGIGNModel[23] = '.';
+	szGIGNModel[4] = g_l;	szGIGNModel[9] = g_a;	szGIGNModel[14] = g_g;	szGIGNModel[19] = g_g;	szGIGNModel[24] = g_m;
+
+	char *szGSG9Model = new char[28];
+
+	szGSG9Model[0] = g_m;	szGSG9Model[5] = g_s;	szGSG9Model[10] = g_y;	szGSG9Model[15] = g_s;	szGSG9Model[20] = g_s;	szGSG9Model[25] = g_d;
+	szGSG9Model[1] = g_o;	szGSG9Model[6] = '/';	szGSG9Model[11] = g_e;	szGSG9Model[16] = g_g;	szGSG9Model[21] = g_g;	szGSG9Model[26] = g_l;
+	szGSG9Model[2] = g_d;	szGSG9Model[7] = g_p;	szGSG9Model[12] = g_r;	szGSG9Model[17] = g_9;	szGSG9Model[22] = g_9;	szGSG9Model[27] = '\0';
+	szGSG9Model[3] = g_e;	szGSG9Model[8] = g_l;	szGSG9Model[13] = '/';	szGSG9Model[18] = '/';	szGSG9Model[23] = '.';
+	szGSG9Model[4] = g_l;	szGSG9Model[9] = g_a;	szGSG9Model[14] = g_g;	szGSG9Model[19] = g_g;	szGSG9Model[24] = g_m;
+
+	char *szGuerillaModel = new char[36];
+
+	szGuerillaModel[0] = g_m;	szGuerillaModel[5] = g_s;	szGuerillaModel[10] = g_y;	szGuerillaModel[15] = g_u;	szGuerillaModel[20] = g_l;	szGuerillaModel[25] = g_e;	szGuerillaModel[30] = g_a;	szGuerillaModel[35] = '\0';
+	szGuerillaModel[1] = g_o;	szGuerillaModel[6] = '/';	szGuerillaModel[11] = g_e;	szGuerillaModel[16] = g_e;	szGuerillaModel[21] = g_a;	szGuerillaModel[26] = g_r;	szGuerillaModel[31] = '.';
+	szGuerillaModel[2] = g_d;	szGuerillaModel[7] = g_p;	szGuerillaModel[12] = g_r;	szGuerillaModel[17] = g_r;	szGuerillaModel[22] = '/';	szGuerillaModel[27] = g_i;	szGuerillaModel[32] = g_m;
+	szGuerillaModel[3] = g_e;	szGuerillaModel[8] = g_l;	szGuerillaModel[13] = '/';	szGuerillaModel[18] = g_i;	szGuerillaModel[23] = g_g;	szGuerillaModel[28] = g_l;	szGuerillaModel[33] = g_d;
+	szGuerillaModel[4] = g_l;	szGuerillaModel[9] = g_a;	szGuerillaModel[14] = g_g;	szGuerillaModel[19] = g_l;	szGuerillaModel[24] = g_u;	szGuerillaModel[29] = g_l;	szGuerillaModel[34] = g_l;
+
+	char *szArcticModel = new char[32];
+
+	szArcticModel[0] = g_m;	szArcticModel[5] = g_s;	szArcticModel[10] = g_y;	szArcticModel[15] = g_r;	szArcticModel[20] = '/';	szArcticModel[25] = g_i;	szArcticModel[30] = g_l;
+	szArcticModel[1] = g_o;	szArcticModel[6] = '/';	szArcticModel[11] = g_e;	szArcticModel[16] = g_c;	szArcticModel[21] = g_a;	szArcticModel[26] = g_c;	szArcticModel[31] = '\0';
+	szArcticModel[2] = g_d;	szArcticModel[7] = g_p;	szArcticModel[12] = g_r;	szArcticModel[17] = g_t;	szArcticModel[22] = g_r;	szArcticModel[27] = '.';
+	szArcticModel[3] = g_e;	szArcticModel[8] = g_l;	szArcticModel[13] = '/';	szArcticModel[18] = g_i;	szArcticModel[23] = g_c;	szArcticModel[28] = g_m;
+	szArcticModel[4] = g_l;	szArcticModel[9] = g_a;	szArcticModel[14] = g_a;	szArcticModel[19] = g_c;	szArcticModel[24] = g_t;	szArcticModel[29] = g_d;
+
+	char *szSASModel = new char[26];
+
+	szSASModel[0] = g_m;	szSASModel[5] = g_s;	szSASModel[10] = g_y;	szSASModel[15] = g_a;	szSASModel[20] = g_s;	szSASModel[25] = '\0';
+	szSASModel[1] = g_o;	szSASModel[6] = '/';	szSASModel[11] = g_e;	szSASModel[16] = g_s;	szSASModel[21] = '.';
+	szSASModel[2] = g_d;	szSASModel[7] = g_p;	szSASModel[12] = g_r;	szSASModel[17] = '/';	szSASModel[22] = g_m;
+	szSASModel[3] = g_e;	szSASModel[8] = g_l;	szSASModel[13] = '/';	szSASModel[18] = g_s;	szSASModel[23] = g_d;
+	szSASModel[4] = g_l;	szSASModel[9] = g_a;	szSASModel[14] = g_s;	szSASModel[19] = g_a;	szSASModel[24] = g_l;
+
+	char *szTerrorModel = new char[32];
+
+	szTerrorModel[0] = g_m;	szTerrorModel[5] = g_s;	szTerrorModel[10] = g_y;	szTerrorModel[15] = g_e;	szTerrorModel[20] = '/';	szTerrorModel[25] = g_o;	szTerrorModel[30] = g_l;
+	szTerrorModel[1] = g_o;	szTerrorModel[6] = '/';	szTerrorModel[11] = g_e;	szTerrorModel[16] = g_r;	szTerrorModel[21] = g_t;	szTerrorModel[26] = g_r;	szTerrorModel[31] = '\0';
+	szTerrorModel[2] = g_d;	szTerrorModel[7] = g_p;	szTerrorModel[12] = g_r;	szTerrorModel[17] = g_r;	szTerrorModel[22] = g_e;	szTerrorModel[27] = '.';
+	szTerrorModel[3] = g_e;	szTerrorModel[8] = g_l;	szTerrorModel[13] = '/';	szTerrorModel[18] = g_o;	szTerrorModel[23] = g_r;	szTerrorModel[28] = g_m;
+	szTerrorModel[4] = g_l;	szTerrorModel[9] = g_a;	szTerrorModel[14] = g_t;	szTerrorModel[19] = g_r;	szTerrorModel[24] = g_r;	szTerrorModel[29] = g_d;
+
+	char *szUrbanModel = new char[30];
+
+	szUrbanModel[0] = g_m;	szUrbanModel[5] = g_s;	szUrbanModel[10] = g_y;	szUrbanModel[15] = g_r;	szUrbanModel[20] = g_u;	szUrbanModel[25] = '.';
+	szUrbanModel[1] = g_o;	szUrbanModel[6] = '/';	szUrbanModel[11] = g_e;	szUrbanModel[16] = g_b;	szUrbanModel[21] = g_r;	szUrbanModel[26] = g_m;
+	szUrbanModel[2] = g_d;	szUrbanModel[7] = g_p;	szUrbanModel[12] = g_r;	szUrbanModel[17] = g_a;	szUrbanModel[22] = g_b;	szUrbanModel[27] = g_d;
+	szUrbanModel[3] = g_e;	szUrbanModel[8] = g_l;	szUrbanModel[13] = '/';	szUrbanModel[18] = g_n;	szUrbanModel[23] = g_a;	szUrbanModel[28] = g_l;
+	szUrbanModel[4] = g_l;	szUrbanModel[9] = g_a;	szUrbanModel[14] = g_u;	szUrbanModel[19] = '/';	szUrbanModel[24] = g_n;	szUrbanModel[29] = '\0';
+
+	char *szVIPModel = new char[26];
+
+	szVIPModel[0] = g_m;	szVIPModel[5] = g_s;	szVIPModel[10] = g_y;	szVIPModel[15] = g_i;	szVIPModel[20] = g_p;	szVIPModel[25] = '\0';
+	szVIPModel[1] = g_o;	szVIPModel[6] = '/';	szVIPModel[11] = g_e;	szVIPModel[16] = g_p;	szVIPModel[21] = '.';
+	szVIPModel[2] = g_d;	szVIPModel[7] = g_p;	szVIPModel[12] = g_r;	szVIPModel[17] = '/';	szVIPModel[22] = g_m;
+	szVIPModel[3] = g_e;	szVIPModel[8] = g_l;	szVIPModel[13] = '/';	szVIPModel[18] = g_v;	szVIPModel[23] = g_d;
+	szVIPModel[4] = g_l;	szVIPModel[9] = g_a;	szVIPModel[14] = g_v;	szVIPModel[19] = g_i;	szVIPModel[24] = g_l;
+
 	PRECACHE_MODEL("models/player.mdl");
-	PRECACHE_MODEL("models/player/arab/arab.mdl");
-	PRECACHE_MODEL("models/player/arctic/arctic.mdl");
-	PRECACHE_MODEL("models/player/gign/gign.mdl");
-	PRECACHE_MODEL("models/player/gsg9/gsg9.mdl");
-	PRECACHE_MODEL("models/player/guerilla/guerilla.mdl");
-	PRECACHE_MODEL("models/player/sas/sas.mdl");
-	PRECACHE_MODEL("models/player/terror/terror.mdl");
-	PRECACHE_MODEL("models/player/urban/urban.mdl");
-	PRECACHE_MODEL("models/player/vip/vip.mdl");
+	PRECACHE_MODEL( szArabModel );
+	PRECACHE_MODEL( szGIGNModel );
+	PRECACHE_MODEL( szGSG9Model );
+	PRECACHE_MODEL( szGuerillaModel );
+	PRECACHE_MODEL( szArcticModel );
+	PRECACHE_MODEL( szSASModel );
+	PRECACHE_MODEL( szTerrorModel );
+	PRECACHE_MODEL( szUrbanModel );
+	PRECACHE_MODEL( szVIPModel );
 
 	// Beta 6.6: the player models are precached here, and the client's files must
 	// keep within these bounds (vMin, vMax: Counter-Strike 1.6's names)
@@ -2709,15 +3068,15 @@ void ClientPrecache( void )
 	Vector vMax( 48, 36, 58 );
 
 	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player.mdl" );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/arab/arab.mdl" );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/arctic/arctic.mdl" );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/gign/gign.mdl" );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/gsg9/gsg9.mdl" );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/guerilla/guerilla.mdl" );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/sas/sas.mdl" );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/terror/terror.mdl" );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/urban/urban.mdl" );
-	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, "models/player/vip/vip.mdl" );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szArabModel );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szGIGNModel );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szGSG9Model );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szGuerillaModel );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szArcticModel );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szSASModel );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szTerrorModel );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szUrbanModel );
+	ENGINE_FORCE_UNMODIFIED( force_model_specifybounds, (float *)&vMin, (float *)&vMax, szVIPModel );
 
 	// hud sounds
 

@@ -103,7 +103,7 @@ void CAWP::SecondaryAttack( void )
 
 	m_pPlayer->ResetMaxSpeed();
 
-	EMIT_SOUND( ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/zoom.wav", 1, ATTN_NORM );
+	EMIT_SOUND( ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/zoom.wav", 0.2, 2.4 );
 	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.3;
 }
 
@@ -118,7 +118,7 @@ void CAWP::PrimaryAttack( void )
 	else if ( FBitSet( m_pPlayer->pev->flags, FL_DUCKING ) )
 		AWPFire( 0, 1.45, FALSE );
 	else
-		AWPFire( 0.0025, 1.45, FALSE );
+		AWPFire( 0.001, 1.45, FALSE );
 }
 
 void CAWP::AWPFire( float flSpread, float flCycleTime, BOOL fUseAutoAim )
@@ -182,7 +182,11 @@ void CAWP::Reload( void )
 	if ( m_pPlayer->ammo_338mag <= 0 )
 		return;
 
-	if ( DefaultReload( AWP_MAX_CLIP, AWP_RELOAD, 2.5 ) )
+	int iResult = DefaultReload( AWP_MAX_CLIP, AWP_RELOAD, 2.5 );	// name ours
+
+	m_pPlayer->SetAnimation( PLAYER_RELOAD );
+
+	if ( iResult )
 	{
 		if ( m_pPlayer->pev->fov != 90 )
 		{

@@ -646,8 +646,9 @@ public:
 	void UserCmd_NVGAdjustUp( void );		// name ours
 	void UserCmd_NVGAdjustDown( void );		// name ours
 
+	int m_iOn;						// name ours: CHud::Redraw reads it from Beta 7.0
+
 private:
-	int m_iOn;						// name ours
 	int m_iAlpha;					// name ours
 	wrect_t *m_prcScope[3][8];		// name ours: the scope's pieces at 640, 800 and 1024 wide
 	wrect_t *m_prcHorizontal;		// name ours
@@ -776,7 +777,7 @@ public:
 	SCREENINFO	m_scrinfo;
 
 	int	m_iWeaponBits;
-	int	m_fPlayerDead;
+	bool	m_fPlayerDead;	// a byte from Beta 7.0 (SDK 2.0: int)
 	int m_iIntermission;
 
 	// sprite indexes
@@ -784,6 +785,9 @@ public:
 
 	float m_flCvarCheckTime;	// name ours
 	bool m_bGunSmoke;			// name ours: the gunsmoke command toggles it
+	float m_flTexSort;			// name ours: gl_texsort as Init found it
+	float m_flZMax;				// name ours: gl_zmax as Init found it
+	bool m_bNoAlphaMin;			// name ours: gl_alphamin read 0 at Init
 
 
 	void AddHudElem(CHudBase *p);
@@ -973,4 +977,46 @@ enum b70_unknown_e
 	B70_UNKNOWN3,
 	B70_UNKNOWN4,
 	B70_UNKNOWN5,
+	B70_UNKNOWN6,
+	B70_UNKNOWN7,
+	B70_UNKNOWN8,
+	B70_UNKNOWN9,
+	B70_UNKNOWN10,
+	B70_UNKNOWN11,
+	B70_UNKNOWN12,
+	B70_UNKNOWN13,
+	B70_UNKNOWN14,
+	B70_UNKNOWN15,
+	B70_UNKNOWN16,
+	B70_UNKNOWN17,
+	B70_UNKNOWN18,
+	B70_UNKNOWN19,
+	B70_UNKNOWN20,
+	B70_UNKNOWN21,
+	B70_UNKNOWN22,
+	B70_UNKNOWN23,
+	B70_UNKNOWN24,
+	B70_UNKNOWN25,
+	B70_UNKNOWN26,
+	B70_UNKNOWN27,
+	B70_UNKNOWN28,
+	B70_UNKNOWN29,
+	B70_UNKNOWN30,
+	B70_UNKNOWN31,
+	B70_UNKNOWN32,
+	B70_UNKNOWN33,
+	B70_UNKNOWN34,
+	B70_UNKNOWN35,
+	B70_UNKNOWN36,
+	B70_UNKNOWN37,
+	B70_UNKNOWN38,
+	B70_UNKNOWN39,
+	B70_UNKNOWN40,
+	B70_UNKNOWN41,
+	B70_UNKNOWN42,
+	B70_UNKNOWN43,
+	B70_UNKNOWN44,
+	B70_UNKNOWN45,
+	B70_UNKNOWN46,
+	B70_UNKNOWN47,
 };

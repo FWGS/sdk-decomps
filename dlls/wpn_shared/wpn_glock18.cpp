@@ -152,7 +152,7 @@ void CGLOCK18::GLOCK18Fire( float flSpread, float flCycleTime, BOOL fUseBurstMod
 	}
 	else
 	{
-		flCycleTime -= 0.1;
+		flCycleTime -= 0.05;
 
 		if ( ++m_iShotsFired > 1 )
 			return;
@@ -227,6 +227,8 @@ void CGLOCK18::Reload( void )
 		DefaultReload( GLOCK18_MAX_CLIP, GLOCK18_RELOAD, 2.2 );
 	else
 		DefaultReload( GLOCK18_MAX_CLIP, GLOCK18_RELOAD2, 2.2 );
+
+	m_pPlayer->SetAnimation( PLAYER_RELOAD );
 }
 
 void CGLOCK18::WeaponIdle( void )

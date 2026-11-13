@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
-# ADD CPP /nologo /MT /W3 /GX /Zi /O2 /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\utils\vgui\include" /I "..\dlls" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
+# ADD CPP /nologo /MT /W3 /GX /Zi /O2 /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\utils\vgui\include" /I "..\dlls" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "CLIENT_DLL" /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -150,6 +150,10 @@ SOURCE=..\dlls\wpn_shared\wpn_c4.cpp
 # Begin Source File
 
 SOURCE=..\dlls\wpn_shared\wpn_deagle.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\wpn_shared\wpn_elite.cpp
 # End Source File
 # Begin Source File
 
@@ -378,6 +382,10 @@ SOURCE=.\util.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\vgui_BuyMenu.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\vgui_ClassMenu.cpp
 # End Source File
 # Begin Source File
@@ -390,7 +398,19 @@ SOURCE=.\vgui_ControlConfigPanel.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\vgui_CSTeamMenu.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\vgui_CTMenu.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\vgui_CustomObjects.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\vgui_EquipmentMenu.cpp
 # End Source File
 # Begin Source File
 
@@ -398,7 +418,19 @@ SOURCE=.\vgui_int.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\vgui_MachineGunMenu.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\vgui_MOTDWindow.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\vgui_PistolMenu.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\vgui_RifleMenu.cpp
 # End Source File
 # Begin Source File
 
@@ -414,11 +446,23 @@ SOURCE=.\vgui_ServerBrowser.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\vgui_ShotgunMenu.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\vgui_SMGMenu.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\vgui_TeamFortressViewport.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\vgui_teammenu.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\vgui_TerroristMenu.cpp
 # End Source File
 # Begin Source File
 
