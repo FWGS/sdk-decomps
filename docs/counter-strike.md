@@ -19,7 +19,7 @@ Valve's Half-Life SDK 1.0 (`b443b44`, tag `initial`, as released on
 versions. Each commit message says what the release changed, how its DLLs
 were built and which parts of its text are stand-ins; each tag message
 gives the retail files' SHA-256. File references below are to the head of
-the branch, `c2f09f0` (1.5), unless a tag is named.
+the branch, `5e4dafa` (1.5), unless a tag is named.
 
 ## Contents
 
@@ -48,33 +48,33 @@ of the repository, by SHA-256 and `cmp` against the retail files.
 
 | Release | Released | Tag (commit) | Server | Client | Retail `mp.dll` SHA-256 | Retail `client.dll` SHA-256 |
 |---|---|---|---|---|---|---|
-| Beta 1.0 | 1999-06-19 | [`cstrike-beta1.0`](../../../tree/cstrike-beta1.0) (`8b24c6c`) | **identical** | **identical** | `f4155737d5f190a385da49308a1ef38446f5dd50aaae2362eccff48addac3bf6` | `07e181325c522cd612c1059d28c3c173c7200b1c9953f7d9bec418a4d6055564` |
-| Beta 1.1 | 1999-06-27 | [`cstrike-beta1.1`](../../../tree/cstrike-beta1.1) (`9df55e7`) | **identical** | Beta 1.0's file, **identical** | `577517c643e09c7f9426ff8cde659254df496a79bd18d075a340110bb0a5ecec` | `07e181325c522cd612c1059d28c3c173c7200b1c9953f7d9bec418a4d6055564` |
-| Beta 2.0 | 1999-08-13 | [`cstrike-beta2.0`](../../../tree/cstrike-beta2.0) (`a3bf3ea`) | **identical** | **identical** | `258e016a4b257b759bc42dc71769455508309eb86de188c1dcd6ad3cd4c6debe` | `791242cc4a109773c940962dcd7fbccb79955c8adffc36773d3eff0acfafaf73` |
-| Beta 2.1 | 1999-08-17 | [`cstrike-beta2.1`](../../../tree/cstrike-beta2.1) (`57793ea`) | **identical** | Beta 2.0's file, **identical** | `57f9dd8b2cae2072a77e053eb174fd3842d9ef8253031cb4c55475a38f40d844` | `791242cc4a109773c940962dcd7fbccb79955c8adffc36773d3eff0acfafaf73` |
-| Beta 3.0 | 1999-09-14 | [`cstrike-beta3.0`](../../../tree/cstrike-beta3.0) (`9d0c2e3`) | **identical** | **identical** | `a1c31191a6176be679ee5fa2e6b1e7feaf59f83e26117b346ed3f2263ce4382b` | `a3298a3a5a2a0369340d63d30beb6a271653f17310892e7bc70b1d40c5600c50` |
-| Beta 3.1 | 1999-09-16 | [`cstrike-beta3.1`](../../../tree/cstrike-beta3.1) (`f06669b`) | **identical** | Beta 3.0's file, **identical** | `7dac5feda8c0137a7bcdb3855ab3e94ce3c5bcf84e3cb47f9319113b03f0b209` | `a3298a3a5a2a0369340d63d30beb6a271653f17310892e7bc70b1d40c5600c50` |
-| Beta 4.0 | 1999-11-05 | [`cstrike-beta4.0`](../../../tree/cstrike-beta4.0) (`5a46865`) | **identical** | **identical** | `95312d4de5ca88c387b072f97563911b84a8e0c2c046b850a097bfab8c4dcca6` | `bd1b1c76bfd79a7614f36508518637bf78716e1414e8592b19bd7bbd44f3f3c7` |
-| Beta 4.1 | 1999-12-01 | [`cstrike-beta4.1`](../../../tree/cstrike-beta4.1) (`52356a2`) | **identical** | Beta 4.0's file, **identical** | `f14aed6b873e9a1b31786782d5e33f3d57656f25d72f2a45a0a76bcddb4dc08f` | `bd1b1c76bfd79a7614f36508518637bf78716e1414e8592b19bd7bbd44f3f3c7` |
-| Beta 5.0, leaked build | files of 1999-12-09 | [`cstrike-beta5.0-leak`](../../../tree/cstrike-beta5.0-leak) (`b67fdc6`) | **identical** | **identical** | `2ba7b797f9e9fdad3a88dbbeab61125e664a8777153c27ef4251ad69e8fcc816` | `62e8489388fa153da1fbdf0d348b33d749a50acb5cbcc4cbda7540e956aefa74` |
-| Beta 5.0 | 1999-12-23 | [`cstrike-beta5.0`](../../../tree/cstrike-beta5.0) (`7b2c1dd`) | **identical** | **identical** | `87ea6dade4035c65338fb8cd95cce5b489b53b3951b8c34323fcd214c50927d7` | `b3ebbbe9290812cd01b44a19d7b989aba90e8f068051340a33f8dc564ed4c6f0` |
-| Beta 5.2 | 2000-01-10 | [`cstrike-beta5.2`](../../../tree/cstrike-beta5.2) (`9d2267f`) | **identical** | **identical** | `af119154607b38b6d0bae8a10efc702c4354d7088166895b47c73e3a75938b07` | `79730770a318066771ee2299af9266bd99aebb153bda0fa586d0d9baf6cce123` |
-| Beta 6.0 | 2000-03-10 | [`cstrike-beta6.0`](../../../tree/cstrike-beta6.0) (`725056f`) | **identical** | **identical** | `23796074115c00f308170bdd68c8a40ad0d1ec7e769bf3d9549650d0c3d09f7c` | `bc7412fcbbb20f8f4c1a37a8e5c83b36926d54b86450b0bf52319fe83a7fd80b` |
-| Beta 6.1 | 2000-03-24 | [`cstrike-beta6.1`](../../../tree/cstrike-beta6.1) (`2933bc0`) | **identical** | Beta 6.0's file, **identical** | `d7f05c09d3d9bd1ee44ed2c438ba6830819a57ec532ee20c5b1e860f8debac96` | `bc7412fcbbb20f8f4c1a37a8e5c83b36926d54b86450b0bf52319fe83a7fd80b` |
-| Beta 6.5 | 2000-06-08 | [`cstrike-beta6.5`](../../../tree/cstrike-beta6.5) (`989f789`) | **identical** | **identical** | `abc1fb0da96654ea3e8a05cedf0ad4ca1d553a44b4b19691ec822c815e2c89cf` | `db55dcbd4316f73412fa6f73828476985f490b1872ddfebfa5f57497a8e1f95a` |
-| Beta 6.5d | not dated | [`cstrike-beta6.5d`](../../../tree/cstrike-beta6.5d) (`e4d25bb`) | Beta 6.5's file | Beta 6.5's file | `abc1fb0da96654ea3e8a05cedf0ad4ca1d553a44b4b19691ec822c815e2c89cf` | `db55dcbd4316f73412fa6f73828476985f490b1872ddfebfa5f57497a8e1f95a` |
-| Beta 6.6 | 2000-06-22 | [`cstrike-beta6.6`](../../../tree/cstrike-beta6.6) (`f560025`) | **identical** | **identical** | `84fb002a67a9f8dd7e48ec60494c5078d598d2151ddc34409234ee98d87d90da` | `1db237bb08759f1a7323cf1d1c3a24d912a0893e50638a5a684cd40994bd757d` |
-| Beta 7.0 | 2000-08-26 | [`cstrike-beta7.0`](../../../tree/cstrike-beta7.0) (`51270df`) | **identical** | **identical** | `210d739c26423f48693a800d536a9a2e838ebd2c24afa1bbebf97fc8870b56e3` | `3f16ba1141c172802ed6f32b08bc3de4d1576cb14a2d3d7a3d79a0e20968e496` |
-| Beta 7.1 | September 2000 | [`cstrike-beta7.1`](../../../tree/cstrike-beta7.1) (`a2a4f2c`) | **identical** | **identical** | `41f728a70c0778dff227d88635e10b2e4710fb5136e8545bb199c869ba7ce9b3` | `62e647eda8ce22b574a52e5f9040a9acc1c449602cc05b125e1f62cafe13178d` |
-| 1.0 | 2000-11-08 | [`cstrike-1.0`](../../../tree/cstrike-1.0) (`32d22a6`) | **identical** | **identical** | `21073277e6e94d947075b6c958a61df2b840d3cd9db394b3349c887457332fea` | `0dab270405a0cd9bf68ebfd2137f013dddf2f7128bd496530af8d82ad76501a2` |
-| 1.0b | 2001-01-25 | [`cstrike-1.0b`](../../../tree/cstrike-1.0b) (`25a996d`) | **identical** | 1.0's file, **identical** | `0fc676a35a0c84a4a5cf50c392d2ca18768397ecb4ebeb939e9bcf73e06dcbdc` | `0dab270405a0cd9bf68ebfd2137f013dddf2f7128bd496530af8d82ad76501a2` |
-| 1.1 | 2001-03-13 | [`cstrike-1.1`](../../../tree/cstrike-1.1) (`e57d4f8`) | **identical** | **identical** | `bea6118681f7a9d05b32fa71a2a6f828faee1151eca887f53d96544c96774881` | `47e8c2ed15a15e199ae7fadb58c4637fb7893fdb6c3a347ddd8fd2631dbc078b` |
-| 1.1b | not dated | [`cstrike-1.1b`](../../../tree/cstrike-1.1b) (`e57d4f8`) | 1.1's file | 1.1's file | `bea6118681f7a9d05b32fa71a2a6f828faee1151eca887f53d96544c96774881` | `47e8c2ed15a15e199ae7fadb58c4637fb7893fdb6c3a347ddd8fd2631dbc078b` |
-| 1.1c | 2001-04-06 | [`cstrike-1.1c`](../../../tree/cstrike-1.1c) (`e57d4f8`) | 1.1's file | 1.1's file | `bea6118681f7a9d05b32fa71a2a6f828faee1151eca887f53d96544c96774881` | `47e8c2ed15a15e199ae7fadb58c4637fb7893fdb6c3a347ddd8fd2631dbc078b` |
-| 1.2 | 2001-06-30 (the archive's list) | [`cstrike-1.2`](../../../tree/cstrike-1.2) (`e57d4f8`) | 1.1's file (no package to compare) | 1.1's file (no package to compare) | `bea6118681f7a9d05b32fa71a2a6f828faee1151eca887f53d96544c96774881` | `47e8c2ed15a15e199ae7fadb58c4637fb7893fdb6c3a347ddd8fd2631dbc078b` |
-| 1.3 | 2001-09-12 | [`cstrike-1.3`](../../../tree/cstrike-1.3) (`3873386`) | **identical** | **identical** | `598c9473cc16386a99bc01bba8f4bb31ffb10473f111434b2926fa3be81c30e1` | `71fdbe140df3598a74738537b924141f4fb4b0b828737bd99a7223d9e4549460` |
-| 1.4 | 2002-04-24 | [`cstrike-1.4`](../../../tree/cstrike-1.4) (`b7d5032`) | **identical** | packed; **not identical** | `f11016c098bf874f3b8ea9936a0c6760097d177412895de11faa0efbddeaac98` | `4b8af3606cb440fc40f066abe96b5959fe2036cae6809b7ffdbeeb6c50d3471d` |
-| 1.5 | 2002-06-12 | [`cstrike-1.5`](../../../tree/cstrike-1.5) (`c2f09f0`) | **identical** | packed; **not identical** | `f10cb95979afd46c677bbf21d40be7ec5a9fc179306a03b3b1ce76744ca4d2e8` | `61228d9c9664c0c67af3fb7717d7fa05b0fee88728a97030e89b45b12b5167ac` |
+| Beta 1.0 | 1999-06-19 | [`cstrike-beta1.0`](../../../tree/cstrike-beta1.0) (`a29757a`) | **identical** | **identical** | `f4155737d5f190a385da49308a1ef38446f5dd50aaae2362eccff48addac3bf6` | `07e181325c522cd612c1059d28c3c173c7200b1c9953f7d9bec418a4d6055564` |
+| Beta 1.1 | 1999-06-27 | [`cstrike-beta1.1`](../../../tree/cstrike-beta1.1) (`26b28e7`) | **identical** | Beta 1.0's file, **identical** | `577517c643e09c7f9426ff8cde659254df496a79bd18d075a340110bb0a5ecec` | `07e181325c522cd612c1059d28c3c173c7200b1c9953f7d9bec418a4d6055564` |
+| Beta 2.0 | 1999-08-13 | [`cstrike-beta2.0`](../../../tree/cstrike-beta2.0) (`06d374c`) | **identical** | **identical** | `258e016a4b257b759bc42dc71769455508309eb86de188c1dcd6ad3cd4c6debe` | `791242cc4a109773c940962dcd7fbccb79955c8adffc36773d3eff0acfafaf73` |
+| Beta 2.1 | 1999-08-17 | [`cstrike-beta2.1`](../../../tree/cstrike-beta2.1) (`2d195a8`) | **identical** | Beta 2.0's file, **identical** | `57f9dd8b2cae2072a77e053eb174fd3842d9ef8253031cb4c55475a38f40d844` | `791242cc4a109773c940962dcd7fbccb79955c8adffc36773d3eff0acfafaf73` |
+| Beta 3.0 | 1999-09-14 | [`cstrike-beta3.0`](../../../tree/cstrike-beta3.0) (`b0635b4`) | **identical** | **identical** | `a1c31191a6176be679ee5fa2e6b1e7feaf59f83e26117b346ed3f2263ce4382b` | `a3298a3a5a2a0369340d63d30beb6a271653f17310892e7bc70b1d40c5600c50` |
+| Beta 3.1 | 1999-09-16 | [`cstrike-beta3.1`](../../../tree/cstrike-beta3.1) (`69f37fc`) | **identical** | Beta 3.0's file, **identical** | `7dac5feda8c0137a7bcdb3855ab3e94ce3c5bcf84e3cb47f9319113b03f0b209` | `a3298a3a5a2a0369340d63d30beb6a271653f17310892e7bc70b1d40c5600c50` |
+| Beta 4.0 | 1999-11-05 | [`cstrike-beta4.0`](../../../tree/cstrike-beta4.0) (`8f90f1a`) | **identical** | **identical** | `95312d4de5ca88c387b072f97563911b84a8e0c2c046b850a097bfab8c4dcca6` | `bd1b1c76bfd79a7614f36508518637bf78716e1414e8592b19bd7bbd44f3f3c7` |
+| Beta 4.1 | 1999-12-01 | [`cstrike-beta4.1`](../../../tree/cstrike-beta4.1) (`059541f`) | **identical** | Beta 4.0's file, **identical** | `f14aed6b873e9a1b31786782d5e33f3d57656f25d72f2a45a0a76bcddb4dc08f` | `bd1b1c76bfd79a7614f36508518637bf78716e1414e8592b19bd7bbd44f3f3c7` |
+| Beta 5.0, leaked build | files of 1999-12-09 | [`cstrike-beta5.0-leak`](../../../tree/cstrike-beta5.0-leak) (`2683e38`) | **identical** | **identical** | `2ba7b797f9e9fdad3a88dbbeab61125e664a8777153c27ef4251ad69e8fcc816` | `62e8489388fa153da1fbdf0d348b33d749a50acb5cbcc4cbda7540e956aefa74` |
+| Beta 5.0 | 1999-12-23 | [`cstrike-beta5.0`](../../../tree/cstrike-beta5.0) (`1cbc344`) | **identical** | **identical** | `87ea6dade4035c65338fb8cd95cce5b489b53b3951b8c34323fcd214c50927d7` | `b3ebbbe9290812cd01b44a19d7b989aba90e8f068051340a33f8dc564ed4c6f0` |
+| Beta 5.2 | 2000-01-10 | [`cstrike-beta5.2`](../../../tree/cstrike-beta5.2) (`f8c1f94`) | **identical** | **identical** | `af119154607b38b6d0bae8a10efc702c4354d7088166895b47c73e3a75938b07` | `79730770a318066771ee2299af9266bd99aebb153bda0fa586d0d9baf6cce123` |
+| Beta 6.0 | 2000-03-10 | [`cstrike-beta6.0`](../../../tree/cstrike-beta6.0) (`9760190`) | **identical** | **identical** | `23796074115c00f308170bdd68c8a40ad0d1ec7e769bf3d9549650d0c3d09f7c` | `bc7412fcbbb20f8f4c1a37a8e5c83b36926d54b86450b0bf52319fe83a7fd80b` |
+| Beta 6.1 | 2000-03-24 | [`cstrike-beta6.1`](../../../tree/cstrike-beta6.1) (`9876677`) | **identical** | Beta 6.0's file, **identical** | `d7f05c09d3d9bd1ee44ed2c438ba6830819a57ec532ee20c5b1e860f8debac96` | `bc7412fcbbb20f8f4c1a37a8e5c83b36926d54b86450b0bf52319fe83a7fd80b` |
+| Beta 6.5 | 2000-06-08 | [`cstrike-beta6.5`](../../../tree/cstrike-beta6.5) (`f8291ba`) | **identical** | **identical** | `abc1fb0da96654ea3e8a05cedf0ad4ca1d553a44b4b19691ec822c815e2c89cf` | `db55dcbd4316f73412fa6f73828476985f490b1872ddfebfa5f57497a8e1f95a` |
+| Beta 6.5d | not dated | [`cstrike-beta6.5d`](../../../tree/cstrike-beta6.5d) (`18911c6`) | Beta 6.5's file | Beta 6.5's file | `abc1fb0da96654ea3e8a05cedf0ad4ca1d553a44b4b19691ec822c815e2c89cf` | `db55dcbd4316f73412fa6f73828476985f490b1872ddfebfa5f57497a8e1f95a` |
+| Beta 6.6 | 2000-06-22 | [`cstrike-beta6.6`](../../../tree/cstrike-beta6.6) (`a43d0b4`) | **identical** | **identical** | `84fb002a67a9f8dd7e48ec60494c5078d598d2151ddc34409234ee98d87d90da` | `1db237bb08759f1a7323cf1d1c3a24d912a0893e50638a5a684cd40994bd757d` |
+| Beta 7.0 | 2000-08-26 | [`cstrike-beta7.0`](../../../tree/cstrike-beta7.0) (`654725d`) | **identical** | **identical** | `210d739c26423f48693a800d536a9a2e838ebd2c24afa1bbebf97fc8870b56e3` | `3f16ba1141c172802ed6f32b08bc3de4d1576cb14a2d3d7a3d79a0e20968e496` |
+| Beta 7.1 | September 2000 | [`cstrike-beta7.1`](../../../tree/cstrike-beta7.1) (`15d5377`) | **identical** | **identical** | `41f728a70c0778dff227d88635e10b2e4710fb5136e8545bb199c869ba7ce9b3` | `62e647eda8ce22b574a52e5f9040a9acc1c449602cc05b125e1f62cafe13178d` |
+| 1.0 | 2000-11-08 | [`cstrike-1.0`](../../../tree/cstrike-1.0) (`e943424`) | **identical** | **identical** | `21073277e6e94d947075b6c958a61df2b840d3cd9db394b3349c887457332fea` | `0dab270405a0cd9bf68ebfd2137f013dddf2f7128bd496530af8d82ad76501a2` |
+| 1.0b | 2001-01-25 | [`cstrike-1.0b`](../../../tree/cstrike-1.0b) (`9c64f22`) | **identical** | 1.0's file, **identical** | `0fc676a35a0c84a4a5cf50c392d2ca18768397ecb4ebeb939e9bcf73e06dcbdc` | `0dab270405a0cd9bf68ebfd2137f013dddf2f7128bd496530af8d82ad76501a2` |
+| 1.1 | 2001-03-13 | [`cstrike-1.1`](../../../tree/cstrike-1.1) (`08c7456`) | **identical** | **identical** | `bea6118681f7a9d05b32fa71a2a6f828faee1151eca887f53d96544c96774881` | `47e8c2ed15a15e199ae7fadb58c4637fb7893fdb6c3a347ddd8fd2631dbc078b` |
+| 1.1b | not dated | [`cstrike-1.1b`](../../../tree/cstrike-1.1b) (`08c7456`) | 1.1's file | 1.1's file | `bea6118681f7a9d05b32fa71a2a6f828faee1151eca887f53d96544c96774881` | `47e8c2ed15a15e199ae7fadb58c4637fb7893fdb6c3a347ddd8fd2631dbc078b` |
+| 1.1c | 2001-04-06 | [`cstrike-1.1c`](../../../tree/cstrike-1.1c) (`08c7456`) | 1.1's file | 1.1's file | `bea6118681f7a9d05b32fa71a2a6f828faee1151eca887f53d96544c96774881` | `47e8c2ed15a15e199ae7fadb58c4637fb7893fdb6c3a347ddd8fd2631dbc078b` |
+| 1.2 | 2001-06-30 (the archive's list) | [`cstrike-1.2`](../../../tree/cstrike-1.2) (`08c7456`) | 1.1's file (no package to compare) | 1.1's file (no package to compare) | `bea6118681f7a9d05b32fa71a2a6f828faee1151eca887f53d96544c96774881` | `47e8c2ed15a15e199ae7fadb58c4637fb7893fdb6c3a347ddd8fd2631dbc078b` |
+| 1.3 | 2001-09-12 | [`cstrike-1.3`](../../../tree/cstrike-1.3) (`ffb6e62`) | **identical** | **identical** | `598c9473cc16386a99bc01bba8f4bb31ffb10473f111434b2926fa3be81c30e1` | `71fdbe140df3598a74738537b924141f4fb4b0b828737bd99a7223d9e4549460` |
+| 1.4 | 2002-04-24 | [`cstrike-1.4`](../../../tree/cstrike-1.4) (`3916799`) | **identical** | packed; **not identical** | `f11016c098bf874f3b8ea9936a0c6760097d177412895de11faa0efbddeaac98` | `4b8af3606cb440fc40f066abe96b5959fe2036cae6809b7ffdbeeb6c50d3471d` |
+| 1.5 | 2002-06-12 | [`cstrike-1.5`](../../../tree/cstrike-1.5) (`5e4dafa`) | **identical** | packed; **not identical** | `f10cb95979afd46c677bbf21d40be7ec5a9fc179306a03b3b1ce76744ca4d2e8` | `61228d9c9664c0c67af3fb7717d7fa05b0fee88728a97030e89b45b12b5167ac` |
 
 Release dates are the commit messages'. Beta 7.1's DLLs are linked on 15
 September 2000 (UTC); the archive's README dates the release 13 September.
@@ -644,30 +644,30 @@ the evidence):
 
 | Release (commit) | Server | Client |
 |---|---|---|
-| Beta 1.0 (`8b24c6c`) | Two unused typedefs, in `animation.h` and `multiplay_gamerules.cpp`: one declaration each, before `SetSequenceBox` and `GetNextBestWeapon` | none |
-| Beta 1.1 (`9df55e7`) | 1.0's, and an unused enum of 11 in `weapons.h` ahead of `CBasePlayerItem` | Beta 1.0's file |
-| Beta 2.0 (`a3bf3ea`) | the earlier ones; an unused enum at the end of `cbase.h` (6 declarations every file sees); an unused inline in `client.cpp` ahead of `IsCloseToBase` (8 lines) | an unused prototype and a dead function in `health.h` and `health.cpp` |
-| Beta 2.1 (`57793ea`) | the inline in `client.cpp` 5 lines instead of 8 | Beta 2.0's file |
-| Beta 3.0 (`9d0c2e3`) | `animation.h`'s typedef, the enums in `weapons.h` and `cbase.h`; `debris.cpp`'s one declaration (the file is in the Linux object list, its text is ours); the P90's and knife's armour ratios in `TakeDamage` written as multiples of `ARMOR_RATIO` (constant pooling) | unused declarations in `health.h` and `health.cpp`; two globals of `ammo.cpp` ahead of an `#include`; braces in `DrawPlayers` (the `.bss` order) |
-| Beta 3.1 (`f06669b`) | 3.0's | Beta 3.0's file |
-| Beta 4.0 (`5a46865`) | declarations in `weapons.h` (11), `cbase.h` (9) and `animation.h`; intermediate code in `multiplay_gamerules.cpp` (a 42-line function), `client.cpp` (7 lines) and `combat.cpp` (a comment) | declarations in `health.h`, `health.cpp` and `message.cpp`; braces in `DrawPlayers` |
-| Beta 4.1 (`52356a2`) | 4.0's, with 8 declarations before `GetNextBestWeapon` and a 25-line comment in `weapons.cpp` (line numbers) | Beta 4.0's file |
-| Beta 5.0 leak (`b67fdc6`) | the declaration stand-ins gone; unused inlines: 24 empty statements in `weapons.h` ahead of `CBasePlayerItem`, 3 in `multiplay_gamerules.cpp` | an unused inline in the client's headers |
-| Beta 5.0 (`7b2c1dd`) | `weapons.h`'s as the leak; `multiplay_gamerules.cpp`'s gone | the inline, 15 statements |
-| Beta 5.2 (`9d2267f`) | `weapons.h`'s 24 statements | the client's unused inline |
-| Beta 6.0 (`725056f`) | `weapons.h`'s 24. Kept as text, not stand-ins: eight unreferenced globals in `client.cpp` and an unused local in `FireBullets`, which the Linux library and 1.6 have | the inline; `MAX_MOTD_LENGTH` 245 and two 8-byte gaps in `CHudNVG` that nothing touches |
-| Beta 6.1 (`2933bc0`) | 6.0's (6.1's objects don't show `weapons.h`'s) | Beta 6.0's file |
-| Beta 6.5 (`989f789`) | 14 dead stores in `FireBullets3`, a dead block in `CHostage::IdleThink` (the inliner's budget); the place of `hostage.cpp`'s include | empty statements in `hud.h` (60), at the end of `CHudMoney::Draw` (85) and in `hl_weapons.cpp` (8); `RotateVectorZ`'s statements; 18 unused names at the end of `hud.h`; the dead functions LINK counts (names and places from 1.6) |
-| Beta 6.5d (`e4d25bb`) | 6.6's; no Windows server of this state exists, so they mean nothing here | 6.6's |
-| Beta 6.6 (`f560025`) | 6.5's, and 8 empty statements at the end of `CHalfLifeMultiplay::InitHUD` | 6.5's, with 6 names at the end of `hud.h` |
-| Beta 7.0 (`51270df`) | 26 empty statements at the end of `CHalfLifeMultiplay::Think`; in the new `CFuncVehicle::Next` 94 dead stores to 20 dead locals and a `goto`; `FireBullets3` and `IdleThink` as before | 6.5's, with 48 names at the end of `hud.h` |
-| Beta 7.1 (`a2a4f2c`) | 116 statements at the end of `Think` (with `trains.h` included ahead of `gamerules.h`, the only reading built); 42 dead stores in `CFuncVehicle::CollisionDetection`, a few in `Next` | 7.0's; `ammo.cpp`'s line layout in two functions as 1.6's |
-| 1.0 (`32d22a6`) | `extdll.h`'s 7,896 names (the server doesn't depend on them); 154 statements at the end of `Think`; `IdleThink`'s dead block with one arm; the vehicle's as 7.1; `FireBullets3` needs none | `extdll.h`'s names; 58 statements in `hud.h`, 8 in `hl_weapons.cpp`, 85 in `CHudMoney::Draw`; one unused name at the end of `hud.h` |
-| 1.0b (`25a996d`) | 1.0's; a pointer local in `CBasePlayer::TakeDamage` (operand order) | 1.0's file |
-| 1.1 (`e57d4f8`) | 122 statements at the end of `Think`; `IdleThink`'s block; parentheses in `Host_Say`'s flood test | 1.0's; 7 names at the end of `hud.h`; SDK 2.2's unused `GetScoreBoard` accessor in the viewport's header |
-| 1.3 (`3873386`) | gone: `Think`'s filler, `CollisionDetection`'s dead stores. New: `float *pdt = &dt;` in `StudioProcessGait` | `hud.h`'s statements gone; 26 statements in `hl_weapons.cpp`, 85 in `CHudMoney::Draw`, 46 names in `hud.h`, a 22-line filler in the viewport's header; two empty statements in `wpn_knife.cpp`'s `Swing`; a second spread loop in `EV_HLDM_FireBullets` that the optimiser removes |
-| 1.4 (`b7d5032`) | six small ones: `Next`'s two dead locals, `PickNextVIP`'s `iCount = iCount + 1`, an empty test in `CHostage::MoveToward`, early returns in `CONSOLE_ECHO` and `CONSOLE_ECHO_LOGGED`, `GiveCTTouchBonus`'s local, a final `return` in `ShowMenu`. Gone: `IdleThink`'s, `pdt`, `Host_Say`'s | 1.3's; fillers in `hl_weapons.cpp` (68 statements) and `ev_hldm.cpp` (60), which only set the order of header inlines and prove nothing while the client is not identical |
-| 1.5 (`c2f09f0`) | 1.4's, and `NextLevel`'s last statement | 1.4's |
+| Beta 1.0 (`a29757a`) | Two unused typedefs, in `animation.h` and `multiplay_gamerules.cpp`: one declaration each, before `SetSequenceBox` and `GetNextBestWeapon` | none |
+| Beta 1.1 (`26b28e7`) | 1.0's, and an unused enum of 11 in `weapons.h` ahead of `CBasePlayerItem` | Beta 1.0's file |
+| Beta 2.0 (`06d374c`) | the earlier ones; an unused enum at the end of `cbase.h` (6 declarations every file sees); an unused inline in `client.cpp` ahead of `IsCloseToBase` (8 lines) | an unused prototype and a dead function in `health.h` and `health.cpp` |
+| Beta 2.1 (`2d195a8`) | the inline in `client.cpp` 5 lines instead of 8 | Beta 2.0's file |
+| Beta 3.0 (`b0635b4`) | `animation.h`'s typedef, the enums in `weapons.h` and `cbase.h`; `debris.cpp`'s one declaration (the file is in the Linux object list, its text is ours); the P90's and knife's armour ratios in `TakeDamage` written as multiples of `ARMOR_RATIO` (constant pooling) | unused declarations in `health.h` and `health.cpp`; two globals of `ammo.cpp` ahead of an `#include`; braces in `DrawPlayers` (the `.bss` order) |
+| Beta 3.1 (`69f37fc`) | 3.0's | Beta 3.0's file |
+| Beta 4.0 (`8f90f1a`) | declarations in `weapons.h` (11), `cbase.h` (9) and `animation.h`; intermediate code in `multiplay_gamerules.cpp` (a 42-line function), `client.cpp` (7 lines) and `combat.cpp` (a comment) | declarations in `health.h`, `health.cpp` and `message.cpp`; braces in `DrawPlayers` |
+| Beta 4.1 (`059541f`) | 4.0's, with 8 declarations before `GetNextBestWeapon` and a 25-line comment in `weapons.cpp` (line numbers) | Beta 4.0's file |
+| Beta 5.0 leak (`2683e38`) | the declaration stand-ins gone; unused inlines: 24 empty statements in `weapons.h` ahead of `CBasePlayerItem`, 3 in `multiplay_gamerules.cpp` | an unused inline in the client's headers |
+| Beta 5.0 (`1cbc344`) | `weapons.h`'s as the leak; `multiplay_gamerules.cpp`'s gone | the inline, 15 statements |
+| Beta 5.2 (`f8c1f94`) | `weapons.h`'s 24 statements | the client's unused inline |
+| Beta 6.0 (`9760190`) | `weapons.h`'s 24. Kept as text, not stand-ins: eight unreferenced globals in `client.cpp` and an unused local in `FireBullets`, which the Linux library and 1.6 have | the inline; `MAX_MOTD_LENGTH` 245 and two 8-byte gaps in `CHudNVG` that nothing touches |
+| Beta 6.1 (`9876677`) | 6.0's (6.1's objects don't show `weapons.h`'s) | Beta 6.0's file |
+| Beta 6.5 (`f8291ba`) | 14 dead stores in `FireBullets3`, a dead block in `CHostage::IdleThink` (the inliner's budget); the place of `hostage.cpp`'s include | empty statements in `hud.h` (60), at the end of `CHudMoney::Draw` (85) and in `hl_weapons.cpp` (8); `RotateVectorZ`'s statements; 18 unused names at the end of `hud.h`; the dead functions LINK counts (names and places from 1.6) |
+| Beta 6.5d (`18911c6`) | 6.6's; no Windows server of this state exists, so they mean nothing here | 6.6's |
+| Beta 6.6 (`a43d0b4`) | 6.5's, and 8 empty statements at the end of `CHalfLifeMultiplay::InitHUD` | 6.5's, with 6 names at the end of `hud.h` |
+| Beta 7.0 (`654725d`) | 26 empty statements at the end of `CHalfLifeMultiplay::Think`; in the new `CFuncVehicle::Next` 94 dead stores to 20 dead locals and a `goto`; `FireBullets3` and `IdleThink` as before | 6.5's, with 48 names at the end of `hud.h` |
+| Beta 7.1 (`15d5377`) | 116 statements at the end of `Think` (with `trains.h` included ahead of `gamerules.h`, the only reading built); 42 dead stores in `CFuncVehicle::CollisionDetection`, a few in `Next` | 7.0's; `ammo.cpp`'s line layout in two functions as 1.6's |
+| 1.0 (`e943424`) | `extdll.h`'s 7,896 names (the server doesn't depend on them); 154 statements at the end of `Think`; `IdleThink`'s dead block with one arm; the vehicle's as 7.1; `FireBullets3` needs none | `extdll.h`'s names; 58 statements in `hud.h`, 8 in `hl_weapons.cpp`, 85 in `CHudMoney::Draw`; one unused name at the end of `hud.h` |
+| 1.0b (`9c64f22`) | 1.0's; a pointer local in `CBasePlayer::TakeDamage` (operand order) | 1.0's file |
+| 1.1 (`08c7456`) | 122 statements at the end of `Think`; `IdleThink`'s block; parentheses in `Host_Say`'s flood test | 1.0's; 7 names at the end of `hud.h`; SDK 2.2's unused `GetScoreBoard` accessor in the viewport's header |
+| 1.3 (`ffb6e62`) | gone: `Think`'s filler, `CollisionDetection`'s dead stores. New: `float *pdt = &dt;` in `StudioProcessGait` | `hud.h`'s statements gone; 26 statements in `hl_weapons.cpp`, 85 in `CHudMoney::Draw`, 46 names in `hud.h`, a 22-line filler in the viewport's header; two empty statements in `wpn_knife.cpp`'s `Swing`; a second spread loop in `EV_HLDM_FireBullets` that the optimiser removes |
+| 1.4 (`3916799`) | six small ones: `Next`'s two dead locals, `PickNextVIP`'s `iCount = iCount + 1`, an empty test in `CHostage::MoveToward`, early returns in `CONSOLE_ECHO` and `CONSOLE_ECHO_LOGGED`, `GiveCTTouchBonus`'s local, a final `return` in `ShowMenu`. Gone: `IdleThink`'s, `pdt`, `Host_Say`'s | 1.3's; fillers in `hl_weapons.cpp` (68 statements) and `ev_hldm.cpp` (60), which only set the order of header inlines and prove nothing while the client is not identical |
+| 1.5 (`5e4dafa`) | 1.4's, and `NextLevel`'s last statement | 1.4's |
 
 The Beta 4.1 server entry and the Beta 6.0 client entry come from the
 trees: those two commit messages don't list them. Retail's own bugs and
@@ -679,7 +679,7 @@ misspelt name).
 
 ## Beta 6.5d and the shared tags
 
-**Beta 6.5d** (`e4d25bb`) is a Linux release: its package has Beta 6.5's two
+**Beta 6.5d** (`18911c6`) is a Linux release: its package has Beta 6.5's two
 Windows DLLs unchanged and a new `cs_i386.so` (SHA-256
 `3e8a6dd8ea13f8d611774ef6985ef6cf22a534a8226bd1abe8576ffce1e5d16e`). That
 library was built from a later source than 6.5: the tree on its way to 6.6.
@@ -709,7 +709,7 @@ what the client's own files were on that day; `cl_dll` here is Beta 6.6's.
 Beta 6.5's tag stays on Beta 6.5's commit, which builds the two DLLs of the
 6.5d package.
 
-**1.1b, 1.1c and 1.2** have their tags on 1.1's commit (`e57d4f8`):
+**1.1b, 1.1c and 1.2** have their tags on 1.1's commit (`08c7456`):
 
 - **1.1c** (2001-04-06): the package's `mp.dll`, `client.dll`,
   `cs_i386.so`, `liblist.gam` and `titles.txt` are 1.1's files byte for byte;
