@@ -39,6 +39,7 @@ directory, so no path reaches the image. Per recipe:
   code without the pack's scheduling.
 """
 import os
+import re
 import shutil
 import sys
 
@@ -75,29 +76,29 @@ VERSIONS = {
 PACKED = {"r14": (0x6035, 0x1900000), "r15": (0x08D5, 0x1900000)}
 # recipe: build_dsp.py's --compiler-file
 COMPILER_FILE = {"r14": "steam_wrap.c=vc6sp5", "r15": "steam_wrap.c=vc6sp5"}
-# recipe: (file, exact line) pairs written after the client's link: the build runs on a copy without them
+# recipe: (file, a line's code) pairs written after the client's link: the build runs on a copy without
+# those lines (a comment after the code is not part of the match)
 AS_OF_LINK = {
     "b66": (("dlls/wpn_shared/wpn_c4.cpp",
-             "\t\t\tUTIL_LogPrintf( \"%s planted the bomb\\n\", STRING( m_pPlayer->pev->netname ) );"
-             "\t// Beta 6.6: in the server, linked 2000-06-21; the client, linked 2000-06-19, was built before"
-             " this line existed (release_client.py builds it without the line)"),),
+             "\t\t\tUTIL_LogPrintf( \"%s planted the bomb\\n\", STRING( m_pPlayer->pev->netname ) );"),),
 }
 
 
 def as_of_link(ver, src, copy):
     """A copy of the tree SRC in COPY with AS_OF_LINK[ver]'s lines taken out. Each line must be in its file
-    exactly once, as a whole line."""
+    exactly once, as a whole line: the code, then nothing or a // comment."""
     if os.path.isdir(copy):
         shutil.rmtree(copy)
     shutil.copytree(src, copy, symlinks=True, ignore=shutil.ignore_patterns(".git"))
     for rel, line in AS_OF_LINK[ver]:
         p = os.path.join(copy, rel)
         data = open(p, "rb").read()
-        want = line.encode("latin-1") + b"\r\n"
-        i = data.find(want)
-        if data.count(want) != 1 or (i > 0 and data[i - 1:i] != b"\n"):
+        want = re.compile(rb"(?m)^" + re.escape(line.encode("latin-1")) + rb"(?:[ \t]*//[^\r\n]*)?\r\n")
+        hits = list(want.finditer(data))
+        if len(hits) != 1:
             sys.exit(f"{os.path.join(src, rel)}: the line the client's link predates is not there once:\n  {line}")
-        open(p, "wb").write(data[:i] + data[i + len(want):])
+        i, j = hits[0].span()
+        open(p, "wb").write(data[:i] + data[j:])
         print(f"client: {rel} as of the client's link, without the line {line.strip()[:60]!r} ...", flush=True)
     return copy
 
