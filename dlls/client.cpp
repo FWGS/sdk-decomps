@@ -466,16 +466,17 @@ void ClientCommand( edict_t *pEntity )
 				}
 				else
 				{
-					float r = atoi( CMD_ARGV(3) );
-					float g = atoi( CMD_ARGV(4) );
-					float b = atoi( CMD_ARGV(5) );
+					Vector color;
+					color.x = atoi( CMD_ARGV(3) );
+					color.y = atoi( CMD_ARGV(4) );
+					color.z = atoi( CMD_ARGV(5) );
 
-					ALERT( at_console, "custom fog (RGB %d, %d, %d): %f to %f\n", (int)r, (int)g, (int)b, flStart, flEnd );
+					ALERT( at_console, "custom fog (RGB %d, %d, %d): %f to %f\n", (int)color.x, (int)color.y, (int)color.z, flStart, flEnd );
 					MESSAGE_BEGIN( MSG_ALL, gmsgFog );
 						WRITE_BYTE( 1 );
-						WRITE_BYTE( (int)r );
-						WRITE_BYTE( (int)g );
-						WRITE_BYTE( (int)b );
+						WRITE_BYTE( (int)color.x );
+						WRITE_BYTE( (int)color.y );
+						WRITE_BYTE( (int)color.z );
 						WRITE_COORD( flStart );
 						WRITE_COORD( flEnd );
 					MESSAGE_END();
