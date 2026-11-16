@@ -30,6 +30,7 @@
 #include "demo.h"
 #include "demo_api.h"
 #include "vgui_scorepanel.h"
+#include "triangleapi.h"
 
 
 
@@ -86,6 +87,13 @@ cvar_t *cl_lw = NULL;
 void ShutdownInput (void);
 
 int __MsgFunc_DamageFX( const char *pszName, int iSize, void *pbuf );	// damagefx.cpp
+
+// the client effects (tractorbeam.cpp, effects.cpp, bloodspray.cpp, rain.cpp, damagefx.cpp)
+void TractorbeamVidInit( void );
+void ParticleSystemsVidInit( void );
+void BloodSprayVidInit( void );
+void RainVidInit( void );
+void CL_DamageFXReset( void );
 
 //DECLARE_MESSAGE(m_Logo, Logo)
 int __MsgFunc_Logo(const char *pszName, int iSize, void *pbuf)
@@ -506,6 +514,17 @@ void CHud :: VidInit( void )
 	m_StatusIcons.VidInit();
 	GetClientVoiceMgr()->VidInit();
 	m_Spectator.VidInit();
+	m_Ident.VidInit();
+
+	// the mod's client effects start empty, and no fog
+	TractorbeamVidInit();
+	ParticleSystemsVidInit();
+	BloodSprayVidInit();
+	RainVidInit();
+	CL_DamageFXReset();
+
+	float fogColor[3] = { 0, 0, 0 };
+	gEngfuncs.pTriAPI->Fog( fogColor, 0, 1, FALSE );
 }
 
 int CHud::MsgFunc_Logo(const char *pszName,  int iSize, void *pbuf)
