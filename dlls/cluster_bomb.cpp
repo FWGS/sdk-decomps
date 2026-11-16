@@ -166,6 +166,11 @@ void CClusterBomb::ClusterExplode( TraceResult *pTrace )
 	{
 		switch ( pev->weapons )
 		{
+		default:
+			UTIL_MakeVectors( UTIL_VecToAngles( -pev->movedir ) );
+			vecDir = ClusterSpread( Vector( 1, 1, 1 ) );
+			pBomblet = CGrenade::ShootTimed( pevOwner, pev->origin + vecDir * 8, vecDir * RANDOM_FLOAT( 150, 300 ), RANDOM_FLOAT( 2.5, 3.5 ) );
+			break;
 		case 1:
 			UTIL_MakeVectors( UTIL_VecToAngles( -pev->movedir ) );
 			vecDir = ClusterSpread( Vector( 1, 1, 1 ) );
@@ -186,11 +191,6 @@ void CClusterBomb::ClusterExplode( TraceResult *pTrace )
 			pBomblet->SetThink( MakeSolid );
 			pBomblet->pev->nextthink = gpGlobals->time + 0.5;
 			pBomblet->pev->spawnflags |= 512;
-			break;
-		default:
-			UTIL_MakeVectors( UTIL_VecToAngles( -pev->movedir ) );
-			vecDir = ClusterSpread( Vector( 1, 1, 1 ) );
-			pBomblet = CGrenade::ShootTimed( pevOwner, pev->origin + vecDir * 8, vecDir * RANDOM_FLOAT( 150, 300 ), RANDOM_FLOAT( 2.5, 3.5 ) );
 			break;
 		}
 
