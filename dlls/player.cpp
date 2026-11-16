@@ -49,7 +49,9 @@ BOOL gInitHUD = TRUE;
 extern void CopyToBodyQue(entvars_t* pev);
 extern void respawn(entvars_t *pev, BOOL fCopyCorpse);
 extern Vector VecBModelOrigin(entvars_t *pevBModel );
-extern edict_t *EntSelectSpawnPoint( CBaseEntity *pPlayer );
+extern CBaseEntity *EntSelectSpawnPoint( CBaseEntity *pPlayer );
+extern CBaseEntity *UTIL_RandomEntityByClassname( const char *szName );	// name ours: util.cpp, one of the entities of this class at random
+extern void UpdateFogAndRain( CBaseEntity *pPlayer );	// effects.cpp: env_fog for the player, env_rain restarted
 
 // the world node graph
 extern CGraph	WorldGraph;
@@ -185,8 +187,10 @@ int gmsgSetFOV = 0;
 int gmsgShowMenu = 0;
 int gmsgGeigerRange = 0;
 int gmsgTeamNames = 0;
-int gmsgDamageFX = 0;	// name ours; a stand-in until LinkUserMessages registers "DamageFX"
-int gmsgFog = 0;	// env_fog's message; LinkUserMessages doesn't register "Fog" yet
+int gmsgSciInfo = 0;		// scientists killed, per kind (scoreboard)
+int gmsgIdentUpdate = 0;	// target ID
+int gmsgFog = 0;
+int gmsgDamageFX = 0;
 
 void LinkUserMessages( void )
 {
@@ -201,7 +205,7 @@ void LinkUserMessages( void )
 	gmsgGeigerRange = REG_USER_MSG("Geiger", 1);
 	gmsgFlashlight = REG_USER_MSG("Flashlight", 2);
 	gmsgFlashBattery = REG_USER_MSG("FlashBat", 1);
-	gmsgHealth = REG_USER_MSG( "Health", 1 );
+	gmsgHealth = REG_USER_MSG( "Health", 2 );
 	gmsgDamage = REG_USER_MSG( "Damage", 12 );
 	gmsgBattery = REG_USER_MSG( "Battery", 2);
 	gmsgTrain = REG_USER_MSG( "Train", 1);
@@ -227,8 +231,12 @@ void LinkUserMessages( void )
 	gmsgShowMenu = REG_USER_MSG( "ShowMenu", -1 );
 	gmsgShake = REG_USER_MSG("ScreenShake", sizeof(ScreenShake));
 	gmsgFade = REG_USER_MSG("ScreenFade", sizeof(ScreenFade));
-	gmsgAmmoX = REG_USER_MSG("AmmoX", 2);
+	gmsgAmmoX = REG_USER_MSG("AmmoX", 3);
 	gmsgTeamNames = REG_USER_MSG( "TeamNames", -1 );
+	gmsgSciInfo = REG_USER_MSG( "SciInfo", 5 );
+	gmsgIdentUpdate = REG_USER_MSG( "IdentUpdate", -1 );
+	gmsgFog = REG_USER_MSG( "Fog", -1 );
+	gmsgDamageFX = REG_USER_MSG( "DamageFX", 4 );
 }
 
 LINK_ENTITY_TO_CLASS( player, CBasePlayer );
@@ -472,6 +480,8 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	// keep track of amount of damage last sustained
 	m_lastDamageAmount = flDamage;
 
+	bool fArmorHit = false;
+
 	// Armor. 
 	if (pev->armorvalue && !(bitsDamageType & (DMG_FALL | DMG_DROWN)) )// armor doesn't protect against fall or drown damage!
 	{
@@ -491,9 +501,24 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		}
 		else
 			pev->armorvalue -= flArmor;
+
+		if ( flArmor )
+			fArmorHit = true;
 		
 		flDamage = flNew;
 	}
+
+	// tell director about it
+	MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
+		WRITE_BYTE ( DRC_EVENT );	// take damage event
+		WRITE_SHORT( ENTINDEX(this->edict()) );	// index number of primary entity
+		WRITE_SHORT( ENTINDEX(ENT(pevInflictor)) );	// index number of secondary entity
+		WRITE_LONG( 5 );   // eventflags (priority and flags)
+	MESSAGE_END();
+
+	// the energy shield stops everything
+	if ( Shielded() )
+		return CBaseMonster::TakeDamage( pevInflictor, pevAttacker, 0, 0 );
 
 	// this cast to INT is critical!!! If a player ends up with 0.5 health, the engine will get that
 	// as an int (zero) and think the player is dead! (this will incite a clientside screentilt, etc)
@@ -507,15 +532,6 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 				m_rgbTimeBasedDamage[i] = 0;
 	}
 
-	// tell director about it
-	MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
-		WRITE_BYTE ( DRC_EVENT );	// take damage event
-		WRITE_SHORT( ENTINDEX(this->edict()) );	// index number of primary entity
-		WRITE_SHORT( ENTINDEX(ENT(pevInflictor)) );	// index number of secondary entity
-		WRITE_LONG( 5 );   // eventflags (priority and flags)
-	MESSAGE_END();
-
-
 	// how bad is it, doc?
 
 	ftrivial = (pev->health > 75 || m_lastDamageAmount < 5);
@@ -525,17 +541,18 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	// handle all bits set in this damage message,
 	// let the suit give player the diagnosis
 
-	// UNDONE: add sounds for types of damage sustained (ie: burn, shock, slash )
-
-	// UNDONE: still need to record damage and heal messages for the following types
-
-		// DMG_BURN	
-		// DMG_FREEZE
-		// DMG_BLAST
-		// DMG_SHOCK
-
 	m_bitsDamageType |= bitsDamage; // Save this so we can report it to the client
 	m_bitsHUDDamage = -1;  // make sure the damage bits get resent
+
+	if (fTookDamage && !ftrivial && fmajor && flHealthPrev >= 75) 
+	{
+		// first time we take major damage...
+		// turn automedic on if not on
+		SetSuitUpdate("!HEV_MED1", FALSE, SUIT_NEXT_IN_30MIN);	// automedic on
+
+		// give morphine shot if not given recently
+		SetSuitUpdate("!HEV_HEAL7", FALSE, SUIT_NEXT_IN_30MIN);	// morphine shot
+	}
 
 	while (fTookDamage && (!ftrivial || (bitsDamage & DMG_TIMEBASED)) && ffound && bitsDamage)
 	{
@@ -554,6 +571,8 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 				SetSuitUpdate("!HEV_DMG5", FALSE, SUIT_NEXT_IN_30SEC);	// major fracture
 			else
 				SetSuitUpdate("!HEV_DMG4", FALSE, SUIT_NEXT_IN_30SEC);	// minor fracture
+
+			SetSuitUpdate("!HEV_HEAL8", FALSE, SUIT_NEXT_IN_5MIN);
 	
 			bitsDamage &= ~(DMG_FALL | DMG_CRUSH);
 			ffound = TRUE;
@@ -562,9 +581,12 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		if (bitsDamage & DMG_BULLET)
 		{
 			if (m_lastDamageAmount > 5)
+			{
 				SetSuitUpdate("!HEV_DMG6", FALSE, SUIT_NEXT_IN_30SEC);	// blood loss detected
-			//else
-			//	SetSuitUpdate("!HEV_DMG0", FALSE, SUIT_NEXT_IN_30SEC);	// minor laceration
+				SetSuitUpdate("!HEV_HEAL3", FALSE, SUIT_NEXT_IN_30SEC);
+			}
+			else
+				SetSuitUpdate("!HEV_DMG0", FALSE, SUIT_NEXT_IN_30SEC);	// minor laceration
 			
 			bitsDamage &= ~DMG_BULLET;
 			ffound = TRUE;
@@ -573,9 +595,15 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		if (bitsDamage & DMG_SLASH)
 		{
 			if (fmajor)
+			{
 				SetSuitUpdate("!HEV_DMG1", FALSE, SUIT_NEXT_IN_30SEC);	// major laceration
+				SetSuitUpdate("!HEV_HEAL1", FALSE, SUIT_NEXT_IN_5MIN);
+			}
 			else
+			{
 				SetSuitUpdate("!HEV_DMG0", FALSE, SUIT_NEXT_IN_30SEC);	// minor laceration
+				SetSuitUpdate("!HEV_HEAL0", FALSE, SUIT_NEXT_IN_5MIN);
+			}
 
 			bitsDamage &= ~DMG_SLASH;
 			ffound = TRUE;
@@ -584,7 +612,10 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		if (bitsDamage & DMG_SONIC)
 		{
 			if (fmajor)
+			{
 				SetSuitUpdate("!HEV_DMG2", FALSE, SUIT_NEXT_IN_1MIN);	// internal bleeding
+				SetSuitUpdate("!HEV_HEAL2", FALSE, SUIT_NEXT_IN_5MIN);
+			}
 			bitsDamage &= ~DMG_SONIC;
 			ffound = TRUE;
 		}
@@ -592,6 +623,7 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		if (bitsDamage & (DMG_POISON | DMG_PARALYZE))
 		{
 			SetSuitUpdate("!HEV_DMG3", FALSE, SUIT_NEXT_IN_1MIN);	// blood toxins detected
+			SetSuitUpdate("!HEV_MED2", FALSE, SUIT_NEXT_IN_5MIN);
 			bitsDamage &= ~(DMG_POISON | DMG_PARALYZE);
 			ffound = TRUE;
 		}
@@ -599,6 +631,7 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		if (bitsDamage & DMG_ACID)
 		{
 			SetSuitUpdate("!HEV_DET1", FALSE, SUIT_NEXT_IN_1MIN);	// hazardous chemicals detected
+			SetSuitUpdate("!HEV_E4", FALSE, SUIT_NEXT_IN_5MIN);
 			bitsDamage &= ~DMG_ACID;
 			ffound = TRUE;
 		}
@@ -606,6 +639,7 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		if (bitsDamage & DMG_NERVEGAS)
 		{
 			SetSuitUpdate("!HEV_DET0", FALSE, SUIT_NEXT_IN_1MIN);	// biohazard detected
+			SetSuitUpdate("!HEV_MED2", FALSE, SUIT_NEXT_IN_5MIN);
 			bitsDamage &= ~DMG_NERVEGAS;
 			ffound = TRUE;
 		}
@@ -613,41 +647,56 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		if (bitsDamage & DMG_RADIATION)
 		{
 			SetSuitUpdate("!HEV_DET2", FALSE, SUIT_NEXT_IN_1MIN);	// radiation detected
+			SetSuitUpdate("!HEV_DET5", FALSE, SUIT_NEXT_IN_5MIN);
 			bitsDamage &= ~DMG_RADIATION;
 			ffound = TRUE;
 		}
 		if (bitsDamage & DMG_SHOCK)
 		{
 			bitsDamage &= ~DMG_SHOCK;
+			SetSuitUpdate("!HEV_SHOCK", FALSE, SUIT_NEXT_IN_30SEC);
+			SetSuitUpdate("!HEV_E2", FALSE, SUIT_NEXT_IN_30SEC);
+			ffound = TRUE;
+		}
+		if (bitsDamage & (DMG_BURN | DMG_SLOWBURN))
+		{
+			bitsDamage &= ~(DMG_BURN | DMG_SLOWBURN);
+			SetSuitUpdate("!HEV_FIRE", FALSE, SUIT_NEXT_IN_1MIN);
 			ffound = TRUE;
 		}
 	}
 
 	pev->punchangle.x = -2;
 
-	if (fTookDamage && !ftrivial && fmajor && flHealthPrev >= 75) 
+	if (fTookDamage && fmajor)
 	{
-		// first time we take major damage...
-		// turn automedic on if not on
-		SetSuitUpdate("!HEV_MED1", FALSE, SUIT_NEXT_IN_30MIN);	// automedic on
+		SetSuitUpdate("!HEV_PAIN", TRUE, SUIT_NEXT_IN_1MIN);
 
-		// give morphine shot if not given recently
-		SetSuitUpdate("!HEV_HEAL7", FALSE, SUIT_NEXT_IN_30MIN);	// morphine shot
+		if (pev->health >= 30)
+			SetSuitUpdate("!HEV_HLTH4", FALSE, SUIT_NEXT_IN_1MIN);
 	}
 	
 	if (fTookDamage && !ftrivial && fcritical && flHealthPrev < 75)
 	{
 
 		// already took major damage, now it's critical...
-		if (pev->health < 6)
-			SetSuitUpdate("!HEV_HLTH3", FALSE, SUIT_NEXT_IN_10MIN);	// near death
+		if (pev->health < 5)
+			SetSuitUpdate("!HEV_HLTH6", FALSE, SUIT_REPEAT_OK);
+		else if (pev->health < 10)
+			SetSuitUpdate("!HEV_HLTH3", FALSE, SUIT_NEXT_IN_30SEC);	// near death
 		else if (pev->health < 20)
-			SetSuitUpdate("!HEV_HLTH2", FALSE, SUIT_NEXT_IN_10MIN);	// health critical
+			SetSuitUpdate("!HEV_HLTH2", FALSE, SUIT_NEXT_IN_1MIN);	// health critical
+		else if (pev->health < 30)
+			SetSuitUpdate("!HEV_HLTH0", FALSE, SUIT_NEXT_IN_5MIN);
 	
 		// give critical health warnings
 		if (!RANDOM_LONG(0,3) && flHealthPrev < 50)
 			SetSuitUpdate("!HEV_DMG7", FALSE, SUIT_NEXT_IN_5MIN); //seek medical attention
 	}
+
+	// sic: whether hurt or not
+	if (!RANDOM_LONG(0,3) && pev->health < 50)
+		SetSuitUpdate("!HEV_DMG7", FALSE, SUIT_NEXT_IN_5MIN); //seek medical attention
 
 	// if we're taking time based damage, warn about its continuing effects
 	if (fTookDamage && (bitsDamageType & DMG_TIMEBASED) && flHealthPrev < 75)
@@ -658,8 +707,12 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 					SetSuitUpdate("!HEV_DMG7", FALSE, SUIT_NEXT_IN_5MIN); //seek medical attention
 			}
 			else
-				SetSuitUpdate("!HEV_HLTH1", FALSE, SUIT_NEXT_IN_10MIN);	// health dropping
+				SetSuitUpdate("!HEV_HLTH1", FALSE, SUIT_NEXT_IN_5MIN);	// health dropping
 		}
+
+	// the armor took a hit and is running low
+	if ( fArmorHit && pev->armorvalue <= 50 )
+		SetSuitUpdate("!HEV_NOARMOR", TRUE, SUIT_NEXT_IN_30SEC);
 
 	return fTookDamage;
 }
@@ -676,7 +729,7 @@ void CBasePlayer::PackDeadPlayerItems( void )
 	int iWeaponRules;
 	int iAmmoRules;
 	int i;
-	CBasePlayerWeapon *rgpPackWeapons[ 20 ];// 20 hardcoded for now. How to determine exactly how many weapons we have?
+	CBasePlayerWeapon *rgpPackWeapons[ 32 ];// 20 hardcoded for now. How to determine exactly how many weapons we have?
 	int iPackAmmo[ MAX_AMMO_SLOTS + 1];
 	int iPW = 0;// index into packweapons array
 	int iPA = 0;// index into packammo array
@@ -858,8 +911,6 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	if ( m_pActiveItem )
 		m_pActiveItem->Holster( );
 
-	g_pGameRules->PlayerKilled( this, pevAttacker, g_pevLastInflictor );
-
 	if ( m_pTank != NULL )
 	{
 		m_pTank->Use( this, this, USE_OFF, 0 );
@@ -893,7 +944,7 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	// send "health" update message to zero
 	m_iClientHealth = 0;
 	MESSAGE_BEGIN( MSG_ONE, gmsgHealth, NULL, pev );
-		WRITE_BYTE( m_iClientHealth );
+		WRITE_SHORT( m_iClientHealth );
 	MESSAGE_END();
 
 	// Tell Ammo Hud that the player is dead
@@ -904,7 +955,7 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	MESSAGE_END();
 
 	// reset FOV
-	pev->fov = m_iFOV = m_iClientFOV = 0;
+	m_iFOV = m_iClientFOV = 0;
 
 	MESSAGE_BEGIN( MSG_ONE, gmsgSetFOV, NULL, pev );
 		WRITE_BYTE(0);
@@ -919,8 +970,12 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 		pev->solid			= SOLID_NOT;
 		GibMonster();	// This clears pev->model
 		pev->effects |= EF_NODRAW;
+		// after EF_NODRAW: the death notice tells a gibbed player from a dead one
+		g_pGameRules->PlayerKilled( this, pevAttacker, g_pevLastInflictor );
 		return;
 	}
+
+	g_pGameRules->PlayerKilled( this, pevAttacker, g_pevLastInflictor );
 
 	DeathSound();
 	
@@ -1264,7 +1319,7 @@ void CBasePlayer::PlayerDeathThink(void)
 			pev->velocity = flForward * pev->velocity.Normalize();
 	}
 
-	if ( HasWeapons() )
+	if ( g_pGameRules->IsMultiplayer() && HasWeapons() )
 	{
 		// we drop the guns here because weapons that have an area effect and can kill their user
 		// will sometimes crash coming back from CBasePlayer::Killed() if they kill their owner because the
@@ -1316,7 +1371,7 @@ void CBasePlayer::PlayerDeathThink(void)
 // if the player has been dead for one second longer than allowed by forcerespawn, 
 // forcerespawn isn't on. Send the player off to an intermission camera until they 
 // choose to respawn.
-	if ( g_pGameRules->IsMultiplayer() && ( gpGlobals->time > (m_fDeadTime + 6) ) && !(m_afPhysicsFlags & PFLAG_OBSERVER) )
+	if ( ( gpGlobals->time > (m_fDeadTime + 6) ) && !(m_afPhysicsFlags & PFLAG_OBSERVER) )
 	{
 		// go to dead camera. 
 		StartDeathCam();
@@ -1655,6 +1710,97 @@ void CBasePlayer::AddPointsToTeam( int score, BOOL bAllowNegativeScore )
 
 void CBasePlayer::PreThink(void)
 {
+	// target ID: tell the client about the monster in the crosshair
+	Vector vecAngles = pev->v_angle + pev->punchangle;
+	UTIL_MakeVectors( vecAngles );
+
+	TraceResult tr;
+	Vector vecSrc = GetGunPosition() - gpGlobals->v_up * 2;
+	Vector vecAiming = gpGlobals->v_forward;
+
+	UTIL_TraceLine( vecSrc, vecSrc + vecAiming * 4096, dont_ignore_monsters, ignore_glass, ENT( pev ), &tr );
+
+	CBaseEntity *pEntity = CBaseEntity::Instance( tr.pHit );
+	CBaseMonster *pMonster;
+
+	if ( pEntity && (pMonster = pEntity->MyMonsterPointer()) != NULL && pMonster->GetHudName() )
+	{
+		if ( pEntity != m_pIdentEntity )
+		{
+			// a new target: send everything
+			int iFlags = 1;			// neutral
+			if ( pMonster->Classify() == CLASS_HUMAN_PASSIVE )
+				iFlags = 2;			// a scientist
+			else
+			{
+				int iRelationship = pMonster->IRelationship( this );
+				if ( iRelationship == R_AL )
+					iFlags = 0;		// a friend
+				else if ( iRelationship >= R_DL )
+					iFlags = 3;		// an enemy
+			}
+
+			bool fArmor = false;
+			if ( pMonster->pev->armorvalue == 0 && pMonster->pev->armortype == 0 )
+			{
+				m_iIdentArmorType = m_iIdentArmor = 0;
+			}
+			else
+			{
+				fArmor = true;
+				if ( pMonster->IsPlayer() && pMonster->pev->armorvalue <= 100 )
+					m_iIdentArmorType = 1;	// a suit's battery charge
+				else
+					m_iIdentArmorType = 2;	// an energy shield
+				iFlags |= m_iIdentArmorType << 2;
+			}
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgIdentUpdate, NULL, pev );
+				WRITE_BYTE( iFlags );
+				WRITE_SHORT( m_iIdentHealth = pMonster->pev->health );
+				if ( fArmor )
+					WRITE_SHORT( m_iIdentArmor = pMonster->pev->armorvalue );
+				WRITE_LONG( m_iIdentPower = pMonster->GetBattlePower() );
+				WRITE_STRING( pMonster->GetHudName() );
+			MESSAGE_END();
+
+			m_pIdentEntity = pEntity;
+		}
+		else
+		{
+			// the same target: send what changed
+			int iFlags = 0;
+			if ( m_iIdentHealth != pMonster->pev->health )
+				iFlags = 0x10;
+			if ( m_iIdentArmorType && m_iIdentArmor != pMonster->pev->armorvalue )
+				iFlags |= 0x20;
+			if ( pMonster->GetBattlePower() != m_iIdentPower )
+				iFlags |= 0x40;
+
+			if ( iFlags )
+			{
+				MESSAGE_BEGIN( MSG_ONE, gmsgIdentUpdate, NULL, pev );
+					WRITE_BYTE( iFlags );
+					if ( iFlags & 0x10 )
+						WRITE_SHORT( m_iIdentHealth = pMonster->pev->health );
+					if ( iFlags & 0x20 )
+						WRITE_SHORT( m_iIdentArmor = pMonster->pev->armorvalue );
+					if ( iFlags & 0x40 )
+						WRITE_LONG( m_iIdentPower = pMonster->GetBattlePower() );
+				MESSAGE_END();
+			}
+		}
+	}
+	else if ( m_pIdentEntity )
+	{
+		// nothing there any more
+		MESSAGE_BEGIN( MSG_ONE, gmsgIdentUpdate, NULL, pev );
+			WRITE_BYTE( 0xFF );
+		MESSAGE_END();
+
+		m_pIdentEntity = NULL;
+	}
+
 	int buttonsChanged = (m_afButtonLast ^ pev->button);	// These buttons have changed this frame
 	
 	// Debounced button codes for pressed/released
@@ -1886,7 +2032,7 @@ void CBasePlayer::CheckTimeBasedDamage()
 				bDuration = PARALYZE_DURATION;
 				break;
 			case itbd_NerveGas:
-//				TakeDamage(pev, pev, NERVEGAS_DAMAGE, DMG_GENERIC);	
+				TakeDamage(pev, pev, NERVEGAS_DAMAGE, DMG_GENERIC);	
 				bDuration = NERVEGAS_DURATION;
 				break;
 			case itbd_Poison:
@@ -1914,11 +2060,11 @@ void CBasePlayer::CheckTimeBasedDamage()
 				bDuration = ACID_DURATION;
 				break;
 			case itbd_SlowBurn:
-//				TakeDamage(pev, pev, SLOWBURN_DAMAGE, DMG_GENERIC);
+				TakeDamage(pev, pev, SLOWBURN_DAMAGE, DMG_GENERIC);
 				bDuration = SLOWBURN_DURATION;
 				break;
 			case itbd_SlowFreeze:
-//				TakeDamage(pev, pev, SLOWFREEZE_DAMAGE, DMG_GENERIC);
+				TakeDamage(pev, pev, SLOWFREEZE_DAMAGE, DMG_GENERIC);
 				bDuration = SLOWFREEZE_DURATION;
 				break;
 			default:
@@ -1927,16 +2073,12 @@ void CBasePlayer::CheckTimeBasedDamage()
 
 			if (m_rgbTimeBasedDamage[i])
 			{
-				// use up an antitoxin on poison or nervegas after a few seconds of damage					
+				// the suit cures poison and nervegas after a few seconds of damage, no antitoxin needed
 				if (((i == itbd_NerveGas) && (m_rgbTimeBasedDamage[i] < NERVEGAS_DURATION)) ||
 					((i == itbd_Poison)   && (m_rgbTimeBasedDamage[i] < POISON_DURATION)))
 				{
-					if (m_rgItems[ITEM_ANTIDOTE])
-					{
-						m_rgbTimeBasedDamage[i] = 0;
-						m_rgItems[ITEM_ANTIDOTE]--;
-						SetSuitUpdate("!HEV_HEAL4", FALSE, SUIT_REPEAT_OK);
-					}
+					m_rgbTimeBasedDamage[i] = 0;
+					SetSuitUpdate("!HEV_HEAL5", FALSE, SUIT_REPEAT_OK);
 				}
 
 
@@ -2382,6 +2524,19 @@ void CBasePlayer::PostThink()
 		}
 	}
 
+	// show the burns and shocks taken since the last frame
+	if ( m_flShockDamage >= 1 || m_flBurnDamage >= 1 )
+	{
+		MESSAGE_BEGIN( MSG_PVS, gmsgDamageFX, pev->origin );
+			WRITE_SHORT( ENTINDEX( edict() ) );
+			WRITE_BYTE( m_flBurnDamage );
+			WRITE_BYTE( m_flShockDamage );
+		MESSAGE_END();
+
+		m_flBurnDamage = 0;
+		m_flShockDamage = 0;
+	}
+
 // do weapon stuff
 	ItemPostFrame( );
 
@@ -2476,6 +2631,7 @@ pt_end:
 				{
 					gun->m_flNextPrimaryAttack		= max( gun->m_flNextPrimaryAttack - gpGlobals->frametime, -1.0 );
 					gun->m_flNextSecondaryAttack	= max( gun->m_flNextSecondaryAttack - gpGlobals->frametime, -0.001 );
+					gun->m_flNextWeaponSpecial		= max( gun->m_flNextWeaponSpecial - gpGlobals->frametime, -0.001 );
 
 					if ( gun->m_flTimeWeaponIdle != 1000 )
 					{
@@ -2560,92 +2716,60 @@ Returns the entity to spawn at
 USES AND SETS GLOBAL g_pLastSpawn
 ============
 */
-edict_t *EntSelectSpawnPoint( CBaseEntity *pPlayer )
+CBaseEntity *EntSelectSpawnPoint( CBaseEntity *pPlayer )
 {
 	CBaseEntity *pSpot;
-	edict_t		*player;
 
-	player = pPlayer->edict();
-
-// choose a info_player_deathmatch point
-	if (g_pGameRules->IsCoOp())
+	if ( g_pGameRules->IsCoOp() )
 	{
-		pSpot = UTIL_FindEntityByClassname( g_pLastSpawn, "info_player_coop");
-		if ( !FNullEnt(pSpot) )
-			goto ReturnSpot;
-		pSpot = UTIL_FindEntityByClassname( g_pLastSpawn, "info_player_start");
-		if ( !FNullEnt(pSpot) ) 
-			goto ReturnSpot;
+		// the start spot if it's free, else a free coop spot, else the start spot anyway
+		CBaseEntity *pStart = UTIL_FindEntityByClassname( NULL, "info_player_start" );
+		if ( IsSpawnPointValid( pPlayer, pStart ) )
+			return pStart;
+
+		pSpot = NULL;
+		while ( (pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_coop" )) != NULL )
+		{
+			if ( IsSpawnPointValid( pPlayer, pSpot ) )
+				return pSpot;
+		}
+
+		return pStart;
 	}
 	else if ( g_pGameRules->IsDeathmatch() )
 	{
-		pSpot = g_pLastSpawn;
-		// Randomize the start spot
-		for ( int i = RANDOM_LONG(1,5); i > 0; i-- )
-			pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_deathmatch" );
-		if ( FNullEnt( pSpot ) )  // skip over the null point
-			pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_deathmatch" );
-
+		// a free deathmatch spot, starting at a random one
+		pSpot = UTIL_RandomEntityByClassname( "info_player_deathmatch" );
 		CBaseEntity *pFirstSpot = pSpot;
 
-		do 
+		if ( pSpot )
 		{
-			if ( pSpot )
+			do
 			{
-				// check if pSpot is valid
-				if ( IsSpawnPointValid( pPlayer, pSpot ) )
-				{
-					if ( pSpot->pev->origin == Vector( 0, 0, 0 ) )
-					{
-						pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_deathmatch" );
-						continue;
-					}
+				if ( pSpot && IsSpawnPointValid( pPlayer, pSpot ) )
+					return pSpot;
 
-					// if so, go to pSpot
-					goto ReturnSpot;
-				}
-			}
-			// increment pSpot
-			pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_deathmatch" );
-		} while ( pSpot != pFirstSpot ); // loop if we're not back to the start
+				pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_deathmatch" );
+			} while ( pSpot != pFirstSpot );
 
-		// we haven't found a place to spawn yet,  so kill any guy at the first spawn point and spawn there
-		if ( !FNullEnt( pSpot ) )
-		{
-			CBaseEntity *ent = NULL;
-			while ( (ent = UTIL_FindEntityInSphere( ent, pSpot->pev->origin, 128 )) != NULL )
-			{
-				// if ent is a client, kill em (unless they are ourselves)
-				if ( ent->IsPlayer() && !(ent->edict() == player) )
-					ent->TakeDamage( VARS(INDEXENT(0)), VARS(INDEXENT(0)), 300, DMG_GENERIC );
-			}
-			goto ReturnSpot;
+			return pFirstSpot;
 		}
 	}
 
-	// If startspot is set, (re)spawn there.
-	if ( FStringNull( gpGlobals->startspot ) || !strlen(STRING(gpGlobals->startspot)))
-	{
-		pSpot = UTIL_FindEntityByClassname(NULL, "info_player_start");
-		if ( !FNullEnt(pSpot) )
-			goto ReturnSpot;
-	}
-	else
-	{
-		pSpot = UTIL_FindEntityByTargetname( NULL, STRING(gpGlobals->startspot) );
-		if ( !FNullEnt(pSpot) )
-			goto ReturnSpot;
-	}
+	return UTIL_FindEntityByClassname( NULL, "info_player_start" );
+}
 
-ReturnSpot:
-	if ( FNullEnt( pSpot ) )
-	{
-		ALERT(at_error, "PutClientInServer: no info_player_start on level");
-		return INDEXENT(0);
-	}
-
-	g_pLastSpawn = pSpot;
-	return pSpot->edict();
+//=========================================================
+// ShowMenu - name ours, after the message.  Nothing calls it.
+//=========================================================
+void CBasePlayer::ShowMenu( int bitsValidSlots, int nDisplayTime, BOOL fNeedMore, char *pszText )
+{
+	MESSAGE_BEGIN( MSG_ONE, gmsgShowMenu, NULL, pev );
+		WRITE_SHORT( bitsValidSlots );
+		WRITE_CHAR( nDisplayTime );
+		WRITE_BYTE( fNeedMore );
+		WRITE_STRING( pszText );
+	MESSAGE_END();
 }
 
 void CBasePlayer::Spawn( void )
@@ -2656,7 +2780,7 @@ void CBasePlayer::Spawn( void )
 	pev->takedamage		= DAMAGE_AIM;
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_WALK;
-	pev->max_health		= pev->health;
+	pev->max_health		= 300;	// the energy shield's armor counts up to 300
 	pev->flags		   &= FL_PROXY;	// keep proxy flag sey by engine
 	pev->flags		   |= FL_CLIENT;
 	pev->air_finished	= gpGlobals->time + 12;
@@ -2720,18 +2844,30 @@ void CBasePlayer::Spawn( void )
 
 	m_fNoPlayerSound = FALSE;// normal sound behavior.
 
-	m_pLastItem = NULL;
 	m_fInitHUD = TRUE;
 	m_iClientHideHUD = -1;  // force this to be recalculated
-	m_fWeapon = FALSE;
-	m_pClientActiveItem = NULL;
 	m_iClientBattery = -1;
 
-	// reset all ammo values to 0
-	for ( int i = 0; i < MAX_AMMO_SLOTS; i++ )
+	if ( g_pGameRules->IsMultiplayer() )
 	{
-		m_rgAmmo[i] = 0;
-		m_rgAmmoLast[i] = 0;  // client ammo values also have to be reset  (the death hud clear messages does on the client side)
+		m_pLastItem = NULL;
+		m_fWeapon = FALSE;
+		m_pClientActiveItem = NULL;
+
+		// reset all ammo values to 0
+		for ( int i = 0; i < MAX_AMMO_SLOTS; i++ )
+		{
+			m_rgAmmo[i] = 0;
+			m_rgAmmoLast[i] = 0;  // client ammo values also have to be reset  (the death hud clear messages does on the client side)
+		}
+	}
+	else
+	{
+		// a single player respawns with what he had: only make the HUD resend it
+		m_pClientActiveItem = NULL;
+
+		for ( int i = 0; i < MAX_AMMO_SLOTS; i++ )
+			m_rgAmmoLast[i] = 0;
 	}
 
 	m_lastx = m_lasty = 0;
@@ -2781,6 +2917,8 @@ void CBasePlayer :: Precache( void )
 
 	if ( gInitHUD )
 		m_fInitHUD = TRUE;
+
+	m_fGameHUDInitialized = FALSE;
 }
 
 
@@ -2816,9 +2954,14 @@ int CBasePlayer::Restore( CRestore &restore )
 		ALERT( at_console, "No Landmark:%s\n", pSaveData->szLandmarkName );
 
 		// default to normal spawn
-		edict_t* pentSpawnSpot = EntSelectSpawnPoint( this );
-		pev->origin = VARS(pentSpawnSpot)->origin + Vector(0,0,1);
-		pev->angles = VARS(pentSpawnSpot)->angles;
+		CBaseEntity *pSpawnSpot = EntSelectSpawnPoint( this );
+		if ( !pSpawnSpot )
+		{
+			ALERT( at_error, "CBasePlayer::Restore: no info_player_start on level" );
+			pSpawnSpot = CBaseEntity::Instance( INDEXENT( 0 ) );
+		}
+		pev->origin = pSpawnSpot->pev->origin + Vector(0,0,1);
+		pev->angles = pSpawnSpot->pev->angles;
 	}
 	pev->v_angle.z = 0;	// Clear out roll
 	pev->angles = pev->v_angle;
@@ -3361,6 +3504,24 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 		GiveNamedItem( "weapon_snark" );
 		GiveNamedItem( "weapon_hornetgun" );
 #endif
+		GiveNamedItem( "weapon_repulsor" );
+		GiveNamedItem( "weapon_reflector" );
+		GiveNamedItem( "weapon_fireball" );
+		GiveNamedItem( "weapon_flamethrower" );
+		GiveNamedItem( "weapon_laserhandgun" );
+		GiveNamedItem( "weapon_vortexlauncher" );
+		GiveNamedItem( "weapon_softgun" );
+		GiveNamedItem( "weapon_teslacoil" );
+		GiveNamedItem( "weapon_displacer" );
+		GiveNamedItem( "weapon_sniper" );
+		GiveNamedItem( "weapon_freezethrower" );
+		GiveNamedItem( "weapon_sword" );
+		GiveNamedItem( "ammo_fireballclip" );
+		GiveNamedItem( "ammo_laserclip" );
+		GiveNamedItem( "ammo_egonclip" );
+		GiveNamedItem( "ammo_acidtank" );
+		GiveNamedItem( "ammo_vortexclip" );
+		GiveNamedItem( "ammo_sniperclip" );
 		gEvilImpulse101 = FALSE;
 		break;
 
@@ -3729,7 +3890,7 @@ void CBasePlayer::SendAmmoUpdate(void)
 			// send "Ammo" update message
 			MESSAGE_BEGIN( MSG_ONE, gmsgAmmoX, NULL, pev );
 				WRITE_BYTE( i );
-				WRITE_BYTE( max( min( m_rgAmmo[i], 254 ), 0 ) );  // clamp the value to one byte
+				WRITE_SHORT( max( min( m_rgAmmo[i], 999 ), 0 ) );  // clamp the value to the HUD's three digits
 			MESSAGE_END();
 		}
 	}
@@ -3763,6 +3924,7 @@ void CBasePlayer :: UpdateClientData( void )
 			MESSAGE_END();
 
 			g_pGameRules->InitHUD( this );
+			UpdateFogAndRain( this );
 			m_fGameHUDInitialized = TRUE;
 			if ( g_pGameRules->IsMultiplayer() )
 			{
@@ -3770,6 +3932,13 @@ void CBasePlayer :: UpdateClientData( void )
 			}
 		}
 		FireTargets( "game_playerspawn", this, this, USE_TOGGLE, 0 );
+	}
+	else if ( !m_fGameHUDInitialized )
+	{
+		// restored from a saved game (Precache clears it)
+		m_fGameHUDInitialized = TRUE;
+		UpdateFogAndRain( this );
+		g_pGameRules->InitHUD( this );
 	}
 
 	if ( m_iHideHUD != m_iClientHideHUD )
@@ -3805,7 +3974,7 @@ void CBasePlayer :: UpdateClientData( void )
 
 		// send "health" update message
 		MESSAGE_BEGIN( MSG_ONE, gmsgHealth, NULL, pev );
-			WRITE_BYTE( iHealth );
+			WRITE_SHORT( iHealth );
 		MESSAGE_END();
 
 		m_iClientHealth = pev->health;
@@ -4089,7 +4258,7 @@ Vector CBasePlayer :: GetAutoaimVector( float flDelta )
 
 	// always use non-sticky autoaim
 	// UNDONE: use sever variable to chose!
-	if (0 || g_iSkillLevel == SKILL_EASY)
+	if (g_iSkillLevel == SKILL_EASY)
 	{
 		m_vecAutoAim = m_vecAutoAim * 0.67 + angles * 0.33;
 	}
@@ -4129,7 +4298,7 @@ Vector CBasePlayer :: AutoaimDeflection( Vector &vecSrc, float flDist, float flD
 	edict_t		*bestent;
 	TraceResult tr;
 
-	if ( g_psv_aim->value == 0 )
+	if ( g_psv_aim->value != 0 )	// sic: auto-aim is off while sv_aim is on
 	{
 		m_fOnTarget = FALSE;
 		return g_vecZero;

@@ -2573,6 +2573,12 @@ void PM_NoClip()
 
 }
 
+// name ours: noclip (with FL_FLY) moving along the velocity it has, the movement keys ignored
+void PM_NoClipVelocity( void )
+{
+	VectorMA( pmove->origin, pmove->frametime, pmove->velocity, pmove->origin );
+}
+
 // Only allow bunny jumping up to 1.7x server / player maxspeed setting
 #define BUNNYJUMP_MAX_SPEED_FACTOR 1.7f
 
@@ -3190,7 +3196,10 @@ void PM_PlayerMove ( qboolean server )
 		break;
 
 	case MOVETYPE_NOCLIP:
-		PM_NoClip();
+		if ( pmove->flags & FL_FLY )
+			PM_NoClipVelocity();
+		else
+			PM_NoClip();
 		break;
 
 	case MOVETYPE_TOSS:
