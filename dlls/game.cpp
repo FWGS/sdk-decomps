@@ -448,11 +448,30 @@ cvar_t	sk_player_leg3	= { "sk_player_leg3","1" };
 
 // END Cvars for Skill Level settings
 
+// Scientist Slaughterhouse
+cvar_t	ssh_extrablood	= { "ssh_extrablood","1", FCVAR_ARCHIVE };
+cvar_t	ssh_rndweapons	= { "ssh_rndweapons","0", FCVAR_SERVER };
+cvar_t	ssh_randomscis	= { "ssh_randomscis","0", FCVAR_SERVER };
+cvar_t	ssh_hazardmode	= { "ssh_hazardmode","0", FCVAR_SERVER };
+cvar_t	ssh_chaosmode	= { "ssh_chaosmode","0", FCVAR_SERVER };
+cvar_t	ssh_monstergibs	= { "ssh_monstergibs","4", FCVAR_ARCHIVE | FCVAR_SERVER };
+cvar_t	ssh_scigibs		= { "ssh_scigibs","4", FCVAR_ARCHIVE | FCVAR_SERVER };
+cvar_t	ssh_precache	= { "ssh_precache","", FCVAR_SPONLY };
+
 // Register your console variables here
 // This gets called one time when the game is initialied
 void GameDLLInit( void )
 {
 	// Register cvars here:
+
+	CVAR_REGISTER (&ssh_extrablood);
+	CVAR_REGISTER (&ssh_rndweapons);
+	CVAR_REGISTER (&ssh_randomscis);
+	CVAR_REGISTER (&ssh_hazardmode);
+	CVAR_REGISTER (&ssh_chaosmode);
+	CVAR_REGISTER (&ssh_monstergibs);
+	CVAR_REGISTER (&ssh_scigibs);
+	CVAR_REGISTER (&ssh_precache);
 
 	g_psv_gravity = CVAR_GET_POINTER( "sv_gravity" );
 	g_psv_aim = CVAR_GET_POINTER( "sv_aim" );
