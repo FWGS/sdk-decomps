@@ -210,6 +210,7 @@ extern CBaseEntity	*UTIL_FindEntityByString(CBaseEntity *pStartEntity, const cha
 extern CBaseEntity	*UTIL_FindEntityByClassname(CBaseEntity *pStartEntity, const char *szName );
 extern CBaseEntity	*UTIL_FindEntityByTargetname(CBaseEntity *pStartEntity, const char *szName );
 extern CBaseEntity	*UTIL_FindEntityGeneric(const char *szName, Vector &vecSrc, float flRadius );
+extern CBaseEntity	*UTIL_RandomTargetname( const char *szName );	// name ours: one of the entities so named, at random
 
 // returns a CBaseEntity pointer to a player by index.  Only returns if the player is spawned and connected
 // otherwise returns NULL
@@ -262,6 +263,7 @@ extern void			UTIL_DecalTrace( TraceResult *pTrace, int decalNumber );
 extern void			UTIL_PlayerDecalTrace( TraceResult *pTrace, int playernum, int decalNumber, BOOL bIsCustom );
 extern void			UTIL_GunshotDecalTrace( TraceResult *pTrace, int decalNumber );
 extern void			UTIL_Sparks( const Vector &position );
+extern void			UTIL_BeamRing( int iType, int iSprite, const Vector &vecOrigin, float flRadius, int iWidth, float flLife, const Vector &vecColor, float flBrightness );	// name ours; util.cpp (0x100e5d80)
 extern void			UTIL_Ricochet( const Vector &position, float scale );
 extern void			UTIL_StringToVector( float *pVector, const char *pString );
 extern void			UTIL_StringToIntArray( int *pVector, int count, const char *pString );
