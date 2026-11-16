@@ -91,6 +91,7 @@ public:
 	void	TurnOff( void );
 	void	TurnOn( void );
 	BOOL	IsOn( void );
+	virtual int	GetOnState( void ) { return IsOn(); }
 };
 
 LINK_ENTITY_TO_CLASS( func_wall_toggle, CFuncWallToggle );
@@ -150,6 +151,7 @@ public:
 	void	Spawn( void );
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void	UpdateSpeed( float speed );
+	void	Touch( CBaseEntity *pOther );
 };
 
 LINK_ENTITY_TO_CLASS( func_conveyor, CFuncConveyor );
@@ -195,6 +197,33 @@ void CFuncConveyor :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TY
 {
     pev->speed = -pev->speed;
 	UpdateSpeed( pev->speed );
+}
+
+
+// Carries monsters standing on the belt along (the engine moves only players)
+void CFuncConveyor :: Touch( CBaseEntity *pOther )
+{
+	if ( pev->spawnflags & (SF_CONVEYOR_VISUAL | SF_CONVEYOR_NOTSOLID) )
+		return;
+
+	if ( pOther->pev->movetype != MOVETYPE_STEP )
+		return;
+
+	if ( pOther->pev->groundentity != edict() )
+		return;
+
+	TraceResult tr;
+	UTIL_TraceLine( pOther->pev->origin, pOther->pev->origin - Vector( 0, 0, 20 ), ignore_monsters, pOther->edict(), &tr );
+
+	if ( tr.pHit && FBitSet( tr.pHit->v.flags, FL_CONVEYOR ) )
+	{
+		pOther->pev->basevelocity = pev->speed * pev->movedir;
+
+		if ( tr.pHit != edict() )
+			pOther->pev->basevelocity = tr.pHit->v.speed * -0.5 * tr.pHit->v.movedir;
+
+		gpGlobals->force_retouch++;
+	}
 }
 
 
@@ -286,6 +315,9 @@ public:
 	void RampPitchVol (int fUp );
 	void Blocked( CBaseEntity *pOther );
 	virtual int	ObjectCaps( void ) { return CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	virtual int	GetOnState( void ) { return m_pfnThink == static_cast <void (CBaseEntity::*)(void)> (Rotate) && pev->avelocity != g_vecZero; }
+	virtual const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "a rotating object"; return STRING( m_iszKillDesc ); }
+	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { if ( FBitSet( pev->spawnflags, SF_BRUSH_HURT ) ) return DamageVerb( DMG_SLASH, fGibbed ); return DamageVerb( DMG_CRUSH, fGibbed ); }
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
 	
@@ -339,6 +371,11 @@ void CFuncRotating :: KeyValue( KeyValueData* pkvd)
 	else if (FStrEq(pkvd->szKeyName, "sounds"))
 	{
 		m_sounds = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "killdesc"))
+	{
+		m_iszKillDesc = ALLOC_STRING(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
 	else 
@@ -525,7 +562,7 @@ void CFuncRotating :: HurtTouch ( CBaseEntity *pOther )
 	// calculate damage based on rotation speed
 	pev->dmg = pev->avelocity.Length() / 10;
 
-	pOther->TakeDamage( pev, pev, pev->dmg, DMG_CRUSH);
+	pOther->TakeDamage( pev, pev, pev->dmg, DMG_SLASH);
 	
 	pevOther->velocity = (pevOther->origin - VecBModelOrigin(pev) ).Normalize() * pev->dmg;
 }
@@ -735,6 +772,9 @@ public:
 	void	Touch( CBaseEntity *pOther );
 	void	EXPORT RopeTouch ( CBaseEntity *pOther );// this touch func makes the pendulum a rope
 	virtual int	ObjectCaps( void ) { return CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	virtual int	GetOnState( void ) { return pev->speed != 0; }
+	virtual const char *GetKillDesc( void ) { return "a swinging object"; }
+	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "crushed"; }
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
 	void	Blocked( CBaseEntity *pOther );
@@ -953,6 +993,244 @@ void CPendulum :: RopeTouch ( CBaseEntity *pOther )
 	pev->enemy = pOther->edict();
 	pevOther->velocity = g_vecZero;
 	pevOther->movetype = MOVETYPE_NONE;
+}
+
+
+// =================== FUNC_SHIELD ==============================================
+//
+// func_shield - an energy barrier brush. "type" picks the effect: 0 flashes by the
+// damage it takes, 1 flashes at full strength, 2 fades out and 3 fades in as it is
+// damaged. "max_health" is its strength (0: invulnerable), "charge_rate" the health
+// it regains each second, "speed" how long it stays down once broken, "dmg" what it
+// does to whatever touches it. Names ours but the class's and its saved fields'.
+//
+#define SF_SHIELD_START_OFF		0x0001
+
+class CFuncShield : public CFuncWallToggle
+{
+public:
+	void	Spawn( void );
+	void	KeyValue( KeyValueData *pkvd );
+	void	EXPORT FadeThink( void );
+	void	EXPORT RechargeThink( void );
+	void	EXPORT HurtTouch( CBaseEntity *pOther );
+	void	ShieldUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	int		TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType );
+
+	virtual int	Shielded( void ) { return 1; }
+	virtual int	GetOnState( void ) { return pev->solid != SOLID_NOT; }
+	virtual const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "contact with an energy barrier"; return STRING( m_iszKillDesc ); }
+	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "annihilated"; }
+	virtual int	DamageDecal( int bitsDamageType ) { return -1; }
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	int		m_type;
+	float	m_charge;
+	float	m_lastTime;
+};
+
+LINK_ENTITY_TO_CLASS( func_shield, CFuncShield );
+
+TYPEDESCRIPTION	CFuncShield::m_SaveData[] = 
+{
+	DEFINE_FIELD( CFuncShield, m_type, FIELD_INTEGER ),
+	DEFINE_FIELD( CFuncShield, m_charge, FIELD_FLOAT ),
+	DEFINE_FIELD( CFuncShield, m_lastTime, FIELD_TIME ),
+};
+
+IMPLEMENT_SAVERESTORE( CFuncShield, CFuncWallToggle );
+
+
+void CFuncShield :: KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "type"))
+	{
+		m_type = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "charge_rate"))
+	{
+		m_charge = atof(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "killdesc"))
+	{
+		m_iszKillDesc = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CFuncWallToggle::KeyValue( pkvd );
+}
+
+
+void CFuncShield :: Spawn( void )
+{
+	pev->movetype	= MOVETYPE_PUSH;
+	pev->solid		= SOLID_BSP;
+	SET_MODEL( ENT(pev), STRING(pev->model) );
+
+	if ( !pev->rendermode )
+		pev->rendermode = kRenderTransAdd;
+
+	if ( pev->dmg > 0 )
+		SetTouch( HurtTouch );
+
+	pev->takedamage = DAMAGE_YES;
+
+	if ( pev->max_health > 0 )
+		pev->health = pev->max_health;
+	else if ( m_type > 1 )	// the fading types need a strength
+		pev->health = pev->max_health = 100;
+
+	SetThink( FadeThink );
+
+	if ( FBitSet( pev->spawnflags, SF_SHIELD_START_OFF ) && pev->targetname )
+	{
+		pev->takedamage = DAMAGE_NO;
+		TurnOff();
+		pev->renderamt = 255;
+	}
+	else
+		pev->nextthink = pev->ltime + 0.1;
+
+	if ( pev->targetname )
+		SetUse( ShieldUse );
+	else
+		SetUse( NULL );
+
+	m_lastTime = gpGlobals->time;
+}
+
+
+// sic: CFuncWallToggle::Use stays in the vtable, so this is never called
+void CFuncShield :: ShieldUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	int status = IsOn();
+
+	if ( ShouldToggle( useType, status ) )
+	{
+		if ( status )
+		{
+			pev->takedamage = DAMAGE_NO;
+			TurnOff();
+			pev->renderamt = 255;
+			pev->nextthink = 0;
+		}
+		else
+		{
+			pev->takedamage = DAMAGE_YES;
+			TurnOn();
+			if ( pev->max_health > 0 )
+				pev->health = pev->max_health;
+			pev->nextthink = pev->ltime + 0.1;
+		}
+	}
+}
+
+
+void CFuncShield :: FadeThink( void )
+{
+	pev->nextthink = pev->ltime + 0.1;
+
+	if ( pev->max_health > 0 && m_charge > 0 )
+		RechargeThink();
+
+	if ( pev->health <= 0 && m_type > 1 )
+		return;
+
+	if ( m_type <= 1 )
+	{
+		if ( pev->renderamt > 7 )
+			pev->renderamt -= 7;
+		else
+			pev->renderamt = 0;
+
+		if ( pev->renderamt > 255 )
+			pev->renderamt = 255;
+	}
+	else if ( m_type == 2 )
+		pev->renderamt = pev->health / pev->max_health * 255;
+	else
+		pev->renderamt = ( 1 - pev->health / pev->max_health ) * 255;
+}
+
+
+void CFuncShield :: RechargeThink( void )
+{
+	if ( m_lastTime + 1 < gpGlobals->time )
+	{
+		if ( pev->health < 0 )
+			pev->health = 0;
+
+		bool fDown = pev->health <= 0;
+
+		pev->health += m_charge;
+		if ( pev->health > pev->max_health )
+			pev->health = pev->max_health;
+
+		m_lastTime = gpGlobals->time;
+
+		if ( fDown && pev->health > 0 )
+		{
+			pev->takedamage = DAMAGE_YES;
+			TurnOn();
+		}
+	}
+}
+
+
+void CFuncShield :: HurtTouch( CBaseEntity *pOther )
+{
+	entvars_t *pevOther = pOther->pev;
+
+	if ( pevOther->takedamage )
+	{
+		if ( pev->max_health )
+			TakeDamage( pev, pev, pevOther->health, DMG_GENERIC );
+		else if ( !m_type )
+			pev->renderamt += pevOther->health;
+
+		if ( pev->dmg )
+			pOther->TakeDamage( pev, pev, pev->dmg, DMG_ENERGYBEAM );
+	}
+	else if ( !m_type )
+		pev->renderamt += max( 35, pev->dmg );
+
+	if ( m_type == 1 )
+		pev->renderamt = 255;
+}
+
+
+int CFuncShield :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType )
+{
+	if ( m_type == 0 )
+		pev->renderamt += flDamage;
+	else if ( m_type == 1 )
+		pev->renderamt = 255;
+
+	if ( pev->max_health <= 0 )
+		return 0;
+
+	pev->health -= flDamage;
+
+	if ( m_type == 2 )
+		pev->renderamt = pev->health / pev->max_health * 255;
+	else if ( m_type == 3 )
+		pev->renderamt = ( 1 - pev->health / pev->max_health ) * 255;
+
+	if ( pev->health <= 0 )
+	{
+		pev->takedamage = DAMAGE_NO;
+		TurnOff();
+		pev->renderamt = 255;
+		pev->nextthink = pev->ltime + pev->speed;
+	}
+
+	return 1;
 }
 
 

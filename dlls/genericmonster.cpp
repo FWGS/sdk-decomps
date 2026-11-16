@@ -46,6 +46,10 @@ LINK_ENTITY_TO_CLASS( monster_generic, CGenericMonster );
 //=========================================================
 int	CGenericMonster :: Classify ( void )
 {
+	// the "MyClass" keyvalue, if any
+	if ( m_iMyClass )
+		return m_iMyClass;
+
 	return	CLASS_PLAYER_ALLY;
 }
 
