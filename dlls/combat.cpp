@@ -1029,6 +1029,73 @@ float CBaseMonster :: DamageForce( float damage )
 	return force;
 }
 
+//=========================================================
+// CheckTimeBasedDamage - the player's time-based damage,
+// for monsters (every second; burning and freezing hurt).
+// A first version; tuned to retail's code later.
+//=========================================================
+void CBaseMonster :: CheckTimeBasedDamage( void )
+{
+	int i;
+	BYTE bDuration = 0;
+
+	if ( !( m_bitsDamageType & 0x778000 ) )
+		return;
+
+	if ( abs( gpGlobals->time - m_flTbdPrev ) < 1.0 )
+		return;
+
+	m_flTbdPrev = gpGlobals->time;
+
+	for ( i = 0; i < CDMG_TIMEBASED; i++ )
+	{
+		if ( m_bitsDamageType & ( DMG_PARALYZE << i ) )
+		{
+			switch ( i )
+			{
+			case itbd_NerveGas:
+				TakeDamage( pev, pev, NERVEGAS_DAMAGE, DMG_GENERIC );
+				bDuration = 2;
+				break;
+			case itbd_Poison:
+				TakeDamage( pev, pev, POISON_DAMAGE, DMG_GENERIC );
+				bDuration = 15;
+				break;
+			case itbd_Radiation:
+				TakeDamage( pev, pev, RADIATION_DAMAGE, DMG_GENERIC );
+				bDuration = 4;
+				break;
+			case itbd_SlowBurn:
+				TakeDamage( pev, pev, 1.0, DMG_BURN );
+				bDuration = 10;
+				break;
+			case itbd_SlowFreeze:
+				TakeDamage( pev, pev, 1.0, DMG_FREEZE );
+			case itbd_Paralyze:
+			case itbd_Acid:
+				bDuration = 2;
+				break;
+			default:
+				bDuration = 0;
+			}
+
+			if ( m_rgbTimeBasedDamage[i] )
+			{
+				// decrement damage duration, detect when done.
+				if ( !m_rgbTimeBasedDamage[i] || --m_rgbTimeBasedDamage[i] == 0 )
+				{
+					m_rgbTimeBasedDamage[i] = 0;
+					// if we're done, clear damage bits
+					m_bitsDamageType &= ~( DMG_PARALYZE << i );
+				}
+			}
+			else
+				// first time taking this damage type - init damage duration
+				m_rgbTimeBasedDamage[i] = bDuration;
+		}
+	}
+}
+
 //
 // RadiusDamage - this entity is exploding, or otherwise needs to inflict damage upon entities within a certain range.
 // 
@@ -1703,4 +1770,40 @@ void CBaseMonster :: MakeDamageBloodDecal ( int cCount, float flNoise, TraceResu
 			UTIL_BloodDecalTrace( &Bloodtr, BloodColor() );
 		}
 	}
+}
+
+//=========================================================
+// Resurrect - play the death animation backwards and get
+// up again.  A first version; tuned to retail's code later.
+//=========================================================
+void CBaseMonster :: Resurrect( CBaseEntity *pActivator )
+{
+	ResetSequenceInfo();
+	pev->frame = 255;
+	pev->framerate = -1;
+	pev->movetype = MOVETYPE_STEP;
+	pev->solid = SOLID_SLIDEBOX;
+	pev->deadflag = DEAD_NO;
+	pev->health = pev->max_health;
+	pev->spawnflags |= 0x80000000 | SF_MONSTER_FADECORPSE;
+	SetThink( ResurrectThink );
+	pev->nextthink = gpGlobals->time + 0.1;
+	pev->owner = pActivator->edict();
+}
+
+void CBaseMonster :: ResurrectThink( void )
+{
+	StudioFrameAdvance();
+	if ( !m_fSequenceFinished )
+	{
+		pev->nextthink = gpGlobals->time + 0.1;
+		return;
+	}
+
+	pev->health = pev->max_health;
+	pev->renderfx = kRenderFxNone;
+	pev->rendermode = kRenderNormal;
+	MonsterInit();
+	SetState( m_IdealMonsterState );
+	SetActivity( m_IdealActivity );
 }

@@ -592,6 +592,7 @@ TYPEDESCRIPTION	CBaseEntity::m_SaveData[] =
 	DEFINE_FIELD( CBaseEntity, m_pfnTouch, FIELD_FUNCTION ),
 	DEFINE_FIELD( CBaseEntity, m_pfnUse, FIELD_FUNCTION ),
 	DEFINE_FIELD( CBaseEntity, m_pfnBlocked, FIELD_FUNCTION ),
+	DEFINE_FIELD( CBaseEntity, m_iszKillDesc, FIELD_STRING ),
 };
 
 
@@ -769,6 +770,30 @@ CBaseEntity * CBaseEntity::Create( char *szName, const Vector &vecOrigin, const 
 	pEntity->pev->angles = vecAngles;
 	DispatchSpawn( pEntity->edict() );
 	return pEntity;
+}
+
+
+// Retail has a 154-byte CBaseEntity method here (a TE_BEAMFOLLOW message,
+// 0x10023d90), not written yet.
+
+// Half the smallest extent, sic: y is compared at half size.
+float CBaseEntity :: GetHoldDistance( void )
+{
+	if ( !CanBeTractored() )
+		return 0;
+
+	float flSize = pev->size.x;
+	if ( flSize > pev->size.y * 0.5 )
+		flSize = pev->size.y;
+	if ( flSize > pev->size.z )
+		flSize = pev->size.z;
+
+	return flSize * 0.5;
+}
+
+float CBaseEntity :: MovementSpeed( void )
+{
+	return pev->velocity.Length();
 }
 
 

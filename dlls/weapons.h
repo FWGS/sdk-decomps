@@ -36,7 +36,7 @@ public:
 	static void UseSatchelCharges( entvars_t *pevOwner, SATCHELCODE code );
 
 	void Explode( Vector vecSrc, Vector vecAim );
-	void Explode( TraceResult *pTrace, int bitsDamageType );
+	virtual void Explode( TraceResult *pTrace, int bitsDamageType );
 	void EXPORT Smoke( void );
 
 	void EXPORT BounceTouch( CBaseEntity *pOther );
@@ -255,6 +255,8 @@ public:
 	virtual int PrimaryAmmoIndex() { return -1; };
 	virtual int SecondaryAmmoIndex() { return -1; };
 
+	virtual void WeaponSpecial( void ) {}				// do "+ATTACK3"
+
 	virtual int UpdateClientData( CBasePlayer *pPlayer ) { return 0; }
 
 	virtual CBasePlayerItem *GetWeaponPtr( void ) { return NULL; };
@@ -343,6 +345,7 @@ public:
 	int		m_fInSpecialReload;									// Are we in the middle of a reload for the shotguns
 	float	m_flNextPrimaryAttack;								// soonest time ItemPostFrame will call PrimaryAttack
 	float	m_flNextSecondaryAttack;							// soonest time ItemPostFrame will call SecondaryAttack
+	float	m_flNextWeaponSpecial;								// soonest time ItemPostFrame will call WeaponSpecial
 	float	m_flTimeWeaponIdle;									// soonest time ItemPostFrame will call WeaponIdle
 	int		m_iPrimaryAmmoType;									// "primary" ammo index into players m_rgAmmo[]
 	int		m_iSecondaryAmmoType;								// "secondary" ammo index into players m_rgAmmo[]

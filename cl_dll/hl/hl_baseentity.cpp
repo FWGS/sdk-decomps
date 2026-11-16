@@ -55,6 +55,8 @@ int CBaseEntity::ShouldToggle( USE_TYPE useType, BOOL currentState ) { return 0;
 int	CBaseEntity :: DamageDecal( int bitsDamageType ) { return -1; }
 CBaseEntity * CBaseEntity::Create( char *szName, const Vector &vecOrigin, const Vector &vecAngles, edict_t *pentOwner ) { return NULL; }
 void CBaseEntity::SUB_Remove( void ) { }
+float CBaseEntity::GetHoldDistance( void ) { return 0; }
+float CBaseEntity::MovementSpeed( void ) { return 0; }
 
 // CBaseDelay Stubs
 void CBaseDelay :: KeyValue( struct KeyValueData_s * ) { }
@@ -109,6 +111,7 @@ CBeam *CBeam::BeamCreate( const char *pSpriteName, int width ) { return NULL; }
 void CSprite::Expand( float scaleSpeed, float fadeSpeed ) { }
 
 
+float CBaseMonster::MovementSpeed( void ) { return 0; }
 CBaseEntity* CBaseMonster :: CheckTraceHullAttack( float flDist, int iDamage, int iDmgType ) { return NULL; }
 void CBaseMonster :: Eat ( float flFullDuration ) { }
 BOOL CBaseMonster :: FShouldEat ( void ) { return TRUE; }
@@ -164,6 +167,7 @@ void CBaseMonster :: MovementComplete( void ) { }
 int CBaseMonster::TaskIsRunning( void ) { return 0; }
 int CBaseMonster::IRelationship ( CBaseEntity *pTarget ) { return 0; }
 BOOL CBaseMonster :: FindCover ( Vector vecThreat, Vector vecViewOffset, float flMinDist, float flMaxDist ) { return FALSE; }
+BOOL CBaseMonster :: FindRetreat ( Vector vecThreat, float flMinDist, float flMaxDist ) { return FALSE; }
 BOOL CBaseMonster :: BuildNearestRoute ( Vector vecThreat, Vector vecViewOffset, float flMinDist, float flMaxDist ) { return FALSE; }
 CBaseEntity *CBaseMonster :: BestVisibleEnemy ( void ) { return NULL; }
 BOOL CBaseMonster :: FInViewCone ( CBaseEntity *pEntity ) { return FALSE; }
@@ -236,6 +240,7 @@ int CBaseMonster :: TakeHealth (float flHealth, int bitsDamageType) { return 0; 
 int CBaseMonster :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType ) { return 0; }
 int CBaseMonster::Restore( class CRestore & ) { return 1; }
 int CBaseMonster::Save( class CSave & ) { return 1; }
+void CBaseMonster::Resurrect( CBaseEntity *pActivator ) { }
 
 int TrainSpeed(int iSpeed, int iMax) { 	return 0; }
 void CBasePlayer :: DeathSound( void ) { }
@@ -345,3 +350,9 @@ int CBasePlayerWeapon::ExtractClipAmmo( CBasePlayerWeapon *pWeapon ) { return 0;
 void CBasePlayerWeapon::RetireWeapon( void ) { }
 void CSoundEnt::InsertSound ( int iType, const Vector &vecOrigin, int iVolume, float flDuration ) {}
 void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType ){}
+
+// A stand-in, not in retail.  The stock satchel.cpp still builds
+// CSatchelCharge (a CGrenade) into the client, whose vtable wants this; retail's
+// client has no CSatchelCharge (no RTTI, no monster_satchel/weapon_satchel
+// factory).  Remove once satchel.cpp is retail's.
+void CBaseMonster::CheckTimeBasedDamage( void ) { }

@@ -95,6 +95,7 @@ public:
 	virtual BOOL AllowAutoTargetCrosshair( void ) { return TRUE; };
 	virtual BOOL ClientCommand( CBasePlayer *pPlayer, const char *pcmd ) { return FALSE; };  // handles the user commands;  returns TRUE if command handled properly
 	virtual void ClientUserInfoChanged( CBasePlayer *pPlayer, char *infobuffer ) {}		// the player has changed userinfo;  can change it now
+	virtual BOOL ClientSay( CBasePlayer *pPlayer, char *pText ) { return FALSE; }	// name ours: Host_Say passes non-team chat here
 
 // Client kills/scoring
 	virtual int IPointsForKill( CBasePlayer *pAttacker, CBasePlayer *pKilled ) = 0;// how many points do I award whoever kills this player?
@@ -109,6 +110,7 @@ public:
 	virtual float FlWeaponRespawnTime( CBasePlayerItem *pWeapon ) = 0;// when may this weapon respawn?
 	virtual float FlWeaponTryRespawn( CBasePlayerItem *pWeapon ) = 0; // can i respawn now,  and if not, when should i try again?
 	virtual Vector VecWeaponRespawnSpot( CBasePlayerItem *pWeapon ) = 0;// where in the world should this weapon respawn?
+	virtual char *GetRespawnWeapon( CBasePlayerItem *pWeapon ) = 0;// name ours: the classname a respawning weapon comes back as (ssh_rndweapons)
 
 // Item retrieval
 	virtual BOOL CanHaveItem( CBasePlayer *pPlayer, CItem *pItem ) = 0;// is this player allowed to take this item?
@@ -213,6 +215,7 @@ public:
 	virtual float FlWeaponRespawnTime( CBasePlayerItem *pWeapon );
 	virtual float FlWeaponTryRespawn( CBasePlayerItem *pWeapon );
 	virtual Vector VecWeaponRespawnSpot( CBasePlayerItem *pWeapon );
+	virtual char *GetRespawnWeapon( CBasePlayerItem *pWeapon );
 
 // Item retrieval
 	virtual BOOL CanHaveItem( CBasePlayer *pPlayer, CItem *pItem );
@@ -242,6 +245,7 @@ public:
 
 // Monsters
 	virtual BOOL FAllowMonsters( void );
+	virtual BOOL ClientSay( CBasePlayer *pPlayer, char *pText );
 
 // Teamplay stuff	
 	virtual const char *GetTeamID( CBaseEntity *pEntity ) {return "";};
@@ -308,6 +312,7 @@ public:
 	virtual float FlWeaponRespawnTime( CBasePlayerItem *pWeapon );
 	virtual float FlWeaponTryRespawn( CBasePlayerItem *pWeapon );
 	virtual Vector VecWeaponRespawnSpot( CBasePlayerItem *pWeapon );
+	virtual char *GetRespawnWeapon( CBasePlayerItem *pWeapon );
 
 // Item retrieval
 	virtual BOOL CanHaveItem( CBasePlayer *pPlayer, CItem *pItem );

@@ -220,6 +220,16 @@ int CHalfLifeRules :: WeaponShouldRespawn( CBasePlayerItem *pWeapon )
 }
 
 //=========================================================
+// GetRespawnWeapon - a stand-in.  Retail: with
+// ssh_rndweapons set, one of 22 weapon names at random
+// (RANDOM_LONG( 0, 21 )), else the weapon's classname.
+//=========================================================
+char *CHalfLifeRules :: GetRespawnWeapon( CBasePlayerItem *pWeapon )
+{
+	return (char *)STRING( pWeapon->pev->classname );
+}
+
+//=========================================================
 //=========================================================
 BOOL CHalfLifeRules::CanHaveItem( CBasePlayer *pPlayer, CItem *pItem )
 {
@@ -325,4 +335,11 @@ int CHalfLifeRules::PlayerRelationship( CBaseEntity *pPlayer, CBaseEntity *pTarg
 BOOL CHalfLifeRules :: FAllowMonsters( void )
 {
 	return TRUE;
+}
+
+//=========================================================
+//=========================================================
+BOOL CHalfLifeRules :: ClientSay( CBasePlayer *pPlayer, char *pText )
+{
+	return FALSE;
 }

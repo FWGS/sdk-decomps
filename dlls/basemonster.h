@@ -25,6 +25,10 @@ private:
 		int					m_afConditions;
 
 public:
+		float				m_flBurnDamage;		// name ours: burn damage taken (TakeDamage adds it up)
+		float				m_flShockDamage;	// name ours: shock damage taken
+		int					m_iMyClass;
+
 		typedef enum
 		{
 			SCRIPT_PLAYING = 0,		// Playing the sequence
@@ -84,6 +88,7 @@ public:
 	int					m_afCapability;// tells us what a monster can/can't do.
 
 	float				m_flNextAttack;		// cannot attack again until this time
+	float				m_flTbdPrev;		// name ours: time-based damage, last check
 
 	int					m_bitsDamageType;	// what types of damage has monster (player) taken
 	BYTE				m_rgbTimeBasedDamage[CDMG_TIMEBASED];
@@ -219,7 +224,7 @@ public:
 		inline int MovementIsComplete( void ) { return (m_movementGoal == MOVEGOAL_NONE); }
 
 		int IScheduleFlags ( void );
-		BOOL FRefreshRoute( void );
+		virtual BOOL FRefreshRoute( void );
 		BOOL FRouteClear ( void );
 		void RouteSimplify( CBaseEntity *pTargetEnt );
 		void AdvanceRoute ( float distance );
@@ -233,6 +238,7 @@ public:
 		
 		BOOL FindLateralCover ( const Vector &vecThreat, const Vector &vecViewOffset );
 		virtual BOOL FindCover ( Vector vecThreat, Vector vecViewOffset, float flMinDist, float flMaxDist );
+		virtual BOOL FindRetreat ( Vector vecThreat, float flMinDist, float flMaxDist );	// name ours
 		virtual BOOL FValidateCover ( const Vector &vecCoverLocation ) { return TRUE; };
 		virtual float CoverRadius( void ) { return 784; } // Default cover radius
 
@@ -274,7 +280,7 @@ public:
 		void Eat ( float flFullDuration );// make the monster 'full' for a while.
 
 		CBaseEntity *CheckTraceHullAttack( float flDist, int iDamage, int iDmgType );
-		BOOL FacingIdeal( void );
+		virtual BOOL FacingIdeal( void );
 
 		BOOL FCheckAITrigger( void );// checks and, if necessary, fires the monster's trigger target. 
 		BOOL NoFriendlyFire( void );
@@ -322,6 +328,17 @@ public:
 	virtual void PainSound ( void ) { return; };
 	
 	virtual void StopFollowing( BOOL clearSchedule ) {}
+
+	virtual int		HeatSignature( void ) { return 3; }
+	virtual BOOL	CanBeRepulsed( bool fForce ) { return pev->movetype != MOVETYPE_NONE; }
+	virtual BOOL	CanBeTeleported( void ) { return !IsBSPModel(); }
+	virtual const char *GetHudName( void ) { return GetKillDesc(); }	// target ID name
+	virtual int		GetBattlePower( void ) { return 0; }				// target ID "battle power"
+	virtual int		GetOnState( void ) { return IsAlive(); }
+	virtual void	CheckTimeBasedDamage( void );
+	virtual void	Resurrect( CBaseEntity *pActivator );	// name ours
+	virtual float	MovementSpeed( void );
+	void EXPORT		ResurrectThink( void );
 
 	inline void	Remember( int iMemory ) { m_afMemory |= iMemory; }
 	inline void	Forget( int iMemory ) { m_afMemory &= ~iMemory; }

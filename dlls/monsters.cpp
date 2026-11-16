@@ -108,6 +108,7 @@ TYPEDESCRIPTION	CBaseMonster::m_SaveData[] =
 
 	DEFINE_FIELD( CBaseMonster, m_scriptState, FIELD_INTEGER ),
 	DEFINE_FIELD( CBaseMonster, m_pCine, FIELD_CLASSPTR ),
+	DEFINE_FIELD( CBaseMonster, m_iMyClass, FIELD_INTEGER ),
 };
 
 //IMPLEMENT_SAVERESTORE( CBaseMonster, CBaseToggle );
@@ -2328,6 +2329,79 @@ BOOL CBaseMonster :: FindCover ( Vector vecThreat, Vector vecViewOffset, float f
 	return FALSE;
 }
 
+//=========================================================
+// FindRetreat - FindCover for a node on the far side of me
+// from vecThreat (more than 90 degrees off its direction).
+// A first version; tuned to retail's code later.
+//=========================================================
+BOOL CBaseMonster :: FindRetreat ( Vector vecThreat, float flMinDist, float flMaxDist )
+{
+	int i;
+	int iMyHullIndex;
+	int iMyNode;
+	int iThreatNode;
+	float flDist;
+	float flThreatYaw;
+
+	if ( !flMaxDist )
+	{
+		// user didn't supply a MaxDist, so work up a crazy one.
+		flMaxDist = 784;
+	}
+
+	if ( flMinDist > 0.5 * flMaxDist)
+	{
+		flMaxDist = flMinDist * 2;
+	}
+
+	if ( !WorldGraph.m_fGraphPresent || !WorldGraph.m_fGraphPointersSet )
+	{
+		ALERT ( at_aiconsole, "Graph not ready for findcover!\n" );
+		return FALSE;
+	}
+
+	iMyNode = WorldGraph.FindNearestNode( pev->origin, this );
+	iThreatNode = WorldGraph.FindNearestNode ( vecThreat, this );
+	iMyHullIndex = WorldGraph.HullIndex( this );
+
+	if ( iMyNode == NO_NODE )
+	{
+		ALERT ( at_aiconsole, "FindCover() - %s has no nearest node!\n", STRING(pev->classname));
+		return FALSE;
+	}
+	if ( iThreatNode == NO_NODE )
+	{
+		iThreatNode = iMyNode;
+	}
+
+	flThreatYaw = UTIL_VecToYaw( vecThreat );
+
+	for ( i = 0 ; i < WorldGraph.m_cNodes ; i++ )
+	{
+		int nodeNumber = (i + WorldGraph.m_iLastCoverSearch) % WorldGraph.m_cNodes;
+
+		CNode &node = WorldGraph.Node( nodeNumber );
+		WorldGraph.m_iLastCoverSearch = nodeNumber + 1;
+
+		flDist = ( pev->origin - node.m_vecOrigin ).Length();
+
+		if ( flDist >= flMinDist && flDist < flMaxDist )
+		{
+			if ( fabs( UTIL_AngleDiff( UTIL_VecToYaw( node.m_vecOrigin ), flThreatYaw ) ) > 90 )
+			{
+				if ( ( iMyNode == iThreatNode ) || WorldGraph.PathLength( iMyNode, nodeNumber, iMyHullIndex, m_afCapability ) <= WorldGraph.PathLength( iThreatNode, nodeNumber, iMyHullIndex, m_afCapability ) )
+				{
+					if ( FValidateCover ( node.m_vecOrigin ) && MoveToLocation( ACT_RUN, 0, node.m_vecOrigin ) )
+					{
+						return TRUE;
+					}
+				}
+			}
+		}
+	}
+	return FALSE;
+}
+
 
 //=========================================================
 // BuildNearestRoute - tries to build a route as close to the target
@@ -3445,4 +3519,17 @@ BOOL CBaseMonster :: ShouldFadeOnDeath( void )
 		return TRUE;
 
 	return FALSE;
+}
+
+// Retail has a 451-byte mod function here (0x10088ed0), not written yet.
+
+float CBaseMonster :: MovementSpeed( void )
+{
+	if ( m_pfnThink != static_cast <void (CBaseEntity::*)(void)> (CallMonsterThink) )
+		return CBaseEntity::MovementSpeed();
+
+	if ( !IsMoving() )
+		return 0;
+
+	return m_flGroundSpeed;
 }

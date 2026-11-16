@@ -35,6 +35,7 @@ TYPEDESCRIPTION	CTalkMonster::m_SaveData[] =
 {
 	DEFINE_FIELD( CTalkMonster, m_bitsSaid, FIELD_INTEGER ),
 	DEFINE_FIELD( CTalkMonster, m_nSpeak, FIELD_INTEGER ),
+	DEFINE_FIELD( CTalkMonster, m_iActive, FIELD_INTEGER ),
 
 	// Recalc'ed in Precache()
 	//	DEFINE_FIELD( CTalkMonster, m_voicePitch, FIELD_INTEGER ),

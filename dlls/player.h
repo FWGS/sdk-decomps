@@ -160,6 +160,13 @@ public:
 	int	m_rgAmmo[MAX_AMMO_SLOTS];
 	int	m_rgAmmoLast[MAX_AMMO_SLOTS];
 
+	// target ID (IdentUpdate), what the client was last sent; names ours
+	CBaseEntity	*m_pIdentEntity;
+	int			m_iIdentHealth;
+	int			m_iIdentArmor;
+	int			m_iIdentArmorType;
+	int			m_iIdentPower;
+
 	Vector				m_vecAutoAim;
 	BOOL				m_fOnTarget;
 	int					m_iDeaths;
@@ -185,6 +192,8 @@ public:
 	virtual void TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType);
 	virtual int TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType);
 	virtual void	Killed( entvars_t *pevAttacker, int iGib );
+	virtual const char *GetKillDesc( void ) { return STRING( pev->netname ); }
+	virtual int		Shielded( void ) { return pev->armorvalue > 100; }	// the energy shield
 	virtual Vector BodyTarget( const Vector &posSrc ) { return Center( ) + pev->view_ofs * RANDOM_FLOAT( 0.5, 1.1 ); };		// position to shoot at
 	virtual void StartSneaking( void ) { m_tSneaking = gpGlobals->time - 1; }
 	virtual void StopSneaking( void ) { m_tSneaking = gpGlobals->time + 30; }
@@ -194,6 +203,7 @@ public:
 	virtual	BOOL IsPlayer( void ) { return TRUE; }			// Spectators should return FALSE for this, they aren't "players" as far as game logic is concerned
 
 	virtual BOOL IsNetClient( void ) { return TRUE; }		// Bots should return FALSE for this, they can't receive NET messages
+	virtual BOOL CanBeTeleported( void ) { return FALSE; }
 															// Spectators should return TRUE for this
 	virtual const char *TeamID( void );
 
@@ -285,6 +295,9 @@ public:
 	float m_flAmmoStartCharge;
 	float m_flPlayAftershock;
 	float m_flNextAmmoBurn;// while charging, when to absorb another unit of player's ammo?
+
+	int	m_iSciDeaths[4];	// scientists killed, per kind (scoreboard)
+	int	m_iSciGibs[4];		// scientists gibbed, per kind
 };
 
 #define AUTOAIM_2DEGREES  0.0348994967025

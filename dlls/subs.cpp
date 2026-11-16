@@ -136,6 +136,7 @@ TYPEDESCRIPTION	CBaseDelay::m_SaveData[] =
 {
 	DEFINE_FIELD( CBaseDelay, m_flDelay, FIELD_FLOAT ),
 	DEFINE_FIELD( CBaseDelay, m_iszKillTarget, FIELD_STRING ),
+	DEFINE_FIELD( CBaseDelay, m_hActivator, FIELD_EHANDLE ),
 };
 
 IMPLEMENT_SAVERESTORE( CBaseDelay, CBaseEntity );
@@ -347,7 +348,6 @@ TYPEDESCRIPTION	CBaseToggle::m_SaveData[] =
 	DEFINE_FIELD( CBaseToggle, m_vecAngle2, FIELD_VECTOR ),		// UNDONE: Position could go through transition, but also angle?
 	DEFINE_FIELD( CBaseToggle, m_cTriggersLeft, FIELD_INTEGER ),
 	DEFINE_FIELD( CBaseToggle, m_flHeight, FIELD_FLOAT ),
-	DEFINE_FIELD( CBaseToggle, m_hActivator, FIELD_EHANDLE ),
 	DEFINE_FIELD( CBaseToggle, m_pfnCallWhenMoveDone, FIELD_FUNCTION ),
 	DEFINE_FIELD( CBaseToggle, m_vecFinalDest, FIELD_POSITION_VECTOR ),
 	DEFINE_FIELD( CBaseToggle, m_vecFinalAngle, FIELD_VECTOR ),

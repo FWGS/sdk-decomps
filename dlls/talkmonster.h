@@ -130,7 +130,7 @@ public:
 	int				FIdleStare( void );
 	int				FIdleHello( void );
 	void			IdleHeadTurn( Vector &vecFriend );
-	int				FOkToSpeak( void );
+	virtual int		FOkToSpeak( void );
 	void			TrySmellTalk( void );
 	CBaseEntity		*EnumFriends( CBaseEntity *pentPrevious, int listNumber, BOOL bTrace );
 	void			AlertFriends( void );
@@ -165,6 +165,8 @@ public:
 	float		m_useTime;						// Don't allow +USE until this time
 	int			m_iszUse;						// Custom +USE sentence group (follow)
 	int			m_iszUnUse;						// Custom +USE sentence group (stop following)
+	int			m_iActive;
+	int			m_iActiveCount;					// name ours
 
 	float		m_flLastSaidSmelled;// last time we talked about something that stinks
 	float		m_flStopTalkTime;// when in the future that I'll be done saying this sentence.

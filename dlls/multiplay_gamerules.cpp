@@ -1062,6 +1062,15 @@ Vector CHalfLifeMultiplay::VecAmmoRespawnSpot( CBasePlayerAmmo *pAmmo )
 }
 
 //=========================================================
+// GetRespawnWeapon - a stand-in, see
+// CHalfLifeRules::GetRespawnWeapon.
+//=========================================================
+char *CHalfLifeMultiplay::GetRespawnWeapon( CBasePlayerItem *pWeapon )
+{
+	return (char *)STRING( pWeapon->pev->classname );
+}
+
+//=========================================================
 //=========================================================
 float CHalfLifeMultiplay::FlHealthChargerRechargeTime( void )
 {

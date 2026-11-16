@@ -115,6 +115,9 @@ TYPEDESCRIPTION	CBasePlayer::m_playerSaveData[] =
 	DEFINE_FIELD( CBasePlayer, m_pTank, FIELD_EHANDLE ),
 	DEFINE_FIELD( CBasePlayer, m_iHideHUD, FIELD_INTEGER ),
 	DEFINE_FIELD( CBasePlayer, m_iFOV, FIELD_INTEGER ),
+	DEFINE_FIELD( CBasePlayer, m_iDeaths, FIELD_INTEGER ),
+	DEFINE_ARRAY( CBasePlayer, m_iSciDeaths, FIELD_INTEGER, 4 ),
+	DEFINE_ARRAY( CBasePlayer, m_iSciGibs, FIELD_INTEGER, 4 ),
 	
 	//DEFINE_FIELD( CBasePlayer, m_fDeadTime, FIELD_FLOAT ), // only used in multiplayer games
 	//DEFINE_FIELD( CBasePlayer, m_fGameHUDInitialized, FIELD_INTEGER ), // only used in multiplayer games

@@ -104,6 +104,7 @@ class CBaseEntity;
 class CBaseMonster;
 class CBasePlayerItem;
 class CSquadMonster;
+class CTalkMonster;
 
 
 #define	SF_NORESPAWN	( 1 << 30 )// !!!set this bit on guns and stuff that should never respawn.
@@ -142,6 +143,7 @@ public:
 	// path corners
 	CBaseEntity			*m_pGoalEnt;// path corner we are heading towards
 	CBaseEntity			*m_pLink;// used for temporary link-list operations. 
+	int					m_iszKillDesc;// "killdesc": what death messages call this entity
 
 	// initialization functions
 	virtual void	Spawn( void ) { return; }
@@ -151,6 +153,21 @@ public:
 	virtual int		Restore( CRestore &restore );
 	virtual int		ObjectCaps( void ) { return FCAP_ACROSS_TRANSITION; }
 	virtual void	Activate( void ) {}
+
+	virtual int		HeatSignature( void ) { return 0; }	// how heat-seeking rockets rate this target, 0: ignore
+	virtual int		Shielded( void ) { return 0; }		// energy shield type, 0: none
+	virtual BOOL	CanBeRepulsed( bool fForce ) { return FALSE; }
+	virtual BOOL	CanBeTeleported( void ) { return FALSE; }	// by the displacer
+	virtual BOOL	CanBeTractored( void ) { return CanBeRepulsed( false ); }	// by the repulsor's tractor beam
+	virtual float	GetHoldDistance( void );				// name ours
+	virtual BOOL	CanBeGrenaded( int fLauncher ) { return pev->movetype <= MOVETYPE_STEP || pev->waterlevel > 0; }
+	virtual BOOL	IsGrenadeTarget( void ) { return FALSE; }	// name ours
+	virtual void	BuildFinished( CBaseEntity *pBuilder ) {}	// name ours
+	virtual int		GetOnState( void ) { return -1; }	// name ours; master_watcher: 1 on, 0 off, -1 can't tell
+	virtual const char *GetKillDesc( void ) { return STRING( pev->classname ); }
+	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return fGibbed ? "gibbed" : "killed"; }
+	virtual const char *GetHitGroupDesc( int iHitGroup ) { return ""; }
+	virtual float	MovementSpeed( void );
 	
 	// Setup the object->object collision box (pev->mins / pev->maxs is the object->world collision box)
 	virtual void	SetObjectCollisionBox( void );
@@ -172,6 +189,7 @@ public:
 	virtual BOOL    IsTriggered( CBaseEntity *pActivator ) {return TRUE;}
 	virtual CBaseMonster *MyMonsterPointer( void ) { return NULL;}
 	virtual CSquadMonster *MySquadMonsterPointer( void ) { return NULL;}
+	virtual CTalkMonster *MyTalkMonsterPointer( void ) { return NULL; }
 	virtual	int		GetToggleState( void ) { return TS_AT_TOP; }
 	virtual void	AddPoints( int score, BOOL bAllowNegativeScore ) {}
 	virtual void	AddPointsToTeam( int score, BOOL bAllowNegativeScore ) {}
@@ -444,6 +462,7 @@ class CBaseDelay : public CBaseEntity
 public:
 	float		m_flDelay;
 	int			m_iszKillTarget;
+	EHANDLE		m_hActivator;
 
 	virtual void	KeyValue( KeyValueData* pkvd);
 	virtual int		Save( CSave &save );
@@ -519,7 +538,6 @@ public:
 
 	int					m_cTriggersLeft;		// trigger_counter only, # of activations remaining
 	float				m_flHeight;
-	EHANDLE				m_hActivator;
 	void (CBaseToggle::*m_pfnCallWhenMoveDone)(void);
 	Vector				m_vecFinalDest;
 	Vector				m_vecFinalAngle;
@@ -531,6 +549,8 @@ public:
 
 	static	TYPEDESCRIPTION m_SaveData[];
 
+	virtual const char *GetKillDesc( void ) { if ( m_iszKillDesc ) return STRING( m_iszKillDesc ); return STRING( pev->classname ); }
+	virtual int		GetOnState( void ) { return GetToggleState() == TS_AT_TOP; }
 	virtual int		GetToggleState( void ) { return m_toggle_state; }
 	virtual float	GetDelay( void ) { return m_flWait; }
 
