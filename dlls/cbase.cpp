@@ -796,7 +796,7 @@ float CBaseEntity :: MovementSpeed( void )
 	return pev->velocity.Length();
 }
 
-// A stand-in for cbase.cpp's retail function 0x10023ec0:
+// A stand-in for retail's 0x10023ec0 until this function is written to match:
 // random_scis.cpp calls it. TRUE when the origin or a corner of the box is in solid.
 bool CBaseEntity :: IsInSolid( void )
 {

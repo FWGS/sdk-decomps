@@ -104,7 +104,7 @@ BOOL CWatchMaster :: IsTriggered( CBaseEntity *pActivator )
 	if ( m_globalstate && gGlobalState.EntityGetState( m_globalstate ) != GLOBAL_ON )
 		return FALSE;
 
-	bool fResult = FBitSet( pev->spawnflags, SF_WATCH_DEFAULTON );
+	bool fResult = HasSpawnFlag( SF_WATCH_DEFAULTON );
 
 	for ( int i = 0; i < m_cTargets && m_iTargetName[i]; i++ )
 	{
@@ -114,7 +114,7 @@ BOOL CWatchMaster :: IsTriggered( CBaseEntity *pActivator )
 		if ( *pszName == '!' )
 			pszName++;
 
-		bool fOn = FBitSet( pev->spawnflags, SF_WATCH_DEFAULTON );
+		bool fOn = HasSpawnFlag( SF_WATCH_DEFAULTON );
 
 		CBaseEntity *pTarget = UTIL_FindEntityByTargetname( NULL, pszName );
 		while ( pTarget )
@@ -125,7 +125,7 @@ BOOL CWatchMaster :: IsTriggered( CBaseEntity *pActivator )
 
 				ALERT( at_console, "%s (%s) is %d\n", pszTarget, STRING( pTarget->pev->classname ), iState );
 
-				if ( (bool)FBitSet( pev->spawnflags, SF_WATCH_OR ) )
+				if ( HasSpawnFlag( SF_WATCH_OR ) )
 				{
 					if ( *pszTarget == '!' )
 					{
@@ -164,7 +164,7 @@ BOOL CWatchMaster :: IsTriggered( CBaseEntity *pActivator )
 			pTarget = UTIL_FindEntityByTargetname( pTarget, pszName );
 		}
 
-		if ( !(bool)FBitSet( pev->spawnflags, SF_WATCH_OR ) )
+		if ( !HasSpawnFlag( SF_WATCH_OR ) )
 		{
 			if ( !fOn )
 				return FALSE;

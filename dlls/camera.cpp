@@ -114,7 +114,7 @@ void CInfoCamera :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 		pev->velocity = pev->avelocity = g_vecZero;
 		UTIL_SetOrigin( pev, pev->vuser1 );
 
-		if ( (bool)FBitSet( pev->spawnflags, SF_CAMERA_NOCONTROL ) )
+		if ( HasSpawnFlag( SF_CAMERA_NOCONTROL ) )
 			m_pPlayer->EnableControl( TRUE );	// sic: m_pPlayer is NULL by now
 		return;
 	}
@@ -130,14 +130,14 @@ void CInfoCamera :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 		SET_VIEW( pActivator->edict(), edict() );
 		pev->vuser1 = pev->origin;
 
-		if ( (bool)FBitSet( pev->spawnflags, SF_CAMERA_NOCONTROL ) )
+		if ( HasSpawnFlag( SF_CAMERA_NOCONTROL ) )
 			m_pPlayer->EnableControl( FALSE );
 		return;
 	}
 
-	bool fPersistant = FBitSet( pev->spawnflags, SF_CAMERA_PERSISTANT );
+	bool fPersistant = HasSpawnFlag( SF_CAMERA_PERSISTANT );
 
-	if ( (bool)FBitSet( pev->spawnflags, SF_CAMERA_CLASSNAME ) )
+	if ( HasSpawnFlag( SF_CAMERA_CLASSNAME ) )
 		FindTargetByClassname();
 	else
 		FindTargetByTargetname();
@@ -149,7 +149,7 @@ void CInfoCamera :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 		SET_VIEW( pActivator->edict(), edict() );
 		pev->vuser1 = pev->origin;
 
-		if ( (bool)FBitSet( pev->spawnflags, SF_CAMERA_NOCONTROL ) )
+		if ( HasSpawnFlag( SF_CAMERA_NOCONTROL ) )
 			m_pPlayer->EnableControl( FALSE );
 	}
 }
@@ -159,15 +159,15 @@ void CInfoCamera :: Think( void )
 {
 	if ( m_hTarget == NULL && m_type != CAMERA_STATIC )
 	{
-		if ( FBitSet( pev->spawnflags, SF_CAMERA_SWITCHTARGET ) )
+		if ( HasSpawnFlag( SF_CAMERA_SWITCHTARGET ) )
 		{
-			if ( (bool)FBitSet( pev->spawnflags, SF_CAMERA_CLASSNAME ) )
+			if ( HasSpawnFlag( SF_CAMERA_CLASSNAME ) )
 				FindTargetByClassname();
 			else
 				FindTargetByTargetname();
 		}
 
-		if ( m_hTarget == NULL && !(bool)FBitSet( pev->spawnflags, SF_CAMERA_PERSISTANT ) )
+		if ( m_hTarget == NULL && !HasSpawnFlag( SF_CAMERA_PERSISTANT ) )
 		{
 			pev->nextthink = 0;
 			SET_VIEW( m_pPlayer->edict(), m_pPlayer->edict() );
@@ -175,14 +175,14 @@ void CInfoCamera :: Think( void )
 			m_hTarget = NULL;
 			pev->velocity = pev->avelocity = g_vecZero;
 
-			if ( (bool)FBitSet( pev->spawnflags, SF_CAMERA_NOCONTROL ) )
+			if ( HasSpawnFlag( SF_CAMERA_NOCONTROL ) )
 				m_pPlayer->EnableControl( TRUE );	// sic: m_pPlayer is NULL by now
 			return;
 		}
 	}
 
 	// a player in control ends it by moving
-	if ( !(bool)FBitSet( pev->spawnflags, SF_CAMERA_NOCONTROL ) && FBitSet( m_pPlayer->pev->button, IN_JUMP | IN_FORWARD | IN_BACK | IN_MOVELEFT | IN_MOVERIGHT ) )
+	if ( !HasSpawnFlag( SF_CAMERA_NOCONTROL ) && FBitSet( m_pPlayer->pev->button, IN_JUMP | IN_FORWARD | IN_BACK | IN_MOVELEFT | IN_MOVERIGHT ) )
 	{
 		pev->nextthink = 0;
 		SET_VIEW( m_pPlayer->edict(), m_pPlayer->edict() );
@@ -229,11 +229,8 @@ void CInfoCamera :: Think( void )
 		// sic: falls through
 
 	case CAMERA_NEAR:
-		{
-			Vector vecDir = ( pev->origin - m_hTarget->Center() ).Normalize();
-			MoveTo( m_hTarget->Center() + vecDir * 100 );
-			Face();
-		}
+		MoveTo( m_hTarget->Center() + ( pev->origin - m_hTarget->Center() ).Normalize() * 100 );
+		Face();
 		break;
 	}
 }
