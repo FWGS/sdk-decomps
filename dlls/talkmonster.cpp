@@ -1634,35 +1634,3 @@ BOOL CTalkMonster :: FCanActiveIdle ( void )
 	return FALSE;
 }
 
-
-// TEMPORARY LINK STUBS: defaultai.cpp and monsters.cpp define the real ones; this commit is reverted.
-Task_t	tlIdleTurnStub[] =
-{
-	{ TASK_STOP_MOVING,			0				},
-	{ TASK_TURN_LEFT,			(float)-179		},
-	{ TASK_SET_ACTIVITY,		(float)ACT_IDLE },
-	{ TASK_WAIT,				(float)5		},
-};
-
-Schedule_t	slIdleTurn[] =
-{
-	{ tlIdleTurnStub, ARRAYSIZE( tlIdleTurnStub ), 0x78344, 0x7f, "IdleTurn" },
-};
-
-Task_t	tlReturnStub[] =
-{
-	{ TASK_GET_PATH_TO_LASTPOSITION,(float)0		},
-	{ TASK_WALK_PATH,				(float)0		},
-	{ TASK_WAIT_FOR_MOVEMENT,		(float)0		},
-	{ TASK_CLEAR_LASTPOSITION,		(float)0		},
-};
-
-Schedule_t	slReturn[] =
-{
-	{ tlReturnStub, ARRAYSIZE( tlReturnStub ), 0x78340, 0x59, "Return" },
-};
-
-int CBaseMonster :: FindReachableHintNode ( void )
-{
-	return FindHintNode();
-}
