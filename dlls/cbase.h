@@ -684,6 +684,7 @@ extern const char *HitGroupOf( int iHitGroup );	// "'s head"
 #define GIB_NORMAL			0// gib if entity was overkilled
 #define GIB_NEVER			1// never gib, no matter how much death damage is done ( freezing, etc )
 #define GIB_ALWAYS			2// always gib ( Houndeye Shock, Barnacle Bite )
+#define GIB_FADE			4// fade the body out (name ours)
 
 class CBaseMonster;
 class CCineMonster;

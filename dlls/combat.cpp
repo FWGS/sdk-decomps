@@ -29,6 +29,7 @@
 #include "animation.h"
 #include "weapons.h"
 #include "func_break.h"
+#include "game.h"
 
 extern DLL_GLOBAL Vector		g_vecAttackDir;
 extern DLL_GLOBAL int			g_iSkillLevel;
@@ -436,7 +437,8 @@ BOOL CBaseMonster :: HasHumanGibs( void )
 	if ( myClass == CLASS_HUMAN_MILITARY ||
 		 myClass == CLASS_PLAYER_ALLY	||
 		 myClass == CLASS_HUMAN_PASSIVE  ||
-		 myClass == CLASS_PLAYER )
+		 myClass == CLASS_PLAYER ||
+		 ( m_bloodColor == BLOOD_COLOR_RED && myClass == 14 ) )	// the NA units
 
 		 return TRUE;
 
@@ -464,9 +466,7 @@ BOOL CBaseMonster :: HasAlienGibs( void )
 void CBaseMonster::FadeMonster( void )
 {
 	StopAnimation();
-	pev->velocity = g_vecZero;
-	pev->movetype = MOVETYPE_NONE;
-	pev->avelocity = g_vecZero;
+	pev->movetype = MOVETYPE_TOSS;
 	pev->animtime = gpGlobals->time;
 	pev->effects |= EF_NOINTERP;
 	SUB_StartFadeOut();
@@ -483,13 +483,21 @@ void CBaseMonster :: GibMonster( void )
 
 	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "common/bodysplat.wav", 1, ATTN_NORM);		
 
+	SpawnBlood( Center(), BloodColor(), 500 );
+
+	int cGibs = ssh_monstergibs.value;
+
 	// only humans throw skulls !!!UNDONE - eventually monsters will have their own sets of gibs
 	if ( HasHumanGibs() )
 	{
+		int cSticky = RANDOM_LONG( 0, cGibs / 2 - 1 );
+
 		if ( CVAR_GET_FLOAT("violence_hgibs") != 0 )	// Only the player will ever get here
 		{
 			CGib::SpawnHeadGib( pev );
-			CGib::SpawnRandomGibs( pev, 4, 1 );	// throw some human gibs.
+			CGib::SpawnRandomGibs( pev, cGibs - cSticky, 1 );	// throw some human gibs.
+			if ( cSticky > 0 )
+				CGib::SpawnStickyGibs( pev, Center(), cSticky );
 		}
 		gibbed = TRUE;
 	}
@@ -497,7 +505,12 @@ void CBaseMonster :: GibMonster( void )
 	{
 		if ( CVAR_GET_FLOAT("violence_agibs") != 0 )	// Should never get here, but someone might call it directly
 		{
-			CGib::SpawnRandomGibs( pev, 4, 0 );	// Throw alien gibs
+			if ( !strcmp( STRING( pev->classname ), "monster_alien_slave" ) )
+				CGib::SpawnModelHeadGib( pev, "models/islave_gibs1.mdl" );
+			else if ( !strcmp( STRING( pev->classname ), "monster_zombie" ) )
+				CGib::SpawnModelHeadGib( pev, "models/zombiegibs1.mdl" );
+
+			CGib::SpawnRandomGibs( pev, cGibs, 0 );	// Throw alien gibs
 		}
 		gibbed = TRUE;
 	}
@@ -697,14 +710,14 @@ void CBaseMonster::BecomeDead( void )
 	
 	// give the corpse half of the monster's original maximum health. 
 	pev->health = pev->max_health / 2;
-	pev->max_health = 5; // max_health now becomes a counter for how many blood decals the corpse can place.
+	pev->max_health = RANDOM_LONG( 5, 50 ); // max_health now becomes a counter for how many blood decals the corpse can place.
 
 	// make the corpse fly away from the attack vector
 	pev->movetype = MOVETYPE_TOSS;
-	//pev->flags &= ~FL_ONGROUND;
-	//pev->origin.z += 2;
-	//pev->velocity = g_vecAttackDir * -1;
-	//pev->velocity = pev->velocity * RANDOM_FLOAT( 300, 400 );
+	pev->flags &= ~FL_ONGROUND;
+	pev->origin.z += 2;
+	pev->velocity = g_vecAttackDir * -1;
+	pev->velocity = pev->velocity * RANDOM_FLOAT( 300, 400 );
 }
 
 
@@ -773,6 +786,8 @@ void CBaseMonster :: Killed( entvars_t *pevAttacker, int iGib )
 	{
 		if ( ShouldGibMonster( iGib ) )
 			CallGibMonster();
+		else if ( iGib == GIB_FADE )
+			FadeMonster();
 		return;
 	}
 
@@ -796,10 +811,10 @@ void CBaseMonster :: Killed( entvars_t *pevAttacker, int iGib )
 		CallGibMonster();
 		return;
 	}
-	else if ( pev->flags & FL_MONSTER )
+	else if ( iGib == GIB_FADE )
 	{
-		SetTouch( NULL );
-		BecomeDead();
+		FadeMonster();
+		return;
 	}
 	
 	// don't let the status bar glitch for players.with <0 health.
@@ -809,8 +824,6 @@ void CBaseMonster :: Killed( entvars_t *pevAttacker, int iGib )
 	}
 	
 	//pev->enemy = ENT( pevAttacker );//why? (sjb)
-	
-	m_IdealMonsterState = MONSTERSTATE_DEAD;
 }
 
 //
@@ -827,7 +840,6 @@ void CBaseEntity :: SUB_StartFadeOut ( void )
 	}
 
 	pev->solid = SOLID_NOT;
-	pev->avelocity = g_vecZero;
 
 	pev->nextthink = gpGlobals->time + 0.1;
 	SetThink ( SUB_FadeOut );
