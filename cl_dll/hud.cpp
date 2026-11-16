@@ -236,6 +236,13 @@ int __MsgFunc_ScoreInfo(const char *pszName, int iSize, void *pbuf)
 	return 0;
 }
 
+int __MsgFunc_SciInfo(const char *pszName, int iSize, void *pbuf)
+{
+	if (gViewPort)
+		return gViewPort->MsgFunc_SciInfo( pszName, iSize, pbuf );
+	return 0;
+}
+
 int __MsgFunc_TeamScore(const char *pszName, int iSize, void *pbuf)
 {
 	if (gViewPort)
@@ -293,6 +300,7 @@ void CHud :: Init( void )
 	HOOK_MESSAGE( ScoreInfo );
 	HOOK_MESSAGE( TeamScore );
 	HOOK_MESSAGE( TeamInfo );
+	HOOK_MESSAGE( SciInfo );
 
 	HOOK_MESSAGE( Spectator );
 	HOOK_MESSAGE( AllowSpec );

@@ -324,6 +324,17 @@ extern extra_player_info_t  g_PlayerExtraInfo[MAX_PLAYERS+1];   // additional pl
 extern team_info_t			g_TeamInfo[MAX_TEAMS+1];
 extern int					g_IsSpectator[MAX_PLAYERS+1];
 
+// the scoreboard's four scientists (SciInfo; names ours)
+#define MAX_SCIENTISTS 4
+struct sci_info_t
+{
+	char *name;
+	short deaths;	// times killed
+	short gibs;		// times gibbed
+};
+
+extern sci_info_t			g_SciInfo[MAX_SCIENTISTS];
+
 
 //
 //-----------------------------------------------------
