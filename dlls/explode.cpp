@@ -24,6 +24,7 @@
 #include "cbase.h"
 #include "decals.h"
 #include "explode.h"
+#include "soundent.h"
 
 // Spark Shower
 class CShower : public CBaseEntity
@@ -88,6 +89,9 @@ public:
 	void EXPORT Smoke ( void );
 	void KeyValue( KeyValueData *pkvd );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	int ObjectCaps( void ) { return 0; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { if ( m_iszKillDesc ) return DamageVerb( DMG_BLAST, fGibbed ); return DamageVerb( DMG_GENERIC, fGibbed ); }
+	const char *GetKillDesc( void ) { if ( m_iszKillDesc ) return STRING( m_iszKillDesc ); return "an explosion"; }
 
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
@@ -113,6 +117,11 @@ void CEnvExplosion::KeyValue( KeyValueData *pkvd )
 		m_iMagnitude = atoi(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "killdesc"))
+	{
+		m_iszKillDesc = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
 	else
 		CBaseEntity::KeyValue( pkvd );
 }
@@ -133,13 +142,11 @@ void CEnvExplosion::Spawn( void )
 	float flSpriteScale;
 	flSpriteScale = ( m_iMagnitude - 50) * 0.6;
 	
-	/*
-	if ( flSpriteScale > 50 )
+	if ( flSpriteScale > 255 )
 	{
-		flSpriteScale = 50;
+		flSpriteScale = 255;
 	}
-	*/
-	if ( flSpriteScale < 10 )
+	else if ( flSpriteScale < 10 )
 	{
 		flSpriteScale = 10;
 	}
@@ -214,7 +221,12 @@ void CEnvExplosion::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 	// do damage
 	if ( !( pev->spawnflags & SF_ENVEXPLOSION_NODAMAGE ) )
 	{
-		RadiusDamage ( pev, pev, m_iMagnitude, CLASS_NONE, DMG_BLAST );
+		// the owner (ExplosionCreate's) gets the kill
+		entvars_t *pevOwner = pev;
+		if ( pev->owner )
+			pevOwner = VARS( pev->owner );
+
+		RadiusDamage ( pev, pevOwner, m_iMagnitude, CLASS_NONE, DMG_BLAST );
 	}
 
 	SetThink( Smoke );
@@ -271,4 +283,87 @@ void ExplosionCreate( const Vector &center, const Vector &angles, edict_t *pOwne
 
 	pExplosion->Spawn();
 	pExplosion->Use( NULL, NULL, USE_TOGGLE, 0 );
+}
+
+
+// blast_shower: an invisible TE_EXPLOSION repeated every pev->speed seconds until
+// pev->dmgtime, doing pev->dmg radius damage each time unless spawnflag 1 is set
+// (name ours)
+class CBlastShower : public CEnvExplosion
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	void Think( void );
+	void Touch( CBaseEntity *pOther );
+};
+
+LINK_ENTITY_TO_CLASS( blast_shower, CBlastShower );
+
+void CBlastShower::Spawn( void )
+{
+	Precache();
+
+	if ( !pev->model )
+		pev->modelindex = g_sModelIndexFireball;
+	else
+		SET_MODEL( ENT(pev), STRING(pev->model) );
+
+	pev->effects = EF_NODRAW;
+	pev->movetype = MOVETYPE_BOUNCE;
+	pev->solid = SOLID_NOT;
+	UTIL_SetSize( pev, g_vecZero, g_vecZero );
+	pev->nextthink = gpGlobals->time + 0.1;
+}
+
+void CBlastShower::Precache( void )
+{
+	if ( pev->model )
+		PRECACHE_MODEL( (char *)STRING(pev->model) );
+}
+
+void CBlastShower::Think( void )
+{
+	pev->nextthink = gpGlobals->time + pev->speed;
+
+	int iScale = ( pev->dmg - 50 ) * .60;
+	if ( iScale < 10 )
+		iScale = 10;
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_EXPLOSION );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		WRITE_SHORT( pev->modelindex );
+		WRITE_BYTE( min( iScale, 255 ) ); // scale * 10
+		WRITE_BYTE( 15  ); // framerate
+		WRITE_BYTE( TE_EXPLFLAG_NOPARTICLES );
+	MESSAGE_END();
+
+	if ( !( pev->spawnflags & 1 ) )
+	{
+		if ( pev->dmgtime > gpGlobals->time )
+			CSoundEnt::InsertSound ( bits_SOUND_DANGER, pev->origin + pev->velocity * 0.5, pev->velocity.Length( ), 0.2 );
+
+		entvars_t *pevAttacker;
+		if ( pev->enemy )
+			pevAttacker = VARS( pev->enemy );
+		else
+			pevAttacker = NULL;
+
+		edict_t *pOwner = pev->owner;
+		pev->owner = NULL; // can't traceline attack owner if this is set
+		RadiusDamage( pev->origin, pev, pevAttacker, pev->dmg, CLASS_NONE, DMG_BLAST );
+		pev->owner = pOwner;
+	}
+
+	if ( pev->dmgtime < gpGlobals->time )
+		UTIL_Remove( this );
+}
+
+// sic: makes whatever touches it invulnerable (never called: the shower is SOLID_NOT)
+void CBlastShower::Touch( CBaseEntity *pOther )
+{
+	pOther->pev->takedamage = DAMAGE_NO;
 }
