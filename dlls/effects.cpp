@@ -27,6 +27,7 @@
 #define	SF_GIBSHOOTER_ALIEN			2 // name ours: shoots alien gibs
 
 #define SF_FUNNEL_REVERSE			1 // funnel effect repels particles instead of attracting them.
+#define SF_FUNNEL_REPEATABLE		2 // name ours: the funnel stays after it is used
 
 
 // Lightning target, just alias landmark
@@ -1775,7 +1776,9 @@ void CTestEffect::TestThink( void )
 	{
 		for (i = 0; i < m_iBeam; i++)
 		{
-			UTIL_Remove( m_pBeam[i] );
+			if ( m_pBeam[i] )
+				UTIL_Remove( m_pBeam[i] );
+			m_pBeam[i] = NULL;
 		}
 		m_flStartTime = gpGlobals->time;
 		m_iBeam = 0;
@@ -1892,7 +1895,7 @@ Vector CBlood::BloodPosition( CBaseEntity *pActivator )
 void CBlood::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
 	if ( pev->spawnflags & SF_BLOOD_STREAM )
-		UTIL_BloodStream( BloodPosition(pActivator), Direction(), (Color() == BLOOD_COLOR_RED) ? 70 : Color(), BloodAmount() );
+		UTIL_BloodStream( BloodPosition(pActivator), Direction(), Color(), BloodAmount() );
 	else
 		UTIL_BloodDrips( BloodPosition(pActivator), Direction(), Color(), BloodAmount() );
 
@@ -2182,7 +2185,9 @@ public:
 
 void CEnvFunnel :: Precache ( void )
 {
-	m_iSprite = PRECACHE_MODEL ( "sprites/flare6.spr" );
+	if ( FStringNull( pev->model ) )
+		pev->model = MAKE_STRING( "sprites/flare6.spr" );
+	m_iSprite = PRECACHE_MODEL ( (char *)STRING(pev->model) );
 }
 
 LINK_ENTITY_TO_CLASS( env_funnel, CEnvFunnel );
@@ -2208,8 +2213,11 @@ void CEnvFunnel::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE us
 
 	MESSAGE_END();
 
-	SetThink( SUB_Remove );
-	pev->nextthink = gpGlobals->time;
+	if ( !(pev->spawnflags & SF_FUNNEL_REPEATABLE) )
+	{
+		SetThink( SUB_Remove );
+		pev->nextthink = gpGlobals->time;
+	}
 }
 
 void CEnvFunnel::Spawn( void )
