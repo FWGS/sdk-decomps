@@ -19,10 +19,14 @@
 //=========================================================
 // Hornet Defines
 //=========================================================
-#define HORNET_TYPE_RED			0
-#define HORNET_TYPE_ORANGE		1
-#define HORNET_RED_SPEED		(float)600
-#define HORNET_ORANGE_SPEED		(float)800
+// The hornet gun's six hornets, chosen by its secondary attack (the gun's and the hornet's
+// pev->weapons, read by StartHornet; Spawn sets 0). Names ours.
+#define HORNET_TYPE_NORMAL		0	// red trail, tracks
+#define HORNET_TYPE_DART		1	// green, straight through what it hits
+#define HORNET_TYPE_BOUNCE		2	// blue, bounces off the world
+#define HORNET_TYPE_HEADSHOT	3	// yellow, goes for scientists' heads
+#define HORNET_TYPE_FIRE		4	// orange, burns
+#define HORNET_TYPE_ICE			5	// light blue, freezes
 #define	HORNET_BUZZ_VOLUME		(float)0.8
 
 extern int iHornetPuff;
@@ -41,13 +45,21 @@ public:
 	virtual int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
 
+	int HeatSignature( void ) { return 0; }
+	const char *GetKillDesc( void ) { return "an unknown alien bioweapon"; }
+
 	void IgniteTrail( void );
-	void EXPORT StartTrack ( void );
-	void EXPORT StartDart ( void );
+	void EXPORT StartHornet ( void );
 	void EXPORT TrackTarget ( void );
 	void EXPORT TrackTouch ( CBaseEntity *pOther );
+	void EXPORT HeadshotTouch( CBaseEntity *pOther );
 	void EXPORT DartTouch( CBaseEntity *pOther );
+	void EXPORT BounceTouch( CBaseEntity *pOther );
 	void EXPORT DieTouch ( CBaseEntity *pOther );
+	void EXPORT HeadBlastThink( void );
+	void EXPORT FlyThink( void );
+	void Expire( void );	// name ours
+	void EXPORT DeadTouch( CBaseEntity *pOther );
 	
 	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
 

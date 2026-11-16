@@ -184,6 +184,10 @@ SOURCE=.\barney.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\beams.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\bigmomma.cpp
 # End Source File
 # Begin Source File
@@ -257,6 +261,10 @@ SOURCE=.\entity_link.cpp
 # Begin Source File
 
 SOURCE=.\explode.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\fire.cpp
 # End Source File
 # Begin Source File
 

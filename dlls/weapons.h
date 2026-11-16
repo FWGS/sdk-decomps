@@ -32,6 +32,7 @@ public:
 
 	static CGrenade *ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );
 	static CGrenade *ShootContact( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
+	static CGrenade *ShootMine( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );	// name ours
 	static CGrenade *ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
 	static CGrenade *ShootExplosion( entvars_t *pevOwner, const Vector &vecStart, float flDelay, const Vector &vecDir );	// name ours; ggrenade.cpp (0x100600b0)
 	static CGrenade *ShootHybrid( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );	// name ours; ggrenade.cpp (0x1005fc70)
@@ -39,6 +40,10 @@ public:
 
 	void Explode( Vector vecSrc, Vector vecAim );
 	virtual void Explode( TraceResult *pTrace, int bitsDamageType );
+	void FireExplode( TraceResult *pTrace );	// name ours
+	void SphereBlast( void );	// name ours
+	void MortarBlast( void );	// name ours
+	void EXPORT HurtThink( void );
 	void EXPORT Smoke( void );
 
 	void EXPORT BounceTouch( CBaseEntity *pOther );
@@ -51,10 +56,18 @@ public:
 	void EXPORT MakeSolid( void );
 	void EXPORT DetonateUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT TumbleThink( void );
+	void EXPORT HybridThink( void );
+	void EXPORT HybridTouch( CBaseEntity *pOther );
+	void EXPORT MineThink( void );
 
 	virtual void BounceSound( void );
 	virtual int	BloodColor( void ) { return DONT_BLEED; }
 	virtual void Killed( entvars_t *pevAttacker, int iGib );
+#ifndef CLIENT_DLL
+	virtual const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "a grenade"; return STRING( m_iszKillDesc ); }
+	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return DamageVerb( DMG_BLAST, fGibbed ); }
+#endif
+	virtual int HeatSignature( void ) { return 0; }
 
 	BOOL m_fRegisteredSound;// whether or not this grenade has issued its DANGER sound to the world sound list yet.
 };
@@ -277,6 +290,39 @@ typedef struct
 	int iId;
 } AmmoInfo;
 
+// The crossbow's dart, here for func_turret's info_shootpoint_bolt too.
+// UNDONE: Save/restore this?  Don't forget to set classname and LINK_ENTITY_TO_CLASS()
+// 
+// OVERLOADS SOME ENTVARS:
+//
+// speed - the ideal magnitude of my velocity; 0 once the dart sticks in the world
+// frags - the dart type: 1 explosive, 2 flare, 3 electrical, 4 laser net, else standard
+class CCrossbowBolt : public CBaseEntity
+{
+	void Spawn( void );
+	void Precache( void );
+	int  Classify ( void );
+	BOOL CanBeRepulsed( bool fForce ) { return TRUE; }
+	const char *GetKillDesc( void )
+	{
+		if ( pev->frags == 4 && pev->speed == 0 )
+			return "a laser net";
+		return "a high-velocity stealth crossbow";
+	}
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup );
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupOf( iHitGroup ); }
+	void EXPORT BubbleThink( void );
+	void EXPORT BoltTouch( CBaseEntity *pOther );
+	void EXPORT ExplodeThink( void );
+	void EXPORT ZapThink( void );
+	void EXPORT LightThink( void );
+	void LaserNet( void );	// name ours
+
+public:
+	static CCrossbowBolt *BoltCreate( void );
+	void BoltTrail( void );	// name ours
+};
+
 // Items that the player has in their inventory that they can use
 class CBasePlayerItem : public CBaseAnimating
 {
@@ -461,6 +507,7 @@ extern void SpawnBlood(Vector vecSpot, int bloodColor, float flDamage);
 extern int DamageDecal( CBaseEntity *pEntity, int bitsDamageType );
 extern void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType );
 extern void RadiusDamageNoTrace( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType );	// name ours
+extern void FireSpread( const Vector &vecOrigin, float flDamage, entvars_t *pevOwner, edict_t *pentIgnore );	// fire.cpp: flames around a spot (name ours)
 
 typedef struct 
 {
@@ -691,14 +738,15 @@ public:
 	int GetItemInfo(ItemInfo *p);
 
 	void FireBolt( void );
-	void FireSniperBolt( void );
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
+	void WeaponSpecial( void );		// cycles the dart type (pev->weapons)
 	int AddToPlayer( CBasePlayer *pPlayer );
 	BOOL Deploy( );
 	void Holster( int skiplocal = 0 );
 	void Reload( void );
 	void WeaponIdle( void );
+	BOOL ShouldWeaponIdle( void ) { return pev->frags != 0; }	// pev->frags: rapid fire
 
 	int m_fInZoom; // don't save this
 
@@ -979,6 +1027,8 @@ public:
 	void EndAttack( void );
 	void Attack( void );
 	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void WeaponSpecial( void );
 	void WeaponIdle( void );
 
 	float m_flAmmoUseTime;// since we use < 1 point of ammo per update, we subtract ammo on a timer.
@@ -986,17 +1036,22 @@ public:
 	float GetPulseInterval( void );
 	float GetDischargeInterval( void );
 
+	void IonCannon( void );	// name ours (its client thunk slot fits this name)
 	void Fire( const Vector &vecOrigSrc, const Vector &vecDir );
 
 	BOOL HasAmmo( void );
 
 	void UseAmmo( int count );
 	
-	enum EGON_FIREMODE { FIRE_NARROW, FIRE_WIDE};
-
 	CBeam				*m_pBeam;
+#ifndef CLIENT_DLL
 	CBeam				*m_pNoise;
 	CSprite				*m_pSprite;
+	CBeam				*m_pIonBeams[4];		// the ion cannon's extra beams (names ours)
+	CSprite				*m_pIonSprites[10];		// even: beam starts, odd: beam ends
+	EHANDLE				m_hIonTargets[5];		// what each ion beam locked on
+	Vector				m_vecIonTargetOfs[5];	// where on it
+#endif
 
 	virtual BOOL UseDecrement( void )
 	{ 
@@ -1011,9 +1066,9 @@ public:
 
 private:
 	float				m_shootTime;
-	EGON_FIREMODE		m_fireMode;
 	float				m_shakeTime;
 	BOOL				m_deployed;
+	int					m_iBeamCount;	// the ion cannon's extra beam pairs, 0-2
 
 	unsigned short m_usEgonFire;
 };
@@ -1063,6 +1118,8 @@ public:
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void WeaponSpecial( void );	// the grenade mode (pev->weapons)
 	BOOL Deploy( void );
 	BOOL CanHolster( void );
 	void Holster( int skiplocal = 0 );

@@ -35,6 +35,99 @@ enum handgrenade_e {
 };
 
 
+#ifndef CLIENT_DLL
+
+// repulsor_grenade, the hand grenade's shockwave mode (CRepulsorGrenade: the export's
+// class name): three seconds after the throw it pushes everything that can be repulsed
+// and is in sight within 192 units away at 1000 units/s plus 200 up, with a green
+// shockwave ring, and is gone
+class CRepulsorGrenade : public CGrenade
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	void EXPORT Repulse( void );
+
+	int m_iSpriteTexture;	// name ours
+};
+
+LINK_ENTITY_TO_CLASS( repulsor_grenade, CRepulsorGrenade );
+
+void CRepulsorGrenade::Spawn( void )
+{
+	Precache( );
+	m_fRegisteredSound = TRUE;
+
+	SetTouch( BounceTouch );
+	SetThink( Repulse );
+	pev->nextthink = gpGlobals->time + 3;
+
+	pev->sequence = RANDOM_LONG( 3, 6 );
+	pev->framerate = 1.0;
+	pev->gravity = 0.5;
+	pev->friction = 0.8;
+
+	SET_MODEL(ENT(pev), "models/w_grenade.mdl");
+	pev->movetype = MOVETYPE_BOUNCE;
+	pev->solid = SOLID_BBOX;
+	UTIL_SetSize(pev, Vector( 0, 0, 0), Vector(0, 0, 0));
+}
+
+void CRepulsorGrenade::Precache( void )
+{
+	m_iSpriteTexture = PRECACHE_MODEL( "sprites/shockwave.spr" );
+	PRECACHE_SOUND( "weapons/concgren_blast1.wav" );
+}
+
+void CRepulsorGrenade::Repulse( void )
+{
+	CBaseEntity *pEntity = NULL;
+
+	while ( ( pEntity = UTIL_FindEntityInSphere( pEntity, pev->origin, 192 ) ) != NULL )
+	{
+		if ( pEntity != this && pEntity->CanBeRepulsed( false ) )
+		{
+			TraceResult tr;
+			Vector vecSpot = pEntity->Center();
+
+			UTIL_TraceLine( pev->origin, vecSpot, ignore_monsters, ENT(pev), &tr );
+			if ( tr.flFraction >= 1 || tr.pHit == pEntity->edict() )
+			{
+				pEntity->pev->velocity = pEntity->pev->velocity + ( vecSpot - pev->origin ).Normalize() * 1000 + Vector( 0, 0, 200 );
+			}
+		}
+	}
+
+	EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/concgren_blast1.wav", 1, ATTN_NORM );
+
+	// shockwave
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_BEAMCYLINDER );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z + 768 ); // reach damage radius over .25 seconds
+		WRITE_SHORT( m_iSpriteTexture );
+		WRITE_BYTE( 0 ); // startframe
+		WRITE_BYTE( 0 ); // framerate
+		WRITE_BYTE( 2 ); // life
+		WRITE_BYTE( 64 );  // width
+		WRITE_BYTE( 0 );   // noise
+		WRITE_BYTE( 128 );   // r
+		WRITE_BYTE( 255 );   // g
+		WRITE_BYTE( 32 );   // b
+		WRITE_BYTE( 255 ); //brightness
+		WRITE_BYTE( 0 );		// speed
+	MESSAGE_END();
+
+	UTIL_Remove( this );
+}
+
+#endif
+
+
 LINK_ENTITY_TO_CLASS( weapon_handgrenade, CHandGrenade );
 
 
@@ -59,6 +152,9 @@ void CHandGrenade::Precache( void )
 	PRECACHE_MODEL("models/w_grenade.mdl");
 	PRECACHE_MODEL("models/v_grenade.mdl");
 	PRECACHE_MODEL("models/p_grenade.mdl");
+	PRECACHE_MODEL("models/mirv_grenade.mdl");
+	PRECACHE_MODEL("models/bomblet.mdl");
+	UTIL_PrecacheOther( "repulsor_grenade" );
 }
 
 int CHandGrenade::GetItemInfo(ItemInfo *p)
@@ -119,6 +215,47 @@ void CHandGrenade::PrimaryAttack()
 
 		SendWeaponAnim( HANDGRENADE_PINPULL );
 		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.5;
+		pev->iuser1 = 0;	// the mode's first grenade
+	}
+}
+
+void CHandGrenade::SecondaryAttack()
+{
+	if ( !m_flStartThrow && m_pPlayer->m_rgAmmo[ m_iPrimaryAmmoType ] > 0 )
+	{
+		m_flStartThrow = gpGlobals->time;
+		m_flReleaseThrow = 0;
+
+		SendWeaponAnim( HANDGRENADE_PINPULL );
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.5;
+		pev->iuser1 = 1;	// the mode's second grenade
+	}
+}
+
+// Picks the grenade mode (pev->weapons): 0 standard (hand grenade; secondary
+// incendiary), 1 cluster (cluster bomb; secondary MIRV), 2 shockwave (repulsor
+// grenade; secondary EMP)
+void CHandGrenade::WeaponSpecial( void )
+{
+	if ( !m_flStartThrow )
+	{
+		m_flNextWeaponSpecial = UTIL_WeaponTimeBase() + 1.0;
+
+		pev->weapons++;
+		if ( pev->weapons > 2 )
+			pev->weapons = 0;
+
+#ifndef CLIENT_DLL
+		const char *pszMode;
+		switch ( pev->weapons )
+		{
+		case 1:	pszMode = "Cluster";	break;
+		case 2:	pszMode = "Shockwave";	break;
+		default:	pszMode = "Standard";	break;
+		}
+
+		ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "%s mode selected", pszMode );
+#endif
 	}
 }
 
@@ -133,6 +270,7 @@ void CHandGrenade::WeaponIdle( void )
 
 	if ( m_flStartThrow )
 	{
+		CBaseEntity *pThrown = NULL;	// sic: never used (retail's x87 operand order in vecSrc needs it)
 		Vector angThrow = m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle;
 
 		if ( angThrow.x < 0 )
@@ -155,7 +293,54 @@ void CHandGrenade::WeaponIdle( void )
 		if (time < 0)
 			time = 0;
 
-		CGrenade::ShootTimed( m_pPlayer->pev, vecSrc, vecThrow, time );
+#ifndef CLIENT_DLL
+		if ( pev->weapons == 2 )
+		{
+			if ( pev->iuser1 )
+			{
+				// EMP: an energy sphere of shock damage
+				CGrenade *pGrenade = CGrenade::ShootTimed( m_pPlayer->pev, vecSrc, vecThrow, time );
+				pGrenade->pev->rendercolor = Vector( 128, 192, 255 );
+				pGrenade->pev->spawnflags |= 16;
+				pGrenade->m_bitsDamageInflict = DMG_SHOCK | DMG_NEVERGIB;
+				pGrenade->m_iszKillDesc = MAKE_STRING( "an EMP hand grenade" );
+			}
+			else
+			{
+				CBaseEntity *pRepulsor = CBaseEntity::Create( "repulsor_grenade", vecSrc, UTIL_VecToAngles( vecThrow ), m_pPlayer->edict() );
+				pRepulsor->pev->velocity = vecThrow;
+				pRepulsor->pev->nextthink = gpGlobals->time + time;
+			}
+		}
+		else if ( pev->weapons )
+		{
+			CClusterBomb *pBomb;
+			if ( pev->iuser1 )
+			{
+				pBomb = CClusterBomb::ShootMirv( m_pPlayer->edict(), vecSrc, vecThrow, time );
+				pBomb->pev->frags = 40;
+			}
+			else
+			{
+				pBomb = CClusterBomb::ShootTimed( m_pPlayer->edict(), vecSrc, vecThrow, time );
+				pBomb->pev->frags = 6;
+				pBomb->pev->spawnflags |= 1;
+			}
+			pBomb->m_iszKillDesc = MAKE_STRING( "a cluster bomb" );
+		}
+		else
+		{
+			CGrenade *pGrenade = CGrenade::ShootTimed( m_pPlayer->pev, vecSrc, vecThrow, time );
+			if ( pev->iuser1 )
+			{
+				// incendiary, leaves flames
+				pGrenade->pev->spawnflags |= 3;
+				pGrenade->m_iszKillDesc = MAKE_STRING( "an incendiary hand grenade" );
+			}
+			else
+				pGrenade->m_iszKillDesc = MAKE_STRING( "a hand grenade" );
+		}
+#endif
 
 		if ( flVel < 500 )
 		{
