@@ -1330,7 +1330,6 @@ float CBaseMonster :: DamageForce( float damage )
 //=========================================================
 // CheckTimeBasedDamage - the player's time-based damage,
 // for monsters (every second; burning and freezing hurt).
-// A first version; tuned to retail's code later.
 //=========================================================
 void CBaseMonster :: CheckTimeBasedDamage( void )
 {
@@ -2299,7 +2298,7 @@ void CBaseMonster :: MakeDamageBloodDecal ( int cCount, float flNoise, TraceResu
 
 //=========================================================
 // Resurrect - play the death animation backwards and get
-// up again.  A first version; tuned to retail's code later.
+// up again.
 //=========================================================
 void CBaseMonster :: Resurrect( CBaseEntity *pActivator )
 {
