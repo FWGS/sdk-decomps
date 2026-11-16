@@ -239,6 +239,9 @@ public:
 		BOOL FindLateralCover ( const Vector &vecThreat, const Vector &vecViewOffset );
 		virtual BOOL FindCover ( Vector vecThreat, Vector vecViewOffset, float flMinDist, float flMaxDist );
 		virtual BOOL FindRetreat ( Vector vecThreat, float flMinDist, float flMaxDist );	// name ours
+		BOOL FindNodeInCover ( Vector vecThreat, Vector vecViewOffset, float flMinDist, float flMaxDist, Vector &vecResult );	// name ours
+		BOOL FindNodeAway ( Vector vecThreat, float flMinDist, float flMaxDist, Vector &vecResult );	// name ours
+		BOOL FindEnemyNode ( const Vector &vecEnemy, Vector &vecResult, float flMinDist, float flMaxEnemyDist, float flMinEnemyDist );	// name ours
 		virtual BOOL FValidateCover ( const Vector &vecCoverLocation ) { return TRUE; };
 		virtual float CoverRadius( void ) { return 784; } // Default cover radius
 
@@ -253,6 +256,8 @@ public:
 
 		virtual BOOL FValidateHintType( short sHint );
 		int FindHintNode ( void );
+		int FindReachableHintNode ( void );	// name ours
+		bool HasHintNodes ( void );	// name ours
 		virtual BOOL FCanActiveIdle ( void );
 		void SetTurnActivity ( void );
 		float FLSoundVolume ( CSound *pSound );
@@ -339,6 +344,7 @@ public:
 	virtual void	Resurrect( CBaseEntity *pActivator );	// name ours
 	virtual float	MovementSpeed( void );
 	void EXPORT		ResurrectThink( void );
+	bool			ReadyToResurrect( CBaseEntity *pActivator );	// name ours
 
 	inline void	Remember( int iMemory ) { m_afMemory |= iMemory; }
 	inline void	Forget( int iMemory ) { m_afMemory &= ~iMemory; }
@@ -349,6 +355,7 @@ public:
 	BOOL CineCleanup( );
 
 	CBaseEntity* DropItem ( char *pszItemName, const Vector &vecPos, const Vector &vecAng );// drop an item.
+	void EmulatePlayerUse ( void );	// name ours
 };
 
 
