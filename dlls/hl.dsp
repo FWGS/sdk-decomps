@@ -372,6 +372,10 @@ SOURCE=.\maprules.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\masters.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\monstermaker.cpp
 # End Source File
 # Begin Source File
