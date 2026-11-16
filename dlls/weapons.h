@@ -33,6 +33,8 @@ public:
 	static CGrenade *ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );
 	static CGrenade *ShootContact( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
 	static CGrenade *ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
+	static CGrenade *ShootExplosion( entvars_t *pevOwner, const Vector &vecStart, float flDelay, const Vector &vecDir );	// name ours; ggrenade.cpp (0x100600b0)
+	static CGrenade *ShootHybrid( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );	// name ours; ggrenade.cpp (0x1005fc70)
 	static void UseSatchelCharges( entvars_t *pevOwner, SATCHELCODE code );
 
 	void Explode( Vector vecSrc, Vector vecAim );
@@ -45,6 +47,8 @@ public:
 	void EXPORT DangerSoundThink( void );
 	void EXPORT PreDetonate( void );
 	void EXPORT Detonate( void );
+	void EXPORT ExDetonate( void );
+	void EXPORT MakeSolid( void );
 	void EXPORT DetonateUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT TumbleThink( void );
 
@@ -53,6 +57,22 @@ public:
 	virtual void Killed( entvars_t *pevAttacker, int iGib );
 
 	BOOL m_fRegisteredSound;// whether or not this grenade has issued its DANGER sound to the world sound list yet.
+};
+
+// The mod's cluster bomb (cluster_bomb.cpp; the exports name the class). Declared here because the hand
+// grenade throws it; its other members are added here with cluster_bomb.cpp.
+class CClusterBomb : public CGrenade
+{
+public:
+	static CClusterBomb *ShootTimed( edict_t *pOwner, const Vector &vecStart, const Vector &vecVelocity, float time );	// name ours (0x10027d00)
+	static CClusterBomb *ShootMirv( edict_t *pOwner, const Vector &vecStart, const Vector &vecVelocity, float time );	// name ours (0x10027e70): ShootTimed, then pev->weapons = 3
+
+	void EXPORT ClusterDetonate( void );
+	void EXPORT ClusterExplodeTouch( CBaseEntity *pOther );
+	void EXPORT ClusterBounceTouch( CBaseEntity *pOther );
+	void EXPORT ClusterHybridThink( void );
+	void EXPORT ClusterHybridTouch( CBaseEntity *pOther );
+	void EXPORT ClusterPreDetonate( void );
 };
 
 
@@ -208,12 +228,18 @@ typedef	enum
 	BULLET_PLAYER_9MM, // glock
 	BULLET_PLAYER_MP5, // mp5
 	BULLET_PLAYER_357, // python
+	BULLET_PLAYER_SNIPER, // sniper box (name ours)
 	BULLET_PLAYER_BUCKSHOT, // shotgun
 	BULLET_PLAYER_CROWBAR, // crowbar swipe
+	BULLET_PLAYER_SOFTGUN, // softgun: 16 damage, DMG_RADIATION (name ours)
 
 	BULLET_MONSTER_9MM,
 	BULLET_MONSTER_MP5,
+	BULLET_MONSTER_357, // otis (name ours)
 	BULLET_MONSTER_12MM,
+	BULLET_MONSTER_BUCKSHOT, // hgrunt shotgun (name ours)
+	BULLET_MONSTER_TRACER1, // TE_USERTRACER tracers (name ours)
+	BULLET_MONSTER_TRACER2, // TE_USERTRACER tracers: NA apache (name ours)
 } Bullet;
 
 
@@ -346,7 +372,7 @@ public:
 	virtual BOOL PlayEmptySound( void );
 	virtual void ResetEmptySound( void );
 
-	virtual void SendWeaponAnim( int iAnim, int skiplocal = 1, int body = 0 );  // skiplocal is 1 if client is predicting weapon animations
+	virtual void SendWeaponAnim( int iAnim, int skiplocal = 0, int body = 0 );  // skiplocal is 1 if client is predicting weapon animations
 
 	virtual BOOL CanDeploy( void );
 	virtual BOOL IsUseable( void );
@@ -404,6 +430,7 @@ public:
 
 extern DLL_GLOBAL	short	g_sModelIndexLaser;// holds the index for the laser beam
 extern DLL_GLOBAL	const char *g_pModelNameLaser;
+Vector UTIL_SpreadVector( const Vector &vecSpread );	// weapons.cpp, name ours
 
 extern DLL_GLOBAL	short	g_sModelIndexLaserDot;// holds the index for the laser beam dot
 extern DLL_GLOBAL	short	g_sModelIndexFireball;// holds the index for the fireball
@@ -412,6 +439,13 @@ extern DLL_GLOBAL	short	g_sModelIndexWExplosion;// holds the index for the under
 extern DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 extern DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for blood drops
 extern DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for blood spray (bigger)
+extern DLL_GLOBAL	short	g_sModelIndexFireExplosion;// sprites/fexplo.spr (names ours from here)
+extern DLL_GLOBAL	short	g_sModelIndexSmokePuff;// sprites/smoke.spr
+extern DLL_GLOBAL	short	g_sModelIndexLightning;// sprites/lgtning.spr
+extern DLL_GLOBAL	short	g_sModelIndexPlayerFlame;// sprites/playerflame.spr
+extern DLL_GLOBAL	int	g_iBloodSprayEvent;// events/bloodspray.sc (name ours; W_Precache sets it)
+extern DLL_GLOBAL	int		g_iBlastSphereEvent;// events/blastsphere.sc
+extern DLL_GLOBAL	int		g_iElectricEvent;// events/electric.sc
 
 extern void ClearMultiDamage(void);
 extern void ApplyMultiDamage(entvars_t* pevInflictor, entvars_t* pevAttacker );
@@ -421,6 +455,7 @@ extern void DecalGunshot( TraceResult *pTrace, int iBulletType );
 extern void SpawnBlood(Vector vecSpot, int bloodColor, float flDamage);
 extern int DamageDecal( CBaseEntity *pEntity, int bitsDamageType );
 extern void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType );
+extern void RadiusDamageNoTrace( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType );	// name ours
 
 typedef struct 
 {
