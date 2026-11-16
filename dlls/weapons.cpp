@@ -565,12 +565,14 @@ void CBasePlayerItem::FallThink ( void )
 //=========================================================
 void CBasePlayerItem::Materialize( void )
 {
-	if ( pev->effects & EF_NODRAW )
+	if ( pev->rendermode != kRenderNormal )
 	{
-		// changing from invisible state to visible.
+		// changing from the respawn shell to solid.
 		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "items/suitchargeok1.wav", 1, ATTN_NORM, 0, 150 );
-		pev->effects &= ~EF_NODRAW;
 		pev->effects |= EF_MUZZLEFLASH;
+		if ( pev->rendermode == kRenderTransColor )
+			pev->renderfx = kRenderFxNone;	// the shell Respawn gave it
+		pev->rendermode = kRenderNormal;
 	}
 
 	pev->solid = SOLID_TRIGGER;
@@ -623,15 +625,28 @@ CBaseEntity* CBasePlayerItem::Respawn( void )
 {
 	// make a copy of this weapon that is invisible and inaccessible to players (no touch function). The weapon spawn/respawn code
 	// will decide when to make the weapon visible and touchable.
-	CBaseEntity *pNewWeapon = CBaseEntity::Create( (char *)STRING( pev->classname ), g_pGameRules->VecWeaponRespawnSpot( this ), pev->angles, pev->owner );
+	// (another weapon when ssh_rndweapons is set: the game rules choose)
+	char *pszClassname = g_pGameRules->GetRespawnWeapon( this );
+	CBaseEntity *pNewWeapon = CBaseEntity::Create( pszClassname, g_pGameRules->VecWeaponRespawnSpot( this ), pev->angles, pev->owner );
 
 	if ( pNewWeapon )
 	{
-		pNewWeapon->pev->effects |= EF_NODRAW;// invisible for now
+		// a faint grey glow shell until it materializes (a shell of its own turns translucent)
+		if ( pNewWeapon->pev->renderfx != kRenderFxGlowShell )
+		{
+			pNewWeapon->pev->renderfx = kRenderFxGlowShell;
+			pNewWeapon->pev->rendercolor = Vector( 192, 192, 192 );
+			pNewWeapon->pev->rendermode = kRenderTransColor;
+		}
+		else
+		{
+			pNewWeapon->pev->rendermode = kRenderTransTexture;
+		}
+		pNewWeapon->pev->renderamt = 1;
 		pNewWeapon->SetTouch( NULL );// no touch
 		pNewWeapon->SetThink( AttemptToMaterialize );
 
-		DROP_TO_FLOOR ( ENT(pev) );
+		DROP_TO_FLOOR ( ENT(pNewWeapon->pev) );
 
 		// not a typo! We want to know when the weapon the player just picked up should respawn! This new entity we created is the replacement,
 		// but when it should respawn is based on conditions belonging to the weapon that was taken.
@@ -704,7 +719,12 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		m_fInReload = FALSE;
 	}
 
-	if ((m_pPlayer->pev->button & IN_ATTACK2) && CanAttack( m_flNextSecondaryAttack, gpGlobals->time, UseDecrement() ) )
+	if ((m_pPlayer->pev->button & IN_ALT1) && CanAttack( m_flNextWeaponSpecial, gpGlobals->time, UseDecrement() ) )
+	{
+		// +attack3
+		WeaponSpecial();
+	}
+	else if ((m_pPlayer->pev->button & IN_ATTACK2) && CanAttack( m_flNextSecondaryAttack, gpGlobals->time, UseDecrement() ) )
 	{
 		if ( pszAmmo2() && !m_pPlayer->m_rgAmmo[SecondaryAmmoIndex()] )
 		{
@@ -713,7 +733,7 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 
 		m_pPlayer->TabulateAmmo();
 		SecondaryAttack();
-		m_pPlayer->pev->button &= ~IN_ATTACK2;
+		// (the SDK cleared IN_ATTACK2 here)
 	}
 	else if ((m_pPlayer->pev->button & IN_ATTACK) && CanAttack( m_flNextPrimaryAttack, gpGlobals->time, UseDecrement() ) )
 	{
@@ -1044,6 +1064,10 @@ BOOL CBasePlayerWeapon :: DefaultDeploy( char *szViewModel, char *szWeaponModel,
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.0;
 
+	// the player takes on the weapon's glow
+	m_pPlayer->pev->renderfx = pev->renderfx;
+	m_pPlayer->pev->rendercolor = pev->rendercolor;
+
 	return TRUE;
 }
 
@@ -1061,7 +1085,7 @@ BOOL CBasePlayerWeapon :: DefaultReload( int iClipSize, int iAnim, float fDelay,
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + fDelay;
 
 	//!!UNDONE -- reload sound goes here !!!
-	SendWeaponAnim( iAnim, UseDecrement() ? 1 : 0 );
+	SendWeaponAnim( iAnim, UseDecrement() ? 1 : 0, body );
 
 	m_fInReload = TRUE;
 
@@ -1118,7 +1142,18 @@ void CBasePlayerAmmo::Spawn( void )
 
 CBaseEntity* CBasePlayerAmmo::Respawn( void )
 {
-	pev->effects |= EF_NODRAW;
+	// a faint grey glow shell until it materializes, as weapons
+	if ( pev->renderfx != kRenderFxGlowShell )
+	{
+		pev->renderfx = kRenderFxGlowShell;
+		pev->rendercolor = Vector( 192, 192, 192 );
+		pev->rendermode = kRenderTransColor;
+	}
+	else
+	{
+		pev->rendermode = kRenderTransTexture;
+	}
+	pev->renderamt = 1;
 	SetTouch( NULL );
 
 	UTIL_SetOrigin( pev, g_pGameRules->VecAmmoRespawnSpot( this ) );// move to wherever I'm supposed to repawn.
@@ -1131,12 +1166,14 @@ CBaseEntity* CBasePlayerAmmo::Respawn( void )
 
 void CBasePlayerAmmo::Materialize( void )
 {
-	if ( pev->effects & EF_NODRAW )
+	if ( pev->rendermode != kRenderNormal )
 	{
-		// changing from invisible state to visible.
+		// changing from the respawn shell to solid.
 		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "items/suitchargeok1.wav", 1, ATTN_NORM, 0, 150 );
-		pev->effects &= ~EF_NODRAW;
 		pev->effects |= EF_MUZZLEFLASH;
+		if ( pev->rendermode == kRenderTransColor )
+			pev->renderfx = kRenderFxNone;
+		pev->rendermode = kRenderNormal;
 	}
 
 	SetTouch( DefaultTouch );
