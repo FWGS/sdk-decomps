@@ -287,7 +287,7 @@ void CRocket :: FlyThink( void  )
 	if (pev->waterlevel == 3)
 	{
 		// go slow underwater
-		pev->velocity = gpGlobals->v_forward * ( flSpeed >= 300 ? ( flSpeed = 300 ) : flSpeed );	// sic: keeps the cap
+		pev->velocity = gpGlobals->v_forward * ( flSpeed < 300 ? flSpeed : ( flSpeed = 300 ) );	// near miss: retail puts the first arm after the function body
 		UTIL_BubbleTrail( pev->origin - pev->velocity * 0.1, pev->origin, 4 );
 	}
 	else
@@ -343,8 +343,7 @@ void CRocket :: Steer( void )
 	if ( flSpeed < 256 )
 		flSpeed = 256;
 
-	Vector vecTarget = ( m_vecEnemyLKP - pev->origin ).Normalize();
-	pev->velocity = pev->velocity * 0.8 + vecTarget * flSpeed;
+	pev->velocity = pev->velocity * 0.8 + ( m_vecEnemyLKP - pev->origin ).Normalize() * flSpeed;
 
 	flSpeed = pev->velocity.Length();
 	if (pev->waterlevel == 3)
@@ -365,8 +364,8 @@ void CRocket :: Steer( void )
 
 	if (flSpeed > 200)
 	{
-		flSpeed = max( 1000, flSpeed );
-		CSoundEnt::InsertSound ( bits_SOUND_DANGER, pev->origin + pev->velocity * 0.5, flSpeed, 0.1 );
+		float flVolume = max( 1000, flSpeed );
+		CSoundEnt::InsertSound ( bits_SOUND_DANGER, pev->origin + pev->velocity * 0.5, flVolume, 0.1 );
 	}
 }
 
