@@ -308,7 +308,10 @@ void CGib :: SpawnRandomGibs( entvars_t *pevVictim, int cGibs, int human )
 				{
 					// 0: plain, 1: floats, 2: sprays blood
 					pGib->pev->iuser1 = RANDOM_LONG( 0, 2 );
-					pGib->pev->nextthink = gpGlobals->time + ( pGib->pev->iuser1 ? 0.1 : 4 );
+					if ( pGib->pev->iuser1 )
+						pGib->pev->nextthink = gpGlobals->time + 0.1;
+					else
+						pGib->pev->nextthink = gpGlobals->time + 4;
 
 					if ( pGib->pev->iuser1 == 2 )
 					{
@@ -878,11 +881,9 @@ void CGib :: WaitTillLand ( void )
 		// If you bleed, you stink!
 		if ( m_bloodColor != DONT_BLEED )
 		{
-			Vector	vecSpot;
-			TraceResult	tr;
-
 			// leave a blood stain under the gib
-			vecSpot = pev->origin + Vector ( 0 , 0 , 8 );//move up a bit, and trace down.
+			Vector vecSpot = pev->origin + Vector ( 0 , 0 , 8 );//move up a bit, and trace down.
+			TraceResult tr;
 			UTIL_TraceLine ( vecSpot, vecSpot + Vector ( 0, 0, -24 ),  ignore_monsters, ENT(pev), & tr);
 
 			UTIL_BloodDecalTrace( &tr, m_bloodColor );
@@ -927,8 +928,8 @@ void CGib :: WaitTillLand ( void )
 		}
 		else if ( pev->iuser1 )
 		{
-			// a gib spraying blood stops in water
-			if ( ( pev->flags & FL_INWATER ) || m_bloodColor != BLOOD_COLOR_RED || UTIL_PointContents( pev->origin ) == CONTENTS_WATER )
+			// a gib spraying blood stops on the ground or in water
+			if ( ( pev->flags & FL_ONGROUND ) || m_bloodColor != BLOOD_COLOR_RED || UTIL_PointContents( pev->origin ) == CONTENTS_WATER )
 			{
 				pev->gravity = 1;
 				pev->iuser1 = 0;
@@ -958,6 +959,7 @@ BOOL CGib :: CanBeRepulsed( bool fForce )
 //
 void CGib :: BounceGibTouch ( CBaseEntity *pOther )
 {
+	Vector	vecSpot;
 	TraceResult	tr;
 	
 	//if ( RANDOM_LONG(0,1) )
@@ -979,14 +981,15 @@ void CGib :: BounceGibTouch ( CBaseEntity *pOther )
 
 			if ( !FNullEnt( pentPlayer ) )
 			{
-				UTIL_TraceLine ( pev->origin - pev->velocity, pev->origin + pev->velocity * 32,  ignore_monsters, ENT(pev), & tr);
+				vecSpot = pev->origin - pev->velocity;
+				UTIL_TraceLine ( vecSpot, pev->origin + pev->velocity * 32,  ignore_monsters, ENT(pev), & tr);
 
 				UTIL_BloodDecalTrace( &tr, m_bloodColor );
 
 				pev->pain_finished = gpGlobals->time + 0.5;
 
 				if ( pev->iuser1 == 2 )
-					SpawnBlood( pev->origin, m_bloodColor, min( pev->velocity.Length(), 100 ) );
+					SpawnBlood( pev->origin, m_bloodColor, min( 100, pev->velocity.Length() ) );
 			}
 		}
 	}
@@ -1013,7 +1016,7 @@ void CGib :: StickyGibTouch ( CBaseEntity *pOther )
 
 	UTIL_BloodDecalTrace( &tr, m_bloodColor );
 
-	SpawnBlood( pev->origin, m_bloodColor, min( pev->velocity.Length(), 100 ) );
+	SpawnBlood( pev->origin, m_bloodColor, min( 100, pev->velocity.Length() ) );
 
 	if ( !( pOther->pev->flags & FL_WORLDBRUSH ) && !FClassnameIs( pOther->pev, "worldspawn" ) )
 		return;
