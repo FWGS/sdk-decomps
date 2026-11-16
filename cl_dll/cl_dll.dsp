@@ -236,6 +236,10 @@ SOURCE=.\demo.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\effects.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\entity.cpp
 # End Source File
 # Begin Source File
