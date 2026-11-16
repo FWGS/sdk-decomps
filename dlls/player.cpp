@@ -1664,6 +1664,97 @@ void CBasePlayer::AddPointsToTeam( int score, BOOL bAllowNegativeScore )
 
 void CBasePlayer::PreThink(void)
 {
+	// target ID: tell the client about the monster in the crosshair
+	Vector vecAngles = pev->v_angle + pev->punchangle;
+	UTIL_MakeVectors( vecAngles );
+
+	TraceResult tr;
+	Vector vecSrc = GetGunPosition() - gpGlobals->v_up * 2;
+	Vector vecAiming = gpGlobals->v_forward;
+
+	UTIL_TraceLine( vecSrc, vecSrc + vecAiming * 4096, dont_ignore_monsters, ignore_glass, ENT( pev ), &tr );
+
+	CBaseEntity *pEntity = CBaseEntity::Instance( tr.pHit );
+	CBaseMonster *pMonster;
+
+	if ( pEntity && (pMonster = pEntity->MyMonsterPointer()) != NULL && pMonster->GetHudName() )
+	{
+		if ( pEntity != m_pIdentEntity )
+		{
+			// a new target: send everything
+			int iFlags = 1;			// neutral
+			if ( pMonster->Classify() == CLASS_HUMAN_PASSIVE )
+				iFlags = 2;			// a scientist
+			else
+			{
+				int iRelationship = pMonster->IRelationship( this );
+				if ( iRelationship == R_AL )
+					iFlags = 0;		// a friend
+				else if ( iRelationship >= R_DL )
+					iFlags = 3;		// an enemy
+			}
+
+			bool fArmor = false;
+			if ( pMonster->pev->armorvalue == 0 && pMonster->pev->armortype == 0 )
+			{
+				m_iIdentArmorType = m_iIdentArmor = 0;
+			}
+			else
+			{
+				fArmor = true;
+				if ( pMonster->IsPlayer() && pMonster->pev->armorvalue <= 100 )
+					m_iIdentArmorType = 1;	// a suit's battery charge
+				else
+					m_iIdentArmorType = 2;	// an energy shield
+				iFlags |= m_iIdentArmorType << 2;
+			}
+
+			MESSAGE_BEGIN( MSG_ONE, gmsgIdentUpdate, NULL, pev );
+				WRITE_BYTE( iFlags );
+				WRITE_SHORT( m_iIdentHealth = pMonster->pev->health );
+				if ( fArmor )
+					WRITE_SHORT( m_iIdentArmor = pMonster->pev->armorvalue );
+				WRITE_LONG( m_iIdentPower = pMonster->GetBattlePower() );
+				WRITE_STRING( pMonster->GetHudName() );
+			MESSAGE_END();
+
+			m_pIdentEntity = pEntity;
+		}
+		else
+		{
+			// the same target: send what changed
+			int iFlags = 0;
+			if ( m_iIdentHealth != pMonster->pev->health )
+				iFlags = 0x10;
+			if ( m_iIdentArmorType && m_iIdentArmor != pMonster->pev->armorvalue )
+				iFlags |= 0x20;
+			if ( pMonster->GetBattlePower() != m_iIdentPower )
+				iFlags |= 0x40;
+
+			if ( iFlags )
+			{
+				MESSAGE_BEGIN( MSG_ONE, gmsgIdentUpdate, NULL, pev );
+					WRITE_BYTE( iFlags );
+					if ( iFlags & 0x10 )
+						WRITE_SHORT( m_iIdentHealth = pMonster->pev->health );
+					if ( iFlags & 0x20 )
+						WRITE_SHORT( m_iIdentArmor = pMonster->pev->armorvalue );
+					if ( iFlags & 0x40 )
+						WRITE_LONG( m_iIdentPower = pMonster->GetBattlePower() );
+				MESSAGE_END();
+			}
+		}
+	}
+	else if ( m_pIdentEntity )
+	{
+		// nothing there any more
+		MESSAGE_BEGIN( MSG_ONE, gmsgIdentUpdate, NULL, pev );
+			WRITE_BYTE( 0xFF );
+		MESSAGE_END();
+
+		m_pIdentEntity = NULL;
+	}
+
 	int buttonsChanged = (m_afButtonLast ^ pev->button);	// These buttons have changed this frame
 	
 	// Debounced button codes for pressed/released
