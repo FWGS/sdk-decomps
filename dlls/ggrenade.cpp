@@ -43,9 +43,6 @@ LINK_ENTITY_TO_CLASS( grenade, CGrenade );
 #define SF_GRENADE_KEEPOWNER	0x0100	// pev->owner is kept through the damage
 #define SF_GRENADE_NOEFFECTS	0x0200	// damage only, removed right away
 
-// fire.cpp: flames around a spot (name ours)
-extern void FireSpread( const Vector &vecOrigin, float flDamage, entvars_t *pevOwner, edict_t *pentIgnore );
-
 //
 // Grenade Explode
 //
