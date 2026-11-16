@@ -448,6 +448,10 @@ SOURCE=.\roach.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\rocket.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\rpg.cpp
 # End Source File
 # Begin Source File

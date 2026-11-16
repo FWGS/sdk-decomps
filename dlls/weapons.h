@@ -215,7 +215,7 @@ public:
 #define AMMO_M203BOX_GIVE		4
 #define AMMO_BUCKSHOTBOX_GIVE	12
 #define AMMO_CROSSBOWCLIP_GIVE	10
-#define AMMO_RPGCLIP_GIVE		RPG_MAX_CLIP
+#define AMMO_RPGCLIP_GIVE		5
 #define AMMO_URANIUMBOX_GIVE	20
 #define AMMO_SNARKBOX_GIVE		5
 
@@ -437,6 +437,10 @@ extern DLL_GLOBAL	short	g_sModelIndexWExplosion;// holds the index for the under
 extern DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 extern DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for blood drops
 extern DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for blood spray (bigger)
+extern DLL_GLOBAL	short	g_sModelIndexFireExplosion;// sprites/fexplo.spr (names ours from here)
+extern DLL_GLOBAL	short	g_sModelIndexSmokePuff;// sprites/smoke.spr
+extern DLL_GLOBAL	short	g_sModelIndexLightning;// sprites/lgtning.spr
+extern DLL_GLOBAL	short	g_sModelIndexPlayerFlame;// sprites/playerflame.spr
 
 extern void ClearMultiDamage(void);
 extern void ApplyMultiDamage(entvars_t* pevInflictor, entvars_t* pevAttacker );
@@ -783,7 +787,8 @@ public:
 	void Holster( int skiplocal = 0 );
 
 	void PrimaryAttack( void );
-	void SecondaryAttack( void );
+	void SecondaryAttack( void );	// the guidance (m_mode)
+	void WeaponSpecial( void );		// the warhead (m_ammo)
 	void WeaponIdle( void );
 
 	void UpdateSpot( void );
@@ -809,21 +814,57 @@ private:
 
 };
 
-class CRpgRocket : public CGrenade
+// Scientist Slaughterhouse's rocket (rocket.cpp): the RPG's rocket and the mod's missiles derive from it.
+// It flies at m_vecEnemyLKP (Steer) as its think function picks it: FlyThink straight on, FollowThink at
+// laser spots, SeekThink at the hottest target (HeatSignature) in m_flFieldOfView, TargetThink at m_hEnemy
+// once m_flSeekTime has passed. A sprite model (".spr") animates and sets SF_ROCKET_SPRITE.
+#define SF_ROCKET_SPRITE	0x800	// name ours
+
+class CRocket : public CGrenade
+{
+public:
+	int		Save( CSave &save );
+	int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	void Spawn( void );
+	void Precache( void );
+	int HeatSignature( void ) { return 3; }
+	const char *GetKillDesc( void ) { if ( m_iszKillDesc ) return STRING( m_iszKillDesc ); return "a rocket"; }
+	void Killed( entvars_t *pevAttacker, int iGib );
+
+	static CRocket *CreateRocket( const Vector &vecOrigin, const Vector &vecAngles, edict_t *pOwner, const Vector &vecColor, int iszModel );	// names ours
+	static CRocket *ShootArc( edict_t *pOwner, Vector vecOrigin, Vector vecVelocity, const Vector &vecColor );	// tossed, faces its velocity
+
+	void EXPORT RocketTouch( CBaseEntity *pOther );
+	void EXPORT FollowThink( void );
+	void EXPORT SeekThink( void );
+	void EXPORT TargetThink( void );
+	void EXPORT FlyThink( void );
+	void EXPORT ArcThink( void );
+
+	virtual void IgniteTrail( const Vector &vecColor );	// names ours: the light, sound and smoke trail
+	virtual void Steer( void );							// turns the velocity towards m_vecEnemyLKP
+
+	float	m_flSeekTime;
+	Vector	m_vecBSphereColor;	// a sprite rocket's colour (its rendercolor goes to 0)
+	float	m_lastTime;
+	float	m_maxFrame;
+};
+
+class CRpgRocket : public CRocket
 {
 public:
 	int		Save( CSave &save );
 	int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
 	void Spawn( void );
-	void Precache( void );
-	void EXPORT FollowThink( void );
-	void EXPORT IgniteThink( void );
-	void EXPORT RocketTouch( CBaseEntity *pOther );
-	static CRpgRocket *CreateRpgRocket( Vector vecOrigin, Vector vecAngles, CBaseEntity *pOwner, CRpg *pLauncher );
+	void Killed( entvars_t *pevAttacker, int iGib );
+	void IgniteTrail( const Vector &vecColor );
+	void EXPORT RpgTouch( CBaseEntity *pOther );
+	void EXPORT CameraThink( void );	// the remote controlled rocket
+	static CRpgRocket *CreateRpgRocket( Vector vecOrigin, Vector vecAngles, edict_t *pOwner, CRpg *pLauncher, const Vector &vecColor );
 
-	int m_iTrail;
-	float m_flIgniteTime;
 	CRpg *m_pLauncher;// pointer back to the launcher that fired me. 
 };
 
