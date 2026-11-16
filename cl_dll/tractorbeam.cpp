@@ -220,15 +220,13 @@ void CTractorBeam::Render( void )
 		if ( pEnt->curstate.playerclass && pEnt->curstate.owner )
 		{
 			cl_entity_t *pOwner = gEngfuncs.GetEntityByIndex( pEnt->curstate.owner );
-			float vecEnd[3];
-			VectorCopy( origin, vecEnd );
+			Vector vecEnd( origin );
 			VectorCopy( pOwner->attachment[0], origin );
 
-			Vector vecDir( vecEnd[0] - origin[0], vecEnd[1] - origin[1], vecEnd[2] - origin[2] );
+			Vector vecDir = vecEnd - Vector( origin );
 			flLength = vecDir.Length();
-			Vector vecNorm = vecDir.Normalize();
 
-			VectorAngles( vecNorm, angles );
+			VectorAngles( vecDir.Normalize(), angles );
 			angles[2] = pEnt->angles.z;
 		}
 
