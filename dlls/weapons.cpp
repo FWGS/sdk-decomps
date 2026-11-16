@@ -46,7 +46,13 @@ DLL_GLOBAL	short	g_sModelIndexWExplosion;// holds the index for the underwater e
 DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for the initial blood
 DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for splattered blood
-DLL_GLOBAL	int	g_iBloodSprayEvent;// events/bloodspray.sc (name ours; W_Precache sets it)
+DLL_GLOBAL	short	g_sModelIndexFireExplosion;// sprites/fexplo.spr (names ours from here)
+DLL_GLOBAL	short	g_sModelIndexSmokePuff;// sprites/smoke.spr
+DLL_GLOBAL	short	g_sModelIndexLightning;// sprites/lgtning.spr
+DLL_GLOBAL	short	g_sModelIndexPlayerFlame;// sprites/playerflame.spr
+DLL_GLOBAL	int		g_iBloodSprayEvent;// events/bloodspray.sc
+DLL_GLOBAL	int		g_iBlastSphereEvent;// events/blastsphere.sc
+DLL_GLOBAL	int		g_iElectricEvent;// events/electric.sc
 
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
 AmmoInfo CBasePlayerItem::AmmoInfoArray[MAX_AMMO_SLOTS];
@@ -315,6 +321,7 @@ void W_Precache(void)
 	// common world objects
 	UTIL_PrecacheOther( "item_suit" );
 	UTIL_PrecacheOther( "item_battery" );
+	UTIL_PrecacheOther( "item_healthkit" );
 	UTIL_PrecacheOther( "item_antidote" );
 	UTIL_PrecacheOther( "item_security" );
 	UTIL_PrecacheOther( "item_longjump" );
@@ -385,6 +392,26 @@ void W_Precache(void)
 	UTIL_PrecacheOtherWeapon( "weapon_hornetgun" );
 #endif
 
+	// the mod's weapons
+	UTIL_PrecacheOtherWeapon( "weapon_repulsor" );
+	UTIL_PrecacheOtherWeapon( "weapon_reflector" );
+	UTIL_PrecacheOtherWeapon( "weapon_fireball" );
+	UTIL_PrecacheOtherWeapon( "weapon_flamethrower" );
+	UTIL_PrecacheOtherWeapon( "weapon_laserhandgun" );
+	UTIL_PrecacheOtherWeapon( "weapon_vortexlauncher" );
+	UTIL_PrecacheOtherWeapon( "weapon_softgun" );
+	UTIL_PrecacheOtherWeapon( "weapon_teslacoil" );
+	UTIL_PrecacheOtherWeapon( "weapon_freezethrower" );
+	UTIL_PrecacheOtherWeapon( "weapon_displacer" );
+	UTIL_PrecacheOtherWeapon( "weapon_sniper" );
+	UTIL_PrecacheOtherWeapon( "weapon_sword" );
+
+	UTIL_PrecacheOther( "ammo_fireballclip" );
+	UTIL_PrecacheOther( "ammo_laserclip" );
+	UTIL_PrecacheOther( "ammo_egonclip" );
+	UTIL_PrecacheOther( "ammo_acidtank" );
+	UTIL_PrecacheOther( "ammo_vortexclip" );
+	UTIL_PrecacheOther( "ammo_sniperclip" );
 
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 	if ( g_pGameRules->IsDeathmatch() )
@@ -393,15 +420,33 @@ void W_Precache(void)
 	}
 #endif
 
+	UTIL_PrecacheOther( "flame" );
+
 	g_sModelIndexFireball = PRECACHE_MODEL ("sprites/zerogxplode.spr");// fireball
+	g_sModelIndexFireExplosion = PRECACHE_MODEL ("sprites/fexplo.spr");
 	g_sModelIndexWExplosion = PRECACHE_MODEL ("sprites/WXplo1.spr");// underwater fireball
 	g_sModelIndexSmoke = PRECACHE_MODEL ("sprites/steam1.spr");// smoke
+	g_sModelIndexSmokePuff = PRECACHE_MODEL ("sprites/smoke.spr");
 	g_sModelIndexBubbles = PRECACHE_MODEL ("sprites/bubble.spr");//bubbles
 	g_sModelIndexBloodSpray = PRECACHE_MODEL ("sprites/bloodspray.spr"); // initial blood
 	g_sModelIndexBloodDrop = PRECACHE_MODEL ("sprites/blood.spr"); // splattered blood 
 
 	g_sModelIndexLaser = PRECACHE_MODEL( (char *)g_pModelNameLaser );
 	g_sModelIndexLaserDot = PRECACHE_MODEL("sprites/laserdot.spr");
+	g_sModelIndexLightning = PRECACHE_MODEL("sprites/lgtning.spr");
+	g_sModelIndexPlayerFlame = PRECACHE_MODEL("sprites/playerflame.spr");
+	PRECACHE_MODEL("sprites/xblood.spr");
+
+	g_iBloodSprayEvent = PRECACHE_EVENT( 1, "events/bloodspray.sc" );
+	g_iBlastSphereEvent = PRECACHE_EVENT( 1, "events/blastsphere.sc" );
+
+	PRECACHE_SOUND("buttons/spark1.wav");
+	PRECACHE_SOUND("buttons/spark2.wav");
+	PRECACHE_SOUND("buttons/spark3.wav");
+	PRECACHE_SOUND("buttons/spark4.wav");
+	PRECACHE_SOUND("buttons/spark5.wav");
+	PRECACHE_SOUND("buttons/spark6.wav");
+	g_iElectricEvent = PRECACHE_EVENT( 1, "events/electric.sc" );
 
 
 	// used by explosions
@@ -520,12 +565,14 @@ void CBasePlayerItem::FallThink ( void )
 //=========================================================
 void CBasePlayerItem::Materialize( void )
 {
-	if ( pev->effects & EF_NODRAW )
+	if ( pev->rendermode != kRenderNormal )
 	{
-		// changing from invisible state to visible.
+		// changing from the respawn shell to solid.
 		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "items/suitchargeok1.wav", 1, ATTN_NORM, 0, 150 );
-		pev->effects &= ~EF_NODRAW;
 		pev->effects |= EF_MUZZLEFLASH;
+		if ( pev->rendermode == kRenderTransColor )
+			pev->renderfx = kRenderFxNone;	// the shell Respawn gave it
+		pev->rendermode = kRenderNormal;
 	}
 
 	pev->solid = SOLID_TRIGGER;
@@ -578,15 +625,28 @@ CBaseEntity* CBasePlayerItem::Respawn( void )
 {
 	// make a copy of this weapon that is invisible and inaccessible to players (no touch function). The weapon spawn/respawn code
 	// will decide when to make the weapon visible and touchable.
-	CBaseEntity *pNewWeapon = CBaseEntity::Create( (char *)STRING( pev->classname ), g_pGameRules->VecWeaponRespawnSpot( this ), pev->angles, pev->owner );
+	// (another weapon when ssh_rndweapons is set: the game rules choose)
+	char *pszClassname = g_pGameRules->GetRespawnWeapon( this );
+	CBaseEntity *pNewWeapon = CBaseEntity::Create( pszClassname, g_pGameRules->VecWeaponRespawnSpot( this ), pev->angles, pev->owner );
 
 	if ( pNewWeapon )
 	{
-		pNewWeapon->pev->effects |= EF_NODRAW;// invisible for now
+		// a faint grey glow shell until it materializes (a shell of its own turns translucent)
+		if ( pNewWeapon->pev->renderfx != kRenderFxGlowShell )
+		{
+			pNewWeapon->pev->renderfx = kRenderFxGlowShell;
+			pNewWeapon->pev->rendercolor = Vector( 192, 192, 192 );
+			pNewWeapon->pev->rendermode = kRenderTransColor;
+		}
+		else
+		{
+			pNewWeapon->pev->rendermode = kRenderTransTexture;
+		}
+		pNewWeapon->pev->renderamt = 1;
 		pNewWeapon->SetTouch( NULL );// no touch
 		pNewWeapon->SetThink( AttemptToMaterialize );
 
-		DROP_TO_FLOOR ( ENT(pev) );
+		DROP_TO_FLOOR ( ENT(pNewWeapon->pev) );
 
 		// not a typo! We want to know when the weapon the player just picked up should respawn! This new entity we created is the replacement,
 		// but when it should respawn is based on conditions belonging to the weapon that was taken.
@@ -659,7 +719,12 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		m_fInReload = FALSE;
 	}
 
-	if ((m_pPlayer->pev->button & IN_ATTACK2) && CanAttack( m_flNextSecondaryAttack, gpGlobals->time, UseDecrement() ) )
+	if ((m_pPlayer->pev->button & IN_ALT1) && CanAttack( m_flNextWeaponSpecial, gpGlobals->time, UseDecrement() ) )
+	{
+		// +attack3
+		WeaponSpecial();
+	}
+	else if ((m_pPlayer->pev->button & IN_ATTACK2) && CanAttack( m_flNextSecondaryAttack, gpGlobals->time, UseDecrement() ) )
 	{
 		if ( pszAmmo2() && !m_pPlayer->m_rgAmmo[SecondaryAmmoIndex()] )
 		{
@@ -668,7 +733,7 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 
 		m_pPlayer->TabulateAmmo();
 		SecondaryAttack();
-		m_pPlayer->pev->button &= ~IN_ATTACK2;
+		// (the SDK cleared IN_ATTACK2 here)
 	}
 	else if ((m_pPlayer->pev->button & IN_ATTACK) && CanAttack( m_flNextPrimaryAttack, gpGlobals->time, UseDecrement() ) )
 	{
@@ -999,6 +1064,10 @@ BOOL CBasePlayerWeapon :: DefaultDeploy( char *szViewModel, char *szWeaponModel,
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.5;
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.0;
 
+	// the player takes on the weapon's glow
+	m_pPlayer->pev->renderfx = pev->renderfx;
+	m_pPlayer->pev->rendercolor = pev->rendercolor;
+
 	return TRUE;
 }
 
@@ -1016,7 +1085,7 @@ BOOL CBasePlayerWeapon :: DefaultReload( int iClipSize, int iAnim, float fDelay,
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + fDelay;
 
 	//!!UNDONE -- reload sound goes here !!!
-	SendWeaponAnim( iAnim, UseDecrement() ? 1 : 0 );
+	SendWeaponAnim( iAnim, UseDecrement() ? 1 : 0, body );
 
 	m_fInReload = TRUE;
 
@@ -1073,7 +1142,18 @@ void CBasePlayerAmmo::Spawn( void )
 
 CBaseEntity* CBasePlayerAmmo::Respawn( void )
 {
-	pev->effects |= EF_NODRAW;
+	// a faint grey glow shell until it materializes, as weapons
+	if ( pev->renderfx != kRenderFxGlowShell )
+	{
+		pev->renderfx = kRenderFxGlowShell;
+		pev->rendercolor = Vector( 192, 192, 192 );
+		pev->rendermode = kRenderTransColor;
+	}
+	else
+	{
+		pev->rendermode = kRenderTransTexture;
+	}
+	pev->renderamt = 1;
 	SetTouch( NULL );
 
 	UTIL_SetOrigin( pev, g_pGameRules->VecAmmoRespawnSpot( this ) );// move to wherever I'm supposed to repawn.
@@ -1086,12 +1166,14 @@ CBaseEntity* CBasePlayerAmmo::Respawn( void )
 
 void CBasePlayerAmmo::Materialize( void )
 {
-	if ( pev->effects & EF_NODRAW )
+	if ( pev->rendermode != kRenderNormal )
 	{
-		// changing from invisible state to visible.
+		// changing from the respawn shell to solid.
 		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "items/suitchargeok1.wav", 1, ATTN_NORM, 0, 150 );
-		pev->effects &= ~EF_NODRAW;
 		pev->effects |= EF_MUZZLEFLASH;
+		if ( pev->rendermode == kRenderTransColor )
+			pev->renderfx = kRenderFxNone;
+		pev->rendermode = kRenderNormal;
 	}
 
 	SetTouch( DefaultTouch );
@@ -1538,7 +1620,6 @@ IMPLEMENT_SAVERESTORE( CRpg, CBasePlayerWeapon );
 
 TYPEDESCRIPTION	CRpgRocket::m_SaveData[] = 
 {
-	DEFINE_FIELD( CRpgRocket, m_flIgniteTime, FIELD_TIME ),
 	DEFINE_FIELD( CRpgRocket, m_pLauncher, FIELD_CLASSPTR ),
 };
 IMPLEMENT_SAVERESTORE( CRpgRocket, CGrenade );
@@ -1570,7 +1651,7 @@ TYPEDESCRIPTION	CEgon::m_SaveData[] =
 //	DEFINE_FIELD( CEgon, m_pSprite, FIELD_CLASSPTR ),
 	DEFINE_FIELD( CEgon, m_shootTime, FIELD_TIME ),
 	DEFINE_FIELD( CEgon, m_fireState, FIELD_INTEGER ),
-	DEFINE_FIELD( CEgon, m_fireMode, FIELD_INTEGER ),
+	DEFINE_FIELD( CEgon, m_iBeamCount, FIELD_INTEGER ),
 	DEFINE_FIELD( CEgon, m_shakeTime, FIELD_TIME ),
 	DEFINE_FIELD( CEgon, m_flAmmoUseTime, FIELD_TIME ),
 };
@@ -1581,4 +1662,18 @@ TYPEDESCRIPTION	CSatchel::m_SaveData[] =
 	DEFINE_FIELD( CSatchel, m_chargeReady, FIELD_INTEGER ),
 };
 IMPLEMENT_SAVERESTORE( CSatchel, CBasePlayerWeapon );
+
+// a direction around v_forward scattered within vecSpread, as FireBullets scatters its shots
+// (UTIL_MakeVectors first)
+Vector UTIL_SpreadVector( const Vector &vecSpread )
+{
+	float x, y;
+
+	do {
+		x = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
+		y = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
+	} while ( (x*x+y*y) > 1 );
+
+	return gpGlobals->v_forward + x * vecSpread.x * gpGlobals->v_right + y * vecSpread.y * gpGlobals->v_up;
+}
 
