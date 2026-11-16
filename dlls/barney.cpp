@@ -45,11 +45,11 @@
 #define SF_BARNEY_HATE_SCIENTISTS	32
 #define SF_BARNEY_NO_WEAPON_DROP	1024	// "Dont drop weapon"
 
-// provisional: laser_pulse is pulse.cpp's (weapons.h declares it later)
+// provisional: laser_pulse is pulse.cpp's (weapons.h declares it later, with this Shoot)
 class CLaserPulse : public CBaseEntity
 {
 public:
-	static CLaserPulse *Create( Vector vecOrigin, edict_t *pOwner, const Vector &vecColor, int iType, float flScale, int iWeapons );
+	static CLaserPulse *Shoot( Vector vecOrigin, edict_t *pOwner, const Vector &vecColor, int iTrailLife, float flScale, int iColor );
 };
 
 class CBarney : public CTalkMonster
@@ -455,7 +455,7 @@ void CBarney :: BarneyFireLaser ( void )
 		break;
 	}
 
-	CLaserPulse *pPulse = CLaserPulse::Create( vecShootOrigin, ENT(pev), vecColor, 2, 0.25, 0 );
+	CLaserPulse *pPulse = CLaserPulse::Shoot( vecShootOrigin, ENT(pev), vecColor, 2, 0.25, 0 );
 	pPulse->pev->dmg = gSkillData.monDmg9MM * 1.4;
 	pPulse->pev->velocity = vecShootDir * 2000;
 	pPulse->pev->iuser2 = 0x1400;

@@ -34,6 +34,11 @@
 class CBarnacle : public CBaseMonster
 {
 public:
+	int  GetBattlePower( void ) { return 100 - (int)( pev->max_health * -0.1 ); }
+	int  HeatSignature( void ) { return 0; }
+	const char *GetKillDesc( void ) { return "a barnacle"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "eaten"; }
+
 	void Spawn( void );
 	void Precache( void );
 	CBaseEntity *TongueTouchEnt ( float *pflLength );
@@ -113,6 +118,7 @@ void CBarnacle :: Spawn()
 	m_bloodColor		= BLOOD_COLOR_RED;
 	pev->effects		= EF_INVLIGHT; // take light from the ceiling 
 	pev->health			= 25;
+	pev->max_health		= 25;
 	m_flFieldOfView		= 0.5;// indicates the width of this monster's forward view cone ( as a dotproduct result )
 	m_MonsterState		= MONSTERSTATE_NONE;
 	m_flKillVictimTime	= 0;
@@ -215,8 +221,22 @@ void CBarnacle :: BarnacleThink ( void )
 				// kill!
 				if ( pVictim )
 				{
-					pVictim->TakeDamage ( pev, pev, pVictim->pev->health, DMG_SLASH | DMG_ALWAYSGIB );
-					m_cGibs = 3;
+					if ( FClassnameIs( pVictim->pev, "monster_scientist" ) )
+					{
+						// a scientist is eaten whole: kill him without gibs,
+						// switch his body groups and let him drop
+						pVictim->TakeDamage ( pev, pev, pVictim->pev->health, DMG_SLASH | DMG_NEVERGIB );
+						pVictim->SetBodygroup( 0, 8 );
+						pVictim->SetBodygroup( 1, 0 );
+						pVictim->SetBodygroup( 2, 1 );
+						pVictim->pev->movetype = MOVETYPE_TOSS;
+						pVictim->GibMonster();
+						pVictim->SetThink( CallMonsterThink );
+						m_hEnemy = NULL;
+					}
+					else
+						pVictim->TakeDamage ( pev, pev, pVictim->pev->health, DMG_SLASH | DMG_ALWAYSGIB );
+					m_cGibs += 3;
 				}
 
 				return;
@@ -251,7 +271,9 @@ void CBarnacle :: BarnacleThink ( void )
 			m_flTongueAdj = -100;
 		}
 
-		if ( m_cGibs && RANDOM_LONG(0,99) == 1 )
+		// the more it has eaten, the more it coughs up (sic: == makes it 1 in 100 anyway)
+		int iChance = min( 20, m_cGibs );
+		if ( m_cGibs && RANDOM_LONG(0,99) == max( 5, iChance ) )
 		{
 			// cough up a gib.
 			CGib::SpawnRandomGibs( pev, 1, 1 );
