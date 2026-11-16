@@ -47,6 +47,7 @@ extern DLL_GLOBAL ULONG		g_ulFrameCount;
 extern void CopyToBodyQue(entvars_t* pev);
 extern int giPrecacheGrunt;
 extern int gmsgSayText;
+extern int gmsgFog;
 
 extern int g_teamplay;
 
@@ -128,23 +129,17 @@ void ClientDisconnect( edict_t *pEntity )
 
 
 // called by ClientKill and DeadThink
+// The mod respawns the player in single player too, instead of reloading the server.
 void respawn(entvars_t* pev, BOOL fCopyCorpse)
 {
-	if (gpGlobals->coop || gpGlobals->deathmatch)
+	if ( fCopyCorpse )
 	{
-		if ( fCopyCorpse )
-		{
-			// make a copy of the dead body for appearances sake
-			CopyToBodyQue(pev);
-		}
+		// make a copy of the dead body for appearances sake
+		CopyToBodyQue(pev);
+	}
 
-		// respawn player
-		GetClassPtr( (CBasePlayer *)pev)->Spawn( );
-	}
-	else
-	{       // restart the entire server
-		SERVER_COMMAND("reload\n");
-	}
+	// respawn player
+	GetClassPtr( (CBasePlayer *)pev)->Spawn( );
 }
 
 /*
@@ -265,6 +260,10 @@ void Host_Say( edict_t *pEntity, int teamonly )
 	if ( pc != NULL )
 		return;  // no character found, so say nothing
 
+	// the game rules see all non-team chat first (both of retail's return FALSE); sic: the edict, not the player
+	if ( !teamonly )
+		g_pGameRules->ClientSay( (CBasePlayer *)pEntity, p );
+
 // turn on color set 2  (color on,  no sound)
 	if ( teamonly )
 		sprintf( text, "%c(TEAM) %s: ", 2, STRING( pEntity->v.netname ) );
@@ -374,13 +373,33 @@ void ClientCommand( edict_t *pEntity )
 	}
 	else if ( FStrEq(pcmd, "give" ) )
 	{
-		if ( g_flWeaponCheat != 0.0)
+		if ( g_flWeaponCheat != 0.0 && CMD_ARGC() > 1 )
 		{
 			int iszItem = ALLOC_STRING( CMD_ARGV(1) );	// Make a copy of the classname
 			GetClassPtr((CBasePlayer *)pev)->GiveNamedItem( STRING(iszItem) );
 		}
 	}
+	else if ( FStrEq(pcmd, "create" ) )
+	{
+		// "create <classname> [weapons]": spawns any entity 64 units in front of the player (cheats only)
+		if ( g_flWeaponCheat != 0.0 && CMD_ARGC() > 1 )
+		{
+			edict_t *pent = CREATE_NAMED_ENTITY( ALLOC_STRING( CMD_ARGV(1) ) );
+			if ( FNullEnt( pent ) )
+			{
+				ALERT ( at_console, "NULL Ent in CBaseEntity::Create!\n" );
+				return;
+			}
 
+			UTIL_MakeVectors( pev->v_angle );
+			pent->v.origin = pev->origin + gpGlobals->v_forward * 64;
+			pent->v.angles = Vector( 0, pev->angles.y, 0 );
+			pent->v.spawnflags |= SF_NORESPAWN | ( 1 << 31 );
+			if ( CMD_ARGC() > 2 )
+				pent->v.weapons = atoi( CMD_ARGV(2) );
+			DispatchSpawn( pent );
+		}
+	}
 	else if ( FStrEq(pcmd, "drop" ) )
 	{
 		// player is dropping an item. 
@@ -390,7 +409,9 @@ void ClientCommand( edict_t *pEntity )
 	{
 		if ( g_flWeaponCheat && CMD_ARGC() > 1)
 		{
-			GetClassPtr((CBasePlayer *)pev)->m_iFOV = atoi( CMD_ARGV(1) );
+			CBasePlayer *pPlayer = (CBasePlayer *)CBaseEntity::Instance( pEntity );
+			pPlayer->m_iFOV = atoi( CMD_ARGV(1) );
+			pPlayer->pev->fov = pPlayer->m_iFOV;
 		}
 		else
 		{
@@ -408,6 +429,60 @@ void ClientCommand( edict_t *pEntity )
 	else if (FStrEq(pcmd, "lastinv" ))
 	{
 		GetClassPtr((CBasePlayer *)pev)->SelectLastItem();
+	}
+	else if ( FStrEq(pcmd, "fire" ) && g_flWeaponCheat )
+	{
+		// "fire <target>": fires the target as the player (cheats only)
+		if ( CMD_ARGC() >= 2 )
+			FireTargets( CMD_ARGV(1), CBaseEntity::Instance( pEntity ), CBaseEntity::Instance( pEntity ), USE_TOGGLE, 0 );
+	}
+	else if ( FStrEq(pcmd, "fog" ) )
+	{
+		// "fog off", "fog <start> <end>" (grey) or "fog <start> <end> <r> <g> <b>"; not a cheat
+		if ( CMD_ARGC() >= 2 )
+		{
+			if ( FStrEq( CMD_ARGV(1), "off" ) )
+			{
+				MESSAGE_BEGIN( MSG_ALL, gmsgFog );
+					WRITE_BYTE( 0 );
+				MESSAGE_END();
+				ALERT( at_console, "fog off\n" );
+			}
+			else if ( CMD_ARGC() >= 3 )
+			{
+				float flStart = atof( CMD_ARGV(1) );
+				float flEnd = atof( CMD_ARGV(2) );
+
+				if ( CMD_ARGC() < 6 )
+				{
+					ALERT( at_console, "default fog: %f to %f\n", flStart, flEnd );
+					MESSAGE_BEGIN( MSG_ALL, gmsgFog );
+						WRITE_BYTE( 1 );
+						WRITE_BYTE( 128 );
+						WRITE_BYTE( 128 );
+						WRITE_BYTE( 128 );
+						WRITE_COORD( flStart );
+						WRITE_COORD( flEnd );
+					MESSAGE_END();
+				}
+				else
+				{
+					float r = atoi( CMD_ARGV(3) );
+					float g = atoi( CMD_ARGV(4) );
+					float b = atoi( CMD_ARGV(5) );
+
+					ALERT( at_console, "custom fog (RGB %d, %d, %d): %f to %f\n", (int)r, (int)g, (int)b, flStart, flEnd );
+					MESSAGE_BEGIN( MSG_ALL, gmsgFog );
+						WRITE_BYTE( 1 );
+						WRITE_BYTE( (int)r );
+						WRITE_BYTE( (int)g );
+						WRITE_BYTE( (int)b );
+						WRITE_COORD( flStart );
+						WRITE_COORD( flEnd );
+					MESSAGE_END();
+				}
+			}
+		}
 	}
 	else if ( g_pGameRules->ClientCommand( GetClassPtr((CBasePlayer *)pev), pcmd ) )
 	{
@@ -1063,6 +1138,9 @@ int AddToFullPack( struct entity_state_s *state, int e, edict_t *ent, edict_t *h
 		state->playerclass  = ent->v.playerclass;
 	}
 
+	state->fuser1 = ent->v.fuser1;
+	state->fuser2 = ent->v.fuser2;
+
 	// Special stuff for players only
 	if ( player )
 	{
@@ -1137,6 +1215,9 @@ void CreateBaseline( int player, int eindex, struct entity_state_s *baseline, st
 		baseline->solid			= entity->v.solid;
 		baseline->framerate		= entity->v.framerate;
 		baseline->gravity		= entity->v.gravity;
+
+		baseline->fuser1		= entity->v.fuser1;
+		baseline->fuser2		= entity->v.fuser2;
 	}
 }
 
@@ -1445,6 +1526,8 @@ int GetWeaponData( struct edict_s *player, struct weapon_data_s *info )
 						item->iuser1					= gun->m_chargeReady;
 						item->iuser2					= gun->m_fInAttack;
 						item->iuser3					= gun->m_fireState;
+						item->m_iWeaponState			= gun->pev->weapons;
+						item->fuser4					= max( gun->m_flNextWeaponSpecial, -0.001 );
 						
 											
 //						item->m_flPumpTime				= max( gun->m_flPumpTime, -0.001 );
@@ -1541,6 +1624,10 @@ void UpdateClientData ( const struct edict_s *ent, int sendweapons, struct clien
 					{
 						cd->vuser2.y = ( ( CRpg * )pl->m_pActiveItem)->m_fSpotActive;
 						cd->vuser2.z = ( ( CRpg * )pl->m_pActiveItem)->m_cActiveRockets;
+					}
+					else if ( pl->m_pActiveItem->m_iId == WEAPON_VORTEXLAUNCHER )
+					{
+						cd->vuser2.y = ( ( CVortexLauncher * )pl->m_pActiveItem)->m_hRocket != NULL;
 					}
 				}
 			}
