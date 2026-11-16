@@ -806,6 +806,31 @@ private:
 
 };
 
+// rocket.cpp's rocket, the base of the mod's missiles (a stand-in until rocket.cpp has the real declaration)
+#define SF_ROCKET_SPRITE	0x800
+
+class CRocket : public CGrenade
+{
+public:
+	static CRocket *CreateRocket( const Vector &vecOrigin, const Vector &vecAngles, edict_t *pOwner, const Vector &vecColor, int iszModel );
+	static CRocket *ShootArc( edict_t *pOwner, Vector vecOrigin, Vector vecVelocity, const Vector &vecColor );
+
+	void EXPORT RocketTouch( CBaseEntity *pOther );
+	void EXPORT FollowThink( void );
+	void EXPORT SeekThink( void );
+	void EXPORT TargetThink( void );
+	void EXPORT FlyThink( void );
+	void EXPORT ArcThink( void );
+
+	virtual void IgniteTrail( const Vector &vecColor );
+	virtual void Steer( void );
+
+	float	m_flSeekTime;
+	Vector	m_vecBSphereColor;
+	float	m_lastTime;
+	float	m_maxFrame;
+};
+
 class CRpgRocket : public CGrenade
 {
 public:
