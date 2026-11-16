@@ -79,6 +79,20 @@ public:
 #define	WEAPON_SATCHEL			14
 #define	WEAPON_SNARK			15
 
+// Scientist Slaughterhouse's weapons (ids from GetItemInfo; names ours)
+#define WEAPON_REPULSOR			16
+#define WEAPON_LASERPISTOL		17	// weapon_laserhandgun
+#define WEAPON_SOFTGUN			18
+#define WEAPON_REFLECTOR		19
+#define WEAPON_TESLACOIL		20
+#define WEAPON_FIREBALL			21
+#define WEAPON_FLAMETHROWER		22
+#define WEAPON_VORTEXLAUNCHER	23
+#define WEAPON_FREEZETHROWER	24
+#define WEAPON_DISPLACER		25
+#define WEAPON_SNIPER			26
+#define WEAPON_SWORD			27
+
 #define WEAPON_ALLWEAPONS		(~(1<<WEAPON_SUIT))
 
 #define WEAPON_SUIT				31	// ?????
@@ -104,27 +118,44 @@ public:
 #define SNARK_WEIGHT		5
 #define SATCHEL_WEIGHT		-10
 #define TRIPMINE_WEIGHT		-10
+#define REPULSOR_WEIGHT		1	// names ours from here
+#define LASERPISTOL_WEIGHT	10
+#define SOFTGUN_WEIGHT		15
+#define REFLECTOR_WEIGHT	15
+#define TESLACOIL_WEIGHT	20
+#define FIREBALL_WEIGHT		20
+#define FLAMETHROWER_WEIGHT	25
+#define VORTEXLAUNCHER_WEIGHT	30
+#define FREEZETHROWER_WEIGHT	20
+#define DISPLACER_WEIGHT	30
+#define SNIPER_WEIGHT		10
+#define SWORD_WEIGHT		15
 
 
 // weapon clip/carry ammo capacities
-#define URANIUM_MAX_CARRY		100
-#define	_9MM_MAX_CARRY			250
-#define _357_MAX_CARRY			36
+#define URANIUM_MAX_CARRY		999
+#define	_9MM_MAX_CARRY			400
+#define _357_MAX_CARRY			72
 #define BUCKSHOT_MAX_CARRY		125
-#define BOLT_MAX_CARRY			50
-#define ROCKET_MAX_CARRY		5
-#define HANDGRENADE_MAX_CARRY	10
-#define SATCHEL_MAX_CARRY		5
-#define TRIPMINE_MAX_CARRY		5
-#define SNARK_MAX_CARRY			15
-#define HORNET_MAX_CARRY		8
-#define M203_GRENADE_MAX_CARRY	10
+#define BOLT_MAX_CARRY			100
+#define ROCKET_MAX_CARRY		50
+#define HANDGRENADE_MAX_CARRY	50
+#define SATCHEL_MAX_CARRY		50
+#define TRIPMINE_MAX_CARRY		50
+#define SNARK_MAX_CARRY			100
+#define HORNET_MAX_CARRY		24
+#define M203_GRENADE_MAX_CARRY	50
+#define REPULSOR_MAX_CARRY		16	// "rep"; names ours from here
+#define FUEL_MAX_CARRY			250	// "ffuel"
+#define ACID_MAX_CARRY			250	// "acid"
+#define VORTEX_MAX_CARRY		50	// "vortex_m"
+#define M40_MAX_CARRY			100	// "m40"
 
 // the maximum amount of ammo each weapon's clip can hold
 #define WEAPON_NOCLIP			-1
 
 //#define CROWBAR_MAX_CLIP		WEAPON_NOCLIP
-#define GLOCK_MAX_CLIP			17
+#define GLOCK_MAX_CLIP			18
 #define PYTHON_MAX_CLIP			6
 #define MP5_MAX_CLIP			50
 #define MP5_DEFAULT_AMMO		25

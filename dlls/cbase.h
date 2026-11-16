@@ -621,7 +621,7 @@ public:
 #define DMG_ALWAYSGIB		(1 << 13)	// with this bit OR'd in, any damage type can be made to gib victims upon death.
 #define DMG_DROWN			(1 << 14)	// Drowning
 // time-based damage
-#define DMG_TIMEBASED		(~(0x3fff))	// mask for time-based damage
+#define DMG_TIMEBASED		( DMG_PARALYZE | DMG_NERVEGAS | DMG_POISON | DMG_RADIATION | DMG_ACID | DMG_SLOWBURN | DMG_SLOWFREEZE )	// mask for time-based damage (retail: exactly these)
 
 #define DMG_PARALYZE		(1 << 15)	// slows affected creature down
 #define DMG_NERVEGAS		(1 << 16)	// nerve toxins, very bad
@@ -632,9 +632,15 @@ public:
 #define DMG_SLOWBURN		(1 << 21)	// in an oven
 #define DMG_SLOWFREEZE		(1 << 22)	// in a subzero freezer
 #define DMG_MORTAR			(1 << 23)	// Hit by air raid (done to distinguish grenade from mortar)
+#define DMG_SPLATTER		(1 << 31)	// name ours: gibs corpses
 
 // these are the damage types that are allowed to gib corpses
-#define DMG_GIB_CORPSE		( DMG_CRUSH | DMG_FALL | DMG_BLAST | DMG_SONIC | DMG_CLUB )
+#define DMG_GIB_CORPSE		( DMG_CRUSH | DMG_FALL | DMG_BLAST | DMG_SONIC | DMG_CLUB | DMG_SPLATTER )
+
+// death message phrases (combat.cpp's); names ours
+extern const char *DamageVerb( int bitsDamageType, BOOL fGibbed );	// "crushed", "incinerated", ... "gibbed"/"killed"
+extern const char *HitGroupIn( int iHitGroup );	// " in the head"
+extern const char *HitGroupOf( int iHitGroup );	// "'s head"
 
 // these are the damage types that have client hud art
 #define DMG_SHOWNHUD		(DMG_POISON | DMG_ACID | DMG_FREEZE | DMG_SLOWFREEZE | DMG_DROWN | DMG_BURN | DMG_SLOWBURN | DMG_NERVEGAS | DMG_RADIATION | DMG_SHOCK)
