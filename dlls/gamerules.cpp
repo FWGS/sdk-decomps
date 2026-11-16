@@ -313,7 +313,7 @@ CGameRules *InstallGameRules( void )
 	SERVER_COMMAND( "exec game.cfg\n" );
 	SERVER_EXECUTE( );
 
-	if ( !gpGlobals->deathmatch )
+	if ( !gpGlobals->deathmatch && !gpGlobals->coop )
 	{
 		// generic half-life
 		g_teamplay = 0;
@@ -321,25 +321,10 @@ CGameRules *InstallGameRules( void )
 	}
 	else
 	{
-		if ( teamplay.value > 0 )
-		{
-			// teamplay
-
-			g_teamplay = 1;
-			return new CHalfLifeTeamplay;
-		}
-		if ((int)gpGlobals->deathmatch == 1)
-		{
-			// vanilla deathmatch
-			g_teamplay = 0;
-			return new CHalfLifeMultiplay;
-		}
-		else
-		{
-			// vanilla deathmatch??
-			g_teamplay = 0;
-			return new CHalfLifeMultiplay;
-		}
+		// vanilla deathmatch, also for coop: teamplay_gamerules.cpp is not in
+		// the project
+		g_teamplay = 0;
+		return new CHalfLifeMultiplay;
 	}
 }
 
