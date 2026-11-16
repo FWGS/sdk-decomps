@@ -1537,7 +1537,6 @@ IMPLEMENT_SAVERESTORE( CRpg, CBasePlayerWeapon );
 
 TYPEDESCRIPTION	CRpgRocket::m_SaveData[] = 
 {
-	DEFINE_FIELD( CRpgRocket, m_flIgniteTime, FIELD_TIME ),
 	DEFINE_FIELD( CRpgRocket, m_pLauncher, FIELD_CLASSPTR ),
 };
 IMPLEMENT_SAVERESTORE( CRpgRocket, CGrenade );
@@ -1580,6 +1579,9 @@ TYPEDESCRIPTION	CSatchel::m_SaveData[] =
 	DEFINE_FIELD( CSatchel, m_chargeReady, FIELD_INTEGER ),
 };
 IMPLEMENT_SAVERESTORE( CSatchel, CBasePlayerWeapon );
+
+// stand-in for a W_Precache global (sprites/smoke.spr), which the rockets' trails use
+DLL_GLOBAL short g_sModelIndexSmokePuff;
 
 // stand-in for the spread helper (retail 0x100eb710, 328 bytes), which the shotgun calls
 Vector UTIL_SpreadVector( const Vector &vecSpread )
