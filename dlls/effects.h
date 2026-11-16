@@ -43,6 +43,7 @@ public:
 			flags = FCAP_DONT_SAVE;
 		return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | flags; 
 	}
+	int		GetOnState( void ) { return !FBitSet( pev->effects, EF_NODRAW ); }
 	void EXPORT AnimateThink( void );
 	void EXPORT ExpandThink( void );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
@@ -96,6 +97,18 @@ private:
 
 	float		m_lastTime;
 	float		m_maxFrame;
+};
+
+
+// magic_missile (turret.cpp): a sprite that flies, hurts what it touches and fades out;
+// the base of the mod's sprite projectiles (psi_blast ...)
+class CMagicMissile : public CSprite
+{
+public:
+	const char *GetKillDesc( void ) { return "a disruptor gun"; }
+	void Spawn( void );
+	void Precache( void );
+	void EXPORT HurtTouch( CBaseEntity *pOther );
 };
 
 
