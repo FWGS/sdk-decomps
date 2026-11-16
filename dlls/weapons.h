@@ -1427,7 +1427,7 @@ public:
 	CLaserPulse() {}	// sic: an empty constructor (special_laser's factory calls CBaseEntity's out of line)
 	void Spawn( void );
 	void Precache( void );
-	const char *GetKillDesc( void ) { return m_iszKillDesc ? STRING( m_iszKillDesc ) : "a pulse laser"; }
+	const char *GetKillDesc( void ) { return !m_iszKillDesc ? "a pulse laser" : STRING( m_iszKillDesc ); }
 	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup );
 	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
 
