@@ -970,6 +970,12 @@ void UTIL_TraceModel( const Vector &vecStart, const Vector &vecEnd, int hullNumb
 	g_engfuncs.pfnTraceModel( vecStart, vecEnd, hullNumber, pentModel, ptr );
 }
 
+// name ours: where this entity's toss (its velocity and gravity) will take it
+void UTIL_TraceToss( CBaseEntity *pEntity, edict_t *pentIgnore, TraceResult *ptr )
+{
+	TRACE_TOSS( pEntity->edict(), pentIgnore, ptr );
+}
+
 
 TraceResult UTIL_GetGlobalTrace( )
 {
@@ -1098,15 +1104,24 @@ Vector UTIL_GetAimVector( edict_t *pent, float flSpeed )
 
 int UTIL_IsMasterTriggered(string_t sMaster, CBaseEntity *pActivator)
 {
+	const char *pszMaster = STRING( sMaster );	// sic: before the test of sMaster
+	bool fInvert = false;
+
+	// "!name": the master's state inverted
+	if ( *pszMaster == '!' )
+	{
+		fInvert = true;
+		pszMaster++;
+	}
+
 	if (sMaster)
 	{
-		edict_t *pentTarget = FIND_ENTITY_BY_TARGETNAME(NULL, STRING(sMaster));
-	
-		if ( !FNullEnt(pentTarget) )
+		CBaseEntity *pMaster = UTIL_FindEntityByTargetname( NULL, pszMaster );
+		if ( pMaster && (pMaster->ObjectCaps() & FCAP_MASTER) )
 		{
-			CBaseEntity *pMaster = CBaseEntity::Instance(pentTarget);
-			if ( pMaster && (pMaster->ObjectCaps() & FCAP_MASTER) )
-				return pMaster->IsTriggered( pActivator );
+			if ( fInvert )
+				return !pMaster->IsTriggered( pActivator );
+			return pMaster->IsTriggered( pActivator );
 		}
 
 		ALERT(at_console, "Master was null or not a master!\n");
@@ -1239,6 +1254,9 @@ void UTIL_DecalTrace( TraceResult *pTrace, int decalNumber )
 	{
 		CBaseEntity *pEntity = CBaseEntity::Instance( pTrace->pHit );
 		if ( pEntity && !pEntity->IsBSPModel() )
+			return;
+		// no decals on energy shields; sic: pEntity isn't tested for NULL here
+		if ( pEntity->Shielded() )
 			return;
 		entityIndex = ENTINDEX( pTrace->pHit );
 	}
@@ -2029,6 +2047,7 @@ void EntvarsKeyvalue( entvars_t *pev, KeyValueData *pkvd )
 
 int CSave :: WriteEntVars( const char *pname, entvars_t *pev )
 {
+	ALERT( at_console, "saving private %s\n", STRING( pev->classname ) );	// sic: every entity saved, in the console
 	return WriteFields( pname, pev, gEntvarsDescription, ENTVARS_COUNT );
 }
 
@@ -2541,3 +2560,86 @@ int	CRestore::BufferCheckZString( const char *string )
 	return 0;
 }
 
+
+// One of the entities with this targetname, each as likely as the others; NULL if there is none.
+CBaseEntity *UTIL_RandomEntityByTargetname( const char *szName )
+{
+	CBaseEntity *pRandom = NULL;
+	CBaseEntity *pEntity = UTIL_FindEntityByTargetname( NULL, szName );
+	int iCount = 0;
+
+	while ( pEntity )
+	{
+		iCount++;
+		if ( RANDOM_LONG( 0, iCount - 1 ) < 1 )
+			pRandom = pEntity;
+		pEntity = UTIL_FindEntityByTargetname( pEntity, szName );
+	}
+
+	return pRandom;
+}
+
+// One of the entities of this class, each as likely as the others; NULL if there is none.
+CBaseEntity *UTIL_RandomEntityByClassname( const char *szName )
+{
+	CBaseEntity *pRandom = NULL;
+	CBaseEntity *pEntity = UTIL_FindEntityByClassname( NULL, szName );
+	int iCount = 0;
+
+	while ( pEntity )
+	{
+		iCount++;
+		if ( RANDOM_LONG( 0, iCount - 1 ) < 1 )
+			pRandom = pEntity;
+		pEntity = UTIL_FindEntityByClassname( pEntity, szName );
+	}
+
+	return pRandom;
+}
+
+// name ours; nothing in retail calls it. Gibs everything else that can take damage within
+// 64 units of pEntity's centre (health + 100 damage), as pEntity's activator if it has one.
+void UTIL_GibInRadius( CBaseDelay *pEntity )
+{
+	if ( !pEntity )
+		return;
+
+	entvars_t *pevAttacker = pEntity->pev;
+	if ( pEntity->m_hActivator )
+		pevAttacker = pEntity->m_hActivator->pev;
+
+	Vector vecSrc( pEntity->Center() );
+
+	CBaseEntity *pOther = NULL;
+	while ( ( pOther = UTIL_FindEntityInSphere( pOther, vecSrc, 64 ) ) != NULL )
+	{
+		if ( pOther != pEntity && pOther->pev->takedamage != DAMAGE_NO )
+			pOther->TakeDamage( pEntity->pev, pevAttacker, pOther->pev->health + 100, DMG_ALWAYSGIB | DMG_SPLATTER );
+	}
+}
+
+// name ours: a beam ring or cylinder (iType: TE_BEAMTORUS, TE_BEAMDISK, TE_BEAMCYLINDER) at vecOrigin,
+// growing to flRadius over flLife seconds; sent to the PAS. Life and width are in tenths.
+void UTIL_BeamRing( int iType, int iSprite, const Vector &vecOrigin, float flRadius, int iWidth, float flLife, const Vector &vecColor, float flBrightness )
+{
+	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, vecOrigin );
+		WRITE_BYTE( iType );
+		WRITE_COORD( vecOrigin.x );
+		WRITE_COORD( vecOrigin.y );
+		WRITE_COORD( vecOrigin.z );
+		WRITE_COORD( vecOrigin.x );
+		WRITE_COORD( vecOrigin.y );
+		WRITE_COORD( vecOrigin.z + flRadius / flLife );	// reach the radius over the life
+		WRITE_SHORT( iSprite );
+		WRITE_BYTE( 0 );	// startframe
+		WRITE_BYTE( 0 );	// framerate
+		WRITE_BYTE( flLife * 10 );	// life
+		WRITE_BYTE( iWidth * 10 );	// width
+		WRITE_BYTE( 0 );	// noise
+		WRITE_BYTE( vecColor.x );
+		WRITE_BYTE( vecColor.y );
+		WRITE_BYTE( vecColor.z );
+		WRITE_BYTE( flBrightness );	// brightness
+		WRITE_BYTE( 0 );	// speed
+	MESSAGE_END();
+}
