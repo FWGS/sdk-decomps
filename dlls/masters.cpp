@@ -22,8 +22,8 @@
 
 #define MAX_WATCH_TARGETS			16	// name ours
 
-#define SF_WATCH_INVERT				1	// name ours: on unless a watched entity says otherwise
-#define SF_WATCH_ANY				2	// name ours: on as soon as one watched entity agrees
+#define SF_WATCH_DEFAULTON			1	// fgd "Default on"
+#define SF_WATCH_OR					2	// fgd "Logical OR": on as soon as one watched entity agrees
 
 //
 // master_watcher: on when the entities it watches are on. Every keyvalue
@@ -104,7 +104,7 @@ BOOL CWatchMaster :: IsTriggered( CBaseEntity *pActivator )
 	if ( m_globalstate && gGlobalState.EntityGetState( m_globalstate ) != GLOBAL_ON )
 		return FALSE;
 
-	bool fResult = FBitSet( pev->spawnflags, SF_WATCH_INVERT );
+	bool fResult = FBitSet( pev->spawnflags, SF_WATCH_DEFAULTON );
 
 	for ( int i = 0; i < m_cTargets && m_iTargetName[i]; i++ )
 	{
@@ -114,7 +114,7 @@ BOOL CWatchMaster :: IsTriggered( CBaseEntity *pActivator )
 		if ( *pszName == '!' )
 			pszName++;
 
-		bool fOn = FBitSet( pev->spawnflags, SF_WATCH_INVERT );
+		bool fOn = FBitSet( pev->spawnflags, SF_WATCH_DEFAULTON );
 
 		CBaseEntity *pTarget = UTIL_FindEntityByTargetname( NULL, pszName );
 		while ( pTarget )
@@ -125,7 +125,7 @@ BOOL CWatchMaster :: IsTriggered( CBaseEntity *pActivator )
 
 				ALERT( at_console, "%s (%s) is %d\n", pszTarget, STRING( pTarget->pev->classname ), iState );
 
-				if ( (bool)FBitSet( pev->spawnflags, SF_WATCH_ANY ) )
+				if ( (bool)FBitSet( pev->spawnflags, SF_WATCH_OR ) )
 				{
 					if ( *pszTarget == '!' )
 					{
@@ -164,7 +164,7 @@ BOOL CWatchMaster :: IsTriggered( CBaseEntity *pActivator )
 			pTarget = UTIL_FindEntityByTargetname( pTarget, pszName );
 		}
 
-		if ( !(bool)FBitSet( pev->spawnflags, SF_WATCH_ANY ) )
+		if ( !(bool)FBitSet( pev->spawnflags, SF_WATCH_OR ) )
 		{
 			if ( !fOn )
 				return FALSE;
