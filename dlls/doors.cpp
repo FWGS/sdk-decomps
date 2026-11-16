@@ -29,6 +29,9 @@ extern void SetMovedir(entvars_t* ev);
 #define noiseMoving noise1
 #define noiseArrived noise2
 
+#define SF_DOOR_NOREVERSE		1024	// name ours: not in the fgd; a blocked door keeps going
+#define SF_DOOR_TRAPDOOR		2048	// "Trapdoor hack": a blocked door throws monsters up
+
 class CBaseDoor : public CBaseToggle
 {
 public:
@@ -38,6 +41,8 @@ public:
 	virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	virtual void Blocked( CBaseEntity *pOther );
 
+	virtual const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "a door"; return STRING( m_iszKillDesc ); }
+	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "crushed"; }
 
 	virtual int	ObjectCaps( void ) 
 	{ 
@@ -699,17 +704,28 @@ void CBaseDoor::Blocked( CBaseEntity *pOther )
 {
 	edict_t	*pentTarget = NULL;
 	CBaseDoor	*pDoor		= NULL;
+	float	flDamage = pev->dmg;	// name ours
 
 
 	// Hurt the blocker a little.
-	if ( pev->dmg )
-		pOther->TakeDamage( pev, pev, pev->dmg, DMG_CRUSH );
+	if ( flDamage )
+		pOther->TakeDamage( pev, pev, flDamage, DMG_CRUSH );
+
+	// trapdoor hack: throw monsters standing on it up
+	if ( pOther->pev->movetype == MOVETYPE_STEP && HasSpawnFlag( SF_DOOR_TRAPDOOR ) )
+	{
+		pOther->pev->velocity = Vector( 0, 0, 100 );
+		pOther->pev->flags &= ~FL_ONGROUND;
+	}
 
 	// if a door has a negative wait, it would never come back if blocked,
 	// so let it just squash the object to death real fast
 
-	if (m_flWait >= 0)
+	if (m_flWait >= 0 && !FBitSet( pev->spawnflags, SF_DOOR_NOREVERSE ))
 	{
+		if ( !FStringNull( pev->noise1 ) )
+			STOP_SOUND( ENT(pev), CHAN_STATIC, (char*)STRING(pev->noise1) );
+
 		if (m_toggle_state == TS_GOING_DOWN)
 		{
 			DoorGoUp();
@@ -737,7 +753,7 @@ void CBaseDoor::Blocked( CBaseEntity *pOther )
 				
 					pDoor = GetClassPtr( (CBaseDoor *) VARS(pentTarget) );
 
-					if ( pDoor->m_flWait >= 0)
+					if ( pDoor->m_flWait >= 0 && !FBitSet( pDoor->pev->spawnflags, SF_DOOR_NOREVERSE ))
 					{
 						if (pDoor->pev->velocity == pev->velocity && pDoor->pev->avelocity == pev->velocity)
 						{
@@ -753,6 +769,9 @@ void CBaseDoor::Blocked( CBaseEntity *pOther )
 								pDoor->pev->avelocity = g_vecZero;
 							}
 						}
+
+						if ( !FStringNull( pDoor->pev->noise1 ) )
+							STOP_SOUND( ENT(pDoor->pev), CHAN_STATIC, (char*)STRING(pDoor->pev->noise1) );
 
 						if ( pDoor->m_toggle_state == TS_GOING_DOWN)
 							pDoor->DoorGoUp();

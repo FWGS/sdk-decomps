@@ -28,6 +28,7 @@ public:
 	void Precache( void );
 	void KeyValue( KeyValueData* pkvd);
 	void EXPORT BreakTouch( CBaseEntity *pOther );
+	void EXPORT DieThink( void );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void DamageSound( void );
 
@@ -43,6 +44,7 @@ public:
 
 	virtual void	Die( void );		// not exported in retail (CBreakRespawn's override is)
 	virtual int		ObjectCaps( void ) { return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION); }
+	virtual const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "an explosive crate"; return STRING( m_iszKillDesc ); }
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
 

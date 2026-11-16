@@ -44,7 +44,7 @@
 #define	SF_MONSTER_WAIT_TILL_SEEN		1// spawnflag that makes monsters wait until player can see them before attacking.
 #define	SF_MONSTER_GAG					2 // no idle noises from this monster
 #define SF_MONSTER_HITMONSTERCLIP		4
-//										8
+#define SF_MONSTER_IGNOREPLAYER			8 // name ours (fgd "Ignore Player"): talkmonsters don't stare at the player nor hate him when provoked
 #define SF_MONSTER_PRISONER				16 // monster won't attack anyone, no one will attacke him.
 //										32
 //										64
@@ -150,10 +150,14 @@ public:
 	void EXPORT WaitTillLand( void );
 	void		LimitVelocity( void );
 
-	virtual int	ObjectCaps( void ) { return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | FCAP_DONT_SAVE; }
+	virtual int	ObjectCaps( void );
+	virtual BOOL	CanBeRepulsed( bool fForce );
 	static	void SpawnHeadGib( entvars_t *pevVictim );
 	static	void SpawnRandomGibs( entvars_t *pevVictim, int cGibs, int human );
 	static  void SpawnStickyGibs( entvars_t *pevVictim, Vector vecOrigin, int cGibs );
+	static	void SpawnPoppedHead( entvars_t *pevVictim, float flSpeed );	// name ours
+	static	void SpawnModelHeadGib( entvars_t *pevVictim, const char *szGibModel );	// name ours
+	static	void SpawnGlassGibs( entvars_t *pevVictim, int cGibs );	// name ours
 
 	int		m_bloodColor;
 	int		m_cBloodDecals;
