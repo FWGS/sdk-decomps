@@ -124,6 +124,7 @@ kbutton_t	in_alt1;
 kbutton_t	in_score;
 kbutton_t	in_break;
 kbutton_t	in_graph;  // Display the netgraph
+kbutton_t	in_attack3;	// the mod's third attack (WeaponSpecial); name ours
 
 typedef struct kblist_s
 {
@@ -539,6 +540,9 @@ void IN_MLookUp (void)
 	}
 }
 
+void IN_Attack3Down(void) {KeyDown(&in_attack3);}
+void IN_Attack3Up(void) {KeyUp(&in_attack3);}
+
 /*
 ===============
 CL_KeyState
@@ -864,6 +868,12 @@ int CL_ButtonBits( int bResetState )
 	}
 
 	// Dead or in intermission? Shore scoreboard, too
+	// the third attack goes to the server as IN_ALT1
+	if (in_attack3.state & 3)
+	{
+		bits |= IN_ALT1;
+	}
+
 	if ( CL_IsDead() || gHUD.m_iIntermission )
 	{
 		bits |= IN_SCORE;
@@ -885,6 +895,7 @@ int CL_ButtonBits( int bResetState )
 		in_reload.state &= ~2;
 		in_alt1.state &= ~2;
 		in_score.state &= ~2;
+		in_attack3.state &= ~2;
 	}
 
 	return bits;
@@ -976,6 +987,8 @@ void InitInput (void)
 	gEngfuncs.pfnAddCommand ("-graph", IN_GraphUp);
 	gEngfuncs.pfnAddCommand ("+break",IN_BreakDown);
 	gEngfuncs.pfnAddCommand ("-break",IN_BreakUp);
+	gEngfuncs.pfnAddCommand ("+attack3", IN_Attack3Down);
+	gEngfuncs.pfnAddCommand ("-attack3", IN_Attack3Up);
 
 	lookstrafe			= gEngfuncs.pfnRegisterVariable ( "lookstrafe", "0", FCVAR_ARCHIVE );
 	lookspring			= gEngfuncs.pfnRegisterVariable ( "lookspring", "0", FCVAR_ARCHIVE );
