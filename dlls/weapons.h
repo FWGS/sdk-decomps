@@ -428,7 +428,7 @@ public:
 
 extern DLL_GLOBAL	short	g_sModelIndexLaser;// holds the index for the laser beam
 extern DLL_GLOBAL	const char *g_pModelNameLaser;
-extern Vector UTIL_SpreadVector( const Vector &vecSpread );	// name ours (defined in weapons.cpp)
+Vector UTIL_SpreadVector( const Vector &vecSpread );	// weapons.cpp, name ours
 
 extern DLL_GLOBAL	short	g_sModelIndexLaserDot;// holds the index for the laser beam dot
 extern DLL_GLOBAL	short	g_sModelIndexFireball;// holds the index for the fireball
