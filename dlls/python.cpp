@@ -116,7 +116,7 @@ void CPython::Holster( int skiplocal /* = 0 */ )
 
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 1.0;
 	m_flTimeWeaponIdle = UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
-	SendWeaponAnim( PYTHON_HOLSTER, 0 );
+	SendWeaponAnim( PYTHON_HOLSTER );
 }
 
 void CPython::SecondaryAttack( void )
