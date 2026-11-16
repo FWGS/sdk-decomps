@@ -57,6 +57,14 @@ public:
 	BOOL m_fRegisteredSound;// whether or not this grenade has issued its DANGER sound to the world sound list yet.
 };
 
+// cluster_bomb (cluster_bomb.cpp); the hand grenade's cluster mode throws one
+class CClusterBomb : public CGrenade
+{
+public:
+	static CClusterBomb *ShootTimed( edict_t *pOwner, const Vector &vecStart, const Vector &vecVelocity, float time );	// name ours (0x10027d00)
+	static CClusterBomb *ShootMirv( edict_t *pOwner, const Vector &vecStart, const Vector &vecVelocity, float time );	// name ours (0x10027e70)
+};
+
 
 // constant items
 #define ITEM_HEALTHKIT		1
