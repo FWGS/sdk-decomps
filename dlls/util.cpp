@@ -2541,7 +2541,7 @@ int	CRestore::BufferCheckZString( const char *string )
 	return 0;
 }
 
-// stand-in for the beam ring (retail 0x100e5d80, 256 bytes), which the satchel's
+// a stand-in until util.cpp has the real beam ring (retail 0x100e5d80, 256 bytes), which the satchel's
 // satellite uplink calls; written from retail's code
 void UTIL_BeamRing( int iType, int iSprite, const Vector &vecOrigin, float flRadius, int iWidth, float flLife, const Vector &vecColor, float flBrightness )
 {

@@ -796,7 +796,7 @@ float CBaseEntity :: MovementSpeed( void )
 	return pev->velocity.Length();
 }
 
-// stand-in for the beam trail (retail 0x10023d90, 154 bytes), which the pulse laser
+// a stand-in until cbase.cpp has the real beam trail (retail 0x10023d90, 154 bytes), which the pulse laser
 // and the cluster bomb call; written from retail's code
 void CBaseEntity :: BeamFollow( short sModelIndex, int iLife, int iWidth, const Vector &vecColor, int iBrightness )
 {
