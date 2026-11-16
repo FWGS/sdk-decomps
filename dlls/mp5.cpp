@@ -83,6 +83,7 @@ void CMP5::Precache( void )
 
 	PRECACHE_SOUND( "weapons/glauncher.wav" );
 	PRECACHE_SOUND( "weapons/glauncher2.wav" );
+	PRECACHE_SOUND( "doors/aliendoor1.wav" );
 
 	PRECACHE_SOUND ("weapons/357_cock1.wav");
 
@@ -131,14 +132,14 @@ void CMP5::PrimaryAttack()
 	if (m_pPlayer->pev->waterlevel == 3)
 	{
 		PlayEmptySound( );
-		m_flNextPrimaryAttack = 0.15;
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.15;
 		return;
 	}
 
 	if (m_iClip <= 0)
 	{
 		PlayEmptySound();
-		m_flNextPrimaryAttack = 0.15;
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.15;
 		return;
 	}
 
@@ -158,9 +159,9 @@ void CMP5::PrimaryAttack()
 	Vector vecDir;
 
 #ifdef CLIENT_DLL
-	if ( !bIsMultiplayer() )
+	if ( bIsMultiplayer() )
 #else
-	if ( !g_pGameRules->IsMultiplayer() )
+	if ( g_pGameRules->IsMultiplayer() )
 #endif
 	{
 		// optimized multiplayer. Widened to make it easier to hit a moving player
@@ -201,13 +202,14 @@ void CMP5::SecondaryAttack( void )
 	if (m_pPlayer->pev->waterlevel == 3)
 	{
 		PlayEmptySound( );
-		m_flNextPrimaryAttack = 0.15;
+		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.15;
 		return;
 	}
 
 	if (m_pPlayer->m_rgAmmo[m_iSecondaryAmmoType] == 0)
 	{
 		PlayEmptySound( );
+		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.15;
 		return;
 	}
 
@@ -222,12 +224,37 @@ void CMP5::SecondaryAttack( void )
 	// player "shoot" animation
 	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
+#ifndef CLIENT_DLL
  	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 
 	// we don't add in player velocity anymore.
-	CGrenade::ShootContact( m_pPlayer->pev, 
+	CGrenade *pGrenade = CGrenade::ShootContact( m_pPlayer->pev, 
 							m_pPlayer->pev->origin + m_pPlayer->pev->view_ofs + gpGlobals->v_forward * 16, 
 							gpGlobals->v_forward * 800 );
+
+	// the grenade type WeaponSpecial selected (pev->weapons); ggrenade.cpp reads the spawnflags
+	pGrenade->m_iszKillDesc = MAKE_STRING( "a contact grenade" );
+	if ( pev->weapons == 1 )
+	{
+		// incendiary
+		pGrenade->pev->spawnflags |= 3;
+	}
+	else if ( pev->weapons == 2 )
+	{
+		// laser
+		pGrenade->pev->spawnflags |= 16;
+		pGrenade->pev->rendercolor = Vector( 255, 96, 96 );
+		pGrenade->m_flDelay = 1.0;
+		pGrenade->m_iszKillDesc = MAKE_STRING( "a laser blast grenade" );
+	}
+	else if ( pev->weapons == 3 )
+	{
+		// plasma bomb
+		pGrenade->pev->spawnflags |= 9;
+		pGrenade->pev->rendercolor = Vector( 255, 64, 0 );
+		pGrenade->m_iszKillDesc = MAKE_STRING( "a plasma bomb" );
+	}
+#endif
 
 	int flags;
 #if defined( CLIENT_WEAPONS )
@@ -249,10 +276,39 @@ void CMP5::SecondaryAttack( void )
 
 void CMP5::Reload( void )
 {
-	if ( m_pPlayer->ammo_9mm <= 0 )
-		return;
-
 	DefaultReload( MP5_MAX_CLIP, MP5_RELOAD, 1.5 );
+}
+
+
+// +attack3: cycles the M203's grenade type
+void CMP5::WeaponSpecial( void )
+{
+	pev->weapons++;
+	if ( pev->weapons > 3 )
+		pev->weapons = 0;
+
+	m_flNextWeaponSpecial = UTIL_WeaponTimeBase() + 1.0;
+
+#ifndef CLIENT_DLL
+	const char *pszType;
+	switch ( pev->weapons )
+	{
+	case 1:
+		pszType = "Incendiary";
+		break;
+	case 2:
+		pszType = "Laser";
+		break;
+	case 3:
+		pszType = "Plasma Bomb";
+		break;
+	default:
+		pszType = "High Explosive";
+		break;
+	}
+
+	ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "%s grenades selected", pszType );
+#endif
 }
 
 
@@ -278,9 +334,9 @@ void CMP5::WeaponIdle( void )
 		break;
 	}
 
-	SendWeaponAnim( iAnim );
+	SendWeaponAnim( iAnim, 0 );
 
-	m_flTimeWeaponIdle = UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 ); // how long till we do this again.
+	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 ); // how long till we do this again.
 }
 
 

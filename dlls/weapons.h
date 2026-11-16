@@ -194,7 +194,7 @@ public:
 #define AMMO_357BOX_GIVE		12
 #define AMMO_MP5CLIP_GIVE		MP5_MAX_CLIP
 #define AMMO_CHAINBOX_GIVE		200
-#define AMMO_M203BOX_GIVE		2
+#define AMMO_M203BOX_GIVE		4
 #define AMMO_BUCKSHOTBOX_GIVE	12
 #define AMMO_CROSSBOWCLIP_GIVE	10
 #define AMMO_RPGCLIP_GIVE		RPG_MAX_CLIP
@@ -623,6 +623,7 @@ public:
 	int SecondaryAmmoIndex( void );
 	BOOL Deploy( void );
 	void Reload( void );
+	void WeaponSpecial( void );		// picks the grenade type (pev->weapons)
 	void WeaponIdle( void );
 	float m_flNextAnimTime;
 	int m_iShell;
