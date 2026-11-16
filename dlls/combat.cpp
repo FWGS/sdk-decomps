@@ -1652,6 +1652,12 @@ Vector CBaseEntity::FireBulletsPlayer ( ULONG cShots, Vector vecSrc, Vector vecD
 	return Vector( x * vecSpread.x, y * vecSpread.y, 0.0 );
 }
 
+// stand-in for the server's explosive bullets (retail 0x1002d7f0, 978 bytes), which the shotgun calls
+Vector CBaseEntity::FireBulletsExplosive( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker, int shared_rand )
+{
+	return FireBulletsPlayer( cShots, vecSrc, vecDirShooting, vecSpread, flDistance, BULLET_PLAYER_BUCKSHOT, 0, iDamage, pevAttacker, shared_rand );
+}
+
 void CBaseEntity :: TraceBleed( float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType )
 {
 	if (BloodColor() == DONT_BLEED)
