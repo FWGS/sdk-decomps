@@ -618,9 +618,7 @@ void CTripmineTurret :: Shoot( const Vector &vecDir )
 	pev->frags -= 1;
 }
 
-// stand-in for pulse.cpp's CLaserPulse::Shoot (retail 0x100b0860, 205 bytes), which the
-// turret mine calls, until pulse.cpp has the real one. Here between two functions that match on their own, so
-// that it doesn't break the positional comparison with retail up to the deferred inlines at the end of the object.
+// a stand-in until pulse.cpp has the real CLaserPulse::Shoot (retail 0x100b0860, 205 bytes)
 CLaserPulse *CLaserPulse::Shoot( Vector vecOrigin, edict_t *pOwner, const Vector &vecColor, int iTrailLife, float flScale, int iColor )
 {
 	return NULL;
