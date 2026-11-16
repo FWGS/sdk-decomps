@@ -365,6 +365,10 @@ SOURCE=.\text_message.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\tractorbeam.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\train.cpp
 # End Source File
 # Begin Source File
