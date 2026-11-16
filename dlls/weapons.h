@@ -208,12 +208,18 @@ typedef	enum
 	BULLET_PLAYER_9MM, // glock
 	BULLET_PLAYER_MP5, // mp5
 	BULLET_PLAYER_357, // python
+	BULLET_PLAYER_SNIPER, // sniper box (name ours)
 	BULLET_PLAYER_BUCKSHOT, // shotgun
 	BULLET_PLAYER_CROWBAR, // crowbar swipe
+	BULLET_PLAYER_SOFTGUN, // softgun: 16 damage, DMG_RADIATION (name ours)
 
 	BULLET_MONSTER_9MM,
 	BULLET_MONSTER_MP5,
+	BULLET_MONSTER_357, // otis (name ours)
 	BULLET_MONSTER_12MM,
+	BULLET_MONSTER_BUCKSHOT, // hgrunt shotgun (name ours)
+	BULLET_MONSTER_TRACER1, // TE_USERTRACER tracers (name ours)
+	BULLET_MONSTER_TRACER2, // TE_USERTRACER tracers: NA apache (name ours)
 } Bullet;
 
 
@@ -346,7 +352,7 @@ public:
 	virtual BOOL PlayEmptySound( void );
 	virtual void ResetEmptySound( void );
 
-	virtual void SendWeaponAnim( int iAnim, int skiplocal = 1, int body = 0 );  // skiplocal is 1 if client is predicting weapon animations
+	virtual void SendWeaponAnim( int iAnim, int skiplocal = 0, int body = 0 );  // skiplocal is 1 if client is predicting weapon animations
 
 	virtual BOOL CanDeploy( void );
 	virtual BOOL IsUseable( void );
