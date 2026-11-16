@@ -2630,7 +2630,7 @@ void CBasePlayer::Spawn( void )
 	pev->takedamage		= DAMAGE_AIM;
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_WALK;
-	pev->max_health		= pev->health;
+	pev->max_health		= 300;	// the energy shield's armor counts up to 300
 	pev->flags		   &= FL_PROXY;	// keep proxy flag sey by engine
 	pev->flags		   |= FL_CLIENT;
 	pev->air_finished	= gpGlobals->time + 12;
@@ -2694,18 +2694,30 @@ void CBasePlayer::Spawn( void )
 
 	m_fNoPlayerSound = FALSE;// normal sound behavior.
 
-	m_pLastItem = NULL;
 	m_fInitHUD = TRUE;
 	m_iClientHideHUD = -1;  // force this to be recalculated
-	m_fWeapon = FALSE;
-	m_pClientActiveItem = NULL;
 	m_iClientBattery = -1;
 
-	// reset all ammo values to 0
-	for ( int i = 0; i < MAX_AMMO_SLOTS; i++ )
+	if ( g_pGameRules->IsMultiplayer() )
 	{
-		m_rgAmmo[i] = 0;
-		m_rgAmmoLast[i] = 0;  // client ammo values also have to be reset  (the death hud clear messages does on the client side)
+		m_pLastItem = NULL;
+		m_fWeapon = FALSE;
+		m_pClientActiveItem = NULL;
+
+		// reset all ammo values to 0
+		for ( int i = 0; i < MAX_AMMO_SLOTS; i++ )
+		{
+			m_rgAmmo[i] = 0;
+			m_rgAmmoLast[i] = 0;  // client ammo values also have to be reset  (the death hud clear messages does on the client side)
+		}
+	}
+	else
+	{
+		// a single player respawns with what he had: only make the HUD resend it
+		m_pClientActiveItem = NULL;
+
+		for ( int i = 0; i < MAX_AMMO_SLOTS; i++ )
+			m_rgAmmoLast[i] = 0;
 	}
 
 	m_lastx = m_lasty = 0;
@@ -4070,7 +4082,7 @@ Vector CBasePlayer :: GetAutoaimVector( float flDelta )
 
 	// always use non-sticky autoaim
 	// UNDONE: use sever variable to chose!
-	if (0 || g_iSkillLevel == SKILL_EASY)
+	if (g_iSkillLevel == SKILL_EASY)
 	{
 		m_vecAutoAim = m_vecAutoAim * 0.67 + angles * 0.33;
 	}
