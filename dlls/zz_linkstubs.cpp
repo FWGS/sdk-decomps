@@ -1,6 +1,6 @@
-// Link stand-ins, dropped when the real code comes: functions other
-// files define: CBaseMonster::HasHintNodes (monsters.cpp 0x10087c90),
-// CLaserPulse::Shoot (pulse.cpp 0x100b0860)
+// Stand-ins until monsters.cpp and pulse.cpp have the real code: empty definitions
+// of CBaseMonster::HasHintNodes (monsters.cpp, 0x10087c90) and CLaserPulse::Shoot
+// (pulse.cpp, 0x100b0860), so that hl.dll links without them
 #include "extdll.h"
 #include "util.h"
 #include "cbase.h"
