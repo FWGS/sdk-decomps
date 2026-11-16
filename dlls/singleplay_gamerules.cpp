@@ -29,6 +29,15 @@ extern DLL_GLOBAL BOOL	g_fGameOver;
 extern int gmsgDeathMsg;	// client dll messages
 extern int gmsgScoreInfo;
 extern int gmsgMOTD;
+extern int gmsgServerName;
+extern int gmsgTeamNames;
+extern int gmsgTeamInfo;
+extern int gmsgGameMode;
+
+#define ITEM_RESPAWN_TIME	30
+#define WEAPON_RESPAWN_TIME	20
+#define AMMO_RESPAWN_TIME	20
+#define ENTITY_INTOLERANCE	100
 
 //=========================================================
 //=========================================================
@@ -99,6 +108,39 @@ BOOL CHalfLifeRules :: ClientConnected( edict_t *pEntity, const char *pszName, c
 
 void CHalfLifeRules :: InitHUD( CBasePlayer *pl )
 {
+	// the player is an agent, the only team there is
+	strcpy( pl->m_szTeamName, "Agents" );
+
+	// the map's title, or its name, for the scoreboard
+	edict_t *pWorld = INDEXENT( 0 );
+	MESSAGE_BEGIN( MSG_ALL, gmsgServerName );
+		if ( pWorld->v.message )
+			WRITE_STRING( STRING( pWorld->v.message ) );
+		else
+			WRITE_STRING( STRING( gpGlobals->mapname ) );
+	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_ALL, gmsgTeamNames );
+		WRITE_BYTE( 1 );
+		WRITE_STRING( pl->m_szTeamName );
+	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_ALL, gmsgScoreInfo );
+		WRITE_BYTE( ENTINDEX(pl->edict()) );
+		WRITE_SHORT( pl->pev->frags );
+		WRITE_SHORT( pl->m_iDeaths );
+		WRITE_SHORT( 0 );
+		WRITE_SHORT( GetTeamIndex( pl->m_szTeamName ) + 1 );
+	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_ALL, gmsgTeamInfo );
+		WRITE_BYTE( ENTINDEX(pl->edict()) );
+		WRITE_STRING( pl->m_szTeamName );
+	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_ALL, gmsgGameMode );
+		WRITE_BYTE( 1 );  // game mode teamplay
+	MESSAGE_END();
 }
 
 //=========================================================
@@ -121,13 +163,21 @@ float CHalfLifeRules::FlPlayerFallDamage( CBasePlayer *pPlayer )
 //=========================================================
 void CHalfLifeRules :: PlayerSpawn( CBasePlayer *pPlayer )
 {
+	CBaseEntity	*pWeaponEntity = NULL;
+
+	while ( pWeaponEntity = UTIL_FindEntityByClassname( pWeaponEntity, "game_player_equip" ))
+	{
+		pWeaponEntity->Touch( pPlayer );
+	}
+
+	pPlayer->pev->weapons |= (1<<WEAPON_SUIT);
 }
 
 //=========================================================
 //=========================================================
 BOOL CHalfLifeRules :: AllowAutoTargetCrosshair( void )
 {
-	return ( g_iSkillLevel == SKILL_EASY );
+	return TRUE;
 }
 
 //=========================================================
@@ -165,13 +215,121 @@ int CHalfLifeRules :: IPointsForKill( CBasePlayer *pAttacker, CBasePlayer *pKill
 //=========================================================
 void CHalfLifeRules :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKiller, entvars_t *pInflictor )
 {
+	DeathNotice( pVictim, pKiller, pInflictor );
+
+	pVictim->m_iDeaths += 1;
+
+	// update the scores
+	MESSAGE_BEGIN( MSG_ALL, gmsgScoreInfo );
+		WRITE_BYTE( ENTINDEX(pVictim->edict()) );
+		WRITE_SHORT( pVictim->pev->frags );
+		WRITE_SHORT( pVictim->m_iDeaths );
+		WRITE_SHORT( 0 );
+		WRITE_SHORT( GetTeamIndex( pVictim->m_szTeamName ) + 1 );
+	MESSAGE_END();
 }
 
 //=========================================================
 // Deathnotice
 //=========================================================
-void CHalfLifeRules::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, entvars_t *pInflictor )
+void CHalfLifeRules::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, entvars_t *pevInflictor )
 {
+	// Work out what killed the player, and tell everybody about it
+	EHANDLE hKiller, hInflictor;
+	char szText[ 512 ];
+
+	if ( !pKiller )
+	{
+		if ( pevInflictor )
+			pKiller = pevInflictor;
+		else
+			pKiller = VARS( INDEXENT( 0 ) );	// the world
+	}
+	if ( !pevInflictor )
+		pevInflictor = pKiller;
+
+	hKiller = CBaseEntity::Instance( pKiller );
+	hInflictor = CBaseEntity::Instance( pevInflictor );
+
+	int iHitGroup = pVictim->m_LastHitGroup;
+	const char *pszVerb = DamageVerb( 0, FALSE );
+	const char *pszWeapon = "";
+	const char *pszVictim = pVictim->GetHudName();
+	const char *pszKiller = "";
+	const char *pszHitGroup = "";
+	BOOL fGibbed = ( pVictim->pev->effects & EF_NODRAW ) != 0;
+
+	if ( pevInflictor == pKiller && hKiller->IsPlayer() )
+	{
+		// If the inflictor is the killer,  then it must be their current weapon doing the damage
+		CBasePlayer *pPlayer = (CBasePlayer*)CBaseEntity::Instance( pKiller );
+
+		if ( pPlayer && pPlayer->m_pActiveItem )
+			hInflictor = pPlayer->m_pActiveItem;
+	}
+
+	if ( hInflictor )
+	{
+		pszWeapon = hInflictor->GetKillDesc();
+		pszVerb = hInflictor->GetKillVerb( fGibbed, iHitGroup );
+	}
+
+	if ( hKiller )
+		pszKiller = hKiller->GetKillDesc();
+
+	if ( (CBaseEntity *)hKiller == pVictim )
+	{
+		// killed self
+		if ( (CBaseEntity *)hKiller != (CBaseEntity *)hInflictor )
+		{
+			if ( hInflictor )
+				pszHitGroup = hInflictor->GetHitGroupDesc( iHitGroup );
+
+			// sic: the victim's name is passed where the format wants the hit group
+			if ( pszHitGroup[0] == ' ' )
+				sprintf( szText, "%s %s his own%s with %s\n", pszKiller, pszVerb, pszVictim, pszHitGroup, pszWeapon );
+			else if ( pszHitGroup[0] )
+				sprintf( szText, "%s %s his%s with %s\n", pszKiller, pszVerb, pszVictim, pszHitGroup + 2, pszWeapon );
+			else
+				sprintf( szText, "%s %s himself with %s\n", pszKiller, pszVerb, pszVictim, pszWeapon );
+		}
+		else
+		{
+			if ( VerbTakesName( pszVerb ) > 0 )
+			{
+				sprintf( szText, pszVerb, pszVictim );
+				strcat( szText, "\n" );
+			}
+			else
+				sprintf( szText, "%s %s\n", pszVictim, pszVerb );
+		}
+	}
+
+	// sic: no else, the suicide message above is always overwritten
+	if ( !pszKiller[0] )
+	{
+		if ( VerbTakesName( pszVerb ) > 0 )
+		{
+			sprintf( szText, pszVerb, pszVictim );
+			strcat( szText, "\n" );
+		}
+		else
+			sprintf( szText, "%s %s\n", pszVictim, pszVerb );
+	}
+	else
+	{
+		if ( hInflictor )
+			pszHitGroup = hInflictor->GetHitGroupDesc( iHitGroup );
+
+		if ( (CBaseEntity *)hKiller != (CBaseEntity *)hInflictor )
+			sprintf( szText, "%s %s %s%s with %s\n", pszKiller, pszVerb, pszVictim, pszHitGroup, pszWeapon );
+		else if ( pszHitGroup[0] == ' ' )
+			sprintf( szText, "%s was %s%s by %s\n", pszVictim, pszVerb, pszHitGroup, pszWeapon );
+		else
+			sprintf( szText, "%s%s was %s by %s\n", pszVictim, pszHitGroup, pszVerb, pszWeapon );
+	}
+
+	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, szText );
 }
 
 //=========================================================
@@ -188,7 +346,7 @@ void CHalfLifeRules :: PlayerGotWeapon( CBasePlayer *pPlayer, CBasePlayerItem *p
 //=========================================================
 float CHalfLifeRules :: FlWeaponRespawnTime( CBasePlayerItem *pWeapon )
 {
-	return -1;
+	return gpGlobals->time + WEAPON_RESPAWN_TIME;
 }
 
 //=========================================================
@@ -198,6 +356,15 @@ float CHalfLifeRules :: FlWeaponRespawnTime( CBasePlayerItem *pWeapon )
 //=========================================================
 float CHalfLifeRules :: FlWeaponTryRespawn( CBasePlayerItem *pWeapon )
 {
+	if ( pWeapon && pWeapon->m_iId && (pWeapon->iFlags() & ITEM_FLAG_LIMITINWORLD) )
+	{
+		if ( NUMBER_OF_ENTITIES() < (gpGlobals->maxEntities - ENTITY_INTOLERANCE) )
+			return 0;
+
+		// we're past the entity tolerance level,  so delay the respawn
+		return FlWeaponRespawnTime( pWeapon );
+	}
+
 	return 0;
 }
 
@@ -216,7 +383,12 @@ Vector CHalfLifeRules :: VecWeaponRespawnSpot( CBasePlayerItem *pWeapon )
 //=========================================================
 int CHalfLifeRules :: WeaponShouldRespawn( CBasePlayerItem *pWeapon )
 {
-	return GR_WEAPON_RESPAWN_NO;
+	if ( pWeapon->pev->spawnflags & SF_NORESPAWN )
+	{
+		return GR_WEAPON_RESPAWN_NO;
+	}
+
+	return GR_WEAPON_RESPAWN_YES;
 }
 
 //=========================================================
@@ -246,7 +418,12 @@ void CHalfLifeRules::PlayerGotItem( CBasePlayer *pPlayer, CItem *pItem )
 //=========================================================
 int CHalfLifeRules::ItemShouldRespawn( CItem *pItem )
 {
-	return GR_ITEM_RESPAWN_NO;
+	if ( pItem->pev->spawnflags & SF_NORESPAWN )
+	{
+		return GR_ITEM_RESPAWN_NO;
+	}
+
+	return GR_ITEM_RESPAWN_YES;
 }
 
 
@@ -255,7 +432,7 @@ int CHalfLifeRules::ItemShouldRespawn( CItem *pItem )
 //=========================================================
 float CHalfLifeRules::FlItemRespawnTime( CItem *pItem )
 {
-	return -1;
+	return gpGlobals->time + ITEM_RESPAWN_TIME;
 }
 
 //=========================================================
@@ -284,14 +461,19 @@ void CHalfLifeRules::PlayerGotAmmo( CBasePlayer *pPlayer, char *szName, int iCou
 //=========================================================
 int CHalfLifeRules::AmmoShouldRespawn( CBasePlayerAmmo *pAmmo )
 {
-	return GR_AMMO_RESPAWN_NO;
+	if ( pAmmo->pev->spawnflags & SF_NORESPAWN )
+	{
+		return GR_AMMO_RESPAWN_NO;
+	}
+
+	return GR_AMMO_RESPAWN_YES;
 }
 
 //=========================================================
 //=========================================================
 float CHalfLifeRules::FlAmmoRespawnTime( CBasePlayerAmmo *pAmmo )
 {
-	return -1;
+	return gpGlobals->time + AMMO_RESPAWN_TIME;
 }
 
 //=========================================================
@@ -305,7 +487,7 @@ Vector CHalfLifeRules::VecAmmoRespawnSpot( CBasePlayerAmmo *pAmmo )
 //=========================================================
 float CHalfLifeRules::FlHealthChargerRechargeTime( void )
 {
-	return 0;// don't recharge
+	return 30;
 }
 
 //=========================================================
@@ -342,4 +524,36 @@ BOOL CHalfLifeRules :: FAllowMonsters( void )
 BOOL CHalfLifeRules :: ClientSay( CBasePlayer *pPlayer, char *pText )
 {
 	return FALSE;
+}
+
+//=========================================================
+//=========================================================
+void CHalfLifeRules :: UpdateGameMode( CBasePlayer *pPlayer )
+{
+}
+
+//=========================================================
+//=========================================================
+BOOL CHalfLifeRules :: FPlayerCanTakeDamage( CBasePlayer *pPlayer, CBaseEntity *pAttacker )
+{
+	return TRUE;
+}
+
+//=========================================================
+//=========================================================
+BOOL CHalfLifeRules :: ClientCommand( CBasePlayer *pPlayer, const char *pcmd )
+{
+	return FALSE;
+}
+
+//=========================================================
+// FlHEVChargerRechargeTime - suit chargers recharge in
+// single player only when sp_suitrecharge is set
+//=========================================================
+float CHalfLifeRules :: FlHEVChargerRechargeTime( void )
+{
+	if ( CVAR_GET_FLOAT( "sp_suitrecharge" ) )
+		return 30;
+
+	return 0;// don't recharge
 }

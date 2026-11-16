@@ -33,6 +33,8 @@ extern int gmsgDeathMsg;	// client dll messages
 extern int gmsgScoreInfo;
 extern int gmsgMOTD;
 extern int gmsgServerName;
+extern int gmsgTeamNames;
+extern int gmsgTeamInfo;
 
 extern int g_teamplay;
 
@@ -131,7 +133,7 @@ void CHalfLifeMultiplay::RefreshSkillData( void )
 // override some values for multiplay.
 
 	// suitcharger
-	gSkillData.suitchargerCapacity = 30;
+	gSkillData.suitchargerCapacity = 100;
 
 	// Crowbar whack
 	gSkillData.plrDmgCrowbar = 25;
@@ -406,7 +408,7 @@ extern int gmsgGameMode;
 void CHalfLifeMultiplay :: UpdateGameMode( CBasePlayer *pPlayer )
 {
 	MESSAGE_BEGIN( MSG_ONE, gmsgGameMode, NULL, pPlayer->edict() );
-		WRITE_BYTE( 0 );  // game mode none
+		WRITE_BYTE( 1 );  // game mode teamplay
 	MESSAGE_END();
 }
 
@@ -416,25 +418,24 @@ void CHalfLifeMultiplay :: InitHUD( CBasePlayer *pl )
 	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, UTIL_VarArgs( "%s has joined the game\n", 
 		( pl->pev->netname && STRING(pl->pev->netname)[0] != 0 ) ? STRING(pl->pev->netname) : "unconnected" ) );
 
-	// team match?
-	if ( g_teamplay )
-	{
-		UTIL_LogPrintf( "\"%s<%i><%u><%s>\" entered the game\n",  
-			STRING( pl->pev->netname ), 
-			GETPLAYERUSERID( pl->edict() ),
-			GETPLAYERWONID( pl->edict() ),
-			g_engfuncs.pfnInfoKeyValue( g_engfuncs.pfnGetInfoKeyBuffer( pl->edict() ), "model" ) );
-	}
-	else
-	{
-		UTIL_LogPrintf( "\"%s<%i><%u><%i>\" entered the game\n",  
-			STRING( pl->pev->netname ), 
-			GETPLAYERUSERID( pl->edict() ),
-			GETPLAYERWONID( pl->edict() ),
-			GETPLAYERUSERID( pl->edict() ) );
-	}
+	UTIL_LogPrintf( "\"%s<%i><%u><%i>\" entered the game\n",  
+		STRING( pl->pev->netname ), 
+		GETPLAYERUSERID( pl->edict() ),
+		GETPLAYERWONID( pl->edict() ),
+		GETPLAYERUSERID( pl->edict() ) );
 
 	UpdateGameMode( pl );
+
+	// everyone plays on one team
+	MESSAGE_BEGIN( MSG_ONE, gmsgTeamNames, NULL, pl->edict() );
+		WRITE_BYTE( 1 );
+		WRITE_STRING( pl->m_szTeamName );
+	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_ALL, gmsgTeamInfo );
+		WRITE_BYTE( ENTINDEX(pl->edict()) );
+		WRITE_STRING( pl->m_szTeamName );
+	MESSAGE_END();
 
 	// sending just one score makes the hud scoreboard active;  otherwise
 	// it is just disabled for single play
@@ -531,6 +532,16 @@ float CHalfLifeMultiplay :: FlPlayerFallDamage( CBasePlayer *pPlayer )
 //=========================================================
 BOOL CHalfLifeMultiplay::FPlayerCanTakeDamage( CBasePlayer *pPlayer, CBaseEntity *pAttacker )
 {
+	if ( IsCoOp() && pAttacker && PlayerRelationship( pPlayer, pAttacker ) == GR_TEAMMATE )
+	{
+		// my teammate hit me.
+		if ( (friendlyfire.value == 0) && (pAttacker != pPlayer) )
+		{
+			// friendly fire is off, and this hit came from someone other than myself,  then don't get hurt
+			return FALSE;
+		}
+	}
+
 	return TRUE;
 }
 
@@ -601,6 +612,10 @@ BOOL CHalfLifeMultiplay :: AllowAutoTargetCrosshair( void )
 //=========================================================
 int CHalfLifeMultiplay :: IPointsForKill( CBasePlayer *pAttacker, CBasePlayer *pKilled )
 {
+	// killing a teammate in coop costs a point
+	if ( IsCoOp() )
+		return -1;
+
 	return 1;
 }
 
@@ -632,10 +647,6 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 		
 		FireTargets( "game_playerkill", ktmp, ktmp, USE_TOGGLE, 0 );
 	}
-	else
-	{  // killed by the world
-		pKiller->frags -= 1;
-	}
 
 	// update the scores
 	// killed scores
@@ -662,7 +673,8 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 		MESSAGE_END();
 
 		// let the killer paint another decal as soon as he'd like.
-		PK->m_flNextDecalTime = gpGlobals->time;
+		if ( !IsCoOp() )
+			PK->m_flNextDecalTime = gpGlobals->time;
 	}
 #ifndef HLDEMO_BUILD
 	if ( pVictim->HasNamedPlayerItem("weapon_satchel") )
@@ -677,200 +689,102 @@ void CHalfLifeMultiplay :: PlayerKilled( CBasePlayer *pVictim, entvars_t *pKille
 //=========================================================
 void CHalfLifeMultiplay::DeathNotice( CBasePlayer *pVictim, entvars_t *pKiller, entvars_t *pevInflictor )
 {
-	// Work out what killed the player, and send a message to all clients about it
-	CBaseEntity *Killer = CBaseEntity::Instance( pKiller );
+	// Work out what killed the player, and tell everybody about it
+	EHANDLE hKiller, hInflictor;
+	char szText[ 512 ];
 
-	const char *killer_weapon_name = "world";		// by default, the player is killed by the world
-	int killer_index = 0;
-	
-	// Hack to fix name change
-	char *tau = "tau_cannon";
-	char *gluon = "gluon gun";
-
-	if ( pKiller->flags & FL_CLIENT )
+	if ( !pKiller )
 	{
-		killer_index = ENTINDEX(ENT(pKiller));
-		
 		if ( pevInflictor )
-		{
-			if ( pevInflictor == pKiller )
-			{
-				// If the inflictor is the killer,  then it must be their current weapon doing the damage
-				CBasePlayer *pPlayer = (CBasePlayer*)CBaseEntity::Instance( pKiller );
-				
-				if ( pPlayer->m_pActiveItem )
-				{
-					killer_weapon_name = pPlayer->m_pActiveItem->pszName();
-				}
-			}
-			else
-			{
-				killer_weapon_name = STRING( pevInflictor->classname );  // it's just that easy
-			}
-		}
+			pKiller = pevInflictor;
+		else
+			pKiller = VARS( INDEXENT( 0 ) );	// the world
 	}
-	else
+	if ( !pevInflictor )
+		pevInflictor = pKiller;
+
+	hKiller = CBaseEntity::Instance( pKiller );
+	hInflictor = CBaseEntity::Instance( pevInflictor );
+
+	int iHitGroup = pVictim->m_LastHitGroup;
+	const char *pszVerb = DamageVerb( 0, FALSE );
+	const char *pszWeapon = "";
+	const char *pszVictim = pVictim->GetHudName();
+	const char *pszKiller = "";
+	const char *pszHitGroup = "";
+	BOOL fGibbed = ( pVictim->pev->effects & EF_NODRAW ) != 0;
+
+	if ( pevInflictor == pKiller && hKiller->IsPlayer() )
 	{
-		killer_weapon_name = STRING( pevInflictor->classname );
+		// If the inflictor is the killer,  then it must be their current weapon doing the damage
+		CBasePlayer *pPlayer = (CBasePlayer*)CBaseEntity::Instance( pKiller );
+
+		if ( pPlayer && pPlayer->m_pActiveItem )
+			hInflictor = pPlayer->m_pActiveItem;
 	}
 
-	// strip the monster_* or weapon_* from the inflictor's classname
-	if ( strncmp( killer_weapon_name, "weapon_", 7 ) == 0 )
-		killer_weapon_name += 7;
-	else if ( strncmp( killer_weapon_name, "monster_", 8 ) == 0 )
-		killer_weapon_name += 8;
-	else if ( strncmp( killer_weapon_name, "func_", 5 ) == 0 )
-		killer_weapon_name += 5;
+	if ( hInflictor )
+	{
+		pszWeapon = hInflictor->GetKillDesc();
+		pszVerb = hInflictor->GetKillVerb( fGibbed, iHitGroup );
+	}
 
-	MESSAGE_BEGIN( MSG_ALL, gmsgDeathMsg );
-		WRITE_BYTE( killer_index );						// the killer
-		WRITE_BYTE( ENTINDEX(pVictim->edict()) );		// the victim
-		WRITE_STRING( killer_weapon_name );		// what they were killed by (should this be a string?)
-	MESSAGE_END();
+	if ( hKiller )
+		pszKiller = hKiller->GetKillDesc();
 
-	// replace the code names with the 'real' names
-	if ( !strcmp( killer_weapon_name, "egon" ) )
-		killer_weapon_name = gluon;
-	else if ( !strcmp( killer_weapon_name, "gauss" ) )
-		killer_weapon_name = tau;
-
-	if ( pVictim->pev == pKiller )  
+	if ( (CBaseEntity *)hKiller == pVictim )
 	{
 		// killed self
-
-		// team match?
-		if ( g_teamplay )
+		if ( (CBaseEntity *)hKiller != (CBaseEntity *)hInflictor )
 		{
-			UTIL_LogPrintf( "\"%s<%i><%u><%s>\" committed suicide with \"%s\"\n",  
-				STRING( pVictim->pev->netname ), 
-				GETPLAYERUSERID( pVictim->edict() ),
-				GETPLAYERWONID( pVictim->edict() ),
-				g_engfuncs.pfnInfoKeyValue( g_engfuncs.pfnGetInfoKeyBuffer( pVictim->edict() ), "model" ),
-				killer_weapon_name );		
+			if ( hInflictor )
+				pszHitGroup = hInflictor->GetHitGroupDesc( iHitGroup );
+
+			// sic: the victim's name is passed where the format wants the hit group
+			if ( pszHitGroup[0] == ' ' )
+				sprintf( szText, "%s %s his own%s with %s\n", pszKiller, pszVerb, pszVictim, pszHitGroup, pszWeapon );
+			else if ( pszHitGroup[0] )
+				sprintf( szText, "%s %s his%s with %s\n", pszKiller, pszVerb, pszVictim, pszHitGroup + 2, pszWeapon );
+			else
+				sprintf( szText, "%s %s himself with %s\n", pszKiller, pszVerb, pszVictim, pszWeapon );
 		}
 		else
 		{
-			UTIL_LogPrintf( "\"%s<%i><%u><%i>\" committed suicide with \"%s\"\n",  
-				STRING( pVictim->pev->netname ), 
-				GETPLAYERUSERID( pVictim->edict() ),
-				GETPLAYERWONID( pVictim->edict() ),
-				GETPLAYERUSERID( pVictim->edict() ),
-				killer_weapon_name );		
+			if ( VerbTakesName( pszVerb ) > 0 )
+			{
+				sprintf( szText, pszVerb, pszVictim );
+				strcat( szText, "\n" );
+			}
+			else
+				sprintf( szText, "%s %s\n", pszVictim, pszVerb );
 		}
 	}
-	else if ( pKiller->flags & FL_CLIENT )
+
+	// sic: no else, the suicide message above is always overwritten
+	if ( !pszKiller[0] )
 	{
-		// team match?
-		if ( g_teamplay )
+		if ( VerbTakesName( pszVerb ) > 0 )
 		{
-			UTIL_LogPrintf( "\"%s<%i><%u><%s>\" killed \"%s<%i><%u><%s>\" with \"%s\"\n",  
-				STRING( pKiller->netname ),
-				GETPLAYERUSERID( ENT(pKiller) ),
-				GETPLAYERWONID( ENT(pKiller) ),
-				g_engfuncs.pfnInfoKeyValue( g_engfuncs.pfnGetInfoKeyBuffer( ENT(pKiller) ), "model" ),
-				STRING( pVictim->pev->netname ),
-				GETPLAYERUSERID( pVictim->edict() ),
-				GETPLAYERWONID( pVictim->edict() ),
-				g_engfuncs.pfnInfoKeyValue( g_engfuncs.pfnGetInfoKeyBuffer( pVictim->edict() ), "model" ),
-				killer_weapon_name );
+			sprintf( szText, pszVerb, pszVictim );
+			strcat( szText, "\n" );
 		}
 		else
-		{
-			UTIL_LogPrintf( "\"%s<%i><%u><%i>\" killed \"%s<%i><%u><%i>\" with \"%s\"\n",  
-				STRING( pKiller->netname ),
-				GETPLAYERUSERID( ENT(pKiller) ),
-				GETPLAYERWONID( ENT(pKiller) ),
-				GETPLAYERUSERID( ENT(pKiller) ),
-				STRING( pVictim->pev->netname ),
-				GETPLAYERUSERID( pVictim->edict() ),
-				GETPLAYERWONID( pVictim->edict() ),
-				GETPLAYERUSERID( pVictim->edict() ),
-				killer_weapon_name );
-		}
-	}
-	else
-	{ 
-		// killed by the world
-
-		// team match?
-		if ( g_teamplay )
-		{
-			UTIL_LogPrintf( "\"%s<%i><%u><%s>\" committed suicide with \"%s\" (world)\n",
-				STRING( pVictim->pev->netname ), 
-				GETPLAYERUSERID( pVictim->edict() ), 
-				GETPLAYERWONID( pVictim->edict() ),
-				g_engfuncs.pfnInfoKeyValue( g_engfuncs.pfnGetInfoKeyBuffer( pVictim->edict() ), "model" ),
-				killer_weapon_name );		
-		}
-		else
-		{
-			UTIL_LogPrintf( "\"%s<%i><%u><%i>\" committed suicide with \"%s\" (world)\n",
-				STRING( pVictim->pev->netname ), 
-				GETPLAYERUSERID( pVictim->edict() ), 
-				GETPLAYERWONID( pVictim->edict() ),
-				GETPLAYERUSERID( pVictim->edict() ),
-				killer_weapon_name );		
-		}
-	}
-
-	MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
-		WRITE_BYTE ( DRC_EVENT );	// player killed
-		WRITE_SHORT( ENTINDEX(pVictim->edict()) );	// index number of primary entity
-		if (pevInflictor)
-			WRITE_SHORT( ENTINDEX(ENT(pevInflictor)) );	// index number of secondary entity
-		else
-			WRITE_SHORT( ENTINDEX(ENT(pKiller)) );	// index number of secondary entity
-		WRITE_LONG( 7 | DRC_FLAG_DRAMATIC);   // eventflags (priority and flags)
-	MESSAGE_END();
-
-//  Print a standard message
-	// TODO: make this go direct to console
-	return; // just remove for now
-/*
-	char	szText[ 128 ];
-
-	if ( pKiller->flags & FL_MONSTER )
-	{
-		// killed by a monster
-		strcpy ( szText, STRING( pVictim->pev->netname ) );
-		strcat ( szText, " was killed by a monster.\n" );
-		return;
-	}
-
-	if ( pKiller == pVictim->pev )
-	{
-		strcpy ( szText, STRING( pVictim->pev->netname ) );
-		strcat ( szText, " commited suicide.\n" );
-	}
-	else if ( pKiller->flags & FL_CLIENT )
-	{
-		strcpy ( szText, STRING( pKiller->netname ) );
-
-		strcat( szText, " : " );
-		strcat( szText, killer_weapon_name );
-		strcat( szText, " : " );
-
-		strcat ( szText, STRING( pVictim->pev->netname ) );
-		strcat ( szText, "\n" );
-	}
-	else if ( FClassnameIs ( pKiller, "worldspawn" ) )
-	{
-		strcpy ( szText, STRING( pVictim->pev->netname ) );
-		strcat ( szText, " fell or drowned or something.\n" );
-	}
-	else if ( pKiller->solid == SOLID_BSP )
-	{
-		strcpy ( szText, STRING( pVictim->pev->netname ) );
-		strcat ( szText, " was mooshed.\n" );
+			sprintf( szText, "%s %s\n", pszVictim, pszVerb );
 	}
 	else
 	{
-		strcpy ( szText, STRING( pVictim->pev->netname ) );
-		strcat ( szText, " died mysteriously.\n" );
+		if ( hInflictor )
+			pszHitGroup = hInflictor->GetHitGroupDesc( iHitGroup );
+
+		if ( (CBaseEntity *)hKiller != (CBaseEntity *)hInflictor )
+			sprintf( szText, "%s %s %s%s with %s\n", pszKiller, pszVerb, pszVictim, pszHitGroup, pszWeapon );
+		else if ( pszHitGroup[0] == ' ' )
+			sprintf( szText, "%s was %s%s by %s\n", pszVictim, pszVerb, pszHitGroup, pszWeapon );
+		else
+			sprintf( szText, "%s%s was %s by %s\n", pszVictim, pszHitGroup, pszVerb, pszWeapon );
 	}
 
-	UTIL_ClientPrintAll( szText );
-*/
+	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, szText );
 }
 
 //=========================================================
@@ -1094,7 +1008,7 @@ int CHalfLifeMultiplay::DeadPlayerWeapons( CBasePlayer *pPlayer )
 //=========================================================
 int CHalfLifeMultiplay::DeadPlayerAmmo( CBasePlayer *pPlayer )
 {
-	return GR_PLR_DROP_AMMO_ACTIVE;
+	return GR_PLR_DROP_AMMO_ALL;
 }
 
 edict_t *CHalfLifeMultiplay::GetPlayerSpawnSpot( CBasePlayer *pPlayer )
@@ -1113,6 +1027,10 @@ edict_t *CHalfLifeMultiplay::GetPlayerSpawnSpot( CBasePlayer *pPlayer )
 //=========================================================
 int CHalfLifeMultiplay::PlayerRelationship( CBaseEntity *pPlayer, CBaseEntity *pTarget )
 {
+	// in coop, all players are on one team
+	if ( IsCoOp() && pPlayer && pTarget && pTarget->IsPlayer() )
+		return GR_TEAMMATE;
+
 	// half life deathmatch has only enemies
 	return GR_NOTTEAMMATE;
 }
@@ -1137,7 +1055,7 @@ BOOL CHalfLifeMultiplay :: FAllowFlashlight( void )
 //=========================================================
 BOOL CHalfLifeMultiplay :: FAllowMonsters( void )
 {
-	return ( allowmonsters.value != 0 );
+	return TRUE;
 }
 
 //=========================================================
