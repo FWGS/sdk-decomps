@@ -13,10 +13,10 @@ Neil Manke. It ships two game DLLs, both built with Visual C++ 6.0 (VC6):
 
 The branch [`they-hunger`](../../../tree/they-hunger) holds C++ source that
 compiles back into both files, byte for byte. It is Valve's Half-Life SDK
-history up to the tag `v2.1` (`e84d041`, 2000-11-07), plus 76 commits (67
+history up to the tag `v2.1` (`e84d041`, 2000-11-07), plus 78 commits (68
 without merges). The first of them adds the single-player game code from SDK
 2.2b, which 2.1 lacks. Each commit message says what the change matched and
-why. This page describes commit `a2276df`, the head of the branch.
+why. This page describes commit `f4362f0`, the head of the branch.
 
 ## Why this mod
 
@@ -25,7 +25,8 @@ once. This reconstruction uses none of that work: no community source of
 They Hunger was read or copied at any point. Everything on the branch comes
 from the two retail DLLs, the mod's own data files (the maps' entity lists,
 the deathmatch maps' `thdm.fgd`, model sequence and sound names, the text
-files in the paks) and Valve's public SDKs.
+files in the paks), Valve's public SDKs, and, for names, the mod's own
+Linux server (see [Names](#names)).
 
 So the source can be checked against the game itself: it compiles to the
 retail machine code, function for function, and the release build gives the
@@ -47,9 +48,9 @@ Both DLLs are identical to retail.
 | Project | `dlls/hl.dsp`, "hl - Win32 Release" | `cl_dll/cl_dll.dsp`, "cl_dll - Win32 Release" |
 | First identical at | `a2276df` (2026-11-11) | `a2276df` (2026-11-11) |
 
-Verified on 2026-11-11: release builds from a fresh clone of `a2276df`, the
+Verified on 2026-11-17: release builds from a fresh clone of `f4362f0`, the
 head of the branch, have retail's SHA-256, and `cmp` finds no difference.
-The last commit that touches a file the client compiles is `2b0dedb`.
+The last commit that touches a file the client compiles is `14ee6ab`.
 
 **What "identical" means here.** It means the files: every byte of both
 DLLs, with the headers, time stamps, debug record and padding. It does not
@@ -363,7 +364,7 @@ functions.
 
 | Where | What | Why | Evidence |
 |---|---|---|---|
-| [`dlls/weapons.h:574-641`](../../../blob/they-hunger/dlls/weapons.h#L574-L641) | `TH_StandIn`, an inline function of 60 empty statements, between the AP9's class and the sniper rifle's. Name ours (`0aab512`). | It is 366 bytes of IL in front of the sniper rifle's class. In the server's last build `hl_wpn_glock.cpp` creates the `.pch` from its seven headers, so the guns' inline `iItemSlot` and `UseDecrement` are emitted lazily: after each of the file's own functions, every one whose position in the headers' IL is below the file's own IL so far. Retail has four of them (the glock's and the AP9's) after `weapon_einar1`'s `SecondaryAttack`, five after its `Reload` and one after its `WeaponIdle`. Without the stand-in the tree gives eight, two and none, and 621 bytes of the file differ. | The file's own IL up to the end of that `SecondaryAttack` is 32,428 bytes, and `CWeaponEinarSniper::iItemSlot` sits at 32,103 in the header stream; retail's order needs it between 32,428 and 32,506. So retail's `weapons.h` had 325 to 403 bytes more IL in front of the sniper rifle's class than ours, or its `hl_wpn_glock.cpp` that much less before that point, or a mix. The image doesn't show which text it was. 52 to 67 empty statements work, 51 and 68 don't. Two unused classes of the guns' shape (190 bytes each) work too; one or three don't. Ruled out: the shovel's or the medkit's class declared in `weapons.h` (`crowbar.obj` and `egon.obj` then no longer fit), dropping the `flags` blocks the guns copy from the glock (104 bytes, not enough), and every `.pch` state. The other objects limit where the IL can be: anywhere in `weapons.h` from `CBasePlayerItem` to here works; in front of `CGrenade` it moves `apache.obj`, and 71 bytes at the end of `extdll.h`, `util.h`, `schedule.h`, `basemonster.h` or `cbase.h` already move another object. The client compiles `weapons.h` too and is the same file with and without the stand-in. |
+| [`dlls/weapons.h:571-638`](../../../blob/they-hunger/dlls/weapons.h#L571-L638) | `TH_StandIn`, an inline function of 60 empty statements, between the AP9's class and the sniper rifle's. Name ours (`0aab512`). | It is 366 bytes of IL in front of the sniper rifle's class. In the server's last build `hl_wpn_glock.cpp` creates the `.pch` from its seven headers, so the guns' inline `iItemSlot` and `UseDecrement` are emitted lazily: after each of the file's own functions, every one whose position in the headers' IL is below the file's own IL so far. Retail has four of them (the glock's and the AP9's) after `weapon_einar1`'s `SecondaryAttack`, five after its `Reload` and one after its `WeaponIdle`. Without the stand-in the tree gives eight, two and none, and 621 bytes of the file differ. | The file's own IL up to the end of that `SecondaryAttack` is 32,428 bytes, and `CWeaponEinarSniper::iItemSlot` sits at 32,103 in the header stream; retail's order needs it between 32,428 and 32,506. So retail's `weapons.h` had 325 to 403 bytes more IL in front of the sniper rifle's class than ours, or its `hl_wpn_glock.cpp` that much less before that point, or a mix. The image doesn't show which text it was. 52 to 67 empty statements work, 51 and 68 don't. Two unused classes of the guns' shape (190 bytes each) work too; one or three don't. Ruled out: the shovel's or the medkit's class declared in `weapons.h` (`crowbar.obj` and `egon.obj` then no longer fit), dropping the `flags` blocks the guns copy from the glock (104 bytes, not enough), and every `.pch` state. The other objects limit where the IL can be: anywhere in `weapons.h` from `CBasePlayerItem` to here works; in front of `CGrenade` it moves `apache.obj`, and 71 bytes at the end of `extdll.h`, `util.h`, `schedule.h`, `basemonster.h` or `cbase.h` already move another object. The client compiles `weapons.h` too and is the same file with and without the stand-in. |
 | [`cl_dll/hl/hl_weapons.cpp:654-714`](../../../blob/they-hunger/cl_dll/hl/hl_weapons.cpp#L654-L714) | `TH_ClientStandIn`, an inline function of 44 statements, before `HUD_InitClientWeapons`. Name and body ours (`e553179`). | It is 3,149 bytes of IL. `hl_weapons.cpp` creates the `.pch` it is compiled with, so the headers' inlines are emitted lazily here too. Retail's `hl_weapons.obj` has `CBaseEntity::IsAlive`, `IsBSPModel`, `ReflectGauss`, `HasTarget`, `TeamID`, `Think`, `Touch`, `Use` and `Blocked` right after `IsMoving`, before the initialiser of `g_clorg` (0x100046c0 to 0x1000482f), and `Center` and `EyePosition` after `HUD_PostRunCmd`. SDK 2.1's text with our lines for the five guns emits them later. The order of this object's sections decides which copies of identical functions LINK keeps across the whole client: at `d662520`, before the stand-in, 169,747 bytes of the file differ. | Retail's text had 3,095 to 3,290 bytes more IL between the includes and `g_rseq` than SDK 2.1's with our five guns (measured in the image with 619 to 658 empty-statement lines of 5 bytes; 618 and 659 fail), at least about 1,960 of it before `g_clorg`'s initialiser. 44 to 46 statements of this form work; 40 and 48 don't. What is known about the missing text: it had no absolute address (retail's `.reloc` virtual size, 0x8824, is ours exactly; a dead function with three made it 0x882a), it added no function (one more dead function of any of 98 shapes tried moves at least 36,169 bytes in a model of LINK's folding) and no static (`.bss` is equal). An inline or static function nobody called, or statements after a `return`, would leave exactly that: nothing. Tried and ruled out: SDK 2.1's own commented-out animation block (2,361 bytes if compiled; it adds five functions and needs an engine interface retail's client lacks), compiling without `/Zi` (moves the cursor by 400 to 450 bytes), every other `.pch` state and build session we tried (64,099 to 112,089 bytes differ), and the project's headers included after the header region (none is the right size). |
 
 They Hunger needs no placeholder objects: Valve's file lists give retail's
@@ -394,8 +395,7 @@ layout:
 
 | Where | What | Evidence |
 |---|---|---|
-| [`cl_dll/hl/hl_weapons.cpp:50-60`](../../../blob/they-hunger/cl_dll/hl/hl_weapons.cpp#L50-L60) | The client's five gun objects: `g_Ap9`, `g_ClTaurus`, `g_Hkg36`, `g_TfcSniper`, `g_Chain`. Names ours (`e90c20f`). | Retail's static initialisers (0x10004100 to 0x1000421f) give the objects' addresses: the chaingun's first, then `g_clorg` (bucket 60), the AP9's, `g_pWpns` (171), the sniper rifle's, `lasthealth` (520), `ev`, `g_Glock`, `player`, `Globals` (737), the Taurus's, `weapon_einar1`'s, `g_clang` (820). So the five names must hash below 60, to 60-171, to 172-519, to 738-818, and above the Taurus's up to 819. These hash to 4, 137, 354, 753 and 817. No naming scheme fits all five: the SDK's idiom with our class names fits two (`g_WeaponEinarAP9` 93, `g_WeaponEinarChaingun` 19) and not the other three. So retail's names are not known; only their buckets' windows are. |
-| [`dlls/apache.cpp:855`](../../../blob/they-hunger/dlls/apache.cpp#L855), [`1166`](../../../blob/they-hunger/dlls/apache.cpp#L1166), [`1085`](../../../blob/they-hunger/dlls/apache.cpp#L1085) | The two gun counters, both `static int cnt`, and the class name `CEinarBoss`. Names ours (`1e4cdca`). | Function statics are hashed by their decorated names, which contain the function's and the class's name. With these names the order is retail's: `FireRocket`'s unused `count`, the apache's counter, the boss's. |
+| [`cl_dll/hl/hl_weapons.cpp:50-60`](../../../blob/they-hunger/cl_dll/hl/hl_weapons.cpp#L50-L60) | The client's five gun objects: `g_Ap9`, `g_ClTaurus`, `g_Hkg36`, `g_TfcSniper`, `g_Chain`. Names ours (`e90c20f`). | Retail's static initialisers (0x10004100 to 0x1000421f) give the objects' addresses: the chaingun's first, then `g_clorg` (bucket 60), the AP9's, `g_pWpns` (171), the sniper rifle's, `lasthealth` (520), `ev`, `g_Glock`, `player`, `Globals` (737), the Taurus's, `weapon_einar1`'s, `g_clang` (820). So the five names must hash below 60, to 60-171, to 172-519, to 738-818, and above the Taurus's up to 819. These hash to 4, 137, 354, 753 and 817. No naming scheme fits all five: the SDK's idiom with retail's class names fits only the chaingun (`g_WeaponEinarChaingun` 19; `g_WeaponEinarAp9` 211, `g_WeaponEinar2` 208), and shorter forms fit none either (`g_EinarAp9` 489, `g_Taurus` 498, `g_Einar2` 620). So retail's names are not known; only their buckets' windows are. |
 
 ### Other choices and guesses
 
@@ -405,31 +405,50 @@ layout:
 | [`cl_dll/ammo.cpp:550`](../../../blob/they-hunger/cl_dll/ammo.cpp#L550), [`617-636`](../../../blob/they-hunger/cl_dll/ammo.cpp#L617-L636), [`884`](../../../blob/they-hunger/cl_dll/ammo.cpp#L884), [`916`](../../../blob/they-hunger/cl_dll/ammo.cpp#L916), [`992`](../../../blob/they-hunger/cl_dll/ammo.cpp#L992) | The red-mode `if`/`else` statements without braces around their single statements (`4040aea`) | `ammo.cpp` creates its `.pch`, so the amount of its own IL places the VGUI headers' inline members in `ammo.obj`. Retail's text had 172 to 206 bytes less IL by the end of `GetSpriteList` than ours had with braces. A brace pair around one statement is 18 bytes, and the eleven pairs we had written are 198. Ten pairs fit as well (keeping the one in `MsgFunc_HideWeapon`), and so would other text of the same size. No braces is the smallest difference from the SDK's own style. The code of the functions is the same either way. |
 | [`cl_dll/hl/hl_baseentity.cpp`](../../../blob/they-hunger/cl_dll/hl/hl_baseentity.cpp) ([119](../../../blob/they-hunger/cl_dll/hl/hl_baseentity.cpp#L119), [228](../../../blob/they-hunger/cl_dll/hl/hl_baseentity.cpp#L228), [240-241](../../../blob/they-hunger/cl_dll/hl/hl_baseentity.cpp#L240-L241)) | The client's stub file: SDK 2.2b's, without what SDK 2.2 added for its predicted weapons, with 2.1's two step-sound stubs (`d55d13c`) | The stubs retail keeps that have no identical twin come in 2.2b's order (`CBaseMonster::FTriangulate` before `ChangeYaw`, `FireBullets` and `GetDeathActivity`). Dead stubs take part in LINK's folding sort: without `ShouldSimplify` or without `CBasePlayer::PackDeadPlayerItems`, both dead, 101,466 bytes of the file differ, and without both 214,594 (measured with everything else as in the identical build). So both were in retail's file. The rest of the dead stubs are checked only through that sort and `.reloc`'s size. |
 | [`cl_dll/message.cpp:420-443`](../../../blob/they-hunger/cl_dll/message.cpp#L420-L443) | `CHudMessage::MessageAdd` as SDK 2.0's loop with 2.1's skipping of a leading `#` (`9fc784d`) | The function is retail's. Whether it was cut back from 2.1's text or comes from a Valve state between the two releases is open. The three globals 2.1 added stay, unused, because retail's data has them. |
-| [`dlls/weapons.h:559-566`](../../../blob/they-hunger/dlls/weapons.h#L559-L566) and the four classes after it; [`dlls/wpn_shared/hl_wpn_glock.cpp:477-481`](../../../blob/they-hunger/dlls/wpn_shared/hl_wpn_glock.cpp#L477-L481) and four more | The five guns' `UseDecrement` and the `flags` blocks of their fire functions, with the glock's `#if defined( CLIENT_WEAPONS )` | Copied from the glock's SDK text, which the guns' code follows. Neither project defines the macro, so both DLLs compile the `#else` branch, and a plain `return FALSE` and `flags = 0` would give the same code. Only the IL size could tell them apart. The medkit, which only the server has, got the plain form (`5193d32`). |
+| [`dlls/weapons.h:556-563`](../../../blob/they-hunger/dlls/weapons.h#L556-L563) and the four classes after it; [`dlls/wpn_shared/hl_wpn_glock.cpp:477-481`](../../../blob/they-hunger/dlls/wpn_shared/hl_wpn_glock.cpp#L477-L481) and four more | The five guns' `UseDecrement` and the `flags` blocks of their fire functions, with the glock's `#if defined( CLIENT_WEAPONS )` | Copied from the glock's SDK text, which the guns' code follows. Neither project defines the macro, so both DLLs compile the `#else` branch, and a plain `return FALSE` and `flags = 0` would give the same code. Only the IL size could tell them apart. The medkit, which only the server has, got the plain form (`5193d32`). |
 | [`dlls/apache.cpp:763-775`](../../../blob/they-hunger/dlls/apache.cpp#L763-L775) | `CApache::FireRocket`: `m_iRockets--; return;`, with Valve's body left behind the `return` | Retail's function only counts a rocket off. That Valve's body was still compiled is proved: both of its statics are in retail's data, and only with it does the inline `CGrenade::BloodColor` land where retail has it. Where exactly the `return` stood is ours. |
 | [`dlls/apache.cpp:32`](../../../blob/they-hunger/dlls/apache.cpp#L32) | `friend class CEinarBoss;` in `CApache` | The boss calls the apache's private members. Retail's export table still has the apache's think functions as private, so the class wasn't simply made public. A friend declaration is our way to get that. |
-| [`cl_dll/hl/hl_weapons.cpp:1123-1134`](../../../blob/they-hunger/cl_dll/hl/hl_weapons.cpp#L1123-L1134) | The client's `TH_IsMultiplayer` and the two empty screen fades, at the end of the file | The shared weapon file calls three functions that each DLL defines for itself. The client's fades are empty, so LINK folds them into another one-byte function. Their place still matters through the folding sort: in a model of it, the two must follow `TH_IsMultiplayer` at the end of `hl_weapons.cpp` (before it, 2,087 bytes of the image differ; elsewhere more). |
+| [`cl_dll/hl/hl_weapons.cpp:1123-1134`](../../../blob/they-hunger/cl_dll/hl/hl_weapons.cpp#L1123-L1134) | The client's `einar_isMultiplayer` and the two empty screen fades, at the end of the file | The shared weapon file calls three functions that each DLL defines for itself. The client's fades are empty, so LINK folds them into another one-byte function. Their place still matters through the folding sort: in a model of it, the two must follow `einar_isMultiplayer` at the end of `hl_weapons.cpp` (before it, 2,087 bytes of the image differ; elsewhere more). |
 | [`dlls/zombie.cpp:337`](../../../blob/they-hunger/dlls/zombie.cpp#L337), [`dlls/agrunt.cpp:1579`](../../../blob/they-hunger/dlls/agrunt.cpp#L1579) | The sizes of two sound-name buffers | 49 to 52 bytes compile to the same code. |
 | [`dlls/hl.dsp:57`](../../../blob/they-hunger/dlls/hl.dsp#L57) | `/incremental:no` on the server's link line | Inferred: retail was linked with `/debug` but has no incremental-link thunks. `/profile` or `/opt:ref` would have the same effect. |
-| Throughout | Names of everything the image doesn't name | See below. |
+| Throughout | Names of everything the binaries don't name | See [Names](#names). |
 
-**Names.** Retail names a class only where a decorated export or a
-save-table string carries the name. Of the mod's own classes that gives
-five: `CEinarFlameRocket`, `CWeaponEinarShovel` and `CWeaponEinarSpanner`
-(each exports member functions), `CEinarZork` and `CEinarZombieBull` (each
-has a save table, which holds the class's name as a string). The exported
-member names (`FlameTouch`, `Smack`, `SwingAgain`), the names of saved
-fields (for example `einar_sMaster` in `CBreakable` and the flame's
-`m_iTrail`) and all entity names are retail's too. Every other name the mod
-added is ours, formed after those five:
+### Names
 
-- the classes `CEinarCyberFranklin` (it saves under its base class's name,
-  `CAGrunt`), `CEinarBoss`, `CEinarMegasquid`, `CEinarHand`,
-  `CEinarChicken`, `CEinarKelly`, `CEinarBabyKelly`, `CEinarCiv`,
-  `CEinarCivDead`, `CEinarCivSit`, `CWeaponEinarMedkit`, the five gun
-  classes in `weapons.h` (`CWeaponEinarAP9`, `CWeaponEinarSniper`,
-  `CWeaponEinarTFCSniper`, `CWeaponEinarTaurus`, `CWeaponEinarChaingun`) and
-  the three ammo classes (`CAmmoEinar...`), with all their members;
+The Windows DLLs name a class only where a decorated export or a
+save-table string carries the name, and nothing else except through the
+`.bss` hash above. But the mod also shipped a Linux server,
+`th3_i386.so`, built with egcs 1.1.2 from the same release (the same 270
+entity names) and not stripped. Its symbol table names every class,
+method, global function, static data member and function static of the
+server, and the branch uses those names (`14ee6ab`). Each was matched to
+ours by the entity function's class, the vtable slot or what the function
+does; both DLLs build to the same files with either set of names. What
+changed:
+
+- classes: `CWeaponEinarAp9`, `CWeaponEinar2` (`weapon_einar1`),
+  `CAmmoEinarAp9`, `CAmmoEinarSniper1`, `CEinarCivilian`,
+  `CEinarDeadCivilian`, `CEinarSittingCivilian`;
+- methods: `Ap9Fire`, `ChaingunStart` and `ChaingunStop`, `MedkitStart` and
+  `MedkitUse`, the headcrab's `einar_AttackSoundZero`,
+  `einar_AttackSoundNotZero` and `einar_BiteSound`,
+  `CHandGrenade::ShootTimedTNT`, `CSquidSpit::ShootBlood`;
+- the helpers `einar_isMultiplayer`, `einar_ScreenFadeIn` and
+  `einar_ScreenFadeOut`;
+- static sound tables such as `pEinarChickenIdleSounds`, `einar_pDieSounds`
+  and `pCyberPainSounds`;
+- the gun counters in `CApache::FireGun` and `CEinarBoss::FireGun`, both
+  `shooting_flag`. The Linux server keeps them in its initialised data, so
+  they were written `= 0`; VC6 puts such statics after the uninitialised
+  ones in declaration order, which is retail's layout. Before, a name
+  chosen for the hash (`cnt`) stood in for that.
+
+The other mod classes already had retail's names (`CEinarZork`,
+`CEinarKelly`, `CEinarBoss`, `CEinarChicken`, `CEinarZombieBull`,
+`CWeaponEinarChaingun` and the rest). Still ours, because no binary records
+them:
+
+- member variables, sequence enums and locals;
 - the weapon ids (`WEAPON_TH_...`, `WEAPON_EINAR1`) and the guns'
   constants. Their values are retail's;
 - `HIDEHUD_REDMODE` and `SF_SUIT_REDMODE` for "red mode", the monster flags
@@ -437,13 +456,11 @@ added is ours, formed after those five:
   `SF_MONSTER_NOZAP` and `SF_MONSTER_FASTMODEZOMBIE`, `SF_TRACKTRAIN_SOUNDS`
   and `SF_GRUNTREPEL_PARACHUTE`. They are named after the flags' names in
   the mod's fgd; their values are retail's;
-- the helpers `TH_IsMultiplayer`, `TH_ScreenFadeIn` and `TH_ScreenFadeOut`;
-- sequence enums, locals, and unexported functions.
+- names in the client's own code (events, HUD) and the five client gun
+  objects above.
 
-Comments mark many of them `name ours`
-(`git grep -n -i "names\? ours\|ours)" they-hunger` lists 43 lines in 24
-files). Apart from exports and strings, the only way a name reaches the
-image is the `.bss` hash above.
+Comments mark them `name ours`
+(`git grep -n -i "names\? ours\|ours)" they-hunger` lists them).
 
 ### `// sic` lines that keep retail's behaviour
 
@@ -482,7 +499,7 @@ branch needs a source of its own.
   ([Other choices and guesses](#other-choices-and-guesses)).
 - `hl_wpn_glock.cpp` is compiled into both DLLs, and the five guns' code is
   the same in both. Where the DLLs must differ, they call a function each
-  DLL defines for itself (the three `TH_` helpers), so no conditional on the
+  DLL defines for itself (the three `einar_` helpers), so no conditional on the
   DLL was written.
 - One of Valve's conditionals went with its content: the
   `#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )` around the hornet
@@ -508,7 +525,9 @@ and linker builds and the object counts (from the Rich header).
 ## How identity was reached
 
 The work went in this order: the base, then functions, then everything else
-the image records. All of it was done on 2026-11-11.
+the image records. All of it was done on 2026-11-11. On 2026-11-17 the
+names from the mod's Linux server replaced ours ([Names](#names)); both
+files stayed identical.
 [vc6-notes.md](vc6-notes.md) has the compiler and linker rules this needed.
 
 **Functions.** The mod's changes were written from the disassembly and
