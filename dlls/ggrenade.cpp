@@ -43,10 +43,6 @@ LINK_ENTITY_TO_CLASS( grenade, CGrenade );
 #define SF_GRENADE_KEEPOWNER	0x0100	// pev->owner is kept through the damage
 #define SF_GRENADE_NOEFFECTS	0x0200	// damage only, removed right away
 
-// TEMP: the mod's bool spawnflags test (shr/test in retail); to be CBaseEntity's
-static inline bool HasSpawnFlagTmp( entvars_t *pev, int iFlags ) { return pev->spawnflags & iFlags; }
-#define HasSpawnFlag( f ) HasSpawnFlagTmp( pev, f )
-
 // fire.cpp: flames around a spot (name ours)
 extern void FireSpread( const Vector &vecOrigin, float flDamage, entvars_t *pevOwner, edict_t *pentIgnore );
 
