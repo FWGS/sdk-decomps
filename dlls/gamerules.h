@@ -144,7 +144,7 @@ public:
 // Teamplay stuff
 	virtual const char *GetTeamID( CBaseEntity *pEntity ) = 0;// what team is this entity on?
 	virtual int PlayerRelationship( CBaseEntity *pPlayer, CBaseEntity *pTarget ) = 0;// What is the player's relationship with this entity?
-	virtual int GetTeamIndex( const char *pTeamName ) { return -1; }
+	virtual int GetTeamIndex( const char *pTeamName ) { return 0; }
 	virtual const char *GetIndexedTeamName( int teamIndex ) { return ""; }
 	virtual BOOL IsValidTeam( const char *pTeamName ) { return TRUE; }
 	virtual void ChangePlayerTeam( CBasePlayer *pPlayer, const char *pTeamName, BOOL bKill, BOOL bGib ) {}
@@ -162,6 +162,29 @@ public:
 };
 
 extern CGameRules *InstallGameRules( void );
+
+//=========================================================
+// VerbTakesName - does a death message verb have a "%s"
+// for the victim's name?  Positive if it does.  name ours
+//=========================================================
+inline int VerbTakesName( const char *pszVerb )
+{
+	int state = 0;
+
+	for ( int i = 0; pszVerb[i]; i++ )
+	{
+		if ( state == -1 )
+		{
+			if ( pszVerb[i] == 's' )
+				return 1;
+			state = 0;
+		}
+		else if ( pszVerb[i] == '%' )
+			state = -1;
+	}
+
+	return state;
+}
 
 
 //=========================================================
@@ -190,9 +213,11 @@ public:
 	virtual BOOL ClientConnected( edict_t *pEntity, const char *pszName, const char *pszAddress, char szRejectReason[ 128 ] );
 	virtual void InitHUD( CBasePlayer *pl );		// the client dll is ready for updating
 	virtual void ClientDisconnected( edict_t *pClient );
+	virtual void UpdateGameMode( CBasePlayer *pPlayer );
 
 // Client damage rules
 	virtual float FlPlayerFallDamage( CBasePlayer *pPlayer );
+	virtual BOOL  FPlayerCanTakeDamage( CBasePlayer *pPlayer, CBaseEntity *pAttacker );
 	
 // Client spawn/respawn control
 	virtual void PlayerSpawn( CBasePlayer *pPlayer );
@@ -201,6 +226,8 @@ public:
 	virtual float FlPlayerSpawnTime( CBasePlayer *pPlayer );
 
 	virtual BOOL AllowAutoTargetCrosshair( void );
+	virtual BOOL ClientCommand( CBasePlayer *pPlayer, const char *pcmd );
+	virtual BOOL ClientSay( CBasePlayer *pPlayer, char *pText );
 
 // Client kills/scoring
 	virtual int IPointsForKill( CBasePlayer *pAttacker, CBasePlayer *pKilled );
@@ -236,6 +263,7 @@ public:
 
 // Healthcharger respawn control
 	virtual float FlHealthChargerRechargeTime( void );
+	virtual float FlHEVChargerRechargeTime( void );
 
 // What happens to a dead player's weapons
 	virtual int DeadPlayerWeapons( CBasePlayer *pPlayer );
@@ -245,7 +273,6 @@ public:
 
 // Monsters
 	virtual BOOL FAllowMonsters( void );
-	virtual BOOL ClientSay( CBasePlayer *pPlayer, char *pText );
 
 // Teamplay stuff	
 	virtual const char *GetTeamID( CBaseEntity *pEntity ) {return "";};

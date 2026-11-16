@@ -32,6 +32,7 @@ public:
 
 	static CGrenade *ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );
 	static CGrenade *ShootContact( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
+	static CGrenade *ShootMine( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );	// name ours
 	static CGrenade *ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
 	static CGrenade *ShootExplosion( entvars_t *pevOwner, const Vector &vecStart, float flDelay, const Vector &vecDir );	// name ours; ggrenade.cpp (0x100600b0)
 	static CGrenade *ShootHybrid( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );	// name ours; ggrenade.cpp (0x1005fc70)
@@ -39,6 +40,10 @@ public:
 
 	void Explode( Vector vecSrc, Vector vecAim );
 	virtual void Explode( TraceResult *pTrace, int bitsDamageType );
+	void FireExplode( TraceResult *pTrace );	// name ours
+	void SphereBlast( void );	// name ours
+	void MortarBlast( void );	// name ours
+	void EXPORT HurtThink( void );
 	void EXPORT Smoke( void );
 
 	void EXPORT BounceTouch( CBaseEntity *pOther );
@@ -51,19 +56,29 @@ public:
 	void EXPORT MakeSolid( void );
 	void EXPORT DetonateUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT TumbleThink( void );
+	void EXPORT HybridThink( void );
+	void EXPORT HybridTouch( CBaseEntity *pOther );
+	void EXPORT MineThink( void );
 
 	virtual void BounceSound( void );
 	virtual int	BloodColor( void ) { return DONT_BLEED; }
 	virtual void Killed( entvars_t *pevAttacker, int iGib );
+#ifndef CLIENT_DLL
+	virtual const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "a grenade"; return STRING( m_iszKillDesc ); }
+	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return DamageVerb( DMG_BLAST, fGibbed ); }
+#endif
+	virtual int HeatSignature( void ) { return 0; }
 
 	BOOL m_fRegisteredSound;// whether or not this grenade has issued its DANGER sound to the world sound list yet.
 };
 
 // The mod's cluster bomb (cluster_bomb.cpp; the exports name the class). Declared here because the hand
-// grenade throws it; its other members are added here with cluster_bomb.cpp.
+// grenade (handgrenade.cpp) throws it.
 class CClusterBomb : public CGrenade
 {
 public:
+	void Spawn( void );
+
 	static CClusterBomb *ShootTimed( edict_t *pOwner, const Vector &vecStart, const Vector &vecVelocity, float time );	// name ours (0x10027d00)
 	static CClusterBomb *ShootMirv( edict_t *pOwner, const Vector &vecStart, const Vector &vecVelocity, float time );	// name ours (0x10027e70): ShootTimed, then pev->weapons = 3
 
@@ -73,6 +88,9 @@ public:
 	void EXPORT ClusterHybridThink( void );
 	void EXPORT ClusterHybridTouch( CBaseEntity *pOther );
 	void EXPORT ClusterPreDetonate( void );
+
+	void ClusterExplode( TraceResult *pTrace );		// name ours: throws pev->frags bomblets of type pev->weapons
+	static Vector ClusterSpread( const Vector &vecSpread );	// name ours: a random direction around v_forward
 };
 
 
@@ -214,10 +232,10 @@ public:
 #define AMMO_357BOX_GIVE		12
 #define AMMO_MP5CLIP_GIVE		MP5_MAX_CLIP
 #define AMMO_CHAINBOX_GIVE		200
-#define AMMO_M203BOX_GIVE		2
+#define AMMO_M203BOX_GIVE		4
 #define AMMO_BUCKSHOTBOX_GIVE	12
 #define AMMO_CROSSBOWCLIP_GIVE	10
-#define AMMO_RPGCLIP_GIVE		RPG_MAX_CLIP
+#define AMMO_RPGCLIP_GIVE		5
 #define AMMO_URANIUMBOX_GIVE	20
 #define AMMO_SNARKBOX_GIVE		5
 
@@ -271,6 +289,39 @@ typedef struct
 	const char *pszName;
 	int iId;
 } AmmoInfo;
+
+// The crossbow's dart, here for func_turret's info_shootpoint_bolt too.
+// UNDONE: Save/restore this?  Don't forget to set classname and LINK_ENTITY_TO_CLASS()
+// 
+// OVERLOADS SOME ENTVARS:
+//
+// speed - the ideal magnitude of my velocity; 0 once the dart sticks in the world
+// frags - the dart type: 1 explosive, 2 flare, 3 electrical, 4 laser net, else standard
+class CCrossbowBolt : public CBaseEntity
+{
+	void Spawn( void );
+	void Precache( void );
+	int  Classify ( void );
+	BOOL CanBeRepulsed( bool fForce ) { return TRUE; }
+	const char *GetKillDesc( void )
+	{
+		if ( pev->frags == 4 && pev->speed == 0 )
+			return "a laser net";
+		return "a high-velocity stealth crossbow";
+	}
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup );
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupOf( iHitGroup ); }
+	void EXPORT BubbleThink( void );
+	void EXPORT BoltTouch( CBaseEntity *pOther );
+	void EXPORT ExplodeThink( void );
+	void EXPORT ZapThink( void );
+	void EXPORT LightThink( void );
+	void LaserNet( void );	// name ours
+
+public:
+	static CCrossbowBolt *BoltCreate( void );
+	void BoltTrail( void );	// name ours
+};
 
 // Items that the player has in their inventory that they can use
 class CBasePlayerItem : public CBaseAnimating
@@ -456,6 +507,7 @@ extern void SpawnBlood(Vector vecSpot, int bloodColor, float flDamage);
 extern int DamageDecal( CBaseEntity *pEntity, int bitsDamageType );
 extern void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType );
 extern void RadiusDamageNoTrace( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType );	// name ours
+extern void FireSpread( const Vector &vecOrigin, float flDamage, entvars_t *pevOwner, edict_t *pentIgnore );	// fire.cpp: flames around a spot (name ours)
 
 typedef struct 
 {
@@ -658,6 +710,7 @@ public:
 	int SecondaryAmmoIndex( void );
 	BOOL Deploy( void );
 	void Reload( void );
+	void WeaponSpecial( void );		// picks the grenade type (pev->weapons)
 	void WeaponIdle( void );
 	float m_flNextAnimTime;
 	int m_iShell;
@@ -685,14 +738,15 @@ public:
 	int GetItemInfo(ItemInfo *p);
 
 	void FireBolt( void );
-	void FireSniperBolt( void );
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
+	void WeaponSpecial( void );		// cycles the dart type (pev->weapons)
 	int AddToPlayer( CBasePlayer *pPlayer );
 	BOOL Deploy( );
 	void Holster( int skiplocal = 0 );
 	void Reload( void );
 	void WeaponIdle( void );
+	BOOL ShouldWeaponIdle( void ) { return pev->frags != 0; }	// pev->frags: rapid fire
 
 	int m_fInZoom; // don't save this
 
@@ -734,6 +788,7 @@ public:
 
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
+	void WeaponSpecial( void );		// switches the shells (pev->weapons)
 	BOOL Deploy( );
 	void Reload( void );
 	void WeaponIdle( void );
@@ -791,7 +846,8 @@ public:
 	void Holster( int skiplocal = 0 );
 
 	void PrimaryAttack( void );
-	void SecondaryAttack( void );
+	void SecondaryAttack( void );	// the guidance (m_mode)
+	void WeaponSpecial( void );		// the warhead (m_ammo)
 	void WeaponIdle( void );
 
 	void UpdateSpot( void );
@@ -817,14 +873,27 @@ private:
 
 };
 
-// rocket.cpp's rocket, the base of the mod's missiles (a stand-in until rocket.cpp has the real declaration)
-#define SF_ROCKET_SPRITE	0x800
+// Scientist Slaughterhouse's rocket (rocket.cpp): the RPG's rocket and the mod's missiles derive from it.
+// It flies at m_vecEnemyLKP (Steer) as its think function picks it: FlyThink straight on, FollowThink at
+// laser spots, SeekThink at the hottest target (HeatSignature) in m_flFieldOfView, TargetThink at m_hEnemy
+// once m_flSeekTime has passed. A sprite model (".spr") animates and sets SF_ROCKET_SPRITE.
+#define SF_ROCKET_SPRITE	0x800	// name ours
 
 class CRocket : public CGrenade
 {
 public:
-	static CRocket *CreateRocket( const Vector &vecOrigin, const Vector &vecAngles, edict_t *pOwner, const Vector &vecColor, int iszModel );
-	static CRocket *ShootArc( edict_t *pOwner, Vector vecOrigin, Vector vecVelocity, const Vector &vecColor );
+	int		Save( CSave &save );
+	int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	void Spawn( void );
+	void Precache( void );
+	int HeatSignature( void ) { return 3; }
+	const char *GetKillDesc( void ) { if ( m_iszKillDesc ) return STRING( m_iszKillDesc ); return "a rocket"; }
+	void Killed( entvars_t *pevAttacker, int iGib );
+
+	static CRocket *CreateRocket( const Vector &vecOrigin, const Vector &vecAngles, edict_t *pOwner, const Vector &vecColor, int iszModel );	// names ours
+	static CRocket *ShootArc( edict_t *pOwner, Vector vecOrigin, Vector vecVelocity, const Vector &vecColor );	// tossed, faces its velocity
 
 	void EXPORT RocketTouch( CBaseEntity *pOther );
 	void EXPORT FollowThink( void );
@@ -833,30 +902,28 @@ public:
 	void EXPORT FlyThink( void );
 	void EXPORT ArcThink( void );
 
-	virtual void IgniteTrail( const Vector &vecColor );
-	virtual void Steer( void );
+	virtual void IgniteTrail( const Vector &vecColor );	// names ours: the light, sound and smoke trail
+	virtual void Steer( void );							// turns the velocity towards m_vecEnemyLKP
 
 	float	m_flSeekTime;
-	Vector	m_vecBSphereColor;
+	Vector	m_vecBSphereColor;	// a sprite rocket's colour (its rendercolor goes to 0)
 	float	m_lastTime;
 	float	m_maxFrame;
 };
 
-class CRpgRocket : public CGrenade
+class CRpgRocket : public CRocket
 {
 public:
 	int		Save( CSave &save );
 	int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
 	void Spawn( void );
-	void Precache( void );
-	void EXPORT FollowThink( void );
-	void EXPORT IgniteThink( void );
-	void EXPORT RocketTouch( CBaseEntity *pOther );
-	static CRpgRocket *CreateRpgRocket( Vector vecOrigin, Vector vecAngles, CBaseEntity *pOwner, CRpg *pLauncher );
+	void Killed( entvars_t *pevAttacker, int iGib );
+	void IgniteTrail( const Vector &vecColor );
+	void EXPORT RpgTouch( CBaseEntity *pOther );
+	void EXPORT CameraThink( void );	// the remote controlled rocket
+	static CRpgRocket *CreateRpgRocket( Vector vecOrigin, Vector vecAngles, edict_t *pOwner, CRpg *pLauncher, const Vector &vecColor );
 
-	int m_iTrail;
-	float m_flIgniteTime;
 	CRpg *m_pLauncher;// pointer back to the launcher that fired me. 
 };
 
@@ -960,6 +1027,8 @@ public:
 	void EndAttack( void );
 	void Attack( void );
 	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void WeaponSpecial( void );
 	void WeaponIdle( void );
 
 	float m_flAmmoUseTime;// since we use < 1 point of ammo per update, we subtract ammo on a timer.
@@ -967,17 +1036,22 @@ public:
 	float GetPulseInterval( void );
 	float GetDischargeInterval( void );
 
+	void IonCannon( void );	// name ours (its client thunk slot fits this name)
 	void Fire( const Vector &vecOrigSrc, const Vector &vecDir );
 
 	BOOL HasAmmo( void );
 
 	void UseAmmo( int count );
 	
-	enum EGON_FIREMODE { FIRE_NARROW, FIRE_WIDE};
-
 	CBeam				*m_pBeam;
+#ifndef CLIENT_DLL
 	CBeam				*m_pNoise;
 	CSprite				*m_pSprite;
+	CBeam				*m_pIonBeams[4];		// the ion cannon's extra beams (names ours)
+	CSprite				*m_pIonSprites[10];		// even: beam starts, odd: beam ends
+	EHANDLE				m_hIonTargets[5];		// what each ion beam locked on
+	Vector				m_vecIonTargetOfs[5];	// where on it
+#endif
 
 	virtual BOOL UseDecrement( void )
 	{ 
@@ -992,9 +1066,9 @@ public:
 
 private:
 	float				m_shootTime;
-	EGON_FIREMODE		m_fireMode;
 	float				m_shakeTime;
 	BOOL				m_deployed;
+	int					m_iBeamCount;	// the ion cannon's extra beam pairs, 0-2
 
 	unsigned short m_usEgonFire;
 };
@@ -1044,6 +1118,8 @@ public:
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void WeaponSpecial( void );	// the grenade mode (pev->weapons)
 	BOOL Deploy( void );
 	BOOL CanHolster( void );
 	void Holster( int skiplocal = 0 );
@@ -1076,6 +1152,7 @@ public:
 	int AddToPlayer( CBasePlayer *pPlayer );
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
+	void WeaponSpecial( void );		// switches between satchel charges and satellite rain (pev->weapons)
 	int AddDuplicate( CBasePlayerItem *pOriginal );
 	BOOL CanDeploy( void );
 	BOOL Deploy( void );
@@ -1111,6 +1188,8 @@ public:
 	}
 
 	void PrimaryAttack( void );
+	void SecondaryAttack( void );	// the turret mine
+	void WeaponSpecial( void );
 	BOOL Deploy( void );
 	void Holster( int skiplocal = 0 );
 	void WeaponIdle( void );
@@ -1453,15 +1532,26 @@ private:
 };
 
 
-
-// laser_pulse (defined in pulse.cpp, server only): a stand-in with the two statics agrunt.cpp calls
+// laser_pulse (pulse.cpp, server only): the glowing energy pulse fired by the shotgun's laser rounds,
+// the laser pistol and several monsters; base of special_laser (lpistol.cpp)
 class CLaserPulse : public CGrenade
 {
 public:
+	CLaserPulse() {}	// sic: an empty constructor (special_laser's factory calls CBaseEntity's out of line)
+	void Spawn( void );
+	void Precache( void );
+	const char *GetKillDesc( void ) { return !m_iszKillDesc ? "a pulse laser" : STRING( m_iszKillDesc ); }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup );
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+
 	// names ours: precaches the glow and trail sprites of color iColor (1 red, 2 green, 3 blue, 4 "n")
 	static short PrecacheColor( int iColor );
 	// names ours: a pulse at vecOrigin; iColor picks the sprites, iTrailLife > 0 gives it a beam trail
 	static CLaserPulse *Shoot( Vector vecOrigin, edict_t *pOwner, const Vector &vecColor, int iTrailLife, float flScale, int iColor );
+
+	void EXPORT LaserTouch( CBaseEntity *pOther );
+
+	int m_iUnused;	// name ours: 0x2ac, never read or written in retail
 };
 
 #endif // WEAPONS_H

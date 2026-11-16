@@ -184,6 +184,10 @@ SOURCE=.\barney.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\beams.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\bigmomma.cpp
 # End Source File
 # Begin Source File
@@ -204,11 +208,19 @@ SOURCE=.\buttons.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\camera.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\cbase.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\client.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\cluster_bomb.cpp
 # End Source File
 # Begin Source File
 
@@ -253,6 +265,10 @@ SOURCE=.\entity_link.cpp
 # Begin Source File
 
 SOURCE=.\explode.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\fire.cpp
 # End Source File
 # Begin Source File
 
@@ -380,6 +396,10 @@ SOURCE=.\maprules.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\masters.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\monstermaker.cpp
 # End Source File
 # Begin Source File
@@ -444,7 +464,15 @@ SOURCE=..\pm_shared\pm_shared.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\pulse.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\python.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\random_scis.cpp
 # End Source File
 # Begin Source File
 
@@ -453,6 +481,10 @@ SOURCE=.\rat.cpp
 # Begin Source File
 
 SOURCE=.\roach.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\rocket.cpp
 # End Source File
 # Begin Source File
 

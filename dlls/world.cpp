@@ -90,6 +90,8 @@ DLL_DECALLIST gDecals[] = {
 	{ "{smscorch3", 0 },	// DECAL_SMALLSCORCH3,	// Small scorch mark
 	{ "{mommablob", 0 },	// DECAL_MOMMABIRTH		// BM Birth spray
 	{ "{mommablob", 0 },	// DECAL_MOMMASPLAT		// BM Mortar spray?? need decal
+	{ "{water1", 0 },		// name ours: DECAL_WATER1
+	{ "{water2", 0 },		// name ours: DECAL_WATER2
 };
 
 /*
@@ -481,7 +483,10 @@ void CWorld :: Precache( void )
 	g_pLastSpawn = NULL;
 	
 #if 1
-	CVAR_SET_STRING("sv_gravity", "800"); // 67ft/sec
+	if ( pev->gravity == 0 )
+		CVAR_SET_STRING("sv_gravity", "800"); // 67ft/sec
+	else
+		CVAR_SET_FLOAT("sv_gravity", pev->gravity * 800 );	// the worldspawn's "gravity" scales it
 	CVAR_SET_STRING("sv_stepsize", "18");
 #else
 	CVAR_SET_STRING("sv_gravity", "384"); // 32ft/sec
@@ -545,6 +550,7 @@ void CWorld :: Precache( void )
 	}
 	else
 	{
+		PRECACHE_MODEL( "models/stickygib2.mdl" );
 		PRECACHE_MODEL( "models/hgibs.mdl" );
 		PRECACHE_MODEL( "models/agibs.mdl" );
 	}
@@ -665,6 +671,15 @@ void CWorld :: Precache( void )
 	{
 		CVAR_SET_FLOAT( "mp_defaultteam", 0 );
 	}
+
+	// read by name, not through the cvar_t
+	if ( CVAR_GET_FLOAT( "ssh_randomscis" ) >= 1 )
+		CBaseEntity::Create( "random_scis", g_vecZero, g_vecZero, NULL );
+
+	// ssh_precache names an entity class to precache
+	const char *pszPrecache = CVAR_GET_STRING( "ssh_precache" );
+	if ( pszPrecache && *pszPrecache )
+		UTIL_PrecacheOther( pszPrecache );
 }
 
 
@@ -735,6 +750,12 @@ void CWorld :: KeyValue( KeyValueData *pkvd )
 		{
 			pev->spawnflags |= SF_WORLD_FORCETEAM;
 		}
+		pkvd->fHandled = TRUE;
+	}
+	else if ( FStrEq(pkvd->szKeyName, "skill") )
+	{
+		// the map sets the skill level
+		CVAR_SET_FLOAT( "skill", atoi(pkvd->szValue) );
 		pkvd->fHandled = TRUE;
 	}
 	else

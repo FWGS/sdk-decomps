@@ -289,6 +289,8 @@ public:
 	void SetCustomDecalFrames( int nFrames );
 	int GetCustomDecalFrames( void );
 
+	void ShowMenu( int bitsValidSlots, int nDisplayTime, BOOL fNeedMore, char *pszText );	// name ours
+
 	void CBasePlayer::TabulateAmmo( void );
 
 	float m_flStartCharge;

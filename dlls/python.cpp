@@ -98,19 +98,8 @@ void CPython::Precache( void )
 
 BOOL CPython::Deploy( )
 {
-#ifdef CLIENT_DLL
-	if ( bIsMultiplayer() )
-#else
-	if ( g_pGameRules->IsMultiplayer() )
-#endif
-	{
-		// enable laser sight geometry.
-		pev->body = 1;
-	}
-	else
-	{
-		pev->body = 0;
-	}
+	// enable laser sight geometry (single player too).
+	pev->body = 1;
 
 	return DefaultDeploy( "models/v_357.mdl", "models/p_357.mdl", PYTHON_DRAW, "python", UseDecrement(), pev->body );
 }
@@ -132,15 +121,7 @@ void CPython::Holster( int skiplocal /* = 0 */ )
 
 void CPython::SecondaryAttack( void )
 {
-#ifdef CLIENT_DLL
-	if ( !bIsMultiplayer() )
-#else
-	if ( !g_pGameRules->IsMultiplayer() )
-#endif
-	{
-		return;
-	}
-
+	// the scope works in single player too
 	if ( m_pPlayer->pev->fov != 0 )
 	{
 		m_fInZoom = FALSE;
@@ -226,12 +207,7 @@ void CPython::Reload( void )
 		m_pPlayer->pev->fov = m_pPlayer->m_iFOV = 0;  // 0 means reset to default fov
 	}
 
-	int bUseScope = FALSE;
-#ifdef CLIENT_DLL
-	bUseScope = bIsMultiplayer();
-#else
-	bUseScope = g_pGameRules->IsMultiplayer();
-#endif
+	int bUseScope = TRUE;
 
 	if (DefaultReload( 6, PYTHON_RELOAD, 2.0, bUseScope ))
 	{
@@ -279,14 +255,7 @@ void CPython::WeaponIdle( void )
 		m_flTimeWeaponIdle = (170.0/30.0);
 	}
 	
-	int bUseScope = FALSE;
-#ifdef CLIENT_DLL
-	bUseScope = bIsMultiplayer();
-#else
-	bUseScope = g_pGameRules->IsMultiplayer();
-#endif
-	
-	SendWeaponAnim( iAnim, UseDecrement() ? 1 : 0, bUseScope );
+	SendWeaponAnim( iAnim, UseDecrement() ? 1 : 0, 1 );
 }
 
 
