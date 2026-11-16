@@ -2417,9 +2417,11 @@ BOOL CBaseMonster :: FindCover ( Vector vecThreat, Vector vecViewOffset, float f
 }
 
 //=========================================================
-// FindRetreat - FindCover for a node on the far side of me
-// from vecThreat (more than 90 degrees off its direction).
-// A first version; tuned to retail's code later.
+// FindRetreat - FindCover for a node more than 90 degrees
+// off the threat's direction, without the visibility test:
+// the first one in range that is no farther from me than
+// from the threat (by path length) and that I can run to.
+// name ours
 //=========================================================
 BOOL CBaseMonster :: FindRetreat ( Vector vecThreat, float flMinDist, float flMaxDist )
 {
@@ -2470,11 +2472,16 @@ BOOL CBaseMonster :: FindRetreat ( Vector vecThreat, float flMinDist, float flMa
 		CNode &node = WorldGraph.Node( nodeNumber );
 		WorldGraph.m_iLastCoverSearch = nodeNumber + 1;
 
-		flDist = ( pev->origin - node.m_vecOrigin ).Length();
+		Vector vecDelta;	// name ours
+		vecDelta = pev->origin - node.m_vecOrigin;
+		flDist = vecDelta.Length();
 
 		if ( flDist >= flMinDist && flDist < flMaxDist )
 		{
-			if ( fabs( UTIL_AngleDiff( UTIL_VecToYaw( node.m_vecOrigin ), flThreatYaw ) ) > 90 )
+			// sic: the yaws are of the positions themselves, seen from the world origin, not from me
+			float flNodeYaw = UTIL_VecToYaw( node.m_vecOrigin );
+			float flDiff = fabs( UTIL_AngleDiff( flNodeYaw, flThreatYaw ) );
+			if ( flDiff > 90 )
 			{
 				if ( ( iMyNode == iThreatNode ) || WorldGraph.PathLength( iMyNode, nodeNumber, iMyHullIndex, m_afCapability ) <= WorldGraph.PathLength( iThreatNode, nodeNumber, iMyHullIndex, m_afCapability ) )
 				{
