@@ -60,7 +60,7 @@ public:
 };
 
 // The mod's cluster bomb (cluster_bomb.cpp; the exports name the class). Declared here because the hand
-// grenade throws it; its other members are added here with cluster_bomb.cpp.
+// grenade (handgrenade.cpp) throws it.
 class CClusterBomb : public CGrenade
 {
 public:

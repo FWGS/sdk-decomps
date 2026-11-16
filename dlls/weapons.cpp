@@ -1581,9 +1581,6 @@ TYPEDESCRIPTION	CSatchel::m_SaveData[] =
 };
 IMPLEMENT_SAVERESTORE( CSatchel, CBasePlayerWeapon );
 
-// a stand-in until this file has W_Precache's sprites/smoke.spr index
-DLL_GLOBAL short g_sModelIndexSmokePuff;
-
 // a stand-in until this file has the real spread helper (retail 0x100eb710, 328 bytes)
 Vector UTIL_SpreadVector( const Vector &vecSpread )
 {
