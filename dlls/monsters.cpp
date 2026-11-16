@@ -3870,7 +3870,48 @@ BOOL CBaseMonster :: ShouldFadeOnDeath( void )
 	return FALSE;
 }
 
-// Retail has a 451-byte mod function here (0x10088ed0), not written yet.
+//=========================================================
+// EmulatePlayerUse - uses what the player's +use would use
+// from where I stand, looking along my v_angle: the usable
+// (impulse or on/off) non-monster entity within 64 units most
+// in front of me is toggled. name ours
+//=========================================================
+static const float flSearchRadius = 64;	// name ours, player.cpp's PLAYER_SEARCH_RADIUS
+
+void CBaseMonster :: EmulatePlayerUse ( void )
+{
+	CBaseEntity *pObject = NULL;
+	CBaseEntity *pClosest = NULL;
+	Vector		vecLOS;
+	float flMaxDot = VIEW_FIELD_NARROW;
+	float flDot;
+
+	UTIL_MakeVectors ( pev->v_angle );// so we know which way we are facing
+
+	ALERT ( at_console, "emulating player use\n" );
+
+	while ((pObject = UTIL_FindEntityInSphere( pObject, pev->origin, flSearchRadius )) != NULL)
+	{
+		if ( pObject != this && !FBitSet( pObject->pev->flags, FL_MONSTER ) && (pObject->ObjectCaps() & (FCAP_IMPULSE_USE | FCAP_ONOFF_USE)) )
+		{
+			vecLOS = (VecBModelOrigin( pObject->pev ) - (pev->origin + pev->view_ofs));
+
+			// This essentially moves the origin of the target to the corner nearest the player to test to see 
+			// if it's "hull" is in the view cone
+			vecLOS = UTIL_ClampVectorToBox( vecLOS, pObject->pev->size * 0.5 );
+
+			flDot = DotProduct (vecLOS , gpGlobals->v_forward);
+			if (flDot > flMaxDot )
+			{// only if the item is in front of the user
+				pClosest = pObject;
+				flMaxDot = flDot;
+			}
+		}
+	}
+
+	if ( pClosest )
+		pClosest->Use( this, this, USE_TOGGLE, 0 );
+}
 
 float CBaseMonster :: MovementSpeed( void )
 {
