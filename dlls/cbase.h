@@ -617,6 +617,7 @@ public:
 #define DMG_SHOCK			(1 << 8)	// electric shock
 #define DMG_SONIC			(1 << 9)	// sound pulse shockwave
 #define DMG_ENERGYBEAM		(1 << 10)	// laser or other high energy beam 
+#define DMG_NOGIB			(1 << 11)	// name ours: kills like DMG_NEVERGIB (the bullets)
 #define DMG_NEVERGIB		(1 << 12)	// with this bit OR'd in, no damage type will be able to gib victims upon death
 #define DMG_ALWAYSGIB		(1 << 13)	// with this bit OR'd in, any damage type can be made to gib victims upon death.
 #define DMG_DROWN			(1 << 14)	// Drowning
@@ -632,6 +633,7 @@ public:
 #define DMG_SLOWBURN		(1 << 21)	// in an oven
 #define DMG_SLOWFREEZE		(1 << 22)	// in a subzero freezer
 #define DMG_MORTAR			(1 << 23)	// Hit by air raid (done to distinguish grenade from mortar)
+#define DMG_FADE			(1 << 24)	// name ours: the victim fades out instead of dying normally (GIB_FADE)
 #define DMG_SPLATTER		(1 << 31)	// name ours: gibs corpses
 
 // these are the damage types that are allowed to gib corpses

@@ -1137,6 +1137,13 @@ int CBaseMonster :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker,
 	// set damage type sustained
 	m_bitsDamageType |= bitsDamageType;
 
+	// a new dose of time-based damage starts over
+	for ( int i = 0; i < CDMG_TIMEBASED; i++ )
+	{
+		if ( bitsDamageType & ( DMG_PARALYZE << i ) )
+			m_rgbTimeBasedDamage[i] = 0;
+	}
+
 	// grab the vector of the incoming attack. ( pretend that the inflictor is a little lower than it really is, so the body will tend to fly upward a bit).
 	vecDir = Vector( 0, 0, 0 );
 	if (!FNullEnt( pevInflictor ))
@@ -1175,6 +1182,10 @@ int CBaseMonster :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker,
 	// do the damage
 	pev->health -= flTake;
 
+	if ( bitsDamageType & ( DMG_BURN | DMG_SLOWBURN ) )
+		m_flBurnDamage += flDamage;
+	else if ( bitsDamageType & DMG_SHOCK )
+		m_flShockDamage += flDamage;
 	
 	// HACKHACK Don't kill monsters in a script.  Let them break their scripts first
 	if ( m_MonsterState == MONSTERSTATE_SCRIPT )
@@ -1191,9 +1202,13 @@ int CBaseMonster :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker,
 		{
 			Killed( pevAttacker, GIB_ALWAYS );
 		}
-		else if ( bitsDamageType & DMG_NEVERGIB )
+		else if ( bitsDamageType & ( DMG_NEVERGIB | DMG_NOGIB ) )
 		{
 			Killed( pevAttacker, GIB_NEVER );
+		}
+		else if ( bitsDamageType & DMG_FADE )
+		{
+			Killed( pevAttacker, GIB_FADE );
 		}
 		else
 		{
@@ -1242,6 +1257,11 @@ int CBaseMonster :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker,
 	}
 
 	return 1;
+}
+
+int CGib :: ObjectCaps( void )
+{
+	return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | FCAP_DONT_SAVE;
 }
 
 //=========================================================
