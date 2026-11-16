@@ -864,8 +864,6 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	if ( m_pActiveItem )
 		m_pActiveItem->Holster( );
 
-	g_pGameRules->PlayerKilled( this, pevAttacker, g_pevLastInflictor );
-
 	if ( m_pTank != NULL )
 	{
 		m_pTank->Use( this, this, USE_OFF, 0 );
@@ -899,7 +897,7 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	// send "health" update message to zero
 	m_iClientHealth = 0;
 	MESSAGE_BEGIN( MSG_ONE, gmsgHealth, NULL, pev );
-		WRITE_BYTE( m_iClientHealth );
+		WRITE_SHORT( m_iClientHealth );
 	MESSAGE_END();
 
 	// Tell Ammo Hud that the player is dead
@@ -910,7 +908,7 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 	MESSAGE_END();
 
 	// reset FOV
-	pev->fov = m_iFOV = m_iClientFOV = 0;
+	m_iFOV = m_iClientFOV = 0;
 
 	MESSAGE_BEGIN( MSG_ONE, gmsgSetFOV, NULL, pev );
 		WRITE_BYTE(0);
@@ -925,8 +923,12 @@ void CBasePlayer::Killed( entvars_t *pevAttacker, int iGib )
 		pev->solid			= SOLID_NOT;
 		GibMonster();	// This clears pev->model
 		pev->effects |= EF_NODRAW;
+		// after EF_NODRAW: the death notice tells a gibbed player from a dead one
+		g_pGameRules->PlayerKilled( this, pevAttacker, g_pevLastInflictor );
 		return;
 	}
+
+	g_pGameRules->PlayerKilled( this, pevAttacker, g_pevLastInflictor );
 
 	DeathSound();
 	
@@ -1270,7 +1272,7 @@ void CBasePlayer::PlayerDeathThink(void)
 			pev->velocity = flForward * pev->velocity.Normalize();
 	}
 
-	if ( HasWeapons() )
+	if ( g_pGameRules->IsMultiplayer() && HasWeapons() )
 	{
 		// we drop the guns here because weapons that have an area effect and can kill their user
 		// will sometimes crash coming back from CBasePlayer::Killed() if they kill their owner because the
@@ -1322,7 +1324,7 @@ void CBasePlayer::PlayerDeathThink(void)
 // if the player has been dead for one second longer than allowed by forcerespawn, 
 // forcerespawn isn't on. Send the player off to an intermission camera until they 
 // choose to respawn.
-	if ( g_pGameRules->IsMultiplayer() && ( gpGlobals->time > (m_fDeadTime + 6) ) && !(m_afPhysicsFlags & PFLAG_OBSERVER) )
+	if ( ( gpGlobals->time > (m_fDeadTime + 6) ) && !(m_afPhysicsFlags & PFLAG_OBSERVER) )
 	{
 		// go to dead camera. 
 		StartDeathCam();
@@ -1892,7 +1894,7 @@ void CBasePlayer::CheckTimeBasedDamage()
 				bDuration = PARALYZE_DURATION;
 				break;
 			case itbd_NerveGas:
-//				TakeDamage(pev, pev, NERVEGAS_DAMAGE, DMG_GENERIC);	
+				TakeDamage(pev, pev, NERVEGAS_DAMAGE, DMG_GENERIC);	
 				bDuration = NERVEGAS_DURATION;
 				break;
 			case itbd_Poison:
@@ -1920,11 +1922,11 @@ void CBasePlayer::CheckTimeBasedDamage()
 				bDuration = ACID_DURATION;
 				break;
 			case itbd_SlowBurn:
-//				TakeDamage(pev, pev, SLOWBURN_DAMAGE, DMG_GENERIC);
+				TakeDamage(pev, pev, SLOWBURN_DAMAGE, DMG_GENERIC);
 				bDuration = SLOWBURN_DURATION;
 				break;
 			case itbd_SlowFreeze:
-//				TakeDamage(pev, pev, SLOWFREEZE_DAMAGE, DMG_GENERIC);
+				TakeDamage(pev, pev, SLOWFREEZE_DAMAGE, DMG_GENERIC);
 				bDuration = SLOWFREEZE_DURATION;
 				break;
 			default:
@@ -1933,16 +1935,12 @@ void CBasePlayer::CheckTimeBasedDamage()
 
 			if (m_rgbTimeBasedDamage[i])
 			{
-				// use up an antitoxin on poison or nervegas after a few seconds of damage					
+				// the suit cures poison and nervegas after a few seconds of damage, no antitoxin needed
 				if (((i == itbd_NerveGas) && (m_rgbTimeBasedDamage[i] < NERVEGAS_DURATION)) ||
 					((i == itbd_Poison)   && (m_rgbTimeBasedDamage[i] < POISON_DURATION)))
 				{
-					if (m_rgItems[ITEM_ANTIDOTE])
-					{
-						m_rgbTimeBasedDamage[i] = 0;
-						m_rgItems[ITEM_ANTIDOTE]--;
-						SetSuitUpdate("!HEV_HEAL4", FALSE, SUIT_REPEAT_OK);
-					}
+					m_rgbTimeBasedDamage[i] = 0;
+					SetSuitUpdate("!HEV_HEAL5", FALSE, SUIT_REPEAT_OK);
 				}
 
 
@@ -3354,6 +3352,24 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 		GiveNamedItem( "weapon_snark" );
 		GiveNamedItem( "weapon_hornetgun" );
 #endif
+		GiveNamedItem( "weapon_repulsor" );
+		GiveNamedItem( "weapon_reflector" );
+		GiveNamedItem( "weapon_fireball" );
+		GiveNamedItem( "weapon_flamethrower" );
+		GiveNamedItem( "weapon_laserhandgun" );
+		GiveNamedItem( "weapon_vortexlauncher" );
+		GiveNamedItem( "weapon_softgun" );
+		GiveNamedItem( "weapon_teslacoil" );
+		GiveNamedItem( "weapon_displacer" );
+		GiveNamedItem( "weapon_sniper" );
+		GiveNamedItem( "weapon_freezethrower" );
+		GiveNamedItem( "weapon_sword" );
+		GiveNamedItem( "ammo_fireballclip" );
+		GiveNamedItem( "ammo_laserclip" );
+		GiveNamedItem( "ammo_egonclip" );
+		GiveNamedItem( "ammo_acidtank" );
+		GiveNamedItem( "ammo_vortexclip" );
+		GiveNamedItem( "ammo_sniperclip" );
 		gEvilImpulse101 = FALSE;
 		break;
 
