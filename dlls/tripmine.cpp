@@ -617,6 +617,14 @@ void CTripmineTurret :: Shoot( const Vector &vecDir )
 	m_flNextAttack = gpGlobals->time + 0.2;
 	pev->frags -= 1;
 }
+
+// stand-in for pulse.cpp's CLaserPulse::Shoot (retail 0x100b0860, 205 bytes), which the
+// turret mine calls, until pulse.cpp has the real one. Here between two functions that match on their own, so
+// that it doesn't break the positional comparison with retail up to the deferred inlines at the end of the object.
+CLaserPulse *CLaserPulse::Shoot( Vector vecOrigin, edict_t *pOwner, const Vector &vecColor, int iTrailLife, float flScale, int iColor )
+{
+	return NULL;
+}
 #endif
 
 LINK_ENTITY_TO_CLASS( weapon_tripmine, CTripmine );
@@ -888,12 +896,3 @@ void CTripmine::WeaponIdle( void )
 
 	SendWeaponAnim( iAnim );
 }
-
-#ifndef CLIENT_DLL
-// stand-in for pulse.cpp's CLaserPulse::Shoot (retail 0x100b0860, 205 bytes), which the
-// turret mine calls, until pulse.cpp has the real one
-CLaserPulse *CLaserPulse::Shoot( Vector vecOrigin, edict_t *pOwner, const Vector &vecColor, int iTrailLife, float flScale, int iColor )
-{
-	return NULL;
-}
-#endif
