@@ -255,7 +255,7 @@ void CEnvExplosion::Smoke( void )
 
 
 // HACKHACK -- create one of these and fake a keyvalue to get the right explosion setup
-void ExplosionCreate( const Vector &center, const Vector &angles, edict_t *pOwner, int magnitude, BOOL doDamage )
+void ExplosionCreate( const Vector &center, const Vector &angles, edict_t *pOwner, int magnitude, BOOL doDamage, int iSpawnFlags )
 {
 	KeyValueData	kvd;
 	char			buf[128];
@@ -267,6 +267,7 @@ void ExplosionCreate( const Vector &center, const Vector &angles, edict_t *pOwne
 	pExplosion->KeyValue( &kvd );
 	if ( !doDamage )
 		pExplosion->pev->spawnflags |= SF_ENVEXPLOSION_NODAMAGE;
+	pExplosion->pev->spawnflags |= iSpawnFlags;	// a stand-in until explode.cpp is written (retail ORs in its 6th argument)
 
 	pExplosion->Spawn();
 	pExplosion->Use( NULL, NULL, USE_TOGGLE, 0 );
