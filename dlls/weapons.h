@@ -32,13 +32,20 @@ public:
 
 	static CGrenade *ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );
 	static CGrenade *ShootContact( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
+	static CGrenade *ShootHybrid( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );	// name ours
+	static CGrenade *ShootMine( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );	// name ours
 	static CGrenade *ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
 	static CGrenade *ShootExplosion( entvars_t *pevOwner, const Vector &vecStart, float flDelay, const Vector &vecDir );	// name ours; ggrenade.cpp (0x100600b0)
 	static void UseSatchelCharges( entvars_t *pevOwner, SATCHELCODE code );
 
 	void Explode( Vector vecSrc, Vector vecAim );
 	virtual void Explode( TraceResult *pTrace, int bitsDamageType );
+	void FireExplode( TraceResult *pTrace );	// name ours
+	void SphereBlast( void );	// name ours
+	void MortarBlast( void );	// name ours
+	void EXPORT HurtThink( void );
 	void EXPORT Smoke( void );
+	void EXPORT MakeSolid( void );
 
 	void EXPORT BounceTouch( CBaseEntity *pOther );
 	void EXPORT SlideTouch( CBaseEntity *pOther );
@@ -49,6 +56,15 @@ public:
 	void EXPORT ExDetonate( void );
 	void EXPORT DetonateUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT TumbleThink( void );
+	void EXPORT HybridThink( void );
+	void EXPORT HybridTouch( CBaseEntity *pOther );
+	void EXPORT MineThink( void );
+
+#ifndef CLIENT_DLL
+	const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "a grenade"; return STRING( m_iszKillDesc ); }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return DamageVerb( DMG_BLAST, fGibbed ); }
+#endif
+	int HeatSignature( void ) { return 0; }
 
 	virtual void BounceSound( void );
 	virtual int	BloodColor( void ) { return DONT_BLEED; }
