@@ -212,6 +212,10 @@ SOURCE=.\battery.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\bloodspray.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\cdll_int.cpp
 # End Source File
 # Begin Source File
