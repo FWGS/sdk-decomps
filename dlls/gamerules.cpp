@@ -26,7 +26,7 @@
 #include	"skill.h"
 #include	"game.h"
 
-extern edict_t *EntSelectSpawnPoint( CBaseEntity *pPlayer );
+extern CBaseEntity *EntSelectSpawnPoint( CBaseEntity *pPlayer );
 
 DLL_GLOBAL CGameRules*	g_pGameRules = NULL;
 extern DLL_GLOBAL BOOL	g_fGameOver;
@@ -62,16 +62,22 @@ BOOL CGameRules::CanHaveAmmo( CBasePlayer *pPlayer, const char *pszAmmoName, int
 //=========================================================
 edict_t *CGameRules :: GetPlayerSpawnSpot( CBasePlayer *pPlayer )
 {
-	edict_t *pentSpawnSpot = EntSelectSpawnPoint( pPlayer );
+	CBaseEntity *pSpawnSpot = EntSelectSpawnPoint( pPlayer );
 
-	pPlayer->pev->origin = VARS(pentSpawnSpot)->origin + Vector(0,0,1);
+	if ( !pSpawnSpot )
+	{
+		ALERT( at_error, "ClientPutInServer: no info_player_start on level" );
+		pSpawnSpot = CBaseEntity::Instance( INDEXENT( 0 ) );
+	}
+
+	pPlayer->pev->origin = pSpawnSpot->pev->origin + Vector(0,0,1);
 	pPlayer->pev->v_angle  = g_vecZero;
 	pPlayer->pev->velocity = g_vecZero;
-	pPlayer->pev->angles = VARS(pentSpawnSpot)->angles;
+	pPlayer->pev->angles = pSpawnSpot->pev->angles;
 	pPlayer->pev->punchangle = g_vecZero;
 	pPlayer->pev->fixangle = TRUE;
 	
-	return pentSpawnSpot;
+	return pSpawnSpot->edict();
 }
 
 //=========================================================

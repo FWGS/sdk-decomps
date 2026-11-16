@@ -2541,3 +2541,17 @@ int	CRestore::BufferCheckZString( const char *string )
 	return 0;
 }
 
+// TEMPORARY stand-in until util.cpp has the real one
+CBaseEntity *UTIL_RandomEntityByClassname( const char *szName )
+{
+	CBaseEntity *pChosen = NULL;
+	CBaseEntity *pEntity = UTIL_FindEntityByClassname( NULL, szName );
+	int i = 0;
+	while ( pEntity )
+	{
+		if ( RANDOM_LONG( 0, i++ ) < 1 )
+			pChosen = pEntity;
+		pEntity = UTIL_FindEntityByClassname( pEntity, szName );
+	}
+	return pChosen;
+}

@@ -49,7 +49,7 @@ BOOL gInitHUD = TRUE;
 extern void CopyToBodyQue(entvars_t* pev);
 extern void respawn(entvars_t *pev, BOOL fCopyCorpse);
 extern Vector VecBModelOrigin(entvars_t *pevBModel );
-extern edict_t *EntSelectSpawnPoint( CBaseEntity *pPlayer );
+extern CBaseEntity *EntSelectSpawnPoint( CBaseEntity *pPlayer );
 
 // the world node graph
 extern CGraph	WorldGraph;
@@ -185,6 +185,10 @@ int gmsgSetFOV = 0;
 int gmsgShowMenu = 0;
 int gmsgGeigerRange = 0;
 int gmsgTeamNames = 0;
+int gmsgSciInfo = 0;		// scientists killed, per kind (scoreboard)
+int gmsgIdentUpdate = 0;	// target ID
+int gmsgFog = 0;
+int gmsgDamageFX = 0;
 
 void LinkUserMessages( void )
 {
@@ -199,7 +203,7 @@ void LinkUserMessages( void )
 	gmsgGeigerRange = REG_USER_MSG("Geiger", 1);
 	gmsgFlashlight = REG_USER_MSG("Flashlight", 2);
 	gmsgFlashBattery = REG_USER_MSG("FlashBat", 1);
-	gmsgHealth = REG_USER_MSG( "Health", 1 );
+	gmsgHealth = REG_USER_MSG( "Health", 2 );
 	gmsgDamage = REG_USER_MSG( "Damage", 12 );
 	gmsgBattery = REG_USER_MSG( "Battery", 2);
 	gmsgTrain = REG_USER_MSG( "Train", 1);
@@ -225,8 +229,12 @@ void LinkUserMessages( void )
 	gmsgShowMenu = REG_USER_MSG( "ShowMenu", -1 );
 	gmsgShake = REG_USER_MSG("ScreenShake", sizeof(ScreenShake));
 	gmsgFade = REG_USER_MSG("ScreenFade", sizeof(ScreenFade));
-	gmsgAmmoX = REG_USER_MSG("AmmoX", 2);
+	gmsgAmmoX = REG_USER_MSG("AmmoX", 3);
 	gmsgTeamNames = REG_USER_MSG( "TeamNames", -1 );
+	gmsgSciInfo = REG_USER_MSG( "SciInfo", 5 );
+	gmsgIdentUpdate = REG_USER_MSG( "IdentUpdate", -1 );
+	gmsgFog = REG_USER_MSG( "Fog", -1 );
+	gmsgDamageFX = REG_USER_MSG( "DamageFX", 4 );
 }
 
 LINK_ENTITY_TO_CLASS( player, CBasePlayer );
@@ -674,7 +682,7 @@ void CBasePlayer::PackDeadPlayerItems( void )
 	int iWeaponRules;
 	int iAmmoRules;
 	int i;
-	CBasePlayerWeapon *rgpPackWeapons[ 20 ];// 20 hardcoded for now. How to determine exactly how many weapons we have?
+	CBasePlayerWeapon *rgpPackWeapons[ 32 ];// 20 hardcoded for now. How to determine exactly how many weapons we have?
 	int iPackAmmo[ MAX_AMMO_SLOTS + 1];
 	int iPW = 0;// index into packweapons array
 	int iPA = 0;// index into packammo array
@@ -2558,92 +2566,60 @@ Returns the entity to spawn at
 USES AND SETS GLOBAL g_pLastSpawn
 ============
 */
-edict_t *EntSelectSpawnPoint( CBaseEntity *pPlayer )
+CBaseEntity *EntSelectSpawnPoint( CBaseEntity *pPlayer )
 {
 	CBaseEntity *pSpot;
-	edict_t		*player;
 
-	player = pPlayer->edict();
-
-// choose a info_player_deathmatch point
-	if (g_pGameRules->IsCoOp())
+	if ( g_pGameRules->IsCoOp() )
 	{
-		pSpot = UTIL_FindEntityByClassname( g_pLastSpawn, "info_player_coop");
-		if ( !FNullEnt(pSpot) )
-			goto ReturnSpot;
-		pSpot = UTIL_FindEntityByClassname( g_pLastSpawn, "info_player_start");
-		if ( !FNullEnt(pSpot) ) 
-			goto ReturnSpot;
+		// the start spot if it's free, else a free coop spot, else the start spot anyway
+		CBaseEntity *pStart = UTIL_FindEntityByClassname( NULL, "info_player_start" );
+		if ( IsSpawnPointValid( pPlayer, pStart ) )
+			return pStart;
+
+		pSpot = NULL;
+		while ( (pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_coop" )) != NULL )
+		{
+			if ( IsSpawnPointValid( pPlayer, pSpot ) )
+				return pSpot;
+		}
+
+		return pStart;
 	}
 	else if ( g_pGameRules->IsDeathmatch() )
 	{
-		pSpot = g_pLastSpawn;
-		// Randomize the start spot
-		for ( int i = RANDOM_LONG(1,5); i > 0; i-- )
-			pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_deathmatch" );
-		if ( FNullEnt( pSpot ) )  // skip over the null point
-			pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_deathmatch" );
-
+		// a free deathmatch spot, starting at a random one
+		pSpot = UTIL_RandomEntityByClassname( "info_player_deathmatch" );
 		CBaseEntity *pFirstSpot = pSpot;
 
-		do 
+		if ( pSpot )
 		{
-			if ( pSpot )
+			do
 			{
-				// check if pSpot is valid
-				if ( IsSpawnPointValid( pPlayer, pSpot ) )
-				{
-					if ( pSpot->pev->origin == Vector( 0, 0, 0 ) )
-					{
-						pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_deathmatch" );
-						continue;
-					}
+				if ( pSpot && IsSpawnPointValid( pPlayer, pSpot ) )
+					return pSpot;
 
-					// if so, go to pSpot
-					goto ReturnSpot;
-				}
-			}
-			// increment pSpot
-			pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_deathmatch" );
-		} while ( pSpot != pFirstSpot ); // loop if we're not back to the start
+				pSpot = UTIL_FindEntityByClassname( pSpot, "info_player_deathmatch" );
+			} while ( pSpot != pFirstSpot );
 
-		// we haven't found a place to spawn yet,  so kill any guy at the first spawn point and spawn there
-		if ( !FNullEnt( pSpot ) )
-		{
-			CBaseEntity *ent = NULL;
-			while ( (ent = UTIL_FindEntityInSphere( ent, pSpot->pev->origin, 128 )) != NULL )
-			{
-				// if ent is a client, kill em (unless they are ourselves)
-				if ( ent->IsPlayer() && !(ent->edict() == player) )
-					ent->TakeDamage( VARS(INDEXENT(0)), VARS(INDEXENT(0)), 300, DMG_GENERIC );
-			}
-			goto ReturnSpot;
+			return pFirstSpot;
 		}
 	}
 
-	// If startspot is set, (re)spawn there.
-	if ( FStringNull( gpGlobals->startspot ) || !strlen(STRING(gpGlobals->startspot)))
-	{
-		pSpot = UTIL_FindEntityByClassname(NULL, "info_player_start");
-		if ( !FNullEnt(pSpot) )
-			goto ReturnSpot;
-	}
-	else
-	{
-		pSpot = UTIL_FindEntityByTargetname( NULL, STRING(gpGlobals->startspot) );
-		if ( !FNullEnt(pSpot) )
-			goto ReturnSpot;
-	}
+	return UTIL_FindEntityByClassname( NULL, "info_player_start" );
+}
 
-ReturnSpot:
-	if ( FNullEnt( pSpot ) )
-	{
-		ALERT(at_error, "PutClientInServer: no info_player_start on level");
-		return INDEXENT(0);
-	}
-
-	g_pLastSpawn = pSpot;
-	return pSpot->edict();
+//=========================================================
+// ShowMenu - name ours, after the message.  Nothing calls it.
+//=========================================================
+void CBasePlayer::ShowMenu( int bitsValidSlots, int nDisplayTime, BOOL fNeedMore, char *pszText )
+{
+	MESSAGE_BEGIN( MSG_ONE, gmsgShowMenu, NULL, pev );
+		WRITE_SHORT( bitsValidSlots );
+		WRITE_CHAR( nDisplayTime );
+		WRITE_BYTE( fNeedMore );
+		WRITE_STRING( pszText );
+	MESSAGE_END();
 }
 
 void CBasePlayer::Spawn( void )
@@ -2779,6 +2755,8 @@ void CBasePlayer :: Precache( void )
 
 	if ( gInitHUD )
 		m_fInitHUD = TRUE;
+
+	m_fGameHUDInitialized = FALSE;
 }
 
 
@@ -2814,9 +2792,14 @@ int CBasePlayer::Restore( CRestore &restore )
 		ALERT( at_console, "No Landmark:%s\n", pSaveData->szLandmarkName );
 
 		// default to normal spawn
-		edict_t* pentSpawnSpot = EntSelectSpawnPoint( this );
-		pev->origin = VARS(pentSpawnSpot)->origin + Vector(0,0,1);
-		pev->angles = VARS(pentSpawnSpot)->angles;
+		CBaseEntity *pSpawnSpot = EntSelectSpawnPoint( this );
+		if ( !pSpawnSpot )
+		{
+			ALERT( at_error, "CBasePlayer::Restore: no info_player_start on level" );
+			pSpawnSpot = CBaseEntity::Instance( INDEXENT( 0 ) );
+		}
+		pev->origin = pSpawnSpot->pev->origin + Vector(0,0,1);
+		pev->angles = pSpawnSpot->pev->angles;
 	}
 	pev->v_angle.z = 0;	// Clear out roll
 	pev->angles = pev->v_angle;
@@ -3727,7 +3710,7 @@ void CBasePlayer::SendAmmoUpdate(void)
 			// send "Ammo" update message
 			MESSAGE_BEGIN( MSG_ONE, gmsgAmmoX, NULL, pev );
 				WRITE_BYTE( i );
-				WRITE_BYTE( max( min( m_rgAmmo[i], 254 ), 0 ) );  // clamp the value to one byte
+				WRITE_SHORT( max( min( m_rgAmmo[i], 999 ), 0 ) );  // clamp the value to the HUD's three digits
 			MESSAGE_END();
 		}
 	}
@@ -4127,7 +4110,7 @@ Vector CBasePlayer :: AutoaimDeflection( Vector &vecSrc, float flDist, float flD
 	edict_t		*bestent;
 	TraceResult tr;
 
-	if ( g_psv_aim->value == 0 )
+	if ( g_psv_aim->value != 0 )	// sic: auto-aim is off while sv_aim is on
 	{
 		m_fOnTarget = FALSE;
 		return g_vecZero;
