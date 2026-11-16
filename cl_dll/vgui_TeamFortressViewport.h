@@ -402,7 +402,8 @@ public:
 	CClassMenuPanel	*m_pClassMenu;
 	ScorePanel		*m_pScoreBoard;
 	char			m_szServerName[ MAX_SERVERNAME_LENGTH ];
-	char			m_szUnused[128];	// sic: name ours; the mod's viewport is 0x80 bytes bigger and no code uses them
+	char			m_szUnused1[64];	// sic: names ours; the mod's viewport is 0x80 bytes bigger and no code uses them
+	char			m_szUnused2[64];
 };
 
 //============================================================
