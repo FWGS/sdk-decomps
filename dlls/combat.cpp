@@ -1429,6 +1429,10 @@ void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacke
 				continue;
 			}
 
+			// nor does a blast hurt whoever set it off
+			if ( pevInflictor && pEntity->edict() == pevInflictor->owner )
+				continue;
+
 			// blast's don't tavel into or out of water
 			if (bInWater && pEntity->pev->waterlevel == 0)
 				continue;
@@ -1468,6 +1472,60 @@ void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacke
 				{
 					pEntity->TakeDamage ( pevInflictor, pevAttacker, flAdjustedDamage, bitsDamageType );
 				}
+			}
+		}
+	}
+}
+
+
+//=========================================================
+// RadiusDamageNoTrace - RadiusDamage through walls (the
+// hornet gas grenade's cloud) (name ours)
+//=========================================================
+void RadiusDamageNoTrace( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType )
+{
+	CBaseEntity *pEntity = NULL;
+	float		flAdjustedDamage, falloff;
+	Vector		vecSpot;
+
+	if ( flRadius )
+		falloff = flDamage / flRadius;
+	else
+		falloff = 1.0;
+
+	int bInWater = (UTIL_PointContents ( vecSrc ) == CONTENTS_WATER);
+
+	vecSrc.z += 1;// in case grenade is lying on the ground
+
+	if ( !pevAttacker )
+		pevAttacker = pevInflictor;
+
+	// iterate on all entities in the vicinity.
+	while ((pEntity = UTIL_FindEntityInSphere( pEntity, vecSrc, flRadius )) != NULL)
+	{
+		if ( pEntity->pev->takedamage != DAMAGE_NO )
+		{
+			// UNDONE: this should check a damage mask, not an ignore
+			if ( iClassIgnore != CLASS_NONE && pEntity->Classify() == iClassIgnore )
+			{// houndeyes don't hurt other houndeyes with their attack
+				continue;
+			}
+
+			// blast's don't tavel into or out of water
+			if (bInWater && pEntity->pev->waterlevel == 0)
+				continue;
+			if (!bInWater && pEntity->pev->waterlevel == 3)
+				continue;
+
+			vecSpot = pEntity->BodyTarget( vecSrc );
+
+			// decrease damage for an ent that's farther from the bomb.
+			flAdjustedDamage = ( vecSrc - vecSpot ).Length() * falloff;
+			flAdjustedDamage = flDamage - flAdjustedDamage;
+
+			if ( flAdjustedDamage > 0 )
+			{
+				pEntity->TakeDamage ( pevInflictor, pevAttacker, flAdjustedDamage, bitsDamageType );
 			}
 		}
 	}
@@ -1517,6 +1575,8 @@ CBaseEntity* CBaseMonster :: CheckTraceHullAttack( float flDist, int iDamage, in
 		{
 			pEntity->TakeDamage( pev, pev, iDamage, iDmgType );
 		}
+
+		m_vecPosition1 = tr.vecEndPos;	// where the attack hit
 
 		return pEntity;
 	}

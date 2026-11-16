@@ -422,6 +422,7 @@ extern void DecalGunshot( TraceResult *pTrace, int iBulletType );
 extern void SpawnBlood(Vector vecSpot, int bloodColor, float flDamage);
 extern int DamageDecal( CBaseEntity *pEntity, int bitsDamageType );
 extern void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType );
+extern void RadiusDamageNoTrace( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType );	// name ours
 
 typedef struct 
 {
