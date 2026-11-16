@@ -22,11 +22,11 @@
 #include "nodes.h"
 #include "effects.h"
 #include "soundent.h"
+#include "decals.h"
 
 extern DLL_GLOBAL int		g_iSkillLevel;
 
-// Declared here until the files that define them are reconstructed.
-// All names ours.
+// Stand-ins until the files that define them have their declarations; names ours but CLaserPulse's.
 extern DLL_GLOBAL short g_sModelIndexSmokeTrail;	// weapons.cpp: W_Precache, "sprites/smoke.spr" (0x10158c82)
 extern void UTIL_TraceToss( CBaseEntity *pEntity, edict_t *pentIgnore, TraceResult *ptr );	// util.cpp 0x100e3890: TRACE_TOSS
 
@@ -35,20 +35,6 @@ class CLaserPulse : public CBaseEntity		// pulse.cpp (laser_pulse)
 public:
 	static short PrecacheColor( int iColor );	// pulse.cpp 0x100b0530: a colour's glow and trail sprites
 	static CLaserPulse *Shoot( Vector vecOrigin, edict_t *pOwner, const Vector &vecColor, int iTrailLife, float flScale, int iColor );	// 0x100b0860
-};
-
-class CRocket : public CGrenade				// rocket.cpp (rocket)
-{
-public:
-	// rocket.cpp 0x100b4f60: model, origin, angles, colour, owner, then Spawn
-	static CRocket *RocketCreate( const Vector &vecOrigin, const Vector &vecAngles, edict_t *pentOwner, const Vector &vecColor, int iszModel );
-	void EXPORT SeekThink( void );
-	void EXPORT TargetThink( void );
-
-	float	m_flSeekTime;
-	Vector	m_vecBSphereColor;
-	float	m_lastTime;
-	float	m_maxFrame;
 };
 
 #define SF_WAITFORTRIGGER	(0x04 | 0x40) // UNDONE: Fix!
@@ -922,7 +908,7 @@ void CApache :: FireRocket( void )
 	if (iMissile == 2)
 	{
 		// heat-seeking missile
-		CRocket *pRocket = CRocket::RocketCreate( vecSrc, pev->angles, edict(), Vector( 255, 224, 64 ), 0 );
+		CRocket *pRocket = CRocket::CreateRocket( vecSrc, pev->angles, edict(), Vector( 255, 224, 64 ), 0 );
 		pRocket->m_flSeekTime = gpGlobals->time + 0.2;
 		pRocket->pev->dmg = 150;
 		pRocket->pev->velocity = gpGlobals->v_forward * 100;
@@ -935,7 +921,7 @@ void CApache :: FireRocket( void )
 	else if (iMissile == 3)
 	{
 		// photon torpedo
-		CRocket *pRocket = CRocket::RocketCreate( vecSrc, pev->angles, edict(), Vector( 255, 192, 12 ), MAKE_STRING( "sprites/photon_t.spr" ) );
+		CRocket *pRocket = CRocket::CreateRocket( vecSrc, pev->angles, edict(), Vector( 255, 192, 12 ), MAKE_STRING( "sprites/photon_t.spr" ) );
 		if (pRocket)
 		{
 			pRocket->SetThink( CRocket::TargetThink );
@@ -1273,6 +1259,750 @@ void CApacheHVR :: AccelerateThink( void  )
 	// re-aim
 	pev->angles = UTIL_VecToAngles( pev->velocity );
 
+	pev->nextthink = gpGlobals->time + 0.1;
+}
+
+
+
+
+class CNAApache : public CApache
+{
+public:
+	int		Save( CSave &save );
+	int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	void Spawn( void );
+	void Precache( void );
+	void KeyValue( KeyValueData *pkvd );
+	int  Classify( void ) { return 14; };	// the Nephilim Alliance (no CLASS_ define)
+	int  Shielded( void ) { if ( pev->armorvalue > 0 ) return 2; return 0; }
+	BOOL CanBeTractored( void ) { return !Shielded(); }
+	BOOL CanBeRepulsed( bool fForce ) { if ( !Shielded() || fForce ) return TRUE; return FALSE; }
+	int HeatSignature( void ) { return 2; }
+	const char *GetHudName( void ) { return "UFO"; }
+	const char *GetKillDesc( void ) { return pev->health <= 0 ? "" : "an unidentified flying object"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return pev->health <= 0 ? "was blown up by a crashing unidentified flying object" : "shot"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+	int GetBattlePower( void );
+	void Killed( entvars_t *pevAttacker, int iGib );
+
+	void Hunt( void );
+	void FireRocket( void );
+	BOOL FireGun( void );
+	void FireFlak( Vector &vecSrc, Vector &vecEnd );
+
+	int  TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType );
+	void TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType);
+
+	CSprite *m_pSprite;	// the beam cannon's muzzle flare
+	int m_iSpark;		// name ours: sprite of the beam's impact
+};
+LINK_ENTITY_TO_CLASS( monster_na_apache, CNAApache );
+
+TYPEDESCRIPTION	CNAApache::m_SaveData[] = 
+{
+	DEFINE_FIELD( CNAApache, m_pSprite, FIELD_CLASSPTR ),
+};
+IMPLEMENT_SAVERESTORE( CNAApache, CApache );
+
+
+void CNAApache :: Spawn( void )
+{
+	Precache( );
+	// motor
+	pev->movetype = MOVETYPE_FLY;
+	pev->solid = SOLID_BBOX;
+
+	SET_MODEL(ENT(pev), "models/na_apache.mdl");
+	UTIL_SetSize( pev, Vector( -32, -32, -64 ), Vector( 32, 32, 0 ) );
+	UTIL_SetOrigin( pev, pev->origin );
+
+	pev->flags |= FL_MONSTER;
+	pev->takedamage		= DAMAGE_AIM;
+	pev->health			= 2000;
+	pev->armorvalue		= 5000;		// the shield
+
+	if (pev->weapons <= -1)
+	{
+		APACHE_WEAPONS( pev )->iGun = RANDOM_LONG( 0, 4 );
+		APACHE_WEAPONS( pev )->iMissile = RANDOM_LONG( 0, 4 );
+	}
+
+	m_flFieldOfView = -0.707; // 270 degrees
+
+	pev->sequence = 0;
+	ResetSequenceInfo( );
+	pev->frame = RANDOM_LONG(0, 0xFF);
+
+	InitBoneControllers();
+
+	if (pev->spawnflags & SF_WAITFORTRIGGER)
+	{
+		SetUse( StartupUse );
+	}
+	else
+	{
+		SetThink( HuntThink );
+		SetTouch( FlyTouch );
+		pev->nextthink = gpGlobals->time + 1.0;
+	}
+
+	m_iRockets = 10;
+}
+
+
+void CNAApache::Precache( void )
+{
+	PRECACHE_MODEL("models/na_apache.mdl");
+
+	pev->noise = MAKE_STRING("apache/ap_rotor1.wav");
+	PRECACHE_SOUND("apache/ap_rotor1.wav");
+
+	PRECACHE_SOUND("weapons/mortarhit.wav");
+
+	m_iSpriteTexture = PRECACHE_MODEL( "sprites/white.spr" );
+
+	PRECACHE_SOUND("turret/tu_fire1.wav");
+
+	PRECACHE_MODEL("sprites/LRed.spr");
+	PRECACHE_MODEL("sprites/BFlare1.spr");
+	m_iSpark = PRECACHE_MODEL("sprites/xspark4.spr");
+	PRECACHE_SOUND("weapons/debris3.wav");
+
+	UTIL_PrecacheOther( "bio_flak" );
+	UTIL_PrecacheOther( "lght_flak" );
+	UTIL_PrecacheOther( "laser_pulse" );
+	CLaserPulse::PrecacheColor( 4 );
+
+	m_iExplode	= PRECACHE_MODEL( "sprites/fexplo.spr" );
+	m_iBodyGibs = PRECACHE_MODEL( "models/metalplategibs_dark.mdl" );
+
+	UTIL_PrecacheOther( "vortex_missile" );
+	UTIL_PrecacheOther( "na_rocket" );
+	UTIL_PrecacheOther( "rocket" );
+	PRECACHE_MODEL("sprites/flux_t.spr");
+}
+
+
+void CNAApache :: KeyValue( KeyValueData *pkvd )
+{
+	if (FStrEq(pkvd->szKeyName, "weapons2"))
+	{
+		if (pev->weapons == -1)
+			APACHE_WEAPONS( pev )->iGun = RANDOM_LONG( 0, 4 );
+
+		int iMissile = atoi( pkvd->szValue );
+		if (iMissile == -1)
+			iMissile = RANDOM_LONG( 0, 4 );
+		APACHE_WEAPONS( pev )->iMissile = iMissile;
+
+		pkvd->fHandled = TRUE;
+	}
+	else
+		CBaseMonster::KeyValue( pkvd );
+}
+
+
+int CNAApache :: GetBattlePower( void )
+{
+	float flGunPower[] = { 30, 62.5, 50, 35, 50 };
+	float flPower = flGunPower[APACHE_WEAPONS( pev )->iGun];
+
+	switch (APACHE_WEAPONS( pev )->iMissile)
+	{
+	case 2:
+		flPower += 250;
+		break;
+	case 3:
+		flPower += 500;
+		break;
+	case 4:
+		flPower += 437.5f;
+		break;
+	default:
+		flPower += 200;
+		break;
+	}
+
+	flPower *= 937.5f;
+	if (Shielded())
+		flPower += 1000;
+
+	return flPower;
+}
+
+
+int CNAApache :: TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType )
+{
+	if (pevAttacker == pev)
+		return 0;
+
+	if (pev->takedamage == DAMAGE_NO)
+		return 0;
+
+	if (pev->armorvalue > 0)
+	{
+		// the shield takes it and flashes
+		pev->armorvalue -= flDamage;
+		pev->renderfx = kRenderFxGlowShell;
+		pev->renderamt = 255;
+		pev->rendercolor = Vector( 255, 0, 128 );
+	}
+	else
+	{
+		pev->health -= flDamage;
+	}
+
+	if (pev->armorvalue <= 0)
+		pev->armortype = 5;	// the shield stays down this long (tenths of HuntThink's 0.1 s)
+
+	if (pev->health <= 0)
+	{
+		Killed( pevAttacker, GIB_NORMAL );
+		return 0;
+	}
+
+	return 1;
+}
+
+
+void CNAApache::TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType)
+{
+	// the shield takes everything
+	if (pev->armorvalue > 0)
+	{
+		AddMultiDamage( pevAttacker, this, flDamage, bitsDamageType );
+		return;
+	}
+
+	// ignore blades
+	if (ptr->iHitgroup == 6 && (bitsDamageType & (DMG_ENERGYBEAM|DMG_BULLET|DMG_CLUB)))
+		return;
+
+	// hit hard, hits cockpit, hits engines
+	if (flDamage > 50 || ptr->iHitgroup == 1 || ptr->iHitgroup == 2)
+	{
+		AddMultiDamage( pevAttacker, this, flDamage, bitsDamageType );
+		m_iDoSmokePuff = 3 + (flDamage / 5.0);
+	}
+	else if (bitsDamageType & (DMG_BLAST|DMG_SHOCK|DMG_SONIC|DMG_ENERGYBEAM))
+	{
+		AddMultiDamage( pevAttacker, this, flDamage, bitsDamageType );
+	}
+	else
+	{
+		UTIL_Ricochet( ptr->vecEndPos, 2.0 );
+	}
+}
+
+
+BOOL CNAApache :: FireGun( )
+{
+	UTIL_MakeAimVectors( pev->angles );
+
+	Vector posGun, angGun;
+	GetAttachment( 1, posGun, angGun );
+
+	Vector vecTarget = m_posTarget - posGun;
+	float flDist = vecTarget.Length();
+	vecTarget = vecTarget.Normalize( );
+
+	Vector vecOut;
+
+	vecOut.x = DotProduct( gpGlobals->v_forward, vecTarget );
+	vecOut.y = -DotProduct( gpGlobals->v_right, vecTarget );
+	vecOut.z = DotProduct( gpGlobals->v_up, vecTarget );
+
+	Vector angles = UTIL_VecToAngles (vecOut);
+
+	angles.x = -angles.x;
+	if (angles.y > 180)
+		angles.y = angles.y - 360;
+	if (angles.y < -180)
+		angles.y = angles.y + 360;
+	if (angles.x > 180)
+		angles.x = angles.x - 360;
+	if (angles.x < -180)
+		angles.x = angles.x + 360;
+
+	if (angles.x > m_angGun.x)
+		m_angGun.x = min( angles.x, m_angGun.x + 12 );
+	if (angles.x < m_angGun.x)
+		m_angGun.x = max( angles.x, m_angGun.x - 12 );
+	if (angles.y > m_angGun.y)
+		m_angGun.y = min( angles.y, m_angGun.y + 12 );
+	if (angles.y < m_angGun.y)
+		m_angGun.y = max( angles.y, m_angGun.y - 12 );
+
+	m_angGun.y = SetBoneController( 0, m_angGun.y );
+	m_angGun.x = SetBoneController( 1, m_angGun.x );
+
+	Vector posBarrel, angBarrel;
+	GetAttachment( 0, posBarrel, angBarrel );
+	Vector vecGun = (posBarrel - posGun).Normalize( );
+
+	if (DotProduct( vecGun, vecTarget ) > 0.98)
+	{
+		int iGun = APACHE_WEAPONS( pev )->iGun;
+		if (iGun >= 3)
+		{
+			// bionanite or energy flak
+			if (m_flNextAttack <= gpGlobals->time)
+			{
+				m_flNextAttack = gpGlobals->time;
+				FireFlak( posGun, posGun + vecGun * flDist );
+				return TRUE;
+			}
+		}
+		else if (iGun == 0)
+		{
+			FireBullets( 1, posGun, vecGun, VECTOR_CONE_4DEGREES, 8192, BULLET_MONSTER_TRACER2, 1, 24 );
+			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/tu_fire1.wav", 1, 0.3);
+			return TRUE;
+		}
+		else if (iGun == 2)
+		{
+			// pulse cannon
+			CLaserPulse *pPulse = CLaserPulse::Shoot( posGun, edict(), Vector( 255, 255, 255 ), iGun, 0.25, 4 );
+			pPulse->pev->velocity = vecGun * 2000;
+			pPulse->m_iszKillDesc = MAKE_STRING( "a hyperspace flux cannon" );
+			pPulse->pev->dmg = 50;
+			pPulse->pev->iuser2 = DMG_ENERGYBEAM | DMG_ALWAYSGIB;	// damage type
+			EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/debris3.wav", 1, 0.3 );
+			return TRUE;
+		}
+		else if (iGun == 1)
+		{
+			// beam cannon
+			TraceResult tr;
+			UTIL_TraceLine( posGun, posGun + vecGun * 8192, dont_ignore_monsters, ENT( pev ), &tr );
+
+			if (!m_pBeam)
+			{
+				m_pBeam = CBeam::BeamCreate( "sprites/LRed.spr", 80 );
+				m_pBeam->PointEntInit( pev->origin, entindex( ) );
+				m_pBeam->SetEndAttachment( 1 );
+				m_pBeam->SetColor( 255, 255, 255 );
+				m_pBeam->SetBrightness( 192 );
+				m_pBeam->m_iszKillDesc = MAKE_STRING( "a hyperspace flux beam" );
+				m_pBeam->SetScrollRate( 35 );
+				m_pBeam->pev->owner = edict();
+			}
+
+			if (!m_pSprite)
+			{
+				m_pSprite = CSprite::SpriteCreate( "sprites/bflare1.spr", pev->origin, FALSE );
+				m_pSprite->Spawn( );
+				m_pSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxNoDissipation );
+				m_pSprite->SetAttachment( edict(), 1 );
+				m_pSprite->SetScale( 0.5 );
+			}
+
+			// scientists burn up
+			float flDamage = 50;
+			CBaseEntity *pHit = (CBaseEntity *)GET_PRIVATE( tr.pHit );
+			if (pHit && pHit->Classify() == CLASS_HUMAN_PASSIVE)
+				flDamage = pHit->pev->health + 50;
+
+			m_pBeam->BeamDamageInstant( &tr, flDamage );
+			m_pBeam->SetStartPos( tr.vecEndPos );
+
+			if (tr.flFraction != 1.0)
+			{
+				UTIL_DecalTrace( &tr, DECAL_SMALLSCORCH1 + RANDOM_LONG( 0, 2 ) );
+
+				MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+					WRITE_BYTE( TE_SPRITE );
+					WRITE_COORD( tr.vecEndPos.x );
+					WRITE_COORD( tr.vecEndPos.y );
+					WRITE_COORD( tr.vecEndPos.z );
+					WRITE_SHORT( m_iSpark );
+					WRITE_BYTE( 10 ); // scale * 10
+					WRITE_BYTE( 255 ); // brightness
+				MESSAGE_END();
+			}
+		}
+		return TRUE;
+	}
+	else
+	{
+		if (m_pBeam)
+		{
+			UTIL_Remove( m_pBeam );
+			m_pBeam = NULL;
+		}
+		if (m_pSprite)
+		{
+			UTIL_Remove( m_pSprite );
+			m_pSprite = NULL;
+		}
+	}
+	return FALSE;
+}
+
+
+void CNAApache :: FireFlak( Vector &vecSrc, Vector &vecEnd )
+{
+	Vector vecAngles = Vector( RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ) );
+	UTIL_MakeVectors( vecAngles );
+	Vector vecDest = vecEnd + gpGlobals->v_forward * RANDOM_FLOAT( 0, 96 );
+
+	CBaseEntity *pFlak;
+	if (APACHE_WEAPONS( pev )->iGun == 3)
+	{
+		// bionanite flak
+		pFlak = CBaseEntity::Create( "bio_flak", vecSrc, g_vecZero, edict() );
+	}
+	else
+	{
+		// energy flak
+		pFlak = CBaseEntity::Create( "lght_flak", vecSrc, g_vecZero, edict() );
+		m_flNextAttack = gpGlobals->time + 0.2;
+	}
+	pFlak->pev->velocity = vecDest - vecSrc;
+
+	float flTime = pFlak->pev->velocity.Length() / 2000;
+	pFlak->pev->nextthink = gpGlobals->time + max( 0.1, flTime ) + 0.1;
+	pFlak->pev->velocity = pFlak->pev->velocity.Normalize() * 2000;
+
+	EMIT_SOUND( ENT(pev), CHAN_WEAPON, "turret/tu_fire1.wav", 1.0, 0.6 );
+	pev->effects |= EF_MUZZLEFLASH;
+}
+
+
+
+void CNAApache :: FireRocket( void )
+{
+	static float side = 1.0;
+	static int count;
+
+	if (m_iRockets <= 0)
+		return;
+
+	UTIL_MakeAimVectors( pev->angles );
+	Vector vecSrc = pev->origin + 1.5 * (gpGlobals->v_forward * 21 + gpGlobals->v_right * 70 * side + gpGlobals->v_up * -79);
+
+	switch( m_iRockets % 5)
+	{
+	case 0:	vecSrc = vecSrc + gpGlobals->v_right * 10; break;
+	case 1: vecSrc = vecSrc - gpGlobals->v_right * 10; break;
+	case 2: vecSrc = vecSrc + gpGlobals->v_up * 10; break;
+	case 3: vecSrc = vecSrc - gpGlobals->v_up * 10; break;
+	case 4: break;
+	}
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecSrc );
+		WRITE_BYTE( TE_SMOKE );
+		WRITE_COORD( vecSrc.x );
+		WRITE_COORD( vecSrc.y );
+		WRITE_COORD( vecSrc.z );
+		WRITE_SHORT( g_sModelIndexSmoke );
+		WRITE_BYTE( 20 ); // scale * 10
+		WRITE_BYTE( 12 ); // framerate
+	MESSAGE_END();
+
+	int iMissile = APACHE_WEAPONS( pev )->iMissile;
+	if (iMissile == 2)
+	{
+		// bionic missile
+		CRocket *pRocket = CRocket::CreateRocket( vecSrc, pev->angles, edict(), Vector( 0, 255, 170 ), 0 );
+		pRocket->pev->dmg = 200;
+		pRocket->pev->velocity = gpGlobals->v_forward * 100;
+		pRocket->pev->speed = 1200;
+		pRocket->m_flFieldOfView = 0.7;
+		pRocket->SetThink( CRocket::SeekThink );
+		pRocket->m_iszKillDesc = MAKE_STRING( "a bionic missile" );
+		SET_MODEL( ENT( pRocket->pev ), "models/HVR.mdl" );
+	}
+	else if (iMissile == 3)
+	{
+		// vortex missile
+		CBaseMonster *pRocket = (CBaseMonster *)CBaseEntity::Create( "vortex_missile", vecSrc, Vector( -pev->angles.x, pev->angles.y, pev->angles.z ), edict() );
+		if (pRocket)
+		{
+			pRocket->pev->dmg = 500;
+			pRocket->pev->velocity = gpGlobals->v_forward * 100;
+			SET_MODEL( ENT( pRocket->pev ), "models/HVR.mdl" );
+			pRocket->m_hEnemy = m_hEnemy;
+		}
+	}
+	else if (iMissile == 4)
+	{
+		// flux torpedo
+		CRocket *pRocket = CRocket::CreateRocket( vecSrc, pev->angles, edict(), Vector( 255, 0, 128 ), MAKE_STRING( "sprites/flux_t.spr" ) );
+		if (pRocket)
+		{
+			pRocket->SetThink( CRocket::TargetThink );
+			pRocket->pev->speed = 1500;
+			pRocket->pev->renderamt = 255;
+			pRocket->pev->rendermode = kRenderTransAdd;
+			pRocket->m_flSeekTime = gpGlobals->time + 0.2;
+			pRocket->pev->velocity = gpGlobals->v_forward * 256;
+			pRocket->m_hEnemy = m_hEnemy;
+			pRocket->pev->dmg = 300;
+			pRocket->pev->spawnflags |= 8;
+			pRocket->m_iszKillDesc = MAKE_STRING( "a hyperspace flux torpedo" );
+		}
+	}
+	else
+	{
+		CBaseEntity *pRocket = CBaseEntity::Create( "na_rocket", vecSrc, pev->angles, edict() );
+		if (pRocket)
+		{
+			// napalm rocket
+			if (iMissile == 1)
+				pRocket->pev->spawnflags |= 3;
+			pRocket->pev->velocity = pev->velocity + gpGlobals->v_forward * 100;
+		}
+	}
+
+	m_iRockets--;
+
+	side = - side;
+}
+
+
+
+void CNAApache :: Hunt( void )
+{
+	StudioFrameAdvance( );
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	ShowDamage( );
+
+	if ( m_pGoalEnt == NULL && !FStringNull(pev->target) )// this monster has a target
+	{
+		m_pGoalEnt = UTIL_FindEntityByTargetname( NULL, STRING( pev->target ) );
+		if (m_pGoalEnt)
+		{
+			m_posDesired = m_pGoalEnt->pev->origin;
+			UTIL_MakeAimVectors( m_pGoalEnt->pev->angles );
+			m_vecGoal = gpGlobals->v_forward;
+		}
+	}
+
+	// if (m_hEnemy == NULL)
+	{
+		Look( 4092 );
+		m_hEnemy = BestVisibleEnemy( );
+	}
+
+	// generic speed up
+	if (m_flGoalSpeed < 800)
+		m_flGoalSpeed += 5;
+
+	if (m_hEnemy != NULL)
+	{
+		// ALERT( at_console, "%s\n", STRING( m_hEnemy->pev->classname ) );
+		if (FVisible( m_hEnemy ))
+		{
+			if (m_flLastSeen < gpGlobals->time - 5)
+				m_flPrevSeen = gpGlobals->time;
+			m_flLastSeen = gpGlobals->time;
+			m_posTarget = m_hEnemy->Center( );
+		}
+		else
+		{
+			m_hEnemy = NULL;
+		}
+	}
+
+	m_vecTarget = (m_posTarget - pev->origin).Normalize();
+
+	float flLength = (pev->origin - m_posDesired).Length();
+
+	if (m_pGoalEnt)
+	{
+		// ALERT( at_console, "%.0f\n", flLength );
+
+		if (flLength < 128)
+		{
+			m_pGoalEnt = UTIL_FindEntityByTargetname( NULL, STRING( m_pGoalEnt->pev->target ) );
+			if (m_pGoalEnt)
+			{
+				m_posDesired = m_pGoalEnt->pev->origin;
+				UTIL_MakeAimVectors( m_pGoalEnt->pev->angles );
+				m_vecGoal = gpGlobals->v_forward;
+				flLength = (pev->origin - m_posDesired).Length();
+			}
+		}
+	}
+	else
+	{
+		m_posDesired = pev->origin;
+	}
+
+	if (flLength > 250) // 500
+	{
+		// float flLength2 = (m_posTarget - pev->origin).Length() * (1.5 - DotProduct((m_posTarget - pev->origin).Normalize(), pev->velocity.Normalize() ));
+		// if (flLength2 < flLength)
+		if (m_flLastSeen + 90 > gpGlobals->time && DotProduct( (m_posTarget - pev->origin).Normalize(), (m_posDesired - pev->origin).Normalize( )) > 0.25)
+		{
+			m_vecDesired = (m_posTarget - pev->origin).Normalize( );
+		}
+		else
+		{
+			m_vecDesired = (m_posDesired - pev->origin).Normalize( );
+		}
+	}
+	else
+	{
+		m_vecDesired = m_vecGoal;
+	}
+
+	Flight( );
+
+	// ALERT( at_console, "%.0f %.0f %.0f\n", gpGlobals->time, m_flLastSeen, m_flPrevSeen );
+	if ((m_flLastSeen + 1 > gpGlobals->time) && (m_flPrevSeen + 2 < gpGlobals->time))
+	{
+		if (FireGun( ))
+		{
+			// slow down if we're fireing
+			if (m_flGoalSpeed > 400)
+				m_flGoalSpeed = 400;
+		}
+	}
+	else
+	{
+		if (m_pBeam)
+		{
+			UTIL_Remove( m_pBeam );
+			m_pBeam = NULL;
+		}
+	}
+
+	UTIL_MakeAimVectors( pev->angles );
+	Vector vecEst = (gpGlobals->v_forward * 800 + pev->velocity).Normalize( );
+	// ALERT( at_console, "%d %d %d %4.2f\n", pev->angles.x < 0, DotProduct( pev->velocity, gpGlobals->v_forward ) > -100, m_flNextRocket < gpGlobals->time, DotProduct( m_vecTarget, vecEst ) );
+
+	if ((m_iRockets % 2) == 1)
+	{
+		FireRocket( );
+		m_flNextRocket = gpGlobals->time + 0.5;
+		if (APACHE_WEAPONS( pev )->iMissile == 3)
+			m_flNextRocket = gpGlobals->time + 3;
+		if (m_iRockets <= 0)
+		{
+			m_flNextRocket = gpGlobals->time + 10;
+			m_iRockets = 10;
+		}
+	}
+	else if (DotProduct( pev->velocity, gpGlobals->v_forward ) > -100 && m_flNextRocket < gpGlobals->time)
+	{
+		if (m_flLastSeen + 60 > gpGlobals->time)
+		{
+			if (m_hEnemy != NULL)
+			{
+				float flDot = 0.965;
+				int iMissile = APACHE_WEAPONS( pev )->iMissile;
+				if (iMissile == 2)
+					flDot = 0.7;
+				else if (iMissile == 3 || iMissile == 4)
+					flDot = 0.9;
+
+				// make sure it's a good shot
+				if (DotProduct( m_vecTarget, vecEst) > flDot)
+				{
+					TraceResult tr;
+
+					UTIL_TraceLine( pev->origin, pev->origin + vecEst * 4096, ignore_monsters, edict(), &tr );
+					if ((tr.vecEndPos - m_posTarget).Length() < 1024)
+						FireRocket( );
+				}
+			}
+			else
+			{
+				TraceResult tr;
+
+				UTIL_TraceLine( pev->origin, pev->origin + vecEst * 4096, dont_ignore_monsters, edict(), &tr );
+				// just fire when close
+				if ((tr.vecEndPos - m_posTarget).Length() < 512)
+					FireRocket( );
+			}
+		}
+	}
+
+	if (m_pSprite && !m_pBeam)
+	{
+		UTIL_Remove( m_pSprite );
+		m_pSprite = NULL;
+	}
+
+	// the shield: down for 5 seconds once broken, then recharging
+	if (pev->armortype > 0)
+	{
+		pev->renderfx = kRenderFxNone;
+		pev->armortype -= 0.1;
+		if (pev->armortype <= 0)
+		{
+			pev->armorvalue = 0;
+			pev->renderfx = kRenderFxGlowShell;
+			pev->renderamt = 255;
+			pev->rendercolor = Vector( 255, 0, 128 );
+		}
+	}
+	else if (pev->armorvalue < 5000)
+	{
+		pev->armorvalue += 0.25;
+	}
+
+	if (pev->health < 2000)
+		pev->health += 0.05;
+
+	// fade the shield's glow
+	if (pev->renderfx == kRenderFxGlowShell)
+	{
+		pev->renderamt -= 10;
+		if (pev->renderamt < 0)
+		{
+			pev->renderfx = kRenderFxNone;
+			pev->renderamt = 0;
+			pev->rendercolor = g_vecZero;
+		}
+		else
+		{
+			pev->rendercolor = Vector( pev->renderamt, 0, pev->renderamt * 0.5 );
+		}
+	}
+}
+
+
+void CNAApache :: Killed( entvars_t *pevAttacker, int iGib )
+{
+	if (m_pSprite)
+	{
+		UTIL_Remove( m_pSprite );
+		m_pSprite = NULL;
+	}
+	CApache::Killed( pevAttacker, iGib );
+}
+
+
+
+
+class CApacheNAR : public CApacheHVR
+{
+	const char *GetKillDesc( void ) { return "a bionic missile"; }
+	void EXPORT IgniteThink( void );
+};
+LINK_ENTITY_TO_CLASS( na_rocket, CApacheNAR );
+
+
+void CApacheNAR :: IgniteThink( void  )
+{
+	pev->effects |= EF_LIGHT;
+
+	// make rocket sound
+	EMIT_SOUND( ENT(pev), CHAN_VOICE, "weapons/rocket1.wav", 1, 0.5 );
+
+	// rocket trail
+	BeamFollow( g_sModelIndexSmokeTrail, 15, 5, Vector( 0, 170, 255 ), 255 );
+
+	pev->dmg = 200;
+
+	// set to accelerate
+	SetThink( AccelerateThink );
 	pev->nextthink = gpGlobals->time + 0.1;
 }
 
