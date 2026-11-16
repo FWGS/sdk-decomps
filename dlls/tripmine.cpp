@@ -489,9 +489,13 @@ void CTripmineTurret :: MakeBeam( void )
 
 BOOL CTripmineTurret :: FInViewCone( CBaseEntity *pEntity )
 {
-	Vector vecLOS = ( pEntity->pev->origin - pev->origin ).Normalize();
+	Vector	vecLOS;
+	float	flDot;
 
-	float flDot = DotProduct( vecLOS, m_vecDir );
+	vecLOS = ( pEntity->pev->origin - pev->origin );
+	vecLOS = vecLOS.Normalize();
+
+	flDot = DotProduct( vecLOS, m_vecDir );
 
 	if ( flDot > m_flFieldOfView )
 	{
@@ -521,8 +525,7 @@ void CTripmineTurret :: ActiveThink( void )
 		}
 	}
 
-	Vector vecDirToEnemy = m_hEnemy->BodyTarget( pev->origin ) - pev->origin;
-	m_vecAngle1 = UTIL_VecToAngles( vecDirToEnemy );
+	m_vecAngle1 = UTIL_VecToAngles( m_hEnemy->BodyTarget( pev->origin ) - pev->origin );
 	MoveTurret();
 }
 
@@ -545,7 +548,7 @@ void CTripmineTurret :: MoveTurret( void )
 		if ( flDist < 1.0 )
 			m_vecAngle2.x = m_vecAngle1.x;
 		else
-			m_vecAngle2.x += flDir;
+			m_vecAngle2.x += flDir * 1.0;	// sic
 	}
 
 	if ( m_hPulse == NULL && m_vecAngle2.y != m_vecAngle1.y )
@@ -562,7 +565,7 @@ void CTripmineTurret :: MoveTurret( void )
 		if ( flDist < 1.0 )
 			m_vecAngle2.y = m_vecAngle1.y;
 		else
-			m_vecAngle2.y += flDir;
+			m_vecAngle2.y += flDir * 1.0;	// sic
 
 		if ( m_vecAngle2.y < 0 )
 			m_vecAngle2.y += 360;
