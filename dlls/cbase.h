@@ -260,6 +260,7 @@ public:
 	int			ShouldToggle( USE_TYPE useType, BOOL currentState );
 	void		FireBullets( ULONG	cShots, Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iBulletType, int iTracerFreq = 4, int iDamage = 0, entvars_t *pevAttacker = NULL  );
 	Vector		FireBulletsPlayer( ULONG	cShots, Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iBulletType, int iTracerFreq = 4, int iDamage = 0, entvars_t *pevAttacker = NULL, int shared_rand = 0 );
+	Vector		FireBulletsExplosive( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker = NULL, int shared_rand = 0 );	// name ours: the shotgun's explosive slugs (combat.cpp; the client's in hl_weapons.cpp)
 
 	virtual CBaseEntity *Respawn( void ) { return NULL; }
 
