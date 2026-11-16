@@ -618,11 +618,6 @@ void CTripmineTurret :: Shoot( const Vector &vecDir )
 	pev->frags -= 1;
 }
 
-// a stand-in until pulse.cpp has the real CLaserPulse::Shoot (retail 0x100b0860, 205 bytes)
-CLaserPulse *CLaserPulse::Shoot( Vector vecOrigin, edict_t *pOwner, const Vector &vecColor, int iTrailLife, float flScale, int iColor )
-{
-	return NULL;
-}
 #endif
 
 LINK_ENTITY_TO_CLASS( weapon_tripmine, CTripmine );

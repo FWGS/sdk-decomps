@@ -212,6 +212,10 @@ SOURCE=.\client.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\cluster_bomb.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\combat.cpp
 # End Source File
 # Begin Source File
@@ -433,6 +437,10 @@ SOURCE=..\pm_shared\pm_math.c
 # Begin Source File
 
 SOURCE=..\pm_shared\pm_shared.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\pulse.cpp
 # End Source File
 # Begin Source File
 

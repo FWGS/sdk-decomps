@@ -64,6 +64,8 @@ public:
 class CClusterBomb : public CGrenade
 {
 public:
+	void Spawn( void );
+
 	static CClusterBomb *ShootTimed( edict_t *pOwner, const Vector &vecStart, const Vector &vecVelocity, float time );	// name ours (0x10027d00)
 	static CClusterBomb *ShootMirv( edict_t *pOwner, const Vector &vecStart, const Vector &vecVelocity, float time );	// name ours (0x10027e70): ShootTimed, then pev->weapons = 3
 
@@ -73,6 +75,9 @@ public:
 	void EXPORT ClusterHybridThink( void );
 	void EXPORT ClusterHybridTouch( CBaseEntity *pOther );
 	void EXPORT ClusterPreDetonate( void );
+
+	void ClusterExplode( TraceResult *pTrace );		// name ours: throws pev->frags bomblets of type pev->weapons
+	static Vector ClusterSpread( const Vector &vecSpread );	// name ours: a random direction around v_forward
 };
 
 
@@ -1090,6 +1095,7 @@ public:
 	int AddToPlayer( CBasePlayer *pPlayer );
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
+	void WeaponSpecial( void );		// switches between satchel charges and satellite rain (pev->weapons)
 	int AddDuplicate( CBasePlayerItem *pOriginal );
 	BOOL CanDeploy( void );
 	BOOL Deploy( void );
@@ -1477,7 +1483,7 @@ public:
 	CLaserPulse() {}	// sic: an empty constructor (special_laser's factory calls CBaseEntity's out of line)
 	void Spawn( void );
 	void Precache( void );
-	const char *GetKillDesc( void ) { return m_iszKillDesc ? STRING( m_iszKillDesc ) : "a pulse laser"; }
+	const char *GetKillDesc( void ) { return !m_iszKillDesc ? "a pulse laser" : STRING( m_iszKillDesc ); }
 	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup );
 	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
 
