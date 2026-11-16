@@ -1024,6 +1024,7 @@ public:
 	int AddToPlayer( CBasePlayer *pPlayer );
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
+	void WeaponSpecial( void );		// switches between satchel charges and satellite rain (pev->weapons)
 	int AddDuplicate( CBasePlayerItem *pOriginal );
 	BOOL CanDeploy( void );
 	BOOL Deploy( void );

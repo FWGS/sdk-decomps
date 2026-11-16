@@ -22,6 +22,7 @@
 #include "nodes.h"
 #include "player.h"
 #include "gamerules.h"
+#include "customentity.h"
 
 enum satchel_e {
 	SATCHEL_IDLE1 = 0,
@@ -40,6 +41,7 @@ enum satchel_radio_e {
 
 
 
+#ifndef CLIENT_DLL
 class CSatchelCharge : public CGrenade
 {
 	void Spawn( void );
@@ -51,6 +53,8 @@ class CSatchelCharge : public CGrenade
 
 public:
 	void Deactivate( void );
+	void StartSatellite( void );	// name ours
+	void EXPORT SatelliteThink( void );
 };
 LINK_ENTITY_TO_CLASS( monster_satchel, CSatchelCharge );
 
@@ -69,7 +73,7 @@ void CSatchelCharge :: Spawn( void )
 {
 	Precache( );
 	// motor
-	pev->movetype = MOVETYPE_BOUNCE;
+	pev->movetype = MOVETYPE_TOSS;
 	pev->solid = SOLID_BBOX;
 
 	SET_MODEL(ENT(pev), "models/w_satchel.mdl");
@@ -81,6 +85,7 @@ void CSatchelCharge :: Spawn( void )
 	SetUse( DetonateUse );
 	SetThink( SatchelThink );
 	pev->nextthink = gpGlobals->time + 0.1;
+	pev->dmgtime = gpGlobals->time + 5;	// a satellite rain charge calls the strike after 5 seconds
 
 	pev->gravity = 0.5;
 	pev->friction = 0.8;
@@ -88,6 +93,8 @@ void CSatchelCharge :: Spawn( void )
 	pev->dmg = gSkillData.plrDmgSatchel;
 	// ResetSequenceInfo( );
 	pev->sequence = 1;
+
+	m_iszKillDesc = MAKE_STRING( "a remote activated demolition unit" );
 }
 
 
@@ -132,6 +139,13 @@ void CSatchelCharge :: SatchelThink( void )
 		return;
 	}
 
+	// satellite rain: pev->weapons is the number of strikes left
+	if ( pev->weapons && pev->dmgtime <= gpGlobals->time )
+	{
+		StartSatellite();
+		return;
+	}
+
 	if (pev->waterlevel == 3)
 	{
 		pev->movetype = MOVETYPE_FLY;
@@ -155,6 +169,8 @@ void CSatchelCharge :: Precache( void )
 	PRECACHE_SOUND("weapons/g_bounce1.wav");
 	PRECACHE_SOUND("weapons/g_bounce2.wav");
 	PRECACHE_SOUND("weapons/g_bounce3.wav");
+	PRECACHE_MODEL("sprites/vslash.spr");
+	PRECACHE_SOUND("weapons/mortarhit.wav");
 }
 
 void CSatchelCharge :: BounceSound( void )
@@ -167,8 +183,119 @@ void CSatchelCharge :: BounceSound( void )
 	}
 }
 
+//=========================================================
+// StartSatellite - the charge's target designator: a laser
+// to the sky; with sky above, the charge moves up there,
+// hidden, and starts the orbital strike.
+//=========================================================
+void CSatchelCharge::StartSatellite( void )
+{
+	TraceResult tr;
+	float flLife = 1.4;
+
+	UTIL_TraceLine( pev->origin, Vector( pev->origin.x, pev->origin.y, 4000 ), ignore_monsters, ENT( pev ), &tr );
+
+	UTIL_BeamRing( TE_BEAMTORUS, g_sModelIndexLaser, pev->origin + Vector( 0, 0, 8 ), 128, 1, flLife, pev->rendercolor, 255 );
+
+	CBeam *pBeam = CBeam::BeamCreate( g_pModelNameLaser, 40 );
+	pBeam->PointsInit( pev->origin, tr.vecEndPos );
+	pBeam->pev->rendercolor = pev->rendercolor;
+	pBeam->SetBrightness( 255 );
+	pBeam->SetThink( SUB_Remove );
+	pBeam->pev->nextthink = gpGlobals->time + flLife;
+
+	if ( UTIL_PointContents( tr.vecEndPos ) == CONTENTS_SKY )
+	{
+		UTIL_SetOrigin( pev, tr.vecEndPos );
+		SetThink( SatelliteThink );
+		pev->nextthink = gpGlobals->time + 5;
+
+		pev->effects = EF_NODRAW;
+		pev->solid = SOLID_NOT;
+		pev->takedamage = DAMAGE_NO;
+		pev->velocity = g_vecZero;
+		pev->movetype = MOVETYPE_NONE;
+
+		pBeam->pev->angles.z = 4000;	// the beam's end goes to the sky
+		pBeam->SetFlags( BEAM_FSHADEOUT );
+		return;
+	}
+
+	CBaseEntity *pOwner = CBaseEntity::Instance( pev->owner );
+	if ( pOwner && pOwner->IsPlayer() )
+		UTIL_SayText( "Target Designator Error: No sky above location!", pOwner );
+
+	UTIL_Remove( this );
+}
+
+//=========================================================
+// SatelliteThink - one strike of the orbital plasma cannon
+// within 512 units of the charge, every 0.1 to 2 seconds,
+// until pev->weapons runs out
+//=========================================================
+void CSatchelCharge::SatelliteThink( void )
+{
+	TraceResult tr;
+
+	pev->nextthink = gpGlobals->time + RANDOM_FLOAT( 0.1, 2 );
+
+	Vector vecAngles = Vector( 0, RANDOM_FLOAT( 0, 360 ), 0 );
+	UTIL_MakeVectors( vecAngles );
+	Vector vecOffset = gpGlobals->v_forward * RANDOM_FLOAT( 0, 512 );
+	Vector vecTarget = pev->origin + vecOffset;
+	Vector vecSky = vecTarget;
+
+	if ( UTIL_PointContents( vecSky ) != CONTENTS_SKY )
+	{
+		UTIL_TraceLine( pev->origin, vecSky, ignore_monsters, ENT( pev ), &tr );
+		if ( tr.flFraction < 1.0 )
+		{
+			Vector vecDelta = ( tr.vecEndPos - pev->origin ) * tr.flFraction;
+			vecTarget = pev->origin + vecDelta;
+			vecSky = vecTarget;
+		}
+	}
+
+	vecSky.z = 4000;
+	Vector vecGround = Vector( vecSky.x, vecSky.y, -4000 );
+	UTIL_TraceLine( vecSky, vecGround, ignore_monsters, ENT( pev ), &tr );
+
+	if ( tr.fAllSolid || tr.flFraction >= 1.0 || UTIL_PointContents( tr.vecEndPos ) == CONTENTS_SKY )
+	{
+		// nothing to hit, try again
+		pev->nextthink = gpGlobals->time + 0.1;
+		return;
+	}
+
+	vecGround = tr.vecEndPos;
+	Vector vecDir = Vector( 0, 0, -1 );
+
+	CGrenade *pBlast = CGrenade::ShootExplosion( VARS( pev->owner ), vecGround, 0.1, vecDir );
+	pBlast->pev->effects = 0;
+	pBlast->pev->rendermode = kRenderTransAdd;
+	pBlast->pev->renderamt = 0;
+	pBlast->pev->spawnflags = 32;
+	pBlast->pev->rendercolor = Vector( 255, 100, 16 );
+	pBlast->pev->dmg = 150;
+	pBlast->m_iszKillDesc = MAKE_STRING( "Orbital Plasma Cannon" );
+
+	CBeam *pBeam = CBeam::BeamCreate( "sprites/vslash.spr", 160 );
+	pBeam->PointsInit( vecSky, vecGround );
+	pBeam->SetFlags( BEAM_FSHADEIN );
+	pBeam->SetColor( 255, 255, 255 );
+	pBeam->SetBrightness( 255 );
+	pBeam->SetScrollRate( 35 );
+	pBeam->SetThink( SUB_Remove );
+	pBeam->pev->nextthink = gpGlobals->time + 1;
+
+	pev->weapons--;
+	if ( pev->weapons < 1 )
+		SetThink( SUB_Remove );
+}
+
 
 LINK_ENTITY_TO_CLASS( weapon_satchel, CSatchel );
+#endif
 
 
 //=========================================================
@@ -342,21 +469,20 @@ void CSatchel::PrimaryAttack()
 		{
 		SendWeaponAnim( SATCHEL_RADIO_FIRE );
 
+#ifndef CLIENT_DLL
 		edict_t *pPlayer = m_pPlayer->edict( );
 
 		CBaseEntity *pSatchel = NULL;
 
-		while ((pSatchel = UTIL_FindEntityInSphere( pSatchel, m_pPlayer->pev->origin, 4096 )) != NULL)
+		while ((pSatchel = UTIL_FindEntityByClassname( pSatchel, "monster_satchel" )) != NULL)
 		{
-			if (FClassnameIs( pSatchel->pev, "monster_satchel"))
+			if (pSatchel->pev->owner == pPlayer)
 			{
-				if (pSatchel->pev->owner == pPlayer)
-				{
-					pSatchel->Use( m_pPlayer, m_pPlayer, USE_ON, 0 );
-					m_chargeReady = 2;
-				}
+				pSatchel->Use( m_pPlayer, m_pPlayer, USE_ON, 0 );
+				m_chargeReady = 2;
 			}
 		}
+#endif
 
 		m_chargeReady = 2;
 		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.5;
@@ -383,6 +509,22 @@ void CSatchel::SecondaryAttack( void )
 }
 
 
+//=========================================================
+// WeaponSpecial - "+attack3" switches between satchel
+// charges and satellite rain (pev->weapons)
+//=========================================================
+void CSatchel::WeaponSpecial( void )
+{
+	if ( m_pPlayer->m_afButtonPressed & IN_ALT1 )
+	{
+		pev->weapons = !pev->weapons;
+#ifndef CLIENT_DLL
+		ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "%s selected", pev->weapons != 1 ? "Satchel Charge" : "Satellite Rain" );
+#endif
+	}
+}
+
+
 void CSatchel::Throw( void )
 {
 	if ( m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] )
@@ -395,20 +537,36 @@ void CSatchel::Throw( void )
 		CBaseEntity *pSatchel = Create( "monster_satchel", vecSrc, Vector( 0, 0, 0), m_pPlayer->edict() );
 		pSatchel->pev->velocity = vecThrow;
 		pSatchel->pev->avelocity.y = 400;
-
-		m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_satchel_radio.mdl");
-		m_pPlayer->pev->weaponmodel = MAKE_STRING("models/p_satchel_radio.mdl");
-#else
-		LoadVModel ( "models/v_satchel_radio.mdl", m_pPlayer );
 #endif
 
-		SendWeaponAnim( SATCHEL_RADIO_DRAW );
+		if ( pev->weapons )
+		{
+#ifndef CLIENT_DLL
+			// satellite rain: a glowing target designator, 14 strikes, no remote
+			pSatchel->SetUse( NULL );
+			pSatchel->pev->rendercolor = Vector( 255, 100, 16 );
+			pSatchel->pev->renderfx = kRenderFxGlowShell;
+			pSatchel->pev->renderamt = 32;
+			pSatchel->pev->weapons = 14;
+#endif
+		}
+		else
+		{
+#ifndef CLIENT_DLL
+			m_pPlayer->pev->viewmodel = MAKE_STRING("models/v_satchel_radio.mdl");
+			m_pPlayer->pev->weaponmodel = MAKE_STRING("models/p_satchel_radio.mdl");
+#else
+			LoadVModel ( "models/v_satchel_radio.mdl", m_pPlayer );
+#endif
+
+			SendWeaponAnim( SATCHEL_RADIO_DRAW );
+
+			m_chargeReady = 1;
+		}
 
 		// player "shoot" animation
 		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
-		m_chargeReady = 1;
-		
 		m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]--;
 
 		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.0;
@@ -470,6 +628,7 @@ void CSatchel::WeaponIdle( void )
 //=========================================================
 void DeactivateSatchels( CBasePlayer *pOwner )
 {
+#ifndef CLIENT_DLL
 	edict_t *pFind; 
 
 	pFind = FIND_ENTITY_BY_CLASSNAME( NULL, "monster_satchel" );
@@ -481,14 +640,16 @@ void DeactivateSatchels( CBasePlayer *pOwner )
 
 		if ( pSatchel )
 		{
-			if ( pSatchel->pev->owner == pOwner->edict() )
+			// the owner's satchel charges go off; satellite rain keeps going
+			if ( pSatchel->pev->owner == pOwner->edict() && !pSatchel->pev->weapons )
 			{
-				pSatchel->Deactivate();
+				pSatchel->Detonate();
 			}
 		}
 
 		pFind = FIND_ENTITY_BY_CLASSNAME( pFind, "monster_satchel" );
 	}
+#endif
 }
 
 #endif
