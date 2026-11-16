@@ -50,6 +50,7 @@ extern void CopyToBodyQue(entvars_t* pev);
 extern void respawn(entvars_t *pev, BOOL fCopyCorpse);
 extern Vector VecBModelOrigin(entvars_t *pevBModel );
 extern CBaseEntity *EntSelectSpawnPoint( CBaseEntity *pPlayer );
+extern void UpdateFogAndRain( CBasePlayer *pPlayer );	// name ours: effects.cpp, sends env_fog to the player and restarts env_rain
 
 // the world node graph
 extern CGraph	WorldGraph;
@@ -3772,6 +3773,7 @@ void CBasePlayer :: UpdateClientData( void )
 			MESSAGE_END();
 
 			g_pGameRules->InitHUD( this );
+			UpdateFogAndRain( this );
 			m_fGameHUDInitialized = TRUE;
 			if ( g_pGameRules->IsMultiplayer() )
 			{
@@ -3779,6 +3781,13 @@ void CBasePlayer :: UpdateClientData( void )
 			}
 		}
 		FireTargets( "game_playerspawn", this, this, USE_TOGGLE, 0 );
+	}
+	else if ( !m_fGameHUDInitialized )
+	{
+		// restored from a saved game (Precache clears it)
+		m_fGameHUDInitialized = TRUE;
+		UpdateFogAndRain( this );
+		g_pGameRules->InitHUD( this );
 	}
 
 	if ( m_iHideHUD != m_iClientHideHUD )
@@ -3814,7 +3823,7 @@ void CBasePlayer :: UpdateClientData( void )
 
 		// send "health" update message
 		MESSAGE_BEGIN( MSG_ONE, gmsgHealth, NULL, pev );
-			WRITE_BYTE( iHealth );
+			WRITE_SHORT( iHealth );
 		MESSAGE_END();
 
 		m_iClientHealth = pev->health;
