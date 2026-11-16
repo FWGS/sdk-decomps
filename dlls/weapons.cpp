@@ -1580,10 +1580,10 @@ TYPEDESCRIPTION	CSatchel::m_SaveData[] =
 };
 IMPLEMENT_SAVERESTORE( CSatchel, CBasePlayerWeapon );
 
-// stand-in for a W_Precache global (sprites/smoke.spr), which the rockets' trails use
+// a stand-in until this file has W_Precache's sprites/smoke.spr index
 DLL_GLOBAL short g_sModelIndexSmokePuff;
 
-// stand-in for the spread helper (retail 0x100eb710, 328 bytes), which the shotgun calls
+// a stand-in until this file has the real spread helper (retail 0x100eb710, 328 bytes)
 Vector UTIL_SpreadVector( const Vector &vecSpread )
 {
 	float x, y, z;
