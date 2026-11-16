@@ -267,7 +267,7 @@ void ExplosionCreate( const Vector &center, const Vector &angles, edict_t *pOwne
 	pExplosion->KeyValue( &kvd );
 	if ( !doDamage )
 		pExplosion->pev->spawnflags |= SF_ENVEXPLOSION_NODAMAGE;
-	pExplosion->pev->spawnflags |= iSpawnFlags;	// a stand-in until explode.cpp is written (retail ORs in its 6th argument)
+	pExplosion->pev->spawnflags |= iSpawnFlags;	// the mod's 6th argument
 
 	pExplosion->Spawn();
 	pExplosion->Use( NULL, NULL, USE_TOGGLE, 0 );
