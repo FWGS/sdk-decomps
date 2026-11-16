@@ -439,6 +439,7 @@ public:
 	void KeyValue( KeyValueData *pkvd );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	int	ObjectCaps( void ) { return (CPointEntity::ObjectCaps() | FCAP_MASTER); }
+	int	GetOnState( void ) { return IsTriggered( this ); }
 	BOOL IsTriggered( CBaseEntity *pActivator );
 	void EXPORT Register( void );
 	virtual int		Save( CSave &save );
