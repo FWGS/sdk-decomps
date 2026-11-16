@@ -350,9 +350,3 @@ int CBasePlayerWeapon::ExtractClipAmmo( CBasePlayerWeapon *pWeapon ) { return 0;
 void CBasePlayerWeapon::RetireWeapon( void ) { }
 void CSoundEnt::InsertSound ( int iType, const Vector &vecOrigin, int iVolume, float flDuration ) {}
 void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType ){}
-
-// A stand-in, not in retail.  The stock satchel.cpp still builds
-// CSatchelCharge (a CGrenade) into the client, whose vtable wants this; retail's
-// client has no CSatchelCharge (no RTTI, no monster_satchel/weapon_satchel
-// factory).  Remove once satchel.cpp is retail's.
-void CBaseMonster::CheckTimeBasedDamage( void ) { }

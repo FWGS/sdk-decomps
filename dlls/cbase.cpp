@@ -773,8 +773,21 @@ CBaseEntity * CBaseEntity::Create( char *szName, const Vector &vecOrigin, const 
 }
 
 
-// Retail has a 154-byte CBaseEntity method here (a TE_BEAMFOLLOW message,
-// 0x10023d90), not written yet.
+// A beam trail behind this entity (rockets, the pulse laser, the cluster bomb). Sent to all.
+void CBaseEntity :: BeamFollow( short sModelIndex, int iLife, int iWidth, const Vector &vecColor, int iBrightness )
+{
+	MESSAGE_BEGIN( MSG_ALL, SVC_TEMPENTITY );
+		WRITE_BYTE( TE_BEAMFOLLOW );
+		WRITE_SHORT( entindex() );	// entity
+		WRITE_SHORT( sModelIndex );	// model
+		WRITE_BYTE( iLife );		// life
+		WRITE_BYTE( iWidth );		// width
+		WRITE_BYTE( vecColor.x );	// r, g, b
+		WRITE_BYTE( vecColor.y );
+		WRITE_BYTE( vecColor.z );
+		WRITE_BYTE( iBrightness );	// brightness
+	MESSAGE_END();
+}
 
 // Half the smallest extent, sic: y is compared at half size.
 float CBaseEntity :: GetHoldDistance( void )
@@ -796,4 +809,39 @@ float CBaseEntity :: MovementSpeed( void )
 	return pev->velocity.Length();
 }
 
+// TRUE if the origin or any corner of the bounding box is inside a solid
+// (random_scis puts a scientist back where it was then).
+bool CBaseEntity :: IsInSolid( void )
+{
+	int iContents;
 
+	iContents = UTIL_PointContents( pev->origin );
+	if ( iContents == CONTENTS_SOLID )
+		return true;
+	iContents = UTIL_PointContents( pev->origin + pev->mins );
+	if ( iContents == CONTENTS_SOLID )
+		return true;
+	iContents = UTIL_PointContents( pev->origin + pev->maxs );
+	if ( iContents == CONTENTS_SOLID )
+		return true;
+	iContents = UTIL_PointContents( pev->origin + Vector( pev->maxs.x, pev->maxs.y, pev->mins.z ) );
+	if ( iContents == CONTENTS_SOLID )
+		return true;
+	iContents = UTIL_PointContents( pev->origin + Vector( pev->maxs.x, pev->mins.y, pev->mins.z ) );
+	if ( iContents == CONTENTS_SOLID )
+		return true;
+	iContents = UTIL_PointContents( pev->origin + Vector( pev->maxs.x, pev->mins.y, pev->maxs.z ) );
+	if ( iContents == CONTENTS_SOLID )
+		return true;
+	iContents = UTIL_PointContents( pev->origin + Vector( pev->mins.x, pev->maxs.y, pev->maxs.z ) );
+	if ( iContents == CONTENTS_SOLID )
+		return true;
+	iContents = UTIL_PointContents( pev->origin + Vector( pev->mins.x, pev->maxs.y, pev->mins.z ) );
+	if ( iContents == CONTENTS_SOLID )
+		return true;
+	iContents = UTIL_PointContents( pev->origin + Vector( pev->mins.x, pev->mins.y, pev->maxs.z ) );
+	if ( iContents == CONTENTS_SOLID )
+		return true;
+
+	return false;
+}

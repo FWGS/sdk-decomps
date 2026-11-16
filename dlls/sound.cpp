@@ -127,6 +127,7 @@ public:
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
+	int		GetOnState( void ) { return m_fActive; }
 	virtual int	ObjectCaps( void ) { return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION); }
 
 	float m_flAttenuation;		// attenuation value
@@ -1064,7 +1065,7 @@ int USENTENCEG_PickSequential(int isentenceg, char *szfound, int ipick, int fres
 
 	strcpy(szfound, "!");
 	strcat(szfound, szgroupname);
-	sprintf(sznum, "%d", ipick);
+	itoa(ipick, sznum, 10);
 	strcat(szfound, sznum);
 	
 	if (ipick >= count)
@@ -1126,7 +1127,7 @@ int USENTENCEG_Pick(int isentenceg, char *szfound)
 		{
 			strcpy(szfound, "!");
 			strcat(szfound, szgroupname);
-			sprintf(sznum, "%d", ipick);
+			itoa(ipick, sznum, 10);
 			strcat(szfound, sznum);
 			return ipick;
 		}
@@ -1250,7 +1251,7 @@ void SENTENCEG_Stop(edict_t *entity, int isentenceg, int ipick)
 	
 	strcpy(buffer, "!");
 	strcat(buffer, rgsentenceg[isentenceg].szgroupname);
-	sprintf(sznum, "%d", ipick);
+	itoa(ipick, sznum, 10);
 	strcat(buffer, sznum);
 
 	STOP_SOUND(entity, CHAN_VOICE, buffer);
@@ -1396,7 +1397,7 @@ int SENTENCEG_Lookup(const char *sample, char *sentencenum)
 			if (sentencenum)
 			{
 				strcpy(sentencenum, "!");
-				sprintf(sznum, "%d", i);
+				itoa(i, sznum, 10);
 				strcat(sentencenum, sznum);
 			}
 			return i;
@@ -1803,12 +1804,18 @@ public:
 	virtual int	ObjectCaps( void ) { return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION); }
 	
 	int	m_preset;			// preset number
+	float	m_minDelay;		// "min_time": shortest wait between announcements
+	float	m_maxDelay;		// "max_time": longest wait between announcements
 };
+
+#define SPEAKER_PLAYEVERYWHERE		2	// name ours; fgd "Play Everywhere": no attenuation
 
 LINK_ENTITY_TO_CLASS( speaker, CSpeaker );
 TYPEDESCRIPTION	CSpeaker::m_SaveData[] = 
 {
 	DEFINE_FIELD( CSpeaker, m_preset, FIELD_INTEGER ),
+	DEFINE_FIELD( CSpeaker, m_minDelay, FIELD_FLOAT ),
+	DEFINE_FIELD( CSpeaker, m_maxDelay, FIELD_FLOAT ),
 };
 
 IMPLEMENT_SAVERESTORE( CSpeaker, CBaseEntity );
@@ -1830,6 +1837,10 @@ void CSpeaker :: Spawn( void )
     pev->solid		= SOLID_NOT;
     pev->movetype	= MOVETYPE_NONE;
 
+	if ( m_minDelay <= 0 )
+		m_minDelay = 15;
+	if ( m_maxDelay <= 0 )
+		m_maxDelay = 135;
 	
 	SetThink(SpeakerThink);
 	pev->nextthink = 0.0;
@@ -1858,6 +1869,8 @@ void CSpeaker :: SpeakerThink( void )
 	int flags = 0;
 	int pitch = 100;
 
+	if ( FBitSet( pev->spawnflags, SPEAKER_PLAYEVERYWHERE ) )
+		flattenuation = ATTN_NONE;
 
 	// Wait for the talkmonster to finish first.
 	if (gpGlobals->time <= CTalkMonster::g_talkWaitTime)
@@ -1904,8 +1917,7 @@ void CSpeaker :: SpeakerThink( void )
 			ALERT(at_console, "Level Design Error!\nSPEAKER has bad sentence group name: %s\n",szSoundFile); 
 
 		// set next announcement time for random 5 to 10 minute delay
-		pev->nextthink = gpGlobals->time + 
-						RANDOM_FLOAT(ANNOUNCE_MINUTES_MIN * 60.0, ANNOUNCE_MINUTES_MAX * 60.0);
+		pev->nextthink = gpGlobals->time + RANDOM_FLOAT( m_minDelay, m_maxDelay );
 
 		CTalkMonster::g_talkWaitTime = gpGlobals->time + 5;		// time delay until it's ok to speak: used so that two NPCs don't talk at once
 	}
@@ -1971,6 +1983,16 @@ void CSpeaker :: KeyValue( KeyValueData *pkvd )
 	if (FStrEq(pkvd->szKeyName, "preset"))
 	{
 		m_preset = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "max_time"))
+	{
+		m_maxDelay = atof(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "min_time"))
+	{
+		m_minDelay = atof(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
 	else

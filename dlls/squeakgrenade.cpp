@@ -50,6 +50,11 @@ class CSqueakGrenade : public CGrenade
 	void EXPORT SuperBounceTouch( CBaseEntity *pOther );
 	void EXPORT HuntThink( void );
 	int  BloodColor( void ) { return BLOOD_COLOR_YELLOW; }
+	const char *GetKillDesc( void ) { return "a snark"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup )	// bitten while alive, blown up once dead
+	{
+		return DamageVerb( pev->health > 0 ? DMG_GENERIC : DMG_BLAST, fGibbed );
+	}
 	void Killed( entvars_t *pevAttacker, int iGib );
 	void GibMonster( void );
 
