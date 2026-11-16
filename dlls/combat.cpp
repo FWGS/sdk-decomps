@@ -30,6 +30,7 @@
 #include "weapons.h"
 #include "func_break.h"
 #include "game.h"
+#include "explode.h"
 
 extern DLL_GLOBAL Vector		g_vecAttackDir;
 extern DLL_GLOBAL int			g_iSkillLevel;
@@ -2052,6 +2053,122 @@ Vector CBaseEntity::FireBulletsPlayer ( ULONG cShots, Vector vecSrc, Vector vecD
 				break;
 			}
 		}
+		// make bullet trails
+		UTIL_BubbleTrail( vecSrc, tr.vecEndPos, (flDistance * tr.flFraction) / 64.0 );
+	}
+	ApplyMultiDamage(pev, pevAttacker);
+
+	return Vector( x * vecSpread.x, y * vecSpread.y, 0.0 );
+}
+
+/*
+================
+FireBulletsExplosiveMonster
+
+Bullets that explode where they hit: DMG_BLAST to the entity hit and an
+env_explosion of iDamage there.  Used by monsters. (name ours)
+================
+*/
+void CBaseEntity::FireBulletsExplosiveMonster( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker )
+{
+	TraceResult tr;
+	Vector vecRight = gpGlobals->v_right;
+	Vector vecUp = gpGlobals->v_up;
+
+	if ( pevAttacker == NULL )
+		pevAttacker = pev;  // the default attacker is ourselves
+
+	if ( cShots <= 0 )
+		cShots = 1;
+
+	ClearMultiDamage();
+
+	for (ULONG iShot = 1; iShot <= cShots; iShot++)
+	{
+		// get circular gaussian spread
+		float x, y, z;
+		do {
+			x = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
+			y = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
+			z = x*x+y*y;
+		} while (z > 1);
+
+		Vector vecDir = vecDirShooting +
+						x * vecSpread.x * vecRight +
+						y * vecSpread.y * vecUp;
+		Vector vecEnd;
+
+		vecEnd = vecSrc + vecDir * flDistance;
+		UTIL_TraceLine(vecSrc, vecEnd, dont_ignore_monsters, ENT(pev)/*pentIgnore*/, &tr);
+
+		if ( tr.pHit )
+		{
+			CBaseEntity *pEntity = CBaseEntity::Instance(tr.pHit);
+
+			if ( pEntity->pev->takedamage )
+				pEntity->TraceAttack(pevAttacker, iDamage, vecDir, &tr, DMG_BLAST );
+		}
+
+		if ( iDamage )
+			ExplosionCreate( tr.vecEndPos, g_vecZero, ENT(pevAttacker), iDamage, TRUE, SF_ENVEXPLOSION_NOSMOKE | SF_ENVEXPLOSION_NODECAL | SF_ENVEXPLOSION_NOSPARKS );
+
+		// make bullet trails
+		UTIL_BubbleTrail( vecSrc, tr.vecEndPos, (flDistance * tr.flFraction) / 64.0 );
+	}
+	ApplyMultiDamage(pev, pevAttacker);
+}
+
+
+/*
+================
+FireBulletsExplosive
+
+FireBulletsExplosiveMonster for players, with the random seed generator
+of FireBulletsPlayer (the shotgun's explosive slugs). (name ours)
+================
+*/
+Vector CBaseEntity::FireBulletsExplosive( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker, int shared_rand )
+{
+	TraceResult tr;
+	Vector vecRight = gpGlobals->v_right;
+	Vector vecUp = gpGlobals->v_up;
+	float x, y, z;
+
+	if ( pevAttacker == NULL )
+		pevAttacker = pev;  // the default attacker is ourselves
+
+	if ( cShots <= 0 )
+		cShots = 1;
+
+	ClearMultiDamage();
+
+	for ( ULONG iShot = 1; iShot <= cShots; iShot++ )
+	{
+		//Use player's random seed.
+		// get circular gaussian spread
+		x = UTIL_SharedRandomFloat( shared_rand + iShot, -0.5, 0.5 ) + UTIL_SharedRandomFloat( shared_rand + ( 1 + iShot ) , -0.5, 0.5 );
+		y = UTIL_SharedRandomFloat( shared_rand + ( 2 + iShot ), -0.5, 0.5 ) + UTIL_SharedRandomFloat( shared_rand + ( 3 + iShot ), -0.5, 0.5 );
+		z = x * x + y * y;
+
+		Vector vecDir = vecDirShooting +
+						x * vecSpread.x * vecRight +
+						y * vecSpread.y * vecUp;
+		Vector vecEnd;
+
+		vecEnd = vecSrc + vecDir * flDistance;
+		UTIL_TraceLine(vecSrc, vecEnd, dont_ignore_monsters, ENT(pev)/*pentIgnore*/, &tr);
+
+		if ( tr.pHit )
+		{
+			CBaseEntity *pEntity = CBaseEntity::Instance(tr.pHit);
+
+			if ( pEntity->pev->takedamage )
+				pEntity->TraceAttack(pevAttacker, iDamage, vecDir, &tr, DMG_BLAST );
+		}
+
+		if ( iDamage )
+			ExplosionCreate( tr.vecEndPos, g_vecZero, ENT(pevAttacker), iDamage, TRUE, SF_ENVEXPLOSION_NOSMOKE | SF_ENVEXPLOSION_NODECAL | SF_ENVEXPLOSION_NOSPARKS );
+
 		// make bullet trails
 		UTIL_BubbleTrail( vecSrc, tr.vecEndPos, (flDistance * tr.flFraction) / 64.0 );
 	}
