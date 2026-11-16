@@ -170,7 +170,6 @@ public:
 	virtual float	MovementSpeed( void );
 	void	BeamFollow( short sModelIndex, int iLife, int iWidth, const Vector &vecColor, int iBrightness );	// name ours; cbase.cpp (0x10023d90), TE_BEAMFOLLOW
 	bool	HasSpawnFlag( int iFlags ) { return pev->spawnflags & iFlags; }	// name ours: retail tests spawnflags through a bool conversion (89 places in 42 functions)
-	bool	IsInSolid( void );	// name ours; cbase.cpp (0x10023ec0): the origin or a corner of the box is in CONTENTS_SOLID
 	
 	// Setup the object->object collision box (pev->mins / pev->maxs is the object->world collision box)
 	virtual void	SetObjectCollisionBox( void );
@@ -260,6 +259,7 @@ public:
 	void EXPORT SUB_FadeOut ( void );
 	void EXPORT SUB_CallUseToggle( void ) { this->Use( this, this, USE_TOGGLE, 0 ); }
 	int			ShouldToggle( USE_TYPE useType, BOOL currentState );
+	bool		IsInSolid( void );	// name ours: a corner of the box (or the origin) in solid; cbase.cpp
 	void		FireBullets( ULONG	cShots, Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iBulletType, int iTracerFreq = 4, int iDamage = 0, entvars_t *pevAttacker = NULL  );
 	Vector		FireBulletsPlayer( ULONG	cShots, Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iBulletType, int iTracerFreq = 4, int iDamage = 0, entvars_t *pevAttacker = NULL, int shared_rand = 0 );
 	void		FireBulletsExplosiveMonster( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker = NULL );	// name ours: explosive bullets of monsters (the grunt's shotgun)
