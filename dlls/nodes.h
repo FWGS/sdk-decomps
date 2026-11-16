@@ -371,4 +371,18 @@ enum
 	HINT_STUKA_LANDING,
 };
 
+// the talkmonster hints (names ours, from the fgd's)
+#define HINT_TALKMONSTER_WORK		12
+#define HINT_TALKMONSTER_USE		13
+#define HINT_TALKMONSTER_TRANSIT	14
+#define HINT_SCIENTIST_WORK			15
+#define HINT_SCIENTIST_USE			16
+#define HINT_SCIENTIST_TRANSIT		17
+#define HINT_CLEANSUIT_WORK			18
+#define HINT_CLEANSUIT_USE			19
+#define HINT_CLEANSUIT_TRANSIT		20
+#define HINT_SECURITY_WORK			21
+#define HINT_SECURITY_USE			22
+#define HINT_SECURITY_TRANSIT		23
+
 extern CGraph WorldGraph;

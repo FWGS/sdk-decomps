@@ -44,7 +44,7 @@
 #define	SF_MONSTER_WAIT_TILL_SEEN		1// spawnflag that makes monsters wait until player can see them before attacking.
 #define	SF_MONSTER_GAG					2 // no idle noises from this monster
 #define SF_MONSTER_HITMONSTERCLIP		4
-//										8
+#define SF_MONSTER_IGNOREPLAYER			8 // name ours (fgd "Ignore Player"): talkmonsters don't stare at the player nor hate him when provoked
 #define SF_MONSTER_PRISONER				16 // monster won't attack anyone, no one will attacke him.
 //										32
 //										64

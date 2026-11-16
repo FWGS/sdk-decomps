@@ -37,7 +37,7 @@
 #define bit_saidHeard			(1<<6)
 #define bit_saidSmelled			(1<<7)
 
-#define TLK_CFRIENDS		3
+#define TLK_CFRIENDS		4
 
 typedef enum
 {
@@ -91,6 +91,7 @@ enum
 	TASK_TLK_EYECONTACT,	// maintain eyecontact with person who I'm talking to
 	TASK_TLK_IDEALYAW,		// set ideal yaw to face who I'm talking to
 	TASK_FACE_PLAYER,		// Face the player
+	TASK_TLK_CHECK_ACTIVE_IDLE,	// name ours: repeat the active idle at a work hint, or walk back
 
 	LAST_TALKMONSTER_TASK,			// MUST be last
 };
@@ -121,6 +122,8 @@ public:
 	void			RunTask( Task_t *pTask );
 	void			HandleAnimEvent( MonsterEvent_t *pEvent );
 	void			PrescheduleThink( void );
+	BOOL			FValidateHintType( short sHint );
+	BOOL			FCanActiveIdle( void );
 	
 
 	// Conversations / communication
