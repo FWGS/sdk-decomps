@@ -68,6 +68,7 @@ private:
 // These are the new entry points to entities. 
 LINK_ENTITY_TO_CLASS(info_player_deathmatch,CBaseDMStart);
 LINK_ENTITY_TO_CLASS(info_player_start,CPointEntity);
+LINK_ENTITY_TO_CLASS(info_player_coop,CPointEntity);
 LINK_ENTITY_TO_CLASS(info_landmark,CPointEntity);
 
 void CBaseDMStart::KeyValue( KeyValueData *pkvd )
@@ -239,19 +240,7 @@ void CBaseDelay :: SUB_UseTargets( CBaseEntity *pActivator, USE_TYPE useType, fl
 		pTemp->m_iszKillTarget = m_iszKillTarget;
 		pTemp->m_flDelay = 0; // prevent "recursion"
 		pTemp->pev->target = pev->target;
-
-		// HACKHACK
-		// This wasn't in the release build of Half-Life.  We should have moved m_hActivator into this class
-		// but changing member variable hierarchy would break save/restore without some ugly code.
-		// This code is not as ugly as that code
-		if ( pActivator && pActivator->IsPlayer() )		// If a player activates, then save it
-		{
-			pTemp->pev->owner = pActivator->edict();
-		}
-		else
-		{
-			pTemp->pev->owner = NULL;
-		}
+		pTemp->m_hActivator = pActivator;
 
 		return;
 	}
@@ -320,14 +309,8 @@ void SetMovedir( entvars_t *pev )
 
 void CBaseDelay::DelayThink( void )
 {
-	CBaseEntity *pActivator = NULL;
-
-	if ( pev->owner != NULL )		// A player activated this on delay
-	{
-		pActivator = CBaseEntity::Instance( pev->owner );	
-	}
 	// The use type is cached (and stashed) in pev->button
-	SUB_UseTargets( pActivator, (USE_TYPE)pev->button, 0 );
+	SUB_UseTargets( m_hActivator, (USE_TYPE)pev->button, 0 );
 	REMOVE_ENTITY(ENT(pev));
 }
 
@@ -377,6 +360,11 @@ void CBaseToggle::KeyValue( KeyValueData *pkvd )
 	else if (FStrEq(pkvd->szKeyName, "distance"))
 	{
 		m_flMoveDistance = atof(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "killdesc"))
+	{
+		m_iszKillDesc = ALLOC_STRING(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
 	else
