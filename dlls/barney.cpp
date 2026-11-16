@@ -40,18 +40,40 @@
 #define	BARNEY_BODY_GUNDRAWN		1
 #define BARNEY_BODY_GUNGONE			2
 
+// spawnflags (names ours; the fgd calls 32 "Hate Player" and 64 "Hate Scientists")
+#define SF_BARNEY_IGNORE_PLAYER		8
+#define SF_BARNEY_HATE_SCIENTISTS	32
+#define SF_BARNEY_NO_WEAPON_DROP	1024	// "Dont drop weapon"
+
+// provisional: laser_pulse is pulse.cpp's (weapons.h declares it later)
+class CLaserPulse : public CBaseEntity
+{
+public:
+	static CLaserPulse *Create( Vector vecOrigin, edict_t *pOwner, const Vector &vecColor, int iType, float flScale, int iWeapons );
+};
+
 class CBarney : public CTalkMonster
 {
 public:
+	const char *GetKillDesc( void ) { return "Barney"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "shot"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+
 	void Spawn( void );
 	void Precache( void );
 	void SetYawSpeed( void );
 	int  ISoundMask( void );
 	void BarneyFirePistol( void );
+	void BarneyFireLaser( void );	// name ours
 	void AlertSound( void );
 	int  Classify ( void );
+	int  GetBattlePower( void );
+	void CheckAmmo( void );
 	void HandleAnimEvent( MonsterEvent_t *pEvent );
-	
+	int  IRelationship( CBaseEntity *pTarget );
+	BOOL FValidateHintType( short sHint );
+	BOOL FCanActiveIdle( void );
+
 	void RunTask( Task_t *pTask );
 	void StartTask( Task_t *pTask );
 	virtual int	ObjectCaps( void ) { return CTalkMonster :: ObjectCaps() | FCAP_IMPULSE_USE; }
@@ -231,6 +253,18 @@ void CBarney :: RunTask( Task_t *pTask )
 		}
 		CTalkMonster::RunTask( pTask );
 		break;
+	case TASK_PLAY_SEQUENCE:
+		if ( m_fSequenceFinished )
+		{
+			TaskComplete();
+			if ( pTask->flData == ACT_RELOAD )
+			{
+				// the clip size is kept in pev->frags
+				m_cAmmoLoaded = pev->frags;
+				ClearConditions( bits_COND_NO_AMMO_LOADED );
+			}
+		}
+		break;
 	default:
 		CTalkMonster::RunTask( pTask );
 		break;
@@ -262,6 +296,16 @@ int CBarney :: ISoundMask ( void)
 int	CBarney :: Classify ( void )
 {
 	return	CLASS_PLAYER_ALLY;
+}
+
+//=========================================================
+// GetBattlePower - the target ID's rating of this monster
+//=========================================================
+int CBarney :: GetBattlePower( void )
+{
+	float flPower = gSkillData.monDmg9MM;
+	flPower *= pev->weapons == 0 ? 1.25 : 1.4;
+	return flPower * ( pev->max_health * 0.1 );
 }
 
 //=========================================================
@@ -335,6 +379,18 @@ BOOL CBarney :: CheckRangeAttack1 ( float flDot, float flDist )
 	return FALSE;
 }
 
+//=========================================================
+// CheckAmmo - overridden for barney because he actually
+// uses ammo! (base class doesn't)
+//=========================================================
+void CBarney :: CheckAmmo ( void )
+{
+	if ( m_cAmmoLoaded <= 0 )
+	{
+		SetConditions(bits_COND_NO_AMMO_LOADED);
+	}
+}
+
 
 //=========================================================
 // BarneyFirePistol - shoots one round from the pistol at
@@ -353,9 +409,9 @@ void CBarney :: BarneyFirePistol ( void )
 	pev->effects = EF_MUZZLEFLASH;
 
 	FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_2DEGREES, 1024, BULLET_MONSTER_9MM );
-	
+
 	int pitchShift = RANDOM_LONG( 0, 20 );
-	
+
 	// Only shift about half the time
 	if ( pitchShift > 10 )
 		pitchShift = 0;
@@ -363,12 +419,62 @@ void CBarney :: BarneyFirePistol ( void )
 		pitchShift -= 5;
 	EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "barney/ba_attack2.wav", 1, ATTN_NORM, 0, 100 + pitchShift );
 
-	CSoundEnt::InsertSound ( bits_SOUND_COMBAT, pev->origin, 384, 0.3 );
+	CSoundEnt::InsertSound ( bits_SOUND_COMBAT, pev->origin, 600, 0.3 );
 
 	// UNDONE: Reload?
 	m_cAmmoLoaded--;// take away a bullet!
 }
-		
+
+//=========================================================
+// BarneyFireLaser - the laser pistol (pev->weapons 3): one
+// laser_pulse in the colour pev->iuser2 picked
+//=========================================================
+void CBarney :: BarneyFireLaser ( void )
+{
+	Vector vecShootOrigin, vecAngles;
+
+	UTIL_MakeVectors(pev->angles);
+	GetAttachment( 0, vecShootOrigin, vecAngles );
+	Vector vecShootDir = ShootAtEnemy( vecShootOrigin );
+
+	vecAngles = UTIL_VecToAngles( vecShootDir );
+	SetBlending( 0, vecAngles.x );
+	pev->effects = EF_MUZZLEFLASH;
+
+	Vector vecColor;
+	switch ( pev->iuser2 )
+	{
+	case 1:
+		vecColor = Vector( 0, 255, 0 );
+		break;
+	case 2:
+		vecColor = Vector( 0, 0, 255 );
+		break;
+	default:
+		vecColor = Vector( 255, 0, 0 );
+		break;
+	}
+
+	CLaserPulse *pPulse = CLaserPulse::Create( vecShootOrigin, ENT(pev), vecColor, 2, 0.25, 0 );
+	pPulse->pev->dmg = gSkillData.monDmg9MM * 1.4;
+	pPulse->pev->velocity = vecShootDir * 2000;
+	pPulse->pev->iuser2 = 0x1400;
+
+	switch ( RANDOM_LONG( 0, 1 ) )
+	{
+	case 0:
+		EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/pl_gun1.wav", RANDOM_FLOAT( 0.9, 1.0 ), ATTN_NORM );
+		break;
+	case 1:
+		EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/pl_gun2.wav", RANDOM_FLOAT( 0.9, 1.0 ), ATTN_NORM );
+		break;
+	}
+
+	CSoundEnt::InsertSound ( bits_SOUND_COMBAT, pev->origin, 200, 0.3 );
+
+	m_cAmmoLoaded--;// take away a bullet!
+}
+
 //=========================================================
 // HandleAnimEvent - catches the monster-specific messages
 // that occur when tagged animation frames are played.
@@ -380,7 +486,15 @@ void CBarney :: HandleAnimEvent( MonsterEvent_t *pEvent )
 	switch( pEvent->event )
 	{
 	case BARNEY_AE_SHOOT:
-		BarneyFirePistol();
+		if ( m_cAmmoLoaded <= 0 )
+		{
+			// out of ammo: click
+			EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/357_cock1.wav", 0.8, ATTN_NORM );
+		}
+		else if ( pev->weapons == 3 )
+			BarneyFireLaser();
+		else
+			BarneyFirePistol();
 		break;
 
 	case BARNEY_AE_DRAW:
@@ -425,6 +539,27 @@ void CBarney :: Spawn()
 
 	MonsterInit();
 	SetUse( FollowerUse );
+
+	// weapon: 0 pistol, 1 pistol with a 32 round clip, 3 laser pistol; -1 picks 0 or 3
+	if ( pev->weapons <= -1 )
+		pev->weapons = RANDOM_LONG( 0, 1 ) * 3;
+
+	switch ( pev->weapons )
+	{
+	case 1:
+		m_cAmmoLoaded = 32;
+		break;
+	case 3:
+		m_cAmmoLoaded = 24;
+		pev->iuser2 = RANDOM_LONG( 0, 2 );	// the laser's colour
+		break;
+	default:
+		m_cAmmoLoaded = 18;
+		break;
+	}
+
+	// the clip size, for reloading
+	pev->frags = m_cAmmoLoaded;
 }
 
 //=========================================================
@@ -444,7 +579,11 @@ void CBarney :: Precache()
 	PRECACHE_SOUND("barney/ba_die1.wav");
 	PRECACHE_SOUND("barney/ba_die2.wav");
 	PRECACHE_SOUND("barney/ba_die3.wav");
-	
+
+	PRECACHE_SOUND("weapons/pl_gun1.wav");
+	PRECACHE_SOUND("weapons/pl_gun2.wav");
+	UTIL_PrecacheOther( "laser_pulse" );
+
 	// every new barney must call this, otherwise
 	// when a level is loaded, nobody will talk (time is reset to 0)
 	TalkInit();
@@ -611,7 +750,7 @@ void CBarney::TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir
 
 void CBarney::Killed( entvars_t *pevAttacker, int iGib )
 {
-	if ( pev->body < BARNEY_BODY_GUNGONE )
+	if ( pev->body < BARNEY_BODY_GUNGONE && !(pev->spawnflags & SF_BARNEY_NO_WEAPON_DROP) )
 	{// drop the gun!
 		Vector vecGunPos;
 		Vector vecGunAngles;
@@ -619,8 +758,29 @@ void CBarney::Killed( entvars_t *pevAttacker, int iGib )
 		pev->body = BARNEY_BODY_GUNGONE;
 
 		GetAttachment( 0, vecGunPos, vecGunAngles );
-		
-		CBaseEntity *pGun = DropItem( "weapon_9mmhandgun", vecGunPos, vecGunAngles );
+
+		if ( pev->weapons == 3 )
+		{
+			CBaseEntity *pGun = DropItem( "weapon_laserhandgun", vecGunPos, vecGunAngles );
+
+			// the dropped laser pistol keeps barney's colour
+			switch ( pev->iuser2 )
+			{
+			case 1:
+				pGun->pev->rendercolor = Vector( 0, 255, 0 );
+				break;
+			case 2:
+				pGun->pev->rendercolor = Vector( 0, 0, 255 );
+				break;
+			default:
+				pGun->pev->rendercolor = Vector( 255, 0, 0 );
+				break;
+			}
+		}
+		else
+		{
+			CBaseEntity *pGun = DropItem( "weapon_9mmhandgun", vecGunPos, vecGunAngles );
+		}
 	}
 
 	SetUse( NULL );	
@@ -719,6 +879,9 @@ Schedule_t *CBarney :: GetSchedule ( void )
 
 			if ( HasConditions( bits_COND_HEAVY_DAMAGE ) )
 				return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ENEMY );
+
+			if ( HasConditions( bits_COND_NO_AMMO_LOADED ) )
+				return GetScheduleOfType( SCHED_RELOAD );
 		}
 		break;
 
@@ -752,6 +915,10 @@ Schedule_t *CBarney :: GetSchedule ( void )
 		{
 			return GetScheduleOfType( SCHED_MOVE_AWAY );
 		}
+
+		// reload a used clip while nothing happens
+		if ( m_fGunDrawn && m_cAmmoLoaded < pev->frags )
+			return GetScheduleOfType( SCHED_RELOAD );
 
 		// try to say something about smells
 		TrySmellTalk();
@@ -838,4 +1005,260 @@ void CDeadBarney :: Spawn( )
 	MonsterInitDead();
 }
 
+//=========================================================
+// IRelationship - spawnflag 8 makes barney ignore the
+// player's provocations, 32 makes him dislike scientists
+//=========================================================
+int CBarney::IRelationship( CBaseEntity *pTarget )
+{
+	if ( pTarget->IsPlayer() && !(pev->spawnflags & SF_BARNEY_IGNORE_PLAYER) && (m_afMemory & bits_MEMORY_PROVOKED) )
+		return R_HT;
+
+	if ( (pev->spawnflags & SF_BARNEY_HATE_SCIENTISTS) && pTarget->Classify() == CLASS_HUMAN_PASSIVE )
+		return R_DL;
+
+	return CTalkMonster::IRelationship( pTarget );
+}
+
+//=========================================================
+// FValidateHintType - the fgd's "Security" hints
+//=========================================================
+BOOL CBarney::FValidateHintType( short sHint )
+{
+	static short sBarneyHints[] =
+	{
+		21,	// "Security: Work"
+		22,	// "Security: Use"
+		23,	// "Security: Transit"
+	};
+
+	for ( int i = 0; i < ARRAYSIZE( sBarneyHints ); i++ )
+	{
+		if ( sBarneyHints[ i ] == sHint )
+			return TRUE;
+	}
+
+	return CTalkMonster::FValidateHintType( sHint );
+}
+
+//=========================================================
+// FCanActiveIdle - only when the level has hint nodes
+//=========================================================
+BOOL CBarney::FCanActiveIdle( void )
+{
+	static int iHintNodes = 0;	// 1: the graph has hint nodes, -1: none, 0: not asked yet
+
+	if ( !iHintNodes )
+	{
+		ALERT( at_console, "%s queryhintnodeexistence\n", STRING( pev->classname ) );
+		iHintNodes = HasHintNodes() * 2 - 1;
+	}
+
+	if ( iHintNodes == -1 )
+		return FALSE;
+
+	return CTalkMonster::FCanActiveIdle();
+}
+
+//=========================================================
+// OTIS: barney with another model, two heads (body group 2)
+// and a desert eagle or a softmetal accelerator
+//=========================================================
+class COtis : public CBarney	// name ours
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	void TalkInit( void );
+	void HandleAnimEvent( MonsterEvent_t *pEvent );
+	void OtisFirePistol( void );	// name ours
+	void Killed( entvars_t *pevAttacker, int iGib );
+};
+
+LINK_ENTITY_TO_CLASS( monster_otis, COtis );
+
+//=========================================================
+// Spawn
+//=========================================================
+void COtis :: Spawn()
+{
+	Precache( );
+
+	SET_MODEL(ENT(pev), "models/otis.mdl");
+	UTIL_SetSize(pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX);
+
+	pev->solid			= SOLID_SLIDEBOX;
+	pev->movetype		= MOVETYPE_STEP;
+	m_bloodColor		= BLOOD_COLOR_RED;
+	pev->health			= gSkillData.barneyHealth;
+	pev->view_ofs		= Vector ( 0, 0, 50 );// position of the eyes relative to monster's origin.
+	m_flFieldOfView		= VIEW_FIELD_WIDE; // NOTE: we need a wide field of view so npc will notice player and say hello
+	m_MonsterState		= MONSTERSTATE_NONE;
+
+	// head: pev->body, -1 picks one
+	int iHead = pev->body;
+	if ( iHead < 0 )
+		iHead = RANDOM_LONG( 0, 1 );
+	SetBodygroup( 2, iHead );
+
+	SetBodygroup( 1, 0 ); // gun in holster
+	m_fGunDrawn			= FALSE;
+
+	m_afCapability		= bits_CAP_HEAR | bits_CAP_TURN_HEAD | bits_CAP_DOORS_GROUP;
+
+	MonsterInit();
+	SetUse( FollowerUse );
+
+	// weapon: 0 desert eagle, 1 softmetal accelerator; -1 picks one
+	if ( pev->weapons <= -1 )
+		pev->weapons = RANDOM_LONG( 0, 1 );
+
+	switch ( pev->weapons )
+	{
+	case 1:
+		m_cAmmoLoaded = 12;
+		break;
+	default:
+		m_cAmmoLoaded = 7;
+		break;
+	}
+
+	// the clip size, for reloading
+	pev->frags = m_cAmmoLoaded;
+}
+
+//=========================================================
+// Precache - precaches all resources this monster needs
+//=========================================================
+void COtis :: Precache()
+{
+	PRECACHE_MODEL("models/otis.mdl");
+
+	PRECACHE_SOUND("barney/ba_attack1.wav" );
+	PRECACHE_SOUND("barney/ba_attack2.wav" );
+
+	PRECACHE_SOUND("barney/ba_pain1.wav");
+	PRECACHE_SOUND("barney/ba_pain2.wav");
+	PRECACHE_SOUND("barney/ba_pain3.wav");
+
+	PRECACHE_SOUND("barney/ba_die1.wav");
+	PRECACHE_SOUND("barney/ba_die2.wav");
+	PRECACHE_SOUND("barney/ba_die3.wav");
+
+	PRECACHE_SOUND("weapons/pl_gun1.wav");
+	PRECACHE_SOUND("weapons/pl_gun2.wav");
+	
+	// every new barney must call this, otherwise
+	// when a level is loaded, nobody will talk (time is reset to 0)
+	TalkInit();
+	CTalkMonster::Precache();
+}	
+
+// Init talk data: barney's sentences, a lower voice
+void COtis :: TalkInit()
+{
+	CBarney::TalkInit();
+
+	m_voicePitch = 80;
+}
+
+//=========================================================
+// HandleAnimEvent - catches the monster-specific messages
+// that occur when tagged animation frames are played.
+//=========================================================
+void COtis :: HandleAnimEvent( MonsterEvent_t *pEvent )
+{
+	switch( pEvent->event )
+	{
+	case BARNEY_AE_SHOOT:
+		if ( m_cAmmoLoaded <= 0 )
+		{
+			// out of ammo: click
+			EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/357_cock1.wav", 0.8, ATTN_NORM );
+		}
+		else
+			OtisFirePistol();
+		break;
+
+	case BARNEY_AE_DRAW:
+		SetBodygroup( 1, 1 );
+		m_fGunDrawn = TRUE;
+		break;
+
+	case BARNEY_AE_HOLSTER:
+		SetBodygroup( 1, 0 );
+		m_fGunDrawn = FALSE;
+		break;
+
+	default:
+		CTalkMonster::HandleAnimEvent( pEvent );
+	}
+}
+
+//=========================================================
+// OtisFirePistol - one shot of the desert eagle, or of the
+// softmetal accelerator (pev->weapons 1, with a tracer)
+//=========================================================
+void COtis :: OtisFirePistol ( void )
+{
+	UTIL_MakeVectors(pev->angles);
+	Vector vecShootOrigin( pev->origin + Vector( 0, 0, 55 ) );
+	Vector vecShootDir = ShootAtEnemy( vecShootOrigin );
+
+	Vector angDir = UTIL_VecToAngles( vecShootDir );
+	SetBlending( 0, angDir.x );
+	pev->effects = EF_MUZZLEFLASH;
+
+	if ( pev->weapons )
+		FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_2DEGREES, 1024, 13, 1 );	// bullet type 13: retail's value, name not known
+	else
+		FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_2DEGREES, 1024, 10, 0 );	// bullet type 10: retail's value (FireBullets: plrDmg357)
+
+	if ( RANDOM_FLOAT( 0, 1 ) < 0.5 )
+		EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/357_shot1.wav", 1, ATTN_NORM );
+	else
+		EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/357_shot2.wav", 1, ATTN_NORM );
+
+	CSoundEnt::InsertSound ( bits_SOUND_COMBAT, pev->origin, 1000, 0.3 );
+
+	m_cAmmoLoaded--;// take away a bullet!
+}
+
+void COtis::Killed( entvars_t *pevAttacker, int iGib )
+{
+	if ( GetBodygroup( 1 ) != BARNEY_BODY_GUNGONE && !(pev->spawnflags & SF_BARNEY_NO_WEAPON_DROP) )
+	{// drop the gun!
+		Vector vecGunPos;
+		Vector vecGunAngles;
+
+		SetBodygroup( 1, 0 );	// sic: the holstered gun, not "gone"
+
+		GetAttachment( 0, vecGunPos, vecGunAngles );
+		
+		if ( pev->weapons == 3 )	// sic: otis has no laser pistol
+		{
+			CBaseEntity *pGun = DropItem( "weapon_laserhandgun", vecGunPos, vecGunAngles );
+
+			switch ( pev->iuser2 )
+			{
+			case 1:
+				pGun->pev->rendercolor = Vector( 0, 255, 0 );
+				break;
+			case 2:
+				pGun->pev->rendercolor = Vector( 0, 0, 255 );
+				break;
+			default:
+				pGun->pev->rendercolor = Vector( 255, 0, 0 );
+				break;
+			}
+		}
+		else
+		{
+			CBaseEntity *pGun = DropItem( "weapon_357", vecGunPos, vecGunAngles );
+		}
+	}
+
+	SetUse( NULL );	
+	CTalkMonster::Killed( pevAttacker, iGib );
+}
 
