@@ -885,3 +885,12 @@ void CTripmine::WeaponIdle( void )
 
 	SendWeaponAnim( iAnim );
 }
+
+#ifndef CLIENT_DLL
+// stand-in for pulse.cpp's CLaserPulse::Shoot (retail 0x100b0860, 205 bytes), which the
+// turret mine calls, until pulse.cpp has the real one
+CLaserPulse *CLaserPulse::Shoot( Vector vecOrigin, edict_t *pOwner, const Vector &vecColor, int iTrailLife, float flScale, int iColor )
+{
+	return NULL;
+}
+#endif
