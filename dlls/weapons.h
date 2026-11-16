@@ -1098,4 +1098,299 @@ private:
 };
 
 
+// Scientist Slaughterhouse's weapons that the client predicts too (class names from the client's RTTI).
+// Their functions are in the mod's weapon files, which both projects compile.
+
+class CDisplacer : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 1; }
+	int GetItemInfo(ItemInfo *p);
+	int AddToPlayer( CBasePlayer *pPlayer );
+
+	BOOL Deploy( void );
+	void Holster( int skiplocal = 0 );
+
+	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void WeaponIdle( void );
+	BOOL ShouldWeaponIdle( void ) { return pev->frags != 0; }	// pev->frags: the attack spinning up (1 primary, 2 secondary)
+
+	virtual BOOL UseDecrement( void )
+	{ 
+#if defined( CLIENT_WEAPONS )
+		return TRUE;
+#else
+		return FALSE;
+#endif
+	}
+
+private:
+	unsigned short m_usDispSpin;	// names ours
+	unsigned short m_usDispFire;
+};
+
+class CFlameThrower : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 4; }
+	int GetItemInfo(ItemInfo *p);
+	int AddToPlayer( CBasePlayer *pPlayer );
+
+	BOOL Deploy( void );
+	void Holster( int skiplocal = 0 );
+
+	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void WeaponIdle( void );
+	void EndAttack( void );	// name ours
+
+	virtual BOOL UseDecrement( void )
+	{ 
+#if defined( CLIENT_WEAPONS )
+		return TRUE;
+#else
+		return FALSE;
+#endif
+	}
+
+private:
+	unsigned short m_usFlameFire;	// names ours
+	unsigned short m_usFlameStop;
+};
+
+class CLaserPistol : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 2; }
+	int GetItemInfo(ItemInfo *p);
+
+	BOOL Deploy( void );
+	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void WeaponSpecial( void );
+	void Reload( void );
+	void WeaponIdle( void );
+
+	virtual BOOL UseDecrement( void )
+	{ 
+#if defined( CLIENT_WEAPONS )
+		return TRUE;
+#else
+		return FALSE;
+#endif
+	}
+
+private:
+	unsigned short m_usLaserGun;	// name ours
+};
+
+class CRepulsor : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 4; }
+	int GetItemInfo(ItemInfo *p);
+	int AddToPlayer( CBasePlayer *pPlayer );
+
+	BOOL Deploy( void );
+	void Holster( int skiplocal = 0 );
+
+	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void WeaponSpecial( void );		// the tractor beam
+	void WeaponIdle( void );
+	void Reload( void );
+	bool TractorThink( void );		// name ours; FALSE when no tractor beam is held
+	BOOL ShouldWeaponIdle( void ) { return m_pTractorBeam != NULL; }
+
+	EHANDLE m_hTarget;				// names ours: what the tractor beam holds
+	CBaseEntity *m_pTractorBeam;	// the env_tractorbeam
+	float m_flRechargeTime;
+
+	virtual BOOL UseDecrement( void )
+	{ 
+#if defined( CLIENT_WEAPONS )
+		return TRUE;
+#else
+		return FALSE;
+#endif
+	}
+
+private:
+	unsigned short m_usRepulsor;	// name ours
+};
+
+class CSoftGun : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 2; }
+	int GetItemInfo(ItemInfo *p);
+	int AddToPlayer( CBasePlayer *pPlayer );
+
+	BOOL Deploy( void );
+	void Holster( int skiplocal = 0 );
+	void PrimaryAttack( void );
+	void Reload( void );
+	void WeaponIdle( void );
+
+	virtual BOOL UseDecrement( void )
+	{ 
+#if defined( CLIENT_WEAPONS )
+		return TRUE;
+#else
+		return FALSE;
+#endif
+	}
+
+#ifndef CLIENT_DLL
+	const char *GetKillDesc( void ) { return "a soft metal accelerator"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "shot"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+#endif
+
+private:
+	unsigned short m_usSoftGun;	// name ours
+};
+
+class CSword : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 1; }
+#ifndef CLIENT_DLL
+	const char *GetKillDesc( void ) { return "a sword"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup );
+	const char *GetHitGroupDesc( int iHitGroup );
+#endif
+	void EXPORT Smack( void );
+	int GetItemInfo(ItemInfo *p);
+
+	void PrimaryAttack( void );
+	BOOL Deploy( void );
+	void Holster( int skiplocal = 0 );
+	TraceResult m_trHit;
+
+	virtual BOOL UseDecrement( void )
+	{ 
+#if defined( CLIENT_WEAPONS )
+		return TRUE;
+#else
+		return FALSE;
+#endif
+	}
+private:
+	unsigned short m_usSword;	// name ours
+};
+
+class CTeslaCoil : public CBasePlayerWeapon
+{
+public:
+#ifndef CLIENT_DLL
+	int		Save( CSave &save );
+	int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
+#endif
+
+	void Spawn( void );
+	void Precache( void );
+	int iItemSlot( void ) { return 1; }
+#ifndef CLIENT_DLL
+	const char *GetKillDesc( void ) { return "a tesla coil"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return DamageVerb( DMG_SHOCK, fGibbed ); }
+#endif
+	int GetItemInfo(ItemInfo *p);
+	int AddToPlayer( CBasePlayer *pPlayer );
+
+	BOOL Deploy( void );
+	void Holster( int skiplocal = 0 );
+
+	void UpdateEffect( const Vector &endPoint );	// name ours (not yet fitted to the client's thunk order)
+	void RemoveBeam( int iBeam );					// name ours
+
+	void EndAttack( void );
+	void Attract( void );							// name ours (not yet fitted): PrimaryAttack in "Attraction" mode
+	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void WeaponSpecial( void );						// switches between "Projection" and "Attraction" (pev->weapons)
+	void WeaponIdle( void );
+
+	float m_flAmmoUseTime;// since we use < 1 point of ammo per update, we subtract ammo on a timer.
+
+	void Fire( const Vector &vecOrigSrc, const Vector &vecAngles );
+
+	BOOL HasAmmo( void );
+
+	void UseAmmo( int count );
+
+	CBeam				*m_pBeams[4];
+	int					m_shootTime;
+	int					m_fireState;
+
+	virtual BOOL UseDecrement( void )
+	{ 
+#if defined( CLIENT_WEAPONS )
+		return TRUE;
+#else
+		return FALSE;
+#endif
+	}
+
+	unsigned short m_usTeslaStop;	// names ours
+
+private:
+	unsigned short m_usTeslaFire;
+	unsigned short m_usTeslaSpecial;
+};
+
+class CVortexLauncher : public CBasePlayerWeapon
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	void Reload( void );
+	int iItemSlot( void ) { return 0; }
+	int GetItemInfo(ItemInfo *p);
+	int AddToPlayer( CBasePlayer *pPlayer );
+
+	BOOL Deploy( void );
+	void Holster( int skiplocal = 0 );
+
+	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void WeaponIdle( void );
+
+	void MakeSprite( void );	// name ours
+
+#ifndef CLIENT_DLL
+	EHANDLE m_hRocket;		// names ours: the vortex missile in flight (SecondaryAttack sets it off)
+	CSprite *m_pSprite;		// the launcher's glow
+#else
+	int m_hRocket;			// the client's copy of the server's m_hRocket != NULL (vuser2.y)
+#endif
+
+	virtual BOOL UseDecrement( void )
+	{ 
+#if defined( CLIENT_WEAPONS )
+		return TRUE;
+#else
+		return FALSE;
+#endif
+	}
+
+private:
+	unsigned short m_usRpg;
+};
+
+
 #endif // WEAPONS_H
