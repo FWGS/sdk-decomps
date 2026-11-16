@@ -192,17 +192,34 @@ void CMultiSource::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE 
 		return;	
 	}
 
-	// CONSIDER: a Use input to the multisource always toggles.  Could check useType for ON/OFF/TOGGLE
+	BOOL fWasTriggered = IsTriggered( pActivator );	// name ours
 
-	m_rgTriggered[i-1] ^= 1;
+	// the mod honours the use type: on and off set the input, toggle flips it
+	if ( useType == USE_ON )
+		m_rgTriggered[i-1] = 1;
+	else if ( useType == USE_OFF )
+		m_rgTriggered[i-1] = 0;
+	else
+		m_rgTriggered[i-1] ^= 1;
 
-	// 
+	// fire the targets only when the state changes
 	if ( IsTriggered( pActivator ) )
 	{
-		ALERT( at_aiconsole, "Multisource %s enabled (%d inputs)\n", STRING(pev->targetname), m_iTotal );
+		if ( !fWasTriggered )
+		{
+			ALERT( at_aiconsole, "Multisource %s enabled (%d inputs)\n", STRING(pev->targetname), m_iTotal );
+			USE_TYPE useType = USE_TOGGLE;
+			if ( m_globalstate )
+				useType = USE_ON;
+			SUB_UseTargets( NULL, useType, 0 );
+		}
+	}
+	else if ( fWasTriggered )
+	{
+		ALERT( at_aiconsole, "Multisource %s disabled (%d inputs)\n", STRING(pev->targetname), m_iTotal );
 		USE_TYPE useType = USE_TOGGLE;
 		if ( m_globalstate )
-			useType = USE_ON;
+			useType = USE_OFF;
 		SUB_UseTargets( NULL, useType, 0 );
 	}
 }

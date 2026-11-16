@@ -383,6 +383,61 @@ int CSquadMonster :: SquadRecruit( int searchRadius, int maxMembers )
 }
 
 //=========================================================
+//
+// SquadJoin(), get added to a visible squad of my kind that
+// already exists (the SDK declares it, the mod defines it).
+// Returns the new size of the squad, or 0.
+//
+//=========================================================
+int CSquadMonster :: SquadJoin( int searchRadius )
+{
+	int squadCount;
+	int iMyClass;
+
+	// monsters with a group name only use their leader's squad
+	if ( !FStringNull( pev->netname ) )
+		return 0;
+
+	// already in a squad
+	if ( InSquad() )
+		return SquadCount();
+
+	iMyClass = Classify();// cache this monster's class
+
+	CBaseEntity *pEntity = NULL;
+
+	while ((pEntity = UTIL_FindEntityInSphere( pEntity, pev->origin, searchRadius )) != NULL)
+	{
+		CSquadMonster *pRecruit = pEntity->MySquadMonsterPointer( );
+
+		if ( pRecruit && pRecruit != this && pRecruit->IsAlive() && !pRecruit->m_pCine )
+		{
+			// Can I join this guy's squad?
+			if ( pRecruit->InSquad() && pRecruit->Classify() == iMyClass &&
+			   ( (iMyClass != CLASS_ALIEN_MONSTER) || FStrEq(STRING(pev->classname), STRING(pRecruit->pev->classname))) &&
+			    FStringNull( pRecruit->pev->netname ) )
+			{
+				squadCount = pRecruit->SquadCount();
+
+				// the nearest squad is full enough
+				if ( squadCount >= MAX_SQUAD_MEMBERS - 1 )
+					return 0;
+
+				TraceResult tr;
+				UTIL_TraceLine( pev->origin + pev->view_ofs, pRecruit->pev->origin + pev->view_ofs, ignore_monsters, pRecruit->edict(), &tr );// try to hit recruit with a traceline.
+				if ( tr.flFraction == 1.0 )
+				{
+					if ( pRecruit->MySquadLeader()->SquadAdd( this ) )
+						return squadCount + 1;
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
+//=========================================================
 // CheckEnemy
 //=========================================================
 int CSquadMonster :: CheckEnemy ( CBaseEntity *pEnemy )
@@ -427,8 +482,11 @@ void CSquadMonster :: StartMonster( void )
 			}
 		}
 
-		// try to form squads now.
-		int iSquadSize = SquadRecruit( 1024, 4 );
+		// try to join a squad, else to form one now.
+		int iSquadSize = SquadJoin( 1024 );
+
+		if ( !InSquad() )
+			iSquadSize = SquadRecruit( 1024, 4 );
 
 		if ( iSquadSize )
 		{

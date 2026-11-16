@@ -169,7 +169,6 @@ public:
 	virtual const char *GetHitGroupDesc( int iHitGroup ) { return ""; }
 	virtual float	MovementSpeed( void );
 	void	BeamFollow( short sModelIndex, int iLife, int iWidth, const Vector &vecColor, int iBrightness );	// name ours; cbase.cpp (0x10023d90), TE_BEAMFOLLOW
-	bool	HasSpawnFlag( int iFlags ) { return pev->spawnflags & iFlags; }	// name ours: retail tests spawnflags through a bool conversion (89 places in 42 functions)
 	
 	// Setup the object->object collision box (pev->mins / pev->maxs is the object->world collision box)
 	virtual void	SetObjectCollisionBox( void );
@@ -350,6 +349,7 @@ public:
 	edict_t *edict() { return ENT( pev ); };
 	EOFFSET eoffset( ) { return OFFSET( pev ); };
 	int	  entindex( ) { return ENTINDEX( edict() ); };
+	bool	HasSpawnFlag( int iFlags ) { return pev->spawnflags & iFlags; }	// name ours: retail tests spawnflags through a bool conversion (89 places in 42 functions)
 
 	virtual Vector Center( ) { return (pev->absmax + pev->absmin) * 0.5; }; // center point of entity
 	virtual Vector EyePosition( ) { return pev->origin + pev->view_ofs; };			// position of eyes
@@ -444,6 +444,7 @@ public:
 	void KeyValue( KeyValueData *pkvd );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	int	ObjectCaps( void ) { return (CPointEntity::ObjectCaps() | FCAP_MASTER); }
+	int	GetOnState( void ) { return IsTriggered( this ); }
 	BOOL IsTriggered( CBaseEntity *pActivator );
 	void EXPORT Register( void );
 	virtual int		Save( CSave &save );
@@ -644,7 +645,7 @@ public:
 // these are the damage types that are allowed to gib corpses
 #define DMG_GIB_CORPSE		( DMG_CRUSH | DMG_FALL | DMG_BLAST | DMG_SONIC | DMG_CLUB | DMG_SPLATTER )
 
-// death message phrases (combat.cpp's); names ours
+// death message phrases (defined in combat.cpp); names ours
 extern const char *DamageVerb( int bitsDamageType, BOOL fGibbed );	// "crushed", "incinerated", ... "gibbed"/"killed"
 extern const char *HitGroupIn( int iHitGroup );	// " in the head"
 extern const char *HitGroupOf( int iHitGroup );	// "'s head"

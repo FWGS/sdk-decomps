@@ -22,6 +22,7 @@
 #include	"scripted.h"
 #include	"soundent.h"
 #include	"animation.h"
+#include	"nodes.h"
 
 //=========================================================
 // Talking monster base class
@@ -55,6 +56,7 @@ char *CTalkMonster::m_szFriends[TLK_CFRIENDS] =
 {
 	"monster_barney",
 	"monster_scientist",
+	"monster_cleansuit_sci",
 	"monster_sitting_scientist",
 };
 
@@ -343,6 +345,65 @@ Schedule_t	slTlkIdleEyecontact[] =
 	},
 };
 
+//=========================================================
+// TM Active Idle: walk to a hint node of my kind, play its
+// activity there, then repeat it or walk back.
+//=========================================================
+Task_t	tlTMActiveIdle[] =
+{
+	{ TASK_FIND_HINTNODE,			(float)0	},
+	{ TASK_GET_PATH_TO_HINTNODE,	(float)0	},
+	{ TASK_STORE_LASTPOSITION,		(float)0	},
+	{ TASK_WALK_PATH,				(float)0	},
+	{ TASK_WAIT_FOR_MOVEMENT,		(float)0	},
+	{ TASK_FACE_HINTNODE,			(float)0	},
+	{ TASK_PLAY_ACTIVE_IDLE,		(float)0	},
+	{ TASK_TLK_CHECK_ACTIVE_IDLE,	(float)0	},
+	{ TASK_CLEAR_LASTPOSITION,		(float)0	},
+};
+
+Schedule_t	slTMActiveIdle[] =
+{
+	{
+		tlTMActiveIdle,
+		ARRAYSIZE( tlTMActiveIdle ),
+		bits_COND_NEW_ENEMY		|
+		bits_COND_LIGHT_DAMAGE	|
+		bits_COND_HEAVY_DAMAGE	|
+		bits_COND_PROVOKED		|
+		bits_COND_HEAR_SOUND,
+
+		bits_SOUND_COMBAT		|
+		bits_SOUND_DANGER,
+		"TM Active Idle"
+	}
+};
+
+Task_t	tlRepeatActiveIdle[] =
+{
+	{ TASK_FACE_HINTNODE,			(float)0	},
+	{ TASK_PLAY_ACTIVE_IDLE,		(float)0	},
+	{ TASK_TLK_CHECK_ACTIVE_IDLE,	(float)0	},
+	{ TASK_CLEAR_LASTPOSITION,		(float)0	},
+};
+
+Schedule_t	slRepeatActiveIdle[] =
+{
+	{
+		tlRepeatActiveIdle,
+		ARRAYSIZE( tlRepeatActiveIdle ),
+		bits_COND_NEW_ENEMY		|
+		bits_COND_LIGHT_DAMAGE	|
+		bits_COND_HEAVY_DAMAGE	|
+		bits_COND_PROVOKED		|
+		bits_COND_HEAR_SOUND,
+
+		bits_SOUND_COMBAT		|
+		bits_SOUND_DANGER,
+		"Repeat Active Idle"
+	}
+};
+
 
 DEFINE_CUSTOM_SCHEDULES( CTalkMonster )
 {
@@ -357,6 +418,8 @@ DEFINE_CUSTOM_SCHEDULES( CTalkMonster )
 	slTlkIdleWatchClient,
 	&slTlkIdleWatchClient[ 1 ],
 	slTlkIdleEyecontact,
+	slTMActiveIdle,
+	slRepeatActiveIdle,
 };
 
 IMPLEMENT_CUSTOM_SCHEDULES( CTalkMonster, CBaseMonster );
@@ -489,6 +552,47 @@ void CTalkMonster :: StartTask( Task_t *pTask )
 
 	default:
 		CBaseMonster::StartTask( pTask );
+		break;
+
+	case TASK_FIND_HINTNODE:
+		m_iHintNode = FindReachableHintNode();
+
+		if ( m_iHintNode != NO_NODE )
+		{
+			TaskComplete();
+		}
+		else
+		{
+			TaskFail();
+		}
+		break;
+
+	case TASK_TLK_CHECK_ACTIVE_IDLE:
+		if ( m_iHintNode != NO_NODE )
+		{
+			short sHint = WorldGraph.m_pNodes[ m_iHintNode ].m_sHintType;
+
+			// only the work hints are repeated
+			if ( sHint == HINT_TALKMONSTER_WORK || sHint == HINT_SCIENTIST_WORK || sHint == HINT_CLEANSUIT_WORK || sHint == HINT_SECURITY_WORK )
+			{
+				if ( RANDOM_LONG( 0, 14 ) <= m_iActive - m_iActiveCount )
+				{
+					m_iActiveCount++;
+					ChangeSchedule( slRepeatActiveIdle );
+					break;
+				}
+				else if ( RANDOM_LONG( 0, 255 ) > 128 )
+				{
+					m_iHintNode = NO_NODE;
+					ChangeSchedule( slReturn );
+					break;
+				}
+			}
+		}
+
+		m_iHintNode = NO_NODE;
+		TaskComplete();
+		break;
 	}
 }
 
@@ -632,7 +736,7 @@ void CTalkMonster :: RunTask( Task_t *pTask )
 void CTalkMonster :: Killed( entvars_t *pevAttacker, int iGib )
 {
 	// If a client killed me (unless I was already Barnacle'd), make everyone else mad/afraid of him
-	if ( (pevAttacker->flags & FL_CLIENT) && m_MonsterState != MONSTERSTATE_PRONE )
+	if ( pevAttacker && (pevAttacker->flags & FL_CLIENT) && m_MonsterState != MONSTERSTATE_PRONE )
 	{
 		AlertFriends();
 		LimitFollowers( CBaseEntity::Instance(pevAttacker), 0 );
@@ -659,6 +763,9 @@ CBaseEntity	*CTalkMonster::EnumFriends( CBaseEntity *pPrevious, int listNumber, 
 	{
 		if (pFriend == this || !pFriend->IsAlive())
 			// don't talk to self or dead people
+			continue;
+		if ( pFriend->MyMonsterPointer()->IRelationship( this ) > R_NO )
+			// don't talk to friends who hate me
 			continue;
 		if ( bTrace )
 		{
@@ -804,7 +911,7 @@ CBaseEntity *CTalkMonster :: FindNearestFriend(BOOL fPlayer)
 {
 	CBaseEntity *pFriend = NULL;
 	CBaseEntity *pNearest = NULL;
-	float range = 10000000.0;
+	float range = TALKRANGE_MIN;
 	TraceResult tr;
 	Vector vecStart = pev->origin;
 	Vector vecCheck;
@@ -844,6 +951,10 @@ CBaseEntity *CTalkMonster :: FindNearestFriend(BOOL fPlayer)
 			if ( !pMonster || pMonster->m_MonsterState == MONSTERSTATE_SCRIPT || pMonster->m_MonsterState == MONSTERSTATE_PRONE )
 				continue;
 
+			// or if he hates me
+			if ( pMonster->IRelationship( this ) > R_NO )
+				continue;
+
 			vecCheck = pFriend->pev->origin;
 			vecCheck.z = pFriend->pev->absmax.z;
 
@@ -856,11 +967,8 @@ CBaseEntity *CTalkMonster :: FindNearestFriend(BOOL fPlayer)
 				if (tr.flFraction == 1.0)
 				{
 					// visible and in range, this is the new nearest scientist
-					if ((vecStart - vecCheck).Length() < TALKRANGE_MIN)
-					{
-						pNearest = pFriend;
-						range = (vecStart - vecCheck).Length();
-					}
+					pNearest = pFriend;
+					range = (vecStart - vecCheck).Length() * RANDOM_FLOAT( 0.9, 1.1 );	// not always the nearest one
 				}
 			}
 		}
@@ -936,7 +1044,7 @@ int CTalkMonster :: FOkToSpeak( void )
 		return FALSE;
 
 	// if player is not in pvs, don't speak
-	if (!IsAlive() || FNullEnt(FIND_CLIENT_IN_PVS(edict())))
+	if (FNullEnt(FIND_CLIENT_IN_PVS(edict())))
 		return FALSE;
 
 	// don't talk if you're in combat
@@ -1260,6 +1368,12 @@ Schedule_t* CTalkMonster :: GetScheduleOfType ( int Type )
 				return slIdleStand;
 			}
 
+			// go and work at a hint node ("active": 0-14, the chance in 15)
+			if ( RANDOM_LONG( 0, 14 ) <= m_iActive && FCanActiveIdle() )
+			{
+				return slTMActiveIdle;
+			}
+
 			// talk about world
 			if (FOkToSpeak() && RANDOM_LONG(0,m_nSpeak * 2) == 0)
 			{
@@ -1267,7 +1381,7 @@ Schedule_t* CTalkMonster :: GetScheduleOfType ( int Type )
 				return slIdleSpeak;
 			}
 			
-			if ( !IsTalking() && HasConditions ( bits_COND_SEE_CLIENT ) && RANDOM_LONG( 0, 6 ) == 0 )
+			if ( !IsTalking() && HasConditions ( bits_COND_SEE_CLIENT ) && RANDOM_LONG( 0, 6 ) == 0 && !HasSpawnFlag( SF_MONSTER_IGNOREPLAYER ) )
 			{
 				edict_t *pPlayer = g_engfuncs.pfnPEntityOfEntIndex( 1 );
 
@@ -1290,6 +1404,9 @@ Schedule_t* CTalkMonster :: GetScheduleOfType ( int Type )
 				if (IsTalking())
 					// look at who we're talking to
 					return slTlkIdleEyecontact;
+				else if ( RANDOM_LONG( 0, 10 ) <= 2 )
+					// turn around now and then
+					return slIdleTurn;
 				else
 					// regular standing idle
 					return slIdleStand;
@@ -1356,7 +1473,7 @@ void CTalkMonster :: TrySmellTalk( void )
 int CTalkMonster::IRelationship( CBaseEntity *pTarget )
 {
 	if ( pTarget->IsPlayer() )
-		if ( m_afMemory & bits_MEMORY_PROVOKED )
+		if ( !HasSpawnFlag( SF_MONSTER_IGNOREPLAYER ) && ( m_afMemory & bits_MEMORY_PROVOKED ) )
 			return R_HT;
 	return CBaseMonster::IRelationship( pTarget );
 }
@@ -1458,6 +1575,13 @@ void CTalkMonster::KeyValue( KeyValueData *pkvd )
 		m_iszUnUse = ALLOC_STRING(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
+
+	// sic: not an else, so the sentence keys also go on to CBaseMonster::KeyValue
+	if (FStrEq(pkvd->szKeyName, "active"))
+	{
+		m_iActive = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
 	else 
 		CBaseMonster::KeyValue( pkvd );
 }
@@ -1469,5 +1593,44 @@ void CTalkMonster::Precache( void )
 		m_szGrp[TLK_USE] = STRING( m_iszUse );
 	if ( m_iszUnUse )
 		m_szGrp[TLK_UNUSE] = STRING( m_iszUnUse );
+}
+
+//=========================================================
+// FValidateHintType - the talkmonster hints
+//=========================================================
+BOOL CTalkMonster :: FValidateHintType ( short sHint )
+{
+	int i;
+
+	static short sTalkHints[] =
+	{
+		HINT_TALKMONSTER_WORK,
+		HINT_TALKMONSTER_USE,
+		HINT_TALKMONSTER_TRANSIT,
+	};
+
+	for ( i = 0 ; i < ARRAYSIZE ( sTalkHints ) ; i++ )
+	{
+		if ( sTalkHints[ i ] == sHint )
+		{
+			return TRUE;
+		}
+	}
+
+	ALERT ( at_aiconsole, "Couldn't validate hint type" );
+	return FALSE;
+}
+
+//=========================================================
+// FCanActiveIdle - only when idle and standing still
+//=========================================================
+BOOL CTalkMonster :: FCanActiveIdle ( void )
+{
+	if ( m_MonsterState == MONSTERSTATE_IDLE && m_IdealMonsterState == MONSTERSTATE_IDLE && !IsMoving() )
+	{
+		return TRUE;
+	}
+
+	return FALSE;
 }
 
