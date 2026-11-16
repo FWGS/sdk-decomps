@@ -18,16 +18,18 @@
 #include "util.h"
 #include "cbase.h"
 #include "monsters.h"
+
+extern DLL_GLOBAL int		g_iSkillLevel;
+
+// sic: the precompiled header stops before weapons.h (retail emits CGrenade's
+// BloodColor right after hvr_rocket's factory, not at the end of the object)
 #include "weapons.h"
 #include "nodes.h"
 #include "effects.h"
 #include "soundent.h"
 #include "decals.h"
 
-extern DLL_GLOBAL int		g_iSkillLevel;
-
 // Stand-ins until the files that define them have their declarations; names ours but CLaserPulse's.
-extern DLL_GLOBAL short g_sModelIndexSmokeTrail;	// weapons.cpp: W_Precache, "sprites/smoke.spr" (0x10158c82)
 extern void UTIL_TraceToss( CBaseEntity *pEntity, edict_t *pentIgnore, TraceResult *ptr );	// util.cpp 0x100e3890: TRACE_TOSS
 
 class CLaserPulse : public CBaseEntity		// pulse.cpp (laser_pulse)
@@ -1032,7 +1034,7 @@ BOOL CApache :: FireGun( )
 			CLaserPulse *pPulse = CLaserPulse::Shoot( posGun, edict(), Vector( 255, 255, 255 ), 2, 0.25, 2 );
 			pPulse->pev->velocity = vecGun * 2000;
 			pPulse->pev->dmg = gSkillData.monDmg12MM * 1.4;
-			pPulse->pev->iuser2 = DMG_ENERGYBEAM | (1 << 11);	// damage type
+			pPulse->pev->iuser2 = DMG_ENERGYBEAM | DMG_NOGIB;	// damage type
 			if (RANDOM_LONG( 0, 1 ))
 				EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/pl_gun1.wav", 1, 0.3 );
 			else
@@ -1225,7 +1227,7 @@ void CApacheHVR :: IgniteThink( void  )
 	EMIT_SOUND( ENT(pev), CHAN_VOICE, "weapons/rocket1.wav", 1, 0.5 );
 
 	// rocket trail
-	BeamFollow( g_sModelIndexSmokeTrail, 15, 5, Vector( 224, 224, 255 ), 255 );
+	BeamFollow( g_sModelIndexSmokePuff, 15, 5, Vector( 224, 224, 255 ), 255 );
 
 	// set to accelerate
 	SetThink( AccelerateThink );
@@ -1997,7 +1999,7 @@ void CApacheNAR :: IgniteThink( void  )
 	EMIT_SOUND( ENT(pev), CHAN_VOICE, "weapons/rocket1.wav", 1, 0.5 );
 
 	// rocket trail
-	BeamFollow( g_sModelIndexSmokeTrail, 15, 5, Vector( 0, 170, 255 ), 255 );
+	BeamFollow( g_sModelIndexSmokePuff, 15, 5, Vector( 0, 170, 255 ), 255 );
 
 	pev->dmg = 200;
 
