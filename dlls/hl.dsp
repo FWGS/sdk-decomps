@@ -204,6 +204,10 @@ SOURCE=.\buttons.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\camera.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\cbase.cpp
 # End Source File
 # Begin Source File
