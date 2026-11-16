@@ -1420,4 +1420,27 @@ private:
 };
 
 
+
+// laser_pulse (pulse.cpp, server only): the glowing energy pulse fired by the shotgun's laser rounds,
+// the laser pistol and several monsters; base of special_laser (lpistol.cpp)
+class CLaserPulse : public CGrenade
+{
+public:
+	CLaserPulse() {}	// sic: an empty constructor (special_laser's factory calls CBaseEntity's out of line)
+	void Spawn( void );
+	void Precache( void );
+	const char *GetKillDesc( void ) { return !m_iszKillDesc ? "a pulse laser" : STRING( m_iszKillDesc ); }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup );
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+
+	// names ours: precaches the glow and trail sprites of color iColor (1 red, 2 green, 3 blue, 4 "n")
+	static short PrecacheColor( int iColor );
+	// names ours: a pulse at vecOrigin; iColor picks the sprites, iTrailLife > 0 gives it a beam trail
+	static CLaserPulse *Shoot( Vector vecOrigin, edict_t *pOwner, const Vector &vecColor, int iTrailLife, float flScale, int iColor );
+
+	void EXPORT LaserTouch( CBaseEntity *pOther );
+
+	int m_iUnused;	// name ours: 0x2ac, never read or written in retail
+};
+
 #endif // WEAPONS_H
