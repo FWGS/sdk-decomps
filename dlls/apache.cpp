@@ -84,6 +84,9 @@ public:
 	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
 	int GetBattlePower( void );
 
+	int GunType( void ) { return APACHE_WEAPONS( pev )->iGun; }		// names ours
+	int MissileType( void ) { return APACHE_WEAPONS( pev )->iMissile; }
+
 	void EXPORT HuntThink( void );
 	void EXPORT FlyTouch( CBaseEntity *pOther );
 	void EXPORT CrashTouch( CBaseEntity *pOther );
@@ -691,7 +694,7 @@ void CApache :: Hunt( void )
 			if (m_hEnemy != NULL)
 			{
 				float flDot = 0.965;
-				int iMissile = APACHE_WEAPONS( pev )->iMissile;
+				int iMissile = MissileType();
 				if (iMissile == 2)
 					flDot = 0.7;
 				else if (iMissile == 3)
@@ -906,7 +909,7 @@ void CApache :: FireRocket( void )
 		WRITE_BYTE( 12 ); // framerate
 	MESSAGE_END();
 
-	int iMissile = APACHE_WEAPONS( pev )->iMissile;
+	int iMissile = MissileType();
 	if (iMissile == 2)
 	{
 		// heat-seeking missile
@@ -944,7 +947,7 @@ void CApache :: FireRocket( void )
 		if (pRocket)
 		{
 			// napalm rocket
-			if (APACHE_WEAPONS( pev )->iMissile == 1)
+			if (MissileType() == 1)
 				pRocket->pev->spawnflags |= 3;
 			pRocket->pev->velocity = pev->velocity + gpGlobals->v_forward * 100;
 		}
@@ -1021,14 +1024,13 @@ BOOL CApache :: FireGun( )
 
 	if (DotProduct( vecGun, vecTarget ) > 0.98)
 	{
-		int iGun = APACHE_WEAPONS( pev )->iGun;
-		if (iGun == 1)
+		if (GunType() == 1)
 		{
 			// standard flak
 			FireFlak( posGun, posGun + vecGun * flDist );
 			return TRUE;
 		}
-		else if (iGun == 3)
+		else if (GunType() == 3)
 		{
 			// pulse laser
 			CLaserPulse *pPulse = CLaserPulse::Shoot( posGun, edict(), Vector( 255, 255, 255 ), 2, 0.25, 2 );
@@ -1041,7 +1043,7 @@ BOOL CApache :: FireGun( )
 				EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/pl_gun2.wav", 1, 0.3 );
 			return TRUE;
 		}
-		else if (iGun != 2)
+		else if (GunType() != 2)
 		{
 			FireBullets( 1, posGun, vecGun, VECTOR_CONE_4DEGREES, 8192, BULLET_MONSTER_12MM, 1 );
 			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/tu_fire1.wav", 1, 0.3);
@@ -1546,8 +1548,7 @@ BOOL CNAApache :: FireGun( )
 
 	if (DotProduct( vecGun, vecTarget ) > 0.98)
 	{
-		int iGun = APACHE_WEAPONS( pev )->iGun;
-		if (iGun >= 3)
+		if (GunType() >= 3)
 		{
 			// bionanite or energy flak
 			if (m_flNextAttack <= gpGlobals->time)
@@ -1557,16 +1558,16 @@ BOOL CNAApache :: FireGun( )
 				return TRUE;
 			}
 		}
-		else if (iGun == 0)
+		else if (GunType() == 0)
 		{
 			FireBullets( 1, posGun, vecGun, VECTOR_CONE_4DEGREES, 8192, BULLET_MONSTER_TRACER2, 1, 24 );
 			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/tu_fire1.wav", 1, 0.3);
 			return TRUE;
 		}
-		else if (iGun == 2)
+		else if (GunType() == 2)
 		{
 			// pulse cannon
-			CLaserPulse *pPulse = CLaserPulse::Shoot( posGun, edict(), Vector( 255, 255, 255 ), iGun, 0.25, 4 );
+			CLaserPulse *pPulse = CLaserPulse::Shoot( posGun, edict(), Vector( 255, 255, 255 ), 2, 0.25, 4 );
 			pPulse->pev->velocity = vecGun * 2000;
 			pPulse->m_iszKillDesc = MAKE_STRING( "a hyperspace flux cannon" );
 			pPulse->pev->dmg = 50;
@@ -1574,7 +1575,7 @@ BOOL CNAApache :: FireGun( )
 			EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/debris3.wav", 1, 0.3 );
 			return TRUE;
 		}
-		else if (iGun == 1)
+		else if (GunType() == 1)
 		{
 			// beam cannon
 			TraceResult tr;
@@ -1596,7 +1597,7 @@ BOOL CNAApache :: FireGun( )
 			{
 				m_pSprite = CSprite::SpriteCreate( "sprites/bflare1.spr", pev->origin, FALSE );
 				m_pSprite->Spawn( );
-				m_pSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxNoDissipation );
+				m_pSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxDistort );
 				m_pSprite->SetAttachment( edict(), 1 );
 				m_pSprite->SetScale( 0.5 );
 			}
@@ -1704,7 +1705,7 @@ void CNAApache :: FireRocket( void )
 		WRITE_BYTE( 12 ); // framerate
 	MESSAGE_END();
 
-	int iMissile = APACHE_WEAPONS( pev )->iMissile;
+	int iMissile = MissileType();
 	if (iMissile == 2)
 	{
 		// bionic missile
