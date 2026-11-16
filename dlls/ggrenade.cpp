@@ -495,6 +495,19 @@ void CGrenade :: UseSatchelCharges( entvars_t *pevOwner, SATCHELCODE code )
 	}
 }
 
+// stand-in for MakeSolid (retail 0x1005edd0), the think of the cluster bomb's shell bomblets
+void CGrenade::MakeSolid( void )
+{
+	pev->solid = SOLID_BBOX;
+}
+
+// stand-in for the hybrid grenade (retail 0x1005fc70: explodes on touching something that takes
+// damage, bounces otherwise, explodes at time), which the cluster bomb calls; here a timed grenade
+CGrenade *CGrenade::ShootHybrid( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time )
+{
+	return ShootTimed( pevOwner, vecStart, vecVelocity, time );
+}
+
 // stand-in for ShootExplosion (retail 0x100600b0, 231 bytes), which the satchel's orbital
 // strike calls; written from retail's code
 CGrenade *CGrenade::ShootExplosion( entvars_t *pevOwner, const Vector &vecStart, float flDelay, const Vector &vecDir )
