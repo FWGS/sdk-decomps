@@ -180,6 +180,17 @@ void CGrenade::Detonate( void )
 	Explode( &tr, DMG_BLAST );
 }
 
+// stand-in for ExDetonate (retail 0x1005ef50, 334 bytes): retail traces along pev->movedir
+// (from 8 units behind to 40 ahead) and picks the explosion by pev->spawnflags; here only the plain blast
+void CGrenade::ExDetonate( void )
+{
+	TraceResult tr;
+
+	UTIL_TraceLine( pev->origin - pev->movedir * 8, pev->origin + pev->movedir * 40, ignore_monsters, ENT(pev), &tr );
+
+	Explode( &tr, DMG_BLAST );
+}
+
 
 //
 // Contact grenade, explode when it touches something
@@ -482,6 +493,25 @@ void CGrenade :: UseSatchelCharges( entvars_t *pevOwner, SATCHELCODE code )
 		}
 		pentFind = FIND_ENTITY_BY_CLASSNAME( pentFind, "grenade" );
 	}
+}
+
+// stand-in for ShootExplosion (retail 0x100600b0, 231 bytes), which the satchel's orbital
+// strike calls; written from retail's code
+CGrenade *CGrenade::ShootExplosion( entvars_t *pevOwner, const Vector &vecStart, float flDelay, const Vector &vecDir )
+{
+	CGrenade *pGrenade = GetClassPtr( (CGrenade *)NULL );
+	pGrenade->Spawn();
+	pGrenade->pev->takedamage = DAMAGE_NO;
+	pGrenade->pev->effects |= EF_NODRAW;
+	pGrenade->pev->movetype = MOVETYPE_NONE;
+	pGrenade->pev->solid = SOLID_NOT;
+	UTIL_SetOrigin( pGrenade->pev, vecStart );
+	pGrenade->pev->owner = ENT( pevOwner );
+	pGrenade->pev->movedir = vecDir;
+	pGrenade->SetThink( ExDetonate );
+	pGrenade->pev->nextthink = gpGlobals->time + flDelay;
+
+	return pGrenade;
 }
 
 //======================end grenade

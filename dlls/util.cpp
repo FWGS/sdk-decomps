@@ -2541,3 +2541,29 @@ int	CRestore::BufferCheckZString( const char *string )
 	return 0;
 }
 
+// stand-in for the beam ring (retail 0x100e5d80, 256 bytes), which the satchel's
+// satellite uplink calls; written from retail's code
+void UTIL_BeamRing( int iType, int iSprite, const Vector &vecOrigin, float flRadius, int iWidth, float flLife, const Vector &vecColor, float flBrightness )
+{
+	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, vecOrigin );
+		WRITE_BYTE( iType );
+		WRITE_COORD( vecOrigin.x );
+		WRITE_COORD( vecOrigin.y );
+		WRITE_COORD( vecOrigin.z );
+		WRITE_COORD( vecOrigin.x );
+		WRITE_COORD( vecOrigin.y );
+		WRITE_COORD( vecOrigin.z + flRadius / flLife );
+		WRITE_SHORT( iSprite );
+		WRITE_BYTE( 0 );
+		WRITE_BYTE( 0 );
+		WRITE_BYTE( flLife * 10 );
+		WRITE_BYTE( iWidth * 10 );
+		WRITE_BYTE( 0 );
+		WRITE_BYTE( vecColor.x );
+		WRITE_BYTE( vecColor.y );
+		WRITE_BYTE( vecColor.z );
+		WRITE_BYTE( flBrightness );
+		WRITE_BYTE( 0 );
+	MESSAGE_END();
+}
+

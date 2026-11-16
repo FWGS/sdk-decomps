@@ -796,4 +796,21 @@ float CBaseEntity :: MovementSpeed( void )
 	return pev->velocity.Length();
 }
 
+// stand-in for the beam trail (retail 0x10023d90, 154 bytes), which the pulse laser
+// and the cluster bomb call; written from retail's code
+void CBaseEntity :: BeamFollow( short sModelIndex, int iLife, int iWidth, const Vector &vecColor, int iBrightness )
+{
+	MESSAGE_BEGIN( MSG_ALL, SVC_TEMPENTITY );
+		WRITE_BYTE( TE_BEAMFOLLOW );
+		WRITE_SHORT( entindex() );
+		WRITE_SHORT( sModelIndex );
+		WRITE_BYTE( iLife );
+		WRITE_BYTE( iWidth );
+		WRITE_BYTE( vecColor.x );
+		WRITE_BYTE( vecColor.y );
+		WRITE_BYTE( vecColor.z );
+		WRITE_BYTE( iBrightness );
+	MESSAGE_END();
+}
+
 
