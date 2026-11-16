@@ -410,8 +410,7 @@ void ClientCommand( edict_t *pEntity )
 		if ( g_flWeaponCheat && CMD_ARGC() > 1)
 		{
 			CBasePlayer *pPlayer = (CBasePlayer *)CBaseEntity::Instance( pEntity );
-			pPlayer->m_iFOV = atoi( CMD_ARGV(1) );
-			pPlayer->pev->fov = pPlayer->m_iFOV;
+			pPlayer->pev->fov = pPlayer->m_iFOV = atoi( CMD_ARGV(1) );
 		}
 		else
 		{
