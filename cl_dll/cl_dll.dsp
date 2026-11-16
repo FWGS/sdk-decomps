@@ -224,6 +224,10 @@ SOURCE=.\com_weapons.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\damagefx.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\death.cpp
 # End Source File
 # Begin Source File
