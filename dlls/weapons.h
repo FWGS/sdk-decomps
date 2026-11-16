@@ -1057,6 +1057,8 @@ public:
 	}
 
 	void PrimaryAttack( void );
+	void SecondaryAttack( void );	// the turret mine
+	void WeaponSpecial( void );
 	BOOL Deploy( void );
 	void Holster( int skiplocal = 0 );
 	void WeaponIdle( void );
