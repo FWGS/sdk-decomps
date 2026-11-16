@@ -230,6 +230,13 @@ void CSatchelCharge::StartSatellite( void )
 	UTIL_Remove( this );
 }
 
+// name ours: the point flFraction of the way from vecSrc to vecEnd (an inline helper: retail calls its
+// operators out of line, which needs them in a nested inline list)
+inline Vector TracePoint( const Vector &vecSrc, const Vector &vecEnd, float flFraction )
+{
+	return vecSrc + flFraction * ( vecEnd - vecSrc );
+}
+
 //=========================================================
 // SatelliteThink - one strike of the orbital plasma cannon
 // within 512 units of the charge, every 0.1 to 2 seconds,
@@ -249,11 +256,12 @@ void CSatchelCharge::SatelliteThink( void )
 	{
 		UTIL_TraceLine( pev->origin, vecSky, ignore_monsters, ENT( pev ), &tr );
 		if ( tr.flFraction < 1 )
-			vecSky = pev->origin + ( tr.vecEndPos - pev->origin ) * tr.flFraction;
+			vecSky = TracePoint( pev->origin, tr.vecEndPos, tr.flFraction );
 	}
 
 	vecSky.z = 4000;
-	Vector vecGround = Vector( vecSky.x, vecSky.y, -4000 );
+	Vector vecGround = vecSky;
+	vecGround.z = -4000;
 	UTIL_TraceLine( vecSky, vecGround, ignore_monsters, ENT( pev ), &tr );
 
 	if ( tr.fAllSolid || tr.flFraction >= 1 || UTIL_PointContents( tr.vecEndPos ) == CONTENTS_SKY )
@@ -264,9 +272,8 @@ void CSatchelCharge::SatelliteThink( void )
 	}
 
 	vecGround = tr.vecEndPos;
-	Vector vecDir = Vector( 0, 0, -1 );
 
-	CGrenade *pBlast = CGrenade::ShootExplosion( VARS( pev->owner ), vecGround, 0.1, vecDir );
+	CGrenade *pBlast = CGrenade::ShootExplosion( VARS( pev->owner ), vecGround, 0.1, Vector( 0, 0, -1 ) );
 	pBlast->pev->effects = 0;
 	pBlast->pev->rendermode = kRenderTransAdd;
 	pBlast->pev->renderamt = 0;
