@@ -125,8 +125,8 @@ int CGauss::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
-	p->iSlot = 3;
-	p->iPosition = 1;
+	p->iSlot = 5;
+	p->iPosition = 2;
 	p->iId = m_iId = WEAPON_GAUSS;
 	p->iFlags = 0;
 	p->iWeight = GAUSS_WEIGHT;
@@ -347,18 +347,10 @@ void CGauss::StartFire( void )
 		//ALERT ( at_console, "Time:%f Damage:%f\n", gpGlobals->time - m_pPlayer->m_flStartCharge, flDamage );
 
 #ifndef CLIENT_DLL
-		float flZVel = m_pPlayer->pev->velocity.z;
-
 		if ( !m_fPrimaryFire )
 		{
+			// the charged shot pushes the player back, upwards too (the SDK kept the z speed in single play)
 			m_pPlayer->pev->velocity = m_pPlayer->pev->velocity - gpGlobals->v_forward * flDamage * 5;
-		}
-
-		if ( !g_pGameRules->IsMultiplayer() )
-
-		{
-			// in deathmatch, gauss can pop you up into the air. Not in single play.
-			m_pPlayer->pev->velocity.z = flZVel;
 		}
 #endif
 		// player "shoot" animation
@@ -474,7 +466,8 @@ void CGauss::Fire( Vector vecOrigSrc, Vector vecDir, float flDamage )
 				fHasPunched = 1;
 
 				// try punching through wall if secondary attack (primary is incapable of breaking through)
-				if ( !m_fPrimaryFire )
+				// nor through an energy shield
+				if ( !m_fPrimaryFire && !pEntity->Shielded() )
 				{
 					UTIL_TraceLine( tr.vecEndPos + vecDir * 8, vecDest, dont_ignore_monsters, pentIgnore, &beam_tr);
 					if (!beam_tr.fAllSolid)
@@ -615,7 +608,7 @@ class CGaussAmmo : public CBasePlayerAmmo
 	}
 	BOOL AddAmmo( CBaseEntity *pOther ) 
 	{ 
-		if (pOther->GiveAmmo( AMMO_URANIUMBOX_GIVE, "uranium", URANIUM_MAX_CARRY ) != -1)
+		if (pOther->GiveAmmo( 100, "uranium", URANIUM_MAX_CARRY ) != -1)
 		{
 			EMIT_SOUND(ENT(pev), CHAN_ITEM, "items/9mmclip1.wav", 1, ATTN_NORM);
 			return TRUE;

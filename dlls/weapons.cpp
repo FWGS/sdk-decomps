@@ -46,6 +46,13 @@ DLL_GLOBAL	short	g_sModelIndexWExplosion;// holds the index for the underwater e
 DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for the initial blood
 DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for splattered blood
+DLL_GLOBAL	short	g_sModelIndexFireExplosion;// sprites/fexplo.spr (names ours from here)
+DLL_GLOBAL	short	g_sModelIndexSmokePuff;// sprites/smoke.spr
+DLL_GLOBAL	short	g_sModelIndexLightning;// sprites/lgtning.spr
+DLL_GLOBAL	short	g_sModelIndexPlayerFlame;// sprites/playerflame.spr
+DLL_GLOBAL	int		g_iBloodSprayEvent;// events/bloodspray.sc
+DLL_GLOBAL	int		g_iBlastSphereEvent;// events/blastsphere.sc
+DLL_GLOBAL	int		g_iElectricEvent;// events/electric.sc
 
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
 AmmoInfo CBasePlayerItem::AmmoInfoArray[MAX_AMMO_SLOTS];
@@ -314,6 +321,7 @@ void W_Precache(void)
 	// common world objects
 	UTIL_PrecacheOther( "item_suit" );
 	UTIL_PrecacheOther( "item_battery" );
+	UTIL_PrecacheOther( "item_healthkit" );
 	UTIL_PrecacheOther( "item_antidote" );
 	UTIL_PrecacheOther( "item_security" );
 	UTIL_PrecacheOther( "item_longjump" );
@@ -384,6 +392,26 @@ void W_Precache(void)
 	UTIL_PrecacheOtherWeapon( "weapon_hornetgun" );
 #endif
 
+	// the mod's weapons
+	UTIL_PrecacheOtherWeapon( "weapon_repulsor" );
+	UTIL_PrecacheOtherWeapon( "weapon_reflector" );
+	UTIL_PrecacheOtherWeapon( "weapon_fireball" );
+	UTIL_PrecacheOtherWeapon( "weapon_flamethrower" );
+	UTIL_PrecacheOtherWeapon( "weapon_laserhandgun" );
+	UTIL_PrecacheOtherWeapon( "weapon_vortexlauncher" );
+	UTIL_PrecacheOtherWeapon( "weapon_softgun" );
+	UTIL_PrecacheOtherWeapon( "weapon_teslacoil" );
+	UTIL_PrecacheOtherWeapon( "weapon_freezethrower" );
+	UTIL_PrecacheOtherWeapon( "weapon_displacer" );
+	UTIL_PrecacheOtherWeapon( "weapon_sniper" );
+	UTIL_PrecacheOtherWeapon( "weapon_sword" );
+
+	UTIL_PrecacheOther( "ammo_fireballclip" );
+	UTIL_PrecacheOther( "ammo_laserclip" );
+	UTIL_PrecacheOther( "ammo_egonclip" );
+	UTIL_PrecacheOther( "ammo_acidtank" );
+	UTIL_PrecacheOther( "ammo_vortexclip" );
+	UTIL_PrecacheOther( "ammo_sniperclip" );
 
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 	if ( g_pGameRules->IsDeathmatch() )
@@ -392,15 +420,33 @@ void W_Precache(void)
 	}
 #endif
 
+	UTIL_PrecacheOther( "flame" );
+
 	g_sModelIndexFireball = PRECACHE_MODEL ("sprites/zerogxplode.spr");// fireball
+	g_sModelIndexFireExplosion = PRECACHE_MODEL ("sprites/fexplo.spr");
 	g_sModelIndexWExplosion = PRECACHE_MODEL ("sprites/WXplo1.spr");// underwater fireball
 	g_sModelIndexSmoke = PRECACHE_MODEL ("sprites/steam1.spr");// smoke
+	g_sModelIndexSmokePuff = PRECACHE_MODEL ("sprites/smoke.spr");
 	g_sModelIndexBubbles = PRECACHE_MODEL ("sprites/bubble.spr");//bubbles
 	g_sModelIndexBloodSpray = PRECACHE_MODEL ("sprites/bloodspray.spr"); // initial blood
 	g_sModelIndexBloodDrop = PRECACHE_MODEL ("sprites/blood.spr"); // splattered blood 
 
 	g_sModelIndexLaser = PRECACHE_MODEL( (char *)g_pModelNameLaser );
 	g_sModelIndexLaserDot = PRECACHE_MODEL("sprites/laserdot.spr");
+	g_sModelIndexLightning = PRECACHE_MODEL("sprites/lgtning.spr");
+	g_sModelIndexPlayerFlame = PRECACHE_MODEL("sprites/playerflame.spr");
+	PRECACHE_MODEL("sprites/xblood.spr");
+
+	g_iBloodSprayEvent = PRECACHE_EVENT( 1, "events/bloodspray.sc" );
+	g_iBlastSphereEvent = PRECACHE_EVENT( 1, "events/blastsphere.sc" );
+
+	PRECACHE_SOUND("buttons/spark1.wav");
+	PRECACHE_SOUND("buttons/spark2.wav");
+	PRECACHE_SOUND("buttons/spark3.wav");
+	PRECACHE_SOUND("buttons/spark4.wav");
+	PRECACHE_SOUND("buttons/spark5.wav");
+	PRECACHE_SOUND("buttons/spark6.wav");
+	g_iElectricEvent = PRECACHE_EVENT( 1, "events/electric.sc" );
 
 
 	// used by explosions
@@ -1537,7 +1583,6 @@ IMPLEMENT_SAVERESTORE( CRpg, CBasePlayerWeapon );
 
 TYPEDESCRIPTION	CRpgRocket::m_SaveData[] = 
 {
-	DEFINE_FIELD( CRpgRocket, m_flIgniteTime, FIELD_TIME ),
 	DEFINE_FIELD( CRpgRocket, m_pLauncher, FIELD_CLASSPTR ),
 };
 IMPLEMENT_SAVERESTORE( CRpgRocket, CGrenade );
@@ -1569,7 +1614,7 @@ TYPEDESCRIPTION	CEgon::m_SaveData[] =
 //	DEFINE_FIELD( CEgon, m_pSprite, FIELD_CLASSPTR ),
 	DEFINE_FIELD( CEgon, m_shootTime, FIELD_TIME ),
 	DEFINE_FIELD( CEgon, m_fireState, FIELD_INTEGER ),
-	DEFINE_FIELD( CEgon, m_fireMode, FIELD_INTEGER ),
+	DEFINE_FIELD( CEgon, m_iBeamCount, FIELD_INTEGER ),
 	DEFINE_FIELD( CEgon, m_shakeTime, FIELD_TIME ),
 	DEFINE_FIELD( CEgon, m_flAmmoUseTime, FIELD_TIME ),
 };
@@ -1580,4 +1625,18 @@ TYPEDESCRIPTION	CSatchel::m_SaveData[] =
 	DEFINE_FIELD( CSatchel, m_chargeReady, FIELD_INTEGER ),
 };
 IMPLEMENT_SAVERESTORE( CSatchel, CBasePlayerWeapon );
+
+// a direction around v_forward scattered within vecSpread, as FireBullets scatters its shots
+// (UTIL_MakeVectors first)
+Vector UTIL_SpreadVector( const Vector &vecSpread )
+{
+	float x, y;
+
+	do {
+		x = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
+		y = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
+	} while ( (x*x+y*y) > 1 );
+
+	return gpGlobals->v_forward + x * vecSpread.x * gpGlobals->v_right + y * vecSpread.y * gpGlobals->v_up;
+}
 

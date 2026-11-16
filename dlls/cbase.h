@@ -168,6 +168,7 @@ public:
 	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return fGibbed ? "gibbed" : "killed"; }
 	virtual const char *GetHitGroupDesc( int iHitGroup ) { return ""; }
 	virtual float	MovementSpeed( void );
+	void	BeamFollow( short sModelIndex, int iLife, int iWidth, const Vector &vecColor, int iBrightness );	// name ours; cbase.cpp (0x10023d90), TE_BEAMFOLLOW
 	
 	// Setup the object->object collision box (pev->mins / pev->maxs is the object->world collision box)
 	virtual void	SetObjectCollisionBox( void );
@@ -259,6 +260,8 @@ public:
 	int			ShouldToggle( USE_TYPE useType, BOOL currentState );
 	void		FireBullets( ULONG	cShots, Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iBulletType, int iTracerFreq = 4, int iDamage = 0, entvars_t *pevAttacker = NULL  );
 	Vector		FireBulletsPlayer( ULONG	cShots, Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iBulletType, int iTracerFreq = 4, int iDamage = 0, entvars_t *pevAttacker = NULL, int shared_rand = 0 );
+	void		FireBulletsExplosiveMonster( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker = NULL );	// name ours: explosive bullets of monsters (the grunt's shotgun)
+	Vector		FireBulletsExplosive( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker = NULL, int shared_rand = 0 );	// name ours: the shotgun's explosive slugs (combat.cpp; the client's in hl_weapons.cpp)
 
 	virtual CBaseEntity *Respawn( void ) { return NULL; }
 
@@ -617,6 +620,7 @@ public:
 #define DMG_SHOCK			(1 << 8)	// electric shock
 #define DMG_SONIC			(1 << 9)	// sound pulse shockwave
 #define DMG_ENERGYBEAM		(1 << 10)	// laser or other high energy beam 
+#define DMG_NOGIB			(1 << 11)	// name ours: kills like DMG_NEVERGIB (the bullets)
 #define DMG_NEVERGIB		(1 << 12)	// with this bit OR'd in, no damage type will be able to gib victims upon death
 #define DMG_ALWAYSGIB		(1 << 13)	// with this bit OR'd in, any damage type can be made to gib victims upon death.
 #define DMG_DROWN			(1 << 14)	// Drowning
@@ -632,6 +636,7 @@ public:
 #define DMG_SLOWBURN		(1 << 21)	// in an oven
 #define DMG_SLOWFREEZE		(1 << 22)	// in a subzero freezer
 #define DMG_MORTAR			(1 << 23)	// Hit by air raid (done to distinguish grenade from mortar)
+#define DMG_FADE			(1 << 24)	// name ours: the victim fades out instead of dying normally (GIB_FADE)
 #define DMG_SPLATTER		(1 << 31)	// name ours: gibs corpses
 
 // these are the damage types that are allowed to gib corpses
@@ -684,6 +689,7 @@ extern const char *HitGroupOf( int iHitGroup );	// "'s head"
 #define GIB_NORMAL			0// gib if entity was overkilled
 #define GIB_NEVER			1// never gib, no matter how much death damage is done ( freezing, etc )
 #define GIB_ALWAYS			2// always gib ( Houndeye Shock, Barnacle Bite )
+#define GIB_FADE			4// fade the body out (name ours)
 
 class CBaseMonster;
 class CCineMonster;
