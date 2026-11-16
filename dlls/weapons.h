@@ -978,7 +978,7 @@ public:
 	float GetPulseInterval( void );
 	float GetDischargeInterval( void );
 
-	void FireIon( void );	// name ours
+	void IonCannon( void );	// name ours (its client thunk slot fits this name)
 	void Fire( const Vector &vecOrigSrc, const Vector &vecDir );
 
 	BOOL HasAmmo( void );

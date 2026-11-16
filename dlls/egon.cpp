@@ -242,7 +242,7 @@ void CEgon::Attack( void )
 		case FIRE_CHARGE:
 		{
 			if ( pev->weapons == 2 )
-				FireIon();
+				IonCannon();
 			else
 				Fire( vecSrc, vecAiming );
 			m_pPlayer->m_iWeaponVolume = EGON_PRIMARY_VOLUME;
@@ -271,7 +271,7 @@ void CEgon::PrimaryAttack( void )
 
 // the ion discharge cannon: 1, 3 or 5 beams fanned out 15 degrees apart that lock on
 // to what they hit and follow it while it stays in front of the player
-void CEgon::FireIon( void )
+void CEgon::IonCannon( void )
 {
 #ifndef CLIENT_DLL
 	TraceResult tr;
