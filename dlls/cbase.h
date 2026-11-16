@@ -168,6 +168,7 @@ public:
 	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return fGibbed ? "gibbed" : "killed"; }
 	virtual const char *GetHitGroupDesc( int iHitGroup ) { return ""; }
 	virtual float	MovementSpeed( void );
+	void	BeamFollow( short sModelIndex, int iLife, int iWidth, const Vector &vecColor, int iBrightness );	// name ours; cbase.cpp (0x10023d90), TE_BEAMFOLLOW
 	
 	// Setup the object->object collision box (pev->mins / pev->maxs is the object->world collision box)
 	virtual void	SetObjectCollisionBox( void );
@@ -439,6 +440,7 @@ public:
 	void KeyValue( KeyValueData *pkvd );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	int	ObjectCaps( void ) { return (CPointEntity::ObjectCaps() | FCAP_MASTER); }
+	int	GetOnState( void ) { return IsTriggered( this ); }
 	BOOL IsTriggered( CBaseEntity *pActivator );
 	void EXPORT Register( void );
 	virtual int		Save( CSave &save );
