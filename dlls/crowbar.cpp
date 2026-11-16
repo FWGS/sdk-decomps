@@ -84,6 +84,20 @@ int CCrowbar::GetItemInfo(ItemInfo *p)
 	return 1;
 }
 
+#ifndef CLIENT_DLL
+const char *CCrowbar::GetKillVerb( BOOL fGibbed, int &iHitGroup )
+{
+	return iHitGroup == HITGROUP_HEAD ? "cracked" : "whacked";
+}
+
+const char *CCrowbar::GetHitGroupDesc( int iHitGroup )
+{
+	if ( iHitGroup == HITGROUP_HEAD )
+		return "'s skull";
+	return HitGroupIn( iHitGroup );
+}
+#endif
+
 
 
 BOOL CCrowbar::Deploy( )

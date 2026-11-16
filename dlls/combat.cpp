@@ -1794,16 +1794,81 @@ void CBaseMonster :: Resurrect( CBaseEntity *pActivator )
 void CBaseMonster :: ResurrectThink( void )
 {
 	StudioFrameAdvance();
-	if ( !m_fSequenceFinished )
+	if ( m_fSequenceFinished )
 	{
-		pev->nextthink = gpGlobals->time + 0.1;
-		return;
+		pev->health = pev->max_health;
+		pev->renderfx = kRenderFxNone;
+		pev->rendermode = kRenderNormal;
+		MonsterInit();
+		SetState( m_IdealMonsterState );
+		SetActivity( m_IdealActivity );
 	}
+	else
+		pev->nextthink = gpGlobals->time + 0.1;
+}
 
-	pev->health = pev->max_health;
-	pev->renderfx = kRenderFxNone;
-	pev->rendermode = kRenderNormal;
-	MonsterInit();
-	SetState( m_IdealMonsterState );
-	SetActivity( m_IdealActivity );
+// Retail has a 77-byte mod function here (0x1002e070), not written yet.
+
+//=========================================================
+// Death message phrases: what killed a victim, and where.
+//=========================================================
+const char *HitGroupIn( int iHitGroup )
+{
+	switch ( iHitGroup )
+	{
+	case HITGROUP_HEAD:		return " in the head";
+	case HITGROUP_CHEST:	return " in the chest";
+	case HITGROUP_STOMACH:	return " in the stomach";
+	case HITGROUP_LEFTARM:
+	case HITGROUP_RIGHTARM:	return " in the arm";
+	case HITGROUP_LEFTLEG:
+	case HITGROUP_RIGHTLEG:	return " in the leg";
+	}
+	return "";
+}
+
+const char *HitGroupOf( int iHitGroup )
+{
+	switch ( iHitGroup )
+	{
+	case HITGROUP_HEAD:		return "'s head";
+	case HITGROUP_CHEST:	return "'s chest";
+	case HITGROUP_STOMACH:	return "'s stomach";
+	case HITGROUP_LEFTARM:
+	case HITGROUP_RIGHTARM:	return "'s arm";
+	case HITGROUP_LEFTLEG:
+	case HITGROUP_RIGHTLEG:	return "'s leg";
+	}
+	return "";
+}
+
+const char *DamageVerb( int bitsDamageType, BOOL fGibbed )
+{
+	if ( bitsDamageType & DMG_CRUSH )
+		return "crushed";
+	if ( bitsDamageType & DMG_BULLET )
+		return "shot";
+	if ( bitsDamageType & DMG_SLASH )
+		return fGibbed ? "cut up" : "slashed";
+	if ( bitsDamageType & ( DMG_BURN | DMG_SLOWBURN ) )
+		return "incinerated";
+	if ( bitsDamageType & ( DMG_FREEZE | DMG_SLOWFREEZE ) )
+		return "deep freezed";
+	if ( bitsDamageType & DMG_BLAST )
+		return fGibbed ? "blew up" : "blasted";
+	if ( bitsDamageType & DMG_CLUB )
+		return fGibbed ? "smashed" : "whacked";
+	if ( bitsDamageType & DMG_SHOCK )
+		return fGibbed ? "zapped" : "electrocuted";
+	if ( bitsDamageType & DMG_ENERGYBEAM )
+		return fGibbed ? "annihilated" : "zapped";
+	if ( bitsDamageType & DMG_DROWN )
+		return "drowned";
+	if ( bitsDamageType & ( DMG_NERVEGAS | DMG_POISON ) )
+		return "poisoned";
+	if ( bitsDamageType & DMG_RADIATION )
+		return "irradiated";
+	if ( bitsDamageType & DMG_ACID )
+		return "corroded";
+	return fGibbed ? "gibbed" : "killed";
 }

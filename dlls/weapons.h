@@ -502,6 +502,11 @@ public:
 	void Spawn( void );
 	void Precache( void );
 	int iItemSlot( void ) { return 2; }
+#ifndef CLIENT_DLL
+	const char *GetKillDesc( void ) { return "a 9mm handgun"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "shot"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+#endif
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
@@ -535,6 +540,11 @@ public:
 	void Spawn( void );
 	void Precache( void );
 	int iItemSlot( void ) { return 1; }
+#ifndef CLIENT_DLL
+	const char *GetKillDesc( void ) { return "a crowbar"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup );
+	const char *GetHitGroupDesc( int iHitGroup );
+#endif
 	void EXPORT SwingAgain( void );
 	void EXPORT Smack( void );
 	int GetItemInfo(ItemInfo *p);
@@ -564,6 +574,11 @@ public:
 	void Spawn( void );
 	void Precache( void );
 	int iItemSlot( void ) { return 2; }
+#ifndef CLIENT_DLL
+	const char *GetKillDesc( void ) { return "a 44 caliber handgun"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "shot"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+#endif
 	int GetItemInfo(ItemInfo *p);
 	int AddToPlayer( CBasePlayer *pPlayer );
 	void PrimaryAttack( void );
@@ -595,6 +610,11 @@ public:
 	void Spawn( void );
 	void Precache( void );
 	int iItemSlot( void ) { return 3; }
+#ifndef CLIENT_DLL
+	const char *GetKillDesc( void ) { return "a 9mm assault rifle"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "shot"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+#endif
 	int GetItemInfo(ItemInfo *p);
 	int AddToPlayer( CBasePlayer *pPlayer );
 
@@ -668,6 +688,11 @@ public:
 
 	void Spawn( void );
 	void Precache( void );
+#ifndef CLIENT_DLL
+	const char *GetKillDesc( void ) { return "a combat shotgun"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "shot"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+#endif
 	int iItemSlot( ) { return 3; }
 	int GetItemInfo(ItemInfo *p);
 	int AddToPlayer( CBasePlayer *pPlayer );
@@ -740,6 +765,8 @@ public:
 	CLaserSpot *m_pSpot;
 	int m_fSpotActive;
 	int m_cActiveRockets;// how many missiles in flight from this launcher right now?
+	int m_mode;
+	int m_ammo;
 
 	virtual BOOL UseDecrement( void )
 	{ 
@@ -786,6 +813,11 @@ public:
 	void Spawn( void );
 	void Precache( void );
 	int iItemSlot( void ) { return 4; }
+#ifndef CLIENT_DLL
+	const char *GetKillDesc( void ) { return "an experimental hypervelocity projectile weapon"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup );
+	const char *GetHitGroupDesc( int iHitGroup );
+#endif
 	int GetItemInfo(ItemInfo *p);
 	int AddToPlayer( CBasePlayer *pPlayer );
 
@@ -834,6 +866,26 @@ public:
 	void Spawn( void );
 	void Precache( void );
 	int iItemSlot( void ) { return 4; }
+#ifndef CLIENT_DLL
+	const char *GetKillDesc( void )		// pev->weapons: the firing mode
+	{
+		switch ( pev->weapons )
+		{
+		case 1:	return "an antimatter pulverizer";
+		case 2:	return "an ion beam cannon";
+		default:	return "a gluon gun";
+		}
+	}
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup )
+	{
+		switch ( pev->weapons )
+		{
+		case 1:	return DamageVerb( DMG_BLAST, fGibbed );
+		case 2:	return DamageVerb( DMG_SHOCK, fGibbed );
+		default:	return DamageVerb( DMG_ENERGYBEAM, fGibbed );
+		}
+	}
+#endif
 	int GetItemInfo(ItemInfo *p);
 	int AddToPlayer( CBasePlayer *pPlayer );
 

@@ -91,6 +91,20 @@ void CGauss::Precache( void )
 	m_usGaussSpin = PRECACHE_EVENT( 1, "events/gaussspin.sc" );
 }
 
+#ifndef CLIENT_DLL
+const char *CGauss::GetKillVerb( BOOL fGibbed, int &iHitGroup )
+{
+	return iHitGroup == HITGROUP_CHEST ? "shot" : "pierced";
+}
+
+const char *CGauss::GetHitGroupDesc( int iHitGroup )
+{
+	if ( iHitGroup == HITGROUP_CHEST )
+		return " through the heart";
+	return HitGroupOf( iHitGroup );
+}
+#endif
+
 int CGauss::AddToPlayer( CBasePlayer *pPlayer )
 {
 	if ( CBasePlayerWeapon::AddToPlayer( pPlayer ) )

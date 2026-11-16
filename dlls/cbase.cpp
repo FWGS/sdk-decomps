@@ -783,7 +783,7 @@ float CBaseEntity :: GetHoldDistance( void )
 		return 0;
 
 	float flSize = pev->size.x;
-	if ( flSize > pev->size.y * 0.5 )
+	if ( pev->size.y * 0.5 < flSize )
 		flSize = pev->size.y;
 	if ( flSize > pev->size.z )
 		flSize = pev->size.z;

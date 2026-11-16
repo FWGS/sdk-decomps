@@ -1530,6 +1530,8 @@ TYPEDESCRIPTION	CRpg::m_SaveData[] =
 {
 	DEFINE_FIELD( CRpg, m_fSpotActive, FIELD_INTEGER ),
 	DEFINE_FIELD( CRpg, m_cActiveRockets, FIELD_INTEGER ),
+	DEFINE_FIELD( CRpg, m_mode, FIELD_INTEGER ),
+	DEFINE_FIELD( CRpg, m_ammo, FIELD_INTEGER ),
 };
 IMPLEMENT_SAVERESTORE( CRpg, CBasePlayerWeapon );
 
