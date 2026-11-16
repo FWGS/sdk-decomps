@@ -85,6 +85,8 @@ cvar_t *cl_lw = NULL;
 
 void ShutdownInput (void);
 
+int __MsgFunc_DamageFX( const char *pszName, int iSize, void *pbuf );	// damagefx.cpp
+
 //DECLARE_MESSAGE(m_Logo, Logo)
 int __MsgFunc_Logo(const char *pszName, int iSize, void *pbuf)
 {
@@ -281,6 +283,7 @@ void CHud :: Init( void )
 	HOOK_MESSAGE( SetFOV );
 	HOOK_MESSAGE( Concuss );
 	HOOK_MESSAGE( Fog );
+	HOOK_MESSAGE( DamageFX );
 
 	// TFFree CommandMenu
 	HOOK_COMMAND( "+commandmenu", OpenCommandMenu );
