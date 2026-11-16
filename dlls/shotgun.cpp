@@ -154,21 +154,44 @@ void CShotgun::PrimaryAttack()
 
 	Vector vecDir;
 
-#ifdef CLIENT_DLL
-	if ( bIsMultiplayer() )
-#else
-	if ( g_pGameRules->IsMultiplayer() )
-#endif
+	if ( pev->weapons == 1 )
 	{
-		vecDir = m_pPlayer->FireBulletsPlayer( 4, vecSrc, vecAiming, VECTOR_CONE_DM_SHOTGUN, 2048, BULLET_PLAYER_BUCKSHOT, 0, 0, m_pPlayer->pev, m_pPlayer->random_seed );
+		// explosive rounds: one slug
+		vecDir = m_pPlayer->FireBulletsExplosive( 1, vecSrc, vecAiming, VECTOR_CONE_1DEGREES, 2048, gSkillData.plrDmgBuckshot * 6, m_pPlayer->pev, m_pPlayer->random_seed );
+	}
+	else if ( pev->weapons == 2 )
+	{
+#ifndef CLIENT_DLL
+		// laser rounds: six laser pulses
+		for ( int i = 0; i < 6; i++ )
+		{
+			vecDir = SpreadVector( VECTOR_CONE_10DEGREES );
+
+			CLaserPulse *pPulse = CLaserPulse::Shoot( vecSrc, m_pPlayer->edict(), Vector( 255, 16, 16 ), 0, 0.5, 0 );
+			pPulse->pev->velocity = vecDir * RANDOM_FLOAT( 1300, 1400 );
+			pPulse->pev->dmg = gSkillData.plrDmgBuckshot * 1.4;
+			pPulse->m_iszKillDesc = MAKE_STRING( "spread pulse" );
+		}
+#endif
 	}
 	else
 	{
-		// regular old, untouched spread. 
-		vecDir = m_pPlayer->FireBulletsPlayer( 6, vecSrc, vecAiming, VECTOR_CONE_10DEGREES, 2048, BULLET_PLAYER_BUCKSHOT, 0, 0, m_pPlayer->pev, m_pPlayer->random_seed );
+#ifdef CLIENT_DLL
+		if ( bIsMultiplayer() )
+#else
+		if ( g_pGameRules->IsMultiplayer() )
+#endif
+		{
+			vecDir = m_pPlayer->FireBulletsPlayer( 4, vecSrc, vecAiming, VECTOR_CONE_DM_SHOTGUN, 2048, BULLET_PLAYER_BUCKSHOT, 0, 0, m_pPlayer->pev, m_pPlayer->random_seed );
+		}
+		else
+		{
+			// regular old, untouched spread. 
+			vecDir = m_pPlayer->FireBulletsPlayer( 6, vecSrc, vecAiming, VECTOR_CONE_10DEGREES, 2048, BULLET_PLAYER_BUCKSHOT, 0, 0, m_pPlayer->pev, m_pPlayer->random_seed );
+		}
 	}
 
-	PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usSingleFire, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, 0, 0, 0, 0 );
+	PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usSingleFire, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, 0, 0, pev->weapons != 0, 0 );
 
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
@@ -228,22 +251,45 @@ void CShotgun::SecondaryAttack( void )
 
 	Vector vecDir;
 	
-#ifdef CLIENT_DLL
-	if ( bIsMultiplayer() )
-#else
-	if ( g_pGameRules->IsMultiplayer() )
-#endif
+	if ( pev->weapons == 1 )
 	{
-		// tuned for deathmatch
-		vecDir = m_pPlayer->FireBulletsPlayer( 8, vecSrc, vecAiming, VECTOR_CONE_DM_DOUBLESHOTGUN, 2048, BULLET_PLAYER_BUCKSHOT, 0, 0, m_pPlayer->pev, m_pPlayer->random_seed );
+		// explosive rounds: six slugs
+		vecDir = m_pPlayer->FireBulletsExplosive( 6, vecSrc, vecAiming, VECTOR_CONE_15DEGREES, 2048, gSkillData.plrDmgBuckshot * 2, m_pPlayer->pev, m_pPlayer->random_seed );
+	}
+	else if ( pev->weapons == 2 )
+	{
+#ifndef CLIENT_DLL
+		// laser rounds: twelve laser pulses
+		for ( int i = 0; i < 12; i++ )
+		{
+			vecDir = SpreadVector( VECTOR_CONE_10DEGREES );
+
+			CLaserPulse *pPulse = CLaserPulse::Shoot( vecSrc, m_pPlayer->edict(), Vector( 255, 16, 16 ), 0, 0.5, 0 );
+			pPulse->pev->velocity = vecDir * RANDOM_FLOAT( 1300, 1400 );
+			pPulse->pev->dmg = gSkillData.plrDmgBuckshot * 1.4;
+			pPulse->m_iszKillDesc = MAKE_STRING( "spread pulse" );
+		}
+#endif
 	}
 	else
 	{
-		// untouched default single player
-		vecDir = m_pPlayer->FireBulletsPlayer( 12, vecSrc, vecAiming, VECTOR_CONE_10DEGREES, 2048, BULLET_PLAYER_BUCKSHOT, 0, 0, m_pPlayer->pev, m_pPlayer->random_seed );
+#ifdef CLIENT_DLL
+		if ( bIsMultiplayer() )
+#else
+		if ( g_pGameRules->IsMultiplayer() )
+#endif
+		{
+			// tuned for deathmatch
+			vecDir = m_pPlayer->FireBulletsPlayer( 8, vecSrc, vecAiming, VECTOR_CONE_DM_DOUBLESHOTGUN, 2048, BULLET_PLAYER_BUCKSHOT, 0, 0, m_pPlayer->pev, m_pPlayer->random_seed );
+		}
+		else
+		{
+			// untouched default single player
+			vecDir = m_pPlayer->FireBulletsPlayer( 12, vecSrc, vecAiming, VECTOR_CONE_10DEGREES, 2048, BULLET_PLAYER_BUCKSHOT, 0, 0, m_pPlayer->pev, m_pPlayer->random_seed );
+		}
 	}
 		
-	PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usDoubleFire, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, 0, 0, 0, 0 );
+	PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usDoubleFire, 0.0, (float *)&g_vecZero, (float *)&g_vecZero, vecDir.x, vecDir.y, 0, 0, pev->weapons != 0, 0 );
 
 	if (!m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] <= 0)
 		// HEV suit - indicate out of ammo condition
@@ -261,6 +307,51 @@ void CShotgun::SecondaryAttack( void )
 
 	m_fInSpecialReload = 0;
 
+}
+
+
+// +attack3: unloads the shells and loads the next kind (pev->weapons: conventional, explosive, laser)
+void CShotgun::WeaponSpecial( void )
+{
+	if ( m_flNextReload > gpGlobals->time || m_flNextPrimaryAttack > gpGlobals->time )
+		return;
+
+	if ( !m_iClip && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] < 1 )
+		return;
+
+	// the shells go back to the player's ammo (sic: those that don't fit are lost)
+	if ( m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] < iMaxAmmo1() )
+	{
+		m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] += m_iClip;
+		m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] = min( m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType], iMaxAmmo1() );
+	}
+	m_iClip = 0;
+
+	pev->weapons++;
+	if ( pev->weapons > 2 )
+		pev->weapons = 0;
+
+	m_flNextWeaponSpecial = UTIL_WeaponTimeBase() + 1.0;
+
+#ifndef CLIENT_DLL
+	const char *pszType;
+	switch ( pev->weapons )
+	{
+	case 1:
+		pszType = "Explosive";
+		break;
+	case 2:
+		pszType = "Laser";
+		break;
+	default:
+		pszType = "Conventional";
+		break;
+	}
+
+	ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "%s rounds loaded", pszType );
+#endif
+
+	Reload( );
 }
 
 
@@ -282,6 +373,7 @@ void CShotgun::Reload( void )
 		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.6;
 		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.0;
 		m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 1.0;
+		m_flNextWeaponSpecial = UTIL_WeaponTimeBase() + 1.0;
 		return;
 	}
 	else if (m_fInSpecialReload == 1)

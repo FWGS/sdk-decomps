@@ -427,6 +427,7 @@ extern void DecalGunshot( TraceResult *pTrace, int iBulletType );
 extern void SpawnBlood(Vector vecSpot, int bloodColor, float flDamage);
 extern int DamageDecal( CBaseEntity *pEntity, int bitsDamageType );
 extern void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType );
+extern Vector SpreadVector( const Vector &vecSpread );	// name ours (weapons.cpp): gpGlobals->v_forward spread like FireBullets'
 
 typedef struct 
 {
@@ -706,6 +707,7 @@ public:
 
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
+	void WeaponSpecial( void );		// switches the shells (pev->weapons)
 	BOOL Deploy( );
 	void Reload( void );
 	void WeaponIdle( void );
