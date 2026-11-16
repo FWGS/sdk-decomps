@@ -212,6 +212,10 @@ SOURCE=.\client.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\cluster_bomb.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\combat.cpp
 # End Source File
 # Begin Source File

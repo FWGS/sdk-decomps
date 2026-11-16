@@ -34,6 +34,7 @@ public:
 	static CGrenade *ShootContact( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
 	static CGrenade *ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
 	static CGrenade *ShootExplosion( entvars_t *pevOwner, const Vector &vecStart, float flDelay, const Vector &vecDir );	// name ours; ggrenade.cpp (0x100600b0)
+	static CGrenade *ShootHybrid( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );	// name ours; ggrenade.cpp (0x1005fc70)
 	static void UseSatchelCharges( entvars_t *pevOwner, SATCHELCODE code );
 
 	void Explode( Vector vecSrc, Vector vecAim );
@@ -47,6 +48,7 @@ public:
 	void EXPORT PreDetonate( void );
 	void EXPORT Detonate( void );
 	void EXPORT ExDetonate( void );
+	void EXPORT MakeSolid( void );
 	void EXPORT DetonateUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT TumbleThink( void );
 
@@ -62,6 +64,8 @@ public:
 class CClusterBomb : public CGrenade
 {
 public:
+	void Spawn( void );
+
 	static CClusterBomb *ShootTimed( edict_t *pOwner, const Vector &vecStart, const Vector &vecVelocity, float time );	// name ours (0x10027d00)
 	static CClusterBomb *ShootMirv( edict_t *pOwner, const Vector &vecStart, const Vector &vecVelocity, float time );	// name ours (0x10027e70): ShootTimed, then pev->weapons = 3
 
@@ -71,6 +75,9 @@ public:
 	void EXPORT ClusterHybridThink( void );
 	void EXPORT ClusterHybridTouch( CBaseEntity *pOther );
 	void EXPORT ClusterPreDetonate( void );
+
+	void ClusterExplode( TraceResult *pTrace );		// name ours: throws pev->frags bomblets of type pev->weapons
+	static Vector ClusterSpread( const Vector &vecSpread );	// name ours: a random direction around v_forward
 };
 
 
@@ -437,6 +444,10 @@ extern DLL_GLOBAL	short	g_sModelIndexWExplosion;// holds the index for the under
 extern DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 extern DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for blood drops
 extern DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for blood spray (bigger)
+extern DLL_GLOBAL	short	g_sModelIndexFireExplosion;// sprites/fexplo.spr (names ours from here)
+extern DLL_GLOBAL	short	g_sModelIndexSmokePuff;// sprites/smoke.spr
+extern DLL_GLOBAL	short	g_sModelIndexLightning;// sprites/lgtning.spr
+extern DLL_GLOBAL	short	g_sModelIndexPlayerFlame;// sprites/playerflame.spr
 
 extern void ClearMultiDamage(void);
 extern void ApplyMultiDamage(entvars_t* pevInflictor, entvars_t* pevAttacker );
