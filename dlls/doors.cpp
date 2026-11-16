@@ -712,7 +712,7 @@ void CBaseDoor::Blocked( CBaseEntity *pOther )
 		pOther->TakeDamage( pev, pev, flDamage, DMG_CRUSH );
 
 	// trapdoor hack: throw monsters standing on it up
-	if ( pOther->pev->movetype == MOVETYPE_STEP && (bool)FBitSet( pev->spawnflags, SF_DOOR_TRAPDOOR ) )
+	if ( pOther->pev->movetype == MOVETYPE_STEP && HasSpawnFlag( SF_DOOR_TRAPDOOR ) )
 	{
 		pOther->pev->velocity = Vector( 0, 0, 100 );
 		pOther->pev->flags &= ~FL_ONGROUND;

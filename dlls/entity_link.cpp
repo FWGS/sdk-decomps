@@ -54,7 +54,7 @@ void CBaseLinked :: Spawn( void )
 {
 	InitLink();
 
-	if ( (bool)FBitSet( pev->spawnflags, SF_LINKED_FAKEMODEL ) && FClassnameIs( pev, "info_target_linked" ) )
+	if ( HasSpawnFlag( SF_LINKED_FAKEMODEL ) && FClassnameIs( pev, "info_target_linked" ) )
 	{
 		SET_MODEL( ENT( pev ), "sprites/laserdot.spr" );
 		pev->renderamt = 0;
@@ -174,7 +174,7 @@ void CMultiLink :: LinkThink( void )
 
 	Vector vecAngles;
 
-	if ( (bool)FBitSet( pev->spawnflags, SF_MULTILINK_INVERT ) )
+	if ( HasSpawnFlag( SF_MULTILINK_INVERT ) )
 	{
 		vecAngles = Vector( -m_hLinkEnt->pev->angles.x, m_hLinkEnt->pev->angles.y, m_hLinkEnt->pev->angles.z ) + pev->angles;
 	}
