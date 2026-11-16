@@ -225,6 +225,9 @@ void CBaseMonster :: MaintainSchedule ( void )
 			// if the previous schedule was interrupted by a condition, GetIdealState will be 
 			// called. Else, a schedule finished normally.
 
+			// a changed schedule lets go of the hint node
+			m_iHintNode = NO_NODE;
+
 			// Notify the monster that his schedule is changing
 			ScheduleChange();
 
@@ -342,6 +345,15 @@ void CBaseMonster :: RunTask ( Task_t *pTask )
 		{
 			if ( m_fSequenceFinished )
 			{
+				if ( m_iHintNode != NO_NODE )
+				{
+					// the mod's hint types 13, 16, 19 and 22: use what is there, as the player would
+					short sHint = WorldGraph.Node( m_iHintNode ).m_sHintType;
+
+					if ( sHint == 13 || sHint == 16 || sHint == 19 || sHint == 22 )
+						EmulatePlayerUse();
+				}
+
 				TaskComplete();
 			}
 			break;
@@ -577,7 +589,10 @@ void CBaseMonster :: StartTask ( Task_t *pTask )
 			float flCurrentYaw;
 			
 			flCurrentYaw = UTIL_AngleMod( pev->angles.y );
-			pev->ideal_yaw = UTIL_AngleMod( flCurrentYaw - pTask->flData );
+			if ( pTask->flData >= 0 )
+				pev->ideal_yaw = UTIL_AngleMod( flCurrentYaw - pTask->flData );
+			else
+				pev->ideal_yaw = UTIL_AngleMod( flCurrentYaw - RANDOM_FLOAT( 0, -pTask->flData ) );	// a negative angle turns by a random amount up to it
 			SetTurnActivity();
 			break;
 		}
@@ -586,7 +601,10 @@ void CBaseMonster :: StartTask ( Task_t *pTask )
 			float flCurrentYaw;
 			
 			flCurrentYaw = UTIL_AngleMod( pev->angles.y );
-			pev->ideal_yaw = UTIL_AngleMod( flCurrentYaw + pTask->flData );
+			if ( pTask->flData >= 0 )
+				pev->ideal_yaw = UTIL_AngleMod( flCurrentYaw + pTask->flData );
+			else
+				pev->ideal_yaw = UTIL_AngleMod( flCurrentYaw + RANDOM_FLOAT( 0, -pTask->flData ) );	// a negative angle turns by a random amount up to it
 			SetTurnActivity();
 			break;
 		}
@@ -803,6 +821,12 @@ void CBaseMonster :: StartTask ( Task_t *pTask )
 			if ( pBestSound && FindCover( pBestSound->m_vecOrigin, g_vecZero, pBestSound->m_iVolume, CoverRadius() ) )
 			{
 				// then try for plain ole cover
+				m_flMoveWaitFinished = gpGlobals->time + pTask->flData;
+				TaskComplete();
+			}
+			else if ( pBestSound && FindRetreat( pBestSound->m_vecOrigin, pBestSound->m_iVolume, CoverRadius() ) )
+			{
+				// or at least get away from it
 				m_flMoveWaitFinished = gpGlobals->time + pTask->flData;
 				TaskComplete();
 			}
@@ -1141,10 +1165,6 @@ case TASK_GET_PATH_TO_BESTSCENT:
 		}
 	case TASK_WALK_PATH:
 		{
-			if ( pev->movetype == MOVETYPE_FLY )
-			{
-				m_movementActivity = ACT_FLY;
-			}
 			if ( LookupActivity( ACT_WALK ) != ACTIVITY_NOT_AVAILABLE )
 			{
 				m_movementActivity = ACT_WALK;

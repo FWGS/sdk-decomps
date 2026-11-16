@@ -26,6 +26,8 @@ extern Schedule_t	slFail[];
 extern Schedule_t	slIdleStand[];
 extern Schedule_t	slIdleTrigger[];
 extern Schedule_t	slIdleWalk[];
+extern Schedule_t	slIdleTurn[];	// name ours
+extern Schedule_t	slReturn[];		// name ours
 
 //=========================================================
 //	Wake Schedules

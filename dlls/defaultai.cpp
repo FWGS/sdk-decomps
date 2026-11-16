@@ -95,6 +95,44 @@ Schedule_t	slIdleTrigger[] =
 	},
 };
 
+//=========================================================
+// IdleTurn - monster turns around in place, then stands
+// a while. names ours, schedule name retail's
+//=========================================================
+Task_t	tlIdleTurn[] =
+{
+	{ TASK_STOP_MOVING,			0				},
+	{ TASK_TURN_LEFT,			(float)-179		},
+	{ TASK_SET_ACTIVITY,		(float)ACT_IDLE },
+	{ TASK_WAIT,				(float)5		},
+};
+
+Schedule_t	slIdleTurn[] =
+{
+	{ 
+		tlIdleTurn,
+		ARRAYSIZE ( tlIdleTurn ), 
+		bits_COND_NEW_ENEMY		|
+		bits_COND_SEE_FEAR		|
+		bits_COND_LIGHT_DAMAGE	|
+		bits_COND_HEAVY_DAMAGE	|
+		bits_COND_HEAR_SOUND	|
+		bits_COND_SMELL_FOOD	|
+		bits_COND_SMELL			|
+		bits_COND_PROVOKED,
+
+		bits_SOUND_COMBAT		|// sound flags
+		bits_SOUND_WORLD		|
+		bits_SOUND_PLAYER		|
+		bits_SOUND_DANGER		|
+
+		bits_SOUND_MEAT			|// scents
+		bits_SOUND_CARCASS		|
+		bits_SOUND_GARBAGE,
+		"IdleTurn"
+	},
+};
+
 
 Task_t	tlIdleWalk1[] =
 {
@@ -121,6 +159,40 @@ Schedule_t	slIdleWalk[] =
 		bits_SOUND_CARCASS		|
 		bits_SOUND_GARBAGE,
 		"Idle Walk"
+	},
+};
+
+//=========================================================
+// Return - monster walks back to its last position.
+// names ours, schedule name retail's
+//=========================================================
+Task_t	tlReturn[] =
+{
+	{ TASK_GET_PATH_TO_LASTPOSITION,(float)0	},
+	{ TASK_WALK_PATH,			(float)0		},
+	{ TASK_WAIT_FOR_MOVEMENT,	(float)0		},
+	{ TASK_CLEAR_LASTPOSITION,	(float)0		},
+};
+
+Schedule_t	slReturn[] =
+{
+	{ 
+		tlReturn,
+		ARRAYSIZE ( tlReturn ), 
+		bits_COND_NEW_ENEMY		|
+		bits_COND_LIGHT_DAMAGE	|
+		bits_COND_HEAVY_DAMAGE	|
+		bits_COND_HEAR_SOUND	|
+		bits_COND_SMELL_FOOD	|
+		bits_COND_SMELL			|
+		bits_COND_PROVOKED,
+
+		bits_SOUND_COMBAT		|// sound flags
+
+		bits_SOUND_MEAT			|// scents
+		bits_SOUND_CARCASS		|
+		bits_SOUND_GARBAGE,
+		"Return"
 	},
 };
 
@@ -1017,7 +1089,8 @@ Schedule_t *CBaseMonster::m_scheduleList[] =
 	slTakeCoverFromOrigin,
 	slTakeCoverFromBestSound,
 	slTakeCoverFromEnemy,
-	slFail
+	slFail,
+	slReturn
 };
 
 Schedule_t *CBaseMonster::ScheduleFromName( const char *pName )
@@ -1093,7 +1166,13 @@ Schedule_t* CBaseMonster :: GetScheduleOfType ( int Type )
 				return &slActiveIdle[ 0 ];
 			}
 
-			return &slIdleStand[ 0 ];
+			if ( RANDOM_LONG(0,10) > 2 )
+			{
+				return &slIdleStand[ 0 ];
+			}
+
+			// sometimes turn around instead
+			return &slIdleTurn[ 0 ];
 		}
 	case SCHED_IDLE_WALK:
 		{

@@ -2541,6 +2541,23 @@ int	CRestore::BufferCheckZString( const char *string )
 	return 0;
 }
 
+// name ours: one of the entities with this targetname, each as likely
+// (CBeam::RandomTargetname as a global)
+CBaseEntity *UTIL_RandomTargetname( const char *szName )
+{
+	int total = 0;
+
+	CBaseEntity *pEntity = NULL;
+	CBaseEntity *pNewEntity = NULL;
+	while ((pNewEntity = UTIL_FindEntityByTargetname( pNewEntity, szName )) != NULL)
+	{
+		total++;
+		if (RANDOM_LONG(0,total-1) < 1)
+			pEntity = pNewEntity;
+	}
+	return pEntity;
+}
+
 // a stand-in until util.cpp has the real beam ring (retail 0x100e5d80, 256 bytes), which the satchel's
 // satellite uplink calls; written from retail's code
 void UTIL_BeamRing( int iType, int iSprite, const Vector &vecOrigin, float flRadius, int iWidth, float flLife, const Vector &vecColor, float flBrightness )

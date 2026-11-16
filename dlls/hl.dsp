@@ -248,6 +248,10 @@ SOURCE=.\egon.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\entity_link.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\explode.cpp
 # End Source File
 # Begin Source File
@@ -617,6 +621,10 @@ SOURCE=..\engine\eiface.h
 # Begin Source File
 
 SOURCE=.\enginecallback.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\entity_link.h
 # End Source File
 # Begin Source File
 

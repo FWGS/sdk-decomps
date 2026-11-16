@@ -47,6 +47,7 @@ DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for the initial blood
 DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for splattered blood
 DLL_GLOBAL	short	g_sModelIndexSmokePuff;// a stand-in until weapons.cpp has the real sprites/smoke.spr index (retail 0x10158c82)
+DLL_GLOBAL	int	g_iBloodSprayEvent;// events/bloodspray.sc (name ours; W_Precache sets it)
 
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
 AmmoInfo CBasePlayerItem::AmmoInfoArray[MAX_AMMO_SLOTS];
