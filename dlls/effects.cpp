@@ -24,6 +24,7 @@
 #include "shake.h"
 
 #define	SF_GIBSHOOTER_REPEATABLE	1 // allows a gibshooter to be refired
+#define	SF_GIBSHOOTER_ALIEN			2 // name ours: shoots alien gibs
 
 #define SF_FUNNEL_REVERSE			1 // funnel effect repels particles instead of attracting them.
 
@@ -41,6 +42,7 @@ public:
 	
 	void	EXPORT FizzThink( void );
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	int		GetOnState( void ) { return m_state; }
 
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
@@ -383,6 +385,7 @@ public:
 	void	Zap( const Vector &vecSrc, const Vector &vecDest );
 	void	EXPORT StrikeUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void	EXPORT ToggleUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	int		GetOnState( void ) { return m_active; }
 	
 	inline BOOL ServerSide( void )
 	{
@@ -629,8 +632,6 @@ int IsPointEntity( CBaseEntity *pEnt )
 {
 	if ( !pEnt->pev->modelindex )
 		return 1;
-	if ( FClassnameIs( pEnt->pev, "info_target" ) || FClassnameIs( pEnt->pev, "info_landmark" ) || FClassnameIs( pEnt->pev, "path_corner" ) )
-		return 1;
 
 	return 0;
 }
@@ -674,6 +675,7 @@ void CLightning::StrikeThink( void )
 			if ( pev->spawnflags & SF_BEAM_RING)
 			{
 				// don't work
+				ALERT( at_console, "env_beam in ring mode has targets with no models!\n" );
 				return;
 			}
 		}
@@ -750,9 +752,12 @@ void CBeam::BeamDamage( TraceResult *ptr )
 		CBaseEntity *pHit = CBaseEntity::Instance(ptr->pHit);
 		if ( pHit )
 		{
+			entvars_t *pevOwner = pev;	// the beam's owner gets the kill
+			if ( pev->owner )
+				pevOwner = VARS( pev->owner );
 			ClearMultiDamage();
 			pHit->TraceAttack( pev, pev->dmg * (gpGlobals->time - pev->dmgtime), (ptr->vecEndPos - pev->origin).Normalize(), ptr, DMG_ENERGYBEAM );
-			ApplyMultiDamage( pev, pev );
+			ApplyMultiDamage( pev, pevOwner );
 			if ( pev->spawnflags & SF_BEAM_DECALS )
 			{
 				if ( pHit->IsBSPModel() )
@@ -1189,6 +1194,9 @@ void CSprite::Spawn( void )
 	Precache();
 	SET_MODEL( ENT(pev), STRING(pev->model) );
 
+	if ( pev->spawnflags & SF_SPRITE_REVERSE )
+		pev->framerate = -fabs( pev->framerate );
+
 	m_maxFrame = (float) MODEL_FRAMES( pev->modelindex ) - 1;
 	if ( pev->targetname && !(pev->spawnflags & SF_SPRITE_STARTON) )
 		TurnOff();
@@ -1234,8 +1242,12 @@ CSprite *CSprite::SpriteCreate( const char *pSpriteName, const Vector &origin, B
 	pSprite->pev->classname = MAKE_STRING("env_sprite");
 	pSprite->pev->solid = SOLID_NOT;
 	pSprite->pev->movetype = MOVETYPE_NOCLIP;
+	pSprite->m_maxFrame = (float) MODEL_FRAMES( pSprite->pev->modelindex ) - 1;
 	if ( animate )
+	{
+		pSprite->pev->framerate = 10;
 		pSprite->TurnOn();
+	}
 
 	return pSprite;
 }
@@ -1243,9 +1255,9 @@ CSprite *CSprite::SpriteCreate( const char *pSpriteName, const Vector &origin, B
 
 void CSprite::AnimateThink( void )
 {
+	pev->nextthink		= gpGlobals->time + 0.1;
 	Animate( pev->framerate * (gpGlobals->time - m_lastTime) );
 
-	pev->nextthink		= gpGlobals->time + 0.1;
 	m_lastTime			= gpGlobals->time;
 }
 
@@ -1258,6 +1270,11 @@ void CSprite::AnimateUntilDead( void )
 		AnimateThink();
 		pev->nextthink = gpGlobals->time;
 	}
+}
+
+void CSprite::TurnOnThink( void )
+{
+	TurnOn();
 }
 
 void CSprite::Expand( float scaleSpeed, float fadeSpeed )
@@ -1304,6 +1321,18 @@ void CSprite::Animate( float frames )
 				pev->frame = fmod( pev->frame, m_maxFrame );
 		}
 	}
+	else if ( pev->frame < 0 )	// running backwards
+	{
+		if ( pev->spawnflags & SF_SPRITE_ONCE )
+		{
+			TurnOff();
+		}
+		else
+		{
+			if ( m_maxFrame > 0 )
+				pev->frame += m_maxFrame;
+		}
+	}
 }
 
 
@@ -1323,7 +1352,10 @@ void CSprite::TurnOn( void )
 		pev->nextthink = gpGlobals->time;
 		m_lastTime = gpGlobals->time;
 	}
-	pev->frame = 0;
+	if ( pev->framerate < 0 )
+		pev->frame = m_maxFrame;	// a backwards animation starts at the last frame
+	else
+		pev->frame = 0;
 }
 
 
@@ -1352,6 +1384,7 @@ public:
 	void	KeyValue( KeyValueData *pkvd );
 	void EXPORT ShootThink( void );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	int		GetOnState( void ) { return pev->nextthink > 0; }
 
 	virtual CGib *CreateGib( void );
 
@@ -1388,6 +1421,10 @@ void CGibShooter :: Precache ( void )
 	if ( g_Language == LANGUAGE_GERMAN )
 	{
 		m_iGibModelIndex = PRECACHE_MODEL ("models/germanygibs.mdl");
+	}
+	else if ( pev->spawnflags & SF_GIBSHOOTER_ALIEN )
+	{
+		m_iGibModelIndex = PRECACHE_MODEL ("models/agibs.mdl");
 	}
 	else
 	{
@@ -1426,8 +1463,24 @@ void CGibShooter::KeyValue( KeyValueData *pkvd )
 
 void CGibShooter::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	SetThink( ShootThink );
-	pev->nextthink = gpGlobals->time;
+	if ( m_iGibCapacity > 0 )
+	{
+		SetThink( ShootThink );
+		pev->nextthink = gpGlobals->time;
+	}
+	else
+	{
+		// unlimited gibs: toggle
+		if ( pev->nextthink != 0 )
+		{
+			pev->nextthink = 0;
+		}
+		else
+		{
+			SetThink( ShootThink );
+			pev->nextthink = gpGlobals->time;
+		}
+	}
 }
 
 void CGibShooter::Spawn( void )
@@ -1454,19 +1507,42 @@ void CGibShooter::Spawn( void )
 
 CGib *CGibShooter :: CreateGib ( void )
 {
-	if ( CVAR_GET_FLOAT("violence_hgibs") == 0 )
-		return NULL;
+	CGib *pGib;
 
-	CGib *pGib = GetClassPtr( (CGib *)NULL );
-	pGib->Spawn( "models/hgibs.mdl" );
-	pGib->m_bloodColor = BLOOD_COLOR_RED;
+	if ( pev->spawnflags & SF_GIBSHOOTER_ALIEN )
+	{
+		if ( CVAR_GET_FLOAT("violence_agibs") == 0 )
+			return NULL;
+
+		pGib = GetClassPtr( (CGib *)NULL );
+		pGib->Spawn( "models/agibs.mdl" );
+		pGib->m_bloodColor = BLOOD_COLOR_YELLOW;
+		pGib->pev->body = RANDOM_LONG ( 0, pev->body - 1 );
+	}
+	else
+	{
+		if ( CVAR_GET_FLOAT("violence_hgibs") == 0 )
+			return NULL;
+
+		pGib = GetClassPtr( (CGib *)NULL );
+		pGib->Spawn( "models/hgibs.mdl" );
+		pGib->m_bloodColor = BLOOD_COLOR_RED;
+		pGib->pev->body = RANDOM_LONG ( 1, pev->body - 1 );// avoid throwing random amounts of the 0th gib. (skull).
+
+		// 0: plain, 1: floats, 2: sprays blood (CGib::WaitTillLand)
+		pGib->pev->iuser1 = RANDOM_LONG( 0, 2 );
+		if ( pGib->pev->iuser1 )
+			pGib->pev->nextthink = gpGlobals->time + 0.1;
+		else
+			pGib->pev->nextthink = gpGlobals->time + 4;
+		if ( pGib->pev->iuser1 == 2 )
+			pGib->pev->gravity = 0.5;
+	}
 
 	if ( pev->body <= 1 )
 	{
 		ALERT ( at_aiconsole, "GibShooter Body is <= 1!\n" );
 	}
-
-	pGib->pev->body = RANDOM_LONG ( 1, pev->body - 1 );// avoid throwing random amounts of the 0th gib. (skull).
 
 	return pGib;
 }
@@ -1506,18 +1582,21 @@ void CGibShooter :: ShootThink ( void )
 		
 	}
 
-	if ( --m_iGibs <= 0 )
+	if ( m_iGibCapacity )	// 0: unlimited, Use toggles it
 	{
-		if ( pev->spawnflags & SF_GIBSHOOTER_REPEATABLE )
+		if ( --m_iGibs <= 0 )
 		{
-			m_iGibs = m_iGibCapacity;
-			SetThink ( NULL );
-			pev->nextthink = gpGlobals->time;
-		}
-		else
-		{
-			SetThink ( SUB_Remove );
-			pev->nextthink = gpGlobals->time;
+			if ( pev->spawnflags & SF_GIBSHOOTER_REPEATABLE )
+			{
+				m_iGibs = m_iGibCapacity;
+				SetThink ( NULL );
+				pev->nextthink = 0;
+			}
+			else
+			{
+				SetThink ( SUB_Remove );
+				pev->nextthink = gpGlobals->time;
+			}
 		}
 	}
 }
