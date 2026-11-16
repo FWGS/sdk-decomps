@@ -344,6 +344,7 @@ public:
 	virtual void	Resurrect( CBaseEntity *pActivator );	// name ours
 	virtual float	MovementSpeed( void );
 	void EXPORT		ResurrectThink( void );
+	bool			ReadyToResurrect( CBaseEntity *pActivator );	// name ours
 
 	inline void	Remember( int iMemory ) { m_afMemory |= iMemory; }
 	inline void	Forget( int iMemory ) { m_afMemory &= ~iMemory; }
