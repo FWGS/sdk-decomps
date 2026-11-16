@@ -185,6 +185,7 @@ int gmsgSetFOV = 0;
 int gmsgShowMenu = 0;
 int gmsgGeigerRange = 0;
 int gmsgTeamNames = 0;
+int gmsgFog = 0;	// defined here so ClientCommand links; LinkUserMessages registers "Fog" later
 
 void LinkUserMessages( void )
 {
