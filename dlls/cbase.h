@@ -169,7 +169,6 @@ public:
 	virtual const char *GetHitGroupDesc( int iHitGroup ) { return ""; }
 	virtual float	MovementSpeed( void );
 	void	BeamFollow( short sModelIndex, int iLife, int iWidth, const Vector &vecColor, int iBrightness );	// name ours; cbase.cpp (0x10023d90), TE_BEAMFOLLOW
-	bool	HasSpawnFlag( int iFlags ) { return pev->spawnflags & iFlags; }	// name ours: retail tests spawnflags through a bool conversion (89 places in 42 functions)
 	
 	// Setup the object->object collision box (pev->mins / pev->maxs is the object->world collision box)
 	virtual void	SetObjectCollisionBox( void );
@@ -349,6 +348,7 @@ public:
 	edict_t *edict() { return ENT( pev ); };
 	EOFFSET eoffset( ) { return OFFSET( pev ); };
 	int	  entindex( ) { return ENTINDEX( edict() ); };
+	bool	HasSpawnFlag( int iFlags ) { return pev->spawnflags & iFlags; }	// name ours: retail tests spawnflags through a bool conversion (89 places in 42 functions)
 
 	virtual Vector Center( ) { return (pev->absmax + pev->absmin) * 0.5; }; // center point of entity
 	virtual Vector EyePosition( ) { return pev->origin + pev->view_ofs; };			// position of eyes
