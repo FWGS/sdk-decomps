@@ -280,6 +280,10 @@ SOURCE=.\hud_update.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\ident.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\in_camera.cpp
 # End Source File
 # Begin Source File

@@ -113,6 +113,11 @@ int __MsgFunc_Concuss(const char *pszName, int iSize, void *pbuf)
 	return gHUD.MsgFunc_Concuss( pszName, iSize, pbuf );
 }
 
+int __MsgFunc_Fog(const char *pszName, int iSize, void *pbuf )
+{
+	return gHUD.MsgFunc_Fog( pszName, iSize, pbuf );
+}
+
 int __MsgFunc_GameMode(const char *pszName, int iSize, void *pbuf )
 {
 	return gHUD.MsgFunc_GameMode( pszName, iSize, pbuf );
@@ -268,6 +273,7 @@ void CHud :: Init( void )
 	HOOK_MESSAGE( InitHUD );
 	HOOK_MESSAGE( SetFOV );
 	HOOK_MESSAGE( Concuss );
+	HOOK_MESSAGE( Fog );
 
 	// TFFree CommandMenu
 	HOOK_COMMAND( "+commandmenu", OpenCommandMenu );
@@ -339,6 +345,7 @@ void CHud :: Init( void )
 	m_StatusIcons.Init();
 	GetClientVoiceMgr()->Init(&g_VoiceStatusHelper, (vgui::Panel**)&gViewPort);
 	m_Spectator.Init();
+	m_Ident.Init();
 
 	m_SayText.Init();
 	m_Menu.Init();

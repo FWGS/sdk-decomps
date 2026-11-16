@@ -539,6 +539,31 @@ private:
 //
 //-----------------------------------------------------
 //
+// the target identification display (IdentUpdate)
+class CHudIdent: public CHudBase
+{
+public:
+	int Init( void );
+	int VidInit( void );
+	void Reset( void );
+	int Draw(float flTime);
+	int MsgFunc_IdentUpdate(const char *pszName, int iSize, void *pbuf);
+
+private:
+	int		m_iUnused1;			// name ours: no code uses it
+	float	m_flHideTime;		// name ours: the display goes off at this time (0: stays)
+	char	m_szName[64];		// names ours from here on
+	int		m_iHealth;
+	int		m_iArmor;
+	int		m_iArmorType;		// 0 none, 1 "Armor", 2 "Shield"
+	int		m_iPower;			// battle power; 0 "???", below 0 not shown
+	int		m_iRelation;		// 0 "Friendly", 1 "Neutral", 2 "Target", 3 "Hostile"
+	int		m_iUnused2[6];		// no code uses them (CHud's layout gives the class 0x88 bytes)
+};
+
+//
+//-----------------------------------------------------
+//
 
 
 
@@ -613,6 +638,7 @@ public:
 	CHudTextMessage m_TextMessage;
 	CHudStatusIcons m_StatusIcons;
 	CHudSpectator   m_Spectator;
+	CHudIdent		m_Ident;
 
 	void Init( void );
 	void VidInit( void );
@@ -631,6 +657,7 @@ public:
 	void _cdecl MsgFunc_InitHUD( const char *pszName, int iSize, void *pbuf );
 	int _cdecl MsgFunc_SetFOV(const char *pszName,  int iSize, void *pbuf);
 	int  _cdecl MsgFunc_Concuss( const char *pszName, int iSize, void *pbuf );
+	int _cdecl MsgFunc_Fog( const char *pszName, int iSize, void *pbuf );
 
 	// Screen information
 	SCREENINFO	m_scrinfo;
