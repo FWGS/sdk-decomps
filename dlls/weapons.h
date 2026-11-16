@@ -33,6 +33,7 @@ public:
 	static CGrenade *ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );
 	static CGrenade *ShootContact( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
 	static CGrenade *ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
+	static CGrenade *ShootExplosion( entvars_t *pevOwner, const Vector &vecStart, float flDelay, const Vector &vecDir );	// name ours; ggrenade.cpp (0x100600b0)
 	static void UseSatchelCharges( entvars_t *pevOwner, SATCHELCODE code );
 
 	void Explode( Vector vecSrc, Vector vecAim );
@@ -45,6 +46,7 @@ public:
 	void EXPORT DangerSoundThink( void );
 	void EXPORT PreDetonate( void );
 	void EXPORT Detonate( void );
+	void EXPORT ExDetonate( void );
 	void EXPORT DetonateUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT TumbleThink( void );
 
@@ -53,6 +55,22 @@ public:
 	virtual void Killed( entvars_t *pevAttacker, int iGib );
 
 	BOOL m_fRegisteredSound;// whether or not this grenade has issued its DANGER sound to the world sound list yet.
+};
+
+// The mod's cluster bomb (cluster_bomb.cpp; the exports name the class). Declared here because the hand
+// grenade throws it; its other members are added here with cluster_bomb.cpp.
+class CClusterBomb : public CGrenade
+{
+public:
+	static CClusterBomb *ShootTimed( edict_t *pOwner, const Vector &vecStart, const Vector &vecVelocity, float time );	// name ours (0x10027d00)
+	static CClusterBomb *ShootMirv( edict_t *pOwner, const Vector &vecStart, const Vector &vecVelocity, float time );	// name ours (0x10027e70): ShootTimed, then pev->weapons = 3
+
+	void EXPORT ClusterDetonate( void );
+	void EXPORT ClusterExplodeTouch( CBaseEntity *pOther );
+	void EXPORT ClusterBounceTouch( CBaseEntity *pOther );
+	void EXPORT ClusterHybridThink( void );
+	void EXPORT ClusterHybridTouch( CBaseEntity *pOther );
+	void EXPORT ClusterPreDetonate( void );
 };
 
 
@@ -410,6 +428,7 @@ public:
 
 extern DLL_GLOBAL	short	g_sModelIndexLaser;// holds the index for the laser beam
 extern DLL_GLOBAL	const char *g_pModelNameLaser;
+Vector UTIL_SpreadVector( const Vector &vecSpread );	// weapons.cpp, name ours
 
 extern DLL_GLOBAL	short	g_sModelIndexLaserDot;// holds the index for the laser beam dot
 extern DLL_GLOBAL	short	g_sModelIndexFireball;// holds the index for the fireball

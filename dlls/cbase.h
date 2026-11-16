@@ -168,6 +168,7 @@ public:
 	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return fGibbed ? "gibbed" : "killed"; }
 	virtual const char *GetHitGroupDesc( int iHitGroup ) { return ""; }
 	virtual float	MovementSpeed( void );
+	void	BeamFollow( short sModelIndex, int iLife, int iWidth, const Vector &vecColor, int iBrightness );	// name ours; cbase.cpp (0x10023d90), TE_BEAMFOLLOW
 	
 	// Setup the object->object collision box (pev->mins / pev->maxs is the object->world collision box)
 	virtual void	SetObjectCollisionBox( void );
@@ -259,6 +260,7 @@ public:
 	int			ShouldToggle( USE_TYPE useType, BOOL currentState );
 	void		FireBullets( ULONG	cShots, Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iBulletType, int iTracerFreq = 4, int iDamage = 0, entvars_t *pevAttacker = NULL  );
 	Vector		FireBulletsPlayer( ULONG	cShots, Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iBulletType, int iTracerFreq = 4, int iDamage = 0, entvars_t *pevAttacker = NULL, int shared_rand = 0 );
+	Vector		FireBulletsExplosive( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker = NULL, int shared_rand = 0 );	// name ours: the shotgun's explosive slugs (combat.cpp; the client's in hl_weapons.cpp)
 
 	virtual CBaseEntity *Respawn( void ) { return NULL; }
 
