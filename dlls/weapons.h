@@ -1393,4 +1393,14 @@ private:
 };
 
 
+// laser_pulse (defined in pulse.cpp, server only): a stand-in with the two statics agrunt.cpp calls
+class CLaserPulse : public CGrenade
+{
+public:
+	// names ours: precaches the glow and trail sprites of color iColor (1 red, 2 green, 3 blue, 4 "n")
+	static short PrecacheColor( int iColor );
+	// names ours: a pulse at vecOrigin; iColor picks the sprites, iTrailLife > 0 gives it a beam trail
+	static CLaserPulse *Shoot( Vector vecOrigin, edict_t *pOwner, const Vector &vecColor, int iTrailLife, float flScale, int iColor );
+};
+
 #endif // WEAPONS_H
