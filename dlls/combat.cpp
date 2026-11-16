@@ -37,7 +37,7 @@ extern Vector VecBModelOrigin( entvars_t* pevBModel );
 extern entvars_t *g_pevLastInflictor;
 
 #define GERMAN_GIB_COUNT		4
-#define	HUMAN_GIB_COUNT			6
+#define	HUMAN_GIB_COUNT			11
 #define ALIEN_GIB_COUNT			4
 
 
@@ -67,20 +67,28 @@ void CGib :: SpawnStickyGibs( entvars_t *pevVictim, Vector vecOrigin, int cGibs 
 	{
 		CGib *pGib = GetClassPtr( (CGib *)NULL );
 
-		pGib->Spawn( "models/stickygib.mdl" );
-		pGib->pev->body = RANDOM_LONG(0,2);
+		pGib->Spawn( "models/stickygib2.mdl" );
+		pGib->pev->body = RANDOM_LONG(0,3);
+
+		// a sticky gib that would float sprays blood instead
+		pGib->pev->iuser1 *= 2;
+		if ( CVAR_GET_FLOAT( "ssh_extrablood" ) < 1 )
+			pGib->pev->iuser1 = 0;
+
+		if ( pGib->pev->iuser1 == 2 )
+			PLAYBACK_EVENT_FULL( 0, pGib->edict(), g_iBloodSprayEvent, 0.0, (float *)&pGib->pev->origin, (float *)&pGib->pev->angles, 0.0, 0.0, 0, 0, 0, 0 );
 
 		if ( pevVictim )
 		{
+			/*
 			pGib->pev->origin.x = vecOrigin.x + RANDOM_FLOAT( -3, 3 );
 			pGib->pev->origin.y = vecOrigin.y + RANDOM_FLOAT( -3, 3 );
 			pGib->pev->origin.z = vecOrigin.z + RANDOM_FLOAT( -3, 3 );
+			*/
 
-			/*
 			pGib->pev->origin.x = pevVictim->absmin.x + pevVictim->size.x * (RANDOM_FLOAT ( 0 , 1 ) );
 			pGib->pev->origin.y = pevVictim->absmin.y + pevVictim->size.y * (RANDOM_FLOAT ( 0 , 1 ) );
 			pGib->pev->origin.z = pevVictim->absmin.z + pevVictim->size.z * (RANDOM_FLOAT ( 0 , 1 ) );
-			*/
 
 			// make the gib fly away from the attack vector
 			pGib->pev->velocity = g_vecAttackDir * -1;
@@ -111,12 +119,9 @@ void CGib :: SpawnStickyGibs( entvars_t *pevVictim, Vector vecOrigin, int cGibs 
 				pGib->pev->velocity = pGib->pev->velocity * 4;
 			}
 
-			
-			pGib->pev->movetype = MOVETYPE_TOSS;
 			pGib->pev->solid = SOLID_BBOX;
 			UTIL_SetSize ( pGib->pev, Vector ( 0, 0 ,0 ), Vector ( 0, 0, 0 ) );
 			pGib->SetTouch ( StickyGibTouch );
-			pGib->SetThink (NULL);
 		}
 		pGib->LimitVelocity();
 	}
@@ -136,6 +141,104 @@ void CGib :: SpawnHeadGib( entvars_t *pevVictim )
 		pGib->Spawn( "models/hgibs.mdl" );// throw one head
 		pGib->pev->body = 0;
 	}
+
+	if ( pevVictim )
+	{
+		pGib->pev->origin = pevVictim->origin + pevVictim->view_ofs;
+		
+		edict_t		*pentPlayer = FIND_CLIENT_IN_PVS( pGib->edict() );
+		
+		if ( RANDOM_LONG ( 0, 100 ) <= 5 && pentPlayer )
+		{
+			// 5% chance head will be thrown at player's face.
+			entvars_t	*pevPlayer;
+
+			pevPlayer = VARS( pentPlayer );
+			pGib->pev->velocity = ( ( pevPlayer->origin + pevPlayer->view_ofs ) - pGib->pev->origin ).Normalize() * 300;
+			pGib->pev->velocity.z += 100;
+		}
+		else
+		{
+			pGib->pev->velocity = Vector (RANDOM_FLOAT(-100,100), RANDOM_FLOAT(-100,100), RANDOM_FLOAT(200,300));
+		}
+
+
+		pGib->pev->avelocity.x = RANDOM_FLOAT ( 100, 200 );
+		pGib->pev->avelocity.y = RANDOM_FLOAT ( 100, 300 );
+
+		// copy owner's blood color
+		pGib->m_bloodColor = (CBaseEntity::Instance(pevVictim))->BloodColor();
+	
+		if ( pevVictim->health > -50)
+		{
+			pGib->pev->velocity = pGib->pev->velocity * 0.7;
+		}
+		else if ( pevVictim->health > -200)
+		{
+			pGib->pev->velocity = pGib->pev->velocity * 2;
+		}
+		else
+		{
+			pGib->pev->velocity = pGib->pev->velocity * 4;
+		}
+	}
+	pGib->LimitVelocity();
+}
+
+//=========================================================
+// SpawnPoppedHead - the victim's head flies off upwards
+// (name ours)
+//=========================================================
+void CGib :: SpawnPoppedHead( entvars_t *pevVictim, float flSpeed )
+{
+	CGib *pGib = GetClassPtr( (CGib *)NULL );
+
+	if ( g_Language == LANGUAGE_GERMAN )
+	{
+		pGib->Spawn( "models/germangibs.mdl" );// throw one head
+		pGib->pev->body = 0;
+	}
+	else
+	{
+		pGib->Spawn( "models/hgibs.mdl" );// throw one head
+		pGib->pev->body = 0;
+	}
+
+	if ( pevVictim )
+	{
+		pGib->pev->origin = pevVictim->origin + pevVictim->view_ofs;
+
+		pGib->pev->velocity = Vector( 0, 0, 1 );
+
+		// mix in some noise
+		pGib->pev->velocity.x += RANDOM_FLOAT ( -0.15, 0.15 );
+		pGib->pev->velocity.y += RANDOM_FLOAT ( -0.15, 0.15 );
+		pGib->pev->velocity.z += RANDOM_FLOAT ( -0.15, 0.15 );
+
+		pGib->pev->velocity = pGib->pev->velocity * flSpeed;
+
+		pGib->pev->avelocity.x = RANDOM_FLOAT ( 100, 200 );
+		pGib->pev->avelocity.y = RANDOM_FLOAT ( 100, 300 );
+
+		// copy owner's blood color
+		pGib->m_bloodColor = (CBaseEntity::Instance(pevVictim))->BloodColor();
+
+		// don't collide with the body
+		pGib->pev->owner = pevVictim->pContainingEntity;
+	}
+	pGib->LimitVelocity();
+}
+
+//=========================================================
+// SpawnModelHeadGib - SpawnHeadGib with another model (the
+// alien slave's and the zombie's) (name ours)
+//=========================================================
+void CGib :: SpawnModelHeadGib( entvars_t *pevVictim, const char *szGibModel )
+{
+	CGib *pGib = GetClassPtr( (CGib *)NULL );
+
+	pGib->Spawn( szGibModel );// throw one head
+	pGib->pev->body = 0;
 
 	if ( pevVictim )
 	{
@@ -200,6 +303,19 @@ void CGib :: SpawnRandomGibs( entvars_t *pevVictim, int cGibs, int human )
 				// human pieces
 				pGib->Spawn( "models/hgibs.mdl" );
 				pGib->pev->body = RANDOM_LONG(1,HUMAN_GIB_COUNT-1);// start at one to avoid throwing random amounts of skulls (0th gib)
+
+				if ( CVAR_GET_FLOAT( "ssh_extrablood" ) >= 1 )
+				{
+					// 0: plain, 1: floats, 2: sprays blood
+					pGib->pev->iuser1 = RANDOM_LONG( 0, 2 );
+					pGib->pev->nextthink = gpGlobals->time + ( pGib->pev->iuser1 ? 0.1 : 4 );
+
+					if ( pGib->pev->iuser1 == 2 )
+					{
+						pGib->pev->gravity = 0.5;
+						PLAYBACK_EVENT_FULL( 0, pGib->edict(), g_iBloodSprayEvent, 0.0, (float *)&pGib->pev->origin, (float *)&pGib->pev->angles, 0.0, 0.0, 0, 0, 0, 0 );
+					}
+				}
 			}
 			else
 			{
@@ -231,6 +347,63 @@ void CGib :: SpawnRandomGibs( entvars_t *pevVictim, int cGibs, int human )
 
 			// copy owner's blood color
 			pGib->m_bloodColor = (CBaseEntity::Instance(pevVictim))->BloodColor();
+			
+			if ( pevVictim->health > -50)
+			{
+				pGib->pev->velocity = pGib->pev->velocity * 0.7;
+			}
+			else if ( pevVictim->health > -200)
+			{
+				pGib->pev->velocity = pGib->pev->velocity * 2;
+			}
+			else
+			{
+				pGib->pev->velocity = pGib->pev->velocity * 4;
+			}
+
+			pGib->pev->solid = SOLID_BBOX;
+			UTIL_SetSize ( pGib->pev, Vector( 0 , 0 , 0 ), Vector ( 0, 0, 0 ) );
+		}
+		pGib->LimitVelocity();
+	}
+}
+
+//=========================================================
+// SpawnGlassGibs - shards of glass (unused) (name ours)
+//=========================================================
+void CGib :: SpawnGlassGibs( entvars_t *pevVictim, int cGibs )
+{
+	int cSplat;
+
+	for ( cSplat = 0 ; cSplat < cGibs ; cSplat++ )
+	{
+		CGib *pGib = GetClassPtr( (CGib *)NULL );
+
+		pGib->Spawn( "models/glassgibs.mdl" );
+		pGib->pev->body = RANDOM_LONG(0,7);
+		pGib->pev->renderamt = 160;
+		pGib->pev->rendermode = kRenderTransTexture;
+
+		if ( pevVictim )
+		{
+			// spawn the gib somewhere in the monster's bounding volume
+			pGib->pev->origin.x = pevVictim->absmin.x + pevVictim->size.x * (RANDOM_FLOAT ( 0 , 1 ) );
+			pGib->pev->origin.y = pevVictim->absmin.y + pevVictim->size.y * (RANDOM_FLOAT ( 0 , 1 ) );
+			pGib->pev->origin.z = pevVictim->absmin.z + pevVictim->size.z * (RANDOM_FLOAT ( 0 , 1 ) ) + 1;	// absmin.z is in the floor because the engine subtracts 1 to enlarge the box
+
+			pGib->pev->velocity = Vector( 0, 0, 1 );
+
+			// mix in some noise
+			pGib->pev->velocity.x += RANDOM_FLOAT ( -0.5, 0.5 );
+			pGib->pev->velocity.y += RANDOM_FLOAT ( -0.5, 0.5 );
+			pGib->pev->velocity.z += RANDOM_FLOAT ( -0.5, 0.5 );
+
+			pGib->pev->velocity = pGib->pev->velocity * RANDOM_FLOAT ( 300, 400 );
+
+			pGib->pev->avelocity.x = RANDOM_FLOAT ( 100, 200 );
+			pGib->pev->avelocity.y = RANDOM_FLOAT ( 100, 300 );
+
+			pGib->m_bloodColor = DONT_BLEED;
 			
 			if ( pevVictim->health > -50)
 			{
@@ -682,27 +855,102 @@ void CGib :: WaitTillLand ( void )
 {
 	if (!IsInWorld())
 	{
+		if ( pev->iuser1 == 2 )
+		{
+			pev->iuser1 = 0;
+			PLAYBACK_EVENT_FULL( 0, edict(), g_iBloodSprayEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, 0.0, 0.0, 0, 0, 1, 0 );
+		}
 		UTIL_Remove( this );
 		return;
 	}
 
 	if ( pev->velocity == g_vecZero )
 	{
+		if ( UTIL_PointContents( pev->origin ) == CONTENTS_SKY )
+		{
+			UTIL_Remove( this );
+			return;
+		}
+
 		SetThink (SUB_StartFadeOut);
 		pev->nextthink = gpGlobals->time + m_lifeTime;
 
 		// If you bleed, you stink!
 		if ( m_bloodColor != DONT_BLEED )
 		{
-			// ok, start stinkin!
-			CSoundEnt::InsertSound ( bits_SOUND_MEAT, pev->origin, 384, 25 );
+			Vector	vecSpot;
+			TraceResult	tr;
+
+			// leave a blood stain under the gib
+			vecSpot = pev->origin + Vector ( 0 , 0 , 8 );//move up a bit, and trace down.
+			UTIL_TraceLine ( vecSpot, vecSpot + Vector ( 0, 0, -24 ),  ignore_monsters, ENT(pev), & tr);
+
+			UTIL_BloodDecalTrace( &tr, m_bloodColor );
 		}
 	}
 	else
 	{
 		// wait and check again in another half second.
 		pev->nextthink = gpGlobals->time + 0.5;
+
+		if ( pev->iuser1 == 1 )
+		{
+			// a floating gib
+			pev->nextthink = gpGlobals->time + 0.1;
+
+			if ( pev->waterlevel == 3 )
+			{
+				if ( !pev->dmgtime )
+				{
+					pev->dmgtime = gpGlobals->time + m_lifeTime;
+				}
+				else if ( pev->dmgtime < gpGlobals->time )
+				{
+					SUB_StartFadeOut();
+					pev->movetype = MOVETYPE_BOUNCE;
+					return;
+				}
+
+				pev->movetype = MOVETYPE_FLY;
+				pev->velocity = pev->velocity * 0.8;
+				pev->avelocity = pev->avelocity * 0.9;
+				pev->velocity.z += 8;
+			}
+			else if ( pev->waterlevel == 0 )
+			{
+				pev->movetype = MOVETYPE_BOUNCE;
+			}
+			else
+			{
+				pev->velocity.z -= 8;
+			}
+		}
+		else if ( pev->iuser1 )
+		{
+			// a gib spraying blood stops in water
+			if ( ( pev->flags & FL_INWATER ) || m_bloodColor != BLOOD_COLOR_RED || UTIL_PointContents( pev->origin ) == CONTENTS_WATER )
+			{
+				pev->gravity = 1;
+				pev->iuser1 = 0;
+				PLAYBACK_EVENT_FULL( 0, edict(), g_iBloodSprayEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, 0.0, 0.0, 0, 0, 1, 0 );
+			}
+		}
 	}
+}
+
+//=========================================================
+// CanBeRepulsed - the repulsor knocks a gib's blood spray
+// out of it
+//=========================================================
+BOOL CGib :: CanBeRepulsed( bool fForce )
+{
+	if ( fForce && pev->iuser1 == 2 )
+	{
+		pev->iuser1 = 0;
+		PLAYBACK_EVENT_FULL( 0, edict(), g_iBloodSprayEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, 0.0, 0.0, 0, 0, 1, 0 );
+	}
+
+	return TRUE;
 }
 
 //
@@ -710,7 +958,6 @@ void CGib :: WaitTillLand ( void )
 //
 void CGib :: BounceGibTouch ( CBaseEntity *pOther )
 {
-	Vector	vecSpot;
 	TraceResult	tr;
 	
 	//if ( RANDOM_LONG(0,1) )
@@ -726,25 +973,32 @@ void CGib :: BounceGibTouch ( CBaseEntity *pOther )
 	}
 	else
 	{
-		if ( g_Language != LANGUAGE_GERMAN && m_cBloodDecals > 0 && m_bloodColor != DONT_BLEED )
+		if ( g_Language != LANGUAGE_GERMAN && pev->pain_finished <= gpGlobals->time && m_bloodColor != DONT_BLEED )
 		{
-			vecSpot = pev->origin + Vector ( 0 , 0 , 8 );//move up a bit, and trace down.
-			UTIL_TraceLine ( vecSpot, vecSpot + Vector ( 0, 0, -24 ),  ignore_monsters, ENT(pev), & tr);
+			edict_t *pentPlayer = FIND_CLIENT_IN_PVS( edict() );
 
-			UTIL_BloodDecalTrace( &tr, m_bloodColor );
+			if ( !FNullEnt( pentPlayer ) )
+			{
+				UTIL_TraceLine ( pev->origin - pev->velocity, pev->origin + pev->velocity * 32,  ignore_monsters, ENT(pev), & tr);
 
-			m_cBloodDecals--; 
+				UTIL_BloodDecalTrace( &tr, m_bloodColor );
+
+				pev->pain_finished = gpGlobals->time + 0.5;
+
+				if ( pev->iuser1 == 2 )
+					SpawnBlood( pev->origin, m_bloodColor, min( pev->velocity.Length(), 100 ) );
+			}
 		}
+	}
 
-		if ( m_material != matNone && RANDOM_LONG(0,2) == 0 )
-		{
-			float volume;
-			float zvel = fabs(pev->velocity.z);
-		
-			volume = 0.8 * min(1.0, ((float)zvel) / 450.0);
+	if ( m_material != matNone && RANDOM_LONG(0,2) == 0 )
+	{
+		float volume;
+		float zvel = fabs(pev->velocity.z);
+	
+		volume = 0.8 * min(1.0, ((float)zvel) / 450.0);
 
-			CBreakable::MaterialSoundRandom( edict(), (Materials)m_material, volume );
-		}
+		CBreakable::MaterialSoundRandom( edict(), (Materials)m_material, volume );
 	}
 }
 
@@ -753,21 +1007,22 @@ void CGib :: BounceGibTouch ( CBaseEntity *pOther )
 //
 void CGib :: StickyGibTouch ( CBaseEntity *pOther )
 {
-	Vector	vecSpot;
 	TraceResult	tr;
 	
-	SetThink ( SUB_Remove );
-	pev->nextthink = gpGlobals->time + 10;
-
-	if ( !FClassnameIs( pOther->pev, "worldspawn" ) )
-	{
-		pev->nextthink = gpGlobals->time;
-		return;
-	}
-
-	UTIL_TraceLine ( pev->origin, pev->origin + pev->velocity * 32,  ignore_monsters, ENT(pev), & tr);
+	UTIL_TraceLine ( pev->origin - pev->velocity, pev->origin + pev->velocity * 32,  ignore_monsters, ENT(pev), & tr);
 
 	UTIL_BloodDecalTrace( &tr, m_bloodColor );
+
+	SpawnBlood( pev->origin, m_bloodColor, min( pev->velocity.Length(), 100 ) );
+
+	if ( !( pOther->pev->flags & FL_WORLDBRUSH ) && !FClassnameIs( pOther->pev, "worldspawn" ) )
+		return;
+
+	if ( pev->iuser1 )
+		PLAYBACK_EVENT_FULL( 0, edict(), g_iBloodSprayEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, 0.0, 0.0, 0, 0, 1, 0 );
+
+	SetThink ( SUB_StartFadeOut );
+	pev->nextthink = gpGlobals->time + m_lifeTime;
 
 	pev->velocity = tr.vecPlaneNormal * -1;
 	pev->angles = UTIL_VecToAngles ( pev->velocity );
@@ -795,7 +1050,14 @@ void CGib :: Spawn( const char *szGibModel )
 	SET_MODEL(ENT(pev), szGibModel);
 	UTIL_SetSize(pev, Vector( 0, 0, 0), Vector(0, 0, 0));
 
-	pev->nextthink = gpGlobals->time + 4;
+	pev->dmgtime = 0;
+
+	// one gib in two floats
+	pev->iuser1 = RANDOM_LONG( 0, 1 );
+	if ( pev->iuser1 )
+		pev->nextthink = gpGlobals->time + 0.1;
+	else
+		pev->nextthink = gpGlobals->time + 4;
 	m_lifeTime = 25;
 	SetThink ( WaitTillLand );
 	SetTouch ( BounceGibTouch );
