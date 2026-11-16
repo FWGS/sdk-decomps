@@ -17,8 +17,8 @@
 #include "extdll.h"
 #include "util.h"
 #include "cbase.h"
-#include "monsters.h"
 #include "game.h"
+#include "monsters.h"
 
 
 //

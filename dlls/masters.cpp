@@ -18,6 +18,8 @@
 #include "extdll.h"
 #include "util.h"
 #include "cbase.h"
+#include "saverestore.h"
+#include "doors.h"
 
 
 #define MAX_WATCH_TARGETS			16	// name ours
