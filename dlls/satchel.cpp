@@ -192,8 +192,10 @@ void CSatchelCharge::StartSatellite( void )
 {
 	TraceResult tr;
 	float flLife = 1.4;
+	Vector vecEnd = pev->origin;
 
-	UTIL_TraceLine( pev->origin, Vector( pev->origin.x, pev->origin.y, 4000 ), ignore_monsters, ENT( pev ), &tr );
+	vecEnd.z = 4000;
+	UTIL_TraceLine( pev->origin, vecEnd, ignore_monsters, ENT( pev ), &tr );
 
 	UTIL_BeamRing( TE_BEAMTORUS, g_sModelIndexLaser, pev->origin + Vector( 0, 0, 8 ), 128, 1, flLife, pev->rendercolor, 255 );
 
@@ -222,7 +224,7 @@ void CSatchelCharge::StartSatellite( void )
 	}
 
 	CBaseEntity *pOwner = CBaseEntity::Instance( pev->owner );
-	if ( pOwner && pOwner->IsPlayer() )
+	if ( pOwner && pOwner->IsNetClient() )
 		UTIL_SayText( "Target Designator Error: No sky above location!", pOwner );
 
 	UTIL_Remove( this );
@@ -239,28 +241,22 @@ void CSatchelCharge::SatelliteThink( void )
 
 	pev->nextthink = gpGlobals->time + RANDOM_FLOAT( 0.1, 2 );
 
-	Vector vecAngles = Vector( 0, RANDOM_FLOAT( 0, 360 ), 0 );
-	UTIL_MakeVectors( vecAngles );
-	Vector vecOffset = gpGlobals->v_forward * RANDOM_FLOAT( 0, 512 );
-	Vector vecTarget = pev->origin + vecOffset;
-	Vector vecSky = vecTarget;
+	UTIL_MakeVectors( Vector( 0, RANDOM_FLOAT( 0, 360 ), 0 ) );
+	Vector vecSky;
+	vecSky = pev->origin + gpGlobals->v_forward * RANDOM_FLOAT( 0, 512 );
 
 	if ( UTIL_PointContents( vecSky ) != CONTENTS_SKY )
 	{
 		UTIL_TraceLine( pev->origin, vecSky, ignore_monsters, ENT( pev ), &tr );
-		if ( tr.flFraction < 1.0 )
-		{
-			Vector vecDelta = ( tr.vecEndPos - pev->origin ) * tr.flFraction;
-			vecTarget = pev->origin + vecDelta;
-			vecSky = vecTarget;
-		}
+		if ( tr.flFraction < 1 )
+			vecSky = pev->origin + ( tr.vecEndPos - pev->origin ) * tr.flFraction;
 	}
 
 	vecSky.z = 4000;
 	Vector vecGround = Vector( vecSky.x, vecSky.y, -4000 );
 	UTIL_TraceLine( vecSky, vecGround, ignore_monsters, ENT( pev ), &tr );
 
-	if ( tr.fAllSolid || tr.flFraction >= 1.0 || UTIL_PointContents( tr.vecEndPos ) == CONTENTS_SKY )
+	if ( tr.fAllSolid || tr.flFraction >= 1 || UTIL_PointContents( tr.vecEndPos ) == CONTENTS_SKY )
 	{
 		// nothing to hit, try again
 		pev->nextthink = gpGlobals->time + 0.1;
