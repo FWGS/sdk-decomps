@@ -270,6 +270,7 @@ void CHandGrenade::WeaponIdle( void )
 
 	if ( m_flStartThrow )
 	{
+		CBaseEntity *pThrown = NULL;	// sic: never used (retail's x87 operand order in vecSrc needs it)
 		Vector angThrow = m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle;
 
 		if ( angThrow.x < 0 )
