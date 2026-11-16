@@ -34,6 +34,7 @@ public:
 	static CGrenade *ShootContact( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
 	static CGrenade *ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
 	static CGrenade *ShootExplosion( entvars_t *pevOwner, const Vector &vecStart, float flDelay, const Vector &vecDir );	// name ours; ggrenade.cpp (0x100600b0)
+	static CGrenade *ShootHybrid( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );	// name ours; ggrenade.cpp (0x1005fc70)
 	static void UseSatchelCharges( entvars_t *pevOwner, SATCHELCODE code );
 
 	void Explode( Vector vecSrc, Vector vecAim );
@@ -47,6 +48,7 @@ public:
 	void EXPORT PreDetonate( void );
 	void EXPORT Detonate( void );
 	void EXPORT ExDetonate( void );
+	void EXPORT MakeSolid( void );
 	void EXPORT DetonateUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT TumbleThink( void );
 
@@ -437,6 +439,13 @@ extern DLL_GLOBAL	short	g_sModelIndexWExplosion;// holds the index for the under
 extern DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 extern DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for blood drops
 extern DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for blood spray (bigger)
+extern DLL_GLOBAL	short	g_sModelIndexFireExplosion;// sprites/fexplo.spr (names ours from here)
+extern DLL_GLOBAL	short	g_sModelIndexSmokePuff;// sprites/smoke.spr
+extern DLL_GLOBAL	short	g_sModelIndexLightning;// sprites/lgtning.spr
+extern DLL_GLOBAL	short	g_sModelIndexPlayerFlame;// sprites/playerflame.spr
+extern DLL_GLOBAL	int	g_iBloodSprayEvent;// events/bloodspray.sc (name ours; W_Precache sets it)
+extern DLL_GLOBAL	int		g_iBlastSphereEvent;// events/blastsphere.sc
+extern DLL_GLOBAL	int		g_iElectricEvent;// events/electric.sc
 
 extern void ClearMultiDamage(void);
 extern void ApplyMultiDamage(entvars_t* pevInflictor, entvars_t* pevAttacker );
@@ -446,6 +455,7 @@ extern void DecalGunshot( TraceResult *pTrace, int iBulletType );
 extern void SpawnBlood(Vector vecSpot, int bloodColor, float flDamage);
 extern int DamageDecal( CBaseEntity *pEntity, int bitsDamageType );
 extern void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType );
+extern void RadiusDamageNoTrace( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType );	// name ours
 
 typedef struct 
 {
