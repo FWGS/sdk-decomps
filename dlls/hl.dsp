@@ -220,6 +220,10 @@ SOURCE=.\controller.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\crane.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\crossbow.cpp
 # End Source File
 # Begin Source File
