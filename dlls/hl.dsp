@@ -204,6 +204,10 @@ SOURCE=.\buttons.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\camera.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\cbase.cpp
 # End Source File
 # Begin Source File
@@ -376,6 +380,10 @@ SOURCE=.\maprules.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\masters.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\monstermaker.cpp
 # End Source File
 # Begin Source File
@@ -441,6 +449,10 @@ SOURCE=..\pm_shared\pm_shared.c
 # Begin Source File
 
 SOURCE=.\python.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\random_scis.cpp
 # End Source File
 # Begin Source File
 
