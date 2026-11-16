@@ -2387,6 +2387,19 @@ void CBasePlayer::PostThink()
 		}
 	}
 
+	// show the burns and shocks taken since the last frame
+	if ( m_flShockDamage >= 1 || m_flBurnDamage >= 1 )
+	{
+		MESSAGE_BEGIN( MSG_PVS, gmsgDamageFX, pev->origin );
+			WRITE_SHORT( ENTINDEX( edict() ) );
+			WRITE_BYTE( m_flBurnDamage );
+			WRITE_BYTE( m_flShockDamage );
+		MESSAGE_END();
+
+		m_flBurnDamage = 0;
+		m_flShockDamage = 0;
+	}
+
 // do weapon stuff
 	ItemPostFrame( );
 
@@ -2481,6 +2494,7 @@ pt_end:
 				{
 					gun->m_flNextPrimaryAttack		= max( gun->m_flNextPrimaryAttack - gpGlobals->frametime, -1.0 );
 					gun->m_flNextSecondaryAttack	= max( gun->m_flNextSecondaryAttack - gpGlobals->frametime, -0.001 );
+					gun->m_flNextWeaponSpecial		= max( gun->m_flNextWeaponSpecial - gpGlobals->frametime, -0.001 );
 
 					if ( gun->m_flTimeWeaponIdle != 1000 )
 					{
