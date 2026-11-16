@@ -976,11 +976,16 @@ Vector CHalfLifeMultiplay::VecAmmoRespawnSpot( CBasePlayerAmmo *pAmmo )
 }
 
 //=========================================================
-// GetRespawnWeapon - a stand-in, see
-// CHalfLifeRules::GetRespawnWeapon.
+// GetRespawnWeapon - what a respawning weapon comes back
+// as: with ssh_rndweapons set, any weapon at random
 //=========================================================
+extern char *g_pszRandomWeapons[];	// singleplay_gamerules.cpp
+
 char *CHalfLifeMultiplay::GetRespawnWeapon( CBasePlayerItem *pWeapon )
 {
+	if ( CVAR_GET_FLOAT( "ssh_rndweapons" ) )
+		return g_pszRandomWeapons[ RANDOM_LONG( 0, 21 ) ];
+
 	return (char *)STRING( pWeapon->pev->classname );
 }
 

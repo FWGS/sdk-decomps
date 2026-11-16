@@ -50,6 +50,7 @@ extern void CopyToBodyQue(entvars_t* pev);
 extern void respawn(entvars_t *pev, BOOL fCopyCorpse);
 extern Vector VecBModelOrigin(entvars_t *pevBModel );
 extern CBaseEntity *EntSelectSpawnPoint( CBaseEntity *pPlayer );
+extern CBaseEntity *UTIL_RandomEntityByClassname( const char *szName );	// name ours: util.cpp, one of the entities of this class at random
 extern void UpdateFogAndRain( CBasePlayer *pPlayer );	// name ours: effects.cpp, sends env_fog to the player and restarts env_rain
 
 // the world node graph

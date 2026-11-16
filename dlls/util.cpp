@@ -2541,7 +2541,7 @@ int	CRestore::BufferCheckZString( const char *string )
 	return 0;
 }
 
-// TEMPORARY stand-in until util.cpp has the real one
+// TEMPORARY stand-in: the real UTIL_RandomEntityByClassname comes later in this file
 CBaseEntity *UTIL_RandomEntityByClassname( const char *szName )
 {
 	CBaseEntity *pChosen = NULL;
@@ -2556,7 +2556,7 @@ CBaseEntity *UTIL_RandomEntityByClassname( const char *szName )
 	return pChosen;
 }
 
-// TEMPORARY stand-in for effects.cpp's
+// TEMPORARY stand-in until effects.cpp defines UpdateFogAndRain
 class CBasePlayer;
 void UpdateFogAndRain( CBasePlayer *pPlayer )
 {

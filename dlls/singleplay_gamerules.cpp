@@ -392,12 +392,40 @@ int CHalfLifeRules :: WeaponShouldRespawn( CBasePlayerItem *pWeapon )
 }
 
 //=========================================================
-// GetRespawnWeapon - a stand-in.  Retail: with
-// ssh_rndweapons set, one of 22 weapon names at random
-// (RANDOM_LONG( 0, 21 )), else the weapon's classname.
+// GetRespawnWeapon - what a respawning weapon comes back
+// as: with ssh_rndweapons set, any of these at random
 //=========================================================
+char *g_pszRandomWeapons[] =	// name ours
+{
+	"weapon_9mmhandgun",
+	"weapon_laserhandgun",
+	"weapon_softgun",
+	"weapon_357",
+	"weapon_mp5",
+	"weapon_shotgun",
+	"weapon_crossbow",
+	"weapon_sniper",
+	"weapon_reflector",
+	"weapon_teslacoil",
+	"weapon_rpg",
+	"weapon_fireball",
+	"weapon_flamethrower",
+	"weapon_gauss",
+	"weapon_egon",
+	"weapon_vortexlauncher",
+	"weapon_displacer",
+	"weapon_freezethrower",
+	"weapon_handgrenade",
+	"weapon_snark",
+	"weapon_tripmine",
+	"weapon_satchel",
+};
+
 char *CHalfLifeRules :: GetRespawnWeapon( CBasePlayerItem *pWeapon )
 {
+	if ( CVAR_GET_FLOAT( "ssh_rndweapons" ) )
+		return g_pszRandomWeapons[ RANDOM_LONG( 0, 21 ) ];
+
 	return (char *)STRING( pWeapon->pev->classname );
 }
 
