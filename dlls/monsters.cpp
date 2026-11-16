@@ -48,8 +48,6 @@ extern CGraph WorldGraph;// the world node graph
 
 extern int gmsgDamageFX;	// name ours
 
-#define bits_COND_SEE_DEAD_ALLY		( 1 << 14 )	// name ours: sees a dead ally (the SDK's unused CAN_RANGE_ATTACK3 bit)
-
 
 
 // Global Savedata for monster
