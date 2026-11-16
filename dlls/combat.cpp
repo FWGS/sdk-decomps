@@ -2332,7 +2332,27 @@ void CBaseMonster :: ResurrectThink( void )
 		pev->nextthink = gpGlobals->time + 0.1;
 }
 
-// Retail has a 77-byte mod function here (0x1002e070), not written yet.
+//=========================================================
+// ReadyToResurrect - only a dead monster can be brought
+// back; one that is fading out stays for 10 more seconds.
+// (name ours)
+//=========================================================
+bool CBaseMonster :: ReadyToResurrect( CBaseEntity *pActivator )
+{
+	if ( pev->deadflag == DEAD_DEAD )
+	{
+		if ( m_pfnThink == &CBaseEntity::SUB_FadeOut )
+		{
+			pev->renderfx = kRenderFxNone;
+			pev->renderamt = 255;
+			pev->nextthink = gpGlobals->time + 10;
+		}
+
+		return true;
+	}
+
+	return false;
+}
 
 //=========================================================
 // Death message phrases: what killed a victim, and where.
