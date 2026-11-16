@@ -110,7 +110,7 @@ float CFlyingMonster :: ChangeYaw( int speed )
 void CFlyingMonster :: Killed( entvars_t *pevAttacker, int iGib )
 {
 	pev->movetype = MOVETYPE_STEP;
-	ClearBits( pev->flags, FL_ONGROUND );
+	ClearBits( pev->flags, FL_ONGROUND | FL_FLY );
 	pev->angles.z = 0;
 	pev->angles.x = 0;
 	CBaseMonster::Killed( pevAttacker, iGib );

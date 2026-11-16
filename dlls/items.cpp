@@ -147,7 +147,17 @@ void CItem::ItemTouch( CBaseEntity *pOther )
 CBaseEntity* CItem::Respawn( void )
 {
 	SetTouch( NULL );
-	pev->effects |= EF_NODRAW;
+
+	// the mod leaves a faint ghost of the item where it will come back
+	if ( pev->renderfx != kRenderFxGlowShell )
+	{
+		pev->renderfx = kRenderFxGlowShell;
+		pev->rendercolor = Vector( 192, 192, 192 );
+		pev->rendermode = kRenderTransColor;
+	}
+	else
+		pev->rendermode = kRenderTransAdd;
+	pev->renderamt = 1;
 
 	UTIL_SetOrigin( pev, g_pGameRules->VecItemRespawnSpot( this ) );// blip to whereever you should respawn.
 
@@ -158,18 +168,22 @@ CBaseEntity* CItem::Respawn( void )
 
 void CItem::Materialize( void )
 {
-	if ( pev->effects & EF_NODRAW )
+	if ( pev->rendermode != kRenderNormal )
 	{
 		// changing from invisible state to visible.
 		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "items/suitchargeok1.wav", 1, ATTN_NORM, 0, 150 );
-		pev->effects &= ~EF_NODRAW;
 		pev->effects |= EF_MUZZLEFLASH;
+		if ( pev->rendermode == kRenderTransColor )
+			pev->renderfx = kRenderFxNone;
+		pev->rendermode = kRenderNormal;
 	}
 
 	SetTouch( ItemTouch );
 }
 
 #define SF_SUIT_SHORTLOGON		0x0001
+
+#define MAX_ARMOR				300	// name ours: the mod's armor limit (MAX_NORMAL_BATTERY is still 100)
 
 class CItemSuit : public CItem
 {
@@ -183,17 +197,22 @@ class CItemSuit : public CItem
 	{
 		PRECACHE_MODEL ("models/w_suit.mdl");
 	}
+	// the mod's item_suit is a power-up: 100 armor and 100 health, up to 300 each
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{
-		if ( pPlayer->pev->weapons & (1<<WEAPON_SUIT) )
+		if ( pPlayer->pev->armorvalue >= MAX_ARMOR && pPlayer->pev->health >= 300 )
 			return FALSE;
 
-		if ( pev->spawnflags & SF_SUIT_SHORTLOGON )
-			EMIT_SOUND_SUIT(pPlayer->edict(), "!HEV_A0");		// short version of suit logon,
-		else
-			EMIT_SOUND_SUIT(pPlayer->edict(), "!HEV_AAx");	// long version of suit logon
+		pPlayer->pev->armorvalue += 100;
+		pPlayer->pev->armorvalue = min( pPlayer->pev->armorvalue, MAX_ARMOR );
+		pPlayer->TakeHealth( 100, DMG_GENERIC );
 
-		pPlayer->pev->weapons |= (1<<WEAPON_SUIT);
+		EMIT_SOUND( pPlayer->edict(), CHAN_ITEM, "items/gunpickup2.wav", 1, ATTN_NORM );
+
+		MESSAGE_BEGIN( MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev );
+			WRITE_STRING( STRING(pev->classname) );
+		MESSAGE_END();
+
 		return TRUE;
 	}
 };
@@ -217,19 +236,14 @@ class CItemBattery : public CItem
 	}
 	BOOL MyTouch( CBasePlayer *pPlayer )
 	{
-		if ( pPlayer->pev->deadflag != DEAD_NO )
-		{
-			return FALSE;
-		}
-
-		if ((pPlayer->pev->armorvalue < MAX_NORMAL_BATTERY) &&
+		if ((pPlayer->pev->armorvalue < MAX_ARMOR) &&
 			(pPlayer->pev->weapons & (1<<WEAPON_SUIT)))
 		{
 			int pct;
 			char szcharge[64];
 
 			pPlayer->pev->armorvalue += gSkillData.batteryCapacity;
-			pPlayer->pev->armorvalue = min(pPlayer->pev->armorvalue, MAX_NORMAL_BATTERY);
+			pPlayer->pev->armorvalue = min(pPlayer->pev->armorvalue, MAX_ARMOR);
 
 			EMIT_SOUND( pPlayer->edict(), CHAN_ITEM, "items/gunpickup2.wav", 1, ATTN_NORM );
 
@@ -240,7 +254,7 @@ class CItemBattery : public CItem
 			
 			// Suit reports new power level
 			// For some reason this wasn't working in release build -- round it.
-			pct = (int)( (float)(pPlayer->pev->armorvalue * 100.0) * (1.0/MAX_NORMAL_BATTERY) + 0.5);
+			pct = (int)( min( 100, pPlayer->pev->armorvalue ) + 0.5);	// the suit reports up to 100%
 			pct = (pct / 5);
 			if (pct > 0)
 				pct--;
@@ -308,6 +322,8 @@ class CItemLongJump : public CItem
 	void Spawn( void )
 	{ 
 		Precache( );
+		if ( !g_pGameRules->IsMultiplayer() )
+			SetBits( pev->spawnflags, SF_NORESPAWN );
 		SET_MODEL(ENT(pev), "models/w_longjump.mdl");
 		CItem::Spawn( );
 	}
