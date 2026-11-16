@@ -212,4 +212,29 @@ public:
 	Vector  m_firePosition;
 };
 
+
+// The repulsor's tractor beam (CRepulsor::WeaponSpecial creates it and sets m_hTarget).
+// pev->playerclass set: it rides on the target while its owner lives; otherwise a beam
+// from its origin to the target. The client draws it (events/tractorbeam.sc).
+class CTractorBeam : public CBaseEntity
+{
+public:
+	void	Spawn( void );
+	void	Precache( void );
+	int		ObjectCaps( void )
+	{ 
+		int flags = 0;
+		if ( pev->spawnflags & SF_BEAM_TEMPORARY )
+			flags = FCAP_DONT_SAVE;
+		return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | flags; 
+	}
+	void	Killed( entvars_t *pevAttacker, int iGib );
+	void	EXPORT BeamThink( void );
+
+	EHANDLE	m_hTarget;			// name ours
+	int		m_usTractorBeam;	// name ours
+};
+
+extern void UpdateFogAndRain( CBaseEntity *pPlayer );	// name ours; env_fog, env_rain for a new player
+
 #endif		//EFFECTS_H
