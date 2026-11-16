@@ -165,7 +165,7 @@ void CShotgun::PrimaryAttack()
 		// laser rounds: six laser pulses
 		for ( int i = 0; i < 6; i++ )
 		{
-			vecDir = SpreadVector( VECTOR_CONE_10DEGREES );
+			vecDir = UTIL_SpreadVector( VECTOR_CONE_10DEGREES );
 
 			CLaserPulse *pPulse = CLaserPulse::Shoot( vecSrc, m_pPlayer->edict(), Vector( 255, 16, 16 ), 0, 0.5, 0 );
 			pPulse->pev->velocity = vecDir * RANDOM_FLOAT( 1300, 1400 );
@@ -262,7 +262,7 @@ void CShotgun::SecondaryAttack( void )
 		// laser rounds: twelve laser pulses
 		for ( int i = 0; i < 12; i++ )
 		{
-			vecDir = SpreadVector( VECTOR_CONE_10DEGREES );
+			vecDir = UTIL_SpreadVector( VECTOR_CONE_10DEGREES );
 
 			CLaserPulse *pPulse = CLaserPulse::Shoot( vecSrc, m_pPlayer->edict(), Vector( 255, 16, 16 ), 0, 0.5, 0 );
 			pPulse->pev->velocity = vecDir * RANDOM_FLOAT( 1300, 1400 );

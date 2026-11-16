@@ -1582,7 +1582,7 @@ TYPEDESCRIPTION	CSatchel::m_SaveData[] =
 IMPLEMENT_SAVERESTORE( CSatchel, CBasePlayerWeapon );
 
 // stand-in for the spread helper (retail 0x100eb710, 328 bytes), which the shotgun calls
-Vector SpreadVector( const Vector &vecSpread )
+Vector UTIL_SpreadVector( const Vector &vecSpread )
 {
 	float x, y, z;
 
