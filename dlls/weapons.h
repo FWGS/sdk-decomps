@@ -36,6 +36,7 @@ public:
 	static CGrenade *ShootMine( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );	// name ours
 	static CGrenade *ShootSatchelCharge( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
 	static CGrenade *ShootExplosion( entvars_t *pevOwner, const Vector &vecStart, float flDelay, const Vector &vecDir );	// name ours; ggrenade.cpp (0x100600b0)
+	static CGrenade *ShootHybrid( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );	// name ours; ggrenade.cpp (0x1005fc70)
 	static void UseSatchelCharges( entvars_t *pevOwner, SATCHELCODE code );
 
 	void Explode( Vector vecSrc, Vector vecAim );
@@ -54,6 +55,7 @@ public:
 	void EXPORT PreDetonate( void );
 	void EXPORT Detonate( void );
 	void EXPORT ExDetonate( void );
+	void EXPORT MakeSolid( void );
 	void EXPORT DetonateUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT TumbleThink( void );
 	void EXPORT HybridThink( void );
@@ -285,6 +287,39 @@ typedef struct
 	const char *pszName;
 	int iId;
 } AmmoInfo;
+
+// The crossbow's dart, here for func_turret's info_shootpoint_bolt too.
+// UNDONE: Save/restore this?  Don't forget to set classname and LINK_ENTITY_TO_CLASS()
+// 
+// OVERLOADS SOME ENTVARS:
+//
+// speed - the ideal magnitude of my velocity; 0 once the dart sticks in the world
+// frags - the dart type: 1 explosive, 2 flare, 3 electrical, 4 laser net, else standard
+class CCrossbowBolt : public CBaseEntity
+{
+	void Spawn( void );
+	void Precache( void );
+	int  Classify ( void );
+	BOOL CanBeRepulsed( bool fForce ) { return TRUE; }
+	const char *GetKillDesc( void )
+	{
+		if ( pev->frags == 4 && pev->speed == 0 )
+			return "a laser net";
+		return "a high-velocity stealth crossbow";
+	}
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup );
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupOf( iHitGroup ); }
+	void EXPORT BubbleThink( void );
+	void EXPORT BoltTouch( CBaseEntity *pOther );
+	void EXPORT ExplodeThink( void );
+	void EXPORT ZapThink( void );
+	void EXPORT LightThink( void );
+	void LaserNet( void );	// name ours
+
+public:
+	static CCrossbowBolt *BoltCreate( void );
+	void BoltTrail( void );	// name ours
+};
 
 // Items that the player has in their inventory that they can use
 class CBasePlayerItem : public CBaseAnimating
@@ -699,14 +734,15 @@ public:
 	int GetItemInfo(ItemInfo *p);
 
 	void FireBolt( void );
-	void FireSniperBolt( void );
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
+	void WeaponSpecial( void );		// cycles the dart type (pev->weapons)
 	int AddToPlayer( CBasePlayer *pPlayer );
 	BOOL Deploy( );
 	void Holster( int skiplocal = 0 );
 	void Reload( void );
 	void WeaponIdle( void );
+	BOOL ShouldWeaponIdle( void ) { return pev->frags != 0; }	// pev->frags: rapid fire
 
 	int m_fInZoom; // don't save this
 

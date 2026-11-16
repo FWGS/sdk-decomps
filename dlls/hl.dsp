@@ -184,6 +184,10 @@ SOURCE=.\barney.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\beams.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\bigmomma.cpp
 # End Source File
 # Begin Source File

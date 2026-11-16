@@ -74,31 +74,30 @@ void CHornet :: Spawn( void )
 	}
 	else
 	{
-		m_flStopAttack	= gpGlobals->time + 5.0;
+		m_flStopAttack	= gpGlobals->time + 15.0;
 	}
 
 	m_flFieldOfView = 0.9; // +- 25 degrees
 
-	if ( RANDOM_LONG ( 1, 5 ) <= 2 )
-	{
-		m_iHornetType = HORNET_TYPE_RED;
-		m_flFlySpeed = HORNET_RED_SPEED;
-	}
-	else
-	{
-		m_iHornetType = HORNET_TYPE_ORANGE;
-		m_flFlySpeed = HORNET_ORANGE_SPEED;
-	}
+	// the type is the shooter's to set (pev->weapons); StartHornet takes it up
+	m_iHornetType = HORNET_TYPE_NORMAL;
+	pev->weapons = HORNET_TYPE_NORMAL;
 
 	SET_MODEL(ENT( pev ), "models/hornet.mdl");
 	UTIL_SetSize( pev, Vector( -4, -4, -4 ), Vector( 4, 4, 4 ) );
 
-	SetTouch( DieTouch );
-	SetThink( StartTrack );
+	SetThink( StartHornet );
 
 	edict_t *pSoundEnt = pev->owner;
 	if ( !pSoundEnt )
 		pSoundEnt = edict();
+
+	switch (RANDOM_LONG(0,2))
+	{
+	case 0:	EMIT_SOUND( pSoundEnt, CHAN_WEAPON, "agrunt/ag_fire1.wav", 1, ATTN_NORM);	break;
+	case 1:	EMIT_SOUND( pSoundEnt, CHAN_WEAPON, "agrunt/ag_fire2.wav", 1, ATTN_NORM);	break;
+	case 2:	EMIT_SOUND( pSoundEnt, CHAN_WEAPON, "agrunt/ag_fire3.wav", 1, ATTN_NORM);	break;
+	}
 
 	if ( !FNullEnt(pev->owner) && (pev->owner->v.flags & FL_CLIENT) )
 	{
@@ -163,59 +162,59 @@ int CHornet::Classify ( void )
 }
 
 //=========================================================
-// StartTrack - starts a hornet out tracking its target
+// StartHornet - starts a hornet out by its type
 //=========================================================
-void CHornet :: StartTrack ( void )
+void CHornet :: StartHornet ( void )
 {
+	m_iHornetType = pev->weapons;
+
 	IgniteTrail();
 
-	SetTouch( TrackTouch );
-	SetThink( TrackTarget );
+	switch ( m_iHornetType )
+	{
+	case HORNET_TYPE_DART:
+		// flies straight
+		SetTouch( DartTouch );
+		SetThink( FlyThink );
+		m_flFlySpeed = 1200;
+		pev->movedir = pev->velocity.Normalize();
+		pev->velocity = pev->movedir * 1200;
+		pev->enemy = pev->owner;
+		break;
+	case HORNET_TYPE_HEADSHOT:
+		SetTouch( HeadshotTouch );
+		SetThink( TrackTarget );
+		m_flFlySpeed = 600;
+		break;
+	case HORNET_TYPE_BOUNCE:
+		SetTouch( BounceTouch );
+		SetThink( FlyThink );
+		pev->movetype = MOVETYPE_BOUNCEMISSILE;
+		pev->velocity = pev->velocity.Normalize() * 1000;
+		m_flFlySpeed = 1000;
+		break;
+	case HORNET_TYPE_FIRE:
+		SetTouch( TrackTouch );
+		SetThink( TrackTarget );
+		m_flFlySpeed = 700;
+		break;
+	case HORNET_TYPE_ICE:
+		SetTouch( TrackTouch );
+		SetThink( TrackTarget );
+		m_flFlySpeed = 900;
+		break;
+	default:
+		SetTouch( TrackTouch );
+		SetThink( TrackTarget );
+		m_flFlySpeed = 800;
+		break;
+	}
 
 	pev->nextthink = gpGlobals->time + 0.1;
 }
 
-//=========================================================
-// StartDart - starts a hornet out just flying straight.
-//=========================================================
-void CHornet :: StartDart ( void )
-{
-	IgniteTrail();
-
-	SetTouch( DartTouch );
-
-	SetThink( SUB_Remove );
-	pev->nextthink = gpGlobals->time + 4;
-}
-
 void CHornet::IgniteTrail( void )
 {
-/*
-
-  ted's suggested trail colors:
-
-r161
-g25
-b97
-
-r173
-g39
-b14
-
-old colors
-		case HORNET_TYPE_RED:
-			WRITE_BYTE( 255 );   // r, g, b
-			WRITE_BYTE( 128 );   // r, g, b
-			WRITE_BYTE( 0 );   // r, g, b
-			break;
-		case HORNET_TYPE_ORANGE:
-			WRITE_BYTE( 0   );   // r, g, b
-			WRITE_BYTE( 100 );   // r, g, b
-			WRITE_BYTE( 255 );   // r, g, b
-			break;
-	
-*/
-
 	// trail
 	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
 		WRITE_BYTE(  TE_BEAMFOLLOW );
@@ -226,15 +225,35 @@ old colors
 		
 		switch ( m_iHornetType )
 		{
-		case HORNET_TYPE_RED:
-			WRITE_BYTE( 179 );   // r, g, b
-			WRITE_BYTE( 39 );   // r, g, b
-			WRITE_BYTE( 14 );   // r, g, b
+		case HORNET_TYPE_NORMAL:
+			WRITE_BYTE( 255 );   // r, g, b
+			WRITE_BYTE( 0 );   // r, g, b
+			WRITE_BYTE( 0 );   // r, g, b
 			break;
-		case HORNET_TYPE_ORANGE:
+		case HORNET_TYPE_DART:
+			WRITE_BYTE( 0 );   // r, g, b
+			WRITE_BYTE( 255 );   // r, g, b
+			WRITE_BYTE( 0 );   // r, g, b
+			break;
+		case HORNET_TYPE_HEADSHOT:
+			WRITE_BYTE( 255 );   // r, g, b
+			WRITE_BYTE( 255 );   // r, g, b
+			WRITE_BYTE( 0 );   // r, g, b
+			break;
+		case HORNET_TYPE_BOUNCE:
+			WRITE_BYTE( 0 );   // r, g, b
+			WRITE_BYTE( 0 );   // r, g, b
+			WRITE_BYTE( 255 );   // r, g, b
+			break;
+		case HORNET_TYPE_FIRE:
 			WRITE_BYTE( 255 );   // r, g, b
 			WRITE_BYTE( 128 );   // r, g, b
 			WRITE_BYTE( 0 );   // r, g, b
+			break;
+		case HORNET_TYPE_ICE:
+			WRITE_BYTE( 128 );   // r, g, b
+			WRITE_BYTE( 128 );   // r, g, b
+			WRITE_BYTE( 255 );   // r, g, b
 			break;
 		}
 
@@ -256,9 +275,7 @@ void CHornet :: TrackTarget ( void )
 
 	if (gpGlobals->time > m_flStopAttack)
 	{
-		SetTouch( NULL );
-		SetThink( SUB_Remove );
-		pev->nextthink = gpGlobals->time + 0.1;
+		Expire();
 		return;
 	}
 
@@ -271,7 +288,11 @@ void CHornet :: TrackTarget ( void )
 	
 	if ( m_hEnemy != NULL && FVisible( m_hEnemy ))
 	{
-		m_vecEnemyLKP = m_hEnemy->BodyTarget( pev->origin );
+		// the headshot hornet goes for a scientist's eyes
+		if ( m_iHornetType == HORNET_TYPE_HEADSHOT && m_hEnemy->Classify() == CLASS_HUMAN_PASSIVE )
+			m_vecEnemyLKP = m_hEnemy->EyePosition( );
+		else
+			m_vecEnemyLKP = m_hEnemy->BodyTarget( pev->origin );
 	}
 	else
 	{
@@ -298,14 +319,14 @@ void CHornet :: TrackTarget ( void )
 		}
 	}
 
-	if ( flDelta <= 0 && m_iHornetType == HORNET_TYPE_RED )
+	if ( flDelta <= 0 && m_iHornetType == HORNET_TYPE_HEADSHOT )
 	{// no flying backwards, but we don't want to invert this, cause we'd go fast when we have to turn REAL far.
 		flDelta = 0.25;
 	}
 
 	pev->velocity = ( vecFlightDir + vecDirToEnemy).Normalize();
 
-	if ( pev->owner && (pev->owner->v.flags & FL_MONSTER) )
+	if ( pev->owner && !(pev->owner->v.flags & FL_CLIENT) && m_iHornetType != HORNET_TYPE_HEADSHOT )
 	{
 		// random pattern only applies to hornets fired by monsters, not players. 
 
@@ -316,11 +337,11 @@ void CHornet :: TrackTarget ( void )
 	
 	switch ( m_iHornetType )
 	{
-		case HORNET_TYPE_RED:
+		case HORNET_TYPE_HEADSHOT:
 			pev->velocity = pev->velocity * ( m_flFlySpeed * flDelta );// scale the dir by the ( speed * width of turn )
 			pev->nextthink = gpGlobals->time + RANDOM_FLOAT( 0.1, 0.3 );
 			break;
-		case HORNET_TYPE_ORANGE:
+		default:
 			pev->velocity = pev->velocity * m_flFlySpeed;// do not have to slow down to turn.
 			pev->nextthink = gpGlobals->time + 0.1;// fixed think time
 			break;
@@ -390,9 +411,112 @@ void CHornet :: TrackTouch ( CBaseEntity *pOther )
 	DieTouch( pOther );
 }
 
+//=========================================================
+// the headshot hornet sticks to a scientist's head and blows it off
+//=========================================================
+void CHornet :: HeadshotTouch ( CBaseEntity *pOther )
+{
+	if ( pOther->edict() == pev->owner || pOther->pev->modelindex == pev->modelindex )
+	{// bumped into the guy that shot it.
+		pev->solid = SOLID_NOT;
+		return;
+	}
+
+	if ( IRelationship( pOther ) <= R_NO )
+	{
+		// hit something we don't want to hurt, so turn around.
+
+		pev->velocity = pev->velocity.Normalize();
+
+		pev->velocity.x *= -1;
+		pev->velocity.y *= -1;
+
+		pev->origin = pev->origin + pev->velocity * 4; // bounce the hornet off a bit.
+		pev->velocity = pev->velocity * m_flFlySpeed;
+
+		return;
+	}
+
+	if ( FBitSet( pOther->pev->flags, FL_NOTARGET ) || !FClassnameIs( pOther->pev, "monster_scientist" ) )
+	{
+		DieTouch( pOther );
+		return;
+	}
+
+	SetThink( HeadBlastThink );
+	pev->origin = pOther->EyePosition( );
+	pev->nextthink = gpGlobals->time + 2;
+	pev->velocity = g_vecZero;
+	pev->avelocity = g_vecZero;
+	pev->body = 0;
+	pev->aiment = pOther->edict();
+	pev->movetype = MOVETYPE_FOLLOW;
+	m_hEnemy = pOther;
+	pOther->pev->flags |= FL_NOTARGET;	// one hornet per head
+	pev->effects = EF_NODRAW;
+	SetTouch( NULL );
+
+	switch (RANDOM_LONG(0,2))
+	{
+		case 0:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hornet/ag_hornethit1.wav", 1, ATTN_NORM);	break;
+		case 1:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hornet/ag_hornethit2.wav", 1, ATTN_NORM);	break;
+		case 2:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hornet/ag_hornethit3.wav", 1, ATTN_NORM);	break;
+	}
+}
+
+//=========================================================
+// the dart goes through what it hits
+//=========================================================
 void CHornet::DartTouch( CBaseEntity *pOther )
 {
-	DieTouch( pOther );
+	if ( pOther->edict() == pev->owner || pOther->pev->modelindex == pev->modelindex )
+	{// bumped into the guy that shot it.
+		pev->solid = SOLID_NOT;
+		return;
+	}
+
+	if ( pOther->IsBSPModel() || pOther->Shielded() )
+	{
+		DieTouch( pOther );
+		return;
+	}
+
+	switch (RANDOM_LONG(0,2))
+	{// buzz when you plug someone
+		case 0:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hornet/ag_hornethit1.wav", 1, ATTN_NORM);	break;
+		case 1:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hornet/ag_hornethit2.wav", 1, ATTN_NORM);	break;
+		case 2:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hornet/ag_hornethit3.wav", 1, ATTN_NORM);	break;
+	}
+
+	pOther->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_BULLET );
+
+	pev->solid = SOLID_NOT;
+
+	// find the other side of what it hit
+	TraceResult tr;
+	UTIL_TraceLine( pev->origin, pev->origin + pev->movedir * 256, dont_ignore_monsters, ENT( pOther->pev ), &tr );
+	Vector vecEnd = tr.vecEndPos;
+	UTIL_TraceLine( vecEnd, pev->origin, dont_ignore_monsters, ENT( pev ), &tr );
+	if ( tr.flFraction == 0.0 )
+	{
+		UTIL_Remove( this );
+		return;
+	}
+
+	pev->origin = tr.vecEndPos + pev->movedir * 8;
+	pev->velocity = pev->movedir * m_flFlySpeed;
+}
+
+void CHornet::BounceTouch( CBaseEntity *pOther )
+{
+	if ( pOther->edict() == pev->owner || pOther->pev->modelindex == pev->modelindex )
+	{// bumped into the guy that shot it.
+		pev->solid = SOLID_NOT;
+		return;
+	}
+
+	if ( pOther->pev->takedamage )
+		DieTouch( pOther );
 }
 
 void CHornet::DieTouch ( CBaseEntity *pOther )
@@ -406,8 +530,14 @@ void CHornet::DieTouch ( CBaseEntity *pOther )
 			case 1:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hornet/ag_hornethit2.wav", 1, ATTN_NORM);	break;
 			case 2:	EMIT_SOUND( ENT(pev), CHAN_VOICE, "hornet/ag_hornethit3.wav", 1, ATTN_NORM);	break;
 		}
+
+		int bitsDamage = DMG_BULLET;
+		if ( m_iHornetType == HORNET_TYPE_FIRE )
+			bitsDamage = DMG_SLOWBURN | DMG_NEVERGIB;
+		else if ( m_iHornetType == HORNET_TYPE_ICE )
+			bitsDamage = DMG_FREEZE | DMG_NEVERGIB;
 			
-		pOther->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_BULLET );
+		pOther->TakeDamage( pev, VARS( pev->owner ), pev->dmg, bitsDamage );
 	}
 
 	pev->modelindex = 0;// so will disappear for the 0.1 secs we wait until NEXTTHINK gets rid
@@ -417,3 +547,80 @@ void CHornet::DieTouch ( CBaseEntity *pOther )
 	pev->nextthink = gpGlobals->time + 1;// stick around long enough for the sound to finish!
 }
 
+//=========================================================
+// two seconds on a scientist's head
+//=========================================================
+void CHornet::HeadBlastThink( void )
+{
+	if ( m_hEnemy == NULL || m_hEnemy->pev->body >= 4 )
+	{
+		UTIL_Remove( this );
+		return;
+	}
+
+	m_hEnemy->pev->body += 4;	// headless
+
+	Vector vecOrigin, vecAngles;
+	GET_ATTACHMENT( m_hEnemy->edict(), 0, vecOrigin, vecAngles );
+	SpawnBlood( vecOrigin, BLOOD_COLOR_RED, 250 );
+
+	entvars_t *pevOwner = VARS( pev->owner );
+	m_hEnemy->TakeDamage( pev, pevOwner, m_hEnemy->pev->health, DMG_NEVERGIB );
+	if ( m_hEnemy->pev->deadflag != DEAD_DEAD )
+		PLAYBACK_EVENT_FULL( 0, m_hEnemy->edict(), g_iBloodSprayEvent, 0.0, pev->origin, pev->angles, 0.0, 0.0, 1, 0, 0, 0 );
+
+	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_EXPLOSION );
+		WRITE_COORD( vecOrigin.x );
+		WRITE_COORD( vecOrigin.y );
+		WRITE_COORD( vecOrigin.z );
+		if ( UTIL_PointContents( vecOrigin ) != CONTENTS_WATER )
+		{
+			WRITE_SHORT( g_sModelIndexFireball );
+		}
+		else
+		{
+			WRITE_SHORT( g_sModelIndexWExplosion );
+		}
+		WRITE_BYTE( 10 ); // scale * 10
+		WRITE_BYTE( 15 ); // framerate
+		WRITE_BYTE( TE_EXPLFLAG_NOPARTICLES );
+	MESSAGE_END();
+
+	UTIL_Remove( this );
+}
+
+//=========================================================
+// the dart and the bouncer fly without tracking
+//=========================================================
+void CHornet::FlyThink( void )
+{
+	pev->angles = UTIL_VecToAngles( pev->velocity );
+
+	if (gpGlobals->time > m_flStopAttack)
+	{
+		Expire();
+		return;
+	}
+
+	if ( m_iHornetType == HORNET_TYPE_DART )
+		pev->velocity = pev->movedir * m_flFlySpeed;
+
+	pev->solid = SOLID_BBOX;
+	pev->nextthink = gpGlobals->time + 0.1;
+}
+
+// out of time: drop to the ground, gone two seconds later
+void CHornet::Expire( void )
+{
+	pev->movetype = MOVETYPE_TOSS;
+	pev->owner = NULL;
+	SetTouch( DeadTouch );
+	SetThink( SUB_Remove );
+	pev->nextthink = gpGlobals->time + 2;
+}
+
+void CHornet::DeadTouch( CBaseEntity *pOther )
+{
+	SUB_Remove();
+}
