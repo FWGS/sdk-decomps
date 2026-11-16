@@ -274,6 +274,8 @@ void CEgon::PrimaryAttack( void )
 void CEgon::FireIon( void )
 {
 #ifndef CLIENT_DLL
+	TraceResult tr;
+
 	UpdateEffect( g_vecZero, g_vecZero, 0 );
 
 	CBeam *pBeam = m_pBeam;
@@ -287,7 +289,7 @@ void CEgon::FireIon( void )
 		if ( i % 2 )
 			vecAngles.y -= min( i, 2 ) * flSpread;
 		else if ( i )
-			vecAngles.y += i * flSpread / 2;
+			vecAngles.y += (i * flSpread) / 2;
 
 		UTIL_MakeVectors( vecAngles );
 		Vector vecDir = gpGlobals->v_forward * 2048;
@@ -303,7 +305,6 @@ void CEgon::FireIon( void )
 				vecDir = vecToTarget * 2048;
 		}
 
-		TraceResult tr;
 		UTIL_TraceLine( vecSrc, vecSrc + vecDir, dont_ignore_monsters, m_pPlayer->edict(), &tr );
 
 		if ( tr.fAllSolid )
@@ -458,14 +459,14 @@ void CEgon::UpdateEffect( const Vector &startPoint, const Vector &endPoint, floa
 		// the ion beams end in front of the player, flares on their ends
 		UTIL_MakeVectors( m_pPlayer->pev->angles );
 
-		m_pBeam->SetEndPos( Vector( m_pPlayer->pev->origin.x, m_pPlayer->pev->origin.y, m_pPlayer->pev->origin.z + 10 ) + gpGlobals->v_forward * s_vecIonBeamOfs[0].z );
+		m_pBeam->SetEndPos( m_pPlayer->pev->origin + Vector( 0, 0, 10 ) + gpGlobals->v_forward * s_vecIonBeamOfs[0].z );
 		UTIL_SetOrigin( m_pIonSprites[0]->pev, m_pBeam->GetEndPos() );
 
 		if ( m_iBeamCount )
 		{
 			for ( int i = 0; i < m_iBeamCount * 2; i++ )
 			{
-				m_pIonBeams[i]->SetEndPos( Vector( m_pPlayer->pev->origin.x, m_pPlayer->pev->origin.y, m_pPlayer->pev->origin.z + 10 ) + gpGlobals->v_forward * s_vecIonBeamOfs[i+1].z + gpGlobals->v_right * s_vecIonBeamOfs[i+1].x );
+				m_pIonBeams[i]->SetEndPos( m_pPlayer->pev->origin + Vector( 0, 0, 10 ) + gpGlobals->v_forward * s_vecIonBeamOfs[i+1].z + gpGlobals->v_right * s_vecIonBeamOfs[i+1].x );
 				UTIL_SetOrigin( m_pIonSprites[i*2+2]->pev, m_pIonBeams[i]->GetEndPos() );
 			}
 		}
@@ -712,13 +713,14 @@ void CEgon::EndAttack( void )
 #ifndef CLIENT_DLL
 	for ( int i = 0; i < 5; i++ )
 		m_hIonTargets[i] = NULL;
-#endif
 
 	DestroyEffect();
+#endif
 }
 
 
 
+#ifndef CLIENT_DLL
 class CEgonAmmo : public CBasePlayerAmmo
 {
 	void Spawn( void )
@@ -743,5 +745,6 @@ class CEgonAmmo : public CBasePlayerAmmo
 	}
 };
 LINK_ENTITY_TO_CLASS( ammo_egonclip, CEgonAmmo );
+#endif
 
 #endif

@@ -457,7 +457,7 @@ extern DLL_GLOBAL	short	g_sModelIndexFireExplosion;// sprites/fexplo.spr (names 
 extern DLL_GLOBAL	short	g_sModelIndexSmokePuff;// sprites/smoke.spr
 extern DLL_GLOBAL	short	g_sModelIndexLightning;// sprites/lgtning.spr
 extern DLL_GLOBAL	short	g_sModelIndexPlayerFlame;// sprites/playerflame.spr
-extern DLL_GLOBAL	int		g_iBloodSprayEvent;// events/bloodspray.sc
+extern DLL_GLOBAL	int	g_iBloodSprayEvent;// events/bloodspray.sc (name ours; W_Precache sets it)
 extern DLL_GLOBAL	int		g_iBlastSphereEvent;// events/blastsphere.sc
 extern DLL_GLOBAL	int		g_iElectricEvent;// events/electric.sc
 
@@ -469,6 +469,7 @@ extern void DecalGunshot( TraceResult *pTrace, int iBulletType );
 extern void SpawnBlood(Vector vecSpot, int bloodColor, float flDamage);
 extern int DamageDecal( CBaseEntity *pEntity, int bitsDamageType );
 extern void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType );
+extern void RadiusDamageNoTrace( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, float flRadius, int iClassIgnore, int bitsDamageType );	// name ours
 
 typedef struct 
 {
