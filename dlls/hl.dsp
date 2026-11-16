@@ -216,6 +216,10 @@ SOURCE=.\client.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\cluster_bomb.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\combat.cpp
 # End Source File
 # Begin Source File
@@ -448,6 +452,10 @@ SOURCE=..\pm_shared\pm_shared.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\pulse.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\python.cpp
 # End Source File
 # Begin Source File
@@ -461,6 +469,10 @@ SOURCE=.\rat.cpp
 # Begin Source File
 
 SOURCE=.\roach.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\rocket.cpp
 # End Source File
 # Begin Source File
 

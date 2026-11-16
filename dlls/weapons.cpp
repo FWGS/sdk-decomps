@@ -46,6 +46,7 @@ DLL_GLOBAL	short	g_sModelIndexWExplosion;// holds the index for the underwater e
 DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for the initial blood
 DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for splattered blood
+DLL_GLOBAL	short	g_sModelIndexSmokePuff;// a stand-in until weapons.cpp has the real sprites/smoke.spr index (retail 0x10158c82)
 DLL_GLOBAL	int	g_iBloodSprayEvent;// events/bloodspray.sc (name ours; W_Precache sets it)
 
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
@@ -1538,7 +1539,6 @@ IMPLEMENT_SAVERESTORE( CRpg, CBasePlayerWeapon );
 
 TYPEDESCRIPTION	CRpgRocket::m_SaveData[] = 
 {
-	DEFINE_FIELD( CRpgRocket, m_flIgniteTime, FIELD_TIME ),
 	DEFINE_FIELD( CRpgRocket, m_pLauncher, FIELD_CLASSPTR ),
 };
 IMPLEMENT_SAVERESTORE( CRpgRocket, CGrenade );
@@ -1582,3 +1582,16 @@ TYPEDESCRIPTION	CSatchel::m_SaveData[] =
 };
 IMPLEMENT_SAVERESTORE( CSatchel, CBasePlayerWeapon );
 
+// a stand-in until this file has the real spread helper (retail 0x100eb710, 328 bytes)
+Vector UTIL_SpreadVector( const Vector &vecSpread )
+{
+	float x, y, z;
+
+	do {
+		x = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
+		y = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
+		z = x*x+y*y;
+	} while (z > 1);
+
+	return gpGlobals->v_forward + x * vecSpread.x * gpGlobals->v_right + y * vecSpread.y * gpGlobals->v_up;
+}
