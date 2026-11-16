@@ -189,14 +189,16 @@ void CRpgRocket :: CameraThink( void )
 	{
 		SetThink( FlyThink );
 		pev->rendermode = kRenderNormal;
+		return;
 	}
 
-	// sic: goes on with a NULL owner
 	if ( pOwner->v.button & IN_ATTACK2 )
 	{
+		// let go
 		SetThink( FlyThink );
 		SET_VIEW( pev->owner, pev->owner );
 		pev->rendermode = kRenderNormal;
+		return;
 	}
 
 	pev->angles = pOwner->v.v_angle;
@@ -208,9 +210,7 @@ void CRpgRocket :: CameraThink( void )
 		UTIL_MakeVectors( pev->angles );
 
 		float flSpeed = pev->velocity.Length() + 256;
-		if ( flSpeed >= pev->speed )
-			flSpeed = pev->speed;
-		pev->velocity = gpGlobals->v_forward * flSpeed;
+		pev->velocity = gpGlobals->v_forward * min( flSpeed, pev->speed );
 
 		if (pev->waterlevel == 3)
 		{
@@ -492,18 +492,19 @@ void CRpg::PrimaryAttack()
 // cycles the guidance (m_mode): unguided, laser-guided, heat-seeking, remote controlled
 void CRpg::SecondaryAttack()
 {
-	if ( ( !m_cActiveRockets || ( !m_fSpotActive && m_mode != 3 ) ) && ( m_iClip || m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] > 0 ) )
+	if ( ( !m_cActiveRockets || ( !m_fSpotActive && m_mode != 3 ) ) && ( m_iClip || m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] >= 1 ) )
 	{
 		m_mode++;
 		if ( m_mode > 3 )
 			m_mode = 0;
 
+#ifndef CLIENT_DLL
+		// the laser spot only for the laser-guided rocket
 		if ( m_mode == 1 )
 			m_fSpotActive = 1;
 		else
 			m_fSpotActive = 0;
 
-#ifndef CLIENT_DLL
 		if (!m_fSpotActive && m_pSpot)
 		{
 			m_pSpot->Killed( NULL, GIB_NORMAL );
@@ -547,7 +548,7 @@ void CRpg::SecondaryAttack()
 // +attack3: cycles the warhead (m_ammo): high explosive, incendiary, plasma bomb, EMP
 void CRpg::WeaponSpecial( void )
 {
-	if ( ( !m_cActiveRockets || ( !m_fSpotActive && m_mode != 3 ) ) && ( m_iClip || m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] > 0 ) )
+	if ( ( !m_cActiveRockets || ( !m_fSpotActive && m_mode != 3 ) ) && ( m_iClip || m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] >= 1 ) )
 	{
 		// unload (sic: an empty launcher gives a rocket too)
 		m_iClip = 0;
@@ -620,8 +621,10 @@ void CRpg::WeaponIdle( void )
 
 		SendWeaponAnim( iAnim );
 	}
-
-	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1;	// sic: also after an idle animation
+	else
+	{
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1;
+	}
 }
 
 
