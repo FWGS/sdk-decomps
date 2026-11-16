@@ -32,6 +32,7 @@ public:
 	virtual void	KeyValue( KeyValueData* pkvd ); 
 	virtual void	Spawn( void );
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	int		GetOnState( void ) { return !FBitSet( pev->spawnflags, SF_LIGHT_START_OFF ); }
 
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
