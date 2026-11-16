@@ -15,9 +15,9 @@
 #ifndef BEAMS_H
 #define BEAMS_H
 
-// Scientist Slaughterhouse's beam_cannon (beams.cpp). Only what other files use is
-// declared here so far (the crossbow's laser net, func_turret); fields from the save table, the
-// unsaved one at 0x70 unknown. Names ours but the fields'.
+// Scientist Slaughterhouse's beam_cannon (defined in beams.cpp). Declared here because the crossbow's
+// laser net and func_turret create beam cannons. The fields are the save table's (the unsaved one at
+// 0x70 is unknown); the other names are ours.
 class CBeamCannon : public CBeam
 {
 public:
