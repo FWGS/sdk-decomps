@@ -45,13 +45,6 @@
 #define SF_BARNEY_HATE_SCIENTISTS	32
 #define SF_BARNEY_NO_WEAPON_DROP	1024	// "Dont drop weapon"
 
-// provisional: laser_pulse is pulse.cpp's (weapons.h declares it later, with this Shoot)
-class CLaserPulse : public CBaseEntity
-{
-public:
-	static CLaserPulse *Shoot( Vector vecOrigin, edict_t *pOwner, const Vector &vecColor, int iTrailLife, float flScale, int iColor );
-};
-
 class CBarney : public CTalkMonster
 {
 public:
