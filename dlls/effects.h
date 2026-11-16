@@ -28,6 +28,7 @@
 
 #define SF_SPRITE_STARTON		0x0001
 #define SF_SPRITE_ONCE			0x0002
+#define SF_SPRITE_REVERSE		0x0004	// name ours: the animation runs backwards
 #define SF_SPRITE_TEMPORARY		0x8000
 
 class CSprite : public CPointEntity
@@ -43,6 +44,7 @@ public:
 			flags = FCAP_DONT_SAVE;
 		return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | flags; 
 	}
+	int		GetOnState( void ) { return !FBitSet( pev->effects, EF_NODRAW ); }
 	void EXPORT AnimateThink( void );
 	void EXPORT ExpandThink( void );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
@@ -86,6 +88,7 @@ public:
 	}
 
 	void EXPORT AnimateUntilDead( void );
+	void EXPORT TurnOnThink( void );	// name ours
 
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
@@ -111,6 +114,9 @@ public:
 			flags = FCAP_DONT_SAVE;
 		return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | flags; 
 	}
+	int		GetOnState( void ) { return !FBitSet( pev->effects, EF_NODRAW ); }
+	const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "an energy beam"; return STRING( m_iszKillDesc ); }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return DamageVerb( DMG_ENERGYBEAM, fGibbed ); }
 
 	void EXPORT TriggerTouch( CBaseEntity *pOther );
 
@@ -205,5 +211,30 @@ public:
 	int		m_iszSpriteName;
 	Vector  m_firePosition;
 };
+
+
+// The repulsor's tractor beam (CRepulsor::WeaponSpecial creates it and sets m_hTarget).
+// pev->playerclass set: it rides on the target while its owner lives; otherwise a beam
+// from its origin to the target. The client draws it (events/tractorbeam.sc).
+class CTractorBeam : public CBaseEntity
+{
+public:
+	void	Spawn( void );
+	void	Precache( void );
+	int		ObjectCaps( void )
+	{ 
+		int flags = 0;
+		if ( pev->spawnflags & SF_BEAM_TEMPORARY )
+			flags = FCAP_DONT_SAVE;
+		return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | flags; 
+	}
+	void	Killed( entvars_t *pevAttacker, int iGib );
+	void	EXPORT BeamThink( void );
+
+	EHANDLE	m_hTarget;			// name ours
+	int		m_usTractorBeam;	// name ours
+};
+
+extern void UpdateFogAndRain( CBaseEntity *pPlayer );	// name ours; env_fog, env_rain for a new player
 
 #endif		//EFFECTS_H

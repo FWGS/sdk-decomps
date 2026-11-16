@@ -162,13 +162,13 @@ void CRecharge::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE use
 
 
 	// charge the player
-	if (m_hActivator->pev->armorvalue < 100)
+	if (m_hActivator->pev->armorvalue < 300)	// Scientist Slaughterhouse: armor goes to 300
 	{
 		m_iJuice--;
 		m_hActivator->pev->armorvalue += 1;
 
-		if (m_hActivator->pev->armorvalue > 100)
-			m_hActivator->pev->armorvalue = 100;
+		if (m_hActivator->pev->armorvalue > 300)
+			m_hActivator->pev->armorvalue = 300;
 	}
 
 	// govern the rate of charge

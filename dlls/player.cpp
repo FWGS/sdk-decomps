@@ -186,6 +186,7 @@ int gmsgShowMenu = 0;
 int gmsgGeigerRange = 0;
 int gmsgTeamNames = 0;
 int gmsgDamageFX = 0;	// name ours; a stand-in until LinkUserMessages registers "DamageFX"
+int gmsgFog = 0;	// env_fog's message; LinkUserMessages doesn't register "Fog" yet
 
 void LinkUserMessages( void )
 {
