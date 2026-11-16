@@ -58,7 +58,7 @@ void CGrenade::Explode( Vector vecSrc, Vector vecAim )
 	TraceResult tr;
 	UTIL_TraceLine ( pev->origin, pev->origin + Vector ( 0, 0, -32 ),  ignore_monsters, ENT(pev), & tr);
 
-	if ( HasSpawnFlag( SF_GRENADE_INCENDIARY ) )
+	if ( pev->spawnflags & SF_GRENADE_INCENDIARY )
 		FireExplode( &tr );
 	else if ( HasSpawnFlag( SF_GRENADE_ENERGY ) )
 		SphereBlast();
@@ -232,7 +232,14 @@ void CGrenade::FireExplode( TraceResult *pTrace )
 
 	RadiusDamage ( pev->origin, pev, pevOwner, pev->dmg, CLASS_NONE, m_bitsDamageInflict );
 
-	UTIL_DecalTrace( pTrace, RANDOM_FLOAT( 0 , 1 ) < 0.5 ? DECAL_SCORCH1 : DECAL_SCORCH2 );
+	if ( RANDOM_FLOAT( 0 , 1 ) < 0.5 )
+	{
+		UTIL_DecalTrace( pTrace, DECAL_SCORCH1 );
+	}
+	else
+	{
+		UTIL_DecalTrace( pTrace, DECAL_SCORCH2 );
+	}
 
 	switch ( RANDOM_LONG( 0, 2 ) )
 	{
@@ -248,9 +255,12 @@ void CGrenade::FireExplode( TraceResult *pTrace )
 
 	if ( pev->spawnflags & SF_GRENADE_FLAMES )
 	{
+		edict_t *pentHit = NULL;
 		// sic: FL_MONSTER|FL_CLIENT is always nonzero, so any entity hit is passed
-		FireSpread( pTrace->vecEndPos + pTrace->vecPlaneNormal * 64, 5, pevOwner,
-			( pTrace->pHit && pTrace->pHit->v.flags & FL_MONSTER|FL_CLIENT ) ? pTrace->pHit : NULL );
+		if ( pTrace->pHit && pTrace->pHit->v.flags & FL_MONSTER|FL_CLIENT )
+			pentHit = pTrace->pHit;
+
+		FireSpread( pTrace->vecEndPos + pTrace->vecPlaneNormal * 64, 5, pevOwner, pentHit );
 	}
 }
 
@@ -310,7 +320,7 @@ void CGrenade::HurtThink( void )
 	if ( !HasSpawnFlag( SF_GRENADE_KEEPOWNER ) )
 		pev->owner = NULL; // can't traceline attack owner if this is set
 
-	::RadiusDamage( pev->origin, pev, pevOwner, flDamage * 0.75, pev->speed, CLASS_NONE, m_bitsDamageInflict );
+	RadiusDamageNoTrace( pev->origin, pev, pevOwner, flDamage * 0.75, pev->speed, CLASS_NONE, m_bitsDamageInflict );
 
 	pev->owner = ENT( pevOwner );
 }
@@ -322,7 +332,7 @@ void CGrenade::MortarBlast( void )
 	pev->solid = SOLID_NOT;// intangible
 	pev->takedamage = DAMAGE_NO;
 
-	UTIL_ScreenShakeAll( pev->origin, pev->dmg > 255 ? 255 : pev->dmg, 0.4, 4.0 );
+	UTIL_ScreenShakeAll( pev->origin, min( 255, pev->dmg ), 0.4, 4.0 );
 	EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/mortarhit.wav", 1.0, ATTN_NONE );
 
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
@@ -420,7 +430,7 @@ void CGrenade::Detonate( void )
 	vecSpot = pev->origin + Vector ( 0 , 0 , 8 );
 	UTIL_TraceLine ( vecSpot, vecSpot + Vector ( 0, 0, -40 ),  ignore_monsters, ENT(pev), & tr);
 
-	if ( HasSpawnFlag( SF_GRENADE_INCENDIARY ) )
+	if ( pev->spawnflags & SF_GRENADE_INCENDIARY )
 		FireExplode( &tr );
 	else if ( HasSpawnFlag( SF_GRENADE_ENERGY ) )
 		SphereBlast();
@@ -443,7 +453,7 @@ void CGrenade::ExDetonate( void )
 	vecSpot = pev->origin - pev->movedir * 8;
 	UTIL_TraceLine ( vecSpot, vecSpot + pev->movedir * 40,  ignore_monsters, ENT(pev), & tr);
 
-	if ( HasSpawnFlag( SF_GRENADE_INCENDIARY ) )
+	if ( pev->spawnflags & SF_GRENADE_INCENDIARY )
 		FireExplode( &tr );
 	else if ( HasSpawnFlag( SF_GRENADE_ENERGY ) )
 		SphereBlast();
@@ -468,7 +478,7 @@ void CGrenade::ExplodeTouch( CBaseEntity *pOther )
 	vecSpot = pev->origin - pev->velocity.Normalize() * 32;
 	UTIL_TraceLine( vecSpot, vecSpot + pev->velocity.Normalize() * 64, ignore_monsters, ENT(pev), &tr );
 
-	if ( HasSpawnFlag( SF_GRENADE_INCENDIARY ) )
+	if ( pev->spawnflags & SF_GRENADE_INCENDIARY )
 		FireExplode( &tr );
 	else if ( HasSpawnFlag( SF_GRENADE_ENERGY ) )
 		SphereBlast();
@@ -646,7 +656,7 @@ void CGrenade::MineThink( void )
 {
 	pev->nextthink = gpGlobals->time + 0.1;
 
-	float flRadius = pev->dmg > 256 ? 256 : pev->dmg;
+	float flRadius = min( 256, pev->dmg );
 	CBaseEntity *pEntity = NULL;
 	while ( ( pEntity = UTIL_FindEntityInSphere( pEntity, pev->origin, flRadius ) ) != NULL )
 	{
