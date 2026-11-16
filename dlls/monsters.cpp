@@ -33,6 +33,7 @@
 #include "decals.h"
 #include "soundent.h"
 #include "gamerules.h"
+#include "game.h"
 
 #define MONSTER_CUT_CORNER_DIST		8 // 8 means the monster's bounding box is contained without the box of the node in WC
 
@@ -44,6 +45,8 @@ extern DLL_GLOBAL	short	g_sModelIndexLaser;// holds the index for the laser beam
 extern DLL_GLOBAL	short	g_sModelIndexLaserDot;// holds the index for the laser beam dot
 
 extern CGraph WorldGraph;// the world node graph
+
+extern int gmsgDamageFX;	// name ours
 
 
 
@@ -308,7 +311,7 @@ void CBaseMonster :: Look ( int iDistance )
 	int	iSighted = 0;
 
 	// DON'T let visibility information from last frame sit around!
-	ClearConditions(bits_COND_SEE_HATE | bits_COND_SEE_DISLIKE | bits_COND_SEE_ENEMY | bits_COND_SEE_FEAR | bits_COND_SEE_NEMESIS | bits_COND_SEE_CLIENT);
+	ClearConditions(bits_COND_SEE_HATE | bits_COND_SEE_DISLIKE | bits_COND_SEE_ENEMY | bits_COND_SEE_FEAR | bits_COND_SEE_NEMESIS | bits_COND_SEE_CLIENT | bits_COND_SEE_DEAD_ALLY);
 
 	m_pLink = NULL;
 
@@ -327,9 +330,16 @@ void CBaseMonster :: Look ( int iDistance )
 		{
 			pSightEnt = pList[i];
 			// !!!temporarily only considering other monsters and clients, don't see prisoners
-			if ( pSightEnt != this												&& 
-				 !FBitSet( pSightEnt->pev->spawnflags, SF_MONSTER_PRISONER )	&& 
-				 pSightEnt->pev->health > 0 )
+			if ( pSightEnt == this )
+				continue;
+
+			if ( pSightEnt->pev->health <= 0 )
+			{
+				// a dead ally in the box (not checked for visibility)
+				if ( !HasConditions( bits_COND_SEE_DEAD_ALLY ) && IRelationship( pSightEnt ) == R_AL )
+					SetConditions( bits_COND_SEE_DEAD_ALLY );
+			}
+			else if ( !FBitSet( pSightEnt->pev->spawnflags, SF_MONSTER_PRISONER ) )
 			{
 				// the looker will want to consider this entity
 				// don't check anything else about an entity that can't be seen, or an entity that you don't care about.
@@ -523,6 +533,20 @@ void CBaseMonster :: MonsterThink ( void )
 {
 	pev->nextthink = gpGlobals->time + 0.1;// keep monster thinking.
 
+	CheckTimeBasedDamage();
+
+	if ( m_flShockDamage >= 1 || m_flBurnDamage >= 1 )
+	{
+		// tell the clients how much fire and shock damage this monster took (burning and sparks)
+		MESSAGE_BEGIN( MSG_PVS, gmsgDamageFX, pev->origin );
+			WRITE_SHORT( ENTINDEX( edict() ) );
+			WRITE_BYTE( (int)m_flBurnDamage );
+			WRITE_BYTE( (int)m_flShockDamage );
+		MESSAGE_END();
+
+		m_flBurnDamage = 0;
+		m_flShockDamage = 0;
+	}
 
 	RunAI();
 
@@ -2089,7 +2113,7 @@ void CBaseMonster :: StartMonster ( void )
 		pev->origin.z += 1;
 		DROP_TO_FLOOR ( ENT(pev) );
 		// Try to move the monster to make sure it's not stuck in a brush.
-		if (!WALK_MOVE ( ENT(pev), 0, 0, WALKMOVE_NORMAL ) )
+		if ( pev->movetype != MOVETYPE_NONE && !WALK_MOVE ( ENT(pev), 0, 0, WALKMOVE_NORMAL ) )
 		{
 			ALERT(at_error, "Monster %s stuck in wall--level design error", STRING(pev->classname));
 			pev->effects = EF_BRIGHTFIELD;
@@ -2199,25 +2223,88 @@ int CBaseMonster::TaskIsRunning( void )
 //=========================================================
 int CBaseMonster::IRelationship ( CBaseEntity *pTarget )
 {
-	static int iEnemy[14][14] =
-	{			 //   NONE	 MACH	 PLYR	 HPASS	 HMIL	 AMIL	 APASS	 AMONST	APREY	 APRED	 INSECT	PLRALY	PBWPN	ABWPN
-	/*NONE*/		{ R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO,	R_NO,	R_NO	},
-	/*MACHINE*/		{ R_NO	,R_NO	,R_DL	,R_DL	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_DL,	R_DL,	R_DL	},
-	/*PLAYER*/		{ R_NO	,R_DL	,R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO,	R_DL,	R_DL	},
-	/*HUMANPASSIVE*/{ R_NO	,R_NO	,R_AL	,R_AL	,R_HT	,R_FR	,R_NO	,R_HT	,R_DL	,R_FR	,R_NO	,R_AL,	R_NO,	R_NO	},
-	/*HUMANMILITAR*/{ R_NO	,R_NO	,R_HT	,R_DL	,R_NO	,R_HT	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_HT,	R_NO,	R_NO	},
-	/*ALIENMILITAR*/{ R_NO	,R_DL	,R_HT	,R_DL	,R_HT	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_DL,	R_NO,	R_NO	},
-	/*ALIENPASSIVE*/{ R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO,	R_NO,	R_NO	},
-	/*ALIENMONSTER*/{ R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_DL,	R_NO,	R_NO	},
-	/*ALIENPREY   */{ R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_NO	,R_FR	,R_NO	,R_DL,	R_NO,	R_NO	},
-	/*ALIENPREDATO*/{ R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_HT	,R_DL	,R_NO	,R_DL,	R_NO,	R_NO	},
-	/*INSECT*/		{ R_FR	,R_FR	,R_FR	,R_FR	,R_FR	,R_NO	,R_FR	,R_FR	,R_FR	,R_FR	,R_NO	,R_FR,	R_NO,	R_NO	},
-	/*PLAYERALLY*/	{ R_NO	,R_DL	,R_AL	,R_AL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO,	R_NO,	R_NO	},
-	/*PBIOWEAPON*/	{ R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_DL,	R_NO,	R_DL	},
-	/*ABIOWEAPON*/	{ R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_AL	,R_NO	,R_DL	,R_DL	,R_NO	,R_NO	,R_DL,	R_DL,	R_NO	}
+	int iEnemy[21][21] =
+	{			 //   NONE	 MACH	 PLYR	 HPASS	 HMIL	 AMIL	 APASS	 AMONST	APREY	 APRED	 INSECT	PLRALY	PBWPN	ABWPN	 14	 15	 16	 17	 18	 19	 20
+	/*NONE*/		{ R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	},
+	/*MACHINE*/		{ R_NO	,R_NO	,R_DL	,R_DL	,R_NO	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_NO	,R_DL	,R_DL	,R_DL	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_DL	},
+	/*PLAYER*/		{ R_NO	,R_HT	,R_NO	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_NO	,R_HT	,R_DL	,R_DL	,R_NO	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_NO	},
+	/*HUMANPASSIVE*/	{ R_NO	,R_NO	,R_AL	,R_AL	,R_HT	,R_HT	,R_NO	,R_HT	,R_DL	,R_HT	,R_NO	,R_AL	,R_NO	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_NO	},
+	/*HUMANMILITAR*/	{ R_NO	,R_NO	,R_HT	,R_DL	,R_NO	,R_HT	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_HT	,R_NO	,R_NO	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_DL	},
+	/*ALIENMILITAR*/	{ R_NO	,R_DL	,R_HT	,R_DL	,R_HT	,R_AL	,R_NO	,R_AL	,R_NO	,R_AL	,R_NO	,R_DL	,R_NO	,R_NO	,R_DL	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_DL	},
+	/*ALIENPASSIVE*/	{ R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	},
+	/*ALIENMONSTER*/	{ R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_NO	,R_DL	,R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	},
+	/*ALIENPREY   */	{ R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_NO	,R_FR	,R_NO	,R_DL	,R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	},
+	/*ALIENPREDATO*/	{ R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_NO	,R_NO	,R_NO	,R_HT	,R_NO	,R_NO	,R_DL	,R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	},
+	/*INSECT*/		{ R_FR	,R_FR	,R_FR	,R_FR	,R_FR	,R_NO	,R_FR	,R_FR	,R_FR	,R_FR	,R_NO	,R_FR	,R_NO	,R_NO	,R_FR	,R_FR	,R_FR	,R_FR	,R_FR	,R_FR	,R_NO	},
+	/*PLAYERALLY*/	{ R_NO	,R_HT	,R_AL	,R_AL	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_NO	,R_AL	,R_NO	,R_NO	,R_DL	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_NO	},
+	/*PBIOWEAPON*/	{ R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_NO	,R_DL	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	},
+	/*ABIOWEAPON*/	{ R_NO	,R_NO	,R_DL	,R_DL	,R_DL	,R_AL	,R_NO	,R_DL	,R_DL	,R_NO	,R_NO	,R_DL	,R_DL	,R_NO	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	,R_DL	},
+	/*CLASS 14*/	{ R_NO	,R_HT	,R_AL	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_NO	,R_DL	,R_NO	,R_DL	,R_AL	,R_HT	,R_HT	,R_HT	,R_HT	,R_DL	,R_DL	},
+	/*CLASS 15*/	{ R_NO	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_NO	,R_HT	,R_DL	,R_DL	,R_HT	,R_AL	,R_NM	,R_NM	,R_HT	,R_HT	,R_DL	},
+	/*CLASS 16*/	{ R_NO	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_NO	,R_HT	,R_DL	,R_DL	,R_HT	,R_NM	,R_AL	,R_NM	,R_HT	,R_HT	,R_DL	},
+	/*CLASS 17*/	{ R_NO	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_NO	,R_HT	,R_DL	,R_DL	,R_HT	,R_NM	,R_NM	,R_AL	,R_HT	,R_HT	,R_DL	},
+	/*CLASS 18*/	{ R_NO	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_NO	,R_HT	,R_DL	,R_DL	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_DL	},
+	/*CLASS 19*/	{ R_NO	,R_HT	,R_DL	,R_HT	,R_HT	,R_HT	,R_DL	,R_HT	,R_DL	,R_HT	,R_NO	,R_HT	,R_DL	,R_DL	,R_DL	,R_HT	,R_HT	,R_HT	,R_HT	,R_AL	,R_DL	},
+	/*CLASS 20*/	{ R_NO	,R_HT	,R_NO	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_NO	,R_HT	,R_NO	,R_DL	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_HT	,R_NO	}
 	};
 
-	return iEnemy[ Classify() ][ pTarget->Classify() ];
+	int iMyClass = Classify();
+	int iTargetClass = pTarget->Classify();
+
+	if ( ssh_hazardmode.value > 0 )
+	{
+		// hazard mode: monsters and the player are at least as hostile to each other as the cvar says
+		if ( !iTargetClass || !iMyClass )
+			return R_NO;
+
+		if ( !IsPlayer() && pTarget->IsPlayer() )
+			return max( iEnemy[ iMyClass ][ CLASS_PLAYER ], ssh_hazardmode.value );
+
+		if ( IsPlayer() && !pTarget->IsPlayer() )
+			return max( iEnemy[ CLASS_PLAYER ][ iTargetClass ], ssh_hazardmode.value );
+	}
+	else if ( (bool)( pev->spawnflags & 8 ) || ssh_hazardmode.value < 0 )
+	{
+		// spawnflag 8 (or a negative hazard mode): never hostile to the player
+		if ( pTarget->IsPlayer() )
+			return min( iEnemy[ iMyClass ][ CLASS_PLAYER ], R_NO );
+	}
+
+	int iRelationship = iEnemy[ iMyClass ][ iTargetClass ];	// name ours
+
+	switch ( (int)ssh_chaosmode.value )
+	{
+	case 1:
+		// monsters of the same model stay friends, everybody else fights
+		if ( pTarget->pev->modelindex == pev->modelindex )
+			return iRelationship;
+
+	case 2:
+		// everybody hates everybody but its owner
+		if ( !iTargetClass || !iMyClass )
+			return R_NO;
+
+		if ( pTarget->pev->owner == edict() || pev->owner == pTarget->edict() )
+			return min( R_NO, iRelationship );
+
+	case 3:
+		// everybody hates everybody
+		return max( R_HT, iRelationship );
+
+	case -1:
+		// everybody is everybody's ally
+		if ( !iTargetClass || !iMyClass )
+			break;
+		return R_AL;
+
+	default:
+		if ( pTarget->pev->owner == edict() || pev->owner == pTarget->edict() )
+			return min( R_NO, iRelationship );
+
+		return iRelationship;
+	}
+
+	return R_NO;
 }
 
 //=========================================================
@@ -2330,9 +2417,11 @@ BOOL CBaseMonster :: FindCover ( Vector vecThreat, Vector vecViewOffset, float f
 }
 
 //=========================================================
-// FindRetreat - FindCover for a node on the far side of me
-// from vecThreat (more than 90 degrees off its direction).
-// A first version; tuned to retail's code later.
+// FindRetreat - FindCover for a node more than 90 degrees
+// off the threat's direction, without the visibility test:
+// the first one in range that is no farther from me than
+// from the threat (by path length) and that I can run to.
+// name ours
 //=========================================================
 BOOL CBaseMonster :: FindRetreat ( Vector vecThreat, float flMinDist, float flMaxDist )
 {
@@ -2383,11 +2472,16 @@ BOOL CBaseMonster :: FindRetreat ( Vector vecThreat, float flMinDist, float flMa
 		CNode &node = WorldGraph.Node( nodeNumber );
 		WorldGraph.m_iLastCoverSearch = nodeNumber + 1;
 
-		flDist = ( pev->origin - node.m_vecOrigin ).Length();
+		Vector vecDelta;	// name ours
+		vecDelta = pev->origin - node.m_vecOrigin;
+		flDist = vecDelta.Length();
 
 		if ( flDist >= flMinDist && flDist < flMaxDist )
 		{
-			if ( fabs( UTIL_AngleDiff( UTIL_VecToYaw( node.m_vecOrigin ), flThreatYaw ) ) > 90 )
+			// sic: the yaws are of the positions themselves, seen from the world origin, not from me
+			float flNodeYaw = UTIL_VecToYaw( node.m_vecOrigin );
+			float flDiff = fabs( UTIL_AngleDiff( flNodeYaw, flThreatYaw ) );
+			if ( flDiff > 90 )
 			{
 				if ( ( iMyNode == iThreatNode ) || WorldGraph.PathLength( iMyNode, nodeNumber, iMyHullIndex, m_afCapability ) <= WorldGraph.PathLength( iThreatNode, nodeNumber, iMyHullIndex, m_afCapability ) )
 				{
@@ -2402,6 +2496,181 @@ BOOL CBaseMonster :: FindRetreat ( Vector vecThreat, float flMinDist, float flMa
 	return FALSE;
 }
 
+
+//=========================================================
+// FindNodeInCover - like FindCover, but only finds the node:
+// the first node in range that hides it from the threat's
+// eyes and is no farther from me than from the threat goes
+// to vecResult; no route is built. name ours
+//=========================================================
+BOOL CBaseMonster :: FindNodeInCover ( Vector vecThreat, Vector vecViewOffset, float flMinDist, float flMaxDist, Vector &vecResult )
+{
+	int i;
+	int iMyHullIndex;
+	int iMyNode;
+	int iThreatNode;
+	float flDist;
+	Vector	vecLookersOffset;
+	TraceResult tr;
+
+	if ( !flMaxDist )
+	{
+		// user didn't supply a MaxDist, so work up a crazy one.
+		flMaxDist = 784;
+	}
+
+	if ( flMinDist > 0.5 * flMaxDist)
+	{
+		flMaxDist = 0.5 * flMaxDist;	// sic: FindCover moves the minimum
+	}
+
+	if ( !WorldGraph.m_fGraphPresent || !WorldGraph.m_fGraphPointersSet )
+	{
+		ALERT ( at_aiconsole, "Graph not ready for findnodeincover!\n" );
+		return FALSE;
+	}
+
+	// sic: looked up and never used
+	iMyNode = WorldGraph.FindNearestNode( pev->origin, this );
+	iThreatNode = WorldGraph.FindNearestNode ( vecThreat, this );
+	iMyHullIndex = WorldGraph.HullIndex( this );
+
+	vecLookersOffset = vecThreat + vecViewOffset;// calculate location of enemy's eyes
+
+	// we'll do a rough sample to find nodes that are relatively nearby
+	for ( i = 0 ; i < WorldGraph.m_cNodes ; i++ )
+	{
+		int nodeNumber = (i + WorldGraph.m_iLastCoverSearch) % WorldGraph.m_cNodes;
+
+		CNode &node = WorldGraph.Node( nodeNumber );
+		WorldGraph.m_iLastCoverSearch = nodeNumber + 1; // next monster that searches for cover node will start where we left off here.
+
+		flDist = ( pev->origin - node.m_vecOrigin ).Length();
+
+		if ( flDist >= flMinDist && flDist < flMaxDist )
+		{
+			UTIL_TraceLine ( node.m_vecOrigin + vecViewOffset, vecLookersOffset, ignore_monsters, ignore_glass,  ENT(pev), &tr );
+
+			// if this node will block the threat's line of sight to me...
+			if ( tr.flFraction != 1.0 )
+			{
+				// ..and is also no farther from me than from the threat
+				if ( ( node.m_vecOrigin - pev->origin ).Length() <= ( node.m_vecOrigin - vecThreat ).Length() )
+				{
+					if ( FValidateCover ( node.m_vecOrigin ) )
+					{
+						vecResult = node.m_vecOrigin;
+						return TRUE;
+					}
+				}
+			}
+		}
+	}
+	return FALSE;
+}
+
+//=========================================================
+// FindNodeAway - finds a node closer to me than flMaxDist
+// and farther than flMinDist from the threat; it goes to
+// vecResult, no route is built. name ours
+//=========================================================
+BOOL CBaseMonster :: FindNodeAway ( Vector vecThreat, float flMinDist, float flMaxDist, Vector &vecResult )
+{
+	int i;
+	float flDist;
+
+	if ( !flMaxDist )
+	{
+		// user didn't supply a MaxDist, so work up a crazy one.
+		flMaxDist = 784;
+	}
+
+	if ( flMinDist > 0.5 * flMaxDist)
+	{
+		flMaxDist = flMinDist * 2;
+	}
+
+	if ( !WorldGraph.m_fGraphPresent || !WorldGraph.m_fGraphPointersSet )
+	{
+		ALERT ( at_aiconsole, "Graph not ready for findnodeincover!\n" );	// sic
+		return FALSE;
+	}
+
+	for ( i = 0 ; i < WorldGraph.m_cNodes ; i++ )
+	{
+		int nodeNumber = (i + WorldGraph.m_iLastCoverSearch) % WorldGraph.m_cNodes;
+
+		CNode &node = WorldGraph.Node( nodeNumber );
+		WorldGraph.m_iLastCoverSearch = nodeNumber + 1; // next monster that searches for cover node will start where we left off here.
+
+		flDist = ( pev->origin - node.m_vecOrigin ).Length();
+
+		if ( flDist < flMaxDist )
+		{
+			if ( ( node.m_vecOrigin - vecThreat ).Length() > flMinDist )
+			{
+				if ( FValidateCover ( node.m_vecOrigin ) )
+				{
+					vecResult = node.m_vecOrigin;
+					return TRUE;
+				}
+			}
+		}
+	}
+	return FALSE;
+}
+
+//=========================================================
+// FindEnemyNode - finds a node at least flMinDist from me,
+// between flMinEnemyDist and flMaxEnemyDist from the enemy,
+// from which I see the enemy's position; it goes to
+// vecResult, no route is built. A distance limit of 0 or
+// less is not tested, but the enemy distance is then
+// compared with the other limit anyway. name ours
+//=========================================================
+BOOL CBaseMonster :: FindEnemyNode ( const Vector &vecEnemy, Vector &vecResult, float flMinDist, float flMaxEnemyDist, float flMinEnemyDist )
+{
+	int i;
+	float flDist;
+	float flEnemyDist;
+	TraceResult tr;
+
+	if ( !WorldGraph.m_fGraphPresent || !WorldGraph.m_fGraphPointersSet )
+	{
+		ALERT ( at_aiconsole, "Graph not ready for findenemynode!\n" );
+		return FALSE;
+	}
+
+	flDist = 0;
+	flEnemyDist = 0;
+
+	for ( i = 0 ; i < WorldGraph.m_cNodes ; i++ )
+	{
+		int nodeNumber = (i + WorldGraph.m_iLastCoverSearch) % WorldGraph.m_cNodes;
+
+		CNode &node = WorldGraph.Node( nodeNumber );
+		WorldGraph.m_iLastCoverSearch = nodeNumber + 1; // next monster that searches for cover node will start where we left off here.
+
+		if ( flMinDist > 0 )
+			flDist = ( pev->origin - node.m_vecOrigin ).Length();
+
+		if ( flMinEnemyDist > 0 || flMaxEnemyDist > 0 )
+			flEnemyDist = Vector( vecEnemy - node.m_vecOrigin ).Length();
+
+		// sic: with no maximum (0) only a node right on the enemy passes
+		if ( flDist >= flMinDist && flEnemyDist >= flMinEnemyDist && flEnemyDist <= flMaxEnemyDist )
+		{
+			UTIL_TraceLine ( node.m_vecOrigin + pev->view_ofs, vecEnemy, ignore_monsters, ENT(pev), &tr );
+
+			if ( tr.flFraction >= 1 )
+			{
+				vecResult = node.m_vecOrigin;
+				return TRUE;
+			}
+		}
+	}
+	return FALSE;
+}
 
 //=========================================================
 // BuildNearestRoute - tries to build a route as close to the target
@@ -2937,6 +3206,8 @@ int CBaseMonster :: FindHintNode ( void )
 		int nodeNumber = (i + WorldGraph.m_iLastActiveIdleSearch) % WorldGraph.m_cNodes;
 		CNode &node = WorldGraph.Node( nodeNumber );
 
+		ALERT ( at_aiconsole, "find_hintnode: evaluate node %d!\n", nodeNumber );
+
 		if ( node.m_sHintType )
 		{
 			// this node has a hint. Take it if it is visible, the monster likes it, and the monster has an animation to match the hint's activity.
@@ -2951,6 +3222,63 @@ int CBaseMonster :: FindHintNode ( void )
 						WorldGraph.m_iLastActiveIdleSearch = nodeNumber + 1; // next monster that searches for hint nodes will start where we left off.
 						return nodeNumber;// take it!
 					}
+					else
+					{
+						ALERT ( at_aiconsole, "find_hintnode: node not visible!\n" );
+					}
+				}
+				else
+				{
+					ALERT ( at_aiconsole, "find_hintnode: invalid activity!\n" );
+				}
+			}
+		}
+		else
+		{
+			ALERT ( at_aiconsole, "find_hintnode: not a hint node!\n" );
+		}
+	}
+
+	WorldGraph.m_iLastActiveIdleSearch = 0;// start at the top of the list for the next search.
+
+	return NO_NODE;
+}
+
+//=========================================================
+// FindReachableHintNode - like FindHintNode, but takes the
+// first hint node the monster can build a route to. name ours
+//=========================================================
+int CBaseMonster :: FindReachableHintNode ( void )
+{
+	int i;
+
+	if ( !WorldGraph.m_fGraphPresent )
+	{
+		ALERT ( at_aiconsole, "find_hintnode: graph not ready!\n" );
+		return NO_NODE;
+	}
+
+	if ( WorldGraph.m_iLastActiveIdleSearch >= WorldGraph.m_cNodes )
+	{
+		WorldGraph.m_iLastActiveIdleSearch = 0;
+	}
+
+	for ( i = 0; i < WorldGraph.m_cNodes ; i++ )
+	{
+		int nodeNumber = (i + WorldGraph.m_iLastActiveIdleSearch) % WorldGraph.m_cNodes;
+		CNode &node = WorldGraph.Node( nodeNumber );
+
+		if ( node.m_sHintType )
+		{
+			if ( FValidateHintType ( node.m_sHintType ) )
+			{
+				if ( !node.m_sHintActivity || LookupActivity ( node.m_sHintActivity ) != ACTIVITY_NOT_AVAILABLE )
+				{
+					if ( MoveToNode( ACT_WALK, 0, node.m_vecOrigin ) )
+					{
+						WorldGraph.m_iLastActiveIdleSearch = nodeNumber + 1; // next monster that searches for hint nodes will start where we left off.
+						return nodeNumber;// take it!
+					}
 				}
 			}
 		}
@@ -2959,6 +3287,21 @@ int CBaseMonster :: FindHintNode ( void )
 	WorldGraph.m_iLastActiveIdleSearch = 0;// start at the top of the list for the next search.
 
 	return NO_NODE;
+}
+
+//=========================================================
+// HasHintNodes - does the node graph have any hint node
+// this monster likes? name ours
+//=========================================================
+bool CBaseMonster :: HasHintNodes ( void )
+{
+	for ( int i = 0; i < WorldGraph.m_cNodes; i++ )
+	{
+		if ( WorldGraph.m_pNodes[ i ].m_sHintType && FValidateHintType( WorldGraph.m_pNodes[ i ].m_sHintType ) )
+			return true;
+	}
+
+	return false;
 }
 			
 
@@ -3053,6 +3396,11 @@ void CBaseMonster :: KeyValue( KeyValueData *pkvd )
 	else if (FStrEq(pkvd->szKeyName, "TriggerCondition") )
 	{
 		m_iTriggerCondition = atoi( pkvd->szValue );
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "MyClass") )
+	{
+		m_iMyClass = atoi( pkvd->szValue );
 		pkvd->fHandled = TRUE;
 	}
 	else
@@ -3501,6 +3849,7 @@ CBaseEntity* CBaseMonster :: DropItem ( char *pszItemName, const Vector &vecPos,
 		// do we want this behavior to be default?! (sjb)
 		pItem->pev->velocity = pev->velocity;
 		pItem->pev->avelocity = Vector ( 0, RANDOM_FLOAT( 0, 100 ), 0 );
+		pItem->pev->spawnflags |= SF_NORESPAWN;	// a dropped item never respawns
 		return pItem;
 	}
 	else
@@ -3521,7 +3870,48 @@ BOOL CBaseMonster :: ShouldFadeOnDeath( void )
 	return FALSE;
 }
 
-// Retail has a 451-byte mod function here (0x10088ed0), not written yet.
+//=========================================================
+// EmulatePlayerUse - uses what the player's +use would use
+// from where I stand, looking along my v_angle: the usable
+// (impulse or on/off) non-monster entity within 64 units most
+// in front of me is toggled. name ours
+//=========================================================
+static const float flSearchRadius = 64;	// name ours, player.cpp's PLAYER_SEARCH_RADIUS
+
+void CBaseMonster :: EmulatePlayerUse ( void )
+{
+	CBaseEntity *pObject = NULL;
+	CBaseEntity *pClosest = NULL;
+	Vector		vecLOS;
+	float flMaxDot = VIEW_FIELD_NARROW;
+	float flDot;
+
+	UTIL_MakeVectors ( pev->v_angle );// so we know which way we are facing
+
+	ALERT ( at_console, "emulating player use\n" );
+
+	while ((pObject = UTIL_FindEntityInSphere( pObject, pev->origin, flSearchRadius )) != NULL)
+	{
+		if ( pObject != this && !FBitSet( pObject->pev->flags, FL_MONSTER ) && (pObject->ObjectCaps() & (FCAP_IMPULSE_USE | FCAP_ONOFF_USE)) )
+		{
+			vecLOS = (VecBModelOrigin( pObject->pev ) - (pev->origin + pev->view_ofs));
+
+			// This essentially moves the origin of the target to the corner nearest the player to test to see 
+			// if it's "hull" is in the view cone
+			vecLOS = UTIL_ClampVectorToBox( vecLOS, pObject->pev->size * 0.5 );
+
+			flDot = DotProduct (vecLOS , gpGlobals->v_forward);
+			if (flDot > flMaxDot )
+			{// only if the item is in front of the user
+				pClosest = pObject;
+				flMaxDot = flDot;
+			}
+		}
+	}
+
+	if ( pClosest )
+		pClosest->Use( this, this, USE_TOGGLE, 0 );
+}
 
 float CBaseMonster :: MovementSpeed( void )
 {
