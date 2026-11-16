@@ -115,7 +115,7 @@ public:
 		return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | flags; 
 	}
 	int		GetOnState( void ) { return !FBitSet( pev->effects, EF_NODRAW ); }
-	const char *GetKillDesc( void ) { if ( m_iszKillDesc ) return STRING( m_iszKillDesc ); return "an energy beam"; }
+	const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "an energy beam"; return STRING( m_iszKillDesc ); }
 	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return DamageVerb( DMG_ENERGYBEAM, fGibbed ); }
 
 	void EXPORT TriggerTouch( CBaseEntity *pOther );
