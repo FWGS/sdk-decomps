@@ -41,7 +41,6 @@
 #define BARNEY_BODY_GUNGONE			2
 
 // spawnflags (names ours; the fgd calls 32 "Hate Player" and 64 "Hate Scientists")
-#define SF_BARNEY_IGNORE_PLAYER		8
 #define SF_BARNEY_HATE_SCIENTISTS	32
 #define SF_BARNEY_NO_WEAPON_DROP	1024	// "Dont drop weapon"
 
@@ -1004,7 +1003,7 @@ void CDeadBarney :: Spawn( )
 //=========================================================
 int CBarney::IRelationship( CBaseEntity *pTarget )
 {
-	if ( pTarget->IsPlayer() && !(pev->spawnflags & SF_BARNEY_IGNORE_PLAYER) && (m_afMemory & bits_MEMORY_PROVOKED) )
+	if ( pTarget->IsPlayer() && !(pev->spawnflags & SF_MONSTER_IGNOREPLAYER) && (m_afMemory & bits_MEMORY_PROVOKED) )
 		return R_HT;
 
 	if ( (pev->spawnflags & SF_BARNEY_HATE_SCIENTISTS) && pTarget->Classify() == CLASS_HUMAN_PASSIVE )
@@ -1020,9 +1019,9 @@ BOOL CBarney::FValidateHintType( short sHint )
 {
 	static short sBarneyHints[] =
 	{
-		21,	// "Security: Work"
-		22,	// "Security: Use"
-		23,	// "Security: Transit"
+		21,	// HINT_SECURITY_WORK (nodes.h)
+		22,	// HINT_SECURITY_USE
+		23,	// HINT_SECURITY_TRANSIT
 	};
 
 	for ( int i = 0; i < ARRAYSIZE( sBarneyHints ); i++ )
