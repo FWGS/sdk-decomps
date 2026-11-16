@@ -48,7 +48,7 @@ public:
 	BOOL CanHolster( void );
 	void Holster( int skiplocal = 0 );
 	void WeaponIdle( void );
-	CGrenade *ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );	// name ours
+	CGrenade *ShootTimedTNT( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time );
 	float m_flStartThrow;
 	float m_flReleaseThrow;
 };
@@ -171,7 +171,7 @@ void CHandGrenade::WeaponIdle( void )
 		if (time < 0)
 			time = 0;
 
-		ShootTimed( m_pPlayer->pev, vecSrc, vecThrow, time );
+		ShootTimedTNT( m_pPlayer->pev, vecSrc, vecThrow, time );
 
 		if (flVel < 500)
 		{
@@ -248,7 +248,7 @@ void CHandGrenade::WeaponIdle( void )
 // They Hunger: CGrenade::ShootTimed with the dynamite's model, as a
 // (non-static) member of the weapon
 //=========================================================
-CGrenade * CHandGrenade:: ShootTimed( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time )
+CGrenade * CHandGrenade:: ShootTimedTNT( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, float time )
 {
 	CGrenade *pGrenade = GetClassPtr( (CGrenade *)NULL );
 	pGrenade->Spawn();

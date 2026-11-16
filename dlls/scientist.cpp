@@ -1434,9 +1434,9 @@ int CSittingScientist :: FIdleSpeak ( void )
 //=========================================================
 // They Hunger: the civilian (einar_civ), a scientist with
 // models/civ.mdl. Its head and skin are the map's body and
-// skin, untouched. Class names ours.
+// skin, untouched.
 //=========================================================
-class CEinarCiv : public CScientist
+class CEinarCivilian : public CScientist
 {
 public:
 	void Spawn( void );
@@ -1444,12 +1444,12 @@ public:
 	BOOL CanHeal( void ) { return FALSE; }
 };
 
-LINK_ENTITY_TO_CLASS( einar_civ, CEinarCiv );
+LINK_ENTITY_TO_CLASS( einar_civ, CEinarCivilian );
 
 //=========================================================
 // Spawn
 //=========================================================
-void CEinarCiv :: Spawn( void )
+void CEinarCivilian :: Spawn( void )
 {
 	Precache( );
 
@@ -1474,7 +1474,7 @@ void CEinarCiv :: Spawn( void )
 //=========================================================
 // Precache - precaches all resources this monster needs
 //=========================================================
-void CEinarCiv :: Precache( void )
+void CEinarCivilian :: Precache( void )
 {
 	PRECACHE_MODEL("models/civ.mdl");
 	CScientist::Precache();
@@ -1483,15 +1483,15 @@ void CEinarCiv :: Precache( void )
 //=========================================================
 // Dead Civilian PROP (einar_civ_dead)
 //=========================================================
-class CEinarCivDead : public CDeadScientist
+class CEinarDeadCivilian : public CDeadScientist
 {
 public:
 	void Spawn( void );
 };
 
-LINK_ENTITY_TO_CLASS( einar_civ_dead, CEinarCivDead );
+LINK_ENTITY_TO_CLASS( einar_civ_dead, CEinarDeadCivilian );
 
-void CEinarCivDead :: Spawn( )
+void CEinarDeadCivilian :: Spawn( )
 {
 	PRECACHE_MODEL("models/civ.mdl");
 	SET_MODEL(ENT(pev), "models/civ.mdl");
@@ -1515,15 +1515,15 @@ void CEinarCivDead :: Spawn( )
 //=========================================================
 // Sitting Civilian PROP (einar_civ_sit)
 //=========================================================
-class CEinarCivSit : public CSittingScientist
+class CEinarSittingCivilian : public CSittingScientist
 {
 public:
 	void Spawn( void );
 };
 
-LINK_ENTITY_TO_CLASS( einar_civ_sit, CEinarCivSit );
+LINK_ENTITY_TO_CLASS( einar_civ_sit, CEinarSittingCivilian );
 
-void CEinarCivSit :: Spawn( )
+void CEinarSittingCivilian :: Spawn( )
 {
 	PRECACHE_MODEL("models/civ.mdl");
 	SET_MODEL(ENT(pev), "models/civ.mdl");

@@ -1965,7 +1965,7 @@ Schedule_t* CEinarZork :: GetScheduleOfType ( int Type )
 //=========================================================
 // monster_th_cyberfranklin - an alien grunt with Franklin's
 // model and voice, six times the health and one melee swing
-// (class name ours; it saves as CAGrunt)
+// (it saves as CAGrunt)
 //=========================================================
 class CEinarCyberFranklin : public CAGrunt
 {
@@ -1980,19 +1980,19 @@ public:
 	void PrescheduleThink ( void ) {}// no idle speech
 	int IRelationship( CBaseEntity *pTarget ) { return CSquadMonster :: IRelationship( pTarget ); }// human grunts are no nemesis
 
-	static const char *pDieSounds[];
-	static const char *pPainSounds[];
+	static const char *pCyberDieSounds[];
+	static const char *pCyberPainSounds[];
 };
 LINK_ENTITY_TO_CLASS( monster_th_cyberfranklin, CEinarCyberFranklin );
 
-const char *CEinarCyberFranklin::pDieSounds[] =
+const char *CEinarCyberFranklin::pCyberDieSounds[] =
 {
 	"franklin/death1.wav",
 	"franklin/death2.wav",
 	"franklin/death3.wav",
 };
 
-const char *CEinarCyberFranklin::pPainSounds[] =
+const char *CEinarCyberFranklin::pCyberPainSounds[] =
 {
 	"franklin/pain1.wav",
 	"franklin/pain2.wav",
@@ -2005,7 +2005,7 @@ void CEinarCyberFranklin :: DeathSound ( void )
 {
 	StopTalking();
 
-	EMIT_SOUND ( ENT(pev), CHAN_VOICE, pDieSounds[RANDOM_LONG(0,ARRAYSIZE(pDieSounds)-1)], 1.0, ATTN_NORM );
+	EMIT_SOUND ( ENT(pev), CHAN_VOICE, pCyberDieSounds[RANDOM_LONG(0,ARRAYSIZE(pCyberDieSounds)-1)], 1.0, ATTN_NORM );
 }
 
 //=========================================================
@@ -2042,7 +2042,7 @@ void CEinarCyberFranklin :: PainSound ( void )
 
 	StopTalking();
 
-	EMIT_SOUND ( ENT(pev), CHAN_VOICE, pPainSounds[RANDOM_LONG(0,ARRAYSIZE(pPainSounds)-1)], 1.0, ATTN_NORM );
+	EMIT_SOUND ( ENT(pev), CHAN_VOICE, pCyberPainSounds[RANDOM_LONG(0,ARRAYSIZE(pCyberPainSounds)-1)], 1.0, ATTN_NORM );
 }
 
 //=========================================================
@@ -2191,11 +2191,11 @@ void CEinarCyberFranklin :: Precache()
 	for ( i = 0; i < ARRAYSIZE( pAttackMissSounds ); i++ )
 		PRECACHE_SOUND((char *)pAttackMissSounds[i]);
 
-	for ( i = 0; i < ARRAYSIZE( pDieSounds ); i++ )
-		PRECACHE_SOUND((char *)pDieSounds[i]);
+	for ( i = 0; i < ARRAYSIZE( pCyberDieSounds ); i++ )
+		PRECACHE_SOUND((char *)pCyberDieSounds[i]);
 
-	for ( i = 0; i < ARRAYSIZE( pPainSounds ); i++ )
-		PRECACHE_SOUND((char *)pPainSounds[i]);
+	for ( i = 0; i < ARRAYSIZE( pCyberPainSounds ); i++ )
+		PRECACHE_SOUND((char *)pCyberPainSounds[i]);
 
 	PRECACHE_SOUND( "franklin/attack1.wav" );
 	PRECACHE_SOUND( "franklin/alert1.wav" );

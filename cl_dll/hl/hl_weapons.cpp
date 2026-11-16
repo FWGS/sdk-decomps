@@ -53,10 +53,10 @@ CGlock g_Glock;
 // chaingun's object, g_clorg [60], the AP9's, g_pWpns [171], the sniper rifle's,
 // lasthealth [520], ev [528], g_Glock [539], player [564], Globals [737], the
 // Taurus's, weapon_einar1's, g_clang [820].
-CWeaponEinarAP9 g_Ap9;				// [137]
+CWeaponEinarAp9 g_Ap9;				// [137]
 CWeaponEinarTaurus g_ClTaurus;		// [753]
 CWeaponEinarSniper g_Hkg36;			// [354]
-CWeaponEinarTFCSniper g_TfcSniper;	// [817]
+CWeaponEinar2 g_TfcSniper;			// [817]
 CWeaponEinarChaingun g_Chain;		// [4]
 
 /*
@@ -1118,17 +1118,17 @@ void _DLLEXPORT HUD_PostRunCmd( struct local_state_s *from, struct local_state_s
 //=========================================================
 // They Hunger: the client's versions of what the weapons of
 // wpn_shared/hl_wpn_glock.cpp ask their DLL (the game DLL's
-// are at the end of weapons.cpp). Names ours.
+// are at the end of weapons.cpp).
 //=========================================================
-BOOL TH_IsMultiplayer( void )
+BOOL einar_isMultiplayer( void )
 {
 	return gEngfuncs.GetMaxClients() != 1;
 }
 
-void TH_ScreenFadeIn( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha )
+void einar_ScreenFadeIn( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha )
 {
 }
 
-void TH_ScreenFadeOut( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha )
+void einar_ScreenFadeOut( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha )
 {
 }
