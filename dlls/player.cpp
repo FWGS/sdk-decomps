@@ -479,6 +479,8 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	// keep track of amount of damage last sustained
 	m_lastDamageAmount = flDamage;
 
+	bool fArmorHit = false;
+
 	// Armor. 
 	if (pev->armorvalue && !(bitsDamageType & (DMG_FALL | DMG_DROWN)) )// armor doesn't protect against fall or drown damage!
 	{
@@ -498,9 +500,24 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		}
 		else
 			pev->armorvalue -= flArmor;
+
+		if ( flArmor )
+			fArmorHit = true;
 		
 		flDamage = flNew;
 	}
+
+	// tell director about it
+	MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
+		WRITE_BYTE ( DRC_EVENT );	// take damage event
+		WRITE_SHORT( ENTINDEX(this->edict()) );	// index number of primary entity
+		WRITE_SHORT( ENTINDEX(ENT(pevInflictor)) );	// index number of secondary entity
+		WRITE_LONG( 5 );   // eventflags (priority and flags)
+	MESSAGE_END();
+
+	// the energy shield stops everything
+	if ( Shielded() )
+		return CBaseMonster::TakeDamage( pevInflictor, pevAttacker, 0, 0 );
 
 	// this cast to INT is critical!!! If a player ends up with 0.5 health, the engine will get that
 	// as an int (zero) and think the player is dead! (this will incite a clientside screentilt, etc)
@@ -514,15 +531,6 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 				m_rgbTimeBasedDamage[i] = 0;
 	}
 
-	// tell director about it
-	MESSAGE_BEGIN( MSG_SPEC, SVC_HLTV );
-		WRITE_BYTE ( DRC_EVENT );	// take damage event
-		WRITE_SHORT( ENTINDEX(this->edict()) );	// index number of primary entity
-		WRITE_SHORT( ENTINDEX(ENT(pevInflictor)) );	// index number of secondary entity
-		WRITE_LONG( 5 );   // eventflags (priority and flags)
-	MESSAGE_END();
-
-
 	// how bad is it, doc?
 
 	ftrivial = (pev->health > 75 || m_lastDamageAmount < 5);
@@ -532,17 +540,18 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 	// handle all bits set in this damage message,
 	// let the suit give player the diagnosis
 
-	// UNDONE: add sounds for types of damage sustained (ie: burn, shock, slash )
-
-	// UNDONE: still need to record damage and heal messages for the following types
-
-		// DMG_BURN	
-		// DMG_FREEZE
-		// DMG_BLAST
-		// DMG_SHOCK
-
 	m_bitsDamageType |= bitsDamage; // Save this so we can report it to the client
 	m_bitsHUDDamage = -1;  // make sure the damage bits get resent
+
+	if (fTookDamage && !ftrivial && fmajor && flHealthPrev >= 75) 
+	{
+		// first time we take major damage...
+		// turn automedic on if not on
+		SetSuitUpdate("!HEV_MED1", FALSE, SUIT_NEXT_IN_30MIN);	// automedic on
+
+		// give morphine shot if not given recently
+		SetSuitUpdate("!HEV_HEAL7", FALSE, SUIT_NEXT_IN_30MIN);	// morphine shot
+	}
 
 	while (fTookDamage && (!ftrivial || (bitsDamage & DMG_TIMEBASED)) && ffound && bitsDamage)
 	{
@@ -561,6 +570,8 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 				SetSuitUpdate("!HEV_DMG5", FALSE, SUIT_NEXT_IN_30SEC);	// major fracture
 			else
 				SetSuitUpdate("!HEV_DMG4", FALSE, SUIT_NEXT_IN_30SEC);	// minor fracture
+
+			SetSuitUpdate("!HEV_HEAL8", FALSE, SUIT_NEXT_IN_5MIN);
 	
 			bitsDamage &= ~(DMG_FALL | DMG_CRUSH);
 			ffound = TRUE;
@@ -569,9 +580,12 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		if (bitsDamage & DMG_BULLET)
 		{
 			if (m_lastDamageAmount > 5)
+			{
 				SetSuitUpdate("!HEV_DMG6", FALSE, SUIT_NEXT_IN_30SEC);	// blood loss detected
-			//else
-			//	SetSuitUpdate("!HEV_DMG0", FALSE, SUIT_NEXT_IN_30SEC);	// minor laceration
+				SetSuitUpdate("!HEV_HEAL3", FALSE, SUIT_NEXT_IN_30SEC);
+			}
+			else
+				SetSuitUpdate("!HEV_DMG0", FALSE, SUIT_NEXT_IN_30SEC);	// minor laceration
 			
 			bitsDamage &= ~DMG_BULLET;
 			ffound = TRUE;
@@ -580,9 +594,15 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		if (bitsDamage & DMG_SLASH)
 		{
 			if (fmajor)
+			{
 				SetSuitUpdate("!HEV_DMG1", FALSE, SUIT_NEXT_IN_30SEC);	// major laceration
+				SetSuitUpdate("!HEV_HEAL1", FALSE, SUIT_NEXT_IN_5MIN);
+			}
 			else
+			{
 				SetSuitUpdate("!HEV_DMG0", FALSE, SUIT_NEXT_IN_30SEC);	// minor laceration
+				SetSuitUpdate("!HEV_HEAL0", FALSE, SUIT_NEXT_IN_5MIN);
+			}
 
 			bitsDamage &= ~DMG_SLASH;
 			ffound = TRUE;
@@ -591,7 +611,10 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		if (bitsDamage & DMG_SONIC)
 		{
 			if (fmajor)
+			{
 				SetSuitUpdate("!HEV_DMG2", FALSE, SUIT_NEXT_IN_1MIN);	// internal bleeding
+				SetSuitUpdate("!HEV_HEAL2", FALSE, SUIT_NEXT_IN_5MIN);
+			}
 			bitsDamage &= ~DMG_SONIC;
 			ffound = TRUE;
 		}
@@ -599,6 +622,7 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		if (bitsDamage & (DMG_POISON | DMG_PARALYZE))
 		{
 			SetSuitUpdate("!HEV_DMG3", FALSE, SUIT_NEXT_IN_1MIN);	// blood toxins detected
+			SetSuitUpdate("!HEV_MED2", FALSE, SUIT_NEXT_IN_5MIN);
 			bitsDamage &= ~(DMG_POISON | DMG_PARALYZE);
 			ffound = TRUE;
 		}
@@ -606,6 +630,7 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		if (bitsDamage & DMG_ACID)
 		{
 			SetSuitUpdate("!HEV_DET1", FALSE, SUIT_NEXT_IN_1MIN);	// hazardous chemicals detected
+			SetSuitUpdate("!HEV_E4", FALSE, SUIT_NEXT_IN_5MIN);
 			bitsDamage &= ~DMG_ACID;
 			ffound = TRUE;
 		}
@@ -613,6 +638,7 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		if (bitsDamage & DMG_NERVEGAS)
 		{
 			SetSuitUpdate("!HEV_DET0", FALSE, SUIT_NEXT_IN_1MIN);	// biohazard detected
+			SetSuitUpdate("!HEV_MED2", FALSE, SUIT_NEXT_IN_5MIN);
 			bitsDamage &= ~DMG_NERVEGAS;
 			ffound = TRUE;
 		}
@@ -620,41 +646,56 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		if (bitsDamage & DMG_RADIATION)
 		{
 			SetSuitUpdate("!HEV_DET2", FALSE, SUIT_NEXT_IN_1MIN);	// radiation detected
+			SetSuitUpdate("!HEV_DET5", FALSE, SUIT_NEXT_IN_5MIN);
 			bitsDamage &= ~DMG_RADIATION;
 			ffound = TRUE;
 		}
 		if (bitsDamage & DMG_SHOCK)
 		{
 			bitsDamage &= ~DMG_SHOCK;
+			SetSuitUpdate("!HEV_SHOCK", FALSE, SUIT_NEXT_IN_30SEC);
+			SetSuitUpdate("!HEV_E2", FALSE, SUIT_NEXT_IN_30SEC);
+			ffound = TRUE;
+		}
+		if (bitsDamage & (DMG_BURN | DMG_SLOWBURN))
+		{
+			bitsDamage &= ~(DMG_BURN | DMG_SLOWBURN);
+			SetSuitUpdate("!HEV_FIRE", FALSE, SUIT_NEXT_IN_1MIN);
 			ffound = TRUE;
 		}
 	}
 
 	pev->punchangle.x = -2;
 
-	if (fTookDamage && !ftrivial && fmajor && flHealthPrev >= 75) 
+	if (fTookDamage && fmajor)
 	{
-		// first time we take major damage...
-		// turn automedic on if not on
-		SetSuitUpdate("!HEV_MED1", FALSE, SUIT_NEXT_IN_30MIN);	// automedic on
+		SetSuitUpdate("!HEV_PAIN", TRUE, SUIT_NEXT_IN_1MIN);
 
-		// give morphine shot if not given recently
-		SetSuitUpdate("!HEV_HEAL7", FALSE, SUIT_NEXT_IN_30MIN);	// morphine shot
+		if (pev->health >= 30)
+			SetSuitUpdate("!HEV_HLTH4", FALSE, SUIT_NEXT_IN_1MIN);
 	}
 	
 	if (fTookDamage && !ftrivial && fcritical && flHealthPrev < 75)
 	{
 
 		// already took major damage, now it's critical...
-		if (pev->health < 6)
-			SetSuitUpdate("!HEV_HLTH3", FALSE, SUIT_NEXT_IN_10MIN);	// near death
+		if (pev->health < 5)
+			SetSuitUpdate("!HEV_HLTH6", FALSE, SUIT_REPEAT_OK);
+		else if (pev->health < 10)
+			SetSuitUpdate("!HEV_HLTH3", FALSE, SUIT_NEXT_IN_30SEC);	// near death
 		else if (pev->health < 20)
-			SetSuitUpdate("!HEV_HLTH2", FALSE, SUIT_NEXT_IN_10MIN);	// health critical
+			SetSuitUpdate("!HEV_HLTH2", FALSE, SUIT_NEXT_IN_1MIN);	// health critical
+		else if (pev->health < 30)
+			SetSuitUpdate("!HEV_HLTH0", FALSE, SUIT_NEXT_IN_5MIN);
 	
 		// give critical health warnings
 		if (!RANDOM_LONG(0,3) && flHealthPrev < 50)
 			SetSuitUpdate("!HEV_DMG7", FALSE, SUIT_NEXT_IN_5MIN); //seek medical attention
 	}
+
+	// sic: whether hurt or not
+	if (!RANDOM_LONG(0,3) && pev->health < 50)
+		SetSuitUpdate("!HEV_DMG7", FALSE, SUIT_NEXT_IN_5MIN); //seek medical attention
 
 	// if we're taking time based damage, warn about its continuing effects
 	if (fTookDamage && (bitsDamageType & DMG_TIMEBASED) && flHealthPrev < 75)
@@ -665,8 +706,12 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 					SetSuitUpdate("!HEV_DMG7", FALSE, SUIT_NEXT_IN_5MIN); //seek medical attention
 			}
 			else
-				SetSuitUpdate("!HEV_HLTH1", FALSE, SUIT_NEXT_IN_10MIN);	// health dropping
+				SetSuitUpdate("!HEV_HLTH1", FALSE, SUIT_NEXT_IN_5MIN);	// health dropping
 		}
+
+	// the armor took a hit and is running low
+	if ( fArmorHit && pev->armorvalue <= 50 )
+		SetSuitUpdate("!HEV_NOARMOR", TRUE, SUIT_NEXT_IN_30SEC);
 
 	return fTookDamage;
 }
