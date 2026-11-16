@@ -212,7 +212,7 @@ Vector CClusterBomb::ClusterSpread( const Vector &vecSpread )
 	float y = RANDOM_FLOAT( -1, 1 );
 	float z = RANDOM_FLOAT( 0.5, 1 );
 
-	return gpGlobals->v_forward * ( z * vecSpread.z ) + gpGlobals->v_right * ( x * vecSpread.x ) + gpGlobals->v_up * ( y * vecSpread.y );
+	return z * vecSpread.z * gpGlobals->v_forward + x * vecSpread.x * gpGlobals->v_right + y * vecSpread.y * gpGlobals->v_up;
 }
 
 void CClusterBomb::ClusterPreDetonate( void )
