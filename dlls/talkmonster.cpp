@@ -1381,7 +1381,7 @@ Schedule_t* CTalkMonster :: GetScheduleOfType ( int Type )
 				return slIdleSpeak;
 			}
 			
-			if ( !IsTalking() && HasConditions ( bits_COND_SEE_CLIENT ) && RANDOM_LONG( 0, 6 ) == 0 && !(bool)( pev->spawnflags & SF_MONSTER_IGNOREPLAYER ) )
+			if ( !IsTalking() && HasConditions ( bits_COND_SEE_CLIENT ) && RANDOM_LONG( 0, 6 ) == 0 && !HasSpawnFlag( SF_MONSTER_IGNOREPLAYER ) )
 			{
 				edict_t *pPlayer = g_engfuncs.pfnPEntityOfEntIndex( 1 );
 
@@ -1473,7 +1473,7 @@ void CTalkMonster :: TrySmellTalk( void )
 int CTalkMonster::IRelationship( CBaseEntity *pTarget )
 {
 	if ( pTarget->IsPlayer() )
-		if ( !(bool)( pev->spawnflags & SF_MONSTER_IGNOREPLAYER ) && ( m_afMemory & bits_MEMORY_PROVOKED ) )
+		if ( !HasSpawnFlag( SF_MONSTER_IGNOREPLAYER ) && ( m_afMemory & bits_MEMORY_PROVOKED ) )
 			return R_HT;
 	return CBaseMonster::IRelationship( pTarget );
 }

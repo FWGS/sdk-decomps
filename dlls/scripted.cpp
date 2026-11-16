@@ -274,7 +274,7 @@ int CCineMonster :: FindEntity( void )
 {
 	edict_t *pentTarget;
 
-	if ( (bool)( pev->spawnflags & SF_SCRIPT_TARGETACTIVATOR ) )
+	if ( HasSpawnFlag( SF_SCRIPT_TARGETACTIVATOR ) )
 	{
 		// the monster that triggered me, whatever its name
 		if ( m_hActivator != NULL && !m_hActivator->IsPlayer() )
@@ -498,7 +498,7 @@ void CCineMonster :: CineThink( void )
 	{
 		CancelScript( );
 		ALERT( at_aiconsole, "script \"%s\" can't find monster \"%s\"\n", STRING( pev->targetname ), STRING( m_iszEntity ) );
-		if ( !(bool)( pev->spawnflags & SF_SCRIPT_TARGETACTIVATOR ) )
+		if ( !HasSpawnFlag( SF_SCRIPT_TARGETACTIVATOR ) )
 			pev->nextthink = gpGlobals->time + 1.0;
 	}
 }
@@ -1103,7 +1103,7 @@ void CScriptedSentence :: FindThink( void )
 	else
 	{
 //		ALERT( at_console, "%s: can't find monster %s\n", STRING(m_iszSentence), STRING(m_iszEntity) );
-		if ( !(bool)( pev->spawnflags & SF_SENTENCE_TARGETACTIVATOR ) )
+		if ( !HasSpawnFlag( SF_SENTENCE_TARGETACTIVATOR ) )
 			pev->nextthink = gpGlobals->time + m_flRepeat + 0.5;
 	}
 }
@@ -1144,7 +1144,7 @@ CBaseMonster *CScriptedSentence :: FindEntity( void )
 	edict_t *pentTarget;
 	CBaseMonster *pMonster;
 
-	if ( (bool)( pev->spawnflags & SF_SENTENCE_TARGETACTIVATOR ) )
+	if ( HasSpawnFlag( SF_SENTENCE_TARGETACTIVATOR ) )
 	{
 		// the monster that triggered me, whatever its name
 		if ( m_hActivator != NULL && !m_hActivator->IsPlayer() )

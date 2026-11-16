@@ -2263,7 +2263,7 @@ int CBaseMonster::IRelationship ( CBaseEntity *pTarget )
 		if ( IsPlayer() && !pTarget->IsPlayer() )
 			return max( iEnemy[ CLASS_PLAYER ][ iTargetClass ], ssh_hazardmode.value );
 	}
-	else if ( (bool)( pev->spawnflags & 8 ) || ssh_hazardmode.value < 0 )
+	else if ( HasSpawnFlag( SF_MONSTER_IGNOREPLAYER ) || ssh_hazardmode.value < 0 )
 	{
 		// spawnflag 8 (or a negative hazard mode): never hostile to the player
 		if ( pTarget->IsPlayer() )
