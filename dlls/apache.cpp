@@ -913,7 +913,7 @@ void CApache :: FireRocket( void )
 	if (iMissile == 2)
 	{
 		// heat-seeking missile
-		CRocket *pRocket = CRocket::CreateRocket( vecSrc, pev->angles, edict(), Vector( 255, 224, 64 ), 0 );
+		CRocket *pRocket = CRocket::CreateRocket( vecSrc, pev->angles, edict(), Vector( 255, 224, 64 ), 0 );	// sic: used unchecked
 		pRocket->m_flSeekTime = gpGlobals->time + 0.2;
 		pRocket->pev->dmg = 150;
 		pRocket->pev->velocity = gpGlobals->v_forward * 100;
@@ -1709,7 +1709,7 @@ void CNAApache :: FireRocket( void )
 	if (iMissile == 2)
 	{
 		// bionic missile
-		CRocket *pRocket = CRocket::CreateRocket( vecSrc, pev->angles, edict(), Vector( 0, 255, 170 ), 0 );
+		CRocket *pRocket = CRocket::CreateRocket( vecSrc, pev->angles, edict(), Vector( 0, 255, 170 ), 0 );	// sic: used unchecked
 		pRocket->pev->dmg = 200;
 		pRocket->pev->velocity = gpGlobals->v_forward * 100;
 		pRocket->pev->speed = 1200;
