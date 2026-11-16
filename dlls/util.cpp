@@ -2555,3 +2555,9 @@ CBaseEntity *UTIL_RandomEntityByClassname( const char *szName )
 	}
 	return pChosen;
 }
+
+// TEMPORARY stand-in for effects.cpp's
+class CBasePlayer;
+void UpdateFogAndRain( CBasePlayer *pPlayer )
+{
+}
