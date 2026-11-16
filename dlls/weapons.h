@@ -57,6 +57,22 @@ public:
 	BOOL m_fRegisteredSound;// whether or not this grenade has issued its DANGER sound to the world sound list yet.
 };
 
+// The mod's cluster bomb (cluster_bomb.cpp; the exports name the class). Declared here because the hand
+// grenade throws it; its other members are added here with cluster_bomb.cpp.
+class CClusterBomb : public CGrenade
+{
+public:
+	static CClusterBomb *ShootTimed( edict_t *pOwner, const Vector &vecStart, const Vector &vecVelocity, float time );	// name ours (0x10027d00)
+	static CClusterBomb *ShootMirv( edict_t *pOwner, const Vector &vecStart, const Vector &vecVelocity, float time );	// name ours (0x10027e70): ShootTimed, then pev->weapons = 3
+
+	void EXPORT ClusterDetonate( void );
+	void EXPORT ClusterExplodeTouch( CBaseEntity *pOther );
+	void EXPORT ClusterBounceTouch( CBaseEntity *pOther );
+	void EXPORT ClusterHybridThink( void );
+	void EXPORT ClusterHybridTouch( CBaseEntity *pOther );
+	void EXPORT ClusterPreDetonate( void );
+};
+
 
 // constant items
 #define ITEM_HEALTHKIT		1
@@ -412,6 +428,7 @@ public:
 
 extern DLL_GLOBAL	short	g_sModelIndexLaser;// holds the index for the laser beam
 extern DLL_GLOBAL	const char *g_pModelNameLaser;
+Vector UTIL_SpreadVector( const Vector &vecSpread );	// weapons.cpp, name ours
 
 extern DLL_GLOBAL	short	g_sModelIndexLaserDot;// holds the index for the laser beam dot
 extern DLL_GLOBAL	short	g_sModelIndexFireball;// holds the index for the fireball
@@ -420,6 +437,13 @@ extern DLL_GLOBAL	short	g_sModelIndexWExplosion;// holds the index for the under
 extern DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 extern DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for blood drops
 extern DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for blood spray (bigger)
+extern DLL_GLOBAL	short	g_sModelIndexFireExplosion;// sprites/fexplo.spr (names ours from here)
+extern DLL_GLOBAL	short	g_sModelIndexSmokePuff;// sprites/smoke.spr
+extern DLL_GLOBAL	short	g_sModelIndexLightning;// sprites/lgtning.spr
+extern DLL_GLOBAL	short	g_sModelIndexPlayerFlame;// sprites/playerflame.spr
+extern DLL_GLOBAL	int		g_iBloodSprayEvent;// events/bloodspray.sc
+extern DLL_GLOBAL	int		g_iBlastSphereEvent;// events/blastsphere.sc
+extern DLL_GLOBAL	int		g_iElectricEvent;// events/electric.sc
 
 extern void ClearMultiDamage(void);
 extern void ApplyMultiDamage(entvars_t* pevInflictor, entvars_t* pevAttacker );
@@ -908,6 +932,8 @@ public:
 	void EndAttack( void );
 	void Attack( void );
 	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void WeaponSpecial( void );
 	void WeaponIdle( void );
 
 	float m_flAmmoUseTime;// since we use < 1 point of ammo per update, we subtract ammo on a timer.
@@ -915,17 +941,22 @@ public:
 	float GetPulseInterval( void );
 	float GetDischargeInterval( void );
 
+	void FireIon( void );	// name ours
 	void Fire( const Vector &vecOrigSrc, const Vector &vecDir );
 
 	BOOL HasAmmo( void );
 
 	void UseAmmo( int count );
 	
-	enum EGON_FIREMODE { FIRE_NARROW, FIRE_WIDE};
-
 	CBeam				*m_pBeam;
+#ifndef CLIENT_DLL
 	CBeam				*m_pNoise;
 	CSprite				*m_pSprite;
+	CBeam				*m_pIonBeams[4];		// the ion cannon's extra beams (names ours)
+	CSprite				*m_pIonSprites[10];		// even: beam starts, odd: beam ends
+	EHANDLE				m_hIonTargets[5];		// what each ion beam locked on
+	Vector				m_vecIonTargetOfs[5];	// where on it
+#endif
 
 	virtual BOOL UseDecrement( void )
 	{ 
@@ -940,9 +971,9 @@ public:
 
 private:
 	float				m_shootTime;
-	EGON_FIREMODE		m_fireMode;
 	float				m_shakeTime;
 	BOOL				m_deployed;
+	int					m_iBeamCount;	// the ion cannon's extra beam pairs, 0-2
 
 	unsigned short m_usEgonFire;
 };
