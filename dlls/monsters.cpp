@@ -2498,6 +2498,181 @@ BOOL CBaseMonster :: FindRetreat ( Vector vecThreat, float flMinDist, float flMa
 
 
 //=========================================================
+// FindNodeInCover - like FindCover, but only finds the node:
+// the first node in range that hides it from the threat's
+// eyes and is no farther from me than from the threat goes
+// to vecResult; no route is built. name ours
+//=========================================================
+BOOL CBaseMonster :: FindNodeInCover ( Vector vecThreat, Vector vecViewOffset, float flMinDist, float flMaxDist, Vector &vecResult )
+{
+	int i;
+	int iMyHullIndex;
+	int iMyNode;
+	int iThreatNode;
+	float flDist;
+	Vector	vecLookersOffset;
+	TraceResult tr;
+
+	if ( !flMaxDist )
+	{
+		// user didn't supply a MaxDist, so work up a crazy one.
+		flMaxDist = 784;
+	}
+
+	if ( flMinDist > 0.5 * flMaxDist)
+	{
+		flMaxDist = 0.5 * flMaxDist;	// sic: FindCover moves the minimum
+	}
+
+	if ( !WorldGraph.m_fGraphPresent || !WorldGraph.m_fGraphPointersSet )
+	{
+		ALERT ( at_aiconsole, "Graph not ready for findnodeincover!\n" );
+		return FALSE;
+	}
+
+	// sic: looked up and never used
+	iMyNode = WorldGraph.FindNearestNode( pev->origin, this );
+	iThreatNode = WorldGraph.FindNearestNode ( vecThreat, this );
+	iMyHullIndex = WorldGraph.HullIndex( this );
+
+	vecLookersOffset = vecThreat + vecViewOffset;// calculate location of enemy's eyes
+
+	// we'll do a rough sample to find nodes that are relatively nearby
+	for ( i = 0 ; i < WorldGraph.m_cNodes ; i++ )
+	{
+		int nodeNumber = (i + WorldGraph.m_iLastCoverSearch) % WorldGraph.m_cNodes;
+
+		CNode &node = WorldGraph.Node( nodeNumber );
+		WorldGraph.m_iLastCoverSearch = nodeNumber + 1; // next monster that searches for cover node will start where we left off here.
+
+		flDist = ( pev->origin - node.m_vecOrigin ).Length();
+
+		if ( flDist >= flMinDist && flDist < flMaxDist )
+		{
+			UTIL_TraceLine ( node.m_vecOrigin + vecViewOffset, vecLookersOffset, ignore_monsters, ignore_glass,  ENT(pev), &tr );
+
+			// if this node will block the threat's line of sight to me...
+			if ( tr.flFraction != 1.0 )
+			{
+				// ..and is also no farther from me than from the threat
+				if ( ( node.m_vecOrigin - pev->origin ).Length() <= ( node.m_vecOrigin - vecThreat ).Length() )
+				{
+					if ( FValidateCover ( node.m_vecOrigin ) )
+					{
+						vecResult = node.m_vecOrigin;
+						return TRUE;
+					}
+				}
+			}
+		}
+	}
+	return FALSE;
+}
+
+//=========================================================
+// FindNodeAway - finds a node closer to me than flMaxDist
+// and farther than flMinDist from the threat; it goes to
+// vecResult, no route is built. name ours
+//=========================================================
+BOOL CBaseMonster :: FindNodeAway ( Vector vecThreat, float flMinDist, float flMaxDist, Vector &vecResult )
+{
+	int i;
+	float flDist;
+
+	if ( !flMaxDist )
+	{
+		// user didn't supply a MaxDist, so work up a crazy one.
+		flMaxDist = 784;
+	}
+
+	if ( flMinDist > 0.5 * flMaxDist)
+	{
+		flMaxDist = flMinDist * 2;
+	}
+
+	if ( !WorldGraph.m_fGraphPresent || !WorldGraph.m_fGraphPointersSet )
+	{
+		ALERT ( at_aiconsole, "Graph not ready for findnodeincover!\n" );	// sic
+		return FALSE;
+	}
+
+	for ( i = 0 ; i < WorldGraph.m_cNodes ; i++ )
+	{
+		int nodeNumber = (i + WorldGraph.m_iLastCoverSearch) % WorldGraph.m_cNodes;
+
+		CNode &node = WorldGraph.Node( nodeNumber );
+		WorldGraph.m_iLastCoverSearch = nodeNumber + 1; // next monster that searches for cover node will start where we left off here.
+
+		flDist = ( pev->origin - node.m_vecOrigin ).Length();
+
+		if ( flDist < flMaxDist )
+		{
+			if ( ( node.m_vecOrigin - vecThreat ).Length() > flMinDist )
+			{
+				if ( FValidateCover ( node.m_vecOrigin ) )
+				{
+					vecResult = node.m_vecOrigin;
+					return TRUE;
+				}
+			}
+		}
+	}
+	return FALSE;
+}
+
+//=========================================================
+// FindEnemyNode - finds a node at least flMinDist from me,
+// between flMinEnemyDist and flMaxEnemyDist from the enemy,
+// from which I see the enemy's position; it goes to
+// vecResult, no route is built. A distance limit of 0 or
+// less is not tested, but the enemy distance is then
+// compared with the other limit anyway. name ours
+//=========================================================
+BOOL CBaseMonster :: FindEnemyNode ( const Vector &vecEnemy, Vector &vecResult, float flMinDist, float flMaxEnemyDist, float flMinEnemyDist )
+{
+	int i;
+	float flDist;
+	float flEnemyDist;
+	TraceResult tr;
+
+	if ( !WorldGraph.m_fGraphPresent || !WorldGraph.m_fGraphPointersSet )
+	{
+		ALERT ( at_aiconsole, "Graph not ready for findenemynode!\n" );
+		return FALSE;
+	}
+
+	flDist = 0;
+	flEnemyDist = 0;
+
+	for ( i = 0 ; i < WorldGraph.m_cNodes ; i++ )
+	{
+		int nodeNumber = (i + WorldGraph.m_iLastCoverSearch) % WorldGraph.m_cNodes;
+
+		CNode &node = WorldGraph.Node( nodeNumber );
+		WorldGraph.m_iLastCoverSearch = nodeNumber + 1; // next monster that searches for cover node will start where we left off here.
+
+		if ( flMinDist > 0 )
+			flDist = ( pev->origin - node.m_vecOrigin ).Length();
+
+		if ( flMinEnemyDist > 0 || flMaxEnemyDist > 0 )
+			flEnemyDist = Vector( vecEnemy - node.m_vecOrigin ).Length();
+
+		// sic: with no maximum (0) only a node right on the enemy passes
+		if ( flDist >= flMinDist && flEnemyDist >= flMinEnemyDist && flEnemyDist <= flMaxEnemyDist )
+		{
+			UTIL_TraceLine ( node.m_vecOrigin + pev->view_ofs, vecEnemy, ignore_monsters, ENT(pev), &tr );
+
+			if ( tr.flFraction >= 1 )
+			{
+				vecResult = node.m_vecOrigin;
+				return TRUE;
+			}
+		}
+	}
+	return FALSE;
+}
+
+//=========================================================
 // BuildNearestRoute - tries to build a route as close to the target
 // as possible, even if there isn't a path to the final point.
 //
