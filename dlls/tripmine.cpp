@@ -596,7 +596,7 @@ void CTripmineTurret :: MoveTurret( void )
 
 void CTripmineTurret :: Shoot( const Vector &vecDir )
 {
-	m_hPulse = CLaserPulse::CreatePulse( pev->origin, edict(), Vector( 255, 16, 16 ), 1, 0.25, 0 );
+	m_hPulse = CLaserPulse::Shoot( pev->origin, edict(), Vector( 255, 16, 16 ), 1, 0.25, 0 );
 	m_hPulse->pev->velocity = vecDir * 2000;
 	m_hPulse->pev->dmg = 20;
 	m_hPulse->pev->spawnflags |= 4;
