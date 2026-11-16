@@ -1040,6 +1040,8 @@ public:
 	int GetItemInfo(ItemInfo *p);
 
 	void PrimaryAttack( void );
+	void SecondaryAttack( void );
+	void WeaponSpecial( void );	// the grenade mode (pev->weapons)
 	BOOL Deploy( void );
 	BOOL CanHolster( void );
 	void Holster( int skiplocal = 0 );
