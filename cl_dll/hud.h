@@ -389,8 +389,12 @@ public:
 private:
 	HSPRITE m_hSprite1;
 	HSPRITE m_hSprite2;
+	HSPRITE m_hSprite3;	// name ours: suit_shield
+	HSPRITE m_hSprite4;	// name ours: suit_meter
 	wrect_t *m_prc1;
 	wrect_t *m_prc2;
+	wrect_t *m_prc3;
+	wrect_t *m_prc4;
 	int	  m_iBat;	
 	float m_fFade;
 	int	  m_iHeight;		// width of the battery innards
