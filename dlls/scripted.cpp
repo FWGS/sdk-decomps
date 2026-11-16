@@ -198,6 +198,7 @@ void CCineMonster :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYP
 	else
 	{
 		// if not, try finding them
+		m_hActivator = pActivator;
 		SetThink( CineThink );
 		pev->nextthink = gpGlobals->time;
 	}
@@ -272,6 +273,19 @@ void CCineMonster :: Pain( void )
 int CCineMonster :: FindEntity( void )
 {
 	edict_t *pentTarget;
+
+	if ( HasSpawnFlag( SF_SCRIPT_TARGETACTIVATOR ) )
+	{
+		// the monster that triggered me, whatever its name
+		if ( m_hActivator != NULL && !m_hActivator->IsPlayer() )
+		{
+			m_hTargetEnt = m_hActivator->MyMonsterPointer();
+			return m_hTargetEnt != NULL;
+		}
+		m_hActivator = NULL;
+		m_hTargetEnt = NULL;
+		return FALSE;
+	}
 
 	pentTarget = FIND_ENTITY_BY_TARGETNAME(NULL, STRING(m_iszEntity));
 	m_hTargetEnt = NULL;
@@ -484,7 +498,8 @@ void CCineMonster :: CineThink( void )
 	{
 		CancelScript( );
 		ALERT( at_aiconsole, "script \"%s\" can't find monster \"%s\"\n", STRING( pev->targetname ), STRING( m_iszEntity ) );
-		pev->nextthink = gpGlobals->time + 1.0;
+		if ( !HasSpawnFlag( SF_SCRIPT_TARGETACTIVATOR ) )
+			pev->nextthink = gpGlobals->time + 1.0;
 	}
 }
 
@@ -576,7 +591,7 @@ void CCineMonster :: SequenceDone ( CBaseMonster *pMonster )
 	
 	// This may cause a sequence to attempt to grab this guy NOW, so we have to clear him out
 	// of the existing sequence
-	SUB_UseTargets( NULL, USE_TOGGLE, 0 );
+	SUB_UseTargets( pMonster, USE_TOGGLE, 0 );
 }
 
 //=========================================================
@@ -955,6 +970,7 @@ private:
 #define SF_SENTENCE_FOLLOWERS	0x0002	// only say if following player
 #define SF_SENTENCE_INTERRUPT	0x0004	// force talking except when dead
 #define SF_SENTENCE_CONCURRENT	0x0008	// allow other people to keep talking
+#define SF_SENTENCE_TARGETACTIVATOR	0x0100	// name ours (fgd "Target Activator"): the monster that triggered me speaks
 
 TYPEDESCRIPTION	CScriptedSentence::m_SaveData[] = 
 {
@@ -1026,6 +1042,7 @@ void CScriptedSentence :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, US
 	if ( !m_active )
 		return;
 //	ALERT( at_console, "Firing sentence: %s\n", STRING(m_iszSentence) );
+	m_hActivator = pActivator;
 	SetThink( FindThink );
 	pev->nextthink = gpGlobals->time;
 }
@@ -1086,7 +1103,8 @@ void CScriptedSentence :: FindThink( void )
 	else
 	{
 //		ALERT( at_console, "%s: can't find monster %s\n", STRING(m_iszSentence), STRING(m_iszEntity) );
-		pev->nextthink = gpGlobals->time + m_flRepeat + 0.5;
+		if ( !HasSpawnFlag( SF_SENTENCE_TARGETACTIVATOR ) )
+			pev->nextthink = gpGlobals->time + m_flRepeat + 0.5;
 	}
 }
 
@@ -1126,6 +1144,22 @@ CBaseMonster *CScriptedSentence :: FindEntity( void )
 	edict_t *pentTarget;
 	CBaseMonster *pMonster;
 
+	if ( HasSpawnFlag( SF_SENTENCE_TARGETACTIVATOR ) )
+	{
+		// the monster that triggered me, whatever its name
+		if ( m_hActivator != NULL && !m_hActivator->IsPlayer() )
+		{
+			if ( FBitSet( m_hActivator->pev->flags, FL_MONSTER ) )
+			{
+				pMonster = m_hActivator->MyMonsterPointer( );
+				if ( AcceptableSpeaker( pMonster ) )
+					return pMonster;
+			}
+			return NULL;
+		}
+		m_hActivator = NULL;
+		return NULL;
+	}
 
 	pentTarget = FIND_ENTITY_BY_TARGETNAME(NULL, STRING(m_iszEntity));
 	pMonster = NULL;
@@ -1185,7 +1219,7 @@ BOOL CScriptedSentence :: StartSentence( CBaseMonster *pTarget )
 
 	pTarget->PlayScriptedSentence( STRING(m_iszSentence), m_flDuration,  m_flVolume, m_flAttenuation, bConcurrent, pListener );
 	ALERT( at_aiconsole, "Playing sentence %s (%.1f)\n", STRING(m_iszSentence), m_flDuration );
-	SUB_UseTargets( NULL, USE_TOGGLE, 0 );
+	SUB_UseTargets( pTarget, USE_TOGGLE, 0 );
 	return TRUE;
 }
 
@@ -1239,7 +1273,6 @@ void CFurniture :: Spawn( )
 	pev->effects		= 0;
 	pev->yaw_speed		= 0;
 	pev->sequence		= 0;
-	pev->frame			= 0;
 
 //	pev->nextthink += 1.0;
 //	SetThink (WalkMonsterDelay);

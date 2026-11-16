@@ -643,7 +643,7 @@ public:
 // these are the damage types that are allowed to gib corpses
 #define DMG_GIB_CORPSE		( DMG_CRUSH | DMG_FALL | DMG_BLAST | DMG_SONIC | DMG_CLUB | DMG_SPLATTER )
 
-// death message phrases (combat.cpp's); names ours
+// death message phrases (defined in combat.cpp); names ours
 extern const char *DamageVerb( int bitsDamageType, BOOL fGibbed );	// "crushed", "incinerated", ... "gibbed"/"killed"
 extern const char *HitGroupIn( int iHitGroup );	// " in the head"
 extern const char *HitGroupOf( int iHitGroup );	// "'s head"

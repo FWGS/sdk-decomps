@@ -37,6 +37,16 @@ extern cvar_t	teamoverride;
 extern cvar_t	defaultteam;
 extern cvar_t	allowmonsters;
 
+// Scientist Slaughterhouse
+extern cvar_t	ssh_extrablood;
+extern cvar_t	ssh_rndweapons;
+extern cvar_t	ssh_randomscis;
+extern cvar_t	ssh_hazardmode;
+extern cvar_t	ssh_chaosmode;
+extern cvar_t	ssh_monstergibs;
+extern cvar_t	ssh_scigibs;
+extern cvar_t	ssh_precache;
+
 // Engine Cvars
 extern cvar_t	*g_psv_gravity;
 extern cvar_t	*g_psv_aim;
