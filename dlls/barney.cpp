@@ -1210,9 +1210,9 @@ void COtis :: OtisFirePistol ( void )
 	pev->effects = EF_MUZZLEFLASH;
 
 	if ( pev->weapons )
-		FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_2DEGREES, 1024, 13, 1 );	// bullet type 13: retail's value, name not known
+		FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_2DEGREES, 1024, BULLET_MONSTER_TRACER1, 1 );
 	else
-		FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_2DEGREES, 1024, 10, 0 );	// bullet type 10: retail's value (FireBullets: plrDmg357)
+		FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_2DEGREES, 1024, BULLET_MONSTER_357, 0 );
 
 	if ( RANDOM_FLOAT( 0, 1 ) < 0.5 )
 		EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/357_shot1.wav", 1, ATTN_NORM );
