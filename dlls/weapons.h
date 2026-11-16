@@ -60,15 +60,14 @@ public:
 	void EXPORT HybridTouch( CBaseEntity *pOther );
 	void EXPORT MineThink( void );
 
-#ifndef CLIENT_DLL
-	const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "a grenade"; return STRING( m_iszKillDesc ); }
-	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return DamageVerb( DMG_BLAST, fGibbed ); }
-#endif
-	int HeatSignature( void ) { return 0; }
-
 	virtual void BounceSound( void );
 	virtual int	BloodColor( void ) { return DONT_BLEED; }
 	virtual void Killed( entvars_t *pevAttacker, int iGib );
+#ifndef CLIENT_DLL
+	virtual const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "a grenade"; return STRING( m_iszKillDesc ); }
+	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return DamageVerb( DMG_BLAST, fGibbed ); }
+#endif
+	virtual int HeatSignature( void ) { return 0; }
 
 	BOOL m_fRegisteredSound;// whether or not this grenade has issued its DANGER sound to the world sound list yet.
 };
