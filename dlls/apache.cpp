@@ -852,10 +852,10 @@ BOOL CApache :: FireGun( )
 	GetAttachment( 0, posBarrel, angBarrel );
 	Vector vecGun = (posBarrel - posGun).Normalize( );
 
-	static int cnt;	// name ours, chosen so that VC6 puts it after FireRocket's unused count in .bss, as in retail
+	static int shooting_flag = 0;
 
 	// fires on every second call
-	if (DotProduct( vecGun, vecTarget ) > 0.98 && (cnt++ % 2) == 0)
+	if (DotProduct( vecGun, vecTarget ) > 0.98 && (shooting_flag++ % 2) == 0)
 	{
 #if 1
 		FireBullets( 1, posGun, vecGun, VECTOR_CONE_4DEGREES, 8192, BULLET_MONSTER_12MM, 1 );
@@ -890,8 +890,8 @@ BOOL CApache :: FireGun( )
 			m_pBeam = NULL;
 		}
 
-		if (cnt % 2)
-			cnt++;
+		if (shooting_flag % 2)
+			shooting_flag++;
 	}
 	return FALSE;
 }
@@ -1080,7 +1080,6 @@ void CApacheHVR :: AccelerateThink( void  )
 //=========================================================
 // monster_th_boss - the sheriff's helicopter: an apache with
 // models/boss.mdl, twice the health and a slower, lighter gun
-// (class name ours)
 //=========================================================
 class CEinarBoss : public CApache
 {
@@ -1163,10 +1162,10 @@ BOOL CEinarBoss :: FireGun( )
 	GetAttachment( 0, posBarrel, angBarrel );
 	Vector vecGun = (posBarrel - posGun).Normalize( );
 
-	static int cnt;	// name ours; follows the apache's in .bss
+	static int shooting_flag = 0;
 
 	// fires on every third call
-	if (DotProduct( vecGun, vecTarget ) > 0.98 && (cnt++ % 3) == 0)
+	if (DotProduct( vecGun, vecTarget ) > 0.98 && (shooting_flag++ % 3) == 0)
 	{
 		pev->sequence = 1;
 		FireBullets( 1, posGun, vecGun, VECTOR_CONE_4DEGREES, 8192, BULLET_MONSTER_9MM, 1 );
@@ -1175,8 +1174,8 @@ BOOL CEinarBoss :: FireGun( )
 	}
 	else
 	{
-		if (cnt % 3)
-			cnt++;
+		if (shooting_flag % 3)
+			shooting_flag++;
 		else
 			pev->sequence = 0;
 	}

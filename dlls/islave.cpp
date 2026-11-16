@@ -873,8 +873,8 @@ void CISlave :: ClearBeams( )
 
 
 //=========================================================
-// They Hunger: Kelly, the monster_alien_slave of the maps
-// (class name ours). A CISlave that takes its model from
+// They Hunger: Kelly, the monster_alien_slave of the maps.
+// A CISlave that takes its model from
 // the map, doesn't bleed and can be told not to zap.
 //=========================================================
 class CEinarKelly : public CISlave
@@ -964,7 +964,7 @@ BOOL CEinarKelly :: CheckRangeAttack1 ( float flDot, float flDist )
 LINK_ENTITY_TO_CLASS( monster_alien_slave, CEinarKelly );
 
 //=========================================================
-// They Hunger: baby Kelly (class name ours), the same with
+// They Hunger: baby Kelly, the same with
 // its own voice
 //=========================================================
 class CEinarBabyKelly : public CISlave
@@ -979,17 +979,17 @@ public:
 	void AlertSound( void );
 	void IdleSound( void );
 
-	static const char *pPainSounds[];
-	static const char *pDeathSounds[];
+	static const char *pEinarBabyKellyPainSounds[];
+	static const char *pEinarBabyKellyDeathSounds[];
 };
 
-const char *CEinarBabyKelly::pPainSounds[] = 
+const char *CEinarBabyKelly::pEinarBabyKellyPainSounds[] = 
 {
 	"babykelly/slv_pain1.wav",
 	"babykelly/slv_pain2.wav",
 };
 
-const char *CEinarBabyKelly::pDeathSounds[] = 
+const char *CEinarBabyKelly::pEinarBabyKellyDeathSounds[] = 
 {
 	"babykelly/slv_die1.wav",
 	"babykelly/slv_die2.wav",
@@ -1049,11 +1049,11 @@ void CEinarBabyKelly :: Precache()
 	for ( i = 0; i < ARRAYSIZE( pAttackMissSounds ); i++ )
 		PRECACHE_SOUND((char *)pAttackMissSounds[i]);
 
-	for ( i = 0; i < ARRAYSIZE( pPainSounds ); i++ )
-		PRECACHE_SOUND((char *)pPainSounds[i]);
+	for ( i = 0; i < ARRAYSIZE( pEinarBabyKellyPainSounds ); i++ )
+		PRECACHE_SOUND((char *)pEinarBabyKellyPainSounds[i]);
 
-	for ( i = 0; i < ARRAYSIZE( pDeathSounds ); i++ )
-		PRECACHE_SOUND((char *)pDeathSounds[i]);
+	for ( i = 0; i < ARRAYSIZE( pEinarBabyKellyDeathSounds ); i++ )
+		PRECACHE_SOUND((char *)pEinarBabyKellyDeathSounds[i]);
 
 	UTIL_PrecacheOther( "test_effect" );
 }	
@@ -1103,7 +1103,7 @@ void CEinarBabyKelly :: PainSound( void )
 {
 	if (RANDOM_LONG( 0, 2 ) == 0)
 	{
-		EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pPainSounds[ RANDOM_LONG(0,ARRAYSIZE(pPainSounds)-1) ], 1.0, ATTN_NORM, 0, m_voicePitch );
+		EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pEinarBabyKellyPainSounds[ RANDOM_LONG(0,ARRAYSIZE(pEinarBabyKellyPainSounds)-1) ], 1.0, ATTN_NORM, 0, m_voicePitch );
 	}
 }
 
@@ -1113,7 +1113,7 @@ void CEinarBabyKelly :: PainSound( void )
 
 void CEinarBabyKelly :: DeathSound( void )
 {
-	EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pDeathSounds[ RANDOM_LONG(0,ARRAYSIZE(pDeathSounds)-1) ], 1.0, ATTN_NORM, 0, m_voicePitch );
+	EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pEinarBabyKellyDeathSounds[ RANDOM_LONG(0,ARRAYSIZE(pEinarBabyKellyDeathSounds)-1) ], 1.0, ATTN_NORM, 0, m_voicePitch );
 }
 
 LINK_ENTITY_TO_CLASS( monster_th_babykelly, CEinarBabyKelly );

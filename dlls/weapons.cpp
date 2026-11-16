@@ -1581,21 +1581,21 @@ void CBasePlayerWeapon::PrintState( void )
 //=========================================================
 // They Hunger: what the weapons of wpn_shared/hl_wpn_glock.cpp
 // (compiled into the client too) ask the game DLL. The client
-// has its own versions of the three. Names ours.
+// has its own versions of the three.
 //=========================================================
-BOOL TH_IsMultiplayer( void )
+BOOL einar_isMultiplayer( void )
 {
 	return g_pGameRules->IsMultiplayer();
 }
 
 // takes the tint off (the sniper rifles' scope)
-void TH_ScreenFadeIn( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha )
+void einar_ScreenFadeIn( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha )
 {
 	UTIL_ScreenFade( pEntity, color, fadeTime, fadeHold, alpha, 0 );	// FFADE_IN (shake.h)
 }
 
 // tints the screen and leaves it so
-void TH_ScreenFadeOut( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha )
+void einar_ScreenFadeOut( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha )
 {
 	UTIL_ScreenFade( pEntity, color, fadeTime, fadeHold, alpha, 1 | 4 );	// FFADE_OUT | FFADE_STAYOUT (shake.h)
 }

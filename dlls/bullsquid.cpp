@@ -62,7 +62,7 @@ public:
 	void Spawn( void );
 
 	static void Shoot( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
-	static void Shoot( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, int iScale );
+	static void ShootBlood( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, int iScale );
 	void Touch( CBaseEntity *pOther );
 	void EXPORT Animate( void );
 
@@ -127,7 +127,7 @@ void CSquidSpit::Shoot( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity
 }
 
 // They Hunger: the spit with a size. Flag 32 is set before Spawn, which doesn't read it (sic)
-void CSquidSpit::Shoot( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, int iScale )
+void CSquidSpit::ShootBlood( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity, int iScale )
 {
 	CSquidSpit *pSpit = GetClassPtr( (CSquidSpit *)NULL );
 	pSpit->pev->spawnflags |= 32;
@@ -583,7 +583,7 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				WRITE_BYTE ( 25 );			// noise ( client will divide by 100 )
 			MESSAGE_END();
 
-			CSquidSpit::Shoot( pev, vecSpitOffset, vecSpitDir * 900, 1 );
+			CSquidSpit::ShootBlood( pev, vecSpitOffset, vecSpitDir * 900, 1 );
 		}
 		break;
 
@@ -1330,33 +1330,32 @@ public:
 	CUSTOM_SCHEDULES;
 	static TYPEDESCRIPTION m_SaveData[];
 
-	// names ours
-	static const char *pIdleSounds[];
-	static const char *pPainSounds[];
-	static const char *pAlertSounds[];
-	static const char *pDeathSounds[];
-	static const char *pWhipSounds[];
-	static const char *pGoreSounds[];
+	static const char *einar_pIdleSounds[];
+	static const char *einar_pPainSounds[];
+	static const char *einar_pAlertSounds[];
+	static const char *einar_pDieSounds[];
+	static const char *einar_pWhipSounds[];
+	static const char *einar_pGoreSounds[];
 
 	float m_flLastHurtTime;
 };
 LINK_ENTITY_TO_CLASS( monster_th_zombiebull, CEinarZombieBull );
 
-const char *CEinarZombieBull::pIdleSounds[] = 
+const char *CEinarZombieBull::einar_pIdleSounds[] = 
 {
 	"bull/bu_idle1.wav",
 	"bull/bu_idle2.wav",
 	"bull/bu_idle3.wav",
 };
 
-const char *CEinarZombieBull::pPainSounds[] = 
+const char *CEinarZombieBull::einar_pPainSounds[] = 
 {
 	"bull/bu_pain1.wav",
 	"bull/bu_pain2.wav",
 	"bull/bu_pain3.wav",
 };
 
-const char *CEinarZombieBull::pAlertSounds[] = 
+const char *CEinarZombieBull::einar_pAlertSounds[] = 
 {
 	"bull/bu_alert1.wav",
 	"bull/bu_alert2.wav",
@@ -1364,21 +1363,21 @@ const char *CEinarZombieBull::pAlertSounds[] =
 	"bull/bu_alert4.wav",
 };
 
-const char *CEinarZombieBull::pDeathSounds[] = 
+const char *CEinarZombieBull::einar_pDieSounds[] = 
 {
 	"bull/bu_die1.wav",
 	"bull/bu_die2.wav",
 	"bull/bu_die3.wav",
 };
 
-const char *CEinarZombieBull::pWhipSounds[] = 
+const char *CEinarZombieBull::einar_pWhipSounds[] = 
 {
 	"bull/bu_whip1.wav",
 	"bull/bu_whip2.wav",
 	"bull/bu_whip3.wav",
 };
 
-const char *CEinarZombieBull::pGoreSounds[] = 
+const char *CEinarZombieBull::einar_pGoreSounds[] = 
 {
 	"bull/bu_gore1.wav",
 	"bull/bu_gore2.wav",
@@ -1397,7 +1396,7 @@ IMPLEMENT_SAVERESTORE( CEinarZombieBull, CBaseMonster );
 //=========================================================
 void CEinarZombieBull :: IdleSound ( void )
 {
-	EMIT_SOUND( ENT(pev), CHAN_VOICE, pIdleSounds[ RANDOM_LONG(0,ARRAYSIZE(pIdleSounds)-1) ], 1, SQUID_ATTN_IDLE );
+	EMIT_SOUND( ENT(pev), CHAN_VOICE, einar_pIdleSounds[ RANDOM_LONG(0,ARRAYSIZE(einar_pIdleSounds)-1) ], 1, SQUID_ATTN_IDLE );
 }
 
 //=========================================================
@@ -1407,7 +1406,7 @@ void CEinarZombieBull :: PainSound ( void )
 {
 	int iPitch = RANDOM_LONG( 85, 120 );
 
-	EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, pPainSounds[ RANDOM_LONG(0,ARRAYSIZE(pPainSounds)-1) ], 1, ATTN_NORM, 0, iPitch );
+	EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, einar_pPainSounds[ RANDOM_LONG(0,ARRAYSIZE(einar_pPainSounds)-1) ], 1, ATTN_NORM, 0, iPitch );
 }
 
 //=========================================================
@@ -1415,7 +1414,7 @@ void CEinarZombieBull :: PainSound ( void )
 //=========================================================
 void CEinarZombieBull :: AlertSound ( void )
 {
-	EMIT_SOUND( ENT(pev), CHAN_VOICE, pAlertSounds[ RANDOM_LONG(0,ARRAYSIZE(pAlertSounds)-1) ], 1, ATTN_NORM );
+	EMIT_SOUND( ENT(pev), CHAN_VOICE, einar_pAlertSounds[ RANDOM_LONG(0,ARRAYSIZE(einar_pAlertSounds)-1) ], 1, ATTN_NORM );
 }
 
 //=========================================================
@@ -1423,7 +1422,7 @@ void CEinarZombieBull :: AlertSound ( void )
 //=========================================================
 void CEinarZombieBull :: DeathSound ( void )
 {
-	EMIT_SOUND( ENT(pev), CHAN_VOICE, pDeathSounds[ RANDOM_LONG(0,ARRAYSIZE(pDeathSounds)-1) ], 1, ATTN_NORM );
+	EMIT_SOUND( ENT(pev), CHAN_VOICE, einar_pDieSounds[ RANDOM_LONG(0,ARRAYSIZE(einar_pDieSounds)-1) ], 1, ATTN_NORM );
 }
 
 //=========================================================
@@ -1461,23 +1460,23 @@ void CEinarZombieBull :: Precache()
 	PRECACHE_SOUND("bull/bu_runstep1.wav");
 	PRECACHE_SOUND("bull/bu_runstep2.wav");
 
-	for ( i = 0; i < ARRAYSIZE( pIdleSounds ); i++ )
-		PRECACHE_SOUND((char *)pIdleSounds[i]);
+	for ( i = 0; i < ARRAYSIZE( einar_pIdleSounds ); i++ )
+		PRECACHE_SOUND((char *)einar_pIdleSounds[i]);
 
-	for ( i = 0; i < ARRAYSIZE( pPainSounds ); i++ )
-		PRECACHE_SOUND((char *)pPainSounds[i]);
+	for ( i = 0; i < ARRAYSIZE( einar_pPainSounds ); i++ )
+		PRECACHE_SOUND((char *)einar_pPainSounds[i]);
 
-	for ( i = 0; i < ARRAYSIZE( pAlertSounds ); i++ )
-		PRECACHE_SOUND((char *)pAlertSounds[i]);
+	for ( i = 0; i < ARRAYSIZE( einar_pAlertSounds ); i++ )
+		PRECACHE_SOUND((char *)einar_pAlertSounds[i]);
 
-	for ( i = 0; i < ARRAYSIZE( pDeathSounds ); i++ )
-		PRECACHE_SOUND((char *)pDeathSounds[i]);
+	for ( i = 0; i < ARRAYSIZE( einar_pDieSounds ); i++ )
+		PRECACHE_SOUND((char *)einar_pDieSounds[i]);
 
-	for ( i = 0; i < ARRAYSIZE( pWhipSounds ); i++ )
-		PRECACHE_SOUND((char *)pWhipSounds[i]);
+	for ( i = 0; i < ARRAYSIZE( einar_pWhipSounds ); i++ )
+		PRECACHE_SOUND((char *)einar_pWhipSounds[i]);
 
-	for ( i = 0; i < ARRAYSIZE( pGoreSounds ); i++ )
-		PRECACHE_SOUND((char *)pGoreSounds[i]);
+	for ( i = 0; i < ARRAYSIZE( einar_pGoreSounds ); i++ )
+		PRECACHE_SOUND((char *)einar_pGoreSounds[i]);
 
 	PRECACHE_SOUND("zombie/claw_miss2.wav");// because we use the basemonster SWIPE animation event
 }	
@@ -1663,7 +1662,7 @@ void CEinarZombieBull :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				{
 					// croonchy bite sound
 					iPitch = RANDOM_FLOAT( 90, 110 );
-					EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, pGoreSounds[ RANDOM_LONG(0,ARRAYSIZE(pGoreSounds)-1) ], 1, ATTN_NORM, 0, iPitch );
+					EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, einar_pGoreSounds[ RANDOM_LONG(0,ARRAYSIZE(einar_pGoreSounds)-1) ], 1, ATTN_NORM, 0, iPitch );
 
 					
 					//pHurt->pev->punchangle.x = RANDOM_LONG(0,34) - 5;
@@ -1854,7 +1853,7 @@ void CEinarZombieBull :: StartTask ( Task_t *pTask )
 	case TASK_MELEE_ATTACK1:
 	case TASK_MELEE_ATTACK2:
 		{
-			EMIT_SOUND( ENT(pev), CHAN_VOICE, pWhipSounds[ RANDOM_LONG(0,ARRAYSIZE(pWhipSounds)-1) ], 1, ATTN_NORM );
+			EMIT_SOUND( ENT(pev), CHAN_VOICE, einar_pWhipSounds[ RANDOM_LONG(0,ARRAYSIZE(einar_pWhipSounds)-1) ], 1, ATTN_NORM );
 
 			CBaseMonster :: StartTask ( pTask );
 			break;
@@ -1914,7 +1913,7 @@ void CEinarZombieBull :: RunTask ( Task_t *pTask )
 
 //=========================================================
 // They Hunger: the megasquid, a bullsquid five times the
-// size (name ours)
+// size
 //=========================================================
 class CEinarMegasquid : public CBullsquid
 {
@@ -2068,7 +2067,7 @@ void CEinarMegasquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				WRITE_BYTE ( 25 );			// noise ( client will divide by 100 )
 			MESSAGE_END();
 
-			CSquidSpit::Shoot( pev, vecSpitOffset, vecSpitDir * 900, 2 );
+			CSquidSpit::ShootBlood( pev, vecSpitOffset, vecSpitDir * 900, 2 );
 		}
 		break;
 

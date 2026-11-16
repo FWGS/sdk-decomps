@@ -183,7 +183,7 @@ public:
 	void Spawn( void );
 	void Precache( void );
 	void EXPORT FlameTouch( CBaseEntity *pOther );
-	static CEinarFlameRocket *CreateFlameRocket( Vector vecOrigin, Vector vecAngles, CBaseEntity *pOwner );	// name ours
+	static CEinarFlameRocket *CreateFlameRocket( Vector vecOrigin, Vector vecAngles, CBaseEntity *pOwner );
 
 	int m_iTrail;
 };
@@ -794,7 +794,7 @@ LINK_ENTITY_TO_CLASS( ammo_egonclip, CEgonAmmo );
 
 
 //=========================================================
-// They Hunger: the medkit (class and member names ours)
+// They Hunger: the medkit (member names ours)
 //=========================================================
 enum medkit_e {	// names ours: the sequences of Team Fortress Classic's medkit
 	MEDKIT_IDLE = 0,
@@ -819,8 +819,8 @@ public:
 
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
-	void StartHeal( void );
-	void Heal( void );
+	void MedkitStart( void );
+	void MedkitUse( void );
 	void Reload( void );
 	void WeaponIdle( void );
 	BOOL PlayEmptySound( void );
@@ -906,11 +906,11 @@ void CWeaponEinarMedkit::PrimaryAttack( void )
 	{
 		if ( !m_fHealing )
 		{
-			StartHeal();
+			MedkitStart();
 		}
 		else if ( m_flNextSecondaryAttack < gpGlobals->time )
 		{
-			Heal();
+			MedkitUse();
 		}
 	}
 	else if ( m_fFireOnEmpty )
@@ -923,10 +923,10 @@ void CWeaponEinarMedkit::PrimaryAttack( void )
 void CWeaponEinarMedkit::SecondaryAttack( void )
 {
 	if ( m_fHealing )
-		Heal();
+		MedkitUse();
 }
 
-void CWeaponEinarMedkit::StartHeal( void )
+void CWeaponEinarMedkit::MedkitStart( void )
 {
 	SendWeaponAnim( MEDKIT_USE );
 	m_fHealing = TRUE;
@@ -934,7 +934,7 @@ void CWeaponEinarMedkit::StartHeal( void )
 	m_flTimeWeaponIdle = m_flNextPrimaryAttack = m_flNextSecondaryAttack = gpGlobals->time + 1.2;
 }
 
-void CWeaponEinarMedkit::Heal( void )
+void CWeaponEinarMedkit::MedkitUse( void )
 {
 	m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType]--;
 
@@ -957,7 +957,7 @@ void CWeaponEinarMedkit::Heal( void )
 void CWeaponEinarMedkit::Reload( void )
 {
 	if ( m_fHealing )
-		Heal();
+		MedkitUse();
 }
 
 void CWeaponEinarMedkit::WeaponIdle( void )
@@ -969,7 +969,7 @@ void CWeaponEinarMedkit::WeaponIdle( void )
 
 	if ( m_fHealing )
 	{
-		Heal();
+		MedkitUse();
 		return;
 	}
 

@@ -491,10 +491,9 @@ public:
 // compiled into both DLLs, ask their DLL. The game DLL's versions are at the
 // end of weapons.cpp (the game rules' IsMultiplayer, UTIL_ScreenFade with
 // FFADE_IN and with FFADE_OUT | FFADE_STAYOUT); the client has its own.
-// Names ours.
-BOOL TH_IsMultiplayer( void );
-void TH_ScreenFadeIn( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha );
-void TH_ScreenFadeOut( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha );
+BOOL einar_isMultiplayer( void );
+void einar_ScreenFadeIn( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha );
+void einar_ScreenFadeOut( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha );
 
 class CGlock : public CBasePlayerWeapon
 {
@@ -534,13 +533,11 @@ private:
 // wpn_shared/hl_wpn_glock.cpp, in the order AP9, Taurus, sniper rifle,
 // weapon_einar1, chaingun; the client compiles it too. They are declared
 // here in the order of their ids, which is the order retail's game DLL
-// emits their inline functions in. The class and member names are ours
-// (nothing of these classes is exported or saved); the classes are named
-// after retail's CWeaponEinarShovel.
+// emits their inline functions in. The member names are ours.
 //=========================================================
 
 // weapon_th_ap9
-class CWeaponEinarAP9 : public CBasePlayerWeapon
+class CWeaponEinarAp9 : public CBasePlayerWeapon
 {
 public:
 	void Spawn( void );
@@ -551,7 +548,7 @@ public:
 
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
-	void AP9Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim );
+	void Ap9Fire( float flSpread, float flCycleTime, BOOL fUseAutoAim );
 	BOOL Deploy( void );
 	void Reload( void );
 	void WeaponIdle( void );
@@ -673,7 +670,7 @@ private:
 };
 
 // weapon_einar1, the first sniper rifle (TFC's model)
-class CWeaponEinarTFCSniper : public CBasePlayerWeapon
+class CWeaponEinar2 : public CBasePlayerWeapon
 {
 public:
 	void Spawn( void );
@@ -748,9 +745,9 @@ public:
 
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
-	void SpinUp( void );
+	void ChaingunStart( void );
 	void ChaingunFire( float flSpread );
-	void SpinDown( void );
+	void ChaingunStop( void );
 	BOOL Deploy( void );
 	void Holster( int skiplocal = 0 );
 	void Reload( void );
@@ -766,7 +763,7 @@ public:
 	}
 
 private:
-	int m_fSpinning;	// the barrels turn (SpinUp to SpinDown)
+	int m_fSpinning;	// the barrels turn (ChaingunStart to ChaingunStop)
 	int m_iShell;
 
 	unsigned short m_usChaingunSpin;	// events/chaingun1.sc

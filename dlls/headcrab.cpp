@@ -85,10 +85,10 @@ public:
 	void DeathSound( void );
 	void IdleSound( void );
 	void AlertSound( void );
-	// They Hunger: the three attack sounds, for the hand and the chicken (names ours)
-	virtual void AttackSound( void );
-	virtual void JumpSound( void );
-	virtual void BiteSound( void );
+	// They Hunger: the three attack sounds, for the hand and the chicken
+	virtual void einar_AttackSoundZero( void );
+	virtual void einar_AttackSoundNotZero( void );
+	virtual void einar_BiteSound( void );
 	void PrescheduleThink( void );
 	int  Classify ( void );
 	void HandleAnimEvent( MonsterEvent_t *pEvent );
@@ -261,7 +261,7 @@ void CHeadCrab :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				vecJumpDir = Vector( gpGlobals->v_forward.x, gpGlobals->v_forward.y, gpGlobals->v_up.z ) * 350;
 			}
 
-			JumpSound();
+			einar_AttackSoundNotZero();
 
 			pev->velocity = vecJumpDir;
 			m_flNextAttack = gpGlobals->time + 2;
@@ -357,7 +357,7 @@ void CHeadCrab :: LeapTouch ( CBaseEntity *pOther )
 	// Don't hit if back on ground
 	if ( !FBitSet( pev->flags, FL_ONGROUND ) )
 	{
-		BiteSound();
+		einar_BiteSound();
 		
 		pOther->TakeDamage( pev, pev, GetDamageAmount(), DMG_SLASH );
 	}
@@ -385,7 +385,7 @@ void CHeadCrab :: StartTask ( Task_t *pTask )
 	{
 	case TASK_RANGE_ATTACK1:
 		{
-			AttackSound();
+			einar_AttackSoundZero();
 			m_IdealActivity = ACT_RANGE_ATTACK1;
 			SetTouch ( LeapTouch );
 			break;
@@ -469,17 +469,17 @@ void CHeadCrab :: DeathSound ( void )
 }
 
 //=========================================================
-// AttackSound - when the leap task starts
+// einar_AttackSoundZero - when the leap task starts
 //=========================================================
-void CHeadCrab :: AttackSound ( void )
+void CHeadCrab :: einar_AttackSoundZero ( void )
 {
 	EMIT_SOUND_DYN( edict(), CHAN_WEAPON, pAttackSounds[0], GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
 }
 
 //=========================================================
-// JumpSound - at the jump event
+// einar_AttackSoundNotZero - at the jump event
 //=========================================================
-void CHeadCrab :: JumpSound ( void )
+void CHeadCrab :: einar_AttackSoundNotZero ( void )
 {
 	int iSound = RANDOM_LONG(0,2);
 	if ( iSound != 0 )
@@ -487,9 +487,9 @@ void CHeadCrab :: JumpSound ( void )
 }
 
 //=========================================================
-// BiteSound - when the leap hits
+// einar_BiteSound - when the leap hits
 //=========================================================
-void CHeadCrab :: BiteSound ( void )
+void CHeadCrab :: einar_BiteSound ( void )
 {
 	EMIT_SOUND_DYN( edict(), CHAN_WEAPON, RANDOM_SOUND_ARRAY(pBiteSounds), GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
 }
@@ -585,7 +585,7 @@ Schedule_t* CBabyCrab :: GetScheduleOfType ( int Type )
 
 //=========================================================
 // They Hunger: the hand, a headcrab with twice the health
-// and bite that makes no voice sounds (class name ours)
+// and bite that makes no voice sounds
 //=========================================================
 class CEinarHand : public CHeadCrab
 {
@@ -599,9 +599,9 @@ public:
 	void AlertSound( void ) { }
 	void IdleSound( void ) { }
 	void PainSound( void ) { }
-	void JumpSound( void ) { }
-	void AttackSound( void );
-	void BiteSound( void );
+	void einar_AttackSoundNotZero( void ) { }
+	void einar_AttackSoundZero( void );
+	void einar_BiteSound( void );
 };
 LINK_ENTITY_TO_CLASS( einar_hand, CEinarHand );
 
@@ -681,24 +681,24 @@ int	CEinarHand :: Classify ( void )
 }
 
 //=========================================================
-// AttackSound 
+// einar_AttackSoundZero 
 //=========================================================
-void CEinarHand :: AttackSound ( void )
+void CEinarHand :: einar_AttackSoundZero ( void )
 {
 	EMIT_SOUND_DYN( edict(), CHAN_WEAPON, "thehand/hnd_attack1.wav", GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
 }
 
 //=========================================================
-// BiteSound 
+// einar_BiteSound 
 //=========================================================
-void CEinarHand :: BiteSound ( void )
+void CEinarHand :: einar_BiteSound ( void )
 {
 	EMIT_SOUND_DYN( edict(), CHAN_WEAPON, "thehand/hnd_headbite.wav", GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
 }
 
 //=========================================================
 // They Hunger: the chicken, a headcrab that can leap again
-// at once (class name ours)
+// at once
 //=========================================================
 class CEinarChicken : public CHeadCrab
 {
@@ -712,35 +712,35 @@ public:
 	void IdleSound( void );
 	void AlertSound( void );
 	void PainSound( void );
-	void AttackSound( void );
-	void JumpSound( void );
-	void BiteSound( void );
+	void einar_AttackSoundZero( void );
+	void einar_AttackSoundNotZero( void );
+	void einar_BiteSound( void );
 
-	static const char *pIdleSounds[];
-	static const char *pAlertSounds[];
-	static const char *pPainSounds[];
-	static const char *pAttackSounds[];
+	static const char *pEinarChickenIdleSounds[];
+	static const char *pEinarChickenAlertSounds[];
+	static const char *pEinarChickenPainSounds[];
+	static const char *pEinarChickenAttackSounds[];
 };
 LINK_ENTITY_TO_CLASS( monster_th_chicken, CEinarChicken );
 
-const char *CEinarChicken::pIdleSounds[] = 
+const char *CEinarChicken::pEinarChickenIdleSounds[] = 
 {
 	"chicken/ch_idle1.wav",
 	"chicken/ch_idle2.wav",
 };
-const char *CEinarChicken::pAlertSounds[] = 
+const char *CEinarChicken::pEinarChickenAlertSounds[] = 
 {
 	"chicken/ch_alert1.wav",
 	"chicken/ch_alert2.wav",
 };
-const char *CEinarChicken::pPainSounds[] = 
+const char *CEinarChicken::pEinarChickenPainSounds[] = 
 {
 	"chicken/ch_attack2.wav",// sic
 	"chicken/ch_pain2.wav",
 	"chicken/ch_die1.wav",
 	"chicken/ch_die2.wav",
 };
-const char *CEinarChicken::pAttackSounds[] = 
+const char *CEinarChicken::pEinarChickenAttackSounds[] = 
 {
 	"chicken/ch_attack1.wav",
 	"chicken/ch_pain1.wav",// sic
@@ -796,7 +796,7 @@ void CEinarChicken :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				vecJumpDir = Vector( gpGlobals->v_forward.x, gpGlobals->v_forward.y, gpGlobals->v_up.z ) * 350;
 			}
 
-			JumpSound();
+			einar_AttackSoundNotZero();
 
 			pev->velocity = vecJumpDir;
 		}
@@ -839,10 +839,10 @@ void CEinarChicken :: Precache()
 	PRECACHE_SOUND("thehand/hnd_attack1.wav");
 	PRECACHE_SOUND("thehand/hnd_headbite.wav");
 
-	PRECACHE_SOUND_ARRAY(pIdleSounds);
-	PRECACHE_SOUND_ARRAY(pAlertSounds);
-	PRECACHE_SOUND_ARRAY(pPainSounds);
-	PRECACHE_SOUND_ARRAY(pAttackSounds);
+	PRECACHE_SOUND_ARRAY(pEinarChickenIdleSounds);
+	PRECACHE_SOUND_ARRAY(pEinarChickenAlertSounds);
+	PRECACHE_SOUND_ARRAY(pEinarChickenPainSounds);
+	PRECACHE_SOUND_ARRAY(pEinarChickenAttackSounds);
 
 	PRECACHE_MODEL("models/chicken.mdl");
 }	
@@ -893,7 +893,7 @@ int	CEinarChicken :: Classify ( void )
 //=========================================================
 void CEinarChicken :: IdleSound ( void )
 {
-	EMIT_SOUND_DYN( edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY(pIdleSounds), GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+	EMIT_SOUND_DYN( edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY(pEinarChickenIdleSounds), GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
 }
 
 //=========================================================
@@ -901,7 +901,7 @@ void CEinarChicken :: IdleSound ( void )
 //=========================================================
 void CEinarChicken :: AlertSound ( void )
 {
-	EMIT_SOUND_DYN( edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY(pAlertSounds), GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+	EMIT_SOUND_DYN( edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY(pEinarChickenAlertSounds), GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
 }
 
 //=========================================================
@@ -909,33 +909,33 @@ void CEinarChicken :: AlertSound ( void )
 //=========================================================
 void CEinarChicken :: PainSound ( void )
 {
-	EMIT_SOUND_DYN( edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY(pPainSounds), GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+	EMIT_SOUND_DYN( edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY(pEinarChickenPainSounds), GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
 }
 
 //=========================================================
-// AttackSound - one leap in ten starts with an idle sound
+// einar_AttackSoundZero - one leap in ten starts with an idle sound
 //=========================================================
-void CEinarChicken :: AttackSound ( void )
+void CEinarChicken :: einar_AttackSoundZero ( void )
 {
 	if ( RANDOM_LONG(0,9) == 0 )
 		IdleSound();
 }
 
 //=========================================================
-// JumpSound 
+// einar_AttackSoundNotZero 
 //=========================================================
-void CEinarChicken :: JumpSound ( void )
+void CEinarChicken :: einar_AttackSoundNotZero ( void )
 {
 	if ( RANDOM_LONG(0,1) == 0 )
-		EMIT_SOUND_DYN( edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY(pAttackSounds), GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
+		EMIT_SOUND_DYN( edict(), CHAN_VOICE, RANDOM_SOUND_ARRAY(pEinarChickenAttackSounds), GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
 
 	EMIT_SOUND_DYN( edict(), CHAN_WEAPON, "thehand/hnd_attack1.wav", GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );
 }
 
 //=========================================================
-// BiteSound 
+// einar_BiteSound 
 //=========================================================
-void CEinarChicken :: BiteSound ( void )
+void CEinarChicken :: einar_BiteSound ( void )
 {
 	if ( RANDOM_LONG(0,9) == 0 )
 		EMIT_SOUND_DYN( edict(), CHAN_VOICE, "chicken/ch_alert1.wav", GetSoundVolue(), ATTN_IDLE, 0, GetVoicePitch() );

@@ -46,7 +46,7 @@ void CGlock::Spawn( )
 
 	// They Hunger: body 1 is the pistol with the silencer (a map can set it;
 	// multiplayer always has it)
-	if ( TH_IsMultiplayer() )
+	if ( einar_isMultiplayer() )
 		pev->body = 1;
 
 	if ( pev->body == 1 )
@@ -122,7 +122,7 @@ void CGlock::SecondaryAttack( void )
 	// They Hunger, single player: the silencer goes off or on. WeaponIdle
 	// changes the body when m_pPlayer->m_flNextAttack has passed
 	// (CBasePlayerWeapon::ItemPostFrame calls it for m_fInReload > 1).
-	if ( !TH_IsMultiplayer() )
+	if ( !einar_isMultiplayer() )
 	{
 		if ( pev->body == 1 )
 		{
@@ -151,7 +151,7 @@ void CGlock::PrimaryAttack( void )
 {
 	// They Hunger: the slow accurate shot with the silencer (always on in
 	// multiplayer), without it the fast one that was the secondary attack
-	if ( TH_IsMultiplayer() || pev->body == 1 )
+	if ( einar_isMultiplayer() || pev->body == 1 )
 		GlockFire( 0.01, 0.3, TRUE );
 	else
 		GlockFire( 0.1, 0.2, FALSE );
@@ -360,8 +360,8 @@ LINK_ENTITY_TO_CLASS( ammo_9mmclip, CGlockAmmo );
 
 //=========================================================
 // They Hunger: the AP9 (weapon_th_ap9), a machine pistol with
-// a three-round burst as secondary attack. Class, enum and
-// member names are ours.
+// a three-round burst as secondary attack. Enum and member
+// names are ours.
 //=========================================================
 enum ap9_e {
 	AP9_IDLE1 = 0,
@@ -372,9 +372,9 @@ enum ap9_e {
 	AP9_SHOOT3
 };
 
-LINK_ENTITY_TO_CLASS( weapon_th_ap9, CWeaponEinarAP9 );
+LINK_ENTITY_TO_CLASS( weapon_th_ap9, CWeaponEinarAp9 );
 
-void CWeaponEinarAP9::Spawn( )
+void CWeaponEinarAp9::Spawn( )
 {
 	Precache( );
 	m_iId = WEAPON_TH_AP9;
@@ -386,7 +386,7 @@ void CWeaponEinarAP9::Spawn( )
 }
 
 
-void CWeaponEinarAP9::Precache( void )
+void CWeaponEinarAp9::Precache( void )
 {
 	PRECACHE_MODEL("models/v_ap9.mdl");
 	PRECACHE_MODEL("models/w_ap9.mdl");
@@ -405,7 +405,7 @@ void CWeaponEinarAP9::Precache( void )
 	m_usFireAP9 = PRECACHE_EVENT( 1, "events/ap9.sc" );
 }
 
-int CWeaponEinarAP9::GetItemInfo(ItemInfo *p)
+int CWeaponEinarAp9::GetItemInfo(ItemInfo *p)
 {
 	p->pszName = STRING(pev->classname);
 	p->pszAmmo1 = "ap9";
@@ -422,7 +422,7 @@ int CWeaponEinarAP9::GetItemInfo(ItemInfo *p)
 	return 1;
 }
 
-int CWeaponEinarAP9::AddToPlayer( CBasePlayer *pPlayer )
+int CWeaponEinarAp9::AddToPlayer( CBasePlayer *pPlayer )
 {
 	if ( CBasePlayerWeapon::AddToPlayer( pPlayer ) )
 	{
@@ -434,7 +434,7 @@ int CWeaponEinarAP9::AddToPlayer( CBasePlayer *pPlayer )
 	return FALSE;
 }
 
-BOOL CWeaponEinarAP9::Deploy( )
+BOOL CWeaponEinarAp9::Deploy( )
 {
 	return DefaultDeploy( "models/v_ap9.mdl", "models/p_ap9.mdl", AP9_DRAW, "onehanded", /*UseDecrement() ? 1 : 0*/ 0 );
 }
@@ -443,19 +443,19 @@ BOOL CWeaponEinarAP9::Deploy( )
 // CBasePlayerWeapon::ItemPostFrame calls WeaponIdle when
 // m_pPlayer->m_flNextAttack has passed, and WeaponIdle fires again until
 // the count is 6.
-void CWeaponEinarAP9::SecondaryAttack( void )
+void CWeaponEinarAp9::SecondaryAttack( void )
 {
 	m_fInReload += 2;
-	AP9Fire( 0.035, 0.6, FALSE );
+	Ap9Fire( 0.035, 0.6, FALSE );
 	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.04;
 }
 
-void CWeaponEinarAP9::PrimaryAttack( void )
+void CWeaponEinarAp9::PrimaryAttack( void )
 {
-	AP9Fire( 0.07, 0.125, TRUE );
+	Ap9Fire( 0.07, 0.125, TRUE );
 }
 
-void CWeaponEinarAP9::AP9Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
+void CWeaponEinarAp9::Ap9Fire( float flSpread , float flCycleTime, BOOL fUseAutoAim )
 {
 	if (m_iClip <= 0)
 	{
@@ -492,7 +492,7 @@ void CWeaponEinarAP9::AP9Fire( float flSpread , float flCycleTime, BOOL fUseAuto
 	Vector vecSrc	 = m_pPlayer->GetGunPosition( );
 	Vector vecAiming = gpGlobals->v_forward;
 
-	if ( TH_IsMultiplayer() )
+	if ( einar_isMultiplayer() )
 	{
 		m_pPlayer->FireBullets( 1, vecSrc, vecAiming, Vector( flSpread, flSpread, flSpread ), 8192, BULLET_PLAYER_9MM, 0 );
 	}
@@ -511,7 +511,7 @@ void CWeaponEinarAP9::AP9Fire( float flSpread , float flCycleTime, BOOL fUseAuto
 }
 
 
-void CWeaponEinarAP9::Reload( void )
+void CWeaponEinarAp9::Reload( void )
 {
 	int iResult;
 
@@ -519,7 +519,7 @@ void CWeaponEinarAP9::Reload( void )
 
 	if (iResult)
 	{
-		if ( !TH_IsMultiplayer() )
+		if ( !einar_isMultiplayer() )
 			m_flNextPrimaryAttack = m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 2.9;
 
 		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
@@ -528,7 +528,7 @@ void CWeaponEinarAP9::Reload( void )
 
 
 
-void CWeaponEinarAP9::WeaponIdle( void )
+void CWeaponEinarAp9::WeaponIdle( void )
 {
 	ResetEmptySound( );
 
@@ -560,7 +560,7 @@ void CWeaponEinarAP9::WeaponIdle( void )
 }
 
 
-class CAmmoEinarAP9 : public CBasePlayerAmmo	// name ours
+class CAmmoEinarAp9 : public CBasePlayerAmmo
 {
 	void Spawn( void )
 	{ 
@@ -583,7 +583,7 @@ class CAmmoEinarAP9 : public CBasePlayerAmmo	// name ours
 		return FALSE;
 	}
 };
-LINK_ENTITY_TO_CLASS( ammo_th_ap9, CAmmoEinarAP9 );
+LINK_ENTITY_TO_CLASS( ammo_th_ap9, CAmmoEinarAp9 );
 
 
 //=========================================================
@@ -777,7 +777,7 @@ void CWeaponEinarTaurus::WeaponIdle( void )
 }
 
 
-class CAmmoEinarTaurus : public CBasePlayerAmmo	// name ours
+class CAmmoEinarTaurus : public CBasePlayerAmmo
 {
 	void Spawn( void )
 	{ 
@@ -892,7 +892,7 @@ void CWeaponEinarSniper::Holster( int skiplocal /* = 0 */ )
 
 void CWeaponEinarSniper::PrimaryAttack( void )
 {
-	BOOL fMultiplayer = TH_IsMultiplayer();
+	BOOL fMultiplayer = einar_isMultiplayer();
 
 	if ( m_pPlayer->pev->waterlevel != 3 && m_iClip > 0 )
 	{
@@ -975,13 +975,13 @@ void CWeaponEinarSniper::SecondaryAttack()
 	{
 		m_pPlayer->m_iFOV = 0; // 0 means reset to default fov
 		m_fInZoom = 0;
-		TH_ScreenFadeIn( m_pPlayer, Vector( 0, 255, 0 ), 0, 0, 70 );
+		einar_ScreenFadeIn( m_pPlayer, Vector( 0, 255, 0 ), 0, 0, 70 );
 	}
 	else
 	{
 		m_pPlayer->m_iFOV = 20;
 		m_fInZoom = 1;
-		TH_ScreenFadeOut( m_pPlayer, Vector( 0, 255, 0 ), 0, 0, 70 );
+		einar_ScreenFadeOut( m_pPlayer, Vector( 0, 255, 0 ), 0, 0, 70 );
 	}
 	
 	pev->nextthink = UTIL_WeaponTimeBase() + 0.11;
@@ -1009,7 +1009,7 @@ void CWeaponEinarSniper::WeaponIdle( void )
 
 
 // ammo_th_sniper and ammo_einar1
-class CAmmoEinarSniper : public CBasePlayerAmmo	// name ours
+class CAmmoEinarSniper1 : public CBasePlayerAmmo
 {
 	void Spawn( void )
 	{ 
@@ -1033,8 +1033,8 @@ class CAmmoEinarSniper : public CBasePlayerAmmo	// name ours
 		return FALSE;
 	}
 };
-LINK_ENTITY_TO_CLASS( ammo_th_sniper, CAmmoEinarSniper );
-LINK_ENTITY_TO_CLASS( ammo_einar1, CAmmoEinarSniper );
+LINK_ENTITY_TO_CLASS( ammo_th_sniper, CAmmoEinarSniper1 );
+LINK_ENTITY_TO_CLASS( ammo_einar1, CAmmoEinarSniper1 );
 
 
 //=========================================================
@@ -1054,9 +1054,9 @@ enum tfcsniper_e {
 	TFCSNIPER_AUTOHOLSTER
 };
 
-LINK_ENTITY_TO_CLASS( weapon_einar1, CWeaponEinarTFCSniper );
+LINK_ENTITY_TO_CLASS( weapon_einar1, CWeaponEinar2 );
 
-void CWeaponEinarTFCSniper::Spawn( )
+void CWeaponEinar2::Spawn( )
 {
 	Precache( );
 	m_iId = WEAPON_EINAR1;
@@ -1067,7 +1067,7 @@ void CWeaponEinarTFCSniper::Spawn( )
 	FallInit();// get ready to fall down.
 }
 
-void CWeaponEinarTFCSniper::Precache( void )
+void CWeaponEinar2::Precache( void )
 {
 	PRECACHE_MODEL("models/w_isotopebox.mdl");
 	PRECACHE_SOUND("weapons/sniper.wav");
@@ -1080,7 +1080,7 @@ void CWeaponEinarTFCSniper::Precache( void )
 }
 
 
-int CWeaponEinarTFCSniper::GetItemInfo(ItemInfo *p)
+int CWeaponEinar2::GetItemInfo(ItemInfo *p)
 {
 	p->pszName = STRING(pev->classname);
 	p->pszAmmo1 = "bullets";
@@ -1096,7 +1096,7 @@ int CWeaponEinarTFCSniper::GetItemInfo(ItemInfo *p)
 	return 1;
 }
 
-int CWeaponEinarTFCSniper::AddToPlayer( CBasePlayer *pPlayer )
+int CWeaponEinar2::AddToPlayer( CBasePlayer *pPlayer )
 {
 	if ( CBasePlayerWeapon::AddToPlayer( pPlayer ) )
 	{
@@ -1108,12 +1108,12 @@ int CWeaponEinarTFCSniper::AddToPlayer( CBasePlayer *pPlayer )
 	return FALSE;
 }
 
-BOOL CWeaponEinarTFCSniper::Deploy( )
+BOOL CWeaponEinar2::Deploy( )
 {
 	return DefaultDeploy( "models/v_tfc_sniper.mdl", "models/p_sniper.mdl", TFCSNIPER_AUTODRAW, "bow" );
 }
 
-void CWeaponEinarTFCSniper::Holster( int skiplocal /* = 0 */ )
+void CWeaponEinar2::Holster( int skiplocal /* = 0 */ )
 {
 	m_fInReload = FALSE;// cancel any reload in progress.
 
@@ -1126,9 +1126,9 @@ void CWeaponEinarTFCSniper::Holster( int skiplocal /* = 0 */ )
 	SendWeaponAnim( TFCSNIPER_AUTOHOLSTER );
 }
 
-void CWeaponEinarTFCSniper::PrimaryAttack( void )
+void CWeaponEinar2::PrimaryAttack( void )
 {
-	BOOL fMultiplayer = TH_IsMultiplayer();
+	BOOL fMultiplayer = einar_isMultiplayer();
 
 	if ( m_pPlayer->pev->waterlevel != 3 && m_iClip > 0 )
 	{
@@ -1204,19 +1204,19 @@ void CWeaponEinarTFCSniper::PrimaryAttack( void )
 }
 
 
-void CWeaponEinarTFCSniper::SecondaryAttack()
+void CWeaponEinar2::SecondaryAttack()
 {
 	if ( m_fInZoom )
 	{
 		m_pPlayer->m_iFOV = 0; // 0 means reset to default fov
 		m_fInZoom = 0;
-		TH_ScreenFadeIn( m_pPlayer, Vector( 0, 255, 0 ), 0, 0, 70 );
+		einar_ScreenFadeIn( m_pPlayer, Vector( 0, 255, 0 ), 0, 0, 70 );
 	}
 	else
 	{
 		m_pPlayer->m_iFOV = 20;
 		m_fInZoom = 1;
-		TH_ScreenFadeOut( m_pPlayer, Vector( 0, 255, 0 ), 0, 0, 70 );
+		einar_ScreenFadeOut( m_pPlayer, Vector( 0, 255, 0 ), 0, 0, 70 );
 	}
 	
 	pev->nextthink = UTIL_WeaponTimeBase() + 0.11;
@@ -1228,7 +1228,7 @@ void CWeaponEinarTFCSniper::SecondaryAttack()
 // then WeaponIdle, which CBasePlayerWeapon::ItemPostFrame calls for
 // m_fInReload > 1, plays the sound (m_fInReload 2, 1 s) and draws the rifle
 // (m_fInReload 3), and with m_fInReload 1 ItemPostFrame fills the clip.
-void CWeaponEinarTFCSniper::Reload( void )
+void CWeaponEinar2::Reload( void )
 {
 	if ( m_fInZoom )
 	{
@@ -1244,7 +1244,7 @@ void CWeaponEinarTFCSniper::Reload( void )
 }
 
 
-void CWeaponEinarTFCSniper::WeaponIdle( void )
+void CWeaponEinar2::WeaponIdle( void )
 {
 	ResetEmptySound( );
 
@@ -1360,7 +1360,7 @@ void CWeaponEinarChaingun::Holster( int skiplocal /* = 0 */ )
 
 	if ( m_fSpinning )
 	{
-		SpinDown( );
+		ChaingunStop( );
 	}
 	else
 	{
@@ -1374,7 +1374,7 @@ void CWeaponEinarChaingun::SecondaryAttack( void )
 {
 	if ( m_fSpinning )
 	{
-		SpinDown( );
+		ChaingunStop( );
 	}
 }
 
@@ -1384,18 +1384,18 @@ void CWeaponEinarChaingun::PrimaryAttack( void )
 	{
 		if ( !m_fSpinning )
 		{
-			SpinUp( );
+			ChaingunStart( );
 		}
 		else if ( m_flNextSecondaryAttack < UTIL_WeaponTimeBase() )
 		{
-			ChaingunFire( TH_IsMultiplayer() ? 0.15 : 0.1 );
+			ChaingunFire( einar_isMultiplayer() ? 0.15 : 0.1 );
 		}
 	}
 	else
 	{
 		if ( m_fSpinning )
 		{
-			SpinDown( );
+			ChaingunStop( );
 		}
 		else
 		{
@@ -1405,7 +1405,7 @@ void CWeaponEinarChaingun::PrimaryAttack( void )
 	}
 }
 
-void CWeaponEinarChaingun::SpinUp( void )
+void CWeaponEinarChaingun::ChaingunStart( void )
 {
 	m_pPlayer->m_iWeaponVolume = LOUD_GUN_VOLUME;
 
@@ -1464,7 +1464,7 @@ void CWeaponEinarChaingun::ChaingunFire( float flSpread )
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.1;
 }
 
-void CWeaponEinarChaingun::SpinDown( void )
+void CWeaponEinarChaingun::ChaingunStop( void )
 {
 	g_engfuncs.pfnSetClientMaxspeed( ENT( m_pPlayer->pev ), 400 );
 
@@ -1483,7 +1483,7 @@ void CWeaponEinarChaingun::Reload( void )
 {
 	if ( m_fSpinning )
 	{
-		SpinDown( );
+		ChaingunStop( );
 		return;
 	}
 
@@ -1521,7 +1521,7 @@ void CWeaponEinarChaingun::WeaponIdle( void )
 	{
 		if ( m_fSpinning )
 		{
-			SpinDown( );
+			ChaingunStop( );
 			return;
 		}
 
