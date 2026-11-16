@@ -24,6 +24,8 @@
 #define RGB_YELLOWISH 0x00FFA000 //255,160,0
 #define RGB_REDISH 0x00FF1010 //255,160,0
 #define RGB_GREENISH 0x0000A000 //0,160,0
+#define RGB_WHITE 0x00FFFFFF	// name ours: the mod's HUD numbers and icons
+#define RGB_PINKISH 0x00FF0080	// name ours: the mod's bars (255,0,128)
 
 #include "wrect.h"
 #include "cl_dll.h"
