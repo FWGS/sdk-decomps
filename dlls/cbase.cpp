@@ -796,4 +796,25 @@ float CBaseEntity :: MovementSpeed( void )
 	return pev->velocity.Length();
 }
 
-
+// A stand-in for cbase.cpp's retail function 0x10023ec0:
+// random_scis.cpp calls it. TRUE when the origin or a corner of the box is in solid.
+bool CBaseEntity :: IsInSolid( void )
+{
+	if ( UTIL_PointContents( pev->origin ) == CONTENTS_SOLID )
+		return true;
+	if ( UTIL_PointContents( Vector( pev->origin + pev->mins ) ) == CONTENTS_SOLID )
+		return true;
+	if ( UTIL_PointContents( Vector( pev->origin + pev->maxs ) ) == CONTENTS_SOLID )
+		return true;
+	if ( UTIL_PointContents( Vector( pev->origin + Vector( pev->maxs.x, pev->maxs.y, pev->mins.z ) ) ) == CONTENTS_SOLID )
+		return true;
+	if ( UTIL_PointContents( Vector( pev->origin + Vector( pev->maxs.x, pev->mins.y, pev->mins.z ) ) ) == CONTENTS_SOLID )
+		return true;
+	if ( UTIL_PointContents( Vector( pev->origin + Vector( pev->maxs.x, pev->mins.y, pev->maxs.z ) ) ) == CONTENTS_SOLID )
+		return true;
+	if ( UTIL_PointContents( Vector( pev->origin + Vector( pev->mins.x, pev->maxs.y, pev->maxs.z ) ) ) == CONTENTS_SOLID )
+		return true;
+	if ( UTIL_PointContents( Vector( pev->origin + Vector( pev->mins.x, pev->maxs.y, pev->mins.z ) ) ) == CONTENTS_SOLID )
+		return true;
+	return UTIL_PointContents( pev->origin + Vector( pev->mins.x, pev->mins.y, pev->maxs.z ) ) == CONTENTS_SOLID;
+}

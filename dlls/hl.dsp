@@ -444,6 +444,10 @@ SOURCE=.\python.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\random_scis.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\rat.cpp
 # End Source File
 # Begin Source File
