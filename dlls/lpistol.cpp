@@ -193,7 +193,7 @@ void CLaserSpecial::PinballTouch( CBaseEntity *pOther )
 	{
 		if ( UTIL_PointContents( pev->origin ) == CONTENTS_SKY )
 		{
-			m_hEnemy->TakeDamage( pev, VARS( pev->owner ), m_hEnemy->pev->max_health > 200 ? m_hEnemy->pev->max_health : 200, DMG_ENERGYBEAM | DMG_ALWAYSGIB );
+			m_hEnemy->TakeDamage( pev, VARS( pev->owner ), max( m_hEnemy->pev->max_health, 200 ), DMG_ENERGYBEAM | DMG_ALWAYSGIB );
 		}
 		else
 		{
@@ -203,7 +203,7 @@ void CLaserSpecial::PinballTouch( CBaseEntity *pOther )
 			{
 				// thrown at another monster: it takes the victim's full health in damage
 				pOther->TakeDamage( m_hEnemy->pev, VARS( pev->owner ), m_hEnemy->pev->max_health, DMG_ENERGYBEAM | DMG_ALWAYSGIB );
-				m_hEnemy->TakeDamage( pev, VARS( pev->owner ), m_hEnemy->pev->max_health > 200 ? m_hEnemy->pev->max_health : 200, DMG_ENERGYBEAM | DMG_ALWAYSGIB );
+				m_hEnemy->TakeDamage( pev, VARS( pev->owner ), max( m_hEnemy->pev->max_health, 200 ), DMG_ENERGYBEAM | DMG_ALWAYSGIB );
 			}
 			else if ( m_hEnemy->pev->health > 1 )
 			{
