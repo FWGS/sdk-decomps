@@ -1929,7 +1929,18 @@ void CScientist :: DeathMessage( entvars_t *pevAttacker, entvars_t *pevInflictor
 	if ( hKiller )
 		pszKiller = hKiller->GetKillDesc();
 
-	if ( (CBaseEntity *)hKiller != this && pszKiller[0] )
+	if ( (CBaseEntity *)hKiller == this || !pszKiller[0] )
+	{
+		// killed himself, or by something without a name
+		if ( VerbTakesName( pszVerb ) > 0 )
+		{
+			sprintf( szText, pszVerb, pszVictim );
+			strcat( szText, "\n" );
+		}
+		else
+			sprintf( szText, "%s %s\n", pszVictim, pszVerb );
+	}
+	else
 	{
 		if ( hInflictor )
 			pszHitGroup = hInflictor->GetHitGroupDesc( iHitGroup );
@@ -1940,16 +1951,6 @@ void CScientist :: DeathMessage( entvars_t *pevAttacker, entvars_t *pevInflictor
 			sprintf( szText, "%s was %s%s by %s\n", pszVictim, pszVerb, pszHitGroup, pszWeapon );
 		else
 			sprintf( szText, "%s%s was %s by %s\n", pszVictim, pszHitGroup, pszVerb, pszWeapon );
-	}
-	else
-	{
-		if ( VerbTakesName( pszVerb ) > 0 )
-		{
-			sprintf( szText, pszVerb, pszVictim );
-			strcat( szText, "\n" );
-		}
-		else
-			sprintf( szText, "%s %s\n", pszVictim, pszVerb );
 	}
 
 	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, szText );
