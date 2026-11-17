@@ -2218,7 +2218,7 @@ void CTriggerTeleport :: TeleportTouch( CBaseEntity *pOther )
 			Vector vecDir;
 			vecDir = vecAngles + UTIL_VecToAngles( pOther->pev->velocity );
 			UTIL_MakeAimVectors( vecDir );
-			pOther->pev->velocity = pOther->pev->velocity.Length() * gpGlobals->v_forward;
+			pOther->pev->velocity = gpGlobals->v_forward * pOther->pev->velocity.Length();
 
 			// turn the toucher's offset from the landmark
 			Vector vecFromLandmark = pOther->pev->origin - pLandmark->pev->origin;
