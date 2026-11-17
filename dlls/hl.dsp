@@ -580,6 +580,10 @@ SOURCE=..\game_shared\voice_gamemgr.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\volcano.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\weapons.cpp
 # End Source File
 # Begin Source File
