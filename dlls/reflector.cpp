@@ -75,6 +75,14 @@ public:
 	void UpdateBeam( int iBeam, const Vector &vecSrc, const Vector &vecEnd, bool fFirst, bool fWide );
 	void RemoveBeam( int iBeam );
 
+	void UseAmmo( int count )
+	{
+		if ( m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] >= count )
+			m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] -= count;
+		else
+			m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] = 0;
+	}
+
 	float	m_flAmmoUseTime;	// since we use < 1 point of ammo per update, we subtract ammo on a timer.
 	CBeam	*m_pBeams[15];		// five beams of up to three segments each
 	int		m_shootTime;		// the run sound still has to start
@@ -310,11 +318,7 @@ void CReflector::Fire( const Vector &vecOrigSrc, const Vector &vecAngles )
 	// use 6 ammo/second
 	if ( gpGlobals->time >= m_flAmmoUseTime )
 	{
-		if ( m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] >= 1 )
-			m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] -= 1;
-		else
-			m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] = 0;
-
+		UseAmmo( 1 );
 		m_flAmmoUseTime = gpGlobals->time + 0.166;
 	}
 
@@ -391,11 +395,7 @@ void CReflector::FireWide( const Vector &vecOrigSrc, const Vector &vecAngles )
 	// use 6 ammo/second
 	if ( gpGlobals->time >= m_flAmmoUseTime )
 	{
-		if ( m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] >= 1 )
-			m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] -= 1;
-		else
-			m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] = 0;
-
+		UseAmmo( 1 );
 		m_flAmmoUseTime = gpGlobals->time + 0.166;
 	}
 
@@ -440,17 +440,19 @@ void CReflector::FireWide( const Vector &vecOrigSrc, const Vector &vecAngles )
 			// punch through the wall
 			UTIL_TraceLine( tr.vecEndPos + vecDir * 8, vecDest, ignore_monsters, pentIgnore, &beam_tr );
 
-			if ( beam_tr.fAllSolid )
+			if ( !beam_tr.fAllSolid )
+			{
+				// trace backwards to find the exit point
+				UTIL_TraceLine( beam_tr.vecEndPos, tr.vecEndPos, ignore_monsters, pentIgnore, &beam_tr );
+
+				UTIL_DecalTrace( &tr, DECAL_BIGSHOT1 + RANDOM_LONG( 0, 4 ) );
+				UTIL_Sparks( tr.vecEndPos );
+
+				vecSrc = beam_tr.vecEndPos;
+				pentIgnore = NULL;
+			}
+			else
 				break;
-
-			// trace backwards to find the exit point
-			UTIL_TraceLine( beam_tr.vecEndPos, tr.vecEndPos, ignore_monsters, pentIgnore, &beam_tr );
-
-			UTIL_DecalTrace( &tr, DECAL_BIGSHOT1 + RANDOM_LONG( 0, 4 ) );
-			UTIL_Sparks( tr.vecEndPos );
-
-			vecSrc = beam_tr.vecEndPos;
-			pentIgnore = NULL;
 		}
 		else
 		{
