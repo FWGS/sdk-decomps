@@ -126,7 +126,7 @@ int	CZombie :: Classify ( void )
 //=========================================================
 int CZombie :: GetBattlePower( void )
 {
-	return pev->max_health * 0.1 * gSkillData.zombieDmgOneSlash;
+	return ( pev->max_health * 0.1 ) * gSkillData.zombieDmgOneSlash;
 }
 
 //=========================================================
