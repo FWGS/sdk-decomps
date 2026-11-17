@@ -103,11 +103,19 @@ SOURCE=..\dlls\crowbar.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\dlls\displacer.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\dlls\egon.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\ev_hldm.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\flamethrower.cpp
 # End Source File
 # Begin Source File
 
@@ -144,6 +152,10 @@ SOURCE=..\dlls\hornetgun.cpp
 # Begin Source File
 
 SOURCE=..\common\interface.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\lpistol.cpp
 # End Source File
 # Begin Source File
 

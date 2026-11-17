@@ -192,6 +192,10 @@ SOURCE=.\bigmomma.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\black_hole.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\bloater.cpp
 # End Source File
 # Begin Source File
@@ -248,6 +252,10 @@ SOURCE=.\defaultai.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\displacer.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\doors.cpp
 # End Source File
 # Begin Source File
@@ -272,11 +280,23 @@ SOURCE=.\fire.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\fireball.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\flamethrower.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\flyingmonster.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\flyingobject.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\freezethrower.cpp
 # End Source File
 # Begin Source File
 
@@ -393,6 +413,10 @@ SOURCE=.\leech.cpp
 # Begin Source File
 
 SOURCE=.\lights.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\lpistol.cpp
 # End Source File
 # Begin Source File
 
