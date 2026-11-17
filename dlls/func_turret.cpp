@@ -26,9 +26,9 @@
 #include "beams.h"
 
 
-// shoot point "firespread": the cones of weapons.h by degree, with the
-// func_tank's four old cones ("LEGACY") in between
-static float gShootpointSpread[] =	// name ours
+// the shoot points' "firespread" (and beams.cpp's beam_turret "accuracy"): the cones of
+// weapons.h by degree, with func_tank's four old cones ("LEGACY") in between
+float gTankAccuracy[17] =	// name ours
 {
 	0,							// point accurate
 	VECTOR_CONE_1DEGREES.x,
@@ -36,8 +36,8 @@ static float gShootpointSpread[] =	// name ours
 	0.025,						// small cone
 	VECTOR_CONE_3DEGREES.x,
 	VECTOR_CONE_4DEGREES.x,
-	0.05,						// medium cone
 	VECTOR_CONE_5DEGREES.x,
+	0.05,						// medium cone
 	VECTOR_CONE_6DEGREES.x,
 	VECTOR_CONE_7DEGREES.x,
 	VECTOR_CONE_8DEGREES.x,
@@ -1440,7 +1440,7 @@ void CInfoShootpoint :: KeyValue( KeyValueData *pkvd )
 	}
 	else if (FStrEq(pkvd->szKeyName, "firespread"))
 	{
-		m_spread = gShootpointSpread[atoi(pkvd->szValue)];
+		m_spread = gTankAccuracy[atoi(pkvd->szValue)];
 		pkvd->fHandled = TRUE;
 	}
 	else if (FStrEq(pkvd->szKeyName, "delay"))
