@@ -216,20 +216,29 @@ void CWaterSpray::Think( void )
 	MESSAGE_END();
 
 	CBaseEntity *pList[16];
-	int count = UTIL_EntitiesInBox( pList, 16, pev->origin + pev->mins, pev->origin + pev->maxs, FL_CLIENT | FL_MONSTER );
-	for ( int i = 0; i < count; i++ )
-		Touch( pList[i] );
+	Vector vecMins = pev->origin + pev->mins;
+	Vector vecMaxs = pev->origin + pev->maxs;
+	int count = UTIL_EntitiesInBox( pList, 16, vecMins, vecMaxs, FL_CLIENT | FL_MONSTER );
+	if ( count )
+	{
+		for ( int i = 0; i < count; i++ )
+			Touch( pList[i] );
+	}
 }
 
 void CWaterSpray::Touch( CBaseEntity *pOther )
 {
-	if ( !pOther->pev->takedamage )
-		return;
+	if ( pOther->pev->takedamage )
+	{
+		entvars_t *pevOwner = pev;
+		if ( pev->owner )
+			pevOwner = VARS( pev->owner );
 
-	pOther->TakeDamage( pev, pev->owner ? VARS( pev->owner ) : pev, 3, DMG_NEVERGIB | 0x8000000 );
+		pOther->TakeDamage( pev, pevOwner, 3, DMG_NEVERGIB | 0x8000000 );
 
-	if ( pOther->CanBeRepulsed( false ) )
-		pOther->pev->velocity = pOther->pev->velocity + Vector( 0, 0, 64 );
+		if ( pOther->CanBeRepulsed( false ) )
+			pOther->pev->velocity = pOther->pev->velocity + Vector( 0, 0, 64 );
+	}
 }
 
 

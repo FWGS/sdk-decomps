@@ -158,7 +158,7 @@ void CClipDisk::DiskThink( void )
 	Vector vecAngles = UTIL_VecToAngles( m_vecEnemyLKP - pev->origin );
 
 	float flDiff = UTIL_AngleDiff( vecAngles.y, pev->angles.y );
-	if ( fabs( flDiff - m_flTurnRate ) <= 10 )
+	if ( (float)fabs( flDiff - m_flTurnRate ) <= 10 )
 	{
 		pev->angles.y = vecAngles.y;
 	}
@@ -172,15 +172,15 @@ void CClipDisk::DiskThink( void )
 	}
 
 	flDiff = UTIL_AngleDiff( vecAngles.x, pev->angles.x );
-	if ( fabs( flDiff ) <= 10 )
+	if ( (float)fabs( flDiff ) <= 10 )
 		pev->angles.x = vecAngles.x;
 	else
 		pev->angles.x += ( ( flDiff < 0 ) ? -1 : 1 ) * 10;
 
-	float flRoll = UTIL_AngleDiff( pev->angles.y, flOldYaw ) * -2;
-	flDiff = UTIL_AngleDiff( flRoll, pev->angles.z );
-	if ( fabs( flDiff ) <= 4 )
-		pev->angles.z = flRoll;
+	vecAngles.z = UTIL_AngleDiff( pev->angles.y, flOldYaw ) * -2;
+	flDiff = UTIL_AngleDiff( vecAngles.z, pev->angles.z );
+	if ( (float)fabs( flDiff ) <= 4 )
+		pev->angles.z = vecAngles.z;
 	else
 		pev->angles.z += ( ( flDiff < 0 ) ? -1 : 1 ) * 4;
 

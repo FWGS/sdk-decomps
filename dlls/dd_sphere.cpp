@@ -78,7 +78,7 @@ void CBeamWeapon::Spawn( void )
 	pev->renderamt = 200;
 	SetScrollRate( 35 );
 	pev->dmg = 4;
-	pev->pain_finished = gpGlobals->time + 1.0;	// lifetime
+	pev->pain_finished = gpGlobals->time + 1;	// lifetime
 
 	Vector vecTarget = pev->angles;
 
@@ -116,12 +116,12 @@ void CBeamWeapon::WeaponThink( void )
 		Vector vecDir;
 		TraceResult tr;
 
-		m_point1 = m_point1 + m_point2;
+		m_point1 = m_point2 + m_point1;
 		vecDir = ( m_point1 - pev->origin ).Normalize();
 		Vector vecEnd = pev->origin + vecDir * 4096;
 
 		UTIL_TraceLine( pev->origin, vecEnd, dont_ignore_monsters, pev->owner, &tr );
-		SetEndPos( tr.vecEndPos );
+		pev->angles = tr.vecEndPos;
 
 		if ( tr.pHit )
 		{
@@ -258,15 +258,9 @@ void CDSphere::RunAttack( void )
 					vecDir = ( m_hTargets[i]->BodyTarget( pev->origin ) - Center() ).Normalize();
 					vecAngles = UTIL_VecToAngles( vecDir );
 
-					if ( i == 0 )
+					if ( i != 0 )
 					{
-						UTIL_MakeVectors( vecAngles - pev->angles );
-						CBaseEntity::Create( "beamweapon", gpGlobals->v_forward * 16, m_hTargets[0]->BodyTarget( pev->origin ), edict() );
-						m_flNextFire[0] = gpGlobals->time + RANDOM_FLOAT( 1.2, 1.4 );
-					}
-					else
-					{
-						UTIL_MakeVectors( Vector( vecAngles.x + RANDOM_FLOAT( -80, 80 ), vecAngles.y + RANDOM_FLOAT( -80, 80 ), vecAngles.z ) );
+						UTIL_MakeVectors( vecAngles + Vector( RANDOM_FLOAT( -80, 80 ), RANDOM_FLOAT( -80, 80 ), 0 ) );
 
 						CLaserPulse *pPulse = CLaserPulse::Shoot( pev->origin + gpGlobals->v_forward * 20, edict(), Vector( 70, 140, 255 ), 0, 0.25, 0 );
 						pPulse->pev->velocity = vecDir * RANDOM_FLOAT( 800, 1200 );
@@ -274,6 +268,12 @@ void CDSphere::RunAttack( void )
 						pPulse->m_iszKillDesc = MAKE_STRING( "a particle projector cannon" );
 
 						m_flNextFire[i] = gpGlobals->time + RANDOM_FLOAT( 0.2, 0.4 );
+					}
+					else
+					{
+						UTIL_MakeVectors( vecAngles - pev->angles );
+						CBaseEntity::Create( "beamweapon", gpGlobals->v_forward * 16, m_hTargets[0]->BodyTarget( pev->origin ), edict() );
+						m_flNextFire[0] = gpGlobals->time + RANDOM_FLOAT( 1.2, 1.4 );
 					}
 				}
 			}
