@@ -45,8 +45,6 @@ enum displacer_e {
 
 #ifndef CLIENT_DLL
 
-#define DMG_DISPLACE		(1 << 25)	// name ours: only the displacer ball sets it
-
 // displacer_ball: flies at 1000 units/s flashing lightning at random spots around it
 // (two sets of four beams, alternating); what it touches takes 250, and if that
 // kills a monster that can be teleported, it vanishes. 0.6 seconds later a
@@ -168,7 +166,7 @@ void CDisplacerBall::DisplaceTouch( CBaseEntity *pOther )
 
 	if ( pOther->pev->takedamage )
 	{
-		pOther->TakeDamage( pev, VARS( pev->owner ), 250, DMG_ENERGYBEAM | DMG_FADE | DMG_DISPLACE );
+		pOther->TakeDamage( pev, VARS( pev->owner ), 250, DMG_ENERGYBEAM | DMG_FADE | DMG_NOPUSH );
 
 		if ( pOther->CanBeTeleported( ) && pOther->pev->health <= 0 )
 		{
