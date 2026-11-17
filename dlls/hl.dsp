@@ -484,6 +484,14 @@ SOURCE=.\rat.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\reflector.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\repulsor.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\roach.cpp
 # End Source File
 # Begin Source File
@@ -524,6 +532,14 @@ SOURCE=.\skill.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\sniper.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\softgun.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\sound.cpp
 # End Source File
 # Begin Source File
@@ -548,6 +564,10 @@ SOURCE=.\subs.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\sword.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\talkmonster.cpp
 # End Source File
 # Begin Source File
@@ -557,6 +577,10 @@ SOURCE=.\tempmonster.cpp
 # Begin Source File
 
 SOURCE=.\tentacle.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\teslacoil.cpp
 # End Source File
 # Begin Source File
 
@@ -581,6 +605,10 @@ SOURCE=.\util.cpp
 # Begin Source File
 
 SOURCE=..\game_shared\voice_gamemgr.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\vortex.cpp
 # End Source File
 # Begin Source File
 
