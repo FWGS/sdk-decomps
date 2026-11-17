@@ -23,6 +23,8 @@
 
 */
 
+#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
+
 #include "extdll.h"
 #include "util.h"
 #include "cbase.h"
@@ -523,3 +525,5 @@ class CLaserAmmo : public CBasePlayerAmmo
 	}
 };
 LINK_ENTITY_TO_CLASS( ammo_laserclip, CLaserAmmo );
+
+#endif
