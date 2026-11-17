@@ -1265,6 +1265,9 @@ void CBeamTurret::SearchThink( void )
 
 void CBeamTurret::ActiveThink( void )
 {
+	int fAttack = 0;
+	Vector vecDirToEnemy;
+
 	pev->nextthink = gpGlobals->time + 0.1;
 
 	if ( !m_on || m_hEnemy == NULL || !m_hEnemy->IsAlive() )
@@ -1280,7 +1283,8 @@ void CBeamTurret::ActiveThink( void )
 	Vector vecMidEnemy;
 	int fEnemyVisible = FBoxVisible( pev, m_hEnemy->pev, vecMidEnemy );
 	vecMidEnemy = m_hEnemy->BodyTarget( vecMid );
-	Vector vecDirToEnemy = vecMidEnemy - vecMid;
+	vecDirToEnemy = vecMidEnemy - vecMid;	// calculate dir and dist to enemy
+	float flDistToEnemy = vecDirToEnemy.Length();
 
 	if ( !fEnemyVisible )
 	{
@@ -1292,14 +1296,20 @@ void CBeamTurret::ActiveThink( void )
 	UTIL_MakeAimVectors( pev->angles );
 	Vector vecLOS = vecDirToEnemy;
 	vecLOS = vecLOS.Normalize();
+
+	// Is the Gun looking at the target
 	if ( DotProduct( vecLOS, gpGlobals->v_forward ) < m_flFiringArc )
+		fAttack = FALSE;
+	else
+		fAttack = TRUE;
+
+	if ( fAttack )
+		Shoot( vecMidEnemy );
+	else
 	{
 		m_hEnemy = NULL;
 		SetThink( SearchThink );
-		return;
 	}
-
-	Shoot( vecMidEnemy );
 }
 
 
@@ -1387,8 +1397,7 @@ void CBeamTurret::BeamThink( void )
 		}
 		if ( m_hEnemy != NULL )
 		{
-			Vector vecDir( m_hEnemy->BodyTarget( pev->origin ) - m_point1 );
-			m_point2 = vecDir.Normalize() * 5;
+			m_point2 = ( m_hEnemy->BodyTarget( pev->origin ) - m_point1 ).Normalize() * 5;
 		}
 		m_point1 = m_point1 + m_point2;
 	}
