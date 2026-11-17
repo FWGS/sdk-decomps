@@ -1371,6 +1371,11 @@ enum EGON_FIREMODE { FIRE_NARROW, FIRE_WIDE};
 
 BEAM *pBeam;
 BEAM *pBeam2;
+int g_iBeamStyle;	// name ours: what UpdateBeams animates (0 antimatter pulverizer, 1 gluon, 2 tesla coil)
+
+extern TEMPENTITY *g_pEgonFlare;
+extern BEAM *g_pTeslaBeams[5];
+void EV_FadeGrowTempEnt( TEMPENTITY *pTemp, float flUnused, float flScaleSpeed );
 
 void EV_EgonFire( event_args_t *args )
 {
