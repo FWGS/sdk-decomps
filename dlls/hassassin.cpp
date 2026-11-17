@@ -2585,12 +2585,13 @@ Schedule_t *CNAgent :: GetSchedule ( void )
 					return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
 
 				TraceResult tr;
+				Vector vecSrc, vecDir;
 
 				if ( m_hEnemy->CanBeRepulsed( false ) )
 				{
 					// room behind the enemy to blow it away?
-					Vector vecSrc = Center();
-					Vector vecDir = ( m_hEnemy->Center() - vecSrc ).Normalize();
+					vecSrc = Center();
+					vecDir = ( m_hEnemy->Center() - vecSrc ).Normalize();
 					UTIL_TraceLine( vecSrc + vecDir * 64, vecSrc + vecDir * 600, dont_ignore_monsters, m_hEnemy->edict(), &tr );
 					if ( tr.flFraction >= 0.9 )
 						goto attack;
@@ -2598,23 +2599,23 @@ Schedule_t *CNAgent :: GetSchedule ( void )
 
 				// no: get some room first
 				BOOL fJump = FALSE;
-				UTIL_MakeVectors( pev->angles );
-				Vector vecSrc = m_hEnemy->Center();
-				Vector vecDir = ( gpGlobals->v_up - gpGlobals->v_forward ).Normalize();
+				UTIL_VecToAngles( pev->angles );	// sic: meant to make the vectors
+				vecSrc = m_hEnemy->Center();
+				vecDir = ( gpGlobals->v_up - gpGlobals->v_forward ).Normalize();
 				UTIL_TraceLine( vecSrc, Center() + vecDir * 600, ignore_monsters, m_hEnemy->edict(), &tr );
 				if ( ( tr.vecEndPos - vecSrc ).Length() >= 480 )
 					fJump = CheckJump();
 
-				if ( !WorldGraph.m_fGraphPresent || !WorldGraph.m_fGraphPointersSet )
+				if ( WorldGraph.m_fGraphPresent && WorldGraph.m_fGraphPointersSet )
 				{
-					if ( fJump && RANDOM_LONG( 0, 255 ) > 127 )
+					if ( fJump )
 						return GetScheduleOfType ( SCHED_MELEE_ATTACK1 );
-					return GetScheduleOfType ( SCHED_AGENT_BLINK_NPW_COMBO );
+					return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
 				}
 
-				if ( fJump )
+				if ( fJump && RANDOM_LONG( 0, 255 ) >= 128 )
 					return GetScheduleOfType ( SCHED_MELEE_ATTACK1 );
-				return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
+				return GetScheduleOfType ( SCHED_AGENT_BLINK_NPW_COMBO );
 			}
 attack:
 		// jump player!
@@ -2626,7 +2627,7 @@ attack:
 		// secondary attack
 			if ( HasConditions ( bits_COND_CAN_RANGE_ATTACK2 ) )
 			{
-				if ( m_iFrustration > 1 && m_hEnemy != NULL && ( pev->weapons & 1 ) )
+				if ( m_iFrustration >= 2 && m_hEnemy != NULL && ( pev->weapons & 1 ) )
 					return slMineField;
 				return GetScheduleOfType ( SCHED_RANGE_ATTACK2 );
 			}
@@ -2647,25 +2648,25 @@ attack:
 					m_iFrustration = 0;
 
 				// the stronger the enemy, the likelier a charged attack
-				int iHealth = min( m_hEnemy->pev->health + m_hEnemy->pev->armorvalue, 100 );
-				if ( !m_pChargeSprite && RANDOM_LONG( 0, 140 ) < iHealth )
+				int iPower = m_hEnemy->pev->armorvalue + m_hEnemy->pev->health;
+				if ( !m_pChargeSprite && min( iPower, 100 ) > RANDOM_LONG( 0, 140 ) )
 				{
 					m_flChargeTime = gpGlobals->time;
 					m_flChargeScale = 0.5;
-					if ( pev->frags == 1 )
+					if ( pev->frags != 1 )
+					{
+						m_pChargeSprite = CSprite::SpriteCreate( "sprites/wallop.spr", pev->origin, TRUE );
+						m_pChargeSprite->SetAttachment( edict(), 1 );
+						m_pChargeSprite->SetScale( 0.1 );
+						m_pChargeSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxDistort );
+					}
+					else
 					{
 						m_pChargeSprite = CSprite::SpriteCreate( "sprites/n_charge.spr", pev->origin, TRUE );
 						m_pChargeSprite->SetAttachment( edict(), 1 );
 						m_pChargeSprite->SetScale( 0.1 );
 						m_pChargeSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxNone );
 						m_pChargeSprite->pev->framerate = 10;
-					}
-					else
-					{
-						m_pChargeSprite = CSprite::SpriteCreate( "sprites/flux_t.spr", pev->origin, TRUE );
-						m_pChargeSprite->SetAttachment( edict(), 1 );
-						m_pChargeSprite->SetScale( 0.1 );
-						m_pChargeSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxDistort );
 					}
 					m_pChargeSprite->pev->spawnflags |= SF_SPRITE_TEMPORARY;
 				}
