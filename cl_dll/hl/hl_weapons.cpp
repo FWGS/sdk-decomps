@@ -309,10 +309,40 @@ Vector CBaseEntity::FireBulletsPlayer ( ULONG cShots, Vector vecSrc, Vector vecD
     return Vector ( x * vecSpread.x, y * vecSpread.y, 0.0 );
 }
 
-// a stand-in until this file has the real explosive bullets (retail 0x1001fdf0, 326 bytes)
+/*
+=====================
+CBaseEntity :: FireBulletsExplosive
+
+Only produces the random direction vector for the shotgun's explosive slugs
+=====================
+*/
 Vector CBaseEntity::FireBulletsExplosive( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker, int shared_rand )
 {
-	return FireBulletsPlayer( cShots, vecSrc, vecDirShooting, vecSpread, flDistance, BULLET_PLAYER_BUCKSHOT, 0, iDamage, pevAttacker, shared_rand );
+	float x, y, z;
+
+	for ( ULONG iShot = 1; iShot <= cShots; iShot++ )
+	{
+		if ( pevAttacker == NULL )
+		{
+			// get circular gaussian spread
+			do {
+					x = RANDOM_FLOAT(-0.5, 0.5) + RANDOM_FLOAT(-0.5, 0.5);
+					y = RANDOM_FLOAT(-0.5, 0.5) + RANDOM_FLOAT(-0.5, 0.5);
+					z = x*x+y*y;
+			} while (z > 1);
+		}
+		else
+		{
+			//Use player's random seed.
+			// get circular gaussian spread
+			x = UTIL_SharedRandomFloat( shared_rand + iShot, -0.5, 0.5 ) + UTIL_SharedRandomFloat( shared_rand + ( 1 + iShot ) , -0.5, 0.5 );
+			y = UTIL_SharedRandomFloat( shared_rand + ( 2 + iShot ), -0.5, 0.5 ) + UTIL_SharedRandomFloat( shared_rand + ( 3 + iShot ), -0.5, 0.5 );
+			z = x * x + y * y;
+		}
+			
+	}
+
+    return Vector ( x * vecSpread.x, y * vecSpread.y, 0.0 );
 }
 
 /*
@@ -339,7 +369,12 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		m_fInReload = FALSE;
 	}
 
-	if ((m_pPlayer->pev->button & IN_ATTACK2) && (m_flNextSecondaryAttack <= 0.0))
+	if ((m_pPlayer->pev->button & IN_ALT1) && (m_flNextWeaponSpecial <= 0.0))
+	{
+		// +attack3
+		WeaponSpecial();
+	}
+	else if ((m_pPlayer->pev->button & IN_ATTACK2) && (m_flNextSecondaryAttack <= 0.0))
 	{
 		if ( pszAmmo2() && !m_pPlayer->m_rgAmmo[SecondaryAmmoIndex()] )
 		{
@@ -347,7 +382,7 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		}
 
 		SecondaryAttack();
-		m_pPlayer->pev->button &= ~IN_ATTACK2;
+		// (the SDK cleared IN_ATTACK2 here)
 	}
 	else if ((m_pPlayer->pev->button & IN_ATTACK) && (m_flNextPrimaryAttack <= 0.0))
 	{
