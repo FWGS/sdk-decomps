@@ -188,7 +188,7 @@ void CSword::PrimaryAttack()
 		// the third swing, a thrust, does more damage and cuts the victim in half unless it hits the head
 		int iDamage = iSwing == 2 ? gSkillData.plrDmgCrowbar * 5 : gSkillData.plrDmgCrowbar * 3;
 		pEntity->TraceAttack(m_pPlayer->pev, iDamage, gpGlobals->v_forward, &tr,
-			( iSwing == 2 && tr.iHitgroup != HITGROUP_HEAD ) ? ( DMG_SLASH | DMG_ENERGYBEAM | DMG_NEVERGIB | (1 << 26) ) : ( DMG_SLASH | DMG_ENERGYBEAM | DMG_NOGIB ) );
+			( iSwing == 2 && tr.iHitgroup != HITGROUP_HEAD ) ? ( DMG_SLASH | DMG_ENERGYBEAM | DMG_NEVERGIB | DMG_HALVE ) : ( DMG_SLASH | DMG_ENERGYBEAM | DMG_NOGIB ) );
 		ApplyMultiDamage( m_pPlayer->pev, m_pPlayer->pev );
 
 		if (pEntity)
