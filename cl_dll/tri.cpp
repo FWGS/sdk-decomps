@@ -20,7 +20,7 @@
 #define DLLEXPORT __declspec( dllexport )
 
 void RenderAllSpheres( float flTime, float flFrametime );	// sphere.cpp
-void ParticleSystemsDraw( void );						// effects.cpp
+void RenderParticles( void );						// effects.cpp
 void BloodSprayThink( float flTime, float flFrametime );	// bloodspray.cpp
 void CL_DamageTick( float flTime, float flFrametime );		// damagefx.cpp
 
@@ -128,7 +128,7 @@ void DLLEXPORT HUD_DrawTransparentTriangles( void )
 
 	RenderAllSpheres( flTime, flFrametime );
 	// retail calls 0x10060050 here (no arguments; code between text_message.cpp and train.cpp)
-	ParticleSystemsDraw();
+	RenderParticles();
 	BloodSprayThink( flTime, flFrametime );
 	// retail calls 0x10055290 here with flTime (code after pm_shared.c)
 	CL_DamageTick( flTime, flFrametime );

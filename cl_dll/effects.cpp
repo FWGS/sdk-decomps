@@ -1,7 +1,7 @@
 //========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: client particle systems: TriAPI sprite particles streaming from an
-//          entity (the flamethrower's flames); names ours
+//          entity (the flamethrower's flames)
 //
 // $NoKeywords: $
 //=============================================================================
@@ -24,14 +24,14 @@ float g_flGravity;	// sv_gravity, from HUD_TempEntUpdate
 
 Vector g_vecParticleZero( 0, 0, 0 );
 
-CParticleSystemManager g_ParticleSystems;
+CParticleSysManager g_ParticleSystems;
 
-CParticleSystem::CParticleSystem()
+CParticleSys::CParticleSys()
 {
 	memset( this, 0, sizeof( *this ) );
 }
 
-CParticleSystem::~CParticleSystem()
+CParticleSys::~CParticleSys()
 {
 	delete m_pNext;
 	m_pNext = NULL;
@@ -43,7 +43,7 @@ Vector g_vecParticleForward, g_vecParticleRight, g_vecParticleUp;
 // Draw the particles as camera-facing quads, then the
 // next system's
 //=========================================================
-void CParticleSystem::Draw( void )
+void CParticleSys::Draw( void )
 {
 	Vector vecCorner;
 
@@ -100,7 +100,7 @@ void CParticleSystem::Draw( void )
 // Move the particles, then the next system's; spawn new
 // ones while the owner is in view
 //=========================================================
-void CParticleSystem::Update( float flFrametime, float flTime )
+void CParticleSys::Think( float flFrametime, float flTime )
 {
 	bool bAlive = false;
 
@@ -160,7 +160,7 @@ void CParticleSystem::Update( float flFrametime, float flTime )
 	}
 
 	if ( m_pNext )
-		m_pNext->Update( flFrametime, flTime );
+		m_pNext->Think( flFrametime, flTime );
 
 	if ( m_flDieTime != 0 && m_flDieTime <= flTime )
 	{
@@ -180,7 +180,7 @@ void CParticleSystem::Update( float flFrametime, float flTime )
 	}
 }
 
-particle_t *CParticleSystem::AddParticle( const Vector &vecOrigin, const Vector &vecVelocity )
+particle_t *CParticleSys::AddParticle( const Vector &vecOrigin, const Vector &vecVelocity )
 {
 	int i = m_iLastParticle + 1;	// sic: 256 when the last one was 255
 
@@ -209,7 +209,7 @@ particle_t *CParticleSystem::AddParticle( const Vector &vecOrigin, const Vector 
 // The spawn point: m_vecOffset along the owner's view
 // (a player's eyes), or the offset itself without an owner
 //=========================================================
-Vector CParticleSystem::GetOrigin( const Vector &vecOffset )
+Vector CParticleSys::GetOrigin( const Vector &vecOffset )
 {
 	if ( m_iEntity < 0 )
 		return vecOffset;
@@ -253,7 +253,7 @@ Vector CParticleSystem::GetOrigin( const Vector &vecOffset )
 // The spawn velocity: m_flSpeed along the owner's view
 // turned by vecAngles
 //=========================================================
-Vector CParticleSystem::GetVelocity( const Vector &vecDir )
+Vector CParticleSys::GetVelocity( const Vector &vecDir )
 {
 	Vector vecAngles = vecDir;
 
@@ -289,7 +289,7 @@ Vector CParticleSystem::GetVelocity( const Vector &vecDir )
 	return vecForward * m_flSpeed;
 }
 
-void CParticleSystemManager::Remove( CParticleSystem *pSystem )
+void CParticleSysManager::Remove( CParticleSys *pSystem )
 {
 	if ( !pSystem )
 		return;
@@ -309,25 +309,25 @@ void CParticleSystemManager::Remove( CParticleSystem *pSystem )
 	delete pSystem;
 }
 
-CParticleSystemManager::CParticleSystemManager()
+CParticleSysManager::CParticleSysManager()
 {
 	memset( this, 0, sizeof( *this ) );
 }
 
-CParticleSystemManager::~CParticleSystemManager()
+CParticleSysManager::~CParticleSysManager()
 {
 	Clear();
 }
 
-void CParticleSystemManager::Clear( void )
+void CParticleSysManager::Clear( void )
 {
 	delete m_pFirst;
 	m_pFirst = m_pLast = NULL;
 }
 
-CParticleSystem *CParticleSystemManager::Create( int iEntity )
+CParticleSys *CParticleSysManager::Create( int iEntity )
 {
-	CParticleSystem *pSystem = new CParticleSystem;
+	CParticleSys *pSystem = new CParticleSys;
 
 	if ( !pSystem )
 	{
@@ -349,13 +349,13 @@ CParticleSystem *CParticleSystemManager::Create( int iEntity )
 	return pSystem;
 }
 
-void CParticleSystemManager::Update( float flFrametime, float flTime )
+void CParticleSysManager::Update( float flFrametime, float flTime )
 {
 	if ( m_pFirst )
-		m_pFirst->Update( flFrametime, flTime );
+		m_pFirst->Think( flFrametime, flTime );
 }
 
-void CParticleSystemManager::Draw( void )
+void CParticleSysManager::Draw( void )
 {
 	if ( !m_pFirst )
 		return;
@@ -371,29 +371,29 @@ void CParticleSystemManager::Draw( void )
 //=========================================================
 // The owner stopped firing: its systems spawn no more
 //=========================================================
-void CParticleSystemManager::Stop( int iEntity )
+void CParticleSysManager::Stop( int iEntity )
 {
 	if ( !m_pFirst || iEntity < 0 )
 		return;
 
-	for ( CParticleSystem *pSystem = m_pFirst; pSystem; pSystem = pSystem->m_pNext )
+	for ( CParticleSys *pSystem = m_pFirst; pSystem; pSystem = pSystem->m_pNext )
 	{
 		if ( pSystem->m_iEntity == iEntity )
 			pSystem->m_flDieTime = -1;
 	}
 }
 
-void ParticleSystemsDraw( void )
+void RenderParticles( void )
 {
 	g_ParticleSystems.Draw();
 }
 
-void ParticleSystemsUpdate( float flFrametime, float flTime )
+void ThinkParticles( float flFrametime, float flTime )
 {
 	g_ParticleSystems.Update( flFrametime, flTime );
 }
 
-void ParticleSystemsVidInit( void )
+void ParticleVidInit( void )
 {
 	g_ParticleSystems.Clear();
 }

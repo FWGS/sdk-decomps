@@ -1,7 +1,7 @@
 //========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
 //
 // Purpose: client particle systems: TriAPI sprite particles streaming from an
-//          entity (the flamethrower's flames); names ours
+//          entity (the flamethrower's flames)
 //
 // $NoKeywords: $
 //=============================================================================
@@ -11,7 +11,7 @@
 
 #define MAX_PARTICLES	256
 
-struct particle_t
+struct particle_t	// name ours
 {
 	bool	active;
 	Vector	origin;
@@ -21,17 +21,17 @@ struct particle_t
 	float	size;
 };
 
-class CParticleSystem
+class CParticleSys
 {
 public:
-	CParticleSystem();
-	~CParticleSystem();
+	CParticleSys();
+	~CParticleSys();
 
 	void Draw( void );
-	void Update( float flFrametime, float flTime );
-	particle_t *AddParticle( const Vector &vecOrigin, const Vector &vecVelocity );
-	Vector GetOrigin( const Vector &vecOffset );
-	Vector GetVelocity( const Vector &vecAngles );
+	void Think( float flFrametime, float flTime );
+	particle_t *AddParticle( const Vector &vecOrigin, const Vector &vecVelocity );	// name ours
+	Vector GetOrigin( const Vector &vecOffset );	// name ours
+	Vector GetVelocity( const Vector &vecAngles );	// name ours
 
 	Vector		m_vecOffset;	// spawn point: forward, right, up of the owner's view
 	Vector		m_vecAngles;	// spawn direction, added to the owner's view angles
@@ -47,27 +47,27 @@ public:
 	int			m_iFrames;
 	int			m_iLastParticle;
 	float		m_flSpawn;		// particles to spawn, 50 a second
-	CParticleSystem	*m_pNext;
-	CParticleSystem	*m_pPrev;
+	CParticleSys	*m_pNext;
+	CParticleSys	*m_pPrev;
 };
 
-class CParticleSystemManager
+class CParticleSysManager	// name ours, and its members'
 {
 public:
-	CParticleSystemManager();
-	~CParticleSystemManager();
+	CParticleSysManager();
+	~CParticleSysManager();
 
-	void Remove( CParticleSystem *pSystem );
+	void Remove( CParticleSys *pSystem );
 	void Clear( void );
-	CParticleSystem *Create( int iEntity );
+	CParticleSys *Create( int iEntity );
 	void Update( float flFrametime, float flTime );
 	void Draw( void );
 	void Stop( int iEntity );
 
-	CParticleSystem	*m_pFirst;
-	CParticleSystem	*m_pLast;
+	CParticleSys	*m_pFirst;
+	CParticleSys	*m_pLast;
 };
 
-extern CParticleSystemManager g_ParticleSystems;
+extern CParticleSysManager g_ParticleSystems;
 
 #endif // PARTICLESYS_H
