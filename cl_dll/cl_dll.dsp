@@ -95,6 +95,10 @@ LINK32=link.exe
 # PROP Default_Filter "*.CPP"
 # Begin Source File
 
+SOURCE=.\cl_effects.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\dlls\crossbow.cpp
 # End Source File
 # Begin Source File

@@ -19,7 +19,7 @@
 
 #include <stdio.h>
 
-bool EV_IsEntityVisible( cl_entity_t *pEntity );	// name ours
+bool EV_IsInPVS( cl_entity_t *pEntity );
 
 static void EV_BloodDecalHit( TEMPENTITY *pEnt, pmtrace_t *pTrace );
 
@@ -190,7 +190,7 @@ void bloodspray_t::Think( float flTime, float flRate )
 		}
 
 		pEnt = gEngfuncs.GetEntityByIndex( m_iEntity );
-		if ( pEnt != m_pEntity || !pEnt->curstate.modelindex || !EV_IsEntityVisible( pEnt ) )
+		if ( pEnt != m_pEntity || !pEnt->curstate.modelindex || !EV_IsInPVS( pEnt ) )
 		{
 			m_iEntity = 0;
 			return;
@@ -271,10 +271,4 @@ extern "C" void EV_BloodSpray( event_args_t *args )
 		g_BloodSpray.End( args->entindex );
 	else
 		g_BloodSpray.Start( args->entindex, args->iparam1 );
-}
-
-// STUB: a stand-in until the file before crossbow.cpp has the real code
-bool EV_IsEntityVisible( cl_entity_t *pEntity )
-{
-	return pEntity->curstate.messagenum >= gEngfuncs.GetLocalPlayer()->curstate.messagenum;
 }
