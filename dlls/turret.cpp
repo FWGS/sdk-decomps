@@ -1912,3 +1912,723 @@ void CFlakBullet::Explode( void )
 
 	UTIL_Remove( this );
 }
+
+
+//=========================================================
+// The TFC sentry guns' tripod (a plain model)
+//=========================================================
+class CTFCBase : public CBaseEntity	// name ours
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+};
+
+LINK_ENTITY_TO_CLASS( tfc_base, CTFCBase );
+
+void CTFCBase::Precache( void )
+{
+	PRECACHE_MODEL( "models/tfc_base.mdl" );
+}
+
+void CTFCBase::Spawn( void )
+{
+	Precache( );
+	SET_MODEL( ENT(pev), "models/tfc_base.mdl" );
+	pev->takedamage = DAMAGE_NO;
+	UTIL_SetSize( pev, Vector( -16, -16, -16 ), Vector( 16, 16, 16 ) );
+}
+
+
+//=========================================================
+// TFC sentry gun, level 1: a 9mm gun on a tripod
+//=========================================================
+class CTFCSentry1 : public CTimedTurret
+{
+public:
+	void Spawn( );
+	void Precache(void);
+	// other functions
+	void Shoot(Vector &vecSrc, Vector &vecDirToEnemy);
+	int TakeDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType);
+	int MoveTurret(void);
+	void EXPORT SentryDeath( void );
+	void EXPORT SearchThink( void );
+	void EXPORT SentryUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	const char *GetKillDesc( void ) { return "a sentry gun"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "shot"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+	int GetBattlePower( void );
+
+	EHANDLE m_base;	// the tripod
+};
+
+LINK_ENTITY_TO_CLASS( monster_tfc_sentry1, CTFCSentry1 );
+
+TYPEDESCRIPTION	CTFCSentry1::m_SaveData[] =
+{
+	DEFINE_FIELD( CTFCSentry1, m_base, FIELD_EHANDLE ),
+};
+
+IMPLEMENT_SAVERESTORE( CTFCSentry1, CTimedTurret );
+
+void CTFCSentry1::Precache()
+{
+	CBaseTurret::Precache( );
+	PRECACHE_MODEL ("models/sentry1.mdl");
+	UTIL_PrecacheOther( "tfc_base" );
+}
+
+void CTFCSentry1::Spawn()
+{
+	Precache( );
+	SET_MODEL(ENT(pev), "models/sentry1.mdl");
+	if ( m_base == NULL )
+		m_base = CBaseEntity::Create( "tfc_base", Vector( pev->origin.x, pev->origin.y, pev->origin.z - 20 ), pev->angles, edict() );
+	pev->health			= 50;
+	m_HackedGunPos		= Vector( 0, 0, 30 );
+	pev->view_ofs.z		= 0;
+	m_flMaxWait = 1E6;
+	m_flMaxSpin	= 1E6;
+
+	CBaseTurret::Spawn();
+	m_iRetractHeight = 16;
+	m_iDeployHeight = 16;
+	m_iMinPitch	= -30;
+	UTIL_SetSize(pev, Vector(-16, -16, -m_iRetractHeight), Vector(16, 16, m_iRetractHeight));
+
+	Initialize();
+	m_iOrientation = 1;	// sic: the model's controllers run the other way
+	m_flStartYaw = pev->angles.y - 90;
+	if ( !HasSpawnFlag( SF_MONSTER_TURRET_STARTINACTIVE ) )
+	{
+		SetThink(SearchThink);
+		m_iOn = 1;
+		pev->nextthink = gpGlobals->time + 0.3;
+	}
+	m_flFieldOfView = 0.7;
+	m_flDelay = 0.2;
+	if ( pev->targetname )
+		SetUse( SentryUse );
+}
+
+int CTFCSentry1::GetBattlePower( void )
+{
+	return ( pev->max_health * 0.1 ) * ( gSkillData.monDmg9MM * 6.25 );
+}
+
+void CTFCSentry1::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
+{
+	CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 600, 0.3 );
+	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_BULLET_RANGE, BULLET_MONSTER_9MM, 1 );
+	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/pl_gun3.wav", 1, 0.8);
+	pev->effects = pev->effects | EF_MUZZLEFLASH;
+}
+
+int CTFCSentry1::TakeDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType)
+{
+	if ( !pev->takedamage )
+		return 0;
+
+	if (!m_iOn)
+	{
+		SetThink( SearchThink );
+		SetUse( NULL );
+		pev->nextthink = gpGlobals->time + 0.1;
+	}
+
+	pev->health -= flDamage;
+
+	// glow: blue for an ally, red for an enemy (never switched off)
+	pev->renderfx = kRenderFxGlowShell;
+	if ( pev->spawnflags & SF_MONSTER_TURRET_ALLY )
+		pev->rendercolor = Vector( 0, 0, 255 );
+	else
+		pev->rendercolor = Vector( 255, 0, 0 );
+
+	if (pev->health <= 0)
+	{
+		pev->health = 0;
+		pev->takedamage = DAMAGE_NO;
+		pev->dmgtime = gpGlobals->time;
+
+		ClearBits (pev->flags, FL_MONSTER); // why are they set in the first place???
+
+		SetUse(NULL);
+		SetThink(SentryDeath);
+		SUB_UseTargets( this, USE_ON, 0 ); // wake up others
+		pev->nextthink = gpGlobals->time + 0.1;
+
+		return 0;
+	}
+
+	return 1;
+}
+
+void CTFCSentry1::SentryDeath( void )
+{
+	pev->deadflag = DEAD_DEAD;
+	pev->solid = SOLID_NOT;
+	pev->takedamage = DAMAGE_NO;
+
+	// tell the owner (a monstermaker) that we're dead
+	CBaseEntity *pOwner = CBaseEntity::Instance( pev->owner );
+	if ( pOwner )
+		pOwner->DeathNotice( pev );
+
+	ExplosionCreate( pev->origin, pev->angles, edict(), 65, TRUE );
+
+	if ( m_base != NULL )
+		UTIL_Remove( m_base );
+	m_base = NULL;
+
+	UTIL_Remove( this );
+}
+
+//
+// Like CBaseTurret::MonsterThink, but a sentry never retracts
+//
+void CTFCSentry1::SearchThink(void)
+{
+	// ensure rethink
+	SetTurretAnim(TURRET_ANIM_SPIN);
+	StudioFrameAdvance( );
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	if (m_flSpinUpTime == 0 && m_flMaxSpin)
+		m_flSpinUpTime = gpGlobals->time + m_flMaxSpin;
+
+	Ping( );
+
+	// If we have a target and we're still healthy
+	if (m_hEnemy != NULL)
+	{
+		if (!m_hEnemy->IsAlive() )
+			m_hEnemy = NULL;// Dead enemy forces a search for new one
+	}
+
+
+	// Acquire Target
+	if (m_hEnemy == NULL)
+	{
+		Look(m_flSightRange);
+		m_hEnemy = BestVisibleEnemy();
+	}
+
+	// If we've found a target, spin up the barrel and start to attack
+	if (m_hEnemy != NULL)
+	{
+		m_flLastSight = 0;
+		m_flSpinUpTime = 0;
+		SetThink(CallActiveThink);
+	}
+	else
+	{
+		// should we stop the spin?
+		if ((m_flSpinUpTime) && (gpGlobals->time > m_flSpinUpTime))
+		{
+			SpinDownCall();
+		}
+
+		// generic hunt for new victims
+		m_vecGoalAngles.y = (m_vecGoalAngles.y + 0.1 * m_fTurnRate);
+		if (m_vecGoalAngles.y >= 360)
+			m_vecGoalAngles.y -= 360;
+		MoveTurret();
+	}
+}
+
+void CTFCSentry1::SentryUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	if ( !ShouldToggle( useType, m_iOn ) )
+		return;
+
+	if (m_iOn)
+	{
+		m_hEnemy = NULL;
+		m_iOn = 0;
+		pev->nextthink = 0;
+	}
+	else
+	{
+		SetThink(SearchThink);
+		m_iOn = 1;
+		pev->nextthink = gpGlobals->time + 0.1;
+	}
+}
+
+int CTFCSentry1::MoveTurret(void)
+{
+	int state = 0;
+	// any x movement?
+
+	if (m_vecCurAngles.x != m_vecGoalAngles.x)
+	{
+		float flDir = m_vecGoalAngles.x > m_vecCurAngles.x ? 1 : -1 ;
+
+		m_vecCurAngles.x += 0.1 * m_fTurnRate * flDir;
+
+		// if we started below the goal, and now we're past, peg to goal
+		if (flDir == 1)
+		{
+			if (m_vecCurAngles.x > m_vecGoalAngles.x)
+				m_vecCurAngles.x = m_vecGoalAngles.x;
+		}
+		else
+		{
+			if (m_vecCurAngles.x < m_vecGoalAngles.x)
+				m_vecCurAngles.x = m_vecGoalAngles.x;
+		}
+
+		SetBoneController(1, m_vecCurAngles.x);
+		state = 1;
+	}
+
+	if (m_vecCurAngles.y != m_vecGoalAngles.y)
+	{
+		float flDir = m_vecGoalAngles.y > m_vecCurAngles.y ? 1 : -1 ;
+		float flDist = fabs(m_vecGoalAngles.y - m_vecCurAngles.y);
+
+		if (flDist > 180)
+		{
+			flDist = 360 - flDist;
+			flDir = -flDir;
+		}
+		if (flDist > 30)
+		{
+			if (m_fTurnRate < m_iBaseTurnRate * 10)
+			{
+				m_fTurnRate += m_iBaseTurnRate;
+			}
+		}
+		else if (m_fTurnRate > 45)
+		{
+			m_fTurnRate -= m_iBaseTurnRate;
+		}
+		else
+		{
+			m_fTurnRate += m_iBaseTurnRate;
+		}
+
+		m_vecCurAngles.y += 0.1 * m_fTurnRate * flDir;
+
+		if (m_vecCurAngles.y < 0)
+			m_vecCurAngles.y += 360;
+		else if (m_vecCurAngles.y >= 360)
+			m_vecCurAngles.y -= 360;
+
+		if (flDist < (0.05 * m_iBaseTurnRate))
+			m_vecCurAngles.y = m_vecGoalAngles.y;
+
+		SetBoneController(0, m_vecCurAngles.y - pev->angles.y );
+		state = 1;
+	}
+
+	if (!state)
+		m_fTurnRate = m_iBaseTurnRate;
+
+	return state;
+}
+
+
+//=========================================================
+// TFC sentry gun, level 2: a 12mm gun
+//=========================================================
+class CTFCSentry2 : public CTFCSentry1	// name ours
+{
+public:
+	void Spawn( );
+	void Precache(void);
+	void Shoot(Vector &vecSrc, Vector &vecDirToEnemy);
+	int GetBattlePower( void );
+};
+
+LINK_ENTITY_TO_CLASS( monster_tfc_sentry2, CTFCSentry2 );
+
+void CTFCSentry2::Precache()
+{
+	CBaseTurret::Precache( );
+	PRECACHE_MODEL ("models/sentry2.mdl");
+	UTIL_PrecacheOther( "tfc_base" );
+}
+
+void CTFCSentry2::Spawn()
+{
+	Precache( );
+	SET_MODEL(ENT(pev), "models/sentry2.mdl");
+	if ( m_base == NULL )
+		m_base = CBaseEntity::Create( "tfc_base", Vector( pev->origin.x, pev->origin.y, pev->origin.z - 20 ), pev->angles, edict() );
+	pev->health			= 75;
+	Vector vecAng;
+	GetAttachment( 0, m_HackedGunPos, vecAng );
+	pev->view_ofs.z		= 0;
+	m_flMaxWait = 1E6;
+	m_flMaxSpin	= 1E6;
+
+	CBaseTurret::Spawn();
+	m_iRetractHeight = 16;
+	m_iDeployHeight = 16;
+	m_iMinPitch	= -30;
+	UTIL_SetSize(pev, Vector(-16, -16, -m_iRetractHeight), Vector(16, 16, m_iRetractHeight));
+
+	Initialize();
+	if ( !HasSpawnFlag( SF_MONSTER_TURRET_STARTINACTIVE ) )
+	{
+		SetThink(SearchThink);
+		m_iOn = 1;
+		pev->nextthink = gpGlobals->time + 0.3;
+	}
+	m_flFieldOfView = 0.7;
+	m_flDelay = 0;
+	if ( pev->targetname )
+		SetUse( SentryUse );
+}
+
+int CTFCSentry2::GetBattlePower( void )
+{
+	return ( pev->max_health * 0.1 ) * ( gSkillData.monDmg12MM * 12.5 );
+}
+
+void CTFCSentry2::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
+{
+	CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 1000, 0.3 );
+	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_BULLET_RANGE, BULLET_MONSTER_12MM, 1 );
+	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/tu_fire1.wav", 1, 0.8);
+	pev->effects = pev->effects | EF_MUZZLEFLASH;
+}
+
+
+//=========================================================
+// TFC sentry gun, level 3: two 12mm guns and a rocket
+// launcher ("weapons" 1: heat-seeking, -1: random)
+//=========================================================
+class CTFCSentry3 : public CTFCSentry1	// name ours
+{
+public:
+	void Spawn( );
+	void Precache(void);
+	void Shoot(Vector &vecSrc, Vector &vecDirToEnemy);
+	int GetBattlePower( void );
+	void FireRocket( void );	// name ours
+	void ActiveThink( void );
+	int MoveTurret(void);
+};
+
+LINK_ENTITY_TO_CLASS( monster_tfc_sentry3, CTFCSentry3 );
+
+void CTFCSentry3::Precache()
+{
+	CBaseTurret::Precache( );
+	PRECACHE_MODEL ("models/sentry3.mdl");
+	UTIL_PrecacheOther( "tfc_base" );
+	UTIL_PrecacheOther( "rocket" );
+}
+
+void CTFCSentry3::Spawn()
+{
+	Precache( );
+	SET_MODEL(ENT(pev), "models/sentry3.mdl");
+	if ( m_base == NULL )
+		m_base = CBaseEntity::Create( "tfc_base", Vector( pev->origin.x, pev->origin.y, pev->origin.z - 20 ), pev->angles, edict() );
+	pev->health			= 100;
+	Vector vecAng, vecGun2;
+	GetAttachment( 0, m_HackedGunPos, vecAng );
+	GetAttachment( 1, vecGun2, vecAng );
+	m_HackedGunPos = m_HackedGunPos + vecGun2 * 0.5;	// sic: not the midpoint
+	pev->view_ofs.z		= 0;
+	m_flMaxWait = 1E6;
+	m_flMaxSpin	= 1E6;
+
+	if ( pev->weapons < 0 )
+		pev->weapons = RANDOM_LONG( 0, 1 );
+
+	CBaseTurret::Spawn();
+	m_iRetractHeight = 16;
+	m_iDeployHeight = 16;
+	m_iMinPitch	= -30;
+	UTIL_SetSize(pev, Vector(-16, -16, -m_iRetractHeight), Vector(16, 16, m_iRetractHeight));
+
+	Initialize();
+	if ( !HasSpawnFlag( SF_MONSTER_TURRET_STARTINACTIVE ) )
+	{
+		SetThink(SearchThink);
+		m_iOn = 1;
+		pev->nextthink = gpGlobals->time + 0.3;
+	}
+	m_flFieldOfView = 0.7;
+	m_flDelay = 2;
+	m_flNextAttack = gpGlobals->time + 2;
+	if ( pev->targetname )
+		SetUse( SentryUse );
+}
+
+int CTFCSentry3::GetBattlePower( void )
+{
+	return ( pev->max_health * 0.1 ) * ( gSkillData.monDmg12MM * 25 + 40 );
+}
+
+void CTFCSentry3::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
+{
+	Vector vecAng;
+
+	CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 1000, 0.3 );
+	GetAttachment( 0, vecSrc, vecAng );
+	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_BULLET_RANGE, BULLET_MONSTER_12MM, 1 );
+	GetAttachment( 1, vecSrc, vecAng );
+	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_BULLET_RANGE, BULLET_MONSTER_12MM, 1 );
+	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/tu_fire1.wav", 1, 0.8);
+	pev->effects = pev->effects | EF_MUZZLEFLASH;
+}
+
+void CTFCSentry3::FireRocket( void )
+{
+	// the launchers take turns
+	pev->iuser1 = !pev->iuser1;
+
+	Vector vecSrc, vecAng;
+	GetAttachment( pev->iuser1, vecSrc, vecAng );
+
+	Vector vecColor( 224, 224, 255 );
+	if ( pev->weapons )
+		vecColor = Vector( 255, 224, 64 );
+
+	CRocket *pRocket = CRocket::CreateRocket( vecSrc, m_vecCurAngles, edict(), vecColor, 0 );
+	pRocket->pev->speed = 1000;
+	pRocket->pev->dmg = 80;
+	if ( pev->weapons )
+	{
+		pRocket->SetThink( CRocket::SeekThink );
+		pRocket->pev->speed = 600;
+		pRocket->m_iszKillDesc = MAKE_STRING( "a heat-seeking missile" );
+	}
+}
+
+void CTFCSentry3::ActiveThink(void)
+{
+	int fAttack = 0;
+	int fRocket = 0;
+	Vector vecDirToEnemy;
+
+	pev->nextthink = gpGlobals->time + 0.1;
+	StudioFrameAdvance( );
+
+	if ((!m_iOn) || (m_hEnemy == NULL))
+	{
+		m_hEnemy = NULL;
+		m_flLastSight = gpGlobals->time + m_flMaxWait;
+		SetThink(SearchThink);
+		return;
+	}
+
+	// if it's dead, look for something new
+	if ( !m_hEnemy->IsAlive() )
+	{
+		if (!m_flLastSight)
+		{
+			m_flLastSight = gpGlobals->time + 0.5; // continue-shooting timeout
+		}
+		else
+		{
+			if (gpGlobals->time > m_flLastSight)
+			{
+				m_hEnemy = NULL;
+				m_flLastSight = gpGlobals->time + m_flMaxWait;
+				SetThink(SearchThink);
+				return;
+			}
+		}
+	}
+
+	Vector vecMid = pev->origin + pev->view_ofs;
+	Vector vecMidEnemy = m_hEnemy->BodyTarget( vecMid );
+
+	// Look for our current enemy
+	int fEnemyVisible = FBoxVisible(pev, m_hEnemy->pev, vecMidEnemy );
+
+	vecDirToEnemy = vecMidEnemy - vecMid;	// calculate dir and dist to enemy
+	float flDistToEnemy = vecDirToEnemy.Length();
+
+	Vector vec = UTIL_VecToAngles(vecMidEnemy - vecMid);
+
+	// Current enmey is not visible.
+	if (!fEnemyVisible || (flDistToEnemy > m_flSightRange))
+	{
+		if (!m_flLastSight)
+			m_flLastSight = gpGlobals->time + 0.5;
+		else
+		{
+			// Should we look for a new target?
+			if (gpGlobals->time > m_flLastSight)
+			{
+				m_hEnemy = NULL;
+				m_flLastSight = gpGlobals->time + m_flMaxWait;
+				SetThink(SearchThink);
+				return;
+			}
+		}
+		fEnemyVisible = 0;
+	}
+	else
+	{
+		m_vecLastSight = vecMidEnemy;
+	}
+
+	UTIL_MakeAimVectors(m_vecCurAngles);
+
+	Vector vecLOS = vecDirToEnemy; //vecMid - m_vecLastSight;
+	vecLOS = vecLOS.Normalize();
+
+	// Is the Gun looking at the target
+	if (DotProduct(vecLOS, gpGlobals->v_forward) <= 0.866) // 30 degree slop
+		fAttack = FALSE;
+	else
+		fAttack = TRUE;
+
+	// rockets need a better aim
+	if (DotProduct(vecLOS, gpGlobals->v_forward) <= 0.955)
+		fRocket = FALSE;
+	else
+		fRocket = TRUE;
+
+	// fire the guns
+	if (m_iSpin && ((fAttack) || (m_fBeserk)))
+	{
+		Vector vecSrc;	// Shoot takes the barrels' positions
+		SetTurretAnim(TURRET_ANIM_FIRE);
+		Shoot(vecSrc, gpGlobals->v_forward );
+	}
+	else
+	{
+		SetTurretAnim(TURRET_ANIM_SPIN);
+	}
+
+	// and a rocket every m_flDelay seconds
+	if (fRocket && m_flNextAttack <= gpGlobals->time)
+	{
+		FireRocket();
+		m_flNextAttack = gpGlobals->time + m_flDelay;
+	}
+
+	//move the gun
+	if (m_fBeserk)
+	{
+		if (RANDOM_LONG(0,9) == 0)
+		{
+			m_vecGoalAngles.y = RANDOM_FLOAT(0,360);
+			m_vecGoalAngles.x = RANDOM_FLOAT(0,90) - 90 * m_iOrientation;
+			TakeDamage(pev,pev,1, DMG_GENERIC); // don't beserk forever
+			return;
+		}
+	}
+	else if (fEnemyVisible)
+	{
+		if (vec.y > 360)
+			vec.y -= 360;
+
+		if (vec.y < 0)
+			vec.y += 360;
+
+		if (vec.x < -180)
+			vec.x += 360;
+
+		if (vec.x > 180)
+			vec.x -= 360;
+
+		// pin to [m_iMinPitch...60]
+		if (m_iOrientation == 0)
+		{
+			if (vec.x > 60)
+				vec.x = 60;
+			else if (vec.x < m_iMinPitch)
+				vec.x = m_iMinPitch;
+		}
+
+		m_vecGoalAngles.y = vec.y;
+		m_vecGoalAngles.x = vec.x;
+
+	}
+
+	SpinUpCall();
+	MoveTurret();
+}
+
+int CTFCSentry3::MoveTurret(void)
+{
+	int state = 0;
+	// any x movement?
+
+	if (m_vecCurAngles.x != m_vecGoalAngles.x)
+	{
+		float flDir = m_vecGoalAngles.x > m_vecCurAngles.x ? 1 : -1 ;
+
+		m_vecCurAngles.x += 0.1 * m_fTurnRate * flDir;
+
+		// if we started below the goal, and now we're past, peg to goal
+		if (flDir == 1)
+		{
+			if (m_vecCurAngles.x > m_vecGoalAngles.x)
+				m_vecCurAngles.x = m_vecGoalAngles.x;
+		}
+		else
+		{
+			if (m_vecCurAngles.x < m_vecGoalAngles.x)
+				m_vecCurAngles.x = m_vecGoalAngles.x;
+		}
+
+		// the guns and the rocket launchers
+		SetBoneController(1, -m_vecCurAngles.x);
+		SetBoneController(2, -m_vecCurAngles.x);
+		state = 1;
+	}
+
+	if (m_vecCurAngles.y != m_vecGoalAngles.y)
+	{
+		float flDir = m_vecGoalAngles.y > m_vecCurAngles.y ? 1 : -1 ;
+		float flDist = fabs(m_vecGoalAngles.y - m_vecCurAngles.y);
+
+		if (flDist > 180)
+		{
+			flDist = 360 - flDist;
+			flDir = -flDir;
+		}
+		if (flDist > 30)
+		{
+			if (m_fTurnRate < m_iBaseTurnRate * 10)
+			{
+				m_fTurnRate += m_iBaseTurnRate;
+			}
+		}
+		else if (m_fTurnRate > 45)
+		{
+			m_fTurnRate -= m_iBaseTurnRate;
+		}
+		else
+		{
+			m_fTurnRate += m_iBaseTurnRate;
+		}
+
+		m_vecCurAngles.y += 0.1 * m_fTurnRate * flDir;
+
+		if (m_vecCurAngles.y < 0)
+			m_vecCurAngles.y += 360;
+		else if (m_vecCurAngles.y >= 360)
+			m_vecCurAngles.y -= 360;
+
+		if (flDist < (0.05 * m_iBaseTurnRate))
+			m_vecCurAngles.y = m_vecGoalAngles.y;
+
+		SetBoneController(0, m_vecCurAngles.y - pev->angles.y );
+		state = 1;
+	}
+
+	if (!state)
+		m_fTurnRate = m_iBaseTurnRate;
+
+	return state;
+}
