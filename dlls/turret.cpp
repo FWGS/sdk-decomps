@@ -1891,7 +1891,7 @@ void CFlakBullet::Explode( void )
 
 	pev->dmg = 25;
 
-	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_EXPLOSION );
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
@@ -1909,7 +1909,13 @@ void CFlakBullet::Explode( void )
 		WRITE_BYTE( TE_EXPLFLAG_NONE );
 	MESSAGE_END();
 
-	RadiusDamage( pev->origin, pev, VARS( pev->owner ), pev->dmg, 64, CLASS_NONE, DMG_BLAST );
+	entvars_t *pevOwner;
+	if ( pev->owner )
+		pevOwner = VARS( pev->owner );
+	else
+		pevOwner = NULL;
+
+	RadiusDamage( pev->origin, pev, pevOwner, pev->dmg, 64, CLASS_NONE, DMG_BLAST );
 
 	UTIL_Remove( this );
 }
@@ -2005,7 +2011,7 @@ void CTFCSentry1::Spawn()
 	UTIL_SetSize(pev, Vector(-16, -16, -m_iRetractHeight), Vector(16, 16, m_iRetractHeight));
 
 	Initialize();
-	m_iOrientation = 1;	// sic: the model's controllers run the other way
+	m_iOrientation = 1;	// sic: a ceiling turret's pitch limits, without Initialize's flip
 	m_flStartYaw = pev->angles.y - 90;
 	if ( !HasSpawnFlag( SF_MONSTER_TURRET_STARTINACTIVE ) )
 	{
@@ -2765,7 +2771,7 @@ void CBioFlak::Explode( void )
 
 	pev->dmg = 35;
 
-	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_EXPLOSION );
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
@@ -2783,7 +2789,13 @@ void CBioFlak::Explode( void )
 		WRITE_BYTE( TE_EXPLFLAG_NOPARTICLES );
 	MESSAGE_END();
 
-	RadiusDamage( pev->origin, pev, VARS( pev->owner ), pev->dmg, 64, CLASS_NONE, DMG_BLAST | DMG_ALWAYSGIB );
+	entvars_t *pevOwner;
+	if ( pev->owner )
+		pevOwner = VARS( pev->owner );
+	else
+		pevOwner = NULL;
+
+	RadiusDamage( pev->origin, pev, pevOwner, pev->dmg, 64, CLASS_NONE, DMG_BLAST | DMG_ALWAYSGIB );
 
 	UTIL_Remove( this );
 }
@@ -2829,7 +2841,7 @@ void CLightFlak::Explode( void )
 
 	pev->dmg = 50;
 
-	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_EXPLOSION );
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
@@ -2854,7 +2866,7 @@ void CLightFlak::Explode( void )
 		Vector vecDir = Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -0.65, -1 ) ).Normalize();
 		UTIL_TraceLine( pev->origin, pev->origin + vecDir * 512, dont_ignore_monsters, ENT(pev), &tr );
 
-		MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 			WRITE_BYTE( TE_BEAMPOINTS );
 			WRITE_COORD( pev->origin.x );
 			WRITE_COORD( pev->origin.y );
@@ -2876,7 +2888,13 @@ void CLightFlak::Explode( void )
 		MESSAGE_END();
 	}
 
-	RadiusDamage( pev->origin, pev, VARS( pev->owner ), pev->dmg, 128, CLASS_NONE, DMG_SHOCK );
+	entvars_t *pevOwner;
+	if ( pev->owner )
+		pevOwner = VARS( pev->owner );
+	else
+		pevOwner = NULL;
+
+	RadiusDamage( pev->origin, pev, pevOwner, pev->dmg, 128, CLASS_NONE, DMG_SHOCK );
 
 	UTIL_Remove( this );
 }
