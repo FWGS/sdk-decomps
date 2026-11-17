@@ -155,6 +155,10 @@ SOURCE=..\dlls\python.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\dlls\repulsor.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\dlls\rpg.cpp
 # End Source File
 # Begin Source File
@@ -167,7 +171,19 @@ SOURCE=..\dlls\shotgun.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\dlls\softgun.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\dlls\squeakgrenade.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\sword.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\teslacoil.cpp
 # End Source File
 # Begin Source File
 
@@ -192,6 +208,10 @@ SOURCE=..\game_shared\voice_status.cpp
 # Begin Source File
 
 SOURCE=..\game_shared\voice_vgui_tweakdlg.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\vortex.cpp
 # End Source File
 # End Group
 # Begin Source File
