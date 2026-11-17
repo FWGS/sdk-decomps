@@ -22,6 +22,8 @@
 void RenderAllSpheres( float flTime, float flFrametime );	// sphere.cpp
 void ParticleSystemsDraw( void );						// effects.cpp
 void BloodSprayThink( float flTime, float flFrametime );	// bloodspray.cpp
+void RenderAllTractorbeams( void );						// tractorbeam.cpp
+void RainThink( float flTime );							// rain.cpp
 void CL_DamageTick( float flTime, float flFrametime );		// damagefx.cpp
 
 extern "C"
@@ -127,10 +129,10 @@ void DLLEXPORT HUD_DrawTransparentTriangles( void )
 	float flFrametime = flTime - flOldTime;
 
 	RenderAllSpheres( flTime, flFrametime );
-	// retail calls 0x10060050 here (no arguments; code between text_message.cpp and train.cpp)
+	RenderAllTractorbeams();
 	ParticleSystemsDraw();
 	BloodSprayThink( flTime, flFrametime );
-	// retail calls 0x10055290 here with flTime (code after pm_shared.c)
+	RainThink( flTime );
 	CL_DamageTick( flTime, flFrametime );
 
 	flOldTime = flTime;
