@@ -1631,19 +1631,19 @@ void CPowerBeam :: WeaponThink( void )
 
 	for ( int i = 0; i < 5; i++ )
 	{
-		Vector vecDest = vecSrc + vecDir * 4096;
 		TraceResult tr, beam_tr;
+		Vector vecDest = vecSrc + vecDir * 4096;
 
 		UTIL_TraceLine( vecSrc, vecDest, dont_ignore_monsters, pentIgnore, &tr );
 		if ( tr.fAllSolid )
-			return;
+			break;
 
 		UTIL_Sparks( tr.vecEndPos );
 		m_pBeam->SetStartPos( tr.vecEndPos );
 
 		CBaseEntity *pEntity = CBaseEntity::Instance( tr.pHit );
 		if ( pEntity == NULL )
-			return;
+			break;
 
 		if ( pEntity->IsBSPModel() )
 			UTIL_DecalTrace( &tr, DECAL_BIGSHOT1 + RANDOM_LONG( 0, 4 ) );
@@ -1656,14 +1656,14 @@ void CPowerBeam :: WeaponThink( void )
 		}
 
 		if ( pEntity->Shielded() )
-			return;
+			break;
 
 		if ( pEntity->IsBSPModel() )
 		{
 			// burn through the wall
 			UTIL_TraceLine( tr.vecEndPos + vecDir * 8, vecDest, ignore_monsters, pentIgnore, &beam_tr );
 			if ( beam_tr.fAllSolid )
-				return;
+				break;
 
 			// trace backwards to find exit point
 			UTIL_TraceLine( beam_tr.vecEndPos, tr.vecEndPos, ignore_monsters, pentIgnore, &beam_tr );
