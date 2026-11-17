@@ -84,6 +84,21 @@ public:
 	void IdleSound ( void );
 	CUSTOM_SCHEDULES;
 
+	int HeatSignature( void ) { return (int)pev->renderamt / 100; }	// the cloak hides her from heat seekers
+	const char *GetKillDesc( void ) { return "an assassin"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "shot"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+	BOOL CanBeGrenaded( int fLauncher ) { return TRUE; }
+	float GetHoldDistance( void ) { return CBaseMonster::GetHoldDistance() * 0.5; }
+	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
+	{
+		// a hit uncloaks her
+		if ( IsAlive() && flDamage > 0 )
+			pev->renderamt = pev->renderamt < 200 ? 200 : pev->renderamt;
+		return CBaseMonster::TakeDamage( pevInflictor, pevAttacker, flDamage, bitsDamageType );
+	}
+	int GetBattlePower( void );
+
 	int	Save( CSave &save ); 
 	int Restore( CRestore &restore );
 	static TYPEDESCRIPTION m_SaveData[];
@@ -159,7 +174,24 @@ int CHAssassin :: ISoundMask ( void)
 //=========================================================
 int	CHAssassin :: Classify ( void )
 {
+	// the "MyClass" keyvalue, if any
+	if ( m_iMyClass )
+		return m_iMyClass;
+
 	return	CLASS_HUMAN_MILITARY;
+}
+
+//=========================================================
+// GetBattlePower - the target ID's rating of this monster
+//=========================================================
+int CHAssassin :: GetBattlePower( void )
+{
+	float flHealth = pev->max_health * 0.1;
+
+	if ( g_iSkillLevel == SKILL_HARD )
+		flHealth *= 1.25;
+
+	return flHealth * ( gSkillData.plrDmgHandGrenade * 0.1667 + gSkillData.monDmg9MM * 10 );
 }
 
 //=========================================================
@@ -289,7 +321,7 @@ void CHAssassin :: Spawn()
 	m_bloodColor		= BLOOD_COLOR_RED;
 	pev->effects		= 0;
 	pev->health			= gSkillData.hassassinHealth;
-	m_flFieldOfView		= VIEW_FIELD_WIDE; // indicates the width of this monster's forward view cone ( as a dotproduct result )
+	m_flFieldOfView		= VIEW_FIELD_FULL; // indicates the width of this monster's forward view cone ( as a dotproduct result )
 	m_MonsterState		= MONSTERSTATE_NONE;
 	m_afCapability		= bits_CAP_MELEE_ATTACK1 | bits_CAP_DOORS_GROUP;
 	pev->friction		= 1;
