@@ -17,7 +17,7 @@
 
 #include <string.h>
 
-bool EV_IsEntityVisible( cl_entity_t *pEntity );	// name ours
+bool EV_IsInPVS( cl_entity_t *pEntity );
 
 extern void VectorAngles( const float *forward, float *angles );
 
@@ -209,7 +209,7 @@ void CTractorBeam::Render( void )
 			continue;
 		}
 
-		if ( !EV_IsEntityVisible( pEnt ) )
+		if ( !EV_IsInPVS( pEnt ) )
 			continue;
 
 		float origin[3], angles[3];

@@ -18,7 +18,7 @@
 #include "eventscripts.h"
 #include "particlesys.h"
 
-bool EV_IsEntityVisible( cl_entity_t *pEntity );
+bool EV_IsInPVS( cl_entity_t *pEntity );
 
 float g_flGravity;	// sv_gravity, from HUD_TempEntUpdate
 
@@ -169,7 +169,7 @@ void CParticleSys::Think( float flFrametime, float flTime )
 		return;
 	}
 
-	if ( m_iEntity && !EV_IsEntityVisible( gEngfuncs.GetEntityByIndex( m_iEntity ) ) )
+	if ( m_iEntity && !EV_IsInPVS( gEngfuncs.GetEntityByIndex( m_iEntity ) ) )
 		return;
 
 	m_flSpawn += flFrametime * 50;
@@ -180,7 +180,7 @@ void CParticleSys::Think( float flFrametime, float flTime )
 	}
 }
 
-particle_t *CParticleSys::AddParticle( const Vector &vecOrigin, const Vector &vecVelocity )
+sysparticle_t *CParticleSys::AddParticle( const Vector &vecOrigin, const Vector &vecVelocity )
 {
 	int i = m_iLastParticle + 1;	// sic: 256 when the last one was 255
 
