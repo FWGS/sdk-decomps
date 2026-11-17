@@ -1360,7 +1360,8 @@ void CWallop :: WallopTouch( CBaseEntity *pOther )
 		else
 			vecDir = pev->velocity.Normalize();
 
-		CBaseEntity *pShower = CBaseEntity::Create( "blast_shower", pev->origin + vecDir * 8, g_vecZero, pev->owner );
+		Vector vecOrigin = pev->origin + vecDir * 8;
+		CBaseEntity *pShower = CBaseEntity::Create( "blast_shower", vecOrigin, g_vecZero, pev->owner );
 		pShower->pev->velocity = vecDir * 450;
 		pShower->pev->dmgtime = gpGlobals->time + 1;
 		pShower->pev->speed = 0.2;
