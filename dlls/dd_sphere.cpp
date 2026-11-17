@@ -432,7 +432,7 @@ void CDCube::RunAttack( void )
 		{
 			if ( m_hTargets[i] == NULL || !m_hTargets[i]->IsAlive() || !FVisible( m_hTargets[i] ) )
 			{
-				m_hTargets[i] = NULL;
+				m_hTargets[i] = NULL;	// sic: cleared, then set
 				m_hTargets[i] = BestVisibleEnemy();
 			}
 

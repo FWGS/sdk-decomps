@@ -506,7 +506,7 @@ void CWaterElemental :: Precache()
 
 	m_usRain = PRECACHE_EVENT( 1, "events/rain.sc" );
 
-	UTIL_PrecacheOther( "water_blast" );
+	UTIL_PrecacheOther( "water_blast" );	// sic: not water_spray
 
 	PRECACHE_SOUND( "ambience/waterrun.wav" );
 	PRECACHE_SOUND( "ambience/sparks.wav" );
