@@ -190,8 +190,8 @@ void CXenPLight :: LightOff( void )
 // attachment until fully bright, then flies at its enemy at 750 units/s:
 // 40 energy damage (DMG_NOGIB | DMG_RADIATION), a push of ten times the
 // damage plus 60 up for whatever can be repulsed, a pink glow shell on dead
-// monsters (scientists turn pink alive), a small scorch on brush models, a
-// purple light.
+// monsters (a scientist only gets the pink render colour), a small scorch on
+// brush models, a pink dynamic light.
 //
 class CPlantWallop : public CSprite
 {
@@ -328,7 +328,7 @@ void CPlantWallop :: WallopTouch( CBaseEntity *pOther )
 		// the world: vanish into the sky
 		Vector vecEnd = pev->velocity + pev->origin;
 		const char *pTextureName = TRACE_TEXTURE( ENT( pOther->pev ), pev->origin, vecEnd );
-		if ( !strcmp( pTextureName, "sky" ) )
+		if ( !strcmp( pTextureName, "sky" ) )	// sic: no test for a NULL texture name
 		{
 			SetThink( &CBaseEntity::SUB_Remove );
 			return;
