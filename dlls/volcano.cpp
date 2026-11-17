@@ -257,7 +257,8 @@ void CVolcano::ShootThink( void )
 {
 	pev->nextthink = gpGlobals->time + m_flDelay;
 
-	Vector vecDir = pev->movedir;
+	Vector vecDir;
+	vecDir = pev->movedir;
 	vecDir = vecDir + gpGlobals->v_right * RANDOM_FLOAT( -1, 1 ) * m_flVariance;
 	vecDir = vecDir + gpGlobals->v_forward * RANDOM_FLOAT( -1, 1 ) * m_flVariance;
 	vecDir = vecDir + gpGlobals->v_up * RANDOM_FLOAT( -1, 1 ) * m_flVariance;
@@ -284,8 +285,7 @@ void CVolcano::ShootThink( void )
 
 	if ( m_iRockCapacity )
 	{
-		m_iRocks--;
-		if ( m_iRocks <= 0 )
+		if ( --m_iRocks <= 0 )
 		{
 			if ( pev->spawnflags & SF_VOLCANO_REPEATABLE )
 			{
