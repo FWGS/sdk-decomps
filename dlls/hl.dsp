@@ -244,6 +244,10 @@ SOURCE=.\defaultai.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\displacer.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\doors.cpp
 # End Source File
 # Begin Source File

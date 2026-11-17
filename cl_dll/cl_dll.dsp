@@ -103,6 +103,10 @@ SOURCE=..\dlls\crowbar.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\dlls\displacer.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\dlls\egon.cpp
 # End Source File
 # Begin Source File
