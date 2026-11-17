@@ -39,6 +39,7 @@ class CRoach : public CBaseMonster
 public:
 	void Spawn( void );
 	void Precache( void );
+	int  HeatSignature( void ) { return 0; }
 	void SetYawSpeed( void );
 	void EXPORT MonsterThink ( void );
 	void Move ( float flInterval );
@@ -121,7 +122,7 @@ void CRoach :: Spawn()
 	Precache( );
 
 	SET_MODEL(ENT(pev), "models/roach.mdl");
-	UTIL_SetSize( pev, Vector( -1, -1, 0 ), Vector( 1, 1, 2 ) );
+	UTIL_SetSize( pev, Vector( -1, -1, 0 ), Vector( 1, 1, 1 ) );
 
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;

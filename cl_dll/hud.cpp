@@ -30,6 +30,7 @@
 #include "demo.h"
 #include "demo_api.h"
 #include "vgui_scorepanel.h"
+#include "triangleapi.h"
 
 
 
@@ -85,6 +86,16 @@ cvar_t *cl_lw = NULL;
 
 void ShutdownInput (void);
 
+int __MsgFunc_DamageFX( const char *pszName, int iSize, void *pbuf );	// damagefx.cpp
+
+// the client effects (sphere.cpp, tractorbeam.cpp, effects.cpp, bloodspray.cpp, rain.cpp, damagefx.cpp)
+void SphereVidInit( void );
+void TractorbeamVidInit( void );
+void ParticleVidInit( void );
+void BloodSprayVidInit( void );
+void RainVidInit( void );
+void CL_DamageFXReset( void );
+
 //DECLARE_MESSAGE(m_Logo, Logo)
 int __MsgFunc_Logo(const char *pszName, int iSize, void *pbuf)
 {
@@ -111,6 +122,11 @@ int __MsgFunc_SetFOV(const char *pszName, int iSize, void *pbuf)
 int __MsgFunc_Concuss(const char *pszName, int iSize, void *pbuf)
 {
 	return gHUD.MsgFunc_Concuss( pszName, iSize, pbuf );
+}
+
+int __MsgFunc_Fog(const char *pszName, int iSize, void *pbuf )
+{
+	return gHUD.MsgFunc_Fog( pszName, iSize, pbuf );
 }
 
 int __MsgFunc_GameMode(const char *pszName, int iSize, void *pbuf )
@@ -231,6 +247,13 @@ int __MsgFunc_ScoreInfo(const char *pszName, int iSize, void *pbuf)
 	return 0;
 }
 
+int __MsgFunc_SciInfo(const char *pszName, int iSize, void *pbuf)
+{
+	if (gViewPort)
+		return gViewPort->MsgFunc_SciInfo( pszName, iSize, pbuf );
+	return 0;
+}
+
 int __MsgFunc_TeamScore(const char *pszName, int iSize, void *pbuf)
 {
 	if (gViewPort)
@@ -268,6 +291,8 @@ void CHud :: Init( void )
 	HOOK_MESSAGE( InitHUD );
 	HOOK_MESSAGE( SetFOV );
 	HOOK_MESSAGE( Concuss );
+	HOOK_MESSAGE( Fog );
+	HOOK_MESSAGE( DamageFX );
 
 	// TFFree CommandMenu
 	HOOK_COMMAND( "+commandmenu", OpenCommandMenu );
@@ -287,6 +312,7 @@ void CHud :: Init( void )
 	HOOK_MESSAGE( ScoreInfo );
 	HOOK_MESSAGE( TeamScore );
 	HOOK_MESSAGE( TeamInfo );
+	HOOK_MESSAGE( SciInfo );
 
 	HOOK_MESSAGE( Spectator );
 	HOOK_MESSAGE( AllowSpec );
@@ -339,6 +365,7 @@ void CHud :: Init( void )
 	m_StatusIcons.Init();
 	GetClientVoiceMgr()->Init(&g_VoiceStatusHelper, (vgui::Panel**)&gViewPort);
 	m_Spectator.Init();
+	m_Ident.Init();
 
 	m_SayText.Init();
 	m_Menu.Init();
@@ -488,6 +515,18 @@ void CHud :: VidInit( void )
 	m_StatusIcons.VidInit();
 	GetClientVoiceMgr()->VidInit();
 	m_Spectator.VidInit();
+	m_Ident.VidInit();
+
+	// the mod's client effects start empty, and no fog
+	SphereVidInit();
+	TractorbeamVidInit();
+	ParticleVidInit();
+	BloodSprayVidInit();
+	RainVidInit();
+	CL_DamageFXReset();
+
+	float fogColor[3] = { 0, 0, 0 };
+	gEngfuncs.pTriAPI->Fog( fogColor, 0, 1, FALSE );
 }
 
 int CHud::MsgFunc_Logo(const char *pszName,  int iSize, void *pbuf)

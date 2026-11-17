@@ -58,10 +58,16 @@ public:
 	static const char *pAttackHitSounds[];
 	static const char *pAttackMissSounds[];
 
+	const char *GetHudName( void ) { return "Headcrab zombie"; }
+	const char *GetKillDesc( void ) { return "a headcrab zombie"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return DamageVerb( DMG_SLASH, fGibbed ); }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+
 	// No range attacks
 	BOOL CheckRangeAttack1 ( float flDot, float flDist ) { return FALSE; }
 	BOOL CheckRangeAttack2 ( float flDot, float flDist ) { return FALSE; }
 	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
+	int GetBattlePower( void );
 };
 
 LINK_ENTITY_TO_CLASS( monster_zombie, CZombie );
@@ -113,6 +119,14 @@ const char *CZombie::pPainSounds[] =
 int	CZombie :: Classify ( void )
 {
 	return	CLASS_ALIEN_MONSTER;
+}
+
+//=========================================================
+// GetBattlePower - the target ID's rating of this monster
+//=========================================================
+int CZombie :: GetBattlePower( void )
+{
+	return ( pev->max_health * 0.1 ) * gSkillData.zombieDmgOneSlash;
 }
 
 //=========================================================
@@ -271,13 +285,46 @@ void CZombie :: Spawn()
 {
 	Precache( );
 
-	SET_MODEL(ENT(pev), "models/zombie.mdl");
+	// pev->weapons is the body: 0 scientist, 1 barney, 2 hgrunt, 3 assassin,
+	// 4 cleansuit scientist, 5 HEV suit, 6-10 the skins of the sixth body; -1 random
+	if ( pev->weapons < 0 )
+		pev->weapons = RANDOM_LONG( 0, 10 );
+
+	ALERT( at_console, "zombie #%d\n", pev->weapons );
+
+	pev->skin = 0;
+	pev->body = 0;
+
+	if ( pev->weapons == 2 )
+	{
+		SET_MODEL(ENT(pev), "models/zombie_soldier.mdl");
+	}
+	else
+	{
+		SET_MODEL(ENT(pev), "models/zombies_big.mdl");
+
+		if ( pev->weapons > 5 )
+		{
+			pev->body = 1;
+			pev->skin = pev->weapons - 4;
+		}
+		else
+			pev->body = pev->weapons > 2 ? pev->weapons - 1 : pev->weapons;
+	}
+
 	UTIL_SetSize( pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX );
 
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
 	m_bloodColor		= BLOOD_COLOR_GREEN;
-	pev->health			= gSkillData.zombieHealth;
+
+	if ( pev->weapons == 2 || pev->weapons == 4 )
+		pev->health		= gSkillData.zombieHealth * 1.2;
+	else if ( pev->weapons == 5 )
+		pev->health		= gSkillData.zombieHealth * 1.5;
+	else
+		pev->health		= gSkillData.zombieHealth;
+
 	pev->view_ofs		= VEC_VIEW;// position of the eyes relative to monster's origin.
 	m_flFieldOfView		= 0.5;// indicates the width of this monster's forward view cone ( as a dotproduct result )
 	m_MonsterState		= MONSTERSTATE_NONE;
@@ -293,7 +340,14 @@ void CZombie :: Precache()
 {
 	int i;
 
-	PRECACHE_MODEL("models/zombie.mdl");
+	if ( pev->weapons == 2 || pev->weapons < 0 )
+		PRECACHE_MODEL("models/zombie_soldier.mdl");
+
+	if ( pev->weapons != 2 )
+		PRECACHE_MODEL("models/zombies_big.mdl");
+
+	if ( pev->weapons == 0 || pev->weapons < 0 )
+		PRECACHE_MODEL("models/zombiegibs1.mdl");	// the scientist's head (GibMonster)
 
 	for ( i = 0; i < ARRAYSIZE( pAttackHitSounds ); i++ )
 		PRECACHE_SOUND((char *)pAttackHitSounds[i]);
@@ -344,3 +398,33 @@ int CZombie::IgnoreConditions ( void )
 	return iIgnore;
 	
 }
+
+
+//=========================================================
+// The old zombie entities: aliases of monster_zombie with
+// the body set (classes ours)
+//=========================================================
+class CZombieBarney : public CZombie
+{
+public:
+	void Precache( void ) { pev->weapons = 1; CZombie::Precache(); }
+};
+
+LINK_ENTITY_TO_CLASS( monster_zombie_barney, CZombieBarney );
+
+class CZombieGrunt : public CZombie
+{
+public:
+	void Precache( void ) { pev->weapons = 2; CZombie::Precache(); }
+};
+
+LINK_ENTITY_TO_CLASS( monster_zombie_grunt, CZombieGrunt );
+
+class CZombieRandom : public CZombie
+{
+public:
+	// pev->frags marks the body as chosen: a restored zombie keeps it
+	void Precache( void ) { if ( pev->frags != 1 ) { pev->weapons = -1; pev->frags = 1; } CZombie::Precache(); }
+};
+
+LINK_ENTITY_TO_CLASS( monster_zombie_random, CZombieRandom );
