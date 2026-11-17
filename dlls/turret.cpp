@@ -30,6 +30,7 @@
 #include "monsters.h"
 #include "weapons.h"
 #include "effects.h"
+#include "soundent.h"
 
 extern Vector VecBModelOrigin( entvars_t* pevBModel );
 
@@ -40,6 +41,7 @@ extern Vector VecBModelOrigin( entvars_t* pevBModel );
 #define TURRET_MAXWAIT	15		// seconds turret will stay active w/o a target
 #define TURRET_MAXSPIN	5		// seconds turret barrel will spin w/o a target
 #define TURRET_MACHINE_VOLUME	0.5
+#define TURRET_BULLET_RANGE		8192	// name ours: how far the turrets' bullets reach
 
 #define SF_MONSTER_TURRET_INVULNERABLE	128	// fgd "Invulnerable"
 #define SF_MONSTER_TURRET_ALLY			256	// name ours: not in the fgd; the turret counts as a player ally
@@ -833,7 +835,8 @@ void CTimedTurret::ActiveThink(void)
 
 void CTurret::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 {
-	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_MONSTER_12MM, 1 );
+	CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 1000, 0.3 );
+	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_BULLET_RANGE, BULLET_MONSTER_12MM, 1 );
 	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/tu_fire1.wav", 1, 0.6);
 	pev->effects = pev->effects | EF_MUZZLEFLASH;
 }
@@ -841,7 +844,8 @@ void CTurret::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 
 void CMiniTurret::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 {
-	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_MONSTER_9MM, 1 );
+	CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 600, 0.3 );
+	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_BULLET_RANGE, BULLET_MONSTER_9MM, 1 );
 
 	switch(RANDOM_LONG(0,2))
 	{
@@ -1195,6 +1199,15 @@ void CBaseTurret ::	TurretDeath( void )
 	{
 		pev->framerate = 0;
 		SetThink( NULL );
+
+		// tell the owner (a monstermaker) that we're dead, and fade out if we have one
+		CBaseEntity *pOwner = CBaseEntity::Instance( pev->owner );
+		if ( pOwner )
+		{
+			pOwner->DeathNotice( pev );
+			if ( !FNullEnt( pev->owner ) )
+				FadeMonster();
+		}
 	}
 }
 
@@ -1409,7 +1422,8 @@ void CSentry::Spawn()
 
 void CSentry::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 {
-	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_RANGE, BULLET_MONSTER_MP5, 1 );
+	CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 600, 0.3 );
+	FireBullets( 1, vecSrc, vecDirToEnemy, TURRET_SPREAD, TURRET_BULLET_RANGE, BULLET_MONSTER_MP5, 1 );
 	
 	switch(RANDOM_LONG(0,2))
 	{
@@ -1528,6 +1542,15 @@ void CSentry ::	SentryDeath( void )
 	{
 		pev->framerate = 0;
 		SetThink( NULL );
+
+		// tell the owner (a monstermaker) that we're dead, and fade out if we have one
+		CBaseEntity *pOwner = CBaseEntity::Instance( pev->owner );
+		if ( pOwner )
+		{
+			pOwner->DeathNotice( pev );
+			if ( !FNullEnt( pev->owner ) )
+				FadeMonster();
+		}
 	}
 }
 
