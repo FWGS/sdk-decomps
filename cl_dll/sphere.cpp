@@ -388,10 +388,7 @@ void RenderSphere2( const Vector &vecOrigin, const Vector &vecDir, float flRadiu
 			vecColors[i] = vecColor2 + ( vecColor1 - vecColor2 ) * flBlend;
 		}
 		else
-		{
-			float flFade = flDot * g_flSphereFade;
-			vecColors[i] = flFade * vecColor2;
-		}
+			vecColors[i] = ( flDot * g_flSphereFade ) * vecColor2;
 	}
 
 	gEngfuncs.pTriAPI->Begin( TRI_TRIANGLES );

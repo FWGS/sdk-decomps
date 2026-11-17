@@ -91,7 +91,7 @@ int __MsgFunc_DamageFX( const char *pszName, int iSize, void *pbuf );	// damagef
 // the client effects (sphere.cpp, tractorbeam.cpp, effects.cpp, bloodspray.cpp, rain.cpp, damagefx.cpp)
 void SphereVidInit( void );
 void TractorbeamVidInit( void );
-void ParticleSystemsVidInit( void );
+void ParticleVidInit( void );
 void BloodSprayVidInit( void );
 void RainVidInit( void );
 void CL_DamageFXReset( void );
@@ -520,7 +520,7 @@ void CHud :: VidInit( void )
 	// the mod's client effects start empty, and no fog
 	SphereVidInit();
 	TractorbeamVidInit();
-	ParticleSystemsVidInit();
+	ParticleVidInit();
 	BloodSprayVidInit();
 	RainVidInit();
 	CL_DamageFXReset();

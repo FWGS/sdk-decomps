@@ -20,7 +20,7 @@
 #define DLLEXPORT __declspec( dllexport )
 
 void RenderAllSpheres( float flTime, float flFrametime );	// sphere.cpp
-void ParticleSystemsDraw( void );						// effects.cpp
+void RenderParticles( void );						// effects.cpp
 void BloodSprayThink( float flTime, float flFrametime );	// bloodspray.cpp
 void RenderAllTractorbeams( void );						// tractorbeam.cpp
 void RainThink( float flTime );							// rain.cpp
@@ -130,7 +130,7 @@ void DLLEXPORT HUD_DrawTransparentTriangles( void )
 
 	RenderAllSpheres( flTime, flFrametime );
 	RenderAllTractorbeams();
-	ParticleSystemsDraw();
+	RenderParticles();
 	BloodSprayThink( flTime, flFrametime );
 	RainThink( flTime );
 	CL_DamageTick( flTime, flFrametime );
