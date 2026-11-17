@@ -90,7 +90,7 @@ public:
 };
 
 // the anti-missile box's missile: flies at m_hEnemy and destroys it
-class CAntiMissile : public CLaserMissile
+class CAntiMissile : public CRocket
 {
 public:
 	void Spawn( void );
@@ -346,7 +346,7 @@ void CSniperRifle::WeaponIdle( void )
 	{
 		SendWeaponAnim( SNIPER_RELOAD2 );
 		m_flNextSecondaryAttack = m_flNextPrimaryAttack = gpGlobals->time + 1.85;
-		m_flTimeWeaponIdle = gpGlobals->time + 5;
+		m_flTimeWeaponIdle = gpGlobals->time + 5.0;
 		pev->frags = 0;
 	}
 
@@ -375,13 +375,11 @@ void CSniperRifle::WeaponIdle( void )
 		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
 		Vector vecSrc = m_pPlayer->GetGunPosition( );
-		m_pPlayer->FireBullets( 1, vecSrc, vecAiming, g_vecZero, 8192, BULLET_PLAYER_SNIPER, 0, 25 * flAimTime );
+		m_pPlayer->FireBullets( 1, vecSrc, vecAiming, g_vecZero, 8192, BULLET_PLAYER_SNIPER, 0, flAimTime * 25 );
 
 		EMIT_SOUND( ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/sniper_fire.wav", 1, ATTN_NORM );
 
-		if ( m_iClip > 0 )
-			SendWeaponAnim( SNIPER_FIRE );
-		else
+		if ( m_iClip <= 0 )
 		{
 			SendWeaponAnim( SNIPER_FIRELASTROUND );
 
@@ -389,9 +387,11 @@ void CSniperRifle::WeaponIdle( void )
 				// HEV suit - indicate out of ammo condition
 				m_pPlayer->SetSuitUpdate( "!HEV_AMO0", FALSE, 0 );
 		}
+		else
+			SendWeaponAnim( SNIPER_FIRE );
 
 		m_flNextPrimaryAttack = gpGlobals->time + 1.75;
-		m_flTimeWeaponIdle = gpGlobals->time + 5;
+		m_flTimeWeaponIdle = gpGlobals->time + 5.0;
 	}
 
 	if ( m_flTimeWeaponIdle < gpGlobals->time )
@@ -453,7 +453,8 @@ void CSniperRifle::WeaponSpecial( void )
 	{
 		UTIL_MakeVectors( Vector( 0, m_pPlayer->pev->v_angle.y, 0 ) );
 
-		Vector vecSrc = m_pPlayer->pev->origin;
+		Vector vecSrc;
+		vecSrc = m_pPlayer->pev->origin;
 		if ( m_pPlayer->pev->flags & FL_DUCKING )
 			vecSrc = vecSrc - Vector( 0, 0, -18 );
 
@@ -466,12 +467,19 @@ void CSniperRifle::WeaponSpecial( void )
 		{
 			m_hBox = CBaseEntity::Create( "monster_sniper_box", tr.vecEndPos - gpGlobals->v_forward * 16, g_vecZero, NULL );
 			m_hBox->pev->skin = pev->weapons;
-			ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Building a %s box", SniperBoxName( m_hBox->pev->skin ) );
+			const char *pszType;
+			switch ( m_hBox->pev->skin )
+			{
+			case SNIPERBOX_ANTIGRENADE:	pszType = "Anti-grenade"; break;
+			case SNIPERBOX_MINIROCKET:	pszType = "Minirocket"; break;
+			default:					pszType = "Anti-missile"; break;
+			}
+			ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Building a %s box", pszType );
 			m_hBox->BuildFinished( m_pPlayer );
-			EMIT_SOUND( ENT(m_hBox->pev), CHAN_VOICE, "weapons/building.wav", 1, ATTN_NORM );
+			EMIT_SOUND( m_hBox->edict(), CHAN_VOICE, "weapons/building.wav", 1, ATTN_NORM );
 
 			m_flNextPrimaryAttack = gpGlobals->time + 0.3;
-			m_flTimeWeaponIdle = gpGlobals->time + 1;
+			m_flTimeWeaponIdle = gpGlobals->time + 1.0;
 		}
 		else
 			ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Not enough room to build here" );
@@ -530,7 +538,7 @@ void CAntiMissileBox::Spawn( void )
 
 	m_bloodColor = DONT_BLEED;
 	pev->health = 100;
-	pev->takedamage = DAMAGE_YES;
+	pev->takedamage = DAMAGE_AIM;
 	if ( HasSpawnFlag( 128 ) )	// invulnerable
 		pev->takedamage = DAMAGE_NO;
 	pev->frags = 0;
@@ -790,8 +798,8 @@ void CAntiMissile::AMThink( void )
 		return;
 	}
 
-	Vector vecTarget = m_hEnemy->pev->origin + m_hEnemy->pev->velocity * ( flDist * 0.0005 );
-	vecDir = vecTarget - pev->origin;
+	// lead the target
+	vecDir = m_hEnemy->pev->origin + m_hEnemy->pev->velocity * ( flDist * 0.0005 ) - pev->origin;
 	pev->velocity = pev->velocity * 0.2 + vecDir.Normalize() * 1024;
 
 	if ( pev->velocity.Length() > 2000 )
@@ -856,8 +864,7 @@ void CLaserMissile::Steer( void )
 
 	if ( pev->frags != 0 )
 	{
-		Vector vecDir = m_vecEnemyLKP - pev->origin;
-		pev->velocity = pev->velocity * 0.85 + vecDir.Normalize() * 128;
+		pev->velocity = pev->velocity * 0.85 + ( m_vecEnemyLKP - pev->origin ).Normalize() * 128;
 	}
 	else
 	{
