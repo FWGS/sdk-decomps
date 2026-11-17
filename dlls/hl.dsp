@@ -624,6 +624,10 @@ SOURCE=.\basemonster.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\beams.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\cbase.h
 # End Source File
 # Begin Source File
