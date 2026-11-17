@@ -29,6 +29,7 @@
 #include "event_api.h"
 #include "event_args.h"
 #include "in_defs.h"
+#include "particlesys.h"
 
 #include <string.h>
 
@@ -66,7 +67,25 @@ void EV_SnarkFire( struct event_args_s *args  );
 
 
 void EV_TrainPitchAdjust( struct event_args_s *args );
+
+// Scientist Slaughterhouse
+void EV_SoftFire( struct event_args_s *args );
+void EV_FlamerFire( struct event_args_s *args );
+void EV_FlamerStop( struct event_args_s *args );
+void EV_FireLaser( struct event_args_s *args );
+void EV_FireDisplacer( struct event_args_s *args );
+void EV_SpinDisplacer( struct event_args_s *args );
+void EV_TeslaFire( struct event_args_s *args );
+void EV_TeslaStop( struct event_args_s *args );
+void EV_TeslaSpecial( struct event_args_s *args );
+void EV_FireRepulsor( struct event_args_s *args );
+void EV_Sword( struct event_args_s *args );
+void EV_Electric( struct event_args_s *args );
+void EV_TractorBeam( struct event_args_s *args );
 }
+
+void TractorBeamCreate( int iEntity );
+void TractorBeamDelete( int iEntity );
 
 #define VECTOR_CONE_1DEGREES Vector( 0.00873, 0.00873, 0.00873 )
 #define VECTOR_CONE_2DEGREES Vector( 0.01745, 0.01745, 0.01745 )
@@ -1713,3 +1732,500 @@ int EV_TFC_IsAllyTeam( int iTeam1, int iTeam2 )
 {
 	return 0;
 }
+
+//======================
+//	   SOFTGUN START
+//======================
+// EV_FirePython with the softgun's model, its own bullet type (a tracer on
+// every shot) and no multiplayer body
+void EV_SoftFire( event_args_t *args )
+{
+	int idx;
+	vec3_t origin;
+	vec3_t angles;
+
+	vec3_t vecSrc, vecAiming;
+	vec3_t up, right, forward;
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	VectorCopy( args->angles, angles );
+
+	AngleVectors( angles, forward, right, up );
+
+	if ( EV_IsLocal( idx ) )
+	{
+		// Add muzzle flash to current weapon model
+		EV_MuzzleFlash();
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( 5, 0 );
+
+		V_PunchAxis( 0, -10.0 );
+	}
+
+	switch( gEngfuncs.pfnRandomLong( 0, 1 ) )
+	{
+	case 0:
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/357_shot1.wav", gEngfuncs.pfnRandomFloat(0.8, 0.9), ATTN_NORM, 0, PITCH_NORM );
+		break;
+	case 1:
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/357_shot2.wav", gEngfuncs.pfnRandomFloat(0.8, 0.9), ATTN_NORM, 0, PITCH_NORM );
+		break;
+	}
+
+	EV_GetGunPosition( args, vecSrc, origin );
+
+	VectorCopy( forward, vecAiming );
+
+	// fparam1, fparam2: the shot's spread, as the server rolled it
+	EV_HLDM_FireBullets( idx, forward, right, up, 1, vecSrc, vecAiming, 8192, BULLET_PLAYER_SOFTGUN, 1, &tracerCount[idx-1], args->fparam1, args->fparam2 );
+}
+//======================
+//	   SOFTGUN END
+//======================
+
+//======================
+//	 FLAMETHROWER START
+//======================
+#define FLAMER_SOUND_ON			"garg/gar_flameon1.wav"
+#define FLAMER_SOUND_RUN		"garg/gar_flamerun1.wav"
+#define FLAMER_SOUND_OFF		"garg/gar_flameoff1.wav"
+
+// iparam1: 0 flames, 1 acid; bparam2: silent (the flame shootpoint can ask for it).
+// The particle system follows the entity until the stop event.
+void EV_FlamerFire( event_args_t *args )
+{
+	int idx, iType;
+	vec3_t origin;
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	iType = args->iparam1;
+
+	if ( !args->bparam2 )
+	{
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, FLAMER_SOUND_ON, 1.0, ATTN_NORM, 0, 100 );
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_STATIC, FLAMER_SOUND_RUN, 1.0, ATTN_NORM, 0, 100 );
+	}
+
+	//Only play the weapon anims if I shot it.
+	if ( EV_IsLocal( idx ) )
+		gEngfuncs.pEventAPI->EV_WeaponAnimation ( g_fireAnims1[ gEngfuncs.pfnRandomLong( 0, 3 ) ], 1 );
+
+	CParticleSys *pSystem = g_ParticleSystems.Create( idx );
+
+	// a player's flames start at the gun's muzzle
+	if ( idx > gEngfuncs.GetMaxClients() )
+		pSystem->m_vecOffset = Vector( 0, 0, 0 );
+	else
+		pSystem->m_vecOffset = Vector( 8, 3, -6 );
+
+	if ( iType )
+	{
+		pSystem->m_vecColor = Vector( 1.0, 1.0, 0.1 );
+		pSystem->m_pszSprite = "sprites/bio_blast.spr";
+	}
+	else
+	{
+		pSystem->m_vecColor = Vector( 1.0, 1.0, 0.5 );
+		pSystem->m_pszSprite = "sprites/flamer.spr";
+	}
+
+	pSystem->m_iType = iType;
+	pSystem->m_flSpeed = 240;
+	pSystem->m_flScale = 10;
+}
+
+void EV_FlamerStop( event_args_t *args )
+{
+	int idx;
+	vec3_t origin;
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+
+	gEngfuncs.pEventAPI->EV_StopSound( idx, CHAN_STATIC, FLAMER_SOUND_RUN );
+
+	if ( !args->bparam2 )
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, FLAMER_SOUND_OFF, 1.0, ATTN_NORM, 0, 100 );
+
+	g_ParticleSystems.Stop( idx );
+}
+//======================
+//	  FLAMETHROWER END
+//======================
+
+//======================
+//	  LASER GUN START
+//======================
+// bparam1: the clip is empty now (the glock's animation numbers and body)
+void EV_FireLaser( event_args_t *args )
+{
+	int idx;
+	vec3_t origin;
+	int empty;
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+	empty = args->bparam1;
+
+	if ( EV_IsLocal( idx ) )
+	{
+		EV_MuzzleFlash();
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( empty ? 4 : 3, 2 );
+	}
+
+	if ( gEngfuncs.pfnRandomFloat( 0, 1 ) >= 0.5 )
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/pl_gun1.wav", gEngfuncs.pfnRandomFloat( 0.92, 1.0 ), ATTN_NORM, 0, 100 );
+	else
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/pl_gun2.wav", gEngfuncs.pfnRandomFloat( 0.92, 1.0 ), ATTN_NORM, 0, 100 );
+}
+//======================
+//	   LASER GUN END
+//======================
+
+//======================
+//	  DISPLACER START
+//======================
+enum displacer_e {
+	DISPLACER_IDLE1 = 0,
+	DISPLACER_IDLE2,
+	DISPLACER_SPINUP,
+	DISPLACER_SPIN,
+	DISPLACER_FIRE,
+	DISPLACER_DRAW,
+	DISPLACER_HOLSTER1,
+};
+
+// the shot leaves (sent from WeaponIdle after the spin)
+void EV_FireDisplacer( event_args_t *args )
+{
+	int idx;
+	vec3_t origin;
+
+	idx = args->entindex;
+	VectorCopy( args->origin, origin );
+
+	if ( EV_IsLocal( idx ) )
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( DISPLACER_FIRE, 0 );
+
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/displacer_fire.wav", 1.0, ATTN_NORM, 0, 100 );
+}
+
+// the spin-up: two one-second arcs between the gun's attachments 2, 3 and 4,
+// orange for the secondary attack (bparam1), green for the primary
+void EV_SpinDisplacer( event_args_t *args )
+{
+	int idx = args->entindex;
+
+	if ( EV_IsLocal( idx ) )
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( DISPLACER_SPINUP, 0 );
+
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, args->origin, CHAN_WEAPON, "weapons/displacer_spin.wav", 1.0, ATTN_NORM, 0, 100 );
+
+	int iBeamModelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/lgtning.spr" );
+	Vector color;
+
+	if ( args->bparam1 )
+		color = Vector( 1.0, 0.75, 0.14 );
+	else
+		color = Vector( 0.75, 1.0, 0.25 );
+
+	gEngfuncs.pEfxAPI->R_BeamEnts( idx | 0x2000, idx | 0x3000, iBeamModelIndex, 1.0, 1.0, 0.64, 0.75, 0.2, 0, 10, color.x, color.y, color.z );
+	gEngfuncs.pEfxAPI->R_BeamEnts( idx | 0x3000, idx | 0x4000, iBeamModelIndex, 1.0, 1.0, 0.64, 0.75, 0.2, 0, 10, color.x, color.y, color.z );
+}
+//======================
+//	   DISPLACER END
+//======================
+
+//======================
+//	  TESLA COIL START
+//======================
+// The local player's bolts, like the gluon gun's beam: four lightning beams
+// from the gun to the spot aimed at, two green and two blue-white; they live
+// until the stop event and UpdateBeams moves them (beam style 2).
+void EV_TeslaFire( event_args_t *args )
+{
+	int idx;
+
+	idx = args->entindex;
+
+	if ( EV_IsLocal( idx ) )
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( 4, 0 );
+
+	if ( EV_IsLocal( idx ) && cl_lw->value )
+	{
+		vec3_t vecSrc, vecEnd, angles, forward, right, up;
+		pmtrace_t tr;
+
+		cl_entity_t *pl = gEngfuncs.GetEntityByIndex( idx );
+
+		if ( pl )
+		{
+			VectorCopy( gHUD.m_vecAngles, angles );
+
+			AngleVectors( angles, forward, right, up );
+
+			EV_GetGunPosition( args, vecSrc, pl->origin );
+
+			VectorMA( vecSrc, 2048, forward, vecEnd );
+
+			gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
+
+			// Store off the old count
+			gEngfuncs.pEventAPI->EV_PushPMStates();
+
+			// Now add in all of the players.
+			gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );
+
+			gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+			gEngfuncs.pEventAPI->EV_PlayerTrace( vecSrc, vecEnd, PM_STUDIO_BOX, -1, &tr );
+
+			gEngfuncs.pEventAPI->EV_PopPMStates();
+
+			int iBeamModelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/lgtning.spr" );
+
+			g_iBeamStyle = 2;
+
+			for ( int i = 0; i < 4; i++ )
+			{
+				// sic: no test for a failed beam
+				g_pTeslaBeams[i] = gEngfuncs.pEfxAPI->R_BeamEntPoint ( idx | 0x1000, tr.endpos, iBeamModelIndex, 99999, 8.0, 0.2, 100 / 255.0, -2.5, 0, 0.5, 1.0, 1.0, 1.0 );
+
+				switch ( i )
+				{
+				case 0:
+					g_pTeslaBeams[i]->r = 0;
+					g_pTeslaBeams[i]->g = 0.5;
+					break;
+				case 1:
+					g_pTeslaBeams[i]->r = 0;
+					g_pTeslaBeams[i]->g = 0.5;
+					g_pTeslaBeams[i]->amplitude = 0.32;
+					g_pTeslaBeams[i]->width = 4.0;
+					break;
+				case 2:
+					g_pTeslaBeams[i]->amplitude = 0.16;
+					g_pTeslaBeams[i]->width = 2.0;
+					break;
+				case 3:
+					g_pTeslaBeams[i]->r = 0;
+					g_pTeslaBeams[i]->g = 0;
+					g_pTeslaBeams[i]->amplitude = 0.48;
+					g_pTeslaBeams[i]->width = 2.0;
+					break;
+				}
+			}
+		}
+	}
+}
+
+void EV_TeslaStop( event_args_t *args )
+{
+	if ( EV_IsLocal( args->entindex ) )
+	{
+		for ( int i = 0; i < 5; i++ )
+		{
+			if ( g_pTeslaBeams[i] )
+			{
+				g_pTeslaBeams[i]->die = 0.0;
+				g_pTeslaBeams[i] = NULL;
+			}
+		}
+	}
+}
+
+// iparam1 0: the chain lightning's sounds; 1: the attraction strike, a bolt
+// from up to 1024 units above the spot the player aims at, with an explosion
+// sprite there (origin, angles: the player's origin and view angles)
+void EV_TeslaSpecial( event_args_t *args )
+{
+	int idx, iMode;
+
+	idx = args->entindex;
+	iMode = args->iparam1;
+
+	if ( EV_IsLocal( idx ) )
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( 5, 0 );
+
+	if ( iMode == 0 )
+	{
+		if ( gEngfuncs.pfnRandomFloat( 0, 1 ) < 0.5 )
+			gEngfuncs.pEventAPI->EV_PlaySound( idx, args->origin, CHAN_WEAPON, "weapons/electro4.wav", 1.0, ATTN_NORM, 0, 100 );
+		else
+			gEngfuncs.pEventAPI->EV_PlaySound( idx, args->origin, CHAN_WEAPON, "weapons/electro5.wav", 1.0, ATTN_NORM, 0, 100 );
+
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, args->origin, CHAN_ITEM, "weapons/electro6.wav", 1.0, ATTN_NORM, 0, 100 );
+	}
+	else if ( iMode == 1 )
+	{
+		vec3_t vecSrc, vecEnd, forward, right, up;
+		pmtrace_t tr;
+
+		cl_entity_t *pl = gEngfuncs.GetEntityByIndex( idx );
+
+		if ( pl )
+		{
+			int iBeamModelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/lgtning.spr" );
+			int iExplodeModelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/zerogxplode.spr" );
+
+			AngleVectors( args->angles, forward, right, up );
+
+			EV_GetGunPosition( args, vecSrc, pl->origin );
+
+			gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction( false, true );
+
+			// Store off the old count
+			gEngfuncs.pEventAPI->EV_PushPMStates();
+
+			// Now add in all of the players.
+			gEngfuncs.pEventAPI->EV_SetSolidPlayers ( idx - 1 );
+
+			gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+			gEngfuncs.pEventAPI->EV_PlayerTrace( vecSrc, vecSrc + forward * 4096, PM_STUDIO_BOX, -1, &tr );
+
+			// the bolt comes down from above the spot hit
+			vecSrc = tr.endpos;
+			gEngfuncs.pEventAPI->EV_PlayerTrace( vecSrc, tr.endpos + Vector( 0, 0, 4096 ), PM_WORLD_ONLY, -1, &tr );
+
+			// sic: the bolt starts at least 1024 units up, above a lower ceiling
+			if ( tr.endpos.z - vecSrc.z < 1024 )
+				vecEnd = vecSrc + Vector( 0, 0, 1024 );
+			else
+				vecEnd = tr.endpos;
+
+			gEngfuncs.pEventAPI->EV_PopPMStates();
+
+			gEngfuncs.pEfxAPI->R_Explosion( vecSrc, iExplodeModelIndex, 1.0, 10, TE_EXPLFLAG_NONE );
+
+			for ( int i = 0; i < 4; i++ )
+			{
+				BEAM *pBeam = gEngfuncs.pEfxAPI->R_BeamPoints( vecEnd, vecSrc, iBeamModelIndex, 1.0, 8.0, 0.4, 100 / 255.0, 2.5, 0, 0.5, 1.0, 1.0, 1.0 );
+
+				if ( !pBeam )
+					break;
+
+				switch ( i )
+				{
+				case 0:
+					pBeam->r = 0;
+					pBeam->g = 0.5;
+					break;
+				case 1:
+					pBeam->r = 0;
+					pBeam->g = 0.5;
+					pBeam->amplitude = 0.64;
+					pBeam->width = 4.0;
+					break;
+				case 2:
+					pBeam->amplitude = 0.32;
+					pBeam->width = 2.0;
+					break;
+				case 3:
+					pBeam->r = 0;
+					pBeam->g = 0;
+					pBeam->amplitude = 0.96;
+					pBeam->width = 2.0;
+					break;
+				}
+			}
+		}
+	}
+}
+//======================
+//	   TESLA COIL END
+//======================
+
+//======================
+//	   REPULSOR START
+//======================
+void EV_FireRepulsor( event_args_t *args )
+{
+	int idx = args->entindex;
+
+	if ( EV_IsLocal( idx ) )
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( 5, 0 );
+
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, args->origin, CHAN_WEAPON, "weapons/ric1.wav", 1.0, ATTN_NORM, 0, gEngfuncs.pfnRandomLong( 80, 110 ) );
+}
+//======================
+//	    REPULSOR END
+//======================
+
+//======================
+//	    SWORD START
+//======================
+// the swing; Deploy and Holster send the event with iparam1 1 and -1 for the
+// blade's glow, which only the server shows
+void EV_Sword( event_args_t *args )
+{
+	if ( !args->iparam1 )
+		gEngfuncs.pEventAPI->EV_PlaySound( args->entindex, args->origin, CHAN_WEAPON, "weapons/cbar_miss1.wav", 1.0, ATTN_NORM, 0, 100 );
+}
+//======================
+//	     SWORD END
+//======================
+
+//======================
+//	   ELECTRIC START
+//======================
+// fparam2 random lightning bolts, each between two random points within
+// fparam1 units of the origin, light blue (one in five blue, one in five
+// white), each with a spark shower at a third point. The server precaches
+// events/electric.sc but nothing in it plays the event.
+void EV_Electric( event_args_t *args )
+{
+	int iBeamModelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/lgtning.spr" );
+
+	for ( int i = 0; i < args->fparam2; i++ )
+	{
+		vec3_t vecDir, forward, right, vecSrc, vecEnd;
+
+		vecDir[0] = gEngfuncs.pfnRandomFloat( -180, 180 );
+		vecDir[1] = gEngfuncs.pfnRandomFloat( -180, 180 );
+		vecDir[2] = gEngfuncs.pfnRandomFloat( -180, 180 );
+		AngleVectors( vecDir, forward, right, vecEnd );	// sic: vecEnd takes the unused up vector
+		vecSrc = forward * gEngfuncs.pfnRandomFloat( 0, args->fparam1 ) + args->origin;
+
+		vecDir[0] = gEngfuncs.pfnRandomFloat( -180, 180 );
+		vecDir[1] = gEngfuncs.pfnRandomFloat( -180, 180 );
+		vecDir[2] = gEngfuncs.pfnRandomFloat( -180, 180 );
+		AngleVectors( vecDir, forward, right, vecEnd );
+		vecEnd = forward * gEngfuncs.pfnRandomFloat( 0, args->fparam1 ) + args->origin;
+
+		Vector color( 0.0, 0.5, 1.0 );
+		int iColor = gEngfuncs.pfnRandomLong( 0, 4 );
+
+		if ( iColor == 3 )
+			color.y = 0;
+		else if ( iColor == 4 )
+			color = Vector( 1, 1, 1 );
+
+		gEngfuncs.pEfxAPI->R_BeamPoints( vecSrc, vecEnd, iBeamModelIndex, gEngfuncs.pfnRandomFloat( 0.2, 0.5 ), 2.0, 3.0, 0.5, 0, 0, 10, color.x, color.y, color.z );
+
+		vecDir[0] = gEngfuncs.pfnRandomFloat( -180, 180 );
+		vecDir[1] = gEngfuncs.pfnRandomFloat( -180, 180 );
+		vecDir[2] = gEngfuncs.pfnRandomFloat( -180, 180 );
+		AngleVectors( vecDir, forward, right, vecSrc );
+		vecDir = forward * gEngfuncs.pfnRandomFloat( 0, args->fparam1 ) + args->origin;
+
+		gEngfuncs.pEfxAPI->R_SparkShower( vecDir );
+	}
+}
+//======================
+//	    ELECTRIC END
+//======================
+
+//======================
+//	  TRACTOR BEAM START
+//======================
+// bparam1: the beam lets go
+void EV_TractorBeam( event_args_t *args )
+{
+	if ( args->bparam1 )
+		TractorBeamDelete( args->entindex );
+	else
+		TractorBeamCreate( args->entindex );
+}
+//======================
+//	   TRACTOR BEAM END
+//======================
