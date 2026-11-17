@@ -121,6 +121,11 @@ public:
 	void BiteSound( void );
 	void DeathSound( void );
 	void PainSound( void );
+
+	int  HeatSignature( void ) { return 0; }
+	const char *GetKillDesc( void ) { return "an ichthyosaur"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "devoured"; }
+	int  GetBattlePower( void );
 };
 
 LINK_ENTITY_TO_CLASS( monster_ichthyosaur, CIchthyosaur );
@@ -340,6 +345,14 @@ BOOL CIchthyosaur :: CheckMeleeAttack1 ( float flDot, float flDist )
 		return TRUE;
 	}
 	return FALSE;
+}
+
+//=========================================================
+// GetBattlePower - the target ID's rating
+//=========================================================
+int CIchthyosaur :: GetBattlePower( void )
+{
+	return gSkillData.ichthyosaurDmgShake * ( pev->max_health * 0.1 );
 }
 
 void CIchthyosaur::BiteTouch( CBaseEntity *pOther )

@@ -97,6 +97,9 @@ public:
 	BOOL FValidateHintType ( short sHint );
 	BOOL FCanActiveIdle ( void );
 	Schedule_t *GetScheduleOfType ( int Type );
+	const char *GetHudName( void ) { return "a houndeye"; }
+	const char *GetKillDesc( void ) { return "a sonic shockwave"; }
+	int  GetBattlePower( void );
 	Schedule_t *CHoundeye :: GetSchedule( void );
 
 	int	Save( CSave &save ); 
@@ -156,6 +159,26 @@ BOOL CHoundeye :: FValidateHintType ( short sHint )
 
 	ALERT ( at_aiconsole, "Couldn't validate hint type" );
 	return FALSE;
+}
+
+//=========================================================
+// GetBattlePower - the target ID's rating: the sonic
+// attack's damage, with the squad bonus
+//=========================================================
+int CHoundeye :: GetBattlePower( void )
+{
+	float flAdjustedDamage;
+
+	if ( SquadCount() > 1 )
+	{
+		flAdjustedDamage = gSkillData.houndeyeDmgBlast + gSkillData.houndeyeDmgBlast * ( HOUNDEYE_SQUAD_BONUS * ( SquadCount() - 1 ) );
+	}
+	else
+	{
+		flAdjustedDamage = gSkillData.houndeyeDmgBlast;
+	}
+
+	return flAdjustedDamage * ( pev->max_health * 0.1 );
 }
 
 

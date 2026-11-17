@@ -90,6 +90,11 @@ public:
 		}
 	}
 
+	int  HeatSignature( void ) { return 0; }
+	const char *GetKillDesc( void ) { return "a leech"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "sucked"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return "'s blood"; }
+
 	void SetObjectCollisionBox( void )
 	{
 		pev->absmin = pev->origin + Vector(-8,-8,0);
@@ -267,7 +272,8 @@ void CLeech::SwitchLeechState( void )
 
 int CLeech::IRelationship( CBaseEntity *pTarget )
 {
-	if ( pTarget->IsPlayer() )
+	// the mod's leeches hate every human, not just the player
+	if ( pTarget->IsPlayer() || pTarget->Classify() == CLASS_HUMAN_PASSIVE || pTarget->Classify() == CLASS_HUMAN_MILITARY || pTarget->Classify() == CLASS_PLAYER_ALLY )
 		return R_DL;
 	return CBaseMonster::IRelationship( pTarget );
 }

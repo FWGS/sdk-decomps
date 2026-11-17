@@ -29,6 +29,9 @@
 class CGMan : public CBaseMonster
 {
 public:
+	int  HeatSignature( void ) { return 0; }
+	int  GetBattlePower( void ) { return -1; }
+
 	void Spawn( void );
 	void Precache( void );
 	void SetYawSpeed( void );
@@ -68,7 +71,8 @@ IMPLEMENT_SAVERESTORE( CGMan, CBaseMonster );
 //=========================================================
 int	CGMan :: Classify ( void )
 {
-	return	CLASS_NONE;
+	// "Ignore Player" makes him an ordinary passive human
+	return	( pev->spawnflags & SF_MONSTER_IGNOREPLAYER ) ? CLASS_HUMAN_PASSIVE : CLASS_NONE;
 }
 
 //=========================================================
@@ -125,6 +129,8 @@ void CGMan :: Spawn()
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
 	m_bloodColor		= DONT_BLEED;
+	if ( pev->spawnflags & SF_MONSTER_IGNOREPLAYER )
+		m_bloodColor	= BLOOD_COLOR_RED;
 	pev->health			= 100;
 	m_flFieldOfView		= 0.5;// indicates the width of this monster's forward view cone ( as a dotproduct result )
 	m_MonsterState		= MONSTERSTATE_NONE;

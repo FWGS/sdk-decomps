@@ -248,6 +248,14 @@ SOURCE=.\crowbar.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\dd_sphere.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\ddisk.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\defaultai.cpp
 # End Source File
 # Begin Source File
@@ -265,6 +273,10 @@ SOURCE=.\effects.cpp
 # Begin Source File
 
 SOURCE=.\egon.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\elemental.cpp
 # End Source File
 # Begin Source File
 
@@ -369,6 +381,10 @@ SOURCE=.\hassassin.cpp
 # Begin Source File
 
 SOURCE=.\headcrab.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\headmonster.cpp
 # End Source File
 # Begin Source File
 
@@ -649,6 +665,10 @@ SOURCE=.\xen.cpp
 # Begin Source File
 
 SOURCE=.\zombie.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\zz_linkstubs.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
