@@ -384,64 +384,65 @@ void CRepulsor::WeaponSpecial( void )
 	m_flNextSecondaryAttack = m_flNextPrimaryAttack = m_flNextWeaponSpecial = UTIL_WeaponTimeBase() + 1;
 
 #ifndef CLIENT_DLL
-	if ( m_pTractorBeam )
+	if ( !m_pTractorBeam )
+	{
+		float flBestDot = VIEW_FIELD_FULL;
+		Vector vecSrc = m_pPlayer->GetGunPosition( );
+
+		UTIL_MakeVectors( m_pPlayer->pev->v_angle );
+
+		CBaseEntity *pEntity = NULL;
+		while ( ( pEntity = UTIL_FindEntityInSphere( pEntity, vecSrc, 1440 ) ) != NULL )
+		{
+			if ( pEntity->CanBeTractored() && pEntity != m_pPlayer )
+			{
+				Vector vecDir = ( pEntity->Center() - vecSrc ).Normalize();
+				float flDot = DotProduct( vecDir, gpGlobals->v_forward );
+
+				if ( flDot > VIEW_FIELD_ULTRA_NARROW && flDot > flBestDot )
+				{
+					TraceResult tr;
+
+					UTIL_TraceLine( vecSrc, pEntity->pev->origin, ignore_monsters, m_pPlayer->edict(), &tr );
+					if ( tr.flFraction >= 1 || tr.pHit == pEntity->edict() )
+					{
+						flBestDot = flDot;
+						m_hTarget = pEntity;
+					}
+				}
+			}
+		}
+
+		if ( m_hTarget )
+		{
+			m_pTractorBeam = CBaseEntity::Create( "env_tractorbeam", m_hTarget->Center(), pev->angles, m_pPlayer->edict() );
+			m_pTractorBeam->pev->playerclass = 1;
+			m_pTractorBeam->pev->spawnflags |= SF_BEAM_TEMPORARY;
+			((CTractorBeam *)m_pTractorBeam)->m_hTarget = m_hTarget;
+
+			// the beam's length: from 128 to 1440
+			pev->frags = ( m_pTractorBeam->pev->origin - vecSrc ).Length();
+			if ( pev->frags < 128 )
+				pev->frags = 128;
+			else if ( pev->frags > 1440 )
+				pev->frags = 1440;
+
+			m_pTractorBeam->pev->fuser1 = m_hTarget->GetHoldDistance();
+			if ( m_pTractorBeam->pev->fuser1 < 4 )
+				m_pTractorBeam->pev->fuser1 = 4;
+
+			ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Locked tractor beam on %s", STRING( m_hTarget->pev->classname ) );
+		}
+		else
+		{
+			ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Unable to lock tractor beam" );
+		}
+	}
+	else
 	{
 		m_pTractorBeam->Killed( pev, GIB_NEVER );
 		m_pTractorBeam = NULL;
 		m_hTarget = NULL;
-		return;
-	}
-
-	float flBestDot = VIEW_FIELD_FULL;
-	Vector vecSrc = m_pPlayer->GetGunPosition( );
-
-	UTIL_MakeVectors( m_pPlayer->pev->v_angle );
-
-	CBaseEntity *pEntity = NULL;
-	while ( ( pEntity = UTIL_FindEntityInSphere( pEntity, vecSrc, 1440 ) ) != NULL )
-	{
-		if ( pEntity->CanBeTractored() && pEntity != m_pPlayer )
-		{
-			Vector vecDir = ( pEntity->Center() - vecSrc ).Normalize();
-			float flDot = DotProduct( vecDir, gpGlobals->v_forward );
-
-			if ( flDot > VIEW_FIELD_ULTRA_NARROW && flDot > flBestDot )
-			{
-				TraceResult tr;
-
-				UTIL_TraceLine( vecSrc, pEntity->pev->origin, ignore_monsters, m_pPlayer->edict(), &tr );
-				if ( tr.flFraction >= 1 || tr.pHit == pEntity->edict() )
-				{
-					flBestDot = flDot;
-					m_hTarget = pEntity;
-				}
-			}
-		}
-	}
-
-	if ( m_hTarget )
-	{
-		m_pTractorBeam = CBaseEntity::Create( "env_tractorbeam", m_hTarget->Center(), pev->angles, m_pPlayer->edict() );
-		m_pTractorBeam->pev->playerclass = 1;
-		m_pTractorBeam->pev->spawnflags |= SF_BEAM_TEMPORARY;
-		((CTractorBeam *)m_pTractorBeam)->m_hTarget = m_hTarget;
-
-		// the beam's length: from 128 to 1440
-		pev->frags = ( m_pTractorBeam->pev->origin - vecSrc ).Length();
-		if ( pev->frags < 128 )
-			pev->frags = 128;
-		else if ( pev->frags > 1440 )
-			pev->frags = 1440;
-
-		m_pTractorBeam->pev->fuser1 = m_hTarget->GetHoldDistance();
-		if ( m_pTractorBeam->pev->fuser1 < 4 )
-			m_pTractorBeam->pev->fuser1 = 4;
-
-		ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Locked tractor beam on %s", STRING( m_hTarget->pev->classname ) );
-	}
-	else
-	{
-		ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Unable to lock tractor beam" );
 	}
 #endif
 }
