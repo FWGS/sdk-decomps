@@ -1146,8 +1146,8 @@ void CKamehameha :: KameTouch( CBaseEntity *pOther )
 	}
 
 	ALERT( at_console, "contact with %s, blow up\n", STRING( pOther->pev->classname ) );
-	EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "ambience/rocketflame1.wav", 0, 0, SND_STOP, PITCH_NORM );
-	EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, "ambience/rocketrumble1.wav", 0, 0, SND_STOP, PITCH_NORM );
+	STOP_SOUND( ENT( pev ), CHAN_VOICE, "ambience/rocketflame1.wav" );
+	STOP_SOUND( ENT( pev ), CHAN_WEAPON, "ambience/rocketrumble1.wav" );
 
 	UTIL_ScreenShakeAll( pev->origin, 255, 0.4, 4.0 );
 	EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, "weapons/mortarhit.wav", 1.0, ATTN_NONE, 0, PITCH_NORM );
