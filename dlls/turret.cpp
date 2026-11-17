@@ -1674,7 +1674,8 @@ void CFlakTurret::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 	CFlakBullet *pFlak = CFlakBullet::FlakCreate( ENT(pev) );
 	pFlak->pev->origin = vecSrc;
 	pFlak->pev->velocity = vecEnd - vecSrc;
-	pFlak->pev->nextthink = gpGlobals->time + pFlak->pev->velocity.Length() / 2000;
+	float flTime = pFlak->pev->velocity.Length() / 2000;	// name ours: the flight time
+	pFlak->pev->nextthink = gpGlobals->time + flTime;
 	pFlak->pev->velocity = pFlak->pev->velocity.Normalize() * 2000;
 
 	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/tu_fire1.wav", 1, 0.6);
