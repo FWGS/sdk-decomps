@@ -555,7 +555,7 @@ public:
 
 	static	TYPEDESCRIPTION m_SaveData[];
 
-	virtual const char *GetKillDesc( void ) { if ( m_iszKillDesc ) return STRING( m_iszKillDesc ); return STRING( pev->classname ); }
+	virtual const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return STRING( pev->classname ); return STRING( m_iszKillDesc ); }
 	virtual int		GetOnState( void ) { return GetToggleState() == TS_AT_TOP; }
 	virtual int		GetToggleState( void ) { return m_toggle_state; }
 	virtual float	GetDelay( void ) { return m_flWait; }
