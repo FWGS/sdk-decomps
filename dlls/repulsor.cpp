@@ -137,9 +137,9 @@ void CRepulsorBeam::BeamTouch( CBaseEntity *pOther )
 
 	if ( pOther->CanBeRepulsed( false ) )
 	{
+		// push it along
 		pOther->pev->velocity = pev->velocity;
-		Killed( pev, GIB_NEVER );
-		return;
+		fHit = TRUE;
 	}
 
 	if ( fHit || pev->health <= 0 )
