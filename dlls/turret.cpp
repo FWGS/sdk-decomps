@@ -1718,8 +1718,8 @@ void CFlakTurret::ActiveThink(void)
 	}
 
 	// aim from the barrel
-	Vector vecSrc, vecAng;
-	GetAttachment( 0, vecSrc, vecAng );
+	Vector vecSrc;
+	GetAttachment( 0, vecSrc, vecDirToEnemy );	// the angles are thrown away
 	Vector vecMidEnemy = m_hEnemy->BodyTarget( vecSrc );
 
 	// Look for our current enemy
@@ -1768,13 +1768,9 @@ void CFlakTurret::ActiveThink(void)
 	if (m_iSpin && ((fAttack) || (m_fBeserk)) && m_flNextShot <= gpGlobals->time)
 	{
 		SetTurretAnim(TURRET_ANIM_FIRE);
-		float flDist;
 		if (m_fBeserk)
-			flDist = RANDOM_FLOAT( 40, 1200 );
-		else
-			flDist = flDistToEnemy;
-		Vector vecEnd = vecSrc + gpGlobals->v_forward * flDist;
-		Shoot(vecSrc, vecEnd );
+			flDistToEnemy = RANDOM_FLOAT( 40, 1200 );
+		Shoot(vecSrc, vecSrc + gpGlobals->v_forward * flDistToEnemy );
 		m_flNextShot = gpGlobals->time + 0.2;
 	}
 	else
