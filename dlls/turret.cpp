@@ -2697,3 +2697,185 @@ void CRepulsorTurret::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 
 	pev->effects = pev->effects | EF_MUZZLEFLASH;
 }
+
+
+//=========================================================
+// Bionanite flak: a green burst that always gibs
+//=========================================================
+class CBioFlak : public CFlakBullet	// name ours
+{
+public:
+	void Precache( void );
+	void Explode( void );
+
+	const char *GetKillDesc( void ) { return "a bionanite flak cannon"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "dissassembled"; }	// sic
+	const char *GetHitGroupDesc( int iHitGroup ) { return ""; }
+
+	static CBioFlak *FlakCreate( edict_t *pOwner );	// name ours
+
+	int m_iBlast;	// name ours: the explosion sprite
+};
+
+LINK_ENTITY_TO_CLASS( bio_flak, CBioFlak );
+
+
+//=========================================================
+// High-energy flak: bursts with three lightning bolts
+//=========================================================
+class CLightFlak : public CBioFlak	// name ours
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	void Explode( void );
+
+	const char *GetKillDesc( void ) { return "a high-energy flak cannon"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return DamageVerb( DMG_ENERGYBEAM, fGibbed ); }
+
+	static CLightFlak *FlakCreate( edict_t *pOwner );	// name ours
+
+	int m_iBeam;	// name ours: the lightning sprite
+};
+
+LINK_ENTITY_TO_CLASS( lght_flak, CLightFlak );
+
+
+CBioFlak *CBioFlak::FlakCreate( edict_t *pOwner )
+{
+	CBioFlak *pFlak = GetClassPtr( (CBioFlak *)NULL );
+	pFlak->pev->owner = pOwner;
+	pFlak->pev->classname = MAKE_STRING( "bio_flak" );
+	pFlak->Spawn();
+
+	return pFlak;
+}
+
+void CBioFlak::Precache( void )
+{
+	CFlakBullet::Precache( );
+	m_iBlast = PRECACHE_MODEL( "sprites/bio_blast.spr" );
+	pev->rendercolor = Vector( 0, 255, 0 );
+}
+
+void CBioFlak::Explode( void )
+{
+	int iContents = UTIL_PointContents( pev->origin );
+
+	pev->dmg = 35;
+
+	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_EXPLOSION );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		if (iContents != CONTENTS_WATER)
+		{
+			WRITE_SHORT( m_iBlast );
+		}
+		else
+		{
+			WRITE_SHORT( g_sModelIndexWExplosion );
+		}
+		WRITE_BYTE( 14 ); // scale * 10
+		WRITE_BYTE( 15 ); // framerate
+		WRITE_BYTE( TE_EXPLFLAG_NOPARTICLES );
+	MESSAGE_END();
+
+	RadiusDamage( pev->origin, pev, VARS( pev->owner ), pev->dmg, 64, CLASS_NONE, DMG_BLAST | DMG_ALWAYSGIB );
+
+	UTIL_Remove( this );
+}
+
+CLightFlak *CLightFlak::FlakCreate( edict_t *pOwner )
+{
+	CLightFlak *pFlak = GetClassPtr( (CLightFlak *)NULL );
+	pFlak->pev->owner = pOwner;
+	pFlak->pev->classname = MAKE_STRING( "lght_flak" );
+	pFlak->Spawn();
+
+	return pFlak;
+}
+
+void CLightFlak::Spawn( void )
+{
+	Precache( );
+	pev->movetype = MOVETYPE_FLY;
+	pev->solid = SOLID_BBOX;
+	pev->renderamt = 255;
+	pev->rendermode = kRenderTransAdd;
+	SET_MODEL( ENT(pev), "sprites/blueflare1.spr" );
+	pev->scale = 0.5;
+
+	UTIL_SetOrigin( pev, pev->origin );
+	UTIL_SetSize( pev, Vector( 0, 0, 0 ), Vector( 0, 0, 0 ) );
+
+	SetTouch( ExplodeTouch );
+	SetThink( ExplodeThink );
+	pev->nextthink = 0;	// the turret sets the burst time
+}
+
+void CLightFlak::Precache( void )
+{
+	PRECACHE_MODEL( "sprites/blueflare1.spr" );
+	m_iBlast = PRECACHE_MODEL( "sprites/energy_blast.spr" );
+	m_iBeam = PRECACHE_MODEL( "sprites/lgtning.spr" );
+}
+
+void CLightFlak::Explode( void )
+{
+	int iContents = UTIL_PointContents( pev->origin );
+
+	pev->dmg = 50;
+
+	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_EXPLOSION );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		if (iContents != CONTENTS_WATER)
+		{
+			WRITE_SHORT( m_iBlast );
+		}
+		else
+		{
+			WRITE_SHORT( g_sModelIndexWExplosion );
+		}
+		WRITE_BYTE( 20 ); // scale * 10
+		WRITE_BYTE( 15 ); // framerate
+		WRITE_BYTE( TE_EXPLFLAG_NOPARTICLES );
+	MESSAGE_END();
+
+	// three bolts down and around
+	for ( int i = 0; i < 3; i++ )
+	{
+		TraceResult tr;
+		Vector vecDir = Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -0.65, -1 ) ).Normalize();
+		UTIL_TraceLine( pev->origin, pev->origin + vecDir * 512, dont_ignore_monsters, ENT(pev), &tr );
+
+		MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+			WRITE_BYTE( TE_BEAMPOINTS );
+			WRITE_COORD( pev->origin.x );
+			WRITE_COORD( pev->origin.y );
+			WRITE_COORD( pev->origin.z );
+			WRITE_COORD( tr.vecEndPos.x );
+			WRITE_COORD( tr.vecEndPos.y );
+			WRITE_COORD( tr.vecEndPos.z );
+			WRITE_SHORT( m_iBeam );
+			WRITE_BYTE( 0 ); // frame start
+			WRITE_BYTE( 10 ); // framerate
+			WRITE_BYTE( 15 ); // life
+			WRITE_BYTE( 20 ); // width
+			WRITE_BYTE( 36 ); // noise
+			WRITE_BYTE( 0 ); // r, g, b
+			WRITE_BYTE( RANDOM_LONG( 0, 128 ) );
+			WRITE_BYTE( 255 );
+			WRITE_BYTE( 192 ); // brightness
+			WRITE_BYTE( 35 ); // speed
+		MESSAGE_END();
+	}
+
+	RadiusDamage( pev->origin, pev, VARS( pev->owner ), pev->dmg, 128, CLASS_NONE, DMG_SHOCK );
+
+	UTIL_Remove( this );
+}
