@@ -246,7 +246,7 @@ typedef	enum
 	BULLET_PLAYER_9MM, // glock
 	BULLET_PLAYER_MP5, // mp5
 	BULLET_PLAYER_357, // python
-	BULLET_PLAYER_SNIPER, // sniper box (name ours)
+	BULLET_PLAYER_SNIPER, // sniper rifle (name ours)
 	BULLET_PLAYER_BUCKSHOT, // shotgun
 	BULLET_PLAYER_CROWBAR, // crowbar swipe
 	BULLET_PLAYER_SOFTGUN, // softgun: 16 damage, DMG_RADIATION (name ours)
@@ -1454,11 +1454,10 @@ public:
 	BOOL Deploy( void );
 	void Holster( int skiplocal = 0 );
 
-	void UpdateEffect( const Vector &endPoint );	// name ours (not yet fitted to the client's thunk order)
-	void RemoveBeam( int iBeam );					// name ours
+	void RemoveBeam( int iBeam );					// names ours (all fit the client's thunk order)
 
 	void EndAttack( void );
-	void Attract( void );							// name ours (not yet fitted): PrimaryAttack in "Attraction" mode
+	void CallLightning( void );						// PrimaryAttack in "Attraction" mode
 	void PrimaryAttack( void );
 	void SecondaryAttack( void );
 	void WeaponSpecial( void );						// switches between "Projection" and "Attraction" (pev->weapons)
@@ -1487,7 +1486,11 @@ public:
 
 	unsigned short m_usTeslaStop;	// names ours
 
+	enum TESLA_FIRESTATE { FIRE_OFF, FIRE_CHARGE };
+
 private:
+	void AddEffect( const Vector &endPoint );	// the four beams to the bolt's end
+
 	unsigned short m_usTeslaFire;
 	unsigned short m_usTeslaSpecial;
 };
