@@ -184,6 +184,10 @@ SOURCE=.\barney.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\beams.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\bigmomma.cpp
 # End Source File
 # Begin Source File
@@ -573,6 +577,10 @@ SOURCE=.\animation.h
 # Begin Source File
 
 SOURCE=.\basemonster.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\beams.h
 # End Source File
 # Begin Source File
 
