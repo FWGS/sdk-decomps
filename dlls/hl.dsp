@@ -232,6 +232,10 @@ SOURCE=.\controller.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\crane.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\crossbow.cpp
 # End Source File
 # Begin Source File
@@ -269,6 +273,10 @@ SOURCE=.\fire.cpp
 # Begin Source File
 
 SOURCE=.\flyingmonster.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\flyingobject.cpp
 # End Source File
 # Begin Source File
 
@@ -657,6 +665,10 @@ SOURCE=.\extdll.h
 # Begin Source File
 
 SOURCE=.\flyingmonster.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\flyingobject.h
 # End Source File
 # Begin Source File
 
