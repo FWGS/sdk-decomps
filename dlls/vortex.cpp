@@ -22,12 +22,15 @@
 #include "util.h"
 #include "cbase.h"
 #include "monsters.h"
+#include "soundent.h"
+#include "hornet.h"
+
+extern int gEvilImpulse101;
+
 #include "weapons.h"
 #include "nodes.h"
 #include "player.h"
 #include "effects.h"
-#include "hornet.h"
-#include "soundent.h"
 #include "gamerules.h"
 
 
@@ -705,8 +708,6 @@ void CVortexLauncher::WeaponIdle( void )
 }
 
 #ifndef CLIENT_DLL
-
-extern int gEvilImpulse101;
 
 //=========================================================
 // ammo_vortexclip: five vortex missiles, with a blue glow

@@ -47,10 +47,10 @@ enum repulsor_e {
 
 //=========================================================
 // repulsor_beam: the green spark both attacks fire. It flies
-// at 1000 units/s, pushes what it hits along its own velocity
-// when that can be repulsed and bounces off the rest
-// (4 to 8 times); the secondary attack's beam also does 35
-// damage to what it hits and dies on the first hit.
+// at 1000 units/s; what it hits that can be repulsed takes its
+// velocity and the beam dies, off the rest it bounces (4 to 8
+// times). The secondary attack's beam also does 35 damage and
+// dies on the first thing it hurts.
 //=========================================================
 class CRepulsorBeam : public CBaseEntity
 {
