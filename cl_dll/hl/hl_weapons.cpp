@@ -62,6 +62,14 @@ CHandGrenade g_HandGren;
 CSatchel g_Satchel;
 CTripmine g_Tripmine;
 CSqueak g_Snark;
+CSoftGun g_SoftGun;
+CFlameThrower g_Flamethrower;
+CLaserPistol g_LaserPistol;
+CDisplacer g_Displacer;
+CTeslaCoil g_TeslaCoil;
+CRepulsor g_Repulsor;
+CVortexLauncher g_Vortex;
+CSword g_Sword;
 
 
 /*
@@ -309,10 +317,40 @@ Vector CBaseEntity::FireBulletsPlayer ( ULONG cShots, Vector vecSrc, Vector vecD
     return Vector ( x * vecSpread.x, y * vecSpread.y, 0.0 );
 }
 
-// a stand-in until this file has the real explosive bullets (retail 0x1001fdf0, 326 bytes)
+/*
+=====================
+CBaseEntity :: FireBulletsExplosive
+
+Only produces the random direction vector for the shotgun's explosive slugs
+=====================
+*/
 Vector CBaseEntity::FireBulletsExplosive( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker, int shared_rand )
 {
-	return FireBulletsPlayer( cShots, vecSrc, vecDirShooting, vecSpread, flDistance, BULLET_PLAYER_BUCKSHOT, 0, iDamage, pevAttacker, shared_rand );
+	float x, y, z;
+
+	for ( ULONG iShot = 1; iShot <= cShots; iShot++ )
+	{
+		if ( pevAttacker == NULL )
+		{
+			// get circular gaussian spread
+			do {
+					x = RANDOM_FLOAT(-0.5, 0.5) + RANDOM_FLOAT(-0.5, 0.5);
+					y = RANDOM_FLOAT(-0.5, 0.5) + RANDOM_FLOAT(-0.5, 0.5);
+					z = x*x+y*y;
+			} while (z > 1);
+		}
+		else
+		{
+			//Use player's random seed.
+			// get circular gaussian spread
+			x = UTIL_SharedRandomFloat( shared_rand + iShot, -0.5, 0.5 ) + UTIL_SharedRandomFloat( shared_rand + ( 1 + iShot ) , -0.5, 0.5 );
+			y = UTIL_SharedRandomFloat( shared_rand + ( 2 + iShot ), -0.5, 0.5 ) + UTIL_SharedRandomFloat( shared_rand + ( 3 + iShot ), -0.5, 0.5 );
+			z = x * x + y * y;
+		}
+			
+	}
+
+    return Vector ( x * vecSpread.x, y * vecSpread.y, 0.0 );
 }
 
 /*
@@ -339,7 +377,12 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		m_fInReload = FALSE;
 	}
 
-	if ((m_pPlayer->pev->button & IN_ATTACK2) && (m_flNextSecondaryAttack <= 0.0))
+	if ((m_pPlayer->pev->button & IN_ALT1) && (m_flNextWeaponSpecial <= 0.0))
+	{
+		// +attack3
+		WeaponSpecial();
+	}
+	else if ((m_pPlayer->pev->button & IN_ATTACK2) && (m_flNextSecondaryAttack <= 0.0))
 	{
 		if ( pszAmmo2() && !m_pPlayer->m_rgAmmo[SecondaryAmmoIndex()] )
 		{
@@ -347,7 +390,7 @@ void CBasePlayerWeapon::ItemPostFrame( void )
 		}
 
 		SecondaryAttack();
-		m_pPlayer->pev->button &= ~IN_ATTACK2;
+		// (the SDK cleared IN_ATTACK2 here)
 	}
 	else if ((m_pPlayer->pev->button & IN_ATTACK) && (m_flNextPrimaryAttack <= 0.0))
 	{
@@ -631,6 +674,14 @@ void HUD_InitClientWeapons( void )
 	HUD_PrepEntity( &g_Satchel	, &player );
 	HUD_PrepEntity( &g_Tripmine	, &player );
 	HUD_PrepEntity( &g_Snark	, &player );
+	HUD_PrepEntity( &g_SoftGun	, &player );
+	HUD_PrepEntity( &g_Flamethrower	, &player );
+	HUD_PrepEntity( &g_LaserPistol	, &player );
+	HUD_PrepEntity( &g_Displacer	, &player );
+	HUD_PrepEntity( &g_TeslaCoil	, &player );
+	HUD_PrepEntity( &g_Repulsor	, &player );
+	HUD_PrepEntity( &g_Vortex	, &player );
+	HUD_PrepEntity( &g_Sword	, &player );
 }
 
 /*
@@ -686,6 +737,10 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 	static int lasthealth;
 
 	memset( &nulldata, 0, sizeof( nulldata ) );
+
+	// no weapons while the single player console is down (0.91)
+	if ( gEngfuncs.Con_IsVisible() && !bIsMultiplayer() )
+		return;
 
 	HUD_InitClientWeapons();	
 
@@ -751,6 +806,38 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 		case WEAPON_SNARK:
 			pWeapon = &g_Snark;
 			break;
+
+		case WEAPON_SOFTGUN:
+			pWeapon = &g_SoftGun;
+			break;
+
+		case WEAPON_FLAMETHROWER:
+			pWeapon = &g_Flamethrower;
+			break;
+
+		case WEAPON_LASERPISTOL:
+			pWeapon = &g_LaserPistol;
+			break;
+
+		case WEAPON_DISPLACER:
+			pWeapon = &g_Displacer;
+			break;
+
+		case WEAPON_TESLACOIL:
+			pWeapon = &g_TeslaCoil;
+			break;
+
+		case WEAPON_REPULSOR:
+			pWeapon = &g_Repulsor;
+			break;
+
+		case WEAPON_VORTEXLAUNCHER:
+			pWeapon = &g_Vortex;
+			break;
+
+		case WEAPON_SWORD:
+			pWeapon = &g_Sword;
+			break;
 	}
 
 	// Store pointer to our destination entity_state_t so we can get our origin, etc. from it
@@ -802,6 +889,8 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 		pCurrent->m_chargeReady			= pfrom->iuser1;
 		pCurrent->m_fInAttack			= pfrom->iuser2;
 		pCurrent->m_fireState			= pfrom->iuser3;
+		pCurrent->pev->weapons			= pfrom->m_iWeaponState;	// the weapons' fire modes
+		pCurrent->m_flNextWeaponSpecial	= pfrom->fuser4;
 
 		pCurrent->m_iSecondaryAmmoType		= (int)from->client.vuser3[ 2 ];
 		pCurrent->m_iPrimaryAmmoType		= (int)from->client.vuser4[ 0 ];
@@ -862,6 +951,10 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 		 ( ( CRpg * )player.m_pActiveItem)->m_fSpotActive = (int)from->client.vuser2[ 1 ];
 		 ( ( CRpg * )player.m_pActiveItem)->m_cActiveRockets = (int)from->client.vuser2[ 2 ];
 	}
+	else if ( player.m_pActiveItem->m_iId == WEAPON_VORTEXLAUNCHER )
+	{
+		 ( ( CVortexLauncher * )player.m_pActiveItem)->m_hRocket = (int)from->client.vuser2[ 1 ];
+	}
 	
 	// Don't go firing anything if we have died.
 	// Or if we don't have a weapon model deployed
@@ -872,6 +965,11 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 			pWeapon->ItemPostFrame();
 		}
 	}
+
+	// the view model shows the weapon's body and skin
+	cl_entity_t *view = gEngfuncs.GetViewModel();
+	view->curstate.body = pWeapon->pev->body;
+	view->curstate.skin = pWeapon->pev->skin;
 
 	// Assume that we are not going to switch weapons
 	to->client.m_iId					= from->client.m_iId;
@@ -929,23 +1027,17 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 		 from->client.vuser2[ 1 ] = ( ( CRpg * )player.m_pActiveItem)->m_fSpotActive;
 		 from->client.vuser2[ 2 ] = ( ( CRpg * )player.m_pActiveItem)->m_cActiveRockets;
 	}
+	else if ( player.m_pActiveItem->m_iId == WEAPON_VORTEXLAUNCHER )
+	{
+		 from->client.vuser2[ 1 ] = ( ( CVortexLauncher * )player.m_pActiveItem)->m_hRocket;
+	}
 
 	// Make sure that weapon animation matches what the game .dll is telling us
 	//  over the wire ( fixes some animation glitches )
 	if ( g_runfuncs && ( HUD_GetWeaponAnim() != to->client.weaponanim ) )
 	{
-		int body = 2;
-
-		//Pop the model to body 0.
-		if ( pWeapon == &g_Tripmine )
-			 body = 0;
-
-		//Show laser sight/scope combo
-		if ( pWeapon == &g_Python && bIsMultiplayer() )
-			 body = 1;
-		
 		// Force a fixed anim down to viewmodel
-		HUD_SendWeaponAnim( to->client.weaponanim, body, 1 );
+		HUD_SendWeaponAnim( to->client.weaponanim, pWeapon->pev->body, 1 );
 	}
 
 	for ( i = 0; i < 32; i++ )
@@ -973,12 +1065,15 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 		pto->iuser1						= pCurrent->m_chargeReady;
 		pto->iuser2						= pCurrent->m_fInAttack;
 		pto->iuser3						= pCurrent->m_fireState;
+		pto->m_iWeaponState				= pCurrent->pev->weapons;
+		pto->fuser4						= pCurrent->m_flNextWeaponSpecial;
 
 		// Decrement weapon counters, server does this at same time ( during post think, after doing everything else )
 		pto->m_flNextReload				-= cmd->msec / 1000.0;
 		pto->m_fNextAimBonus			-= cmd->msec / 1000.0;
 		pto->m_flNextPrimaryAttack		-= cmd->msec / 1000.0;
 		pto->m_flNextSecondaryAttack	-= cmd->msec / 1000.0;
+		pto->fuser4						-= cmd->msec / 1000.0;
 		pto->m_flTimeWeaponIdle			-= cmd->msec / 1000.0;
 		pto->fuser1						-= cmd->msec / 1000.0;
 
@@ -1012,6 +1107,11 @@ void HUD_WeaponsPostThink( local_state_s *from, local_state_s *to, usercmd_t *cm
 		if ( pto->m_flTimeWeaponIdle < -0.001 )
 		{
 			pto->m_flTimeWeaponIdle = -0.001;
+		}
+
+		if ( pto->fuser4 < -0.001 )
+		{
+			pto->fuser4 = -0.001;
 		}
 
 		if ( pto->m_flNextReload < -0.001 )

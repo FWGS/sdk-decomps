@@ -15,7 +15,7 @@
 #include "r_efx.h"
 #include "event_api.h"
 
-bool EV_IsEntityVisible( cl_entity_t *pEntity );
+bool EV_IsInPVS( cl_entity_t *pEntity );
 
 int g_iFlameModel;		// name ours
 int g_iLightningModel;	// name ours
@@ -154,7 +154,7 @@ void CDamageFX::Think( float flTime, float flFrametime )
 			continue;
 
 		cl_entity_t *pEnt = gEngfuncs.GetEntityByIndex( pFX->m_iEntity );
-		if ( pEnt != pFX->m_pEntity || pEnt->curstate.modelindex != pFX->m_iModel || !EV_IsEntityVisible( pEnt ) )
+		if ( pEnt != pFX->m_pEntity || pEnt->curstate.modelindex != pFX->m_iModel || !EV_IsInPVS( pEnt ) )
 		{
 			pFX->m_iEntity = 0;
 			continue;

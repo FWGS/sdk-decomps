@@ -17,6 +17,7 @@ typedef	enum
 	BULLET_PLAYER_357, // python
 	BULLET_PLAYER_BUCKSHOT, // shotgun
 	BULLET_PLAYER_CROWBAR, // crowbar swipe
+	BULLET_PLAYER_SOFTGUN, // the soft metal accelerator's glowing slug (name ours)
 
 	BULLET_MONSTER_9MM,
 	BULLET_MONSTER_MP5,
