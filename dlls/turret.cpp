@@ -1997,7 +1997,7 @@ void CTFCSentry1::Spawn()
 	Precache( );
 	SET_MODEL(ENT(pev), "models/sentry1.mdl");
 	if ( m_base == NULL )
-		m_base = CBaseEntity::Create( "tfc_base", Vector( pev->origin.x, pev->origin.y, pev->origin.z - 20 ), pev->angles, edict() );
+		m_base = CBaseEntity::Create( "tfc_base", pev->origin - Vector( 0, 0, 20 ), pev->angles, edict() );
 	pev->health			= 50;
 	m_HackedGunPos		= Vector( 0, 0, 30 );
 	pev->view_ofs.z		= 0;
@@ -2270,7 +2270,7 @@ void CTFCSentry2::Spawn()
 	Precache( );
 	SET_MODEL(ENT(pev), "models/sentry2.mdl");
 	if ( m_base == NULL )
-		m_base = CBaseEntity::Create( "tfc_base", Vector( pev->origin.x, pev->origin.y, pev->origin.z - 20 ), pev->angles, edict() );
+		m_base = CBaseEntity::Create( "tfc_base", pev->origin - Vector( 0, 0, 20 ), pev->angles, edict() );
 	pev->health			= 75;
 	Vector vecAng;
 	GetAttachment( 0, m_HackedGunPos, vecAng );
@@ -2342,7 +2342,7 @@ void CTFCSentry3::Spawn()
 	Precache( );
 	SET_MODEL(ENT(pev), "models/sentry3.mdl");
 	if ( m_base == NULL )
-		m_base = CBaseEntity::Create( "tfc_base", Vector( pev->origin.x, pev->origin.y, pev->origin.z - 20 ), pev->angles, edict() );
+		m_base = CBaseEntity::Create( "tfc_base", pev->origin - Vector( 0, 0, 20 ), pev->angles, edict() );
 	pev->health			= 100;
 	Vector vecAng, vecGun2;
 	GetAttachment( 0, m_HackedGunPos, vecAng );
@@ -2369,8 +2369,8 @@ void CTFCSentry3::Spawn()
 		pev->nextthink = gpGlobals->time + 0.3;
 	}
 	m_flFieldOfView = 0.7;
-	m_flDelay = 2;
 	m_flNextAttack = gpGlobals->time + 2;
+	m_flDelay = 2;	// seconds between rockets
 	if ( pev->targetname )
 		SetUse( SentryUse );
 }
