@@ -244,6 +244,10 @@ SOURCE=.\dd_sphere.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\ddisk.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\defaultai.cpp
 # End Source File
 # Begin Source File
