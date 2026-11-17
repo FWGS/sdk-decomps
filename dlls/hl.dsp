@@ -552,6 +552,10 @@ SOURCE=.\tentacle.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\teslamonster.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\triggers.cpp
 # End Source File
 # Begin Source File
