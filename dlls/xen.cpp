@@ -256,16 +256,19 @@ void CPlantWallop :: ChargeThink( void )
 		{
 			// fully charged: fly at the enemy
 			CBaseEntity *pEnemy = CBaseEntity::Instance( pev->enemy );
-			if ( !pEnemy )
+			if ( pEnemy )
+			{
+				pev->solid = SOLID_BBOX;
+				SetTouch( &CPlantWallop::WallopTouch );
+				SetThink( &CSprite::AnimateThink );
+				Vector vecDir = pEnemy->BodyTarget( pev->origin ) - pev->origin;
+				pev->velocity = vecDir.Normalize() * 750;
+			}
+			else
 			{
 				SUB_StartFadeOut();
 				return;
 			}
-
-			pev->solid = SOLID_BBOX;
-			SetTouch( &CPlantWallop::WallopTouch );
-			SetThink( &CSprite::AnimateThink );
-			pev->velocity = ( pEnemy->BodyTarget( pev->origin ) - pev->origin ).Normalize() * 750;
 		}
 
 		pev->renderamt += RANDOM_FLOAT( 5, 7 );
@@ -302,8 +305,7 @@ void CPlantWallop :: WallopTouch( CBaseEntity *pOther )
 		pOther->TraceAttack( pevOwner, pev->dmg, pev->velocity.Normalize(), &tr, DMG_NOGIB | DMG_RADIATION );
 		if ( pOther->CanBeRepulsed( false ) )
 		{
-			Vector vecDir = pev->velocity.Normalize();
-			pOther->pev->velocity = vecDir * ( pev->dmg * 10 ) + Vector( 0, 0, 60 );
+			pOther->pev->velocity = pev->velocity.Normalize() * ( pev->dmg * 10 ) + Vector( 0, 0, 60 );
 		}
 		ApplyMultiDamage( pev, pevOwner );
 
@@ -322,7 +324,7 @@ void CPlantWallop :: WallopTouch( CBaseEntity *pOther )
 	else if ( !ENTINDEX( pOther->edict() ) )
 	{
 		// the world: vanish into the sky
-		Vector vecEnd = pev->origin + pev->velocity;
+		Vector vecEnd = pev->velocity + pev->origin;
 		const char *pTextureName = TRACE_TEXTURE( ENT( pOther->pev ), pev->origin, vecEnd );
 		if ( !strcmp( pTextureName, "sky" ) )
 		{
@@ -450,7 +452,7 @@ void CNAPlantLight :: Think( void )
 
 				TraceResult tr;
 				UTIL_TraceLine( vecSrc, pEntity->pev->origin, dont_ignore_monsters, ENT(pev), &tr );
-				if ( tr.flFraction >= 1.0 || tr.pHit == pEntity->edict() )
+				if ( tr.flFraction >= 1 || tr.pHit == pEntity->edict() )
 				{
 					m_hWallop = CBaseEntity::Create( "plant_wallop", vecSrc, g_vecZero, edict() );
 					m_hWallop->pev->enemy = pEntity->edict();
