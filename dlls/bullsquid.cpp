@@ -26,6 +26,7 @@
 #include	"decals.h"
 #include	"soundent.h"
 #include	"game.h"
+#include	"weapons.h"
 
 #define		SQUID_SPRINT_DIST	256 // how close the squid has to get before starting to sprint and refusing to swerve
 
@@ -59,6 +60,10 @@ enum
 class CSquidSpit : public CBaseEntity
 {
 public:
+	const char *GetKillDesc( void ) { return "unknown molecular acid"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "corroded"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupOf( iHitGroup ); }
+
 	void Spawn( void );
 
 	static void Shoot( entvars_t *pevOwner, Vector vecStart, Vector vecVelocity );
@@ -169,7 +174,11 @@ void CSquidSpit :: Touch ( CBaseEntity *pOther )
 	}
 	else
 	{
-		pOther->TakeDamage ( pev, pev, gSkillData.bullsquidDmgSpit, DMG_GENERIC );
+		// acid damage where the spit hit, credited to the bullsquid
+		TraceResult trHit = UTIL_GetGlobalTrace();
+		ClearMultiDamage();
+		pOther->TraceAttack( VARS( pev->owner ), gSkillData.bullsquidDmgSpit, pev->velocity.Normalize(), &trHit, DMG_ACID );
+		ApplyMultiDamage( pev, VARS( pev->owner ) );
 	}
 
 	SetThink ( SUB_Remove );
@@ -189,6 +198,11 @@ void CSquidSpit :: Touch ( CBaseEntity *pOther )
 class CBullsquid : public CBaseMonster
 {
 public:
+	const char *GetKillDesc( void ) { return "a bullsquid"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "whacked"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+	int  GetBattlePower( void );
+
 	void Spawn( void );
 	void Precache( void );
 	void SetYawSpeed( void );
@@ -276,6 +290,14 @@ int CBullsquid::IRelationship ( CBaseEntity *pTarget )
 	}
 
 	return CBaseMonster :: IRelationship ( pTarget );
+}
+
+//=========================================================
+// GetBattlePower - the target ID's rating of this monster
+//=========================================================
+int CBullsquid :: GetBattlePower( void )
+{
+	return ( pev->max_health * 0.1 ) * ( gSkillData.bullsquidDmgWhip + gSkillData.bullsquidDmgSpit );
 }
 
 //=========================================================
@@ -539,7 +561,10 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			// we should be able to read the position of bones at runtime for this info.
 			vecSpitOffset = ( gpGlobals->v_right * 8 + gpGlobals->v_forward * 37 + gpGlobals->v_up * 23 );		
 			vecSpitOffset = ( pev->origin + vecSpitOffset );
-			vecSpitDir = ( ( m_hEnemy->pev->origin + m_hEnemy->pev->view_ofs ) - vecSpitOffset ).Normalize();
+			if ( m_hEnemy != NULL )
+				vecSpitDir = ( ( m_hEnemy->pev->origin + m_hEnemy->pev->view_ofs ) - vecSpitOffset ).Normalize();
+			else
+				vecSpitDir = ( ( m_vecEnemyLKP + Vector( 0, 0, 36 ) ) - vecSpitOffset ).Normalize();	// the enemy is gone: spit where it was seen
 
 			vecSpitDir.x += RANDOM_FLOAT( -0.05, 0.05 );
 			vecSpitDir.y += RANDOM_FLOAT( -0.05, 0.05 );

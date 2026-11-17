@@ -232,6 +232,10 @@ SOURCE=.\battery.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\bloodspray.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\cdll_int.cpp
 # End Source File
 # Begin Source File
@@ -240,11 +244,19 @@ SOURCE=.\com_weapons.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\damagefx.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\death.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\demo.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\effects.cpp
 # End Source File
 # Begin Source File
 
@@ -300,6 +312,10 @@ SOURCE=.\hud_update.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\ident.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\in_camera.cpp
 # End Source File
 # Begin Source File
@@ -345,7 +361,15 @@ SOURCE=..\pm_shared\pm_shared.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\rain.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\saytext.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\sphere.cpp
 # End Source File
 # Begin Source File
 
@@ -366,6 +390,10 @@ SOURCE=.\StudioModelRenderer.cpp
 # Begin Source File
 
 SOURCE=.\text_message.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\tractorbeam.cpp
 # End Source File
 # Begin Source File
 

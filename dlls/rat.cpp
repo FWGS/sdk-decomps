@@ -31,6 +31,7 @@ class CRat : public CBaseMonster
 public:
 	void Spawn( void );
 	void Precache( void );
+	int  HeatSignature( void ) { return 0; }
 	void SetYawSpeed( void );
 	int  Classify ( void );
 };
