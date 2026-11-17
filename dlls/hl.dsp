@@ -320,6 +320,10 @@ SOURCE=.\func_tank.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\func_turret.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\game.cpp
 # End Source File
 # Begin Source File
@@ -669,10 +673,6 @@ SOURCE=.\xen.cpp
 # Begin Source File
 
 SOURCE=.\zombie.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\zz_linkstubs.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"

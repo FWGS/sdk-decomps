@@ -1038,7 +1038,3 @@ void CFuncTankControls::Spawn( void )
 
 	CBaseEntity::Spawn();
 }
-
-// a stand-in until this file has the real table: 17 firing cones by "accuracy" choice (none, 1 to 10
-// degrees, the four legacy cones, 15 and 20 degrees), filled at start-up; beams.cpp reads it
-float gTankAccuracy[17];

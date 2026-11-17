@@ -27,7 +27,7 @@
 #include "weapons.h"
 #include "decals.h"
 
-extern float gTankAccuracy[];	// defined in func_tank.cpp, name ours: firing cones by "accuracy" choice
+extern float gTankAccuracy[];	// defined in func_turret.cpp, name ours: firing cones by "accuracy" choice
 
 
 //=========================================================
