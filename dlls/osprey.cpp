@@ -1130,8 +1130,8 @@ CBaseMonster *COspreyAI :: MakeGrunt( Vector vecSrc )
 			pGrunt->pev->velocity = Vector( 0, 0, RANDOM_FLOAT( -196, -128 ) );
 			pGrunt->SetActivity( ACT_GLIDE );
 			pGrunt->m_vecLastPosition = tr.vecEndPos;
-			// fgd "Dont drop weapon" (1024) and 8
-			pGrunt->pev->spawnflags |= pev->spawnflags & ( 1024 | 8 );
+			// the osprey's "Dont drop weapon" (1024) and "Ignore Player" go to its grunts
+			pGrunt->pev->spawnflags |= pev->spawnflags & ( 1024 | SF_MONSTER_IGNOREPLAYER );
 
 			CBeam *pBeam = CBeam::BeamCreate( "sprites/rope.spr", 10 );
 			pBeam->PointEntInit( vecSrc + Vector(0,0,112), pGrunt->entindex() );
