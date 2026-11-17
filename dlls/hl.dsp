@@ -192,6 +192,10 @@ SOURCE=.\bigmomma.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\black_hole.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\bloater.cpp
 # End Source File
 # Begin Source File
