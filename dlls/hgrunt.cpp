@@ -62,6 +62,18 @@ extern DLL_GLOBAL int		g_iSkillLevel;
 #define HGRUNT_HANDGRENADE			( 1 << 1)
 #define HGRUNT_GRENADELAUNCHER		( 1 << 2)
 #define HGRUNT_SHOTGUN				( 1 << 3)
+#define HGRUNT_BLASTGUN				( 1 << 4)	// "Blast Gun": one explosive slug (names ours)
+#define HGRUNT_MULTIBLAST			( 1 << 5)	// "Multi Blast": explosive buckshot
+#define HGRUNT_FIREGRENADES			( 1 << 6)	// incendiary grenades; with the next, plasma bombs
+#define HGRUNT_ENERGYGRENADES		( 1 << 7)	// EMP (hand) or laser blast (launcher) grenades
+
+// the grenades' spawnflags, as ggrenade.cpp reads them (names ours)
+#define SF_GRENADE_INCENDIARY		0x0001
+#define SF_GRENADE_FLAMES			0x0002
+#define SF_GRENADE_BLASTSPHERE		0x0008
+#define SF_GRENADE_ENERGY			0x0010
+
+#define SF_GRUNT_NODROP				1024	// "Dont drop weapon" (name ours)
 
 #define HEAD_GROUP					1
 #define HEAD_GRUNT					0
@@ -123,6 +135,12 @@ enum
 class CHGrunt : public CSquadMonster
 {
 public:
+	const char *GetKillDesc( void ) { return "a grunt"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "shot"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+	BOOL CanBeGrenaded( int fLauncher ) { return fLauncher || CBaseEntity::CanBeGrenaded( fLauncher ); }
+	float GetHoldDistance( void ) { return CBaseEntity::GetHoldDistance() * 0.5; }
+
 	void Spawn( void );
 	void Precache( void );
 	void SetYawSpeed ( void );
@@ -157,6 +175,7 @@ public:
 	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
 
 	int IRelationship ( CBaseEntity *pTarget );
+	int GetBattlePower( void );
 
 	BOOL FOkToSpeak( void );
 	void JustSpoke( void );
@@ -272,6 +291,29 @@ int CHGrunt::IRelationship ( CBaseEntity *pTarget )
 }
 
 //=========================================================
+// GetBattlePower - the target ID's rating of this monster
+//=========================================================
+int CHGrunt :: GetBattlePower( void )
+{
+	float flPower;
+
+	if ( FBitSet( pev->weapons, HGRUNT_9MMAR ) )
+		flPower = gSkillData.monDmgMP5 * 6;
+	else
+		flPower = gSkillData.hgruntShotgunPellets * gSkillData.plrDmgBuckshot * 3;
+
+	flPower = flPower * 1.25 + gSkillData.hgruntDmgKick;
+
+	// sic: the launcher counts the hand grenade's damage and the other way round
+	if ( FBitSet( pev->weapons, HGRUNT_GRENADELAUNCHER ) )
+		flPower += gSkillData.plrDmgHandGrenade * 0.25;
+	else if ( FBitSet( pev->weapons, HGRUNT_HANDGRENADE ) )
+		flPower += gSkillData.plrDmgM203Grenade * 0.1667;
+
+	return flPower * ( pev->max_health * 0.1 );
+}
+
+//=========================================================
 // GibMonster - make gun fly through the air.
 //=========================================================
 void CHGrunt :: GibMonster ( void )
@@ -279,12 +321,12 @@ void CHGrunt :: GibMonster ( void )
 	Vector	vecGunPos;
 	Vector	vecGunAngles;
 
-	if ( GetBodygroup( 2 ) != 2 )
+	if ( GetBodygroup( 2 ) != 2 && !( pev->spawnflags & SF_GRUNT_NODROP ) )
 	{// throw a gun if the grunt has one
 		GetAttachment( 0, vecGunPos, vecGunAngles );
 		
 		CBaseEntity *pGun;
-		if (FBitSet( pev->weapons, HGRUNT_SHOTGUN ))
+		if (FBitSet( pev->weapons, HGRUNT_SHOTGUN | HGRUNT_BLASTGUN | HGRUNT_MULTIBLAST ))
 		{
 			pGun = DropItem( "weapon_shotgun", vecGunPos, vecGunAngles );
 		}
@@ -309,6 +351,7 @@ void CHGrunt :: GibMonster ( void )
 		}
 	}
 
+	CGib::SpawnModelHeadGib( pev, "models/gib_hgrunt.mdl" );
 	CBaseMonster :: GibMonster();
 }
 
@@ -491,19 +534,17 @@ BOOL CHGrunt :: CheckRangeAttack2 ( float flDot, float flDist )
 		return m_fThrowGrenade;
 	}
 
-	if ( !FBitSet ( m_hEnemy->pev->flags, FL_ONGROUND ) && m_hEnemy->pev->waterlevel == 0 && m_vecEnemyLKP.z > pev->absmax.z  )
-	{
-		//!!!BUGBUG - we should make this check movetype and make sure it isn't FLY? Players who jump a lot are unlikely to 
-		// be grenaded.
-		// don't throw grenades at anything that isn't on the ground!
-		m_fThrowGrenade = FALSE;
-		return m_fThrowGrenade;
-	}
-	
 	Vector vecTarget;
 
 	if (FBitSet( pev->weapons, HGRUNT_HANDGRENADE))
 	{
+		// the enemy decides whether a grenade can reach it
+		if ( !m_hEnemy->CanBeGrenaded( FALSE ) )
+		{
+			m_fThrowGrenade = FALSE;
+			return m_fThrowGrenade;
+		}
+
 		// find feet
 		if (RANDOM_LONG(0,1))
 		{
@@ -521,6 +562,12 @@ BOOL CHGrunt :: CheckRangeAttack2 ( float flDot, float flDist )
 	}
 	else
 	{
+		if ( !m_hEnemy->CanBeGrenaded( TRUE ) )
+		{
+			m_fThrowGrenade = FALSE;
+			return m_fThrowGrenade;
+		}
+
 		// find target
 		// vecTarget = m_hEnemy->BodyTarget( pev->origin );
 		vecTarget = m_vecEnemyLKP + (m_hEnemy->BodyTarget( pev->origin ) - m_hEnemy->pev->origin);
@@ -825,7 +872,20 @@ void CHGrunt :: Shotgun ( void )
 
 	Vector	vecShellVelocity = gpGlobals->v_right * RANDOM_FLOAT(40,90) + gpGlobals->v_up * RANDOM_FLOAT(75,200) + gpGlobals->v_forward * RANDOM_FLOAT(-40, 40);
 	EjectBrass ( vecShootOrigin - vecShootDir * 24, vecShellVelocity, pev->angles.y, m_iShotgunShell, TE_BOUNCE_SHOTSHELL); 
-	FireBullets(gSkillData.hgruntShotgunPellets, vecShootOrigin, vecShootDir, VECTOR_CONE_15DEGREES, 2048, BULLET_PLAYER_BUCKSHOT, 0 ); // shoot +-7.5 degrees
+
+	if ( FBitSet( pev->weapons, HGRUNT_BLASTGUN ) )
+	{
+		// one slug with all the pellets' damage
+		FireBulletsExplosiveMonster( 1, vecShootOrigin, vecShootDir, VECTOR_CONE_3DEGREES, 2048, gSkillData.hgruntShotgunPellets * gSkillData.plrDmgBuckshot, pev );
+	}
+	else if ( FBitSet( pev->weapons, HGRUNT_MULTIBLAST ) )
+	{
+		FireBulletsExplosiveMonster( gSkillData.hgruntShotgunPellets, vecShootOrigin, vecShootDir, VECTOR_CONE_15DEGREES, 2048, gSkillData.plrDmgBuckshot, pev );
+	}
+	else
+	{
+		FireBullets(gSkillData.hgruntShotgunPellets, vecShootOrigin, vecShootDir, VECTOR_CONE_15DEGREES, 2048, BULLET_MONSTER_BUCKSHOT, 0, 0, NULL ); // shoot +-7.5 degrees
+	}
 
 	pev->effects |= EF_MUZZLEFLASH;
 	
@@ -847,6 +907,7 @@ void CHGrunt :: HandleAnimEvent( MonsterEvent_t *pEvent )
 	switch( pEvent->event )
 	{
 		case HGRUNT_AE_DROP_GUN:
+			if ( !HasSpawnFlag( SF_GRUNT_NODROP ) )
 			{
 			Vector	vecGunPos;
 			Vector	vecGunAngles;
@@ -857,7 +918,7 @@ void CHGrunt :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			SetBodygroup( GUN_GROUP, GUN_NONE );
 
 			// now spawn a gun.
-			if (FBitSet( pev->weapons, HGRUNT_SHOTGUN ))
+			if (FBitSet( pev->weapons, HGRUNT_SHOTGUN | HGRUNT_BLASTGUN | HGRUNT_MULTIBLAST ))
 			{
 				 DropItem( "weapon_shotgun", vecGunPos, vecGunAngles );
 			}
@@ -883,7 +944,32 @@ void CHGrunt :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		{
 			UTIL_MakeVectors( pev->angles );
 			// CGrenade::ShootTimed( pev, pev->origin + gpGlobals->v_forward * 34 + Vector (0, 0, 32), m_vecTossVelocity, 3.5 );
-			CGrenade::ShootTimed( pev, GetGunPosition(), m_vecTossVelocity, 3.5 );
+			CGrenade *pGrenade = CGrenade::ShootTimed( pev, GetGunPosition(), m_vecTossVelocity, 3.5 );
+
+			if ( FBitSet( pev->weapons, HGRUNT_FIREGRENADES ) )
+			{
+				if ( FBitSet( pev->weapons, HGRUNT_ENERGYGRENADES ) )
+				{
+					pGrenade->pev->spawnflags |= SF_GRENADE_INCENDIARY | SF_GRENADE_BLASTSPHERE;
+					pGrenade->m_bitsDamageInflict = DMG_BURN | DMG_BLAST;
+					pGrenade->pev->rendercolor = Vector( 255, 64, 0 );
+					pGrenade->m_iszKillDesc = MAKE_STRING( "a plasma bomb" );
+				}
+				else
+				{
+					pGrenade->pev->spawnflags |= SF_GRENADE_INCENDIARY | SF_GRENADE_FLAMES;
+					pGrenade->pev->dmg *= 0.5;
+					pGrenade->m_iszKillDesc = MAKE_STRING( "an incendiary grenade" );
+				}
+			}
+			else if ( FBitSet( pev->weapons, HGRUNT_ENERGYGRENADES ) )
+			{
+				pGrenade->pev->spawnflags |= SF_GRENADE_ENERGY;
+				pGrenade->pev->rendercolor = Vector( 128, 192, 255 );
+				pGrenade->m_bitsDamageInflict = DMG_SHOCK | DMG_NEVERGIB;
+				pGrenade->m_flDelay = 2;
+				pGrenade->m_iszKillDesc = MAKE_STRING( "an EMP grenade" );
+			}
 
 			m_fThrowGrenade = FALSE;
 			m_flNextGrenadeCheck = gpGlobals->time + 6;// wait six seconds before even looking again to see if a grenade can be thrown.
@@ -894,19 +980,67 @@ void CHGrunt :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		case HGRUNT_AE_GREN_LAUNCH:
 		{
 			EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/glauncher.wav", 0.8, ATTN_NORM);
-			CGrenade::ShootContact( pev, GetGunPosition(), m_vecTossVelocity );
+			CGrenade *pGrenade = CGrenade::ShootContact( pev, GetGunPosition(), m_vecTossVelocity );
+			pGrenade->m_iszKillDesc = MAKE_STRING( "a contact grenade" );
+
+			if ( FBitSet( pev->weapons, HGRUNT_FIREGRENADES ) )
+			{
+				if ( FBitSet( pev->weapons, HGRUNT_ENERGYGRENADES ) )
+				{
+					pGrenade->pev->spawnflags |= SF_GRENADE_INCENDIARY | SF_GRENADE_BLASTSPHERE;
+					pGrenade->m_bitsDamageInflict = DMG_BURN | DMG_BLAST;
+					pGrenade->pev->rendercolor = Vector( 255, 64, 0 );
+					pGrenade->m_iszKillDesc = MAKE_STRING( "a plasma bomb" );
+				}
+				else
+				{
+					pGrenade->pev->spawnflags |= SF_GRENADE_INCENDIARY | SF_GRENADE_FLAMES;
+					pGrenade->pev->dmg *= 0.5;
+					pGrenade->m_iszKillDesc = MAKE_STRING( "an incendiary contact grenade" );
+				}
+			}
+			else if ( FBitSet( pev->weapons, HGRUNT_ENERGYGRENADES ) )
+			{
+				pGrenade->pev->spawnflags |= SF_GRENADE_ENERGY;
+				pGrenade->pev->rendercolor = Vector( 255, 96, 96 );
+				pGrenade->m_flDelay = 1;
+				pGrenade->m_iszKillDesc = MAKE_STRING( "a laser blast grenade" );
+			}
+
 			m_fThrowGrenade = FALSE;
-			if (g_iSkillLevel == SKILL_HARD)
-				m_flNextGrenadeCheck = gpGlobals->time + RANDOM_FLOAT( 2, 5 );// wait a random amount of time before shooting again
-			else
-				m_flNextGrenadeCheck = gpGlobals->time + 6;// wait six seconds before even looking again to see if a grenade can be thrown.
+			m_flNextGrenadeCheck = gpGlobals->time + RANDOM_FLOAT( 2, 5 );// wait a random amount of time before shooting again
 		}
 		break;
 
 		case HGRUNT_AE_GREN_DROP:
 		{
 			UTIL_MakeVectors( pev->angles );
-			CGrenade::ShootTimed( pev, pev->origin + gpGlobals->v_forward * 17 - gpGlobals->v_right * 27 + gpGlobals->v_up * 6, g_vecZero, 3 );
+			CGrenade *pGrenade = CGrenade::ShootTimed( pev, pev->origin + gpGlobals->v_forward * 17 - gpGlobals->v_right * 27 + gpGlobals->v_up * 6, g_vecZero, 3 );
+
+			if ( FBitSet( pev->weapons, HGRUNT_FIREGRENADES ) )
+			{
+				if ( FBitSet( pev->weapons, HGRUNT_ENERGYGRENADES ) )
+				{
+					pGrenade->pev->spawnflags |= SF_GRENADE_INCENDIARY | SF_GRENADE_BLASTSPHERE;
+					pGrenade->m_bitsDamageInflict = DMG_BURN | DMG_BLAST;
+					pGrenade->pev->rendercolor = Vector( 255, 64, 0 );
+					pGrenade->m_iszKillDesc = MAKE_STRING( "a plasma bomb" );
+				}
+				else
+				{
+					pGrenade->pev->spawnflags |= SF_GRENADE_INCENDIARY | SF_GRENADE_FLAMES;
+					pGrenade->m_iszKillDesc = MAKE_STRING( "an incenciary grenade" );	// sic
+				}
+			}
+			else if ( FBitSet( pev->weapons, HGRUNT_ENERGYGRENADES ) )
+			{
+				pGrenade->pev->spawnflags |= SF_GRENADE_ENERGY;
+				pGrenade->pev->rendercolor = Vector( 128, 192, 255 );
+				pGrenade->m_bitsDamageInflict = DMG_SHOCK | DMG_NEVERGIB;
+				pGrenade->m_flDelay = 2;
+				pGrenade->pev->dmg *= 0.5;
+				pGrenade->m_iszKillDesc = MAKE_STRING( "an EMP grenade" );
+			}
 		}
 		break;
 
@@ -1008,8 +1142,40 @@ void CHGrunt :: Spawn()
 		// pev->weapons = HGRUNT_SHOTGUN;
 		// pev->weapons = HGRUNT_9MMAR | HGRUNT_GRENADELAUNCHER;
 	}
+	else if (pev->weapons == -1)
+	{
+		// random weapons
+		int iGun = HGRUNT_9MMAR;
+		switch ( RANDOM_LONG( 0, 3 ) )
+		{
+		case 1:	iGun = HGRUNT_SHOTGUN;		break;
+		case 2:	iGun = HGRUNT_BLASTGUN;		break;
+		case 3:	iGun = HGRUNT_MULTIBLAST;	break;
+		}
 
-	if (FBitSet( pev->weapons, HGRUNT_SHOTGUN ))
+		int iExtra;
+		switch ( RANDOM_LONG( 0, 2 ) )
+		{
+		case 1:	iExtra = HGRUNT_HANDGRENADE;		break;
+		case 2:	iExtra = HGRUNT_GRENADELAUNCHER;	break;
+		default:	iExtra = 0;						break;
+		}
+
+		if ( iExtra )
+		{
+			if ( RANDOM_FLOAT( 0, 1 ) > 0.5 )
+				iExtra |= HGRUNT_FIREGRENADES;
+			if ( iExtra && RANDOM_FLOAT( 0, 1 ) > 0.5 )
+				iExtra |= HGRUNT_ENERGYGRENADES;
+		}
+
+		if ( iExtra & HGRUNT_GRENADELAUNCHER )
+			pev->weapons = iExtra | HGRUNT_9MMAR;	// the launcher needs the 9mmAR
+		else
+			pev->weapons = iExtra | iGun;
+	}
+
+	if (FBitSet( pev->weapons, HGRUNT_SHOTGUN | HGRUNT_BLASTGUN | HGRUNT_MULTIBLAST ))
 	{
 		SetBodygroup( GUN_GROUP, GUN_SHOTGUN );
 		m_cClipSize		= 8;
@@ -1025,7 +1191,7 @@ void CHGrunt :: Spawn()
 	else
 		pev->skin = 1;	// dark skin
 
-	if (FBitSet( pev->weapons, HGRUNT_SHOTGUN ))
+	if (FBitSet( pev->weapons, HGRUNT_SHOTGUN | HGRUNT_BLASTGUN | HGRUNT_MULTIBLAST ))
 	{
 		SetBodygroup( HEAD_GROUP, HEAD_SHOTGUN);
 	}
@@ -1046,6 +1212,7 @@ void CHGrunt :: Spawn()
 void CHGrunt :: Precache()
 {
 	PRECACHE_MODEL("models/hgrunt.mdl");
+	PRECACHE_MODEL("models/gib_hgrunt.mdl");
 
 	PRECACHE_SOUND( "hgrunt/gr_mgun1.wav" );
 	PRECACHE_SOUND( "hgrunt/gr_mgun2.wav" );
@@ -2095,6 +2262,11 @@ Schedule_t *CHGrunt :: GetSchedule( void )
 				//!!!KELLY - this individual just realized he's out of bullet ammo. 
 				// He's going to try to find cover to run to and reload, but rarely, if 
 				// none is available, he'll drop and reload in the open here. 
+				if ( HasConditions( bits_COND_CAN_RANGE_ATTACK2 ) && OccupySlot( bits_SLOTS_HGRUNT_GRENADE ) )
+				{
+					// a grenade first, if he can
+					return GetScheduleOfType( SCHED_RANGE_ATTACK2 );
+				}
 				return GetScheduleOfType ( SCHED_GRUNT_COVER_AND_RELOAD );
 			}
 			
@@ -2113,9 +2285,9 @@ Schedule_t *CHGrunt :: GetSchedule( void )
 					//!!!KELLY - this grunt was hit and is going to run to cover.
 					if (FOkToSpeak()) // && RANDOM_LONG(0,1))
 					{
-						//SENTENCEG_PlayRndSz( ENT(pev), "HG_COVER", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch);
+						SENTENCEG_PlayRndSz( ENT(pev), "HG_COVER", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch);
 						m_iSentence = HGRUNT_SENT_COVER;
-						//JustSpoke();
+						JustSpoke();
 					}
 					return GetScheduleOfType( SCHED_TAKE_COVER_FROM_ENEMY );
 				}
@@ -2131,10 +2303,11 @@ Schedule_t *CHGrunt :: GetSchedule( void )
 			}
 // can grenade launch
 
-			else if ( FBitSet( pev->weapons, HGRUNT_GRENADELAUNCHER) && HasConditions ( bits_COND_CAN_RANGE_ATTACK2 ) && OccupySlot( bits_SLOTS_HGRUNT_GRENADE ) )
+			else if ( HasConditions ( bits_COND_CAN_RANGE_ATTACK2 ) && OccupySlot( bits_SLOTS_HGRUNT_GRENADE ) )
 			{
-				// shoot a grenade if you can
-				return GetScheduleOfType( SCHED_RANGE_ATTACK2 );
+				// shoot a grenade if you can; throw one only at what wants grenades
+				if ( FBitSet( pev->weapons, HGRUNT_GRENADELAUNCHER) || m_hEnemy->IsGrenadeTarget() )
+					return GetScheduleOfType( SCHED_RANGE_ATTACK2 );
 			}
 // can shoot
 			else if ( HasConditions ( bits_COND_CAN_RANGE_ATTACK1 ) )
@@ -2228,7 +2401,7 @@ Schedule_t* CHGrunt :: GetScheduleOfType ( int Type )
 		{
 			if ( InSquad() )
 			{
-				if ( g_iSkillLevel == SKILL_HARD && HasConditions( bits_COND_CAN_RANGE_ATTACK2 ) && OccupySlot( bits_SLOTS_HGRUNT_GRENADE ) )
+				if ( HasConditions( bits_COND_CAN_RANGE_ATTACK2 ) && OccupySlot( bits_SLOTS_HGRUNT_GRENADE ) )
 				{
 					if (FOkToSpeak())
 					{
@@ -2411,20 +2584,36 @@ void CHGruntRepel::RepelUse ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE
 		return NULL;
 	*/
 
-	CBaseEntity *pEntity = Create( "monster_human_grunt", pev->origin, pev->angles );
-	CBaseMonster *pGrunt = pEntity->MyMonsterPointer( );
-	pGrunt->pev->movetype = MOVETYPE_FLY;
-	pGrunt->pev->velocity = Vector( 0, 0, RANDOM_FLOAT( -196, -128 ) );
-	pGrunt->SetActivity( ACT_GLIDE );
-	// UNDONE: position?
-	pGrunt->m_vecLastPosition = tr.vecEndPos;
+	// the grunt gets the repel's weapons, owner, render fields and some spawnflags
+	edict_t *pent = CREATE_NAMED_ENTITY( MAKE_STRING( "monster_human_grunt" ) );
+	if ( pent )
+	{
+		CBaseMonster *pGrunt = CBaseEntity::Instance( pent )->MyMonsterPointer( );
+		pGrunt->pev->origin = pev->origin;
+		pGrunt->pev->angles = pev->angles;
+		pGrunt->pev->owner = pev->owner;
+		pGrunt->pev->weapons = pev->weapons;
+		pGrunt->Spawn( );
 
-	CBeam *pBeam = CBeam::BeamCreate( "sprites/rope.spr", 10 );
-	pBeam->PointEntInit( pev->origin + Vector(0,0,112), pGrunt->entindex() );
-	pBeam->SetFlags( BEAM_FSOLID );
-	pBeam->SetColor( 255, 255, 255 );
-	pBeam->SetThink( SUB_Remove );
-	pBeam->pev->nextthink = gpGlobals->time + -4096.0 * tr.flFraction / pGrunt->pev->velocity.z + 0.5;
+		pGrunt->pev->movetype = MOVETYPE_FLY;
+		pGrunt->pev->velocity = Vector( 0, 0, RANDOM_FLOAT( -196, -128 ) );
+		pGrunt->SetActivity( ACT_GLIDE );
+		// UNDONE: position?
+		pGrunt->m_vecLastPosition = tr.vecEndPos;
+
+		pGrunt->pev->renderfx = pev->renderfx;
+		pGrunt->pev->rendermode = pev->rendermode;
+		pGrunt->pev->renderamt = pev->renderamt;
+		pGrunt->pev->rendercolor = pev->rendercolor;
+		pGrunt->pev->spawnflags |= pev->spawnflags & ( SF_MONSTER_HITMONSTERCLIP | SF_MONSTER_IGNOREPLAYER | 256 | 512 | SF_GRUNT_NODROP );
+
+		CBeam *pBeam = CBeam::BeamCreate( "sprites/rope.spr", 10 );
+		pBeam->PointEntInit( pev->origin + Vector(0,0,112), pGrunt->entindex() );
+		pBeam->SetFlags( BEAM_FSOLID );
+		pBeam->SetColor( 255, 255, 255 );
+		pBeam->SetThink( SUB_Remove );
+		pBeam->pev->nextthink = gpGlobals->time + -4096.0 * tr.flFraction / pGrunt->pev->velocity.z + 0.5;
+	}
 
 	UTIL_Remove( this );
 }
