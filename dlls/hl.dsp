@@ -272,6 +272,10 @@ SOURCE=.\flyingmonster.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\flyingobject.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\func_break.cpp
 # End Source File
 # Begin Source File
@@ -657,6 +661,10 @@ SOURCE=.\extdll.h
 # Begin Source File
 
 SOURCE=.\flyingmonster.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\flyingobject.h
 # End Source File
 # Begin Source File
 
