@@ -280,6 +280,14 @@ SOURCE=.\fire.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\fireball.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\flamethrower.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\flyingmonster.cpp
 # End Source File
 # Begin Source File
