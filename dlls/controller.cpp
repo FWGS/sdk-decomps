@@ -41,6 +41,9 @@
 class CController : public CSquadMonster
 {
 public:
+	const char *GetKillDesc( void ) { return "an alien controller"; }
+	int  GetBattlePower( void );
+
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
@@ -161,6 +164,16 @@ int	CController :: Classify ( void )
 }
 
 //=========================================================
+// GetBattlePower - the target ID's rating of this monster
+//=========================================================
+int CController :: GetBattlePower( void )
+{
+	float flPower = gSkillData.controllerDmgBall * 5;
+	flPower += gSkillData.controllerDmgZap;
+	return flPower * ( pev->max_health * 0.1 );
+}
+
+//=========================================================
 // SetYawSpeed - allows each sequence to have a different
 // turn rate associated with it.
 //=========================================================
@@ -209,6 +222,10 @@ void CController::Killed( entvars_t *pevAttacker, int iGib )
 		m_pBall[1]->SUB_StartFadeOut();
 		m_pBall[1] = NULL;
 	}
+
+	// fall to the ground
+	pev->movetype = MOVETYPE_TOSS;
+	pev->flags &= ~FL_FLY;
 
 	CSquadMonster::Killed( pevAttacker, iGib );
 }
@@ -812,6 +829,10 @@ BOOL CController :: CheckRangeAttack2 ( float flDot, float flDist )
 
 BOOL CController :: CheckMeleeAttack1 ( float flDot, float flDist )
 {
+	if ( flDot > 0.5 && flDist <= 64 )
+	{
+		return TRUE;
+	}
 	return FALSE;
 }
 
@@ -820,15 +841,7 @@ void CController :: SetActivity ( Activity NewActivity )
 {
 	CBaseMonster::SetActivity( NewActivity );
 
-	switch ( m_Activity)
-	{
-	case ACT_WALK:
-		m_flGroundSpeed = 100;
-		break;
-	default:
-		m_flGroundSpeed = 100;
-		break;
-	}
+	m_flGroundSpeed = 100;
 }
 
 
@@ -1136,6 +1149,9 @@ void CController::MoveExecute( CBaseEntity *pTargetEnt, const Vector &vecDir, fl
 //=========================================================
 class CControllerHeadBall : public CBaseMonster
 {
+	const char *GetKillDesc( void ) { return "an unknown alien energy weapon"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "zapped"; }
+
 	void Spawn( void );
 	void Precache( void );
 	void EXPORT HuntThink( void );
@@ -1336,6 +1352,9 @@ void CControllerHeadBall::BounceTouch( CBaseEntity *pOther )
 
 class CControllerZapBall : public CBaseMonster
 {
+	const char *GetKillDesc( void ) { return "an unknown alien energy weapon"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "zapped"; }
+
 	void Spawn( void );
 	void Precache( void );
 	void EXPORT AnimateThink( void );
@@ -1413,7 +1432,7 @@ void CControllerZapBall::ExplodeTouch( CBaseEntity *pOther )
 
 		ClearMultiDamage( );
 		pOther->TraceAttack(pevOwner, gSkillData.controllerDmgBall, pev->velocity.Normalize(), &tr, DMG_ENERGYBEAM ); 
-		ApplyMultiDamage( pevOwner, pevOwner );
+		ApplyMultiDamage( pev, pevOwner );
 
 		UTIL_EmitAmbientSound( ENT(pev), tr.vecEndPos, "weapons/electro4.wav", 0.3, ATTN_NORM, 0, RANDOM_LONG( 90, 99 ) );
 
