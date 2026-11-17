@@ -264,6 +264,10 @@ SOURCE=.\egon.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\elemental.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\entity_link.cpp
 # End Source File
 # Begin Source File
