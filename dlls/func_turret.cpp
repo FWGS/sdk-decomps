@@ -1672,8 +1672,8 @@ void CRocketShootpoint :: Fire( void )
 				pRocket = CRocket::CreateRocket( pev->origin, UTIL_VecToAngles( ShootSpread( gpGlobals->v_forward, m_spread ) ), pev->owner, pev->rendercolor, 0 );
 			pRocket->m_flSeekTime = gpGlobals->time + m_seekTime;
 			pRocket->pev->speed = pev->speed;
-			pRocket->SetThink( &CRocket::SeekThink );
 			pRocket->m_flFieldOfView = pev->scale;
+			pRocket->SetThink( &CRocket::SeekThink );
 			pRocket->m_iszKillDesc = MAKE_STRING( "a heat-seeking missile" );
 			if ( HasSpawnFlag( SF_SPROCKET_INCENDIARY ) )
 				pRocket->pev->spawnflags |= 1;
@@ -2214,7 +2214,8 @@ void CBeamShootpoint :: FireBeam( void )
 		y = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
 	} while (x*x+y*y > 1);
 
-	m_spread1 = x * m_spread * gpGlobals->v_right + y * m_spread * gpGlobals->v_up;
+	Vector vecSpread = x * m_spread * gpGlobals->v_right + y * m_spread * gpGlobals->v_up;
+	m_spread1 = vecSpread;
 
 	GetBeam();
 	if ( !m_pBeam )
@@ -2228,9 +2229,10 @@ void CBeamShootpoint :: FireBeam( void )
 	if ( pev->netname )
 		GetCharge();
 
-	m_pBeam->m_firePosition = pev->origin + gpGlobals->v_forward + m_spread1;
-	m_pBeam->pev->angles = m_pBeam->m_firePosition;
-	m_pBeam->m_firePosition = m_pBeam->pev->angles;
+	m_pBeam->m_firePosition = gpGlobals->v_forward + pev->origin + m_spread1;
+	CBeamCannon *pBeam = m_pBeam;
+	pBeam->pev->angles = pBeam->m_firePosition;
+	pBeam->m_firePosition = pBeam->pev->angles;
 
 	if ( m_pCharge )
 	{
@@ -2353,7 +2355,7 @@ void CLaserShootpoint :: Fire( void )
 	{
 		UTIL_MakeVectors( pev->angles );
 
-		for ( int i = 0; i < iShots; i++ )
+		while ( iShots-- )
 		{
 			CLaserPulse *pPulse = CLaserPulse::Shoot( pev->origin, pev->owner, pev->rendercolor, m_tracerRate, pev->scale, 0 );
 			if ( m_bulletType == 21 )
@@ -2482,6 +2484,9 @@ void CCannonShootpoint :: Precache( void )
 
 void CCannonShootpoint :: Fire( void )
 {
+	Vector vecDir;
+	TraceResult tr;
+
 	LinkThink();
 
 	pev->nextthink = gpGlobals->time + m_fireRate;
@@ -2492,7 +2497,7 @@ void CCannonShootpoint :: Fire( void )
 			pev->speed = 800;
 
 		UTIL_MakeVectors( pev->angles );
-		Vector vecDir = ShootSpread( gpGlobals->v_forward, m_spread );
+		vecDir = ShootSpread( gpGlobals->v_forward, m_spread );
 
 		CBaseEntity *pShell = CBaseEntity::Create( "cshell", pev->origin, UTIL_VecToAngles( vecDir ), pev->owner );
 		pShell->pev->velocity = vecDir * pev->speed;
@@ -2518,9 +2523,8 @@ void CCannonShootpoint :: Fire( void )
 			pev->dmg = 100;
 
 		UTIL_MakeVectors( pev->angles );
-		Vector vecDir = ShootSpread( gpGlobals->v_forward, m_spread );
+		vecDir = ShootSpread( gpGlobals->v_forward, m_spread );
 
-		TraceResult tr;
 		UTIL_TraceLine( pev->origin, pev->origin + vecDir * 8192, dont_ignore_monsters, pev->owner, &tr );
 
 		CBaseEntity *pShell = CBaseEntity::Create( "cshell", tr.vecEndPos, pev->angles, pev->owner );
