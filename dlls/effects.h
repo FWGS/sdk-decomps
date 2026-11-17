@@ -126,7 +126,6 @@ public:
 			flags = FCAP_DONT_SAVE;
 		return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | flags; 
 	}
-	int		GetOnState( void ) { return !FBitSet( pev->effects, EF_NODRAW ); }
 	const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "an energy beam"; return STRING( m_iszKillDesc ); }
 	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return DamageVerb( DMG_ENERGYBEAM, fGibbed ); }
 
@@ -193,6 +192,7 @@ public:
 		pev->dmgtime = gpGlobals->time - 1;
 		BeamDamage(ptr); 
 	}
+	int		GetOnState( void ) { return !FBitSet( pev->effects, EF_NODRAW ); }
 };
 
 
