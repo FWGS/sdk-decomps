@@ -2484,9 +2484,6 @@ void CCannonShootpoint :: Precache( void )
 
 void CCannonShootpoint :: Fire( void )
 {
-	Vector vecDir;
-	TraceResult tr;
-
 	LinkThink();
 
 	pev->nextthink = gpGlobals->time + m_fireRate;
@@ -2497,7 +2494,7 @@ void CCannonShootpoint :: Fire( void )
 			pev->speed = 800;
 
 		UTIL_MakeVectors( pev->angles );
-		vecDir = ShootSpread( gpGlobals->v_forward, m_spread );
+		Vector vecDir = ShootSpread( gpGlobals->v_forward, m_spread );
 
 		CBaseEntity *pShell = CBaseEntity::Create( "cshell", pev->origin, UTIL_VecToAngles( vecDir ), pev->owner );
 		pShell->pev->velocity = vecDir * pev->speed;
@@ -2523,8 +2520,9 @@ void CCannonShootpoint :: Fire( void )
 			pev->dmg = 100;
 
 		UTIL_MakeVectors( pev->angles );
-		vecDir = ShootSpread( gpGlobals->v_forward, m_spread );
+		Vector vecDir = ShootSpread( gpGlobals->v_forward, m_spread );
 
+		TraceResult tr;
 		UTIL_TraceLine( pev->origin, pev->origin + vecDir * 8192, dont_ignore_monsters, pev->owner, &tr );
 
 		CBaseEntity *pShell = CBaseEntity::Create( "cshell", tr.vecEndPos, pev->angles, pev->owner );
