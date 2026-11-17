@@ -1151,27 +1151,23 @@ int CBeamTurret::IRelationship( CBaseEntity *pTarget )
 	case 1:	// the player
 		if ( pTarget->IsPlayer() || iClass == 14 )
 			return R_NO;
-		break;
+		return R_DL;
 	case 2:	// good guys
 		if ( pTarget->IsPlayer() || iClass == CLASS_HUMAN_PASSIVE || iClass == CLASS_PLAYER_ALLY || iClass == 14 )
 			return R_NO;
-		break;
+		return R_DL;
 	case 3:	// human military
 		if ( iClass == CLASS_HUMAN_MILITARY || iClass == CLASS_MACHINE )
 			return R_NO;
-		break;
+		return R_DL;
 	case 4:	// aliens
 		if ( iClass >= CLASS_ALIEN_MILITARY && iClass <= CLASS_ALIEN_PREDATOR )
 			return R_NO;
-		break;
+		return R_DL;
 	case 5:	// everyone but the player
-		if ( pTarget->IsPlayer() )
-			return R_DL;
-		return R_NO;
+		return pTarget->IsPlayer() ? R_DL : R_NO;
 	case 6:	// everyone but scientists
-		if ( iClass == CLASS_HUMAN_PASSIVE )
-			return R_DL;
-		return R_NO;
+		return ( iClass == CLASS_HUMAN_PASSIVE ) ? R_DL : R_NO;
 	}
 
 	return R_DL;
@@ -1187,7 +1183,7 @@ void CBeamTurret::Spawn( void )
 
 	if ( m_type == BEAMTURRET_SHOTS )
 	{
-		if ( m_shots < 2 )
+		if ( m_shots <= 1 )
 			m_shots = 3;
 		m_shotDur = m_duration / ( m_shots * 2 - 1 );
 	}
@@ -1212,38 +1208,38 @@ void CBeamTurret::Spawn( void )
 
 CBeamCannon *CBeamTurret::GetBeam( void )
 {
-	if ( !m_pBeam )
+	if ( m_pBeam )
+		return m_pBeam;
+
+	edict_t *pent = FIND_ENTITY_BY_TARGETNAME( NULL, STRING(pev->target) );
+	while ( !FNullEnt( pent ) )
 	{
-		edict_t *pent = FIND_ENTITY_BY_TARGETNAME( NULL, STRING(pev->target) );
-		while ( !FNullEnt( pent ) )
+		if ( FClassnameIs( pent, "beam_cannon" ) )
 		{
-			if ( FClassnameIs( pent, "beam_cannon" ) )
-			{
-				m_pBeam = (CBeamCannon *)CBaseEntity::Instance( pent );
-				break;
-			}
-			pent = FIND_ENTITY_BY_TARGETNAME( pent, STRING(pev->target) );
+			m_pBeam = (CBeamCannon *)CBaseEntity::Instance( pent );
+			break;
 		}
-		m_pBeam->pev->spawnflags |= SF_CANNON_DIRECTIONAL;	// sic: no beam_cannon, no check
+		pent = FIND_ENTITY_BY_TARGETNAME( pent, STRING(pev->target) );
 	}
+	m_pBeam->pev->spawnflags |= SF_CANNON_DIRECTIONAL;	// sic: no beam_cannon, no check
 	return m_pBeam;
 }
 
 
 CBeamCharge *CBeamTurret::GetCharge( void )
 {
-	if ( !m_pCharge )
+	if ( m_pCharge )
+		return m_pCharge;
+
+	edict_t *pent = FIND_ENTITY_BY_TARGETNAME( NULL, STRING(pev->netname) );
+	while ( !FNullEnt( pent ) )
 	{
-		edict_t *pent = FIND_ENTITY_BY_TARGETNAME( NULL, STRING(pev->netname) );
-		while ( !FNullEnt( pent ) )
+		if ( FClassnameIs( pent, "beam_charge" ) )
 		{
-			if ( FClassnameIs( pent, "beam_charge" ) )
-			{
-				m_pCharge = (CBeamCharge *)CBaseEntity::Instance( pent );
-				break;
-			}
-			pent = FIND_ENTITY_BY_TARGETNAME( pent, STRING(pev->netname) );
+			m_pCharge = (CBeamCharge *)CBaseEntity::Instance( pent );
+			break;
 		}
+		pent = FIND_ENTITY_BY_TARGETNAME( pent, STRING(pev->netname) );
 	}
 	return m_pCharge;
 }
@@ -1294,8 +1290,9 @@ void CBeamTurret::ActiveThink( void )
 	}
 
 	UTIL_MakeAimVectors( pev->angles );
-	vecDirToEnemy = vecDirToEnemy.Normalize();
-	if ( DotProduct( vecDirToEnemy, gpGlobals->v_forward ) < m_flFiringArc )
+	Vector vecLOS = vecDirToEnemy;
+	vecLOS = vecLOS.Normalize();
+	if ( DotProduct( vecLOS, gpGlobals->v_forward ) < m_flFiringArc )
 	{
 		m_hEnemy = NULL;
 		SetThink( SearchThink );
@@ -1508,7 +1505,7 @@ void CMultiBeam::Spawn( void )
 	}
 	Precache( );
 
-	m_iBeamCount = min( m_iBeamCount, MAX_MULTIBEAMS );
+	m_iBeamCount = min( MAX_MULTIBEAMS, m_iBeamCount );
 	if ( m_flThinkRate < 0 )
 		m_flThinkRate = 0.05;
 
@@ -1584,8 +1581,9 @@ void CMultiBeam::Think( void )
 				m_pBeams[i]->SetStartPos( pStart->pev->origin );
 			if ( pEnd )
 			{
-				m_pBeams[i]->SetEndPos( pEnd->pev->origin );
-				m_pBeams[i]->m_firePosition = m_pBeams[i]->pev->angles;
+				CBeamCannon *pBeam = m_pBeams[i];
+				pBeam->SetEndPos( pEnd->pev->origin );
+				pBeam->m_firePosition = pBeam->pev->angles;
 			}
 		}
 		break;
@@ -1599,8 +1597,9 @@ void CMultiBeam::Think( void )
 				m_pBeams[i]->SetStartPos( pStart->pev->origin );
 			if ( pEnd )
 			{
-				m_pBeams[i]->SetEndPos( pEnd->pev->origin );
-				m_pBeams[i]->m_firePosition = m_pBeams[i]->pev->angles;
+				CBeamCannon *pBeam = m_pBeams[i];
+				pBeam->SetEndPos( pEnd->pev->origin );
+				pBeam->m_firePosition = pBeam->pev->angles;
 			}
 		}
 		break;
@@ -1615,8 +1614,9 @@ void CMultiBeam::Think( void )
 				pEnd = UTIL_FindEntityByTargetname( NULL, STRING(pStart->pev->target) );
 				if ( pEnd )
 				{
-					m_pBeams[i]->SetEndPos( pEnd->pev->origin );
-					m_pBeams[i]->m_firePosition = m_pBeams[i]->pev->angles;
+					CBeamCannon *pBeam = m_pBeams[i];
+					pBeam->SetEndPos( pEnd->pev->origin );
+					pBeam->m_firePosition = pBeam->pev->angles;
 				}
 			}
 		}
@@ -1632,8 +1632,9 @@ void CMultiBeam::Think( void )
 				pStart = UTIL_FindEntityByTargetname( NULL, STRING(pStart->pev->target) );
 				if ( pStart )
 				{
-					m_pBeams[i]->SetEndPos( pStart->pev->origin );
-					m_pBeams[i]->m_firePosition = m_pBeams[i]->pev->angles;
+					CBeamCannon *pBeam = m_pBeams[i];
+					pBeam->SetEndPos( pStart->pev->origin );
+					pBeam->m_firePosition = pBeam->pev->angles;
 				}
 			}
 		}
@@ -1656,8 +1657,9 @@ void CMultiBeam::Think( void )
 				m_pBeams[i]->SetStartPos( pStart->pev->origin );
 			if ( pEnd )
 			{
-				m_pBeams[i]->SetEndPos( pEnd->pev->origin );
-				m_pBeams[i]->m_firePosition = m_pBeams[i]->pev->angles;
+				CBeamCannon *pBeam = m_pBeams[i];
+				pBeam->SetEndPos( pEnd->pev->origin );
+				pBeam->m_firePosition = pBeam->pev->angles;
 			}
 		}
 		break;
