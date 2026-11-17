@@ -42,12 +42,18 @@ extern DLL_GLOBAL int		g_iSkillLevel;
 class CISlave : public CSquadMonster
 {
 public:
+	const char *GetHudName( void ) { return "Alien slave"; }
+	const char *GetKillDesc( void ) { return "an alien slave"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { if ( m_iBeams > 0 ) return DamageVerb( DMG_SHOCK, fGibbed ); return DamageVerb( DMG_SLASH, fGibbed ); }
+	float GetHoldDistance( void ) { return CBaseEntity::GetHoldDistance() * 0.5; }
+
 	void Spawn( void );
 	void Precache( void );
 	void SetYawSpeed( void );
 	int	 ISoundMask( void );
 	int  Classify ( void );
 	int  IRelationship( CBaseEntity *pTarget );
+	int  GetBattlePower( void );
 	void HandleAnimEvent( MonsterEvent_t *pEvent );
 	BOOL CheckRangeAttack1 ( float flDot, float flDist );
 	BOOL CheckRangeAttack2 ( float flDot, float flDist );
@@ -157,6 +163,17 @@ int CISlave::IRelationship( CBaseEntity *pTarget )
 		if ( (pev->spawnflags & SF_MONSTER_WAIT_UNTIL_PROVOKED ) && ! (m_afMemory & bits_MEMORY_PROVOKED ))
 			return R_NO;
 	return CBaseMonster::IRelationship( pTarget );
+}
+
+//=========================================================
+// GetBattlePower - the target ID's rating of this monster
+//=========================================================
+int CISlave :: GetBattlePower( void )
+{
+	float flPower = gSkillData.slaveDmgZap * 1.25;
+	if ( g_iSkillLevel == SKILL_HARD )
+		flPower *= 1.25;	// the zap is faster on hard
+	return ( gSkillData.slaveDmgClaw + flPower ) * ( pev->max_health * 0.1 );
 }
 
 
@@ -380,6 +397,8 @@ void CISlave :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			}
 			if (m_hDead != NULL)
 			{
+				CBaseMonster *pDead = m_hDead->MyMonsterPointer();
+				pDead->ReadyToResurrect( this );	// keeps a fading body
 				WackBeam( -1, m_hDead );
 				WackBeam( 1, m_hDead );
 			}
@@ -399,28 +418,17 @@ void CISlave :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		{
 			ClearBeams( );
 
-			if (m_hDead != NULL)
+			if (m_hDead != NULL && !m_hDead->IsAlive())
 			{
-				Vector vecDest = m_hDead->pev->origin + Vector( 0, 0, 38 );
-				TraceResult trace;
-				UTIL_TraceHull( vecDest, vecDest, dont_ignore_monsters, human_hull, m_hDead->edict(), &trace );
-
-				if ( !trace.fStartSolid )
-				{
-					CBaseEntity *pNew = Create( "monster_alien_slave", m_hDead->pev->origin, m_hDead->pev->angles );
-					CBaseMonster *pNewMonster = pNew->MyMonsterPointer( );
-					pNew->pev->spawnflags |= 1;
-					WackBeam( -1, pNew );
-					WackBeam( 1, pNew );
-					UTIL_Remove( m_hDead );
-					EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "hassault/hw_shoot1.wav", 1, ATTN_NORM, 0, RANDOM_LONG( 130, 160 ) );
-
-					/*
-					CBaseEntity *pEffect = Create( "test_effect", pNew->Center(), pev->angles );
-					pEffect->Use( this, this, USE_ON, 1 );
-					*/
-					break;
-				}
+				// bring it back, glowing
+				CBaseMonster *pDead = m_hDead->MyMonsterPointer();
+				pDead->Resurrect( this );
+				pDead->pev->renderfx = kRenderFxGlowShell;
+				pDead->pev->rendercolor = Vector( 96, 128, 16 );
+				pDead->pev->renderamt = 32;
+				pDead->pev->rendermode = kRenderNormal;
+				m_hDead = NULL;
+				break;
 			}
 			ClearMultiDamage();
 
@@ -467,44 +475,43 @@ BOOL CISlave :: CheckRangeAttack1 ( float flDot, float flDist )
 //=========================================================
 BOOL CISlave :: CheckRangeAttack2 ( float flDot, float flDist )
 {
-	return FALSE;
-
-	if (m_flNextAttack > gpGlobals->time)
-	{
-		return FALSE;
-	}
-
-	m_hDead = NULL;
 	m_iBravery = 0;
 
-	CBaseEntity *pEntity = NULL;
-	while ((pEntity = UTIL_FindEntityByClassname( pEntity, "monster_alien_slave" )) != NULL)
+	// look for a dead ally to bring back
+	if ( ( HasConditions( bits_COND_SEE_DEAD_ALLY ) || m_hDead != NULL ) && m_flNextAttack <= gpGlobals->time )
 	{
-		TraceResult tr;
+		m_hDead = NULL;
 
-		UTIL_TraceLine( EyePosition( ), pEntity->EyePosition( ), ignore_monsters, ENT(pev), &tr );
-		if (tr.flFraction == 1.0 || tr.pHit == pEntity->edict())
+		CBaseEntity *pEntity = NULL;
+		while ((pEntity = UTIL_FindEntityInSphere( pEntity, pev->origin, 768 )) != NULL)
 		{
-			if (pEntity->pev->deadflag == DEAD_DEAD)
+			if ( pEntity->pev->deadflag == DEAD_DEAD && IRelationship( pEntity ) == R_AL )
 			{
-				float d = (pev->origin - pEntity->pev->origin).Length();
-				if (d < flDist)
+				TraceResult tr;
+
+				UTIL_TraceLine( EyePosition( ), pEntity->EyePosition( ), ignore_monsters, ENT(pev), &tr );
+				if (tr.flFraction == 1.0 || tr.pHit == pEntity->edict())
 				{
-					m_hDead = pEntity;
-					flDist = d;
+					float d = (pev->origin - pEntity->pev->origin).Length();
+					if (d < flDist)
+					{
+						m_hDead = pEntity;
+						flDist = d;
+					}
 				}
-				m_iBravery--;
-			}
-			else
-			{
-				m_iBravery++;
 			}
 		}
+
+		if ( m_hDead != NULL )
+		{
+			CBaseMonster *pDead = m_hDead->MyMonsterPointer( );
+			if ( pDead && pDead->ReadyToResurrect( this ) )
+				return TRUE;
+			m_hDead = NULL;
+		}
 	}
-	if (m_hDead != NULL)
-		return TRUE;
-	else
-		return FALSE;
+
+	return FALSE;
 }
 
 
@@ -560,6 +567,7 @@ void CISlave :: Precache()
 	PRECACHE_SOUND("zombie/zo_pain2.wav");
 	PRECACHE_SOUND("headcrab/hc_headbite.wav");
 	PRECACHE_SOUND("weapons/cbar_miss1.wav");
+	PRECACHE_MODEL("models/islave_gibs1.mdl");
 
 	for ( i = 0; i < ARRAYSIZE( pAttackHitSounds ); i++ )
 		PRECACHE_SOUND((char *)pAttackHitSounds[i]);
@@ -663,6 +671,13 @@ Schedule_t *CISlave :: GetSchedule( void )
 			return GetScheduleOfType( SCHED_TAKE_COVER_FROM_BEST_SOUND );
 		if ( pSound->m_iType & bits_SOUND_COMBAT )
 			m_afMemory |= bits_MEMORY_PROVOKED;
+	}
+
+	if ( HasConditions( bits_COND_CAN_RANGE_ATTACK2 ) && m_hDead != NULL )
+	{
+		// revive the dead ally
+		MakeIdealYaw( m_hDead->pev->origin );
+		return GetScheduleOfType( SCHED_RANGE_ATTACK1 );
 	}
 
 	switch (m_MonsterState)
