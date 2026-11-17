@@ -288,6 +288,10 @@ SOURCE=.\func_tank.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\func_turret.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\game.cpp
 # End Source File
 # Begin Source File
