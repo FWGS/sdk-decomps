@@ -1660,8 +1660,9 @@ void CFlakTurret::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
 	CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 600, 0.3 );
 
 	// the shell bursts somewhere within 96 units of the aim point
-	UTIL_MakeVectors( Vector( RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ) ) );
-	Vector vecEnd = gpGlobals->v_forward * RANDOM_FLOAT( 0, 96 ) + vecDirToEnemy;
+	Vector vecAngles = Vector( RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ) );
+	UTIL_MakeVectors( vecAngles );
+	Vector vecEnd = vecDirToEnemy + gpGlobals->v_forward * RANDOM_FLOAT( 0, 96 );
 
 	// warn whoever is near the aim point, at most every 10 seconds
 	if ( pev->pain_finished < gpGlobals->time )
