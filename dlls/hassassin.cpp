@@ -1388,7 +1388,8 @@ void CWallop :: ZapThink( void )
 
 	for ( int i = 0; i < c; i++ )
 	{
-		Vector vecAim = Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ) ).Normalize();
+		Vector vecAim = Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ) );
+		vecAim = vecAim.Normalize();
 
 		TraceResult tr;
 		UTIL_TraceLine( pev->origin, pev->origin + vecAim * pev->speed * 2, dont_ignore_monsters, ENT( pev ), &tr );
