@@ -324,6 +324,15 @@ int EV_HLDM_CheckTracer( int idx, float *vecSrc, float *end, float *forward, flo
 
 		switch( iBulletType )
 		{
+		case BULLET_PLAYER_SOFTGUN:
+			{
+				// a tracer particle flying at 4000 units a second
+				Vector vecDir = Vector( end ) - vecTracerSrc;
+				float flLength = vecDir.Length();
+
+				gEngfuncs.pEfxAPI->R_UserTracerParticle( vecTracerSrc, vecDir.Normalize() * 4000, flLength * 0.00025f, 2, 1.0, 0, NULL );
+			}
+			break;
 		case BULLET_PLAYER_MP5:
 		case BULLET_MONSTER_MP5:
 		case BULLET_MONSTER_9MM:
@@ -1363,6 +1372,7 @@ enum EGON_FIREMODE { FIRE_NARROW, FIRE_WIDE};
 #define	EGON_PRIMARY_VOLUME		450
 #define EGON_BEAM_SPRITE		"sprites/xbeam1.spr"
 #define EGON_FLARE_SPRITE		"sprites/XSpark1.spr"
+#define EGON_AMP_SPRITE			"sprites/amp.spr"	// name ours
 #define EGON_SOUND_OFF			"weapons/egon_off1.wav"
 #define EGON_SOUND_RUN			"weapons/egon_run3.wav"
 #define EGON_SOUND_STARTUP		"weapons/egon_windup2.wav"
@@ -1385,30 +1395,21 @@ void EV_EgonFire( event_args_t *args )
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	iFireState = args->iparam1;
-	iFireMode = args->iparam2;
+	iFireMode = args->iparam2;	// 0 gluon gun, 1 antimatter pulverizer, 2 ion discharge cannon
 	int iStartup = args->bparam1;
 
 
 	if ( iStartup )
-	{
-		if ( iFireMode == FIRE_WIDE )
-			gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, EGON_SOUND_STARTUP, 0.98, ATTN_NORM, 0, 125 );
-		else
-			gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, EGON_SOUND_STARTUP, 0.9, ATTN_NORM, 0, 100 );
-	}
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, EGON_SOUND_STARTUP, 0.98, ATTN_NORM, 0, 125 );
 	else
-	{
-		if ( iFireMode == FIRE_WIDE )
-			gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_STATIC, EGON_SOUND_RUN, 0.98, ATTN_NORM, 0, 125 );
-		else
-			gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_STATIC, EGON_SOUND_RUN, 0.9, ATTN_NORM, 0, 100 );
-	}
+		gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_STATIC, EGON_SOUND_RUN, 0.98, ATTN_NORM, 0, 125 );
 
 	//Only play the weapon anims if I shot it.
 	if ( EV_IsLocal( idx ) )
 		gEngfuncs.pEventAPI->EV_WeaponAnimation ( g_fireAnims1[ gEngfuncs.pfnRandomLong( 0, 3 ) ], 1 );
 
-	if ( iStartup == 1 && EV_IsLocal( idx ) && !pBeam && !pBeam2 && cl_lw->value ) //Adrian: Added the cl_lw check for those lital people that hate weapon prediction.
+	// the ion cannon's beams are the server's
+	if ( iFireMode != 2 && iStartup == 1 && EV_IsLocal( idx ) && !pBeam && !pBeam2 && cl_lw->value ) //Adrian: Added the cl_lw check for those lital people that hate weapon prediction.
 	{
 		vec3_t vecSrc, vecEnd, origin, angles, forward, right, up;
 		pmtrace_t tr;
@@ -1438,14 +1439,34 @@ void EV_EgonFire( event_args_t *args )
 
 			gEngfuncs.pEventAPI->EV_PopPMStates();
 
+			if ( iFireMode == 1 )
+			{
+				// the antimatter pulverizer: one white beam
+				int iBeamModelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( EGON_AMP_SPRITE );
+
+				pBeam = gEngfuncs.pEfxAPI->R_BeamEntPoint ( idx | 0x1000, tr.endpos, iBeamModelIndex, 99999, 4.0, 0, 255, 24, 0, 0.15, 255, 255, 255 );
+				pBeam2 = NULL;
+				g_pEgonFlare = NULL;
+				g_iBeamStyle = 0;
+				return;
+			}
+
 			int iBeamModelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( EGON_BEAM_SPRITE );
+			int iFlareModelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( EGON_FLARE_SPRITE );
 		
-			pBeam = gEngfuncs.pEfxAPI->R_BeamEntPoint ( idx | 0x1000, tr.endpos, iBeamModelIndex, 99999, 3.5, 0.2, 0.075, 5, 0, 0.15, 5, 5, 25.5 );
+			pBeam = gEngfuncs.pEfxAPI->R_BeamEntPoint ( idx | 0x1000, tr.endpos, iBeamModelIndex, 99999, 4.0, 0.2, 100 / 255.0, 2.5, 0, 0.5, 80 / 255.0, 90 / 255.0, 144 / 255.0 );
 
 			if ( pBeam )
 				 pBeam->flags |= FBEAM_SINENOISE;
  
-			pBeam2 = gEngfuncs.pEfxAPI->R_BeamEntPoint ( idx | 0x1000, tr.endpos, iBeamModelIndex, 99999, 5.0, 0.08, 0.1, 2.5, 0, 0.15, 5, 5, 25.5 );
+			pBeam2 = gEngfuncs.pEfxAPI->R_BeamEntPoint ( idx | 0x1000, tr.endpos, iBeamModelIndex, 99999, 5.5, 8 / 255.0, 100 / 255.0, 25, 0, 0.15, 80 / 255.0, 90 / 255.0, 1.0 );
+
+			g_pEgonFlare = gEngfuncs.pEfxAPI->R_TempSprite( tr.endpos, vec3_origin, 1.0, iFlareModelIndex, kRenderGlow, kRenderFxNoDissipation, 1.0, 5.0, FTENT_SPRANIMATE | FTENT_PERSIST | FTENT_SPRANIMATELOOP );
+
+			if ( g_pEgonFlare )
+				g_pEgonFlare->entity.curstate.framerate = 8;
+
+			g_iBeamStyle = 1;
 		}
 	}
 }
@@ -1476,6 +1497,12 @@ void EV_EgonStop( event_args_t *args )
 		{
 			pBeam2->die = 0.0;
 			pBeam2 = NULL;
+		}
+
+		if ( g_pEgonFlare )
+		{
+			EV_FadeGrowTempEnt( g_pEgonFlare, 10, 500 );
+			g_pEgonFlare = NULL;
 		}
 	}
 }
