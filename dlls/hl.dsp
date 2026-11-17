@@ -348,6 +348,10 @@ SOURCE=.\headcrab.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\headmonster.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\healthkit.cpp
 # End Source File
 # Begin Source File
