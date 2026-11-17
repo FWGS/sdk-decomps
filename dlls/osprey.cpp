@@ -961,10 +961,8 @@ void COspreyAI::FlyThink( void )
 // CApache::Flight, with the rotors' tilt for the pitch
 void COspreyAI :: Flight( void )
 {
-	Vector vecAngles = pev->angles;
-	vecAngles.x = m_flRotortilt;
-	Vector vecAvel = pev->avelocity;
-	vecAvel.x = m_ang1.x;
+	Vector vecAngles = Vector( m_flRotortilt, pev->angles.y, pev->angles.z );
+	Vector vecAvel = Vector( m_ang1.x, pev->avelocity.y, pev->avelocity.z );
 
 	// tilt model 5 degrees
 	Vector vecAdj = Vector( 5.0, 0, 0 );
@@ -994,7 +992,7 @@ void COspreyAI :: Flight( void )
 	vecAvel.y = pev->avelocity.y;
 
 	// estimate where I'll be in two seconds
-	UTIL_MakeAimVectors( vecAngles + vecAvel * 1 + vecAdj);
+	UTIL_MakeAimVectors( vecAngles + vecAvel + vecAdj);
 	Vector vecEst = pev->origin + pev->velocity * 2.0 + gpGlobals->v_up * m_flForce * 20 - Vector( 0, 0, 384 * 2 );
 
 	// add immediate force
@@ -1117,39 +1115,36 @@ CBaseMonster *COspreyAI :: MakeGrunt( Vector vecSrc )
 {
 	TraceResult tr;
 	UTIL_TraceLine( vecSrc, vecSrc + Vector( 0, 0, -4096.0), dont_ignore_monsters, ENT(pev), &tr);
-	if ( tr.fStartSolid )
-		return NULL;
-	if ( tr.pHit && Instance( tr.pHit )->pev->solid != SOLID_BSP)
-		return NULL;
-	if ( m_iLiveChildren >= m_iMaxLiveChildren )
-		return NULL;
+	if ( !tr.fStartSolid && ( !tr.pHit || Instance( tr.pHit )->pev->solid == SOLID_BSP ) && m_iLiveChildren < m_iMaxLiveChildren )
+	{
+		edict_t *pent = CREATE_NAMED_ENTITY( MAKE_STRING( "monster_human_grunt" ) );
+		if ( pent )
+		{
+			CBaseMonster *pGrunt = Instance( pent )->MyMonsterPointer( );
+			pGrunt->pev->origin = vecSrc;
+			pGrunt->pev->angles = Vector( 0, pev->angles.y, 0 );
+			pGrunt->pev->owner = edict( );
+			pGrunt->pev->weapons = pev->weapons;
+			pGrunt->Spawn( );
+			pGrunt->pev->movetype = MOVETYPE_FLY;
+			pGrunt->pev->velocity = Vector( 0, 0, RANDOM_FLOAT( -196, -128 ) );
+			pGrunt->SetActivity( ACT_GLIDE );
+			pGrunt->m_vecLastPosition = tr.vecEndPos;
+			// fgd "Dont drop weapon" (1024) and 8
+			pGrunt->pev->spawnflags |= pev->spawnflags & ( 1024 | 8 );
 
-	edict_t *pent = CREATE_NAMED_ENTITY( MAKE_STRING( "monster_human_grunt" ) );
-	if ( !pent )
-		return NULL;
+			CBeam *pBeam = CBeam::BeamCreate( "sprites/rope.spr", 10 );
+			pBeam->PointEntInit( vecSrc + Vector(0,0,112), pGrunt->entindex() );
+			pBeam->SetFlags( BEAM_FSOLID );
+			pBeam->SetColor( 255, 255, 255 );
+			pBeam->SetThink( SUB_Remove );
+			pBeam->pev->nextthink = gpGlobals->time + -4096.0 * tr.flFraction / pGrunt->pev->velocity.z + 0.5;
 
-	CBaseMonster *pGrunt = Instance( pent )->MyMonsterPointer( );
-	pGrunt->pev->origin = vecSrc;
-	pGrunt->pev->angles = Vector( 0, pev->angles.y, 0 );
-	pGrunt->pev->owner = edict( );
-	pGrunt->pev->weapons = pev->weapons;
-	pGrunt->Spawn( );
-	pGrunt->pev->movetype = MOVETYPE_FLY;
-	pGrunt->pev->velocity = Vector( 0, 0, RANDOM_FLOAT( -196, -128 ) );
-	pGrunt->SetActivity( ACT_GLIDE );
-	pGrunt->m_vecLastPosition = tr.vecEndPos;
-	// fgd "Dont drop weapon" (1024) and 8
-	pGrunt->pev->spawnflags |= pev->spawnflags & ( 1024 | 8 );
-
-	CBeam *pBeam = CBeam::BeamCreate( "sprites/rope.spr", 10 );
-	pBeam->PointEntInit( vecSrc + Vector(0,0,112), pGrunt->entindex() );
-	pBeam->SetFlags( BEAM_FSOLID );
-	pBeam->SetColor( 255, 255, 255 );
-	pBeam->SetThink( SUB_Remove );
-	pBeam->pev->nextthink = gpGlobals->time + -4096.0 * tr.flFraction / pGrunt->pev->velocity.z + 0.5;
-
-	m_iLiveChildren++;
-	return pGrunt;
+			m_iLiveChildren++;
+			return pGrunt;
+		}
+	}
+	return NULL;
 }
 
 
@@ -1549,40 +1544,40 @@ void COspreyBomber::BomberThink( void )
 	Flight( );
 	ShowDamage( );
 
-	if ( m_flNextAttack >= gpGlobals->time )
-		return;
-
-	// the next of the four bomb bays
-	UTIL_MakeVectors( pev->angles );
-
-	Vector vecSrc;
-	switch ( pev->iuser1 )
+	if ( gpGlobals->time > m_flNextAttack )
 	{
-	case 1:
-		vecSrc = pev->origin + gpGlobals->v_forward * -64 + gpGlobals->v_right *  100 + gpGlobals->v_up * -96;
-		break;
-	case 2:
-		vecSrc = pev->origin + gpGlobals->v_forward *  32 + gpGlobals->v_right * -100 + gpGlobals->v_up * -96;
-		break;
-	case 3:
-		vecSrc = pev->origin + gpGlobals->v_forward * -64 + gpGlobals->v_right * -100 + gpGlobals->v_up * -96;
-		break;
-	default:
-		vecSrc = pev->origin + gpGlobals->v_forward *  32 + gpGlobals->v_right *  100 + gpGlobals->v_up * -96;
-		break;
-	}
+		// the next of the four bomb bays
+		UTIL_MakeVectors( pev->angles );
 
-	// where would a bomb land?
-	TraceResult tr;
-	UTIL_TraceLine( vecSrc, vecSrc + pev->velocity * 4 - Vector( 0, 0, 4096 ), ignore_monsters, ENT(pev), &tr );
-
-	CBaseEntity *pEntity = NULL;
-	while ( ( pEntity = UTIL_FindEntityInSphere( pEntity, tr.vecEndPos, 512 ) ) != NULL )
-	{
-		if ( IRelationship( pEntity ) > R_NO && FVisible( pEntity ) )
+		Vector vecSrc;
+		switch ( pev->iuser1 )
 		{
-			DropBomb( vecSrc );
-			return;
+		case 1:
+			vecSrc = pev->origin + gpGlobals->v_forward * -64 + gpGlobals->v_right *  100 + gpGlobals->v_up * -96;
+			break;
+		case 2:
+			vecSrc = pev->origin + gpGlobals->v_forward *  32 + gpGlobals->v_right * -100 + gpGlobals->v_up * -96;
+			break;
+		default:
+			vecSrc = pev->origin + gpGlobals->v_forward *  32 + gpGlobals->v_right *  100 + gpGlobals->v_up * -96;
+			break;
+		case 3:
+			vecSrc = pev->origin + gpGlobals->v_forward * -64 + gpGlobals->v_right * -100 + gpGlobals->v_up * -96;
+			break;
+		}
+
+		// where would a bomb land?
+		TraceResult tr;
+		UTIL_TraceLine( vecSrc, vecSrc + pev->velocity * 4 - Vector( 0, 0, 4096 ), ignore_monsters, ENT(pev), &tr );
+
+		CBaseEntity *pEntity = NULL;
+		while ( ( pEntity = UTIL_FindEntityInSphere( pEntity, tr.vecEndPos, 512 ) ) != NULL )
+		{
+			if ( IRelationship( pEntity ) >= R_DL && FVisible( pEntity ) )
+			{
+				DropBomb( vecSrc );
+				return;
+			}
 		}
 	}
 }
