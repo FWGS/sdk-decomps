@@ -113,7 +113,8 @@ void CDisplacerBall::FlyThink( void )
 	for ( int i = 0; i < 4; i++ )
 	{
 		TraceResult tr;
-		UTIL_TraceLine( pev->origin, pev->origin + Vector( Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ) ) * 1024 ), ignore_monsters, ENT( pev ), &tr );
+		Vector vecDir = Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ) );
+		UTIL_TraceLine( pev->origin, pev->origin + vecDir * 1024, ignore_monsters, ENT( pev ), &tr );
 
 		if ( tr.fAllSolid )
 			continue;
@@ -401,8 +402,7 @@ void CDisplacer::WeaponIdle( void )
 			{
 				if ( pEntity != m_pPlayer && pEntity->pev->size.z >= 32 && pEntity->pev->takedamage && m_pPlayer->IRelationship( pEntity ) >= R_DL )
 				{
-					Vector vecDir = ( pEntity->Center( ) - vecSrc ).Normalize( );
-					float flDot = DotProduct( vecDir, gpGlobals->v_forward );
+					float flDot = DotProduct( ( pEntity->Center( ) - vecSrc ).Normalize( ), gpGlobals->v_forward );
 
 					if ( flDot > VIEW_FIELD_ULTRA_NARROW && flDot > flBest )
 					{

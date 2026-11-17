@@ -250,7 +250,7 @@ void CLaserSpecial::DrillThink( void )
 
 	pev->nextthink = gpGlobals->time + 0.1;
 
-	Vector vecTop = Vector( m_hEnemy->pev->origin + Vector( 0, 0, m_hEnemy->pev->maxs.z ) );
+	Vector vecTop = m_hEnemy->pev->origin + Vector( 0, 0, m_hEnemy->pev->maxs.z );
 
 	if ( UTIL_PointContents( vecTop ) == CONTENTS_SOLID )
 	{
@@ -260,7 +260,8 @@ void CLaserSpecial::DrillThink( void )
 	}
 
 	TraceResult tr;
-	UTIL_TraceLine( vecTop, m_hEnemy->pev->origin + Vector( 0, 0, m_hEnemy->pev->mins.z ), ignore_monsters, ENT( pev ), &tr );
+	Vector vecBottom = m_hEnemy->pev->origin + Vector( 0, 0, m_hEnemy->pev->mins.z );
+	UTIL_TraceLine( vecTop, vecBottom, ignore_monsters, ENT( pev ), &tr );
 	SpawnBlood( tr.vecEndPos, m_hEnemy->BloodColor( ), 100 );
 }
 
