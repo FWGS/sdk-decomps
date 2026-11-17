@@ -29,6 +29,7 @@
 #include	"game.h"
 #include	"effects.h"
 #include	"decals.h"
+#include	"nodes.h"
 
 extern DLL_GLOBAL int  g_iSkillLevel;
 
@@ -1544,7 +1545,8 @@ void CSlipStream :: SlipTouch( CBaseEntity *pOther )
 // powerbeam - the beam an owner (pev->owner, m_hLinked)
 // fires from its attachment 0 through this entity's origin
 // until pev->dmgtime: 30 energy damage a tenth of a second,
-// sparks, and it burns through up to four walls.
+// sparks, and it burns through up to four walls. The Nephilim
+// agent moves it onto its enemy every shot.
 //=========================================================
 class CPowerBeam : public CBaseEntity
 {
@@ -1561,7 +1563,7 @@ public:
 
 	EHANDLE m_hLinked;
 	CBeam *m_pBeam;				// name ours
-	CBaseEntity *m_pSprite;		// name ours: removed with the beam, never set
+	CBaseEntity *m_pSprite;		// name ours: the agent's charge sprite, removed with the beam
 };
 LINK_ENTITY_TO_CLASS( powerbeam, CPowerBeam );
 
@@ -1676,6 +1678,1286 @@ void CPowerBeam :: WeaponThink( void )
 			pentIgnore = tr.pHit;
 		}
 	}
+}
+
+
+//=========================================================
+// monster_na_agent - the Nephilim Alliance agent: an
+// assassin with an energy shield (armorvalue 2000, regrows
+// a quarter point a think, flashes pink when hit) who blinks
+// from node to node. Primary attacks (pev->frags): 0 the
+// wallop (charged: a slow big one), 1 a laser pulse (charged:
+// the power wave), 2 a slip stream (charged: the power
+// beam); secondary (pev->weapons bits): 1 a vortex mine,
+// 2 an energy disk, 4 a flux rocket.
+//=========================================================
+
+//=========================================================
+// monster-specific schedule types
+//=========================================================
+enum
+{
+	SCHED_AGENT_BLINK_COVER_FROM_ENEMY = SCHED_ASSASSIN_JUMP_LAND + 1,	// names ours
+	SCHED_AGENT_BLINK_COVER_FROM_SOUND,
+	SCHED_AGENT_BLINK_ATTACK,
+	SCHED_AGENT_BLINK_NPW_COMBO,
+};
+
+//=========================================================
+// monster-specific tasks
+//=========================================================
+enum
+{
+	TASK_AGENT_BLINK = TASK_ASSASSIN_FALL_TO_GROUND + 1,	// names ours: teleport to m_vecMoveGoal
+	TASK_AGENT_FIND_COVER_FROM_ENEMY,
+	TASK_AGENT_FIND_COVER_FROM_SOUND,
+	TASK_AGENT_FIND_NODE_NEAR_ENEMY,
+	TASK_AGENT_FIND_NODE_AWAY_FROM_ENEMY,
+};
+
+class CNAgent : public CHAssassin
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int Shielded( void ) { if ( pev->armorvalue > 0 ) return 2; return 0; }
+	BOOL CanBeTractored( void ) { return !Shielded(); }
+	BOOL CanBeRepulsed( bool fForce ) { if ( Shielded() && !fForce ) return FALSE; return TRUE; }
+	const char *GetHudName( void ) { return "Classified, NA-8"; }
+	int HeatSignature( void ) { return 0; }
+	const char *GetKillDesc( void ) { return "a Nephilim Alliance agent"; }
+	int Classify( void ) { if ( m_iMyClass ) return m_iMyClass; return 14; }	// the Nephilim Alliance (no CLASS_ define)
+	void EXPORT StopTouch( CBaseEntity *pOther );
+	int GetBattlePower( void );
+
+	void PowerWave( void );		// names ours
+	void PowerBeam( void );
+	void Shoot( void );
+	void HandleAnimEvent( MonsterEvent_t *pEvent );
+	void RunAI( void );
+	void StartTask( Task_t *pTask );
+	void RunTask( Task_t *pTask );
+	Schedule_t *GetSchedule( void );
+	Schedule_t *GetScheduleOfType( int Type );
+	BOOL CheckRangeAttack1( float flDot, float flDist );
+	BOOL CheckRangeAttack2( float flDot, float flDist );
+	BOOL FCanCheckAttacks( void );
+	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
+	void Killed( entvars_t *pevAttacker, int iGib );
+	BOOL CheckJump( void );		// name ours
+	CUSTOM_SCHEDULES;
+
+	CSprite	*m_pChargeSprite;	// names ours; not saved
+	EHANDLE	m_hPowerBeam;
+	float	m_flChargeTime;		// charging since; 0 when charged
+	float	m_flChargeScale;	// the full charge's sprite scale
+	float	m_flWeaponTime;		// when pev->frags last changed
+};
+LINK_ENTITY_TO_CLASS( monster_na_agent, CNAgent );
+
+//=========================================================
+// StopTouch - recoil from a power wave fired in the air
+// ends at the first thing it touches
+//=========================================================
+void CNAgent :: StopTouch( CBaseEntity *pOther )
+{
+	pev->velocity = g_vecZero;
+	SetTouch( NULL );
+}
+
+//=========================================================
+// GetBattlePower - the target ID's rating of this monster
+//=========================================================
+int CNAgent :: GetBattlePower( void )
+{
+	float flPower = 2747083.25f;	// sic: a constant
+	if ( Shielded() )
+		flPower += 1000;
+	return flPower;
+}
+
+//=========================================================
+// PowerWave - fire the charged power wave; in the air the
+// recoil throws the agent back along a beam
+//=========================================================
+void CNAgent :: PowerWave( void )
+{
+	Vector vecSrc, vecDir;
+
+	GetAttachment( 0, vecSrc, vecDir );
+	UTIL_MakeVectors( pev->angles );
+	vecDir = ShootAtEnemy( vecSrc );
+
+	CBaseMonster *pWave = (CBaseMonster *)CBaseEntity::Create( "powerwave", vecSrc, UTIL_VecToAngles( vecDir ), edict() );
+	pWave->m_hEnemy = m_hEnemy;
+	pWave->pev->speed = 1000;
+
+	pev->nextthink = gpGlobals->time + 6;
+	pev->animtime = pev->nextthink;
+	m_pChargeSprite->pev->scale = 0.7;
+	m_cAmmoLoaded = 0;
+
+	if ( pev->movetype == MOVETYPE_TOSS )
+	{
+		SetTouch( StopTouch );
+		pev->movetype = MOVETYPE_FLY;
+		pev->velocity = vecDir * -256;
+
+		CBeam *pBeam = CBeam::BeamCreate( "sprites/LRed.spr", 100 );
+		pBeam->EntsInit( entindex(), pWave->entindex() );
+		pBeam->SetStartAttachment( 1 );
+		pBeam->SetThink( &CBaseEntity::SUB_Remove );
+		pBeam->pev->nextthink = gpGlobals->time + 6;
+	}
+}
+
+//=========================================================
+// PowerBeam - start or aim the power beam at the enemy
+//=========================================================
+void CNAgent :: PowerBeam( void )
+{
+	if ( m_hEnemy == NULL )
+		return;
+
+	if ( m_hPowerBeam == NULL )
+	{
+		CPowerBeam *pBeam = (CPowerBeam *)CBaseEntity::Create( "powerbeam", m_hEnemy->BodyTarget( pev->origin ), g_vecZero, edict() );
+		m_hPowerBeam = pBeam;
+		m_hPowerBeam->pev->dmgtime = gpGlobals->time + 1;
+		pBeam->m_pSprite = m_pChargeSprite;	// the beam removes the charge sprite
+		m_pChargeSprite = NULL;
+	}
+	else
+	{
+		m_hPowerBeam->pev->origin = m_hEnemy->BodyTarget( pev->origin );
+		m_hPowerBeam->pev->dmgtime = gpGlobals->time + 1;
+	}
+}
+
+//=========================================================
+// Shoot - the primary attack
+//=========================================================
+void CNAgent :: Shoot( void )
+{
+	if ( m_hPowerBeam != NULL )
+	{
+		PowerBeam( );
+		return;
+	}
+
+	if ( m_pChargeSprite && pev->frags == 2 )
+	{
+		PowerBeam( );
+		return;
+	}
+
+	if ( m_pChargeSprite && pev->frags == 1 )
+	{
+		PowerWave( );
+		return;
+	}
+
+	Vector vecShootOrigin, vecShootDir;
+
+	GetAttachment( 0, vecShootOrigin, vecShootDir );
+	UTIL_MakeVectors( pev->angles );
+	vecShootDir = ShootAtEnemy( vecShootOrigin );
+
+	if ( pev->frags == 2 || m_flLastShot + 2 < gpGlobals->time )
+	{
+		m_flDiviation = 0.10;
+	}
+	else
+	{
+		m_flDiviation -= 0.01;
+		if (m_flDiviation < 0.02)
+			m_flDiviation = 0.02;
+	}
+	m_flLastShot = gpGlobals->time;
+
+	EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, "x/x_shoot1.wav", RANDOM_FLOAT( 0.6, 0.8 ), 0.8, 0, PITCH_NORM );
+
+	float x, y, z;
+	do {
+		x = RANDOM_FLOAT( -0.5, 0.5 ) + RANDOM_FLOAT( -0.5, 0.5 );
+		y = RANDOM_FLOAT( -0.5, 0.5 ) + RANDOM_FLOAT( -0.5, 0.5 );
+		z = x * x + y * y;
+	} while ( z > 1 );
+
+	Vector vecDir = vecShootDir + x * m_flDiviation * gpGlobals->v_right + y * m_flDiviation * gpGlobals->v_up;
+
+	CBaseEntity *pShot;
+	if ( pev->frags == 0 )
+	{
+		pShot = CBaseEntity::Create( "wallop", vecShootOrigin, g_vecZero, edict() );
+		pShot->pev->velocity = vecDir * 900;
+	}
+	else if ( pev->frags == 1 )
+	{
+		pShot = CLaserPulse::Shoot( vecShootOrigin, edict(), Vector( 255, 255, 255 ), 4, 0.25, 4 );
+		pShot->pev->velocity = vecDir * 1400;
+		pShot->pev->spawnflags |= 0x10c;
+		pShot->pev->movedir = Vector( 255, 16, 128 );
+		pShot->pev->scale = 0.5;
+		pShot->pev->dmg = 100;
+		pShot->m_iszKillDesc = MAKE_STRING( "an energy wave" );
+	}
+	else
+	{
+		pShot = CBaseEntity::Create( "slip_stream", vecShootOrigin, UTIL_VecToAngles( vecDir ), edict() );
+		pShot->pev->velocity = vecDir * 1000;
+		pShot->m_iszKillDesc = MAKE_STRING( "a slip stream" );
+		CBaseMonster *pStream = pShot->MyMonsterPointer();
+		pStream->m_hEnemy = m_hEnemy;
+		pStream->m_vecEnemyLKP = m_vecEnemyLKP;
+	}
+
+	CSoundEnt::InsertSound( bits_SOUND_WORLD, vecShootOrigin, 600, 0.3 );
+
+	pev->effects |= EF_MUZZLEFLASH;
+
+	Vector angDir = UTIL_VecToAngles( vecShootDir );
+	SetBlending( 0, angDir.x );
+
+	if ( m_pChargeSprite && pev->frags == 0 )
+	{
+		// a charged wallop: slower, bigger and stronger
+		pShot->pev->velocity = vecShootDir * 700;
+		pShot->pev->dmg = m_pChargeSprite->pev->scale * pShot->pev->dmg * 4;
+		pShot->pev->scale = m_pChargeSprite->pev->scale;
+		UTIL_Remove( m_pChargeSprite );
+		m_pChargeSprite = NULL;
+		m_cAmmoLoaded = 0;
+	}
+}
+
+//=========================================================
+// HandleAnimEvent - catches the monster-specific messages
+// that occur when tagged animation frames are played.
+//=========================================================
+void CNAgent :: HandleAnimEvent( MonsterEvent_t *pEvent )
+{
+	switch( pEvent->event )
+	{
+	case ASSASSIN_AE_SHOOT1:
+		if ( m_cAmmoLoaded )
+		{
+			if ( m_flChargeTime != 0 )
+			{
+				// still charging: keep aiming
+				Vector vecSrc, vecDir;
+				GetAttachment( 0, vecSrc, vecDir );
+				UTIL_MakeVectors( pev->angles );
+				vecDir = ShootAtEnemy( vecSrc );
+
+				Vector angDir = UTIL_VecToAngles( vecDir );
+				SetBlending( 0, angDir.x );
+
+				m_flChargeTime -= 0.1;
+				pev->framerate = 0;
+			}
+			else
+				Shoot( );
+		}
+		break;
+	case ASSASSIN_AE_TOSS1:
+		{
+			if ( m_pChargeSprite )
+			{
+				UTIL_Remove( m_pChargeSprite );
+				m_pChargeSprite = NULL;
+			}
+
+			if ( !pev->weapons )
+			{
+				ALERT( at_console, "secondary attack with no possible attack types!\n" );
+				return;
+			}
+
+			UTIL_MakeVectors( pev->angles );
+
+			if ( m_hEnemy != NULL )
+			{
+				if ( ( pev->weapons & 4 ) && m_hEnemy->pev->movetype == MOVETYPE_FLY )
+					pev->weapons = 4;
+				if ( ( pev->weapons & 1 ) && m_hEnemy->pev->size.z < 32 && ( m_hEnemy->pev->flags & FL_ONGROUND ) )
+					pev->weapons = 1;
+			}
+
+			// pick one of the possible attacks
+			if ( pev->weapons == 7 )
+			{
+				pev->weapons = RANDOM_LONG( 0, 2 );
+				pev->weapons += max( 1, pev->weapons );
+			}
+			else if ( pev->weapons == 3 )
+				pev->weapons = RANDOM_LONG( 1, 2 );
+			else if ( pev->weapons == 6 )
+				pev->weapons = RANDOM_LONG( 1, 2 ) * 2;
+
+			if ( pev->weapons == 1 )
+			{
+				CBaseEntity *pMine = CBaseEntity::Create( "vortex_mine", pev->origin + gpGlobals->v_forward * 34 + Vector( 0, 0, 32 ), g_vecZero, edict() );
+				pMine->pev->velocity = m_vecTossVelocity;
+			}
+			else if ( pev->weapons == 4 )
+			{
+				Vector vecSrc, vecDir;
+				GetAttachment( 1, vecSrc, vecDir );
+				vecDir = ShootAtEnemy( vecSrc );
+
+				CRocket *pRocket = CRocket::CreateRocket( vecSrc, UTIL_VecToAngles( vecDir ), edict(), Vector( 255, 0, 128 ), MAKE_STRING( "sprites/flux_t.spr" ) );
+				if ( pRocket )
+				{
+					pRocket->pev->scale = 0.7;
+					pRocket->SetThink( &CRocket::TargetThink );
+					pRocket->pev->speed = 1000;
+					pRocket->pev->renderamt = 255;
+					pRocket->pev->rendermode = kRenderTransAdd;
+					pRocket->pev->velocity = vecDir * 256 + Vector( 0, 0, 128 );
+					pRocket->m_hEnemy = m_hEnemy;
+					pRocket->pev->dmg = 200;
+					pRocket->pev->spawnflags |= 8;
+					pRocket->m_iszKillDesc = MAKE_STRING( "a powerball attack" );
+				}
+			}
+			else
+			{
+				Vector vecSrc, vecAngles;
+				GetAttachment( 1, vecSrc, vecAngles );
+
+				CBaseMonster *pDisk = (CBaseMonster *)CBaseEntity::Create( "energy_disk", vecSrc, pev->angles, edict() );
+				pDisk->pev->speed = 512;
+				pDisk->pev->body = 1;
+				pDisk->m_hEnemy = m_hEnemy;
+				pDisk->m_hActivator = this;
+				pDisk->pev->nextthink += 0.4;
+				pDisk->m_iszKillDesc = MAKE_STRING( "a ringwave attack" );
+			}
+
+			m_flNextGrenadeCheck = gpGlobals->time + 6;// wait six seconds before even looking again to see if a grenade can be thrown.
+			m_fThrowGrenade = FALSE;
+		}
+		break;
+	case ASSASSIN_AE_JUMP:
+		{
+			UTIL_MakeAimVectors( pev->angles );
+			pev->movetype = MOVETYPE_TOSS;
+			pev->flags &= ~FL_ONGROUND;
+			pev->velocity = m_vecJumpVelocity;
+			m_flNextJump = gpGlobals->time + 4.0;
+		}
+		return;
+	default:
+		CHAssassin::HandleAnimEvent( pEvent );
+		break;
+	}
+}
+
+//=========================================================
+// Spawn
+//=========================================================
+void CNAgent :: Spawn()
+{
+	Precache( );
+
+	SET_MODEL(ENT(pev), "models/nassassin.mdl");
+	UTIL_SetSize(pev, Vector( -16, -16, 0 ), Vector( 16, 16, 72 ) );
+
+	pev->solid			= SOLID_SLIDEBOX;
+	pev->movetype		= MOVETYPE_STEP;
+	m_bloodColor		= BLOOD_COLOR_RED;
+	pev->effects		= 0;
+	pev->health			= 500;
+	pev->armorvalue		= 2000;	// the shield
+	m_MonsterState		= MONSTERSTATE_NONE;
+	m_afCapability		= bits_CAP_MELEE_ATTACK1 | bits_CAP_DOORS_GROUP;
+	pev->friction		= 1;
+
+	m_HackedGunPos		= Vector( 0, 24, 48 );
+
+	pev->frags			= RANDOM_LONG( 0, 2 );	// the primary attack
+	m_cAmmoLoaded		= 1;
+
+	MonsterInit();
+
+	m_flDistLook		= 4096;
+	m_flFieldOfView		= VIEW_FIELD_FULL;
+}
+
+//=========================================================
+// Precache - precaches all resources this monster needs
+//=========================================================
+void CNAgent :: Precache()
+{
+	PRECACHE_MODEL("models/nassassin.mdl");
+
+	PRECACHE_SOUND("x/x_shoot1.wav");
+	PRECACHE_SOUND("houndeye/he_blast1.wav");
+
+	m_iShell = PRECACHE_MODEL("sprites/redflare2.spr");	// the blink's spray
+	PRECACHE_MODEL("sprites/n_charge.spr");
+	PRECACHE_MODEL("sprites/flux_t.spr");
+
+	UTIL_PrecacheOther( "wallop" );
+	UTIL_PrecacheOther( "laser_pulse" );
+	CLaserPulse::PrecacheColor( 4 );
+	UTIL_PrecacheOther( "powerwave" );
+	UTIL_PrecacheOther( "powerbeam" );
+	UTIL_PrecacheOther( "energy_disk" );
+	UTIL_PrecacheOther( "vortex_mine" );
+	UTIL_PrecacheOther( "rocket" );
+}
+
+//=========================================================
+// AI Schedules Specific to this monster
+//=========================================================
+
+//=========================================================
+// blink into cover
+//=========================================================
+Task_t	tlAgentBlinkCoverFromEnemy[] =
+{
+	{ TASK_STOP_MOVING,					(float)0					},
+	{ TASK_WAIT,						(float)0.2					},
+	{ TASK_SET_FAIL_SCHEDULE,			(float)SCHED_TAKE_COVER_FROM_ENEMY	},
+	{ TASK_AGENT_FIND_COVER_FROM_ENEMY,	(float)0					},
+	{ TASK_AGENT_BLINK,					(float)0					},
+	{ TASK_REMEMBER,					(float)bits_MEMORY_INCOVER	},
+	{ TASK_FACE_ENEMY,					(float)0					},
+};
+
+Schedule_t	slAgentBlinkCoverFromEnemy[] =
+{
+	{ 
+		tlAgentBlinkCoverFromEnemy,
+		ARRAYSIZE ( tlAgentBlinkCoverFromEnemy ), 
+		bits_COND_NEW_ENEMY |
+		bits_COND_CAN_MELEE_ATTACK1		|
+		bits_COND_HEAR_SOUND,
+		
+		bits_SOUND_DANGER,
+		"AgentBlinkCoverFromEnemy"
+	},
+};
+
+//=========================================================
+// blink away from a dangerous sound
+//=========================================================
+Task_t	tlAgentBlinkCoverFromSound[] =
+{
+	{ TASK_SET_FAIL_SCHEDULE,			(float)SCHED_TAKE_COVER_FROM_BEST_SOUND	},
+	{ TASK_STOP_MOVING,					(float)0					},
+	{ TASK_AGENT_FIND_COVER_FROM_SOUND,	(float)0					},
+	{ TASK_AGENT_BLINK,					(float)0					},
+	{ TASK_REMEMBER,					(float)bits_MEMORY_INCOVER	},
+	{ TASK_TURN_LEFT,					(float)179					},
+};
+
+Schedule_t	slAgentBlinkCoverFromSound[] =
+{
+	{ 
+		tlAgentBlinkCoverFromSound,
+		ARRAYSIZE ( tlAgentBlinkCoverFromSound ), 
+		bits_COND_NEW_ENEMY,
+		0,
+		"AgentBlinkCoverFromSound"
+	},
+};
+
+//=========================================================
+// blink near the enemy and shoot
+//=========================================================
+Task_t	tlAgentBlinkAttack[] =
+{
+	{ TASK_SET_FAIL_SCHEDULE,			(float)SCHED_CHASE_ENEMY	},
+	{ TASK_AGENT_FIND_NODE_NEAR_ENEMY,	(float)0					},
+	{ TASK_AGENT_BLINK,					(float)0					},
+	{ TASK_SET_SCHEDULE,				(float)SCHED_RANGE_ATTACK1	},
+};
+
+Schedule_t	slAgentBlinkAttack[] =
+{
+	{ 
+		tlAgentBlinkAttack,
+		ARRAYSIZE ( tlAgentBlinkAttack ), 
+		bits_COND_NEW_ENEMY |
+		bits_COND_CAN_RANGE_ATTACK1		|
+		bits_COND_HEAR_SOUND,
+		
+		bits_SOUND_DANGER,
+		"AgentBlinkAttack"
+	},
+};
+
+//=========================================================
+// blink around the enemy, dropping vortex mines
+//=========================================================
+Task_t	tlMineField[] =
+{
+	{ TASK_SET_FAIL_SCHEDULE,			(float)SCHED_CHASE_ENEMY	},
+	{ TASK_AGENT_FIND_NODE_NEAR_ENEMY,	(float)0					},
+	{ TASK_AGENT_BLINK,					(float)0					},
+	{ TASK_SPECIAL_ATTACK1,				(float)0					},
+	{ TASK_AGENT_FIND_NODE_NEAR_ENEMY,	(float)256					},
+	{ TASK_AGENT_BLINK,					(float)0					},
+	{ TASK_SPECIAL_ATTACK1,				(float)0					},
+	{ TASK_AGENT_FIND_NODE_NEAR_ENEMY,	(float)256					},
+	{ TASK_AGENT_BLINK,					(float)0					},
+	{ TASK_SPECIAL_ATTACK1,				(float)0					},
+	{ TASK_AGENT_FIND_NODE_NEAR_ENEMY,	(float)256					},
+	{ TASK_AGENT_BLINK,					(float)0					},
+	{ TASK_SPECIAL_ATTACK1,				(float)0					},
+	{ TASK_AGENT_FIND_NODE_NEAR_ENEMY,	(float)256					},
+	{ TASK_AGENT_BLINK,					(float)0					},
+	{ TASK_SPECIAL_ATTACK1,				(float)0					},
+	{ TASK_SET_SCHEDULE,				(float)SCHED_AGENT_BLINK_COVER_FROM_SOUND	},
+};
+
+Schedule_t	slMineField[] =
+{
+	{ 
+		tlMineField,
+		ARRAYSIZE ( tlMineField ), 
+		bits_COND_ENEMY_DEAD,
+		0,
+		"Mine Field"
+	},
+};
+
+//=========================================================
+// blink away from the enemy and fire the power wave
+//=========================================================
+Task_t	tlBlinkNPWCombo[] =
+{
+	{ TASK_SET_FAIL_SCHEDULE,			(float)SCHED_MELEE_ATTACK1	},
+	{ TASK_AGENT_FIND_NODE_AWAY_FROM_ENEMY,	(float)600				},
+	{ TASK_AGENT_BLINK,					(float)0					},
+	{ TASK_RANGE_ATTACK1,				(float)0					},
+};
+
+Schedule_t	slBlinkNPWCombo[] =
+{
+	{ 
+		tlBlinkNPWCombo,
+		ARRAYSIZE ( tlBlinkNPWCombo ), 
+		bits_COND_ENEMY_DEAD,
+		0,
+		"BlinkNPWCombo"
+	},
+};
+
+DEFINE_CUSTOM_SCHEDULES( CNAgent )
+{
+	slAgentBlinkCoverFromEnemy,
+	slAgentBlinkCoverFromSound,
+	slAgentBlinkAttack,
+	slMineField,
+	slBlinkNPWCombo,
+};
+
+IMPLEMENT_CUSTOM_SCHEDULES( CNAgent, CHAssassin );
+
+//=========================================================
+// RunAI - the charge, the shield and the footsteps
+//=========================================================
+void CNAgent :: RunAI( void )
+{
+	if ( pev->movetype == MOVETYPE_FLY )
+	{
+		// the power wave's recoil is over
+		pev->movetype = MOVETYPE_TOSS;
+		SetTouch( NULL );
+	}
+
+	CBaseMonster :: RunAI();
+
+	if ( m_flChargeTime != 0 && m_pChargeSprite )
+	{
+		if ( pev->weapons == 0 )
+			m_pChargeSprite->pev->scale = ( gpGlobals->time - m_flChargeTime ) * m_flChargeScale;
+		else
+			m_pChargeSprite->pev->scale = ( gpGlobals->time - m_flChargeTime ) * m_flChargeScale * 0.5;
+
+		if ( m_pChargeSprite->pev->scale < 0.1 )
+			m_pChargeSprite->pev->scale = 0.1;
+
+		if ( m_pChargeSprite->pev->scale >= m_flChargeScale )
+		{
+			// charged
+			pev->framerate = 1;
+			m_flChargeTime = 0;
+			m_pChargeSprite->pev->scale = m_flChargeScale;
+		}
+	}
+	else if ( !m_cAmmoLoaded && m_pChargeSprite )
+	{
+		UTIL_Remove( m_pChargeSprite );
+		m_pChargeSprite = NULL;
+	}
+
+	if ( pev->armortype > 0 )
+	{
+		// the shield is down for a while
+		pev->renderfx = kRenderFxNone;
+		pev->armortype -= 0.1;
+		if ( pev->armortype <= 0 )
+		{
+			pev->armorvalue = 0;
+			pev->renderfx = kRenderFxGlowShell;
+			pev->renderamt = 255;
+			pev->rendercolor = Vector( 255, 0, 128 );
+		}
+	}
+	else if ( pev->armorvalue < 2000 )
+		pev->armorvalue += 0.25;
+
+	if ( pev->health < 500 )
+		pev->health += 0.1;
+
+	if ( pev->renderfx == kRenderFxGlowShell )
+	{
+		// the shield's flash fades
+		pev->renderamt -= 10;
+		if ( pev->renderamt < 0 )
+		{
+			pev->renderfx = kRenderFxNone;
+			pev->renderamt = 0;
+			pev->rendercolor = g_vecZero;
+		}
+		else
+			pev->rendercolor = Vector( pev->renderamt, 0, pev->renderamt * 0.5 );
+	}
+
+	if (m_Activity == ACT_RUN || m_Activity == ACT_WALK)
+	{
+		static int iStep = 0;
+		iStep = ! iStep;
+		if (iStep)
+		{
+			switch( RANDOM_LONG( 0, 3 ) )
+			{
+			case 0:	EMIT_SOUND( ENT(pev), CHAN_BODY, "player/pl_step1.wav", 0.5, ATTN_NORM);	break;
+			case 1:	EMIT_SOUND( ENT(pev), CHAN_BODY, "player/pl_step3.wav", 0.5, ATTN_NORM);	break;
+			case 2:	EMIT_SOUND( ENT(pev), CHAN_BODY, "player/pl_step2.wav", 0.5, ATTN_NORM);	break;
+			case 3:	EMIT_SOUND( ENT(pev), CHAN_BODY, "player/pl_step4.wav", 0.5, ATTN_NORM);	break;
+			}
+		}
+	}
+}
+
+//=========================================================
+// StartTask
+//=========================================================
+void CNAgent :: StartTask ( Task_t *pTask )
+{
+	switch ( pTask->iTask )
+	{
+	case TASK_AGENT_BLINK:
+		{
+			Vector vecDist = m_vecMoveGoal - pev->origin;
+			if ( vecDist.Length() >= 128 )
+			{
+				Vector vecOld = pev->origin;
+				UTIL_SetOrigin( pev, m_vecMoveGoal );
+				if ( WALK_MOVE( ENT(pev), 0, 0, WALKMOVE_NORMAL ) )
+				{
+					// a spray of sparks where it was
+					MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecOld );
+						WRITE_BYTE( TE_SPRAY );
+						WRITE_COORD( vecOld.x );
+						WRITE_COORD( vecOld.y );
+						WRITE_COORD( vecOld.z );
+						WRITE_COORD( 0 );
+						WRITE_COORD( 0 );
+						WRITE_COORD( 1 );
+						WRITE_SHORT( m_iShell );
+						WRITE_BYTE( 14 );	// count
+						WRITE_BYTE( 130 );	// speed
+						WRITE_BYTE( 128 );	// noise
+						WRITE_BYTE( kRenderTransAdd );
+					MESSAGE_END();
+					EMIT_SOUND_DYN( ENT(pev), CHAN_STATIC, "houndeye/he_blast1.wav", 1.0, 0.3, 0, PITCH_NORM );
+					TaskComplete();
+					break;
+				}
+				UTIL_SetOrigin( pev, vecOld );
+			}
+			TaskFail();
+		}
+		break;
+	case TASK_AGENT_FIND_COVER_FROM_ENEMY:
+		if ( m_hEnemy != NULL )
+		{
+			Vector vecResult;
+			if ( FindNodeInCover( m_hEnemy->pev->origin, m_hEnemy->pev->view_ofs, 0, CoverRadius(), vecResult ) )
+			{
+				m_vecMoveGoal = vecResult;
+				TaskComplete();
+				break;
+			}
+		}
+		TaskFail();
+		break;
+	case TASK_AGENT_FIND_COVER_FROM_SOUND:
+		{
+			CSound *pBestSound = PBestSound();
+			if ( pBestSound )
+			{
+				Vector vecResult;
+				if ( FindNodeInCover( pBestSound->m_vecOrigin, g_vecZero, pBestSound->m_iVolume, max( pBestSound->m_iVolume * 2, CoverRadius() ), vecResult )
+					|| FindNodeAway( pBestSound->m_vecOrigin, pBestSound->m_iVolume, max( pBestSound->m_iVolume * 2, CoverRadius() ), vecResult ) )
+				{
+					m_vecMoveGoal = vecResult;
+					TaskComplete();
+					break;
+				}
+			}
+			TaskFail();
+		}
+		break;
+	case TASK_AGENT_FIND_NODE_NEAR_ENEMY:
+		if ( m_hEnemy == NULL )
+		{
+			TaskFail();
+			break;
+		}
+		{
+			Vector vecResult;
+			if ( FindEnemyNode( m_hEnemy->pev->origin, vecResult, pTask->flData, 512, 0 ) )
+			{
+				m_vecMoveGoal = vecResult;
+				TaskComplete();
+			}
+			else
+				TaskFail();
+		}
+		// sic: falls through
+	case TASK_AGENT_FIND_NODE_AWAY_FROM_ENEMY:
+		if ( m_hEnemy == NULL )
+		{
+			TaskFail();
+			break;
+		}
+		{
+			Vector vecResult;
+			if ( FindEnemyNode( m_hEnemy->pev->origin, vecResult, 0, 0, pTask->flData ) )
+			{
+				m_vecMoveGoal = vecResult;
+				TaskComplete();
+			}
+			else
+				TaskFail();
+		}
+		// sic: falls through
+	case TASK_SPECIAL_ATTACK1:
+		{
+			// drop a vortex mine if it can be thrown
+			Vector vecToss;
+			if ( m_hEnemy != NULL )
+				vecToss = VecCheckToss( pev, GetGunPosition(), m_hEnemy->pev->origin + Vector( RANDOM_FLOAT( -64, 64 ), RANDOM_FLOAT( -64, 64 ), 0 ), 0.5 );
+			else
+				vecToss = VecCheckToss( pev, GetGunPosition(), m_vecEnemyLKP + Vector( RANDOM_FLOAT( -64, 64 ), RANDOM_FLOAT( -64, 64 ), 0 ), 0.5 );
+
+			if ( vecToss == g_vecZero )
+			{
+				TaskFail();
+				break;
+			}
+			pev->weapons = 1;
+			m_IdealActivity = ACT_RANGE_ATTACK2;
+		}
+		break;
+	default:
+		CHAssassin :: StartTask ( pTask );
+		break;
+	}
+}
+
+//=========================================================
+// RunTask
+//=========================================================
+void CNAgent :: RunTask ( Task_t *pTask )
+{
+	switch ( pTask->iTask )
+	{
+	case TASK_SPECIAL_ATTACK1:
+		MakeIdealYaw ( m_vecEnemyLKP );
+		ChangeYaw ( pev->yaw_speed );
+
+		if ( m_fSequenceFinished )
+		{
+			m_Activity = ACT_RESET;
+			TaskComplete();
+		}
+		break;
+	default:
+		CHAssassin :: RunTask ( pTask );
+		break;
+	}
+}
+
+//=========================================================
+// GetSchedule - Decides which type of schedule best suits
+// the monster's current state and conditions. Then calls
+// monster's member function to get a pointer to a schedule
+// of the proper type.
+//=========================================================
+Schedule_t *CNAgent :: GetSchedule ( void )
+{
+	if ( !m_pChargeSprite || m_flChargeTime != 0 )
+		m_cAmmoLoaded = 1;
+
+	switch	( m_MonsterState )
+	{
+	case MONSTERSTATE_IDLE:
+	case MONSTERSTATE_ALERT:
+		{
+			if ( HasConditions ( bits_COND_HEAR_SOUND ))
+			{
+				CSound *pSound;
+				pSound = PBestSound();
+
+				if ( pSound && (pSound->m_iType & bits_SOUND_DANGER) )
+				{
+					return GetScheduleOfType( SCHED_AGENT_BLINK_COVER_FROM_SOUND );
+				}
+				if ( pSound && (pSound->m_iType & bits_SOUND_WORLD) )
+				{
+					return GetScheduleOfType( SCHED_INVESTIGATE_SOUND );
+				}
+			}
+		}
+		break;
+
+	case MONSTERSTATE_COMBAT:
+		{
+// dead enemy
+			if ( HasConditions( bits_COND_ENEMY_DEAD ) )
+			{
+				// call base class, all code to handle dead enemies is centralized there.
+				return CBaseMonster :: GetSchedule();
+			}
+
+			// flying?
+			if ( pev->movetype == MOVETYPE_TOSS)
+			{
+				if (pev->flags & FL_ONGROUND)
+				{
+					// just landed
+					pev->movetype = MOVETYPE_STEP;
+					return GetScheduleOfType ( SCHED_ASSASSIN_JUMP_LAND );
+				}
+				else
+				{
+					// jump or jump/shoot
+					if ( m_MonsterState == MONSTERSTATE_COMBAT )
+						return GetScheduleOfType ( SCHED_ASSASSIN_JUMP );
+					else
+						return GetScheduleOfType ( SCHED_ASSASSIN_JUMP_ATTACK );
+				}
+			}
+
+			if ( HasConditions ( bits_COND_HEAR_SOUND ))
+			{
+				CSound *pSound;
+				pSound = PBestSound();
+
+				if ( pSound && (pSound->m_iType & bits_SOUND_DANGER) )
+				{
+					return GetScheduleOfType( SCHED_AGENT_BLINK_COVER_FROM_SOUND );
+				}
+			}
+
+			if ( HasConditions ( bits_COND_LIGHT_DAMAGE ) )
+			{
+				m_iFrustration++;
+			}
+			if ( HasConditions ( bits_COND_HEAVY_DAMAGE ) )
+			{
+				m_iFrustration += 2;
+			}
+
+		// a charged power wave
+			if ( m_pChargeSprite && m_flChargeTime == 0 && m_hEnemy != NULL && pev->frags == 1 )
+			{
+				if ( HasConditions( bits_COND_CAN_RANGE_ATTACK1 ) && !HasConditions( bits_COND_SPECIAL1 ) )
+					return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
+
+				TraceResult tr;
+
+				if ( m_hEnemy->CanBeRepulsed( false ) )
+				{
+					// room behind the enemy to blow it away?
+					Vector vecSrc = Center();
+					Vector vecDir = ( m_hEnemy->Center() - vecSrc ).Normalize();
+					UTIL_TraceLine( vecSrc + vecDir * 64, vecSrc + vecDir * 600, dont_ignore_monsters, m_hEnemy->edict(), &tr );
+					if ( tr.flFraction >= 0.9 )
+						goto attack;
+				}
+
+				// no: get some room first
+				BOOL fJump = FALSE;
+				UTIL_MakeVectors( pev->angles );
+				Vector vecSrc = m_hEnemy->Center();
+				Vector vecDir = ( gpGlobals->v_up - gpGlobals->v_forward ).Normalize();
+				UTIL_TraceLine( vecSrc, Center() + vecDir * 600, ignore_monsters, m_hEnemy->edict(), &tr );
+				if ( ( tr.vecEndPos - vecSrc ).Length() >= 480 )
+					fJump = CheckJump();
+
+				if ( !WorldGraph.m_fGraphPresent || !WorldGraph.m_fGraphPointersSet )
+				{
+					if ( fJump && RANDOM_LONG( 0, 255 ) > 127 )
+						return GetScheduleOfType ( SCHED_MELEE_ATTACK1 );
+					return GetScheduleOfType ( SCHED_AGENT_BLINK_NPW_COMBO );
+				}
+
+				if ( fJump )
+					return GetScheduleOfType ( SCHED_MELEE_ATTACK1 );
+				return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
+			}
+attack:
+		// jump player!
+			if ( HasConditions ( bits_COND_CAN_MELEE_ATTACK1 ) )
+			{
+				return GetScheduleOfType ( SCHED_MELEE_ATTACK1 );
+			}
+
+		// secondary attack
+			if ( HasConditions ( bits_COND_CAN_RANGE_ATTACK2 ) )
+			{
+				if ( m_iFrustration > 1 && m_hEnemy != NULL && ( pev->weapons & 1 ) )
+					return slMineField;
+				return GetScheduleOfType ( SCHED_RANGE_ATTACK2 );
+			}
+
+		// spotted
+			if ( HasConditions ( bits_COND_SEE_ENEMY ) && HasConditions ( bits_COND_ENEMY_FACING_ME ) )
+			{
+				m_iFrustration++;
+				if ( RANDOM_FLOAT( 0, 1 ) > 0.25 )
+					return GetScheduleOfType ( SCHED_ASSASSIN_EXPOSED );
+				return GetScheduleOfType ( SCHED_AGENT_BLINK_ATTACK );
+			}
+
+		// can attack
+			if ( HasConditions ( bits_COND_CAN_RANGE_ATTACK1 ) )
+			{
+				if ( pev->armorvalue > 0 )
+					m_iFrustration = 0;
+
+				// the stronger the enemy, the likelier a charged attack
+				int iHealth = min( m_hEnemy->pev->health + m_hEnemy->pev->armorvalue, 100 );
+				if ( !m_pChargeSprite && RANDOM_LONG( 0, 140 ) < iHealth )
+				{
+					m_flChargeTime = gpGlobals->time;
+					m_flChargeScale = 0.5;
+					if ( pev->frags == 1 )
+					{
+						m_pChargeSprite = CSprite::SpriteCreate( "sprites/n_charge.spr", pev->origin, TRUE );
+						m_pChargeSprite->SetAttachment( edict(), 1 );
+						m_pChargeSprite->SetScale( 0.1 );
+						m_pChargeSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxNone );
+						m_pChargeSprite->pev->framerate = 10;
+					}
+					else
+					{
+						m_pChargeSprite = CSprite::SpriteCreate( "sprites/flux_t.spr", pev->origin, TRUE );
+						m_pChargeSprite->SetAttachment( edict(), 1 );
+						m_pChargeSprite->SetScale( 0.1 );
+						m_pChargeSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxDistort );
+					}
+					m_pChargeSprite->pev->spawnflags |= SF_SPRITE_TEMPORARY;
+				}
+				return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
+			}
+
+			if ( m_iFrustration > 2 && m_hEnemy != NULL )
+			{
+				if ( !m_pChargeSprite )
+				{
+					pev->frags = RANDOM_LONG( 0, 2 );
+					m_flWeaponTime = gpGlobals->time;
+				}
+				return GetScheduleOfType ( SCHED_AGENT_BLINK_ATTACK );
+			}
+
+			if ( HasConditions ( bits_COND_SEE_ENEMY ) )
+			{
+				return GetScheduleOfType ( SCHED_COMBAT_FACE );
+			}
+
+			if ( HasConditions ( bits_COND_ENEMY_TOOFAR ) )
+			{
+				return GetScheduleOfType ( SCHED_AGENT_BLINK_ATTACK );
+			}
+
+		// new enemy
+			if ( HasConditions ( bits_COND_NEW_ENEMY ) )
+			{
+				if ( RANDOM_FLOAT( 0, 1 ) > 0.5 )
+					return GetScheduleOfType ( SCHED_AGENT_BLINK_COVER_FROM_ENEMY );
+				return GetScheduleOfType ( SCHED_AGENT_BLINK_ATTACK );
+			}
+
+			return GetScheduleOfType ( SCHED_ALERT_STAND );
+		}
+		break;
+	}
+
+	return CHAssassin :: GetSchedule();
+}
+
+//=========================================================
+//=========================================================
+Schedule_t* CNAgent :: GetScheduleOfType ( int Type ) 
+{
+	switch	( Type )
+	{
+	case SCHED_AGENT_BLINK_COVER_FROM_ENEMY:
+		return slAgentBlinkCoverFromEnemy;
+	case SCHED_AGENT_BLINK_COVER_FROM_SOUND:
+		return slAgentBlinkCoverFromSound;
+	case SCHED_AGENT_BLINK_ATTACK:
+		return slAgentBlinkAttack;
+	case SCHED_AGENT_BLINK_NPW_COMBO:
+		return slBlinkNPWCombo;
+	}
+
+	return CHAssassin :: GetScheduleOfType( Type );
+}
+
+//=========================================================
+// CheckRangeAttack1 - picks the primary attack now and then
+// by the enemy's speed, strength and distance
+//=========================================================
+BOOL CNAgent :: CheckRangeAttack1 ( float flDot, float flDist )
+{
+	if ( !m_pChargeSprite && m_flWeaponTime + 14 <= gpGlobals->time
+		&& RANDOM_FLOAT( gpGlobals->time - ( m_flWeaponTime + 14 ), 14 ) >= 10 )
+	{
+		int iWeapon = pev->frags;
+		float flSpeed = m_hEnemy->MovementSpeed();
+		int iHealth = m_hEnemy->pev->armorvalue + m_hEnemy->pev->health;
+
+		switch ( (int)pev->frags )
+		{
+		case 0:
+			if ( flSpeed > 200 )
+				iWeapon = 2;
+			else if ( flSpeed > 100 && flDist > 1024 )
+				iWeapon = iHealth < 200 ? 2 : 1;
+			else if ( flDist > 2048 )
+			{
+				if ( flSpeed < 100 )
+					iWeapon = 1;
+				else
+					iWeapon = 2;
+			}
+			else if ( !( flSpeed < 50 && flDist < 512 && iHealth > 500 ) )
+				iWeapon = RANDOM_LONG( 0, 2 );
+			break;
+		case 1:
+			if ( flSpeed > 200 || flDist > 2048 )
+				iWeapon = 2;
+			else if ( ( flSpeed < 50 && flDist < 512 ) || iHealth > 500 )
+				iWeapon = 0;
+			else if ( !( flSpeed < 100 && flDist < 2048 ) )
+				iWeapon = RANDOM_LONG( 0, 2 );
+			break;
+		case 2:
+			if ( iHealth > 500 )
+			{
+				if ( flDist > 1024 )
+					iWeapon = 1;
+				else
+					iWeapon = 0;
+			}
+			else if ( flDist < 512 )
+			{
+				if ( flSpeed > 50 )
+					iWeapon = 1;
+				else
+					iWeapon = 0;
+			}
+			else if ( flSpeed <= 200 && flDist <= 2048 )
+				iWeapon = RANDOM_LONG( 0, 2 );
+			break;
+		default:
+			iWeapon = RANDOM_LONG( 0, 2 );
+			m_flWeaponTime = gpGlobals->time;
+			break;
+		}
+
+		if ( iWeapon != pev->frags )
+		{
+			pev->frags = iWeapon;
+			m_flWeaponTime = gpGlobals->time;
+		}
+	}
+
+	// the laser pulse is no good up close
+	if ( pev->frags == 1 && flDist < 500 )
+		SetConditions( bits_COND_SPECIAL1 );
+	else
+		ClearConditions( bits_COND_SPECIAL1 );
+
+	float flRange = 2048;
+	if ( pev->frags != 0 )
+		flRange = 4096;
+
+	if ( m_hPowerBeam != NULL || ( m_pChargeSprite && pev->frags == 2 ) )
+	{
+		if ( flDist <= flRange && flDot >= 0.5 )
+			return TRUE;
+	}
+	else if ( !HasConditions( bits_COND_ENEMY_OCCLUDED ) && flDist <= flRange && flDot >= 0.5 )
+	{
+		TraceResult	tr;
+
+		Vector vecSrc = GetGunPosition();
+
+		// verify that a bullet fired from the gun will hit the enemy before the world.
+		UTIL_TraceLine( vecSrc, m_hEnemy->BodyTarget(vecSrc), dont_ignore_monsters, ENT(pev), &tr);
+
+		if ( tr.flFraction == 1 || tr.pHit == m_hEnemy->edict() )
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+//=========================================================
+// CheckRangeAttack2 - which secondary attacks will do
+//=========================================================
+BOOL CNAgent :: CheckRangeAttack2 ( float flDot, float flDist )
+{
+	if ( m_pChargeSprite )
+	{
+		m_fThrowGrenade = FALSE;
+		return FALSE;
+	}
+
+	if ( gpGlobals->time < m_flNextGrenadeCheck )
+		return m_fThrowGrenade;
+
+	pev->weapons = 7;
+
+	// the vortex mine: grenadable enemies in range
+	if ( flDist > 1024 || flDist < 256 || !m_hEnemy->CanBeGrenaded( FALSE ) )
+		pev->weapons &= ~1;
+
+	// the flux rocket: not up close
+	if ( flDist < 256 )
+		pev->weapons &= ~4;
+
+	Vector vecToss = g_vecZero;
+
+	if ( HasConditions( bits_COND_ENEMY_OCCLUDED ) )
+	{
+		pev->weapons &= ~6;
+		if ( !( pev->weapons & 1 ) )
+		{
+			m_fThrowGrenade = FALSE;
+			return FALSE;
+		}
+		vecToss = VecCheckToss( pev, GetGunPosition(), m_hEnemy->pev->origin, 0.5 );
+	}
+	else if ( pev->weapons & 1 )
+		vecToss = VecCheckThrow( pev, GetGunPosition(), m_hEnemy->Center(), flDist, 0.5 );
+
+	if ( vecToss != g_vecZero )
+		m_vecTossVelocity = vecToss;
+
+	// the energy disk: not at machines or small things
+	if ( m_hEnemy->BloodColor() == DONT_BLEED || m_hEnemy->pev->size.z < 32 )
+		pev->weapons &= ~2;
+
+	m_fThrowGrenade = pev->weapons != 0;
+	return m_fThrowGrenade;
+}
+
+BOOL CNAgent :: FCanCheckAttacks( void )
+{
+	return TRUE;
+}
+
+//=========================================================
+// TakeDamage - the shield takes the damage while it lasts
+// and stays down five seconds when it breaks
+//=========================================================
+int CNAgent :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
+{
+	int iResult = TRUE;
+
+	if ( pev->armorvalue > 0 )
+	{
+		pev->armorvalue -= flDamage;
+		pev->renderfx = kRenderFxGlowShell;
+		pev->renderamt = 255;
+		pev->rendercolor = Vector( 255, 0, 128 );
+
+		if ( flDamage > 20 )
+			SetConditions( bits_COND_LIGHT_DAMAGE );
+		if ( flDamage >= 100 )
+			SetConditions( bits_COND_HEAVY_DAMAGE );
+
+		CBaseMonster::TakeDamage( pevInflictor, pevAttacker, 0, 0 );
+	}
+	else
+		iResult = CBaseMonster::TakeDamage( pevInflictor, pevAttacker, flDamage, bitsDamageType );
+
+	if ( pev->armorvalue <= 0 )
+		pev->armortype = 5;	// seconds until the shield regrows
+
+	Forget( bits_MEMORY_INCOVER );
+	return iResult;
+}
+
+//=========================================================
+// Killed - the agent leaves a vortex behind
+//=========================================================
+void CNAgent :: Killed( entvars_t *pevAttacker, int iGib )
+{
+	if ( m_pChargeSprite )
+		UTIL_Remove( m_pChargeSprite );
+	m_pChargeSprite = NULL;
+
+	if ( !HasMemory( bits_MEMORY_KILLED ) )
+	{
+		CBaseEntity *pBlast = CBaseEntity::Create( "vortex_blast", pev->origin, pev->angles, pev->owner );
+		pBlast->pev->dmg = 250;
+		pBlast->pev->movedir = Vector( 0, 0, -32 );
+		pBlast->pev->scale = 1;
+	}
+
+	CBaseMonster::Killed( pevAttacker, iGib );
+}
+
+//=========================================================
+// CheckJump - room for the jump? sets m_vecJumpVelocity
+//=========================================================
+BOOL CNAgent :: CheckJump( void )
+{
+	TraceResult	tr;
+
+	Vector vecDest = pev->origin + Vector( RANDOM_FLOAT( -64, 64), RANDOM_FLOAT( -64, 64 ), 160 );
+
+	UTIL_TraceHull( pev->origin + Vector( 0, 0, 36 ), vecDest + Vector( 0, 0, 36 ), dont_ignore_monsters, human_hull, ENT(pev), &tr);
+
+	if ( tr.fStartSolid || tr.flFraction < 1.0)
+	{
+		return FALSE;
+	}
+
+	float flGravity = g_psv_gravity->value;
+
+	float time = sqrt( 160 / (0.5 * flGravity));
+	float speed = flGravity * time / 160;
+	m_vecJumpVelocity = (vecDest - pev->origin) * speed;
+
+	return TRUE;
 }
 
 #endif
