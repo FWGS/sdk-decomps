@@ -282,7 +282,9 @@ void CRepulsor::PrimaryAttack( void )
 	// player "shoot" animation
 	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
-	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+	Vector vecAngles;
+	vecAngles = m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle;
+	UTIL_MakeVectors( vecAngles );
 	Vector vecSrc = m_pPlayer->GetGunPosition( ) + gpGlobals->v_up * -10 + gpGlobals->v_right * 7;
 
 	CRepulsorBeam *pBeam = CRepulsorBeam::BeamCreate();
@@ -352,8 +354,10 @@ void CRepulsor::SecondaryAttack( void )
 	SendWeaponAnim( REPULSOR_FIRE );
 
 	// sic: the beam's start uses the vectors of the previous UTIL_MakeVectors
+	Vector vecAngles;
 	Vector vecSrc = m_pPlayer->GetGunPosition( ) + gpGlobals->v_up * -10 + gpGlobals->v_right * 7;
-	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+	vecAngles = m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle;
+	UTIL_MakeVectors( vecAngles );
 
 	CRepulsorBeam *pBeam = CRepulsorBeam::BeamCreate();
 	pBeam->pev->origin = vecSrc;
@@ -511,7 +515,9 @@ bool CRepulsor::TractorThink( void )
 		return FALSE;
 	}
 
-	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+	Vector vecAngles;
+	vecAngles = m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle;
+	UTIL_MakeVectors( vecAngles );
 
 	Vector vecDest = m_pPlayer->GetGunPosition( ) + gpGlobals->v_forward * pev->frags;
 	Vector vecDir = vecDest - m_hTarget->Center();
