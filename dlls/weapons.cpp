@@ -1582,3 +1582,16 @@ TYPEDESCRIPTION	CSatchel::m_SaveData[] =
 };
 IMPLEMENT_SAVERESTORE( CSatchel, CBasePlayerWeapon );
 
+// a stand-in until this file has the real spread helper (retail 0x100eb710, 328 bytes)
+Vector UTIL_SpreadVector( const Vector &vecSpread )
+{
+	float x, y, z;
+
+	do {
+		x = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
+		y = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
+		z = x*x+y*y;
+	} while (z > 1);
+
+	return gpGlobals->v_forward + x * vecSpread.x * gpGlobals->v_right + y * vecSpread.y * gpGlobals->v_up;
+}
