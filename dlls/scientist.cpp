@@ -26,6 +26,11 @@
 #include	"scripted.h"
 #include	"animation.h"
 #include	"soundent.h"
+#include	"weapons.h"
+#include	"player.h"
+#include	"gamerules.h"
+#include	"game.h"
+#include	"nodes.h"
 
 
 #define		NUM_SCIENTIST_HEADS		4 // four heads available for scientist model
@@ -39,6 +44,7 @@ enum
 	SCHED_STARTLE,
 	SCHED_TARGET_CHASE_SCARED,
 	SCHED_TARGET_FACE_SCARED,
+	SCHED_IDLE_RUN,		// name ours: walk a path at a run
 };
 
 enum
@@ -59,6 +65,21 @@ enum
 #define		SCIENTIST_AE_NEEDLEON	( 2 )
 #define		SCIENTIST_AE_NEEDLEOFF	( 3 )
 
+// spawnflags
+#define		SF_SCIENTIST_FEARPLAYER		64	// name ours: starts provoked (the fgd's "Fear Player" says 32)
+#define		SF_BARNEY_HATE_SCIENTISTS	32	// as in barney.cpp
+
+// damage bits only the scientist tests (names ours)
+#define		DMG_NOPUSH		(1 << 25)	// no knockback (energy disk, displacer ball)
+#define		DMG_HALVE		(1 << 26)	// cuts the victim in half (energy disk, sword)
+
+// bodygroup 0 (head): 0-3 the heads, +4 headless, 8 skull, 9 none
+// bodygroup 2 (body): 0 whole, 1 legs only, 2 upper body only, 3 none
+// bodygroup 3 (skeleton): 0 none, 1 whole, 2 legs, 3 upper body
+
+extern int gmsgSciInfo;
+extern entvars_t *g_pevLastInflictor;
+
 //=======================================================
 // Scientist
 //=======================================================
@@ -75,19 +96,73 @@ public:
 	void RunTask( Task_t *pTask );
 	void StartTask( Task_t *pTask );
 	int	ObjectCaps( void ) { return CTalkMonster :: ObjectCaps() | FCAP_IMPULSE_USE; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup )
+	{
+		if ( pev->takedamage == DAMAGE_NO )
+			return "telefragged";
+		if ( m_bitsDamageType & DMG_RADIATION )
+			return "died of radiation poisoning";
+		if ( m_bitsDamageType & (DMG_POISON | DMG_NERVEGAS) )
+			return "was poisoned";
+		if ( m_bitsDamageType & DMG_SLOWBURN )
+			return "burned to death";
+		if ( m_bitsDamageType & DMG_SLOWFREEZE )
+			return "was frozen";
+		return "drowned";
+	}
+	const char *GetKillDesc( void )
+	{
+		if ( pev->takedamage != DAMAGE_NO )
+			return "";
+		return GetHudName();
+	}
+	const char *GetHudName( void )
+	{
+		switch ( GetBodygroup( 0 ) )
+		{
+		case HEAD_EINSTEIN:
+		case HEAD_EINSTEIN + NUM_SCIENTIST_HEADS:
+			return "Einstein";
+		case HEAD_LUTHER:
+		case HEAD_LUTHER + NUM_SCIENTIST_HEADS:
+			return "Luther";
+		case HEAD_SLICK:
+		case HEAD_SLICK + NUM_SCIENTIST_HEADS:
+			return "Slick";
+		default:
+			return "Walter";
+		}
+	}
+	int GetBattlePower( void ) { return pev->max_health * 0.1; }
+	BOOL IsGrenadeTarget( void ) { return TRUE; }
 	int TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType);
+	void TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType);
 	virtual int FriendNumber( int arrayNumber );
 	void SetActivity ( Activity newActivity );
 	Activity GetStoppedActivity( void );
 	int ISoundMask( void );
 	void DeclineFollowing( void );
+	BOOL FValidateHintType( short sHint );
+	BOOL FCanActiveIdle( void );
+	int IRelationship( CBaseEntity *pTarget );
+	void MonsterThink( void );
+	void StartMonster( void );
+	int FOkToSpeak( void );
 
 	float	CoverRadius( void ) { return 1200; }		// Need more room for cover because scientists want to get far away!
 	BOOL	DisregardEnemy( CBaseEntity *pEnemy ) { return !pEnemy->IsAlive() || (gpGlobals->time - m_fearTime) > 15; }
 
-	BOOL	CanHeal( void );
+	virtual void	AcidMelt( void );	// name ours: dissolve to a skeleton where the acid hit
+	virtual BOOL	CanHeal( void );
 	void	Heal( void );
 	void	Scream( void );
+	virtual bool	HasHead( void ) { return GetBodygroup( 0 ) < NUM_SCIENTIST_HEADS; }	// name ours
+	virtual bool	CanBeHalved( void ) { return !GetBodygroup( 2 ); }	// name ours
+	virtual bool	CanMelt( void ) { return !GetBodygroup( 3 ); }	// name ours
+
+	void	Shatter( void );	// name ours: frozen solid and hit
+	void	CutInHalf( void );	// name ours
+	void	DeathMessage( entvars_t *pevAttacker, entvars_t *pevInflictor, BOOL fGibbed );	// name ours
 
 	// Override these to set behavior
 	Schedule_t *GetScheduleOfType ( int Type );
@@ -100,6 +175,8 @@ public:
 	void TalkInit( void );
 
 	void			Killed( entvars_t *pevAttacker, int iGib );
+	void			GibMonster( void );
+	void			FadeMonster( void );
 	
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
@@ -111,6 +188,13 @@ private:
 	float m_painTime;
 	float m_healTime;
 	float m_fearTime;
+public:
+	float m_glowTime;			// the glow shell of radiation, freeze or paralysis goes at this time
+	int m_frozen;
+	int m_iGlassGibs;			// name ours
+	float m_flHeadDamage;		// name ours: head hits since the last TakeDamage
+	float m_flAcidDamageUpper;
+	float m_flAcidDamageLower;
 };
 
 LINK_ENTITY_TO_CLASS( monster_scientist, CScientist );
@@ -120,6 +204,10 @@ TYPEDESCRIPTION	CScientist::m_SaveData[] =
 	DEFINE_FIELD( CScientist, m_painTime, FIELD_TIME ),
 	DEFINE_FIELD( CScientist, m_healTime, FIELD_TIME ),
 	DEFINE_FIELD( CScientist, m_fearTime, FIELD_TIME ),
+	DEFINE_FIELD( CScientist, m_glowTime, FIELD_TIME ),
+	DEFINE_FIELD( CScientist, m_frozen, FIELD_INTEGER ),
+	DEFINE_FIELD( CScientist, m_flAcidDamageUpper, FIELD_FLOAT ),
+	DEFINE_FIELD( CScientist, m_flAcidDamageLower, FIELD_FLOAT ),
 };
 
 IMPLEMENT_SAVERESTORE( CScientist, CTalkMonster );
@@ -404,6 +492,36 @@ Schedule_t	slFear[] =
 };
 
 
+// walk a path at a run (name ours)
+Task_t	tlIdleRun[] =
+{
+	{ TASK_SET_FAIL_SCHEDULE,	(float)SCHED_IDLE_WALK	},
+	{ TASK_RUN_PATH,			(float)0		},
+	{ TASK_WAIT_FOR_MOVEMENT,	(float)0		},
+};
+
+Schedule_t	slIdleRun[] =
+{
+	{ 
+		tlIdleRun,
+		ARRAYSIZE ( tlIdleRun ), 
+		bits_COND_NEW_ENEMY		|
+		bits_COND_LIGHT_DAMAGE	|
+		bits_COND_HEAVY_DAMAGE	|
+		bits_COND_HEAR_SOUND	|
+		bits_COND_SMELL_FOOD	|
+		bits_COND_SMELL			|
+		bits_COND_PROVOKED,
+
+		bits_SOUND_COMBAT		|// sound flags
+		bits_SOUND_MEAT			|// scents
+		bits_SOUND_CARCASS		|
+		bits_SOUND_GARBAGE,
+		"Idle Run"
+	},
+};
+
+
 DEFINE_CUSTOM_SCHEDULES( CScientist )
 {
 	slFollow,
@@ -418,6 +536,7 @@ DEFINE_CUSTOM_SCHEDULES( CScientist )
 	slSciPanic,
 	slFollowScared,
 	slFaceTargetScared,
+	slIdleRun,
 };
 
 
@@ -448,6 +567,33 @@ Activity CScientist::GetStoppedActivity( void )
 	if ( m_hEnemy != NULL ) 
 		return ACT_EXCITED;
 	return CTalkMonster::GetStoppedActivity();
+}
+
+
+//=========================================================
+// FValidateHintType - the scientist's own work hints, then
+// the talkmonster's
+//=========================================================
+BOOL CScientist :: FValidateHintType ( short sHint )
+{
+	int i;
+
+	static short sScientistHints[] =
+	{
+		HINT_SCIENTIST_WORK,
+		HINT_SCIENTIST_USE,
+		HINT_SCIENTIST_TRANSIT,
+	};
+
+	for ( i = 0 ; i < ARRAYSIZE ( sScientistHints ) ; i++ )
+	{
+		if ( sScientistHints[ i ] == sHint )
+		{
+			return TRUE;
+		}
+	}
+
+	return CTalkMonster::FValidateHintType( sHint );
 }
 
 
@@ -513,6 +659,18 @@ void CScientist :: StartTask( Task_t *pTask )
 		CTalkMonster::StartTask( pTask );
 		break;
 	}
+}
+
+
+//=========================================================
+// IRelationship - a barney who hates scientists is hated back
+//=========================================================
+int CScientist::IRelationship( CBaseEntity *pTarget )
+{
+	if ( (pTarget->pev->spawnflags & SF_BARNEY_HATE_SCIENTISTS) && pTarget->Classify() == CLASS_PLAYER_ALLY )
+		return R_HT;
+
+	return CTalkMonster::IRelationship( pTarget );
 }
 
 void CScientist :: RunTask( Task_t *pTask )
@@ -634,16 +792,10 @@ void CScientist :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		Heal();
 		break;
 	case SCIENTIST_AE_NEEDLEON:
-		{
-		int oldBody = pev->body;
-		pev->body = (oldBody % NUM_SCIENTIST_HEADS) + NUM_SCIENTIST_HEADS * 1;
-		}
+		SetBodygroup( 1, 1 );
 		break;
 	case SCIENTIST_AE_NEEDLEOFF:
-		{
-		int oldBody = pev->body;
-		pev->body = (oldBody % NUM_SCIENTIST_HEADS) + NUM_SCIENTIST_HEADS * 0;
-		}
+		SetBodygroup( 1, 0 );
 		break;
 
 	default:
@@ -682,11 +834,14 @@ void CScientist :: Spawn( void )
 	}
 
 	// Luther is black, make his hands black
-	if ( pev->body == HEAD_LUTHER )
+	if ( GetBodygroup( 0 ) == HEAD_LUTHER || GetBodygroup( 0 ) == HEAD_LUTHER + NUM_SCIENTIST_HEADS )
 		pev->skin = 1;
 	
 	MonsterInit();
 	SetUse( FollowerUse );
+
+	if ( pev->spawnflags & SF_SCIENTIST_FEARPLAYER )
+		Remember( bits_MEMORY_PROVOKED );
 }
 
 //=========================================================
@@ -701,6 +856,11 @@ void CScientist :: Precache( void )
 	PRECACHE_SOUND("scientist/sci_pain4.wav");
 	PRECACHE_SOUND("scientist/sci_pain5.wav");
 
+	m_iGlassGibs = PRECACHE_MODEL( "models/glassgibs.mdl" );
+	PRECACHE_SOUND( "debris/bustglass1.wav" );
+	PRECACHE_SOUND( "debris/bustglass2.wav" );
+	PRECACHE_SOUND( "debris/bustglass3.wav" );
+
 	// every new scientist must call this, otherwise
 	// when a level is loaded, nobody will talk (time is reset to 0)
 	TalkInit();
@@ -713,12 +873,6 @@ void CScientist :: TalkInit()
 {
 	
 	CTalkMonster::TalkInit();
-
-	// scientist will try to talk to friends in this order:
-
-	m_szFriends[0] = "monster_scientist";
-	m_szFriends[1] = "monster_sitting_scientist";
-	m_szFriends[2] = "monster_barney";
 
 	// scientists speach group names (group names are in sentences.txt)
 
@@ -757,15 +911,176 @@ void CScientist :: TalkInit()
 
 int CScientist :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType)
 {
+	if ( m_frozen )
+	{
+		// cold can't hurt a frozen scientist any more
+		if ( bitsDamageType & (DMG_FREEZE | DMG_SLOWFREEZE) )
+			return 0;
 
-	if ( pevInflictor && pevInflictor->flags & FL_CLIENT )
+		m_frozen = FALSE;
+		if ( bitsDamageType & (DMG_BURN | DMG_SLOWBURN) )
+		{
+			// thawed out: back to life
+			pev->animtime = gpGlobals->time;
+			ResetSequenceInfo( );
+			SetThink( CallMonsterThink );
+			pev->nextthink = gpGlobals->time + 0.1;
+			pev->renderfx = kRenderFxNone;
+		}
+		else if ( bitsDamageType & DMG_FADE )
+		{
+			SUB_StartFadeOut();
+			return 1;
+		}
+		else
+		{
+			Shatter();
+			return 1;
+		}
+	}
+
+	if ( bitsDamageType & DMG_ACID )
+	{
+		ALERT( at_console, "hitgroup %d\n", m_LastHitGroup );
+
+		if ( m_LastHitGroup >= HITGROUP_LEFTLEG )
+			m_flAcidDamageLower += flDamage;
+		else if ( m_LastHitGroup == HITGROUP_STOMACH )
+		{
+			m_flAcidDamageUpper += flDamage;
+			m_flAcidDamageLower += flDamage;
+		}
+		else if ( m_LastHitGroup > HITGROUP_GENERIC )
+			m_flAcidDamageUpper += flDamage;
+	}
+	else if ( bitsDamageType & DMG_RADIATION )
+	{
+		pev->rendercolor = Vector( 0, 255, 0 );
+		pev->renderamt = 10;
+		pev->renderfx = kRenderFxGlowShell;
+		m_glowTime = gpGlobals->time + 8;
+	}
+	else if ( bitsDamageType & (DMG_FREEZE | DMG_SLOWFREEZE) )
+	{
+		pev->rendercolor = Vector( 128, 192, 255 );
+		pev->renderamt = 0;
+		pev->renderfx = kRenderFxGlowShell;
+		m_glowTime = gpGlobals->time + 4;
+	}
+	else if ( bitsDamageType & DMG_PARALYZE )
+	{
+		pev->rendercolor = Vector( 220, 140, 140 );
+		pev->renderamt = 10;
+		pev->renderfx = kRenderFxGlowShell;
+		m_glowTime = gpGlobals->time + 4;
+	}
+
+	if ( pevAttacker && pevAttacker->flags & FL_CLIENT )
 	{
 		Remember( bits_MEMORY_PROVOKED );
 		StopFollowing( TRUE );
 	}
 
+	// < 0: push the body back, > 0: the head flies off this fast
+	float flForce = -IsAlive();
+
+	if ( HasHead() && m_flHeadDamage > 0 && pev->health - flDamage <= -30 &&
+		( pev->health - m_flHeadDamage > -30 || (bitsDamageType & DMG_NOGIB) ) &&
+		!(bitsDamageType & (DMG_NEVERGIB | DMG_ALWAYSGIB)) )
+	{
+		// the head comes off
+		bitsDamageType |= DMG_NEVERGIB;
+		pev->body += NUM_SCIENTIST_HEADS;
+		pev->health = 0;
+
+		Vector vecOrigin, vecAngles;
+		GetAttachment( 0, vecOrigin, vecAngles );
+		SpawnBlood( vecOrigin, BLOOD_COLOR_RED, 250 );
+
+		if ( pev->deadflag != DEAD_DEAD )
+			PLAYBACK_EVENT_FULL( 0, edict(), g_iBloodSprayEvent, 0.0, pev->origin, pev->angles, 0.0, 0.0, 1, 0, 0, 0 );
+
+		if ( bitsDamageType & (DMG_CRUSH | DMG_BLAST | DMG_ENERGYBEAM | DMG_ACID | DMG_MORTAR) )
+			flForce = 0;
+		else
+			flForce = flDamage;
+	}
+	m_flHeadDamage = 0;
+
+	if ( bitsDamageType & DMG_HALVE )
+		bitsDamageType |= DMG_NEVERGIB;
+
 	// make sure friends talk about it if player hurts scientist...
-	return CTalkMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
+	int iRet = CTalkMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
+
+	if ( (bitsDamageType & DMG_HALVE) && pev->health <= 0 && CanBeHalved() )
+	{
+		CutInHalf();
+		return 1;
+	}
+
+	if ( (bitsDamageType & DMG_ACID) && pev->health <= 0 && CanMelt() )
+	{
+		AcidMelt();
+		return 1;
+	}
+
+	if ( (bitsDamageType & (DMG_FREEZE | DMG_SLOWFREEZE)) && pev->health < 0 )
+	{
+		// frozen solid
+		m_frozen = TRUE;
+		StopAnimation();
+		pev->velocity = g_vecZero;
+		pev->avelocity = g_vecZero;
+		pev->effects |= EF_NOINTERP;
+		SetThink( SUB_StartFadeOut );
+		pev->nextthink = gpGlobals->time + 10;
+		return 1;
+	}
+
+	if ( flForce > 0 )
+	{
+		CGib::SpawnPoppedHead( pev, DamageForce( flForce ) );
+		return iRet;
+	}
+
+	if ( flForce < 0 && !(bitsDamageType & DMG_NOPUSH) && pevInflictor && pevInflictor->solid != SOLID_TRIGGER && pevInflictor != pev && (!pevAttacker || pevAttacker->solid != SOLID_TRIGGER) )
+	{
+		pev->velocity = pev->velocity + g_vecAttackDir * -DamageForce( flDamage );
+	}
+
+	return iRet;
+}
+
+
+//=========================================================
+// MonsterThink - the glow shell wears off, and scientists
+// drown
+//=========================================================
+void CScientist :: MonsterThink ( void )
+{
+	if ( m_glowTime && m_glowTime < gpGlobals->time )
+	{
+		pev->renderfx = kRenderFxNone;
+		m_glowTime = 0;
+	}
+
+	if ( pev->waterlevel != 3 )
+	{
+		pev->air_finished = gpGlobals->time + 12;
+		pev->dmg = 0;
+	}
+	else if ( pev->air_finished < gpGlobals->time && pev->dmgtime < gpGlobals->time )
+	{
+		// drown
+		pev->dmg += 1;
+		if ( pev->dmg > 5 )
+			pev->dmg = 5;
+		TakeDamage( pev, pev, pev->dmg, DMG_DROWN );
+		pev->dmgtime = gpGlobals->time + 1;
+	}
+
+	CBaseMonster::MonsterThink();
 }
 
 
@@ -813,6 +1128,9 @@ void CScientist :: DeathSound ( void )
 
 void CScientist::Killed( entvars_t *pevAttacker, int iGib )
 {
+	if ( !HasMemory( bits_MEMORY_KILLED ) )
+		DeathMessage( pevAttacker, g_pevLastInflictor, ShouldGibMonster( iGib ) );
+
 	SetUse( NULL );	
 	CTalkMonster::Killed( pevAttacker, iGib );
 }
@@ -881,6 +1199,9 @@ Schedule_t* CScientist :: GetScheduleOfType ( int Type )
 
 	case SCHED_FEAR:
 		return slFear;
+
+	case SCHED_IDLE_RUN:
+		return slIdleRun;
 	}
 
 	return CTalkMonster::GetScheduleOfType( Type );
@@ -1003,6 +1324,12 @@ Schedule_t *CScientist :: GetSchedule ( void )
 
 MONSTERSTATE CScientist :: GetIdealState ( void )
 {
+	if ( pev->health <= 0 )
+	{
+		m_IdealMonsterState = MONSTERSTATE_DEAD;
+		return m_IdealMonsterState;
+	}
+
 	switch ( m_MonsterState )
 	{
 	case MONSTERSTATE_ALERT:
@@ -1117,6 +1444,12 @@ void CDeadScientist::KeyValue( KeyValueData *pkvd )
 		m_iPose = atoi(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "animation"))
+	{
+		// a custom pose: the first frame of this sequence
+		pev->message = ALLOC_STRING(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
 	else
 		CBaseMonster::KeyValue( pkvd );
 }
@@ -1141,13 +1474,17 @@ void CDeadScientist :: Spawn( )
 	{// -1 chooses a random head
 		pev->body = RANDOM_LONG(0, NUM_SCIENTIST_HEADS-1);// pick a head, any head
 	}
+	else if ( pev->body == -2 )
+	{// -2 chooses a random headless body
+		pev->body = RANDOM_LONG(0, NUM_SCIENTIST_HEADS-1) + NUM_SCIENTIST_HEADS;
+	}
 	// Luther is black, make his hands black
-	if ( pev->body == HEAD_LUTHER )
+	if ( GetBodygroup( 0 ) == HEAD_LUTHER || GetBodygroup( 0 ) == HEAD_LUTHER + NUM_SCIENTIST_HEADS )
 		pev->skin = 1;
 	else
 		pev->skin = 0;
 
-	pev->sequence = LookupSequence( m_szPoses[m_iPose] );
+	pev->sequence = LookupSequence( pev->message ? STRING( pev->message ) : m_szPoses[m_iPose] );
 	if (pev->sequence == -1)
 	{
 		ALERT ( at_console, "Dead scientist with bad pose\n" );
@@ -1170,6 +1507,7 @@ public:
 
 	void EXPORT SittingThink( void );
 	int	Classify ( void );
+	int GetBattlePower( void ) { return 0; }
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
@@ -1233,7 +1571,7 @@ void CSittingScientist :: Spawn( )
 		pev->body = RANDOM_LONG(0, NUM_SCIENTIST_HEADS-1);// pick a head, any head
 	}
 	// Luther is black, make his hands black
-	if ( pev->body == HEAD_LUTHER )
+	if ( GetBodygroup( 0 ) == HEAD_LUTHER || GetBodygroup( 0 ) == HEAD_LUTHER + NUM_SCIENTIST_HEADS )
 		pev->skin = 1;
 	
 	m_baseSequence = LookupSequence( "sitlookleft" );
@@ -1425,4 +1763,556 @@ int CSittingScientist :: FIdleSpeak ( void )
 	// never spoke
 	CTalkMonster::g_talkWaitTime = 0;
 	return FALSE;
+}
+
+
+//=========================================================
+// GibMonster - ssh_scigibs pieces, the head unless it's
+// already gone
+//=========================================================
+void CScientist :: GibMonster( void )
+{
+	SpawnBlood( Center(), BloodColor(), 250 );
+	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "common/bodysplat.wav", 1, ATTN_NORM);
+
+	int cGibs = ssh_scigibs.value;
+	int cSticky = RANDOM_LONG( 0, cGibs / 2 - 1 );
+
+	if ( GetBodygroup( 0 ) < NUM_SCIENTIST_HEADS )
+		CGib::SpawnHeadGib( pev );
+	CGib::SpawnRandomGibs( pev, cGibs - cSticky, 1 );	// throw some human gibs.
+	if ( cSticky > 0 )
+		CGib::SpawnStickyGibs( pev, Center(), cSticky );
+
+	SetThink ( SUB_Remove );
+	pev->nextthink = gpGlobals->time;
+}
+
+
+//=========================================================
+// Shatter - a frozen scientist breaks like glass
+//=========================================================
+void CScientist :: Shatter( void )
+{
+	switch ( RANDOM_LONG( 0, 2 ) )
+	{
+	case 0:	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "debris/bustglass1.wav", 1, ATTN_NORM); break;
+	case 1:	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "debris/bustglass2.wav", 1, ATTN_NORM); break;
+	case 2:	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "debris/bustglass3.wav", 1, ATTN_NORM); break;
+	}
+
+	Vector vecSpot = Center();
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecSpot );
+		WRITE_BYTE( TE_BREAKMODEL );
+
+		// position
+		WRITE_COORD( vecSpot.x );
+		WRITE_COORD( vecSpot.y );
+		WRITE_COORD( vecSpot.z );
+
+		// size
+		WRITE_COORD( pev->size.x );
+		WRITE_COORD( pev->size.y );
+		WRITE_COORD( pev->size.z );
+
+		// velocity
+		WRITE_COORD( 0 );
+		WRITE_COORD( 0 );
+		WRITE_COORD( 0 );
+
+		// randomization
+		WRITE_BYTE( 10 );
+
+		// Model
+		WRITE_SHORT( m_iGlassGibs );	//model id#
+
+		// # of shards
+		WRITE_BYTE( 32 );
+
+		// duration
+		WRITE_BYTE( 40 );// 4.0 seconds
+
+		// flags
+		WRITE_BYTE( BREAK_GLASS );
+	MESSAGE_END();
+
+	SetThink ( SUB_Remove );
+	pev->nextthink = gpGlobals->time;
+}
+
+
+//=========================================================
+// FadeMonster - the glow shell goes, and the corpse stays
+// solid while it fades
+//=========================================================
+void CScientist :: FadeMonster( void )
+{
+	if ( m_glowTime )
+	{
+		pev->renderfx = kRenderFxNone;
+		m_glowTime = 0;
+	}
+
+	StopAnimation();
+	pev->movetype = MOVETYPE_TOSS;
+	pev->animtime = gpGlobals->time;
+	pev->effects |= EF_NOINTERP;
+	SUB_StartFadeOut();
+	pev->solid = SOLID_BBOX;
+}
+
+
+//=========================================================
+// DeathMessage - the killer scores, the scoreboard counts
+// the head, and everybody hears how it happened
+//=========================================================
+void CScientist :: DeathMessage( entvars_t *pevAttacker, entvars_t *pevInflictor, BOOL fGibbed )
+{
+	// Work out what killed the scientist, and tell everybody about it
+	EHANDLE hKiller, hInflictor;
+	char szText[ 512 ];
+
+	if ( !pevAttacker )
+		pevAttacker = pev;
+	if ( !pevInflictor )
+		pevInflictor = pevAttacker;
+
+	hKiller = CBaseEntity::Instance( pevAttacker );
+	hInflictor = CBaseEntity::Instance( pevInflictor );
+
+	int iHitGroup = m_LastHitGroup;
+	const char *pszVerb = DamageVerb( 0, FALSE );
+	const char *pszWeapon = "";
+	const char *pszVictim = GetHudName();
+	const char *pszKiller = "";
+	const char *pszHitGroup = "";
+
+	if ( pevInflictor == pevAttacker && (pevAttacker->flags & FL_CLIENT) )
+	{
+		// If the inflictor is the killer,  then it must be their current weapon doing the damage
+		CBasePlayer *pPlayer = (CBasePlayer*)CBaseEntity::Instance( pevAttacker );
+
+		if ( pPlayer && pPlayer->m_pActiveItem )
+			hInflictor = pPlayer->m_pActiveItem;
+	}
+
+	// a point for the player who did it
+	if ( hKiller != NULL && hKiller->IsPlayer() )
+		hKiller->AddPoints( 1, FALSE );
+	else if ( m_hActivator != NULL && m_hActivator->IsPlayer() )
+		m_hActivator->AddPoints( 1, FALSE );
+
+	// the scoreboard counts the dead (and gibbed) per head
+	int iHead = GetBodygroup( 0 ) % NUM_SCIENTIST_HEADS;
+	CBasePlayer *pPlayer = (CBasePlayer *)CBaseEntity::Instance( INDEXENT( 1 ) );
+
+	pPlayer->m_iSciDeaths[ iHead ]++;
+	if ( fGibbed )
+		pPlayer->m_iSciGibs[ iHead ]++;
+
+	MESSAGE_BEGIN( MSG_ALL, gmsgSciInfo );
+		WRITE_BYTE( iHead );
+		WRITE_SHORT( pPlayer->m_iSciDeaths[ iHead ] );
+		WRITE_SHORT( pPlayer->m_iSciGibs[ iHead ] );
+	MESSAGE_END();
+
+	if ( hInflictor )
+	{
+		pszWeapon = hInflictor->GetKillDesc();
+		pszVerb = hInflictor->GetKillVerb( fGibbed, iHitGroup );
+	}
+
+	if ( hKiller )
+		pszKiller = hKiller->GetKillDesc();
+
+	if ( (CBaseEntity *)hKiller != this && pszKiller[0] )
+	{
+		if ( hInflictor )
+			pszHitGroup = hInflictor->GetHitGroupDesc( iHitGroup );
+
+		if ( (CBaseEntity *)hKiller != (CBaseEntity *)hInflictor && pszWeapon[0] )
+			sprintf( szText, "%s %s %s%s with %s\n", pszKiller, pszVerb, pszVictim, pszHitGroup, pszWeapon );
+		else if ( pszHitGroup[0] == ' ' )
+			sprintf( szText, "%s was %s%s by %s\n", pszVictim, pszVerb, pszHitGroup, pszWeapon );
+		else
+			sprintf( szText, "%s%s was %s by %s\n", pszVictim, pszHitGroup, pszVerb, pszWeapon );
+	}
+	else
+	{
+		if ( VerbTakesName( pszVerb ) > 0 )
+		{
+			sprintf( szText, pszVerb, pszVictim );
+			strcat( szText, "\n" );
+		}
+		else
+			sprintf( szText, "%s %s\n", pszVictim, pszVerb );
+	}
+
+	UTIL_ClientPrintAll( HUD_PRINTNOTIFY, szText );
+}
+
+
+//=========================================================
+// StartMonster - a path corner of speed 100 or more is run
+//=========================================================
+void CScientist :: StartMonster( void )
+{
+	CTalkMonster::StartMonster();
+
+	if ( pev->target && m_pGoalEnt && m_pGoalEnt->pev->speed >= 100 )
+	{
+		m_movementActivity = ACT_RUN;
+		ChangeSchedule( GetScheduleOfType( SCHED_IDLE_RUN ) );
+	}
+}
+
+
+//=========================================================
+// TraceAttack - no hits on parts that are gone; head hits
+// add up for TakeDamage
+//=========================================================
+void CScientist :: TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType)
+{
+	if ( pev->takedamage == DAMAGE_NO )
+		return;
+
+	switch ( ptr->iHitgroup )
+	{
+	case HITGROUP_HEAD:
+		if ( GetBodygroup( 0 ) >= 9 )
+			return;
+		m_flHeadDamage += flDamage;
+		flDamage *= gSkillData.monHead;
+		break;
+	case HITGROUP_CHEST:
+		if ( GetBodygroup( 2 ) == 1 )
+			return;
+		flDamage *= gSkillData.monChest;
+		break;
+	case HITGROUP_STOMACH:
+		flDamage *= gSkillData.monStomach;
+		break;
+	case HITGROUP_LEFTARM:
+	case HITGROUP_RIGHTARM:
+		if ( GetBodygroup( 2 ) == 1 )
+			return;
+		flDamage *= gSkillData.monArm;
+		break;
+	case HITGROUP_LEFTLEG:
+	case HITGROUP_RIGHTLEG:
+		if ( GetBodygroup( 2 ) == 2 )
+			return;
+		flDamage *= gSkillData.monLeg;
+		break;
+	}
+
+	m_LastHitGroup = ptr->iHitgroup;
+
+	SpawnBlood(ptr->vecEndPos, BloodColor(), flDamage);// a little surface blood.
+	TraceBleed( flDamage, vecDir, ptr, bitsDamageType );
+	AddMultiDamage( pevAttacker, this, flDamage, bitsDamageType );
+}
+
+
+//=========================================================
+// FOkToSpeak - not under water; and unlike a talkmonster's,
+// even with an enemy in sight
+//=========================================================
+int CScientist :: FOkToSpeak( void )
+{
+	if ( pev->waterlevel == 3 )
+		return FALSE;
+
+	// if in the grip of a barnacle, don't speak
+	if ( m_MonsterState == MONSTERSTATE_PRONE || m_IdealMonsterState == MONSTERSTATE_PRONE )
+	{
+		return FALSE;
+	}
+
+	// if not alive, certainly don't speak
+	if ( pev->deadflag != DEAD_NO )
+	{
+		return FALSE;
+	}
+
+	// if someone else is talking, don't speak
+	if (gpGlobals->time <= CTalkMonster::g_talkWaitTime)
+		return FALSE;
+
+	if ( pev->spawnflags & SF_MONSTER_GAG )
+		return FALSE;
+
+	// if player is not in pvs, don't speak
+	if (FNullEnt(FIND_CLIENT_IN_PVS(edict())))
+		return FALSE;
+
+	return TRUE;
+}
+
+
+//=========================================================
+// FCanActiveIdle - only when the node graph has any hint
+// node of ours
+//=========================================================
+BOOL CScientist :: FCanActiveIdle ( void )
+{
+	static int iHintNodes = 0;	// name ours: 1 there are, -1 there aren't, 0 not looked yet
+
+	if ( !iHintNodes )
+	{
+		ALERT( at_console, "%s queryhintnodeexistence\n", STRING( pev->classname ) );
+		iHintNodes = HasHintNodes() ? 1 : -1;
+	}
+
+	if ( iHintNodes == -1 )
+		return FALSE;
+
+	return CTalkMonster::FCanActiveIdle();
+}
+
+
+//=========================================================
+// Scientist in a hazard suit (class name ours)
+//=========================================================
+class CCleansuitScientist : public CScientist
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	BOOL FValidateHintType( short sHint );
+	BOOL FCanActiveIdle( void );
+
+	void AcidMelt( void );
+	BOOL CanHeal( void ) { return FALSE; }
+	bool HasHead( void ) { return false; }
+	bool CanBeHalved( void ) { return false; }
+	bool CanMelt( void ) { return m_bloodColor != DONT_BLEED; }
+};
+
+LINK_ENTITY_TO_CLASS( monster_cleansuit_sci, CCleansuitScientist );
+
+//=========================================================
+// Spawn
+//=========================================================
+void CCleansuitScientist :: Spawn( void )
+{
+	Precache( );
+
+	SET_MODEL(ENT(pev), "models/cleansuit_scientist.mdl");
+	UTIL_SetSize(pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX);
+
+	pev->solid			= SOLID_SLIDEBOX;
+	pev->movetype		= MOVETYPE_STEP;
+	m_bloodColor		= BLOOD_COLOR_RED;
+	pev->health			= gSkillData.scientistHealth * 1.25;
+	pev->view_ofs		= Vector ( 0, 0, 50 );// position of the eyes relative to monster's origin.
+	m_flFieldOfView		= VIEW_FIELD_WIDE; // NOTE: we need a wide field of view so scientists will notice player and say hello
+	m_MonsterState		= MONSTERSTATE_NONE;
+
+	m_afCapability		= bits_CAP_HEAR | bits_CAP_TURN_HEAD | bits_CAP_OPEN_DOORS | bits_CAP_AUTO_DOORS | bits_CAP_USE;
+
+	pev->skin = 0;
+
+	if ( pev->body == -1 )
+	{// -1 chooses a random head
+		pev->body = RANDOM_LONG(0, NUM_SCIENTIST_HEADS-1);// pick a head, any head
+	}
+
+	MonsterInit();
+	SetUse( FollowerUse );
+
+	if ( pev->spawnflags & SF_SCIENTIST_FEARPLAYER )
+		Remember( bits_MEMORY_PROVOKED );
+}
+
+//=========================================================
+// Precache - the plain model is the acid skeleton's
+//=========================================================
+void CCleansuitScientist :: Precache( void )
+{
+	PRECACHE_MODEL("models/scientist.mdl");
+	PRECACHE_MODEL("models/cleansuit_scientist.mdl");
+	PRECACHE_SOUND("scientist/sci_pain1.wav");
+	PRECACHE_SOUND("scientist/sci_pain2.wav");
+	PRECACHE_SOUND("scientist/sci_pain3.wav");
+	PRECACHE_SOUND("scientist/sci_pain4.wav");
+	PRECACHE_SOUND("scientist/sci_pain5.wav");
+
+	TalkInit();
+
+	CTalkMonster::Precache();
+}
+
+//=========================================================
+// FValidateHintType - the cleansuit's own work hints
+//=========================================================
+BOOL CCleansuitScientist :: FValidateHintType ( short sHint )
+{
+	int i;
+
+	static short sCleansuitHints[] =
+	{
+		HINT_CLEANSUIT_WORK,
+		HINT_CLEANSUIT_USE,
+		HINT_CLEANSUIT_TRANSIT,
+	};
+
+	for ( i = 0 ; i < ARRAYSIZE ( sCleansuitHints ) ; i++ )
+	{
+		if ( sCleansuitHints[ i ] == sHint )
+		{
+			return TRUE;
+		}
+	}
+
+	return CTalkMonster::FValidateHintType( sHint );
+}
+
+//=========================================================
+// FCanActiveIdle
+//=========================================================
+BOOL CCleansuitScientist :: FCanActiveIdle ( void )
+{
+	static int iHintNodes = 0;	// name ours
+
+	if ( !iHintNodes )
+	{
+		ALERT( at_console, "%s queryhintnodeexistence\n", STRING( pev->classname ) );
+		iHintNodes = HasHintNodes() ? 1 : -1;
+	}
+
+	if ( iHintNodes == -1 )
+		return FALSE;
+
+	return CTalkMonster::FCanActiveIdle();
+}
+
+
+//=========================================================
+// CutInHalf - the upper half becomes a scientist corpse of
+// its own, this one keeps the legs
+//=========================================================
+void CScientist :: CutInHalf( void )
+{
+	int iBody = GetBodygroup( 2 );
+
+	CScientist *pHalf = (CScientist *)CBaseEntity::Create( "monster_scientist", pev->origin, pev->angles, edict() );
+
+	pHalf->pev->velocity = g_vecAttackDir * RANDOM_FLOAT( -40, 0 ) + Vector( pev->velocity.x + RANDOM_FLOAT( -10, 10 ), pev->velocity.y + RANDOM_FLOAT( -10, 10 ), pev->velocity.z + 200 );
+	pHalf->pev->avelocity = Vector( pev->avelocity.x, pev->avelocity.y + RANDOM_FLOAT( 0, 20 ), pev->avelocity.z );
+	pHalf->pev->movetype = MOVETYPE_TOSS;
+	pHalf->pev->solid = SOLID_NOT;
+	pHalf->pev->spawnflags |= SF_MONSTER_FADECORPSE | SF_MONSTER_FALL_TO_GROUND;
+	pHalf->StartMonster();
+
+	SpawnBlood( Center(), BLOOD_COLOR_RED, 1000 );
+
+	pHalf->m_IdealActivity = GetDeathActivity();
+	pHalf->SetActivity( pHalf->m_IdealActivity );
+
+	pev->health = 0;
+	pHalf->pev->health = 0;
+	pHalf->Remember( bits_MEMORY_KILLED );
+	pHalf->pev->deadflag = DEAD_DYING;
+	m_IdealMonsterState = MONSTERSTATE_DEAD;
+	pHalf->m_IdealMonsterState = MONSTERSTATE_DEAD;
+	pHalf->pev->skin = pev->skin;
+	pHalf->pev->body = pev->body;
+
+	if ( iBody == 0 || iBody == 2 )
+		pHalf->SetBodygroup( 2, 2 );
+	else
+	{
+		pHalf->SetBodygroup( 2, 3 );
+		pHalf->SetBodygroup( 2, 3 );	// sic: the skeleton was meant
+	}
+
+	pev->body = 0;
+	SetBodygroup( 0, 9 );
+	if ( iBody == 0 || iBody == 1 )
+		SetBodygroup( 2, 1 );
+	else
+	{
+		SetBodygroup( 2, 3 );
+		SetBodygroup( 3, 2 );
+	}
+}
+
+
+//=========================================================
+// AcidMelt - the part the acid hit dissolves to bones; all
+// of him when the other part had half his health in acid
+//=========================================================
+void CScientist :: AcidMelt( void )
+{
+	SetBodygroup( 1, 0 );	// no needle
+
+	if ( m_LastHitGroup > HITGROUP_GENERIC && m_LastHitGroup != HITGROUP_STOMACH && m_LastHitGroup <= HITGROUP_RIGHTLEG )
+	{
+		if ( m_LastHitGroup >= HITGROUP_LEFTLEG )
+		{
+			if ( m_flAcidDamageUpper > pev->max_health * 0.5 )
+			{
+				SetBodygroup( 3, GetBodygroup( 2 ) + 1 );
+				SetBodygroup( 2, 3 );
+				SetBodygroup( 0, GetBodygroup( 0 ) < NUM_SCIENTIST_HEADS ? 8 : 9 );
+				m_bloodColor = DONT_BLEED;
+				return;
+			}
+
+			// the legs
+			switch ( GetBodygroup( 2 ) )
+			{
+			case 0:
+				SetBodygroup( 2, 2 );
+				SetBodygroup( 3, 2 );
+				break;
+			case 1:
+				SetBodygroup( 2, 3 );
+				SetBodygroup( 3, 2 );
+				break;
+			}
+			return;
+		}
+
+		if ( m_flAcidDamageLower <= pev->max_health * 0.5 )
+		{
+			// the upper body
+			SetBodygroup( 0, GetBodygroup( 0 ) < NUM_SCIENTIST_HEADS ? 8 : 9 );
+			switch ( GetBodygroup( 2 ) )
+			{
+			case 0:
+				SetBodygroup( 2, 1 );
+				SetBodygroup( 3, 3 );
+				break;
+			case 2:
+				SetBodygroup( 2, 3 );
+				SetBodygroup( 3, 3 );
+				break;
+			}
+			return;
+		}
+	}
+
+	// all of him
+	SetBodygroup( 3, GetBodygroup( 2 ) + 1 );
+	SetBodygroup( 2, 3 );
+	SetBodygroup( 0, GetBodygroup( 0 ) < NUM_SCIENTIST_HEADS ? 8 : 9 );
+	m_bloodColor = DONT_BLEED;
+}
+
+
+//=========================================================
+// AcidMelt - the suit goes with him: a whole skeleton of the
+// plain model
+//=========================================================
+void CCleansuitScientist :: AcidMelt( void )
+{
+	SET_MODEL( ENT(pev), "models/scientist.mdl" );
+	UTIL_SetSize( pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX );
+	pev->body = 8;
+	SetBodygroup( 2, 3 );
+	SetBodygroup( 3, 1 );
+	m_bloodColor = DONT_BLEED;
 }
