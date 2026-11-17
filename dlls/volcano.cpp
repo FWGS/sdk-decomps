@@ -74,25 +74,27 @@ void CBoulder::Spawn( void )
 		pev->nextthink = gpGlobals->time + 0.1;
 		pev->dmgtime = gpGlobals->time + 10;
 	}
-	else
+	else if ( m_iTrail )
 	{
 		SetThink( &CGrenade::Detonate );
 		pev->nextthink = gpGlobals->time + 10;
 
-		if ( m_iTrail )
-		{
-			MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
-				WRITE_BYTE( TE_BEAMFOLLOW );
-				WRITE_SHORT( entindex() );	// entity
-				WRITE_SHORT( m_iTrail );	// model
-				WRITE_BYTE( 15 ); // life
-				WRITE_BYTE( 5 );  // width
-				WRITE_BYTE( 225 );   // r
-				WRITE_BYTE( 255 );   // g
-				WRITE_BYTE( 225 );   // b
-				WRITE_BYTE( 200 );	// brightness
-			MESSAGE_END();
-		}
+		MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
+			WRITE_BYTE( TE_BEAMFOLLOW );
+			WRITE_SHORT( entindex() );	// entity
+			WRITE_SHORT( m_iTrail );	// model
+			WRITE_BYTE( 15 ); // life
+			WRITE_BYTE( 5 );  // width
+			WRITE_BYTE( 225 );   // r
+			WRITE_BYTE( 255 );   // g
+			WRITE_BYTE( 225 );   // b
+			WRITE_BYTE( 200 );	// brightness
+		MESSAGE_END();
+	}
+	else
+	{
+		SetThink( &CGrenade::Detonate );
+		pev->nextthink = gpGlobals->time + 10;
 	}
 
 	SetTouch( &CBoulder::BoulderTouch );
