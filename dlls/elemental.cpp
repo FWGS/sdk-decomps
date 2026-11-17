@@ -393,18 +393,18 @@ void CWaterElemental :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		case WATER_AE_SHOOT1:
 		case WATER_AE_SHOOT2:
 		{
-			Vector vecGunPos, vecGunAngles;
+			Vector vecSrc, vecGunPos, vecGunAngles;
 
 			GetAttachment( pEvent->event - 1, vecGunPos, vecGunAngles );
 			UTIL_MakeVectors( pev->angles );
 
-			Vector vecSrc = Center();
+			vecSrc = Center();
 			vecSrc.z = vecGunPos.z;
 			vecSrc = vecSrc + gpGlobals->v_forward * 16;
 
 			Vector vecDir = ShootAtEnemy( vecSrc );
 
-			CBaseEntity *pBlast = CBaseEntity::Create( "water_blast", vecSrc, g_vecZero, edict() );
+			CBaseEntity *pBlast = CBaseEntity::Create( "water_blast", vecGunPos, g_vecZero, edict() );
 
 			// get circular gaussian spread
 			float x, y;
