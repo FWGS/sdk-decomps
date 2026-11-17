@@ -2229,7 +2229,7 @@ void CScientist :: CutInHalf( void )
 	else
 	{
 		pHalf->SetBodygroup( 2, 3 );
-		pHalf->SetBodygroup( 2, 3 );	// sic: the skeleton was meant
+		pHalf->SetBodygroup( 2, 3 );	// sic: the same call twice
 	}
 
 	pev->body = 0;
