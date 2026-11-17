@@ -62,6 +62,12 @@ extern DLL_GLOBAL int		g_iSkillLevel;
 #define HGRUNT_HANDGRENADE			( 1 << 1)
 #define HGRUNT_GRENADELAUNCHER		( 1 << 2)
 #define HGRUNT_SHOTGUN				( 1 << 3)
+#define HGRUNT_BLASTGUN				( 1 << 4)	// "Blast Gun": one explosive slug (names ours)
+#define HGRUNT_MULTIBLAST			( 1 << 5)	// "Multi Blast": explosive buckshot
+#define HGRUNT_UNUSED1				( 1 << 6)	// set at random with grenades, read nowhere
+#define HGRUNT_UNUSED2				( 1 << 7)
+
+#define SF_GRUNT_NODROP				1024	// "Dont drop weapon" (name ours)
 
 #define HEAD_GROUP					1
 #define HEAD_GRUNT					0
@@ -123,6 +129,12 @@ enum
 class CHGrunt : public CSquadMonster
 {
 public:
+	const char *GetKillDesc( void ) { return "a grunt"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "shot"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+	BOOL CanBeGrenaded( int fLauncher ) { return fLauncher || CBaseEntity::CanBeGrenaded( fLauncher ); }
+	float GetHoldDistance( void ) { return CBaseEntity::GetHoldDistance() * 0.5; }
+
 	void Spawn( void );
 	void Precache( void );
 	void SetYawSpeed ( void );
@@ -157,6 +169,7 @@ public:
 	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
 
 	int IRelationship ( CBaseEntity *pTarget );
+	int GetBattlePower( void );
 
 	BOOL FOkToSpeak( void );
 	void JustSpoke( void );
@@ -272,6 +285,29 @@ int CHGrunt::IRelationship ( CBaseEntity *pTarget )
 }
 
 //=========================================================
+// GetBattlePower - the target ID's rating of this monster
+//=========================================================
+int CHGrunt :: GetBattlePower( void )
+{
+	float flPower;
+
+	if ( FBitSet( pev->weapons, HGRUNT_9MMAR ) )
+		flPower = gSkillData.monDmgMP5 * 6;
+	else
+		flPower = gSkillData.hgruntShotgunPellets * gSkillData.plrDmgBuckshot * 3;
+
+	flPower = flPower * 1.25 + gSkillData.hgruntDmgKick;
+
+	// sic: the launcher counts the hand grenade's damage and the other way round
+	if ( FBitSet( pev->weapons, HGRUNT_GRENADELAUNCHER ) )
+		flPower += gSkillData.plrDmgHandGrenade * 0.25;
+	else if ( FBitSet( pev->weapons, HGRUNT_HANDGRENADE ) )
+		flPower += gSkillData.plrDmgM203Grenade * 0.1667;
+
+	return flPower * ( pev->max_health * 0.1 );
+}
+
+//=========================================================
 // GibMonster - make gun fly through the air.
 //=========================================================
 void CHGrunt :: GibMonster ( void )
@@ -279,12 +315,12 @@ void CHGrunt :: GibMonster ( void )
 	Vector	vecGunPos;
 	Vector	vecGunAngles;
 
-	if ( GetBodygroup( 2 ) != 2 )
+	if ( GetBodygroup( 2 ) != 2 && !( pev->spawnflags & SF_GRUNT_NODROP ) )
 	{// throw a gun if the grunt has one
 		GetAttachment( 0, vecGunPos, vecGunAngles );
 		
 		CBaseEntity *pGun;
-		if (FBitSet( pev->weapons, HGRUNT_SHOTGUN ))
+		if (FBitSet( pev->weapons, HGRUNT_SHOTGUN | HGRUNT_BLASTGUN | HGRUNT_MULTIBLAST ))
 		{
 			pGun = DropItem( "weapon_shotgun", vecGunPos, vecGunAngles );
 		}
@@ -309,6 +345,7 @@ void CHGrunt :: GibMonster ( void )
 		}
 	}
 
+	CGib::SpawnModelHeadGib( pev, "models/gib_hgrunt.mdl" );
 	CBaseMonster :: GibMonster();
 }
 
@@ -825,7 +862,20 @@ void CHGrunt :: Shotgun ( void )
 
 	Vector	vecShellVelocity = gpGlobals->v_right * RANDOM_FLOAT(40,90) + gpGlobals->v_up * RANDOM_FLOAT(75,200) + gpGlobals->v_forward * RANDOM_FLOAT(-40, 40);
 	EjectBrass ( vecShootOrigin - vecShootDir * 24, vecShellVelocity, pev->angles.y, m_iShotgunShell, TE_BOUNCE_SHOTSHELL); 
-	FireBullets(gSkillData.hgruntShotgunPellets, vecShootOrigin, vecShootDir, VECTOR_CONE_15DEGREES, 2048, BULLET_PLAYER_BUCKSHOT, 0 ); // shoot +-7.5 degrees
+
+	if ( FBitSet( pev->weapons, HGRUNT_BLASTGUN ) )
+	{
+		// one slug with all the pellets' damage
+		FireBulletsExplosiveMonster( 1, vecShootOrigin, vecShootDir, VECTOR_CONE_3DEGREES, 2048, gSkillData.hgruntShotgunPellets * gSkillData.plrDmgBuckshot, pev );
+	}
+	else if ( FBitSet( pev->weapons, HGRUNT_MULTIBLAST ) )
+	{
+		FireBulletsExplosiveMonster( gSkillData.hgruntShotgunPellets, vecShootOrigin, vecShootDir, VECTOR_CONE_15DEGREES, 2048, gSkillData.plrDmgBuckshot, pev );
+	}
+	else
+	{
+		FireBullets(gSkillData.hgruntShotgunPellets, vecShootOrigin, vecShootDir, VECTOR_CONE_15DEGREES, 2048, BULLET_MONSTER_BUCKSHOT, 0, 0, NULL ); // shoot +-7.5 degrees
+	}
 
 	pev->effects |= EF_MUZZLEFLASH;
 	
@@ -1008,8 +1058,40 @@ void CHGrunt :: Spawn()
 		// pev->weapons = HGRUNT_SHOTGUN;
 		// pev->weapons = HGRUNT_9MMAR | HGRUNT_GRENADELAUNCHER;
 	}
+	else if (pev->weapons == -1)
+	{
+		// random weapons
+		int iGun = HGRUNT_9MMAR;
+		switch ( RANDOM_LONG( 0, 3 ) )
+		{
+		case 1:	iGun = HGRUNT_SHOTGUN;		break;
+		case 2:	iGun = HGRUNT_BLASTGUN;		break;
+		case 3:	iGun = HGRUNT_MULTIBLAST;	break;
+		}
 
-	if (FBitSet( pev->weapons, HGRUNT_SHOTGUN ))
+		int iExtra;
+		switch ( RANDOM_LONG( 0, 2 ) )
+		{
+		case 1:	iExtra = HGRUNT_HANDGRENADE;		break;
+		case 2:	iExtra = HGRUNT_GRENADELAUNCHER;	break;
+		default:	iExtra = 0;						break;
+		}
+
+		if ( iExtra )
+		{
+			if ( RANDOM_FLOAT( 0, 1 ) > 0.5 )
+				iExtra |= HGRUNT_UNUSED1;
+			if ( iExtra && RANDOM_FLOAT( 0, 1 ) > 0.5 )
+				iExtra |= HGRUNT_UNUSED2;
+		}
+
+		if ( iExtra & HGRUNT_GRENADELAUNCHER )
+			pev->weapons = iExtra | HGRUNT_9MMAR;	// the launcher needs the 9mmAR
+		else
+			pev->weapons = iExtra | iGun;
+	}
+
+	if (FBitSet( pev->weapons, HGRUNT_SHOTGUN | HGRUNT_BLASTGUN | HGRUNT_MULTIBLAST ))
 	{
 		SetBodygroup( GUN_GROUP, GUN_SHOTGUN );
 		m_cClipSize		= 8;
@@ -1025,7 +1107,7 @@ void CHGrunt :: Spawn()
 	else
 		pev->skin = 1;	// dark skin
 
-	if (FBitSet( pev->weapons, HGRUNT_SHOTGUN ))
+	if (FBitSet( pev->weapons, HGRUNT_SHOTGUN | HGRUNT_BLASTGUN | HGRUNT_MULTIBLAST ))
 	{
 		SetBodygroup( HEAD_GROUP, HEAD_SHOTGUN);
 	}
@@ -1046,6 +1128,7 @@ void CHGrunt :: Spawn()
 void CHGrunt :: Precache()
 {
 	PRECACHE_MODEL("models/hgrunt.mdl");
+	PRECACHE_MODEL("models/gib_hgrunt.mdl");
 
 	PRECACHE_SOUND( "hgrunt/gr_mgun1.wav" );
 	PRECACHE_SOUND( "hgrunt/gr_mgun2.wav" );
