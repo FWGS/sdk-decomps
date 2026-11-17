@@ -514,7 +514,7 @@ void CTeslaCoil::SecondaryAttack( void )
 		return;
 	}
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usTeslaSpecial, 0, (float *)&m_pPlayer->pev->origin, (float *)&m_pPlayer->pev->v_angle, 0.0, 0.0, 0, 0, 0, 0 );
+	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usTeslaSpecial, 0, m_pPlayer->pev->origin, m_pPlayer->pev->v_angle, 0.0, 0.0, 0, 0, 0, 0 );
 
 #ifndef CLIENT_DLL
 	m_pPlayer->m_iWeaponFlash = BRIGHT_GUN_FLASH;
@@ -523,12 +523,10 @@ void CTeslaCoil::SecondaryAttack( void )
 	// player "shoot" animation
 	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
-	Vector anglesAim, vecSrc;
-
-	anglesAim = m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle;
+	Vector anglesAim = m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle;
 	UTIL_MakeVectors( anglesAim );
 	Vector vecAiming = gpGlobals->v_forward;
-	vecSrc = m_pPlayer->GetGunPosition( ) + gpGlobals->v_up * -8 + gpGlobals->v_right * 8;
+	Vector vecSrc = m_pPlayer->GetGunPosition( ) + gpGlobals->v_up * -8 + gpGlobals->v_right * 8;
 
 	CBaseMonster *pLightning = CBaseEntity::Create( "chain_lightning", vecSrc, anglesAim, m_pPlayer->edict() )->MyMonsterPointer();
 	pLightning->m_hActivator = m_pPlayer;
@@ -751,7 +749,7 @@ void CTeslaCoil::CallLightning( void )
 	CSoundEnt::InsertSound( bits_SOUND_COMBAT, tr.vecEndPos, 512, 3.0 );
 #endif
 
-	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usTeslaSpecial, 0, (float *)&m_pPlayer->pev->origin, (float *)&m_pPlayer->pev->v_angle, 0.0, 0.0, 1, 0, 0, 0 );
+	PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usTeslaSpecial, 0, m_pPlayer->pev->origin, m_pPlayer->pev->v_angle, 0.0, 0.0, 1, 0, 0, 0 );
 
 	m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType] -= 5;
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.0;
