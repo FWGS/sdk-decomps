@@ -92,6 +92,12 @@ public:
 	BOOL CheckRangeAttack2 ( float flDot, float flDist );
 	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
 
+	int  HeatSignature( void ) { return 1; }
+	const char *GetKillDesc( void ) { return ""; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "was headcrabbed"; }
+	BOOL CanBeGrenaded( int fLauncher ) { return TRUE; }
+	int  GetBattlePower( void );
+
 	virtual float GetDamageAmount( void ) { return gSkillData.headcrabDmgBite; }
 	virtual int GetVoicePitch( void ) { return 100; }
 	virtual float GetSoundVolue( void ) { return 1.0; }
@@ -173,6 +179,14 @@ Vector CHeadCrab :: Center ( void )
 Vector CHeadCrab :: BodyTarget( const Vector &posSrc ) 
 { 
 	return Center( );
+}
+
+//=========================================================
+// GetBattlePower - the target ID's rating
+//=========================================================
+int CHeadCrab :: GetBattlePower( void )
+{
+	return gSkillData.headcrabDmgBite * ( pev->max_health * 0.1 );
 }
 
 //=========================================================
@@ -488,6 +502,7 @@ public:
 	void Precache( void );
 	void SetYawSpeed ( void );
 	float GetDamageAmount( void ) { return gSkillData.headcrabDmgBite * 0.3; }
+	int  HeatSignature( void ) { return 0; }
 	BOOL CheckRangeAttack1 ( float flDot, float flDist );
 	Schedule_t* GetScheduleOfType ( int Type );
 	virtual int GetVoicePitch( void ) { return PITCH_NORM + RANDOM_LONG(40,50); }
