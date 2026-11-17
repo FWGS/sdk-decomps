@@ -1554,3 +1554,361 @@ void CSentry ::	SentryDeath( void )
 	}
 }
 
+
+
+#include "explode.h"
+
+//=========================================================
+// Flak shells: fly to where the turret aimed, then burst
+//=========================================================
+class CFlakBullet : public CBaseEntity
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	int Classify( void );
+
+	const char *GetKillDesc( void ) { return "a flak cannon"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "ripped"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return " apart"; }
+
+	static CFlakBullet *FlakCreate( edict_t *pOwner );	// name ours
+
+	void EXPORT ExplodeTouch( CBaseEntity *pOther );
+	void EXPORT ExplodeThink( void );
+	virtual void Explode( void );	// name ours
+};
+
+LINK_ENTITY_TO_CLASS( standard_flak, CFlakBullet );
+
+
+//=========================================================
+// Flak turret - a turret that shoots flak shells
+//=========================================================
+class CFlakTurret : public CTurret
+{
+public:
+	void Spawn(void);
+	void Precache(void);
+	void ActiveThink(void);
+
+	virtual int		Save( CSave &save );
+	virtual int		Restore( CRestore &restore );
+
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	void Shoot(Vector &vecSrc, Vector &vecDirToEnemy);
+
+	const char *GetKillDesc( void ) { return "a turret"; }
+	const char *GetHudName( void ) { return "Flak Cannon"; }
+	int GetBattlePower( void );
+
+	float m_flNextShot;
+};
+
+LINK_ENTITY_TO_CLASS( monster_flakturret, CFlakTurret );
+
+TYPEDESCRIPTION	CFlakTurret::m_SaveData[] =
+{
+	DEFINE_FIELD( CFlakTurret, m_flNextShot, FIELD_TIME ),
+};
+
+IMPLEMENT_SAVERESTORE( CFlakTurret, CTurret );
+
+void CFlakTurret::Spawn()
+{
+	Precache( );
+	SET_MODEL(ENT(pev), "models/turret.mdl");
+	pev->health			= 100;
+	m_HackedGunPos		= Vector( 0, 0, 12.75 );
+	m_flMaxSpin =		TURRET_MAXSPIN;
+	pev->view_ofs.z = 12.75;
+
+	CBaseTurret::Spawn( );
+
+	m_flNextShot = gpGlobals->time;
+	m_iRetractHeight = 16;
+	m_iDeployHeight = 32;
+	m_iMinPitch	= -15;
+	UTIL_SetSize(pev, Vector(-32, -32, -m_iRetractHeight), Vector(32, 32, m_iRetractHeight));
+
+	SetThink(Initialize);
+
+	m_pEyeGlow = CSprite::SpriteCreate( TURRET_GLOW_SPRITE, pev->origin, FALSE );
+	m_pEyeGlow->SetTransparency( kRenderGlow, 255, 0, 0, 0, kRenderFxNoDissipation );
+	m_pEyeGlow->SetAttachment( edict(), 2 );
+	m_eyeBrightness = 0;
+
+	pev->nextthink = gpGlobals->time + 0.3;
+}
+
+void CFlakTurret::Precache()
+{
+	CBaseTurret::Precache( );
+	PRECACHE_MODEL ("models/turret.mdl");
+	PRECACHE_MODEL (TURRET_GLOW_SPRITE);
+	UTIL_PrecacheOther( "standard_flak" );
+}
+
+int CFlakTurret::GetBattlePower( void )
+{
+	return ( pev->max_health * 0.1 ) * 250;
+}
+
+void CFlakTurret::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
+{
+	CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 600, 0.3 );
+
+	// the shell bursts somewhere within 96 units of the aim point
+	UTIL_MakeVectors( Vector( RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ) ) );
+	Vector vecEnd = gpGlobals->v_forward * RANDOM_FLOAT( 0, 96 ) + vecDirToEnemy;
+
+	// warn whoever is near the aim point, at most every 10 seconds
+	if ( pev->pain_finished < gpGlobals->time )
+	{
+		CSoundEnt::InsertSound( bits_SOUND_DANGER, vecDirToEnemy, 192, 3.0 );
+		pev->pain_finished = gpGlobals->time + 10;
+	}
+
+	CFlakBullet *pFlak = CFlakBullet::FlakCreate( ENT(pev) );
+	pFlak->pev->origin = vecSrc;
+	pFlak->pev->velocity = vecEnd - vecSrc;
+	pFlak->pev->nextthink = gpGlobals->time + pFlak->pev->velocity.Length() / 2000;
+	pFlak->pev->velocity = pFlak->pev->velocity.Normalize() * 2000;
+
+	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "turret/tu_fire1.wav", 1, 0.6);
+	pev->effects = pev->effects | EF_MUZZLEFLASH;
+}
+
+
+void CFlakTurret::ActiveThink(void)
+{
+	int fAttack = 0;
+	Vector vecDirToEnemy;
+
+	pev->nextthink = gpGlobals->time + 0.1;
+	StudioFrameAdvance( );
+
+	if ((!m_iOn) || (m_hEnemy == NULL))
+	{
+		m_hEnemy = NULL;
+		m_flLastSight = gpGlobals->time + m_flMaxWait;
+		SetThink(CallMonsterThink);
+		return;
+	}
+
+	// if it's dead, look for something new
+	if ( !m_hEnemy->IsAlive() )
+	{
+		if (!m_flLastSight)
+		{
+			m_flLastSight = gpGlobals->time + 0.5; // continue-shooting timeout
+		}
+		else
+		{
+			if (gpGlobals->time > m_flLastSight)
+			{
+				m_hEnemy = NULL;
+				m_flLastSight = gpGlobals->time + m_flMaxWait;
+				SetThink(CallMonsterThink);
+				return;
+			}
+		}
+	}
+
+	// aim from the barrel
+	Vector vecSrc, vecAng;
+	GetAttachment( 0, vecSrc, vecAng );
+	Vector vecMidEnemy = m_hEnemy->BodyTarget( vecSrc );
+
+	// Look for our current enemy
+	int fEnemyVisible = FBoxVisible(pev, m_hEnemy->pev, vecMidEnemy );
+
+	vecDirToEnemy = vecMidEnemy - vecSrc;	// calculate dir and dist to enemy
+	float flDistToEnemy = vecDirToEnemy.Length();
+
+	Vector vec = UTIL_VecToAngles(vecMidEnemy - vecSrc);
+
+	// Current enmey is not visible.
+	if (!fEnemyVisible || (flDistToEnemy > m_flSightRange))
+	{
+		if (!m_flLastSight)
+			m_flLastSight = gpGlobals->time + 0.5;
+		else
+		{
+			// Should we look for a new target?
+			if (gpGlobals->time > m_flLastSight)
+			{
+				m_hEnemy = NULL;
+				m_flLastSight = gpGlobals->time + m_flMaxWait;
+				SetThink(CallMonsterThink);
+				return;
+			}
+		}
+		fEnemyVisible = 0;
+	}
+	else
+	{
+		m_vecLastSight = vecMidEnemy;
+	}
+
+	UTIL_MakeAimVectors(m_vecCurAngles);
+
+	Vector vecLOS = vecDirToEnemy; //vecMid - m_vecLastSight;
+	vecLOS = vecLOS.Normalize();
+
+	// Is the Gun looking at the target
+	if (DotProduct(vecLOS, gpGlobals->v_forward) <= 0.866) // 30 degree slop
+		fAttack = FALSE;
+	else
+		fAttack = TRUE;
+
+	// fire the gun, at most five times a second; the shell bursts at the enemy's distance
+	if (m_iSpin && ((fAttack) || (m_fBeserk)) && m_flNextShot <= gpGlobals->time)
+	{
+		SetTurretAnim(TURRET_ANIM_FIRE);
+		float flDist;
+		if (m_fBeserk)
+			flDist = RANDOM_FLOAT( 40, 1200 );
+		else
+			flDist = flDistToEnemy;
+		Vector vecEnd = vecSrc + gpGlobals->v_forward * flDist;
+		Shoot(vecSrc, vecEnd );
+		m_flNextShot = gpGlobals->time + 0.2;
+	}
+	else
+	{
+		SetTurretAnim(TURRET_ANIM_SPIN);
+	}
+
+	//move the gun
+	if (m_fBeserk)
+	{
+		if (RANDOM_LONG(0,9) == 0)
+		{
+			m_vecGoalAngles.y = RANDOM_FLOAT(0,360);
+			m_vecGoalAngles.x = RANDOM_FLOAT(0,90) - 90 * m_iOrientation;
+			TakeDamage(pev,pev,1, DMG_GENERIC); // don't beserk forever
+			return;
+		}
+	}
+	else if (fEnemyVisible)
+	{
+		if (vec.y > 360)
+			vec.y -= 360;
+
+		if (vec.y < 0)
+			vec.y += 360;
+
+		if (vec.x < -180)
+			vec.x += 360;
+
+		if (vec.x > 180)
+			vec.x -= 360;
+
+		// now all numbers should be in [1...360]
+		// pin to turret limitations to [-90...15]
+
+		if (m_iOrientation == 0)
+		{
+			if (vec.x > 90)
+				vec.x = 90;
+			else if (vec.x < m_iMinPitch)
+				vec.x = m_iMinPitch;
+		}
+		else
+		{
+			if (vec.x < -90)
+				vec.x = -90;
+			else if (vec.x > -m_iMinPitch)
+				vec.x = -m_iMinPitch;
+		}
+
+		m_vecGoalAngles.y = vec.y;
+		m_vecGoalAngles.x = vec.x;
+
+	}
+
+	SpinUpCall();
+	MoveTurret();
+}
+
+
+CFlakBullet *CFlakBullet::FlakCreate( edict_t *pOwner )
+{
+	CFlakBullet *pFlak = GetClassPtr( (CFlakBullet *)NULL );
+	pFlak->pev->owner = pOwner;
+	pFlak->pev->classname = MAKE_STRING( "standard_flak" );
+	pFlak->Spawn();
+
+	return pFlak;
+}
+
+void CFlakBullet::Spawn( void )
+{
+	Precache( );
+	pev->movetype = MOVETYPE_FLY;
+	pev->solid = SOLID_BBOX;
+	pev->renderamt = 255;
+	pev->rendermode = kRenderTransAdd;
+	SET_MODEL( ENT(pev), "sprites/yelflare2.spr" );
+	pev->scale = 0.5;
+
+	UTIL_SetOrigin( pev, pev->origin );
+	UTIL_SetSize( pev, Vector( 0, 0, 0 ), Vector( 0, 0, 0 ) );
+
+	SetTouch( ExplodeTouch );
+	SetThink( ExplodeThink );
+	pev->nextthink = 0;	// the turret sets the burst time
+}
+
+void CFlakBullet::Precache( void )
+{
+	PRECACHE_MODEL( "sprites/yelflare2.spr" );
+}
+
+int CFlakBullet::Classify( void )
+{
+	return CLASS_NONE;
+}
+
+void CFlakBullet::ExplodeTouch( CBaseEntity *pOther )
+{
+	CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 1024, 3.0 );
+	Explode( );
+}
+
+void CFlakBullet::ExplodeThink( void )
+{
+	CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 1024, 3.0 );
+	Explode( );
+}
+
+void CFlakBullet::Explode( void )
+{
+	int iContents = UTIL_PointContents( pev->origin );
+
+	pev->dmg = 25;
+
+	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_EXPLOSION );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		if (iContents != CONTENTS_WATER)
+		{
+			WRITE_SHORT( g_sModelIndexFireball );
+		}
+		else
+		{
+			WRITE_SHORT( g_sModelIndexWExplosion );
+		}
+		WRITE_BYTE( 10 ); // scale * 10
+		WRITE_BYTE( 15 ); // framerate
+		WRITE_BYTE( TE_EXPLFLAG_NONE );
+	MESSAGE_END();
+
+	RadiusDamage( pev->origin, pev, VARS( pev->owner ), pev->dmg, 64, CLASS_NONE, DMG_BLAST );
+
+	UTIL_Remove( this );
+}
