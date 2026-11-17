@@ -31,7 +31,7 @@
 #define COLUMN_VOICE	6
 #define COLUMN_BLANK	7
 #define NUM_COLUMNS		8
-#define NUM_ROWS		(MAX_PLAYERS + (MAX_SCOREBOARD_TEAMS * 2))
+#define NUM_ROWS		(MAX_PLAYERS + (MAX_SCOREBOARD_TEAMS * 2) + 6)	// the mod: a gap, the scientists' header and four scientists
 
 using namespace vgui;
 
@@ -287,6 +287,7 @@ public:
 	void SortTeams( void );
 	void SortPlayers( int iTeam, char *team );
 	void RebuildTeams( void );
+	void AddScientists( void );	// name ours
 
 	void FillGrid();
 

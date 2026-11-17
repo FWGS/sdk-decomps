@@ -102,6 +102,18 @@ protected:	// the mod's sprite projectiles set m_maxFrame
 };
 
 
+// magic_missile (turret.cpp): a sprite that flies, hurts what it touches and fades out;
+// the base of the mod's sprite projectiles (psi_blast ...)
+class CMagicMissile : public CSprite
+{
+public:
+	const char *GetKillDesc( void ) { return "a disruptor gun"; }
+	void Spawn( void );
+	void Precache( void );
+	void EXPORT HurtTouch( CBaseEntity *pOther );
+};
+
+
 class CBeam : public CBaseEntity
 {
 public:

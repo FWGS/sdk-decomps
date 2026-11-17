@@ -236,6 +236,10 @@ SOURCE=.\controller.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\crane.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\crossbow.cpp
 # End Source File
 # Begin Source File
@@ -569,6 +573,10 @@ SOURCE=.\tempmonster.cpp
 # Begin Source File
 
 SOURCE=.\tentacle.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\teslamonster.cpp
 # End Source File
 # Begin Source File
 
