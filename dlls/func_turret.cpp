@@ -789,7 +789,7 @@ int CFuncTurret :: MoveTurret( void )
 	{
 		float flDir = m_vecGoalAngles.x > pev->angles.x ? 1 : -1 ;
 
-		pev->angles.x += flDir * m_pitchRate * 0.05;
+		pev->angles.x += m_pitchRate * 0.05 * flDir;
 
 		// if we started below the goal, and now we're past, peg to goal
 		if (flDir == 1)
@@ -817,7 +817,7 @@ int CFuncTurret :: MoveTurret( void )
 			flDir = -flDir;
 		}
 
-		pev->angles.y += m_yawRate * flDir * 0.05;
+		pev->angles.y += m_yawRate * 0.05 * flDir;
 
 		if (pev->angles.y < 0)
 			pev->angles.y += 360;
@@ -1331,13 +1331,16 @@ Vector CInfoShootpoint :: ShootSpread( const Vector &vecDir, float flSpread )
 		return vecDir;
 
 	// get circular gaussian spread
-	float x, y;
+	float x, y, z;
 	do {
 		x = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
 		y = RANDOM_FLOAT(-0.5,0.5) + RANDOM_FLOAT(-0.5,0.5);
-	} while (x*x+y*y > 1);
-
-	return vecDir + x * flSpread * gpGlobals->v_right + y * flSpread * gpGlobals->v_up;
+		z = x*x+y*y;
+	} while (z > 1);
+	Vector vecSpread = vecDir +
+		x * flSpread * gpGlobals->v_right +
+		y * flSpread * gpGlobals->v_up;
+	return vecSpread;
 }
 
 
@@ -2121,38 +2124,41 @@ void CBeamShootpoint :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_
 
 CBeamCannon *CBeamShootpoint :: GetBeam( void )
 {
-	if ( !m_pBeam )
+	if ( m_pBeam )
+		return m_pBeam;
+
+	edict_t *pTarget = FIND_ENTITY_BY_TARGETNAME( NULL, STRING(pev->message) );
+
+	while ( !FNullEnt( pTarget ) )
 	{
-		edict_t *pTarget = NULL;
-
-		do
+		if ( FClassnameIs( pTarget, "beam_cannon" ) )
 		{
-			pTarget = FIND_ENTITY_BY_TARGETNAME( pTarget, STRING(pev->message) );
-		} while ( !FNullEnt(pTarget) && !FClassnameIs( pTarget, "beam_cannon" ) );
-
-		if ( !FNullEnt( pTarget ) )
 			m_pBeam = (CBeamCannon*)Instance(pTarget);
-
-		m_pBeam->pev->effects |= EF_BRIGHTLIGHT;	// sic: no beam_cannon found crashes here
+			break;
+		}
+		pTarget = FIND_ENTITY_BY_TARGETNAME( pTarget, STRING(pev->message) );
 	}
 
+	m_pBeam->pev->spawnflags |= 4;	// sic: no beam_cannon found crashes here
 	return m_pBeam;
 }
 
 
 CBeamCharge *CBeamShootpoint :: GetCharge( void )
 {
-	if ( !m_pCharge )
+	if ( m_pCharge )
+		return m_pCharge;
+
+	edict_t *pTarget = FIND_ENTITY_BY_TARGETNAME( NULL, STRING(pev->netname) );
+
+	while ( !FNullEnt( pTarget ) )
 	{
-		edict_t *pTarget = NULL;
-
-		do
+		if ( FClassnameIs( pTarget, "beam_charge" ) )
 		{
-			pTarget = FIND_ENTITY_BY_TARGETNAME( pTarget, STRING(pev->netname) );
-		} while ( !FNullEnt(pTarget) && !FClassnameIs( pTarget, "beam_charge" ) );
-
-		if ( !FNullEnt( pTarget ) )
 			m_pCharge = (CBeamCharge*)Instance(pTarget);
+			break;
+		}
+		pTarget = FIND_ENTITY_BY_TARGETNAME( pTarget, STRING(pev->netname) );
 	}
 
 	return m_pCharge;
