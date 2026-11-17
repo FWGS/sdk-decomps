@@ -1335,7 +1335,7 @@ void CWallop :: WallopTouch( CBaseEntity *pOther )
 		UTIL_DecalTrace( &tr, DECAL_SCORCH1 + RANDOM_LONG( 0, 1 ) );
 
 	EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, "doors/aliendoor1.wav", 1.0, 0.8, 0, PITCH_NORM );
-	CSoundEnt::InsertSound( bits_SOUND_WORLD, pev->origin, 1024, 2.0 );
+	CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 1024, 2.0 );
 
 	if ( pOther->Shielded() )
 	{
@@ -1839,13 +1839,7 @@ void CNAgent :: PowerBeam( void )
 //=========================================================
 void CNAgent :: Shoot( void )
 {
-	if ( m_hPowerBeam != NULL )
-	{
-		PowerBeam( );
-		return;
-	}
-
-	if ( m_pChargeSprite && pev->frags == 2 )
+	if ( m_hPowerBeam != NULL || ( m_pChargeSprite && pev->frags == 2 ) )
 	{
 		PowerBeam( );
 		return;
@@ -1875,7 +1869,7 @@ void CNAgent :: Shoot( void )
 	}
 	m_flLastShot = gpGlobals->time;
 
-	EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, "x/x_shoot1.wav", RANDOM_FLOAT( 0.6, 0.8 ), 0.8, 0, PITCH_NORM );
+	EMIT_SOUND( ENT( pev ), CHAN_WEAPON, "x/x_shoot1.wav", RANDOM_FLOAT( 0.6, 0.8 ), ATTN_NORM );
 
 	float x, y, z;
 	do {
@@ -1912,7 +1906,7 @@ void CNAgent :: Shoot( void )
 		pStream->m_vecEnemyLKP = m_vecEnemyLKP;
 	}
 
-	CSoundEnt::InsertSound( bits_SOUND_WORLD, vecShootOrigin, 600, 0.3 );
+	CSoundEnt::InsertSound( bits_SOUND_COMBAT, vecShootOrigin, 600, 0.3 );
 
 	pev->effects |= EF_MUZZLEFLASH;
 
@@ -2522,7 +2516,7 @@ Schedule_t *CNAgent :: GetSchedule ( void )
 				{
 					return GetScheduleOfType( SCHED_AGENT_BLINK_COVER_FROM_SOUND );
 				}
-				if ( pSound && (pSound->m_iType & bits_SOUND_WORLD) )
+				if ( pSound && (pSound->m_iType & bits_SOUND_COMBAT) )
 				{
 					return GetScheduleOfType( SCHED_INVESTIGATE_SOUND );
 				}
@@ -2733,8 +2727,9 @@ Schedule_t* CNAgent :: GetScheduleOfType ( int Type )
 //=========================================================
 BOOL CNAgent :: CheckRangeAttack1 ( float flDot, float flDist )
 {
+	float flLow;
 	if ( !m_pChargeSprite && m_flWeaponTime + 14 <= gpGlobals->time
-		&& RANDOM_FLOAT( gpGlobals->time - ( m_flWeaponTime + 14 ), 14 ) >= 10 )
+		&& RANDOM_FLOAT( flLow = gpGlobals->time - ( m_flWeaponTime + 14 ), 14 ) >= 10 )
 	{
 		int iWeapon = pev->frags;
 		float flSpeed = m_hEnemy->MovementSpeed();
@@ -2857,12 +2852,13 @@ BOOL CNAgent :: CheckRangeAttack2 ( float flDot, float flDist )
 	if ( HasConditions( bits_COND_ENEMY_OCCLUDED ) )
 	{
 		pev->weapons &= ~6;
-		if ( !( pev->weapons & 1 ) )
+		if ( pev->weapons & 1 )
+			vecToss = VecCheckToss( pev, GetGunPosition(), m_hEnemy->pev->origin, 0.5 );
+		else
 		{
 			m_fThrowGrenade = FALSE;
 			return FALSE;
 		}
-		vecToss = VecCheckToss( pev, GetGunPosition(), m_hEnemy->pev->origin, 0.5 );
 	}
 	else if ( pev->weapons & 1 )
 		vecToss = VecCheckThrow( pev, GetGunPosition(), m_hEnemy->Center(), flDist, 0.5 );
