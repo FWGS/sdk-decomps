@@ -329,6 +329,8 @@ void CVortexRocket::VortexTouch( CBaseEntity *pOther )
 
 void CVortexRocket::SeekThink( void )
 {
+	Vector	vecDirToEnemy;
+
 	if ( m_hEnemy == NULL )
 	{
 		Look( 512 );
@@ -345,16 +347,23 @@ void CVortexRocket::SeekThink( void )
 		m_hEnemy = NULL;
 	}
 
-	Vector vecDirToEnemy = ( m_vecEnemyLKP - pev->origin ).Normalize();
+	vecDirToEnemy = ( m_vecEnemyLKP - pev->origin ).Normalize();
 
-	// below 80% of the top speed it speeds up, by at least 100 units/s
+	// the new speed: 80% of the old one, plus a fifth of the top speed (at
+	// least 100) while below 80% of it; a fifth of the old velocity stays
 	float flSpeed = pev->velocity.Length();
-	if ( m_flFlySpeed * 0.8 > flSpeed )
-		flSpeed = min( flSpeed * 0.8 + max( 100, m_flFlySpeed * 0.2 ), m_flFlySpeed );
+	if ( flSpeed < m_flFlySpeed * 0.8 )
+	{
+		float flAccel = m_flFlySpeed * 0.2;
+		flSpeed = flSpeed * 0.8 + max( 100, flAccel );
+		flSpeed = min( flSpeed, m_flFlySpeed );
+		pev->velocity = pev->velocity * 0.2 + vecDirToEnemy * flSpeed;
+	}
 	else
+	{
 		flSpeed = flSpeed * 0.8;
-
-	pev->velocity = pev->velocity * 0.2 + vecDirToEnemy * flSpeed;
+		pev->velocity = pev->velocity * 0.2 + vecDirToEnemy * flSpeed;
+	}
 
 	float flMaxSpeed = m_flFlySpeed;
 	if ( pev->velocity.Length() > flMaxSpeed )
