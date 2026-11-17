@@ -675,10 +675,7 @@ void CFlyingHead :: EyeLasers( void )
 	vecAngles = pev->angles;
 
 	if ( m_hEnemy )
-	{
-		Vector vecEyes = pev->origin + pev->view_ofs;
-		vecAngles.x = m_flBeamPitch = UTIL_VecToAngles( m_hEnemy->BodyTarget( pev->origin ) - vecEyes ).x;
-	}
+		vecAngles.x = m_flBeamPitch = UTIL_VecToAngles( m_hEnemy->BodyTarget( pev->origin ) - ( pev->origin + pev->view_ofs ) ).x;
 	else
 		vecAngles.x = m_flBeamPitch;
 
@@ -710,9 +707,7 @@ void CFlyingHead :: EyeLasers( void )
 			m_pBeam[i]->pev->spawnflags |= SF_BEAM_SPARKSTART | SF_BEAM_DECALS;
 		}
 
-		m_pBeam[i]->pev->dmg = pev->body ? 1 : 3;
-		m_pBeam[i]->pev->dmgtime = gpGlobals->time - 1;
-		m_pBeam[i]->BeamDamage( &tr );
+		m_pBeam[i]->BeamDamageInstant( &tr, pev->body ? 1 : 3 );
 		m_pBeam[i]->SetStartPos( tr.vecEndPos );
 		m_pBeam[i]->DoSparks( tr.vecEndPos, g_vecZero );
 	}
