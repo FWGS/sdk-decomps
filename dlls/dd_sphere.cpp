@@ -453,9 +453,9 @@ void CDCube::RunAttack( void )
 				}
 				else if ( i < 6 )
 				{
+					Vector vecDir, vecOffset;
 					vecDir = ( m_hTargets[i]->BodyTarget( pev->origin ) - Center() ).Normalize();
 					vecAngles = UTIL_VecToAngles( vecDir );
-
 					// which face of the cube looks at the target
 					int iFace = 0;
 					float flYaw = UTIL_AngleDiff( vecAngles.y, pev->angles.y );
