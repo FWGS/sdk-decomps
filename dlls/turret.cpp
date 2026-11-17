@@ -2632,3 +2632,68 @@ int CTFCSentry3::MoveTurret(void)
 
 	return state;
 }
+
+
+//=========================================================
+// Repulsor turret - a mini turret that fires repulsor beams
+//=========================================================
+class CRepulsorTurret : public CBaseTurret	// name ours
+{
+public:
+	void Spawn( );
+	void Precache(void);
+	// other functions
+	void Shoot(Vector &vecSrc, Vector &vecDirToEnemy);
+
+	const char *GetKillDesc( void ) { return "a turret"; }
+	const char *GetHudName( void ) { return "Repulsor Gun"; }
+	int GetBattlePower( void );
+};
+
+LINK_ENTITY_TO_CLASS( monster_repturret, CRepulsorTurret );
+
+void CRepulsorTurret::Spawn()
+{
+	Precache( );
+	SET_MODEL(ENT(pev), "models/miniturret.mdl");
+	pev->health			= gSkillData.miniturretHealth;
+	m_HackedGunPos		= Vector( 0, 0, 12.75 );
+	m_flMaxSpin = 0;
+	pev->view_ofs.z = 12.75;
+
+	CBaseTurret::Spawn( );
+	m_iRetractHeight = 16;
+	m_iDeployHeight = 32;
+	m_iMinPitch	= -15;
+	UTIL_SetSize(pev, Vector(-16, -16, -m_iRetractHeight), Vector(16, 16, m_iRetractHeight));
+
+	SetThink(Initialize);
+	pev->nextthink = gpGlobals->time + 0.3;
+}
+
+
+void CRepulsorTurret::Precache()
+{
+	CBaseTurret::Precache( );
+	PRECACHE_MODEL ("models/miniturret.mdl");
+	UTIL_PrecacheOther( "repulsor_beam" );
+}
+
+int CRepulsorTurret::GetBattlePower( void )
+{
+	return ( pev->max_health * 0.1 ) * 50;
+}
+
+void CRepulsorTurret::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
+{
+	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "weapons/ric1.wav", 1, 0.8);
+	CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 200, 3.0 );
+
+	CBaseEntity *pBeam = CBaseEntity::Create( "repulsor_beam", vecSrc, g_vecZero, edict() );
+	pBeam->pev->velocity = vecDirToEnemy * 1000;
+	pBeam->pev->speed = 1000;
+	pBeam->pev->dmg = 5;
+	pBeam->pev->health = RANDOM_LONG( 2, 3 );
+
+	pev->effects = pev->effects | EF_MUZZLEFLASH;
+}
