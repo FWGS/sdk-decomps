@@ -17,6 +17,9 @@
 #include "cbase.h"
 #include "animation.h"
 #include "effects.h"
+#include "weapons.h"
+#include "soundent.h"
+#include "decals.h"
 
 
 #define XEN_PLANT_GLOW_SPRITE		"sprites/flare3.spr"
@@ -72,11 +75,13 @@ public:
 	void		LightOn( void );
 	void		LightOff( void );
 
+	int			HeatSignature( void ) { return 1; }
+
 	virtual int	Save( CSave &save );
 	virtual int	Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
 
-private:
+protected:
 	CSprite		*m_pGlow;
 };
 
@@ -180,6 +185,289 @@ void CXenPLight :: LightOff( void )
 
 
 
+//
+// plant_wallop: the Nephilim plant light's shot. It grows on the plant's
+// attachment until fully bright, then flies at its enemy at 750 units/s:
+// 40 energy damage (DMG_NOGIB | DMG_RADIATION), a push of ten times the
+// damage plus 60 up for whatever can be repulsed, a pink glow shell on dead
+// monsters (scientists turn pink alive), a small scorch on brush models, a
+// purple light.
+//
+class CPlantWallop : public CSprite
+{
+public:
+	void	Spawn( void );
+	void	Precache( void );
+	const char *GetKillDesc( void ) { return "a patterned energy projectile"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return DamageVerb( DMG_ENERGYBEAM, fGibbed ); }
+
+	void EXPORT ChargeThink( void );
+	void EXPORT WallopTouch( CBaseEntity *pOther );
+};
+
+LINK_ENTITY_TO_CLASS( plant_wallop, CPlantWallop );
+
+void CPlantWallop :: Spawn( void )
+{
+	Precache();
+
+	SET_MODEL( ENT(pev), "sprites/wallop.spr" );
+	pev->rendermode = kRenderGlow;
+	pev->renderfx = kRenderFxNoDissipation;
+	pev->renderamt = 0;
+	pev->solid = SOLID_NOT;
+
+	m_maxFrame = (float) MODEL_FRAMES( pev->modelindex ) - 1;
+	pev->framerate = 10;
+	TurnOn();
+	SetAttachment( pev->owner, 1 );
+
+	SetThink( &CPlantWallop::ChargeThink );
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	pev->scale = 0.25;
+	pev->dmg = 40;
+	pev->dmgtime = 0;
+
+	UTIL_SetSize( pev, g_vecZero, g_vecZero );
+}
+
+
+void CPlantWallop :: Precache( void )
+{
+	PRECACHE_MODEL( "sprites/wallop.spr" );
+	PRECACHE_SOUND( "doors/aliendoor1.wav" );
+}
+
+
+void CPlantWallop :: ChargeThink( void )
+{
+	if ( pev->owner && !pev->owner->free )
+	{
+		if ( !pev->enemy )
+		{
+			SUB_StartFadeOut();
+			return;
+		}
+
+		AnimateThink();
+
+		if ( pev->renderamt >= 255 )
+		{
+			// fully charged: fly at the enemy
+			CBaseEntity *pEnemy = CBaseEntity::Instance( pev->enemy );
+			if ( !pEnemy )
+			{
+				SUB_StartFadeOut();
+				return;
+			}
+
+			pev->solid = SOLID_BBOX;
+			SetTouch( &CPlantWallop::WallopTouch );
+			SetThink( &CSprite::AnimateThink );
+			pev->velocity = ( pEnemy->BodyTarget( pev->origin ) - pev->origin ).Normalize() * 750;
+		}
+
+		pev->renderamt += RANDOM_FLOAT( 5, 7 );
+		if ( pev->renderamt >= 255 )
+		{
+			// leave the plant
+			Vector vecOrigin, vecAngles;
+
+			pev->renderamt = 255;
+			pev->movetype = MOVETYPE_FLY;
+			pev->aiment = NULL;
+			pev->skin = 0;
+			pev->body = 0;
+			GET_ATTACHMENT( pev->owner, 0, vecOrigin, vecAngles );
+			UTIL_SetOrigin( pev, vecOrigin );
+		}
+	}
+	else
+		UTIL_Remove( this );
+}
+
+
+void CPlantWallop :: WallopTouch( CBaseEntity *pOther )
+{
+	SetTouch( NULL );
+
+	TraceResult tr = UTIL_GetGlobalTrace( );
+
+	if ( pOther->pev->takedamage )
+	{
+		entvars_t *pevOwner = VARS( pev->owner );
+
+		ClearMultiDamage( );
+		pOther->TraceAttack( pevOwner, pev->dmg, pev->velocity.Normalize(), &tr, DMG_NOGIB | DMG_RADIATION );
+		if ( pOther->CanBeRepulsed( false ) )
+		{
+			Vector vecDir = pev->velocity.Normalize();
+			pOther->pev->velocity = vecDir * ( pev->dmg * 10 ) + Vector( 0, 0, 60 );
+		}
+		ApplyMultiDamage( pev, pevOwner );
+
+		if ( pOther->Classify() == CLASS_HUMAN_PASSIVE )
+		{
+			pOther->pev->rendercolor = Vector( 255, 0, 128 );
+		}
+		else if ( FBitSet( pOther->pev->flags, FL_MONSTER ) && !pOther->IsBSPModel() && pOther->pev->health <= 0 )
+		{
+			pOther->pev->renderfx = kRenderFxGlowShell;
+			pOther->pev->rendercolor = Vector( 255, 0, 128 );
+			if ( pOther->pev->rendermode == kRenderNormal )
+				pOther->pev->renderamt = 0;
+		}
+	}
+	else if ( !ENTINDEX( pOther->edict() ) )
+	{
+		// the world: vanish into the sky
+		Vector vecEnd = pev->origin + pev->velocity;
+		const char *pTextureName = TRACE_TEXTURE( ENT( pOther->pev ), pev->origin, vecEnd );
+		if ( !strcmp( pTextureName, "sky" ) )
+		{
+			SetThink( &CBaseEntity::SUB_Remove );
+			return;
+		}
+	}
+
+	if ( pOther->IsBSPModel() )
+		UTIL_DecalTrace( &tr, DECAL_SMALLSCORCH1 + RANDOM_LONG( 0, 2 ) );
+
+	EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "doors/aliendoor1.wav", 1.0, 0.8, 0, PITCH_NORM );
+	CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 512, 0.3 );
+
+	if ( pOther->Shielded() )
+		SetThink( &CBaseEntity::SUB_Remove );
+	else
+		SUB_StartFadeOut();
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_DLIGHT );
+		WRITE_COORD( pev->origin.x );	// X
+		WRITE_COORD( pev->origin.y );	// Y
+		WRITE_COORD( pev->origin.z );	// Z
+		WRITE_BYTE( 64 );		// radius * 0.1
+		WRITE_BYTE( 255 );		// r
+		WRITE_BYTE( 0 );		// g
+		WRITE_BYTE( 128 );		// b
+		WRITE_BYTE( 5 );		// time * 10
+		WRITE_BYTE( 4 );		// decay * 0.1
+	MESSAGE_END( );
+
+	pev->velocity = g_vecZero;
+}
+
+
+//
+// na_plantlight: the Nephilim plant light, a xen_plantlight with its own model
+// that shoots a plant_wallop from its light (attachment 0) at the first living
+// thing it can see within 1024 units, every five seconds at most. Players,
+// the Nephilim (class 14), class 20 and unclassified things are spared.
+//
+class CNAPlantLight : public CXenPLight	// name ours
+{
+public:
+	void		Spawn( void );
+	void		Precache( void );
+	void		Think( void );
+
+	EHANDLE		m_hWallop;	// name ours; not saved
+};
+
+LINK_ENTITY_TO_CLASS( na_plantlight, CNAPlantLight );
+
+void CNAPlantLight :: Spawn( void )
+{
+	Precache();
+
+	SET_MODEL( ENT(pev), "models/na_light.mdl" );
+	pev->movetype	= MOVETYPE_NONE;
+	pev->solid		= SOLID_TRIGGER;
+
+	UTIL_SetSize( pev, Vector(-80,-80,0), Vector(80,80,32));
+	SetActivity( ACT_IDLE );
+	pev->nextthink = gpGlobals->time + 0.1;
+	pev->frame = RANDOM_FLOAT(0,255);
+
+	m_pGlow = CSprite::SpriteCreate( XEN_PLANT_GLOW_SPRITE, pev->origin + Vector(0,0,(pev->mins.z+pev->maxs.z)*0.5), FALSE );
+	m_pGlow->SetTransparency( kRenderGlow, pev->rendercolor.x, pev->rendercolor.y, pev->rendercolor.z, pev->renderamt, pev->renderfx );
+	m_pGlow->SetAttachment( edict(), 1 );
+}
+
+
+void CNAPlantLight :: Precache( void )
+{
+	PRECACHE_MODEL( "models/na_light.mdl" );
+	PRECACHE_MODEL( XEN_PLANT_GLOW_SPRITE );
+	UTIL_PrecacheOther( "plant_wallop" );
+}
+
+
+void CNAPlantLight :: Think( void )
+{
+	StudioFrameAdvance();
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	switch( GetActivity() )
+	{
+	case ACT_CROUCH:
+		if ( m_fSequenceFinished )
+		{
+			SetActivity( ACT_CROUCHIDLE );
+			LightOff();
+		}
+		break;
+
+	case ACT_CROUCHIDLE:
+		if ( gpGlobals->time > pev->dmgtime )
+		{
+			SetActivity( ACT_STAND );
+			LightOn();
+		}
+		break;
+
+	case ACT_STAND:
+		if ( m_fSequenceFinished )
+			SetActivity( ACT_IDLE );
+		break;
+
+	case ACT_IDLE:
+		if ( pev->dmgtime < gpGlobals->time && m_hWallop == NULL )
+		{
+			Vector vecSrc, vecAngles;
+			GetAttachment( 0, vecSrc, vecAngles );
+
+			CBaseEntity *pEntity = NULL;
+			while ( ( pEntity = UTIL_FindEntityInSphere( pEntity, vecSrc, 1024 ) ) != NULL )
+			{
+				if ( !pEntity->IsAlive() )
+					continue;
+
+				int iClass = pEntity->Classify();
+				if ( iClass == CLASS_NONE || iClass == 14 || iClass == CLASS_PLAYER || iClass == 20 )	// 14: the Nephilim
+					continue;
+
+				TraceResult tr;
+				UTIL_TraceLine( vecSrc, pEntity->pev->origin, dont_ignore_monsters, ENT(pev), &tr );
+				if ( tr.flFraction >= 1.0 || tr.pHit == pEntity->edict() )
+				{
+					m_hWallop = CBaseEntity::Create( "plant_wallop", vecSrc, g_vecZero, edict() );
+					m_hWallop->pev->enemy = pEntity->edict();
+					pev->dmgtime = gpGlobals->time + XEN_PLANT_HIDE_TIME;
+					break;
+				}
+			}
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+
+
 class CXenHair : public CActAnimating
 {
 public:
@@ -269,6 +557,9 @@ public:
 	void		HandleAnimEvent( MonsterEvent_t *pEvent );
 	void		Attack( void );	
 	int			Classify( void ) { return CLASS_BARNACLE; }
+	const char	*GetKillDesc( void ) { return "an alien tree"; }
+	const char	*GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return DamageVerb( DMG_CRUSH, fGibbed ); }
+	int			HeatSignature( void ) { return 3; }
 
 	virtual int	Save( CSave &save );
 	virtual int	Restore( CRestore &restore );
@@ -435,6 +726,7 @@ public:
 	int			TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType ) { Attack(); return 0; }
 //	void		HandleAnimEvent( MonsterEvent_t *pEvent );
 	void		Attack( void ) {}
+	int			HeatSignature( void ) { return 2; }
 
 	static const char *pModelNames[];
 };
@@ -452,6 +744,7 @@ class CXenSporeMed : public CXenSpore
 class CXenSporeLarge : public CXenSpore
 {
 	void		Spawn( void );
+	int			HeatSignature( void ) { return 3; }
 
 	static const Vector m_hullSizes[];
 };
