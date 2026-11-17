@@ -40,6 +40,9 @@ public:
 	// This is done to fix spawn flag collisions between this class and a derived class
 	virtual BOOL IsTogglePlat( void ) { return (pev->spawnflags & SF_PLAT_TOGGLE) ? TRUE : FALSE; }
 
+	virtual const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "a moving platform"; return STRING( m_iszKillDesc ); }
+	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "crushed"; }
+
 	virtual int	Save( CSave &save );
 	virtual int	Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
@@ -644,6 +647,8 @@ public:
 	virtual int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
 
+	virtual int		GetOnState( void ) { return pev->nextthink > 0; }
+
 	entvars_t	*m_pevCurrentTarget;
 	int			m_sounds;
 	BOOL		m_activated;
@@ -985,6 +990,11 @@ void CFuncTrackTrain :: KeyValue( KeyValueData *pkvd )
 	else if (FStrEq(pkvd->szKeyName, "bank"))
 	{
 		m_flBank = atof(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "killdesc"))
+	{
+		m_iszKillDesc = ALLOC_STRING(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
 	else
@@ -2113,6 +2123,7 @@ public:
 	void EXPORT		Wait( void );
 	void			Stop( void );
 
+	int				GetOnState( void ) { return m_on; }
 	int				BloodColor( void ) { return DONT_BLEED; }
 	int				Classify( void ) { return CLASS_MACHINE; }
 	int				TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
