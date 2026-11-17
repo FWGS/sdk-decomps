@@ -33,6 +33,8 @@ hud_player_info_t	 g_PlayerInfoList[MAX_PLAYERS+1];	   // player info from the e
 extra_player_info_t  g_PlayerExtraInfo[MAX_PLAYERS+1];   // additional player info sent directly to the client dll
 team_info_t			 g_TeamInfo[MAX_TEAMS+1];
 int					 g_IsSpectator[MAX_PLAYERS+1];
+sci_info_t			 g_SciInfo[MAX_SCIENTISTS];		// name ours
+team_info_t			 g_SciTeamInfo;					// name ours: the scientists' header row
 
 int HUD_IsGame( const char *game );
 int EV_TFC_IsAllyTeam( int iTeam1, int iTeam2 );
@@ -65,11 +67,22 @@ SBColumnInfo g_ColumnInfo[NUM_COLUMNS] =
 	{NULL,			2,			Label::a_east},		// blank column to take up the slack
 };
 
+// the scoreboard's four scientists (name ours)
+char *g_szSciNames[MAX_SCIENTISTS] =
+{
+	"Walter",
+	"Einstein",
+	"Luther",
+	"Slick",
+};
+
 
 #define TEAM_NO				0
 #define TEAM_YES			1
 #define TEAM_SPECTATORS		2
 #define TEAM_BLANK			3
+#define TEAM_SCIENTISTS		4	// name ours: the scientists' header
+#define TEAM_SCIENTIST		5	// name ours: one scientist
 
 
 //-----------------------------------------------------------------------------
@@ -235,6 +248,9 @@ void ScorePanel::Initialize( void )
 	m_iNumTeams = 0;
 	memset( g_PlayerExtraInfo, 0, sizeof g_PlayerExtraInfo );
 	memset( g_TeamInfo, 0, sizeof g_TeamInfo );
+
+	for ( int i = 0; i < MAX_SCIENTISTS; i++ )
+		g_SciInfo[i].name = g_szSciNames[i];
 }
 
 //-----------------------------------------------------------------------------
@@ -267,10 +283,43 @@ void ScorePanel::Update()
 	else
 		SortTeams();
 
+	AddScientists();
+
 	// set scrollbar range
 	m_PlayerList.SetScrollRange(m_iRows);
 
 	FillGrid();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: The mod: a gap, the scientists' header with their totals, and a row
+//			for each of the four scientists below the players
+//-----------------------------------------------------------------------------
+void ScorePanel::AddScientists( void )
+{
+	m_iIsATeam[m_iRows] = TEAM_BLANK;
+	m_bHasBeenSorted[m_iRows] = true;	// sic: indexed by row, not by player
+	m_iRows++;
+
+	m_iIsATeam[m_iRows] = TEAM_SCIENTISTS;
+	m_bHasBeenSorted[m_iRows] = true;
+	m_iRows++;
+
+	for ( int i = 0; i < MAX_SCIENTISTS; i++ )
+	{
+		m_iSortedRows[m_iRows] = i;
+		m_iIsATeam[m_iRows] = TEAM_SCIENTIST;
+		m_bHasBeenSorted[m_iRows] = true;
+		m_iRows++;
+	}
+
+	g_SciTeamInfo.deaths = 0;
+	g_SciTeamInfo.frags = 0;
+	for ( i = 0; i < MAX_SCIENTISTS; i++ )
+	{
+		g_SciTeamInfo.deaths += g_SciInfo[i].deaths;
+		g_SciTeamInfo.frags += g_SciInfo[i].gibs;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -563,6 +612,7 @@ void ScorePanel::FillGrid()
 			char sz[128];
 			hud_player_info_t *pl_info = NULL;
 			team_info_t *team_info = NULL;
+			sci_info_t *sci_info = NULL;
 
 			if (m_iIsATeam[row] == TEAM_BLANK)
 			{
@@ -597,6 +647,21 @@ void ScorePanel::FillGrid()
 											iTeamColors[team_info->teamnumber % iNumberOfTeamColors][2],
 											0 );
 			}
+			else if ( m_iIsATeam[row] == TEAM_SCIENTISTS )
+			{
+				team_info = &g_SciTeamInfo;
+
+				pLabel->setFgColor(32, 64, 255, 0);
+
+				// different height for team header rows
+				rowheight = 20;
+				if (ScreenHeight >= 480)
+				{
+					rowheight = YRES(rowheight);
+				}
+				pLabel->setSize(pLabel->getWide(), rowheight);
+				pLabel->setFont(tfont);
+			}
 			else if ( m_iIsATeam[row] == TEAM_SPECTATORS )
 			{
 				// grey text for spectators
@@ -612,6 +677,12 @@ void ScorePanel::FillGrid()
 				pLabel->setFont(tfont);
 
 				pGridRow->SetRowUnderline(0, true, YRES(3), 100, 100, 100, 0);
+			}
+			else if ( m_iIsATeam[row] == TEAM_SCIENTIST )
+			{
+				pLabel->setFgColor(224, 224, 255, 0);
+
+				sci_info = &g_SciInfo[ m_iSortedRows[row] ];
 			}
 			else
 			{
@@ -668,6 +739,14 @@ void ScorePanel::FillGrid()
 					{
 						sprintf( sz2, CHudTextMessage::BufferedLocaliseTextString( "#Spectators" ) );
 					}
+					else if ( m_iIsATeam[row] == TEAM_SCIENTISTS )
+					{
+						strcpy( sz2, "Scientists" );
+					}
+					else if ( m_iIsATeam[row] == TEAM_SCIENTIST )
+					{
+						strcpy( sz2, sci_info->name );
+					}
 					else
 					{
 						sprintf( sz2, gViewPort->GetTeamName(team_info->teamnumber) );
@@ -696,12 +775,16 @@ void ScorePanel::FillGrid()
 				case COLUMN_CLASS:
 					break;
 				case COLUMN_KILLS:
-					if ( m_iIsATeam[row] == TEAM_YES )
+					if ( m_iIsATeam[row] == TEAM_YES || m_iIsATeam[row] == TEAM_SCIENTISTS )
 						sprintf(sz, "%d",  team_info->frags );
+					else if ( m_iIsATeam[row] == TEAM_SCIENTIST )
+						sprintf(sz, "%d",  sci_info->gibs );
 					break;
 				case COLUMN_DEATHS:
-					if ( m_iIsATeam[row] == TEAM_YES )
+					if ( m_iIsATeam[row] == TEAM_YES || m_iIsATeam[row] == TEAM_SCIENTISTS )
 						sprintf(sz, "%d",  team_info->deaths );
+					else if ( m_iIsATeam[row] == TEAM_SCIENTIST )
+						sprintf(sz, "%d",  sci_info->deaths );
 					break;
 				case COLUMN_LATENCY:
 					if ( m_iIsATeam[row] == TEAM_YES )

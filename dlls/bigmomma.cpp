@@ -102,6 +102,9 @@ void CInfoBM::KeyValue( KeyValueData* pkvd )
 class CBMortar : public CBaseEntity
 {
 public:
+	const char *GetKillDesc( void ) { return "biogenic acid"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "corroded"; }
+
 	void Spawn( void );
 
 	static CBMortar *Shoot( edict_t *pOwner, Vector vecStart, Vector vecVelocity );
@@ -175,6 +178,11 @@ void MortarSpray( const Vector &position, const Vector &direction, int spriteMod
 class CBigMomma : public CBaseMonster
 {
 public:
+	int  HeatSignature( void ) { return 5; }
+	BOOL CanBeRepulsed( bool fForce ) { return fForce; }	// only a forced push moves her
+	const char *GetKillDesc( void ) { return "a gonarch"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "crushed"; }
+
 	void Spawn( void );
 	void Precache( void );
 	void KeyValue( KeyValueData *pkvd );
@@ -670,6 +678,13 @@ void CBigMomma :: Spawn()
 	m_flFieldOfView		= 0.3;// indicates the width of this monster's forward view cone ( as a dotproduct result )
 	m_MonsterState		= MONSTERSTATE_NONE;
 
+	if ( !pev->netname )
+	{
+		// no path to follow: a stronger gonarch that stays where she is
+		pev->health = 500 * gSkillData.bigmommaHealthFactor;
+		Remember( bits_MEMORY_PATH_FINISHED );
+	}
+
 	MonsterInit();
 }
 
@@ -695,7 +710,6 @@ void CBigMomma :: Precache()
 	// TEMP: Squid
 	PRECACHE_MODEL("sprites/mommaspit.spr");// spit projectile.
 	gSpitSprite = PRECACHE_MODEL("sprites/mommaspout.spr");// client side spittle.
-	gSpitDebrisSprite = PRECACHE_MODEL("sprites/mommablob.spr" );
 
 	PRECACHE_SOUND( "bullchicken/bc_acid1.wav" );
 	PRECACHE_SOUND( "bullchicken/bc_spithit1.wav" );

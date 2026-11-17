@@ -95,10 +95,22 @@ public:
 	static	TYPEDESCRIPTION m_SaveData[];
 	static CSprite *SpriteCreate( const char *pSpriteName, const Vector &origin, BOOL animate );
 
-private:
+protected:	// the mod's sprite projectiles set m_maxFrame
 
 	float		m_lastTime;
 	float		m_maxFrame;
+};
+
+
+// magic_missile (turret.cpp): a sprite that flies, hurts what it touches and fades out;
+// the base of the mod's sprite projectiles (psi_blast ...)
+class CMagicMissile : public CSprite
+{
+public:
+	const char *GetKillDesc( void ) { return "a disruptor gun"; }
+	void Spawn( void );
+	void Precache( void );
+	void EXPORT HurtTouch( CBaseEntity *pOther );
 };
 
 
