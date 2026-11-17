@@ -41,6 +41,24 @@ void EV_SnarkFire( struct event_args_s *args );
 
 
 void EV_TrainPitchAdjust( struct event_args_s *args );
+
+// Scientist Slaughterhouse
+void EV_FireSoftGun( struct event_args_s *args );
+void EV_FlamerFire( struct event_args_s *args );
+void EV_FlamerStop( struct event_args_s *args );
+void EV_BloodSpray( struct event_args_s *args );
+void EV_Electric( struct event_args_s *args );
+void EV_Rain( struct event_args_s *args );
+void EV_BlastSphere( struct event_args_s *args );
+void EV_TractorBeam( struct event_args_s *args );
+void EV_FireLaser( struct event_args_s *args );
+void EV_FireDisplacer( struct event_args_s *args );
+void EV_SpinDisplacer( struct event_args_s *args );
+void EV_TeslaFire( struct event_args_s *args );
+void EV_TeslaStop( struct event_args_s *args );
+void EV_TeslaSpecial( struct event_args_s *args );
+void EV_FireRepulsor( struct event_args_s *args );
+void EV_Sword( struct event_args_s *args );
 }
 
 /*
@@ -77,4 +95,20 @@ void Game_HookEvents( void )
 	gEngfuncs.pfnHookEvent( "events/firehornet.sc",				EV_HornetGunFire );
 	gEngfuncs.pfnHookEvent( "events/tripfire.sc",				EV_TripmineFire );
 	gEngfuncs.pfnHookEvent( "events/snarkfire.sc",				EV_SnarkFire );
+	gEngfuncs.pfnHookEvent( "events/softgun.sc",				EV_FireSoftGun );
+	gEngfuncs.pfnHookEvent( "events/flamefire.sc",				EV_FlamerFire );
+	gEngfuncs.pfnHookEvent( "events/flamestop.sc",				EV_FlamerStop );
+	gEngfuncs.pfnHookEvent( "events/bloodspray.sc",				EV_BloodSpray );
+	gEngfuncs.pfnHookEvent( "events/electric.sc",				EV_Electric );
+	gEngfuncs.pfnHookEvent( "events/rain.sc",					EV_Rain );
+	gEngfuncs.pfnHookEvent( "events/blastsphere.sc",			EV_BlastSphere );
+	gEngfuncs.pfnHookEvent( "events/tractorbeam.sc",			EV_TractorBeam );
+	gEngfuncs.pfnHookEvent( "events/lasergun.sc",				EV_FireLaser );
+	gEngfuncs.pfnHookEvent( "events/disp_fire.sc",				EV_FireDisplacer );
+	gEngfuncs.pfnHookEvent( "events/disp_spin.sc",				EV_SpinDisplacer );
+	gEngfuncs.pfnHookEvent( "events/teslafire.sc",				EV_TeslaFire );
+	gEngfuncs.pfnHookEvent( "events/teslastop.sc",				EV_TeslaStop );
+	gEngfuncs.pfnHookEvent( "events/teslaspecial.sc",			EV_TeslaSpecial );
+	gEngfuncs.pfnHookEvent( "events/repulsor.sc",				EV_FireRepulsor );
+	gEngfuncs.pfnHookEvent( "events/sword.sc",					EV_Sword );
 }
