@@ -626,7 +626,7 @@ void CScientist :: StartTask( Task_t *pTask )
 		{
 			Talk( 2 );
 			m_hTalkTarget = m_hEnemy;
-			if ( m_hEnemy->IsPlayer() )
+			if ( m_hEnemy != NULL && m_hEnemy->IsPlayer() )
 				PlaySentence( "SC_PLFEAR", 5, VOL_NORM, ATTN_NORM );
 			else
 				PlaySentence( "SC_FEAR", 5, VOL_NORM, ATTN_NORM );
@@ -989,8 +989,8 @@ int CScientist :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, f
 		!(bitsDamageType & (DMG_NEVERGIB | DMG_ALWAYSGIB)) )
 	{
 		// the head comes off
-		bitsDamageType |= DMG_NEVERGIB;
 		pev->body += NUM_SCIENTIST_HEADS;
+		bitsDamageType |= DMG_NEVERGIB;
 		pev->health = 0;
 
 		Vector vecOrigin, vecAngles;
@@ -1484,7 +1484,10 @@ void CDeadScientist :: Spawn( )
 	else
 		pev->skin = 0;
 
-	pev->sequence = LookupSequence( pev->message ? STRING( pev->message ) : m_szPoses[m_iPose] );
+	if ( pev->message )
+		pev->sequence = LookupSequence( STRING( pev->message ) );
+	else
+		pev->sequence = LookupSequence( m_szPoses[m_iPose] );
 	if (pev->sequence == -1)
 	{
 		ALERT ( at_console, "Dead scientist with bad pose\n" );
@@ -1772,7 +1775,7 @@ int CSittingScientist :: FIdleSpeak ( void )
 //=========================================================
 void CScientist :: GibMonster( void )
 {
-	SpawnBlood( Center(), BloodColor(), 250 );
+	SpawnBlood( Center(), BloodColor(), 500 );
 	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "common/bodysplat.wav", 1, ATTN_NORM);
 
 	int cGibs = ssh_scigibs.value;
@@ -2062,7 +2065,7 @@ BOOL CScientist :: FCanActiveIdle ( void )
 	if ( !iHintNodes )
 	{
 		ALERT( at_console, "%s queryhintnodeexistence\n", STRING( pev->classname ) );
-		iHintNodes = HasHintNodes() ? 1 : -1;
+		iHintNodes = HasHintNodes() * 2 - 1;
 	}
 
 	if ( iHintNodes == -1 )
@@ -2179,7 +2182,7 @@ BOOL CCleansuitScientist :: FCanActiveIdle ( void )
 	if ( !iHintNodes )
 	{
 		ALERT( at_console, "%s queryhintnodeexistence\n", STRING( pev->classname ) );
-		iHintNodes = HasHintNodes() ? 1 : -1;
+		iHintNodes = HasHintNodes() * 2 - 1;
 	}
 
 	if ( iHintNodes == -1 )
@@ -2199,8 +2202,8 @@ void CScientist :: CutInHalf( void )
 
 	CScientist *pHalf = (CScientist *)CBaseEntity::Create( "monster_scientist", pev->origin, pev->angles, edict() );
 
-	pHalf->pev->velocity = g_vecAttackDir * RANDOM_FLOAT( -40, 0 ) + Vector( pev->velocity.x + RANDOM_FLOAT( -10, 10 ), pev->velocity.y + RANDOM_FLOAT( -10, 10 ), pev->velocity.z + 200 );
-	pHalf->pev->avelocity = Vector( pev->avelocity.x, pev->avelocity.y + RANDOM_FLOAT( 0, 20 ), pev->avelocity.z );
+	pHalf->pev->velocity = pev->velocity + Vector( RANDOM_FLOAT( -10, 10 ), RANDOM_FLOAT( -10, 10 ), 200 ) + g_vecAttackDir * RANDOM_FLOAT( -40, 0 );
+	pHalf->pev->avelocity = pev->avelocity + Vector( 0, RANDOM_FLOAT( 0, 20 ), 0 );
 	pHalf->pev->movetype = MOVETYPE_TOSS;
 	pHalf->pev->solid = SOLID_NOT;
 	pHalf->pev->spawnflags |= SF_MONSTER_FADECORPSE | SF_MONSTER_FALL_TO_GROUND;
@@ -2256,50 +2259,72 @@ void CScientist :: AcidMelt( void )
 			{
 				SetBodygroup( 3, GetBodygroup( 2 ) + 1 );
 				SetBodygroup( 2, 3 );
-				SetBodygroup( 0, GetBodygroup( 0 ) < NUM_SCIENTIST_HEADS ? 8 : 9 );
+				if ( GetBodygroup( 0 ) < NUM_SCIENTIST_HEADS )
+					SetBodygroup( 0, 8 );
+				else
+					SetBodygroup( 0, 9 );
 				m_bloodColor = DONT_BLEED;
-				return;
 			}
-
-			// the legs
-			switch ( GetBodygroup( 2 ) )
+			else
 			{
-			case 0:
-				SetBodygroup( 2, 2 );
-				SetBodygroup( 3, 2 );
-				break;
-			case 1:
-				SetBodygroup( 2, 3 );
-				SetBodygroup( 3, 2 );
-				break;
+				// the legs
+				switch ( GetBodygroup( 2 ) )
+				{
+				case 0:
+					SetBodygroup( 2, 2 );
+					SetBodygroup( 3, 2 );
+					break;
+				case 1:
+					SetBodygroup( 2, 3 );
+					SetBodygroup( 3, 2 );
+					break;
+				}
 			}
-			return;
 		}
-
-		if ( m_flAcidDamageLower <= pev->max_health * 0.5 )
+		else
 		{
-			// the upper body
-			SetBodygroup( 0, GetBodygroup( 0 ) < NUM_SCIENTIST_HEADS ? 8 : 9 );
-			switch ( GetBodygroup( 2 ) )
+			if ( m_flAcidDamageLower > pev->max_health * 0.5 )
 			{
-			case 0:
-				SetBodygroup( 2, 1 );
-				SetBodygroup( 3, 3 );
-				break;
-			case 2:
+				SetBodygroup( 3, GetBodygroup( 2 ) + 1 );
 				SetBodygroup( 2, 3 );
-				SetBodygroup( 3, 3 );
-				break;
+				if ( GetBodygroup( 0 ) < NUM_SCIENTIST_HEADS )
+					SetBodygroup( 0, 8 );
+				else
+					SetBodygroup( 0, 9 );
+				m_bloodColor = DONT_BLEED;
 			}
-			return;
+			else
+			{
+				// the upper body
+				if ( GetBodygroup( 0 ) < NUM_SCIENTIST_HEADS )
+					SetBodygroup( 0, 8 );
+				else
+					SetBodygroup( 0, 9 );
+
+				switch ( GetBodygroup( 2 ) )
+				{
+				case 0:
+					SetBodygroup( 2, 1 );
+					SetBodygroup( 3, 3 );
+					break;
+				case 2:
+					SetBodygroup( 2, 3 );
+					SetBodygroup( 3, 3 );
+					break;
+				}
+			}
 		}
 	}
-
-	// all of him
-	SetBodygroup( 3, GetBodygroup( 2 ) + 1 );
-	SetBodygroup( 2, 3 );
-	SetBodygroup( 0, GetBodygroup( 0 ) < NUM_SCIENTIST_HEADS ? 8 : 9 );
-	m_bloodColor = DONT_BLEED;
+	else
+	{
+		SetBodygroup( 3, GetBodygroup( 2 ) + 1 );
+		SetBodygroup( 2, 3 );
+		if ( GetBodygroup( 0 ) < NUM_SCIENTIST_HEADS )
+			SetBodygroup( 0, 8 );
+		else
+			SetBodygroup( 0, 9 );
+		m_bloodColor = DONT_BLEED;
+	}
 }
 
 
