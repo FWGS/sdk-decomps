@@ -81,6 +81,8 @@ class CStomp : public CBaseEntity
 public:
 	void Spawn( void );
 	void Think( void );
+	int  HeatSignature( void ) { return 2; }
+	const char *GetKillDesc( void ) { return "a unknown energy wave"; }	// sic
 	static CStomp *StompCreate( const Vector &origin, const Vector &end, float speed );
 
 private:
@@ -216,6 +218,15 @@ public:
 		pev->absmin = pev->origin + Vector( -80, -80, 0 );
 		pev->absmax = pev->origin + Vector( 80, 80, 214 );
 	}
+
+	BOOL CanBeRepulsed( bool fForce ) { return fForce; }	// only a forced push moves him
+	const char *GetKillDesc( void ) { return "a gargantua"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return FlameIsOn() ? "incinerated" : "whacked"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { if ( FlameIsOn() ) return ""; return HitGroupIn( iHitGroup ); }
+	int  HeatSignature( void ) { return 5; }
+	BOOL CanBeTeleported( void ) { return FALSE; }
+	BOOL IsGrenadeTarget( void ) { return TRUE; }
+	int  GetBattlePower( void );
 
 	Schedule_t *GetScheduleOfType( int Type );
 	void StartTask( Task_t *pTask );
@@ -442,6 +453,15 @@ DEFINE_CUSTOM_SCHEDULES( CGargantua )
 
 IMPLEMENT_CUSTOM_SCHEDULES( CGargantua, CBaseMonster );
 
+//=========================================================
+// GetBattlePower - the target ID's rating: slash, stomp and
+// twenty flame hits, times half the health
+//=========================================================
+int CGargantua::GetBattlePower( void )
+{
+	return ( gSkillData.gargantuaDmgFire * 20 + gSkillData.gargantuaDmgStomp + gSkillData.gargantuaDmgSlash ) * ( pev->max_health * 0.5 );
+}
+
 
 void CGargantua::EyeOn( int level )
 {
@@ -479,7 +499,8 @@ void CGargantua::StompAttack( void )
 	Vector vecEnd = (vecAim * 1024) + vecStart;
 
 	UTIL_TraceLine( vecStart, vecEnd, ignore_monsters, edict(), &trace );
-	CStomp::StompCreate( vecStart, trace.vecEndPos, 0 );
+	CStomp *pStomp = CStomp::StompCreate( vecStart, trace.vecEndPos, 0 );
+	pStomp->pev->owner = edict();
 	UTIL_ScreenShake( pev->origin, 12.0, 100.0, 2.0, 1000 );
 	EMIT_SOUND_DYN ( edict(), CHAN_WEAPON, pStompSounds[ RANDOM_LONG(0,ARRAYSIZE(pStompSounds)-1) ], 1.0, ATTN_GARG, 0, PITCH_NORM + RANDOM_LONG(-10,10) );
 
@@ -752,7 +773,7 @@ void CGargantua :: Spawn()
 	Precache( );
 
 	SET_MODEL(ENT(pev), "models/garg.mdl");
-	UTIL_SetSize( pev, Vector( -32, -32, 0 ), Vector( 32, 32, 64 ) );
+	UTIL_SetSize( pev, Vector( -32, -32, 0 ), Vector( 32, 32, 128 ) );
 
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
