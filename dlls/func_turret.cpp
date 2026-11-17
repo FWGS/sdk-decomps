@@ -2229,7 +2229,8 @@ void CBeamShootpoint :: FireBeam( void )
 	if ( pev->netname )
 		GetCharge();
 
-	m_pBeam->m_firePosition = gpGlobals->v_forward + pev->origin + m_spread1;
+	Vector &vecOrigin = pev->origin;
+	m_pBeam->m_firePosition = gpGlobals->v_forward + vecOrigin + m_spread1;
 	CBeamCannon *pBeam = m_pBeam;
 	pBeam->pev->angles = pBeam->m_firePosition;
 	pBeam->m_firePosition = pBeam->pev->angles;
