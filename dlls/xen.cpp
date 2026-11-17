@@ -293,6 +293,8 @@ void CPlantWallop :: ChargeThink( void )
 
 void CPlantWallop :: WallopTouch( CBaseEntity *pOther )
 {
+	Vector vecDir;	// sic: unused; without it the sky test adds its x terms the other way round
+
 	SetTouch( NULL );
 
 	TraceResult tr = UTIL_GetGlobalTrace( );
