@@ -43,7 +43,7 @@ void EV_SnarkFire( struct event_args_s *args );
 void EV_TrainPitchAdjust( struct event_args_s *args );
 
 // Scientist Slaughterhouse
-void EV_FireSoftGun( struct event_args_s *args );
+void EV_SoftFire( struct event_args_s *args );
 void EV_FlamerFire( struct event_args_s *args );
 void EV_FlamerStop( struct event_args_s *args );
 void EV_BloodSpray( struct event_args_s *args );
@@ -95,7 +95,7 @@ void Game_HookEvents( void )
 	gEngfuncs.pfnHookEvent( "events/firehornet.sc",				EV_HornetGunFire );
 	gEngfuncs.pfnHookEvent( "events/tripfire.sc",				EV_TripmineFire );
 	gEngfuncs.pfnHookEvent( "events/snarkfire.sc",				EV_SnarkFire );
-	gEngfuncs.pfnHookEvent( "events/softgun.sc",				EV_FireSoftGun );
+	gEngfuncs.pfnHookEvent( "events/softgun.sc",				EV_SoftFire );
 	gEngfuncs.pfnHookEvent( "events/flamefire.sc",				EV_FlamerFire );
 	gEngfuncs.pfnHookEvent( "events/flamestop.sc",				EV_FlamerStop );
 	gEngfuncs.pfnHookEvent( "events/bloodspray.sc",				EV_BloodSpray );
