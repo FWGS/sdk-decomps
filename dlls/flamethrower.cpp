@@ -250,14 +250,21 @@ void CFlameThrower::PrimaryAttack( void )
 		return;
 	}
 
+	int flags;
+#if defined( CLIENT_WEAPONS )
+	flags = FEV_NOTHOST;
+#else
+	flags = 0;
+#endif
+
 	if ( pev->dmgtime == 0 )
-		PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFlameFire, 0.0, (float *)&m_pPlayer->pev->origin, (float *)&m_pPlayer->pev->angles, 0.0, 0.0, 0, 0, 0, 0 );
+		PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usFlameFire, 0.0, (float *)&m_pPlayer->pev->origin, (float *)&m_pPlayer->pev->angles, 0.0, 0.0, 0, 0, 0, 0 );
 
 #ifndef CLIENT_DLL
 	m_pPlayer->m_iWeaponVolume = FLAMETHROWER_PRIMARY_VOLUME;
 
-	Vector vecSrc;
-	vecSrc = m_pPlayer->GetGunPosition( );
+	Vector vecDir, vecEnd;	// sic: never used (they make VC6 inline as retail does)
+	Vector vecSrc = m_pPlayer->GetGunPosition( );
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle );
 	vecSrc = vecSrc + gpGlobals->v_forward * 16 + gpGlobals->v_up * -8 + gpGlobals->v_right * 3;
 
@@ -295,14 +302,21 @@ void CFlameThrower::SecondaryAttack( void )
 		return;
 	}
 
+	int flags;
+#if defined( CLIENT_WEAPONS )
+	flags = FEV_NOTHOST;
+#else
+	flags = 0;
+#endif
+
 	if ( pev->dmgtime == 0 )
-		PLAYBACK_EVENT_FULL( FEV_NOTHOST, m_pPlayer->edict(), m_usFlameFire, 0.0, (float *)&m_pPlayer->pev->origin, (float *)&m_pPlayer->pev->angles, 0.0, 0.0, 1, 0, 0, 0 );
+		PLAYBACK_EVENT_FULL( flags, m_pPlayer->edict(), m_usFlameFire, 0.0, (float *)&m_pPlayer->pev->origin, (float *)&m_pPlayer->pev->angles, 0.0, 0.0, 1, 0, 0, 0 );
 
 #ifndef CLIENT_DLL
 	m_pPlayer->m_iWeaponVolume = FLAMETHROWER_PRIMARY_VOLUME;
 
-	Vector vecSrc;
-	vecSrc = m_pPlayer->GetGunPosition( );
+	Vector vecDir, vecEnd;	// sic: never used (they make VC6 inline as retail does)
+	Vector vecSrc = m_pPlayer->GetGunPosition( );
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle );
 	vecSrc = vecSrc + gpGlobals->v_forward * 16 + gpGlobals->v_up * -8 + gpGlobals->v_right * 3;
 
