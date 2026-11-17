@@ -1696,8 +1696,9 @@ void CMultiBeam::RandomArea( void )
 			continue;
 
 		m_pBeams[i]->SetStartPos( vecSrc );
-		m_pBeams[i]->SetEndPos( tr.vecEndPos );
-		m_pBeams[i]->m_firePosition = m_pBeams[i]->pev->angles;
+		CBeamCannon *pBeam = m_pBeams[i];
+		pBeam->SetEndPos( tr.vecEndPos );
+		pBeam->m_firePosition = pBeam->pev->angles;
 	}
 }
 
@@ -1713,13 +1714,15 @@ void CMultiBeam::RandomPoint( void )
 		if ( pStart )
 			vecSrc = pStart->pev->origin;
 
+		Vector vecEnd = Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ) ) * 4096 + vecSrc;
 		TraceResult tr;
-		UTIL_TraceLine( vecSrc, vecSrc + Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ) ) * 4096, ignore_monsters, ENT(pev), &tr );
+		UTIL_TraceLine( vecSrc, vecEnd, ignore_monsters, ENT(pev), &tr );
 		if ( !tr.fAllSolid )
 		{
 			m_pBeams[i]->SetStartPos( vecSrc );
-			m_pBeams[i]->SetEndPos( tr.vecEndPos );
-			m_pBeams[i]->m_firePosition = m_pBeams[i]->pev->angles;
+			CBeamCannon *pBeam = m_pBeams[i];
+			pBeam->SetEndPos( tr.vecEndPos );
+			pBeam->m_firePosition = pBeam->pev->angles;
 		}
 	}
 }
