@@ -19,13 +19,13 @@
 //
 #include "extdll.h"
 #include "util.h"
+#include "customentity.h"
 #include "cbase.h"
 #include "monsters.h"
-#include "customentity.h"
 #include "effects.h"
+#include "beams.h"
 #include "weapons.h"
 #include "decals.h"
-#include "beams.h"
 
 extern float gTankAccuracy[];	// defined in func_tank.cpp, name ours: firing cones by "accuracy" choice
 
@@ -125,9 +125,9 @@ void CBeamCannon::Spawn( void )
 	}
 
 	if ( m_pStartSprite )
-		m_pStartSprite->SetScale( m_flStartSpriteScale );
+		m_pStartSprite->pev->scale = m_flStartSpriteScale;
 	if ( m_pEndSprite )
-		m_pEndSprite->SetScale( m_flEndSpriteScale );
+		m_pEndSprite->pev->scale = m_flEndSpriteScale;
 
 	if ( pev->spawnflags & SF_CANNON_SPIRAL )
 		SetFlags( GetFlags() | BEAM_FSINE );
@@ -318,10 +318,7 @@ void CBeamCannon::TurnOn( void )
 
 void CBeamCannon::Explode( const Vector &vecPos )
 {
-	float flSpriteScale = ( m_radius * 0.6 - 50 ) * 0.6;
-	if ( flSpriteScale < 10 )
-		flSpriteScale = 10;
-	int iScale = flSpriteScale;
+	int iScale = max( 10.0, ( m_radius * 0.6 - 50 ) * 0.6 );
 
 	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_EXPLOSION );
@@ -329,12 +326,15 @@ void CBeamCannon::Explode( const Vector &vecPos )
 		WRITE_COORD( vecPos.y );
 		WRITE_COORD( vecPos.z );
 		WRITE_SHORT( g_sModelIndexFireball );
-		WRITE_BYTE( (BYTE)min( iScale, 255 ) ); // scale * 10
+		WRITE_BYTE( (BYTE)min( 255, iScale ) ); // scale * 10
 		WRITE_BYTE( 15 ); // framerate
 		WRITE_BYTE( TE_EXPLFLAG_NONE );
 	MESSAGE_END();
 
-	RadiusDamage( vecPos, pev, pev->owner ? VARS( pev->owner ) : pev, pev->dmg, m_radius, CLASS_NONE, DMG_BLAST );
+	entvars_t *pevOwner = pev;
+	if ( pev->owner )
+		pevOwner = VARS( pev->owner );
+	RadiusDamage( vecPos, pev, pevOwner, pev->dmg, m_radius, CLASS_NONE, DMG_BLAST );
 }
 
 
@@ -361,7 +361,7 @@ void CBeamCannon::StartFxThink( void )
 	if ( m_pStartSprite )
 		UTIL_SetOrigin( m_pStartSprite->pev, pev->origin );
 
-	if ( m_startLight.x || m_startLight.y || m_startLight.z )
+	if ( m_startLight != Vector( 0, 0, 0 ) )
 	{
 		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 			WRITE_BYTE( TE_DLIGHT );
@@ -384,10 +384,15 @@ void CBeamCannon::StartFxThink( void )
 void CBeamCannon::FireAtPoint( TraceResult &tr )
 {
 	if ( (pev->spawnflags & SF_CANNON_POINT2POINT) && !(pev->spawnflags & SF_CANNON_DIRECTIONAL) )
+	{
 		SetEndPos( m_firePosition );
+		m_firePosition = pev->angles;
+	}
 	else
+	{
 		SetEndPos( tr.vecEndPos );
-	m_firePosition = pev->angles;
+		m_firePosition = pev->angles;
+	}
 
 	if ( m_pEndSprite )
 		UTIL_SetOrigin( m_pEndSprite->pev, GetEndPos() );
@@ -396,7 +401,7 @@ void CBeamCannon::FireAtPoint( TraceResult &tr )
 
 	BeamDamage( &tr );
 
-	if ( m_startLight.x || m_startLight.y || m_startLight.z )
+	if ( m_startLight != Vector( 0, 0, 0 ) )
 	{
 		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 			WRITE_BYTE( TE_DLIGHT );
@@ -412,7 +417,7 @@ void CBeamCannon::FireAtPoint( TraceResult &tr )
 		MESSAGE_END( );
 	}
 
-	if ( m_endLight.x || m_endLight.y || m_endLight.z )
+	if ( m_endLight != Vector( 0, 0, 0 ) )
 	{
 		Vector vecEnd = GetEndPos();
 		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecEnd );
@@ -532,7 +537,9 @@ void CBeamCannon::BeamDamage( TraceResult *ptr )
 		CBaseEntity *pHit = CBaseEntity::Instance(ptr->pHit);
 		if ( pHit )
 		{
-			entvars_t *pevOwner = pev->owner ? VARS( pev->owner ) : pev;
+			entvars_t *pevOwner = pev;
+			if ( pev->owner )
+				pevOwner = VARS( pev->owner );
 
 			if ( pev->dmg > 0 )
 			{
@@ -547,18 +554,16 @@ void CBeamCannon::BeamDamage( TraceResult *ptr )
 			{
 				if ( pHit->IsBSPModel() )
 				{
-					int decal;
 					if ( m_endType == CANNON_END_BLOOD )
-						decal = DECAL_BLOOD1 + RANDOM_LONG( 0, 5 );
+						UTIL_DecalTrace( ptr, DECAL_BLOOD1 + RANDOM_LONG(0,5) );
 					else if ( m_endType == CANNON_END_ALIENBLOOD )
-						decal = DECAL_YBLOOD1 + RANDOM_LONG( 0, 5 );
+						UTIL_DecalTrace( ptr, DECAL_YBLOOD1 + RANDOM_LONG(0,5) );
 					else if ( GetWidth() > 240 )
-						decal = DECAL_SCORCH1 + RANDOM_LONG( 0, 2 );	// sic: 2 gives DECAL_BLOOD1
+						UTIL_DecalTrace( ptr, DECAL_SCORCH1 + RANDOM_LONG(0,2) );	// sic: 2 gives DECAL_BLOOD1
 					else if ( GetWidth() > 100 )
-						decal = DECAL_SMALLSCORCH1 + RANDOM_LONG( 0, 2 );
+						UTIL_DecalTrace( ptr, DECAL_SMALLSCORCH1 + RANDOM_LONG(0,2) );
 					else
-						decal = DECAL_BIGSHOT1 + RANDOM_LONG( 0, 4 );
-					UTIL_DecalTrace( ptr, decal );
+						UTIL_DecalTrace( ptr, DECAL_BIGSHOT1 + RANDOM_LONG(0,4) );
 				}
 			}
 		}
@@ -592,8 +597,11 @@ void CBeamCannon::StrikeThink( void )
 		SetWidth( RANDOM_FLOAT( 1 - m_flicker, 1 + m_flicker ) * m_scale );
 
 	TraceResult tr;
+	IGNORE_GLASS glass = dont_ignore_glass;
+	if ( pev->spawnflags & SF_CANNON_IGNOREGLASS )
+		glass = ignore_glass;
 
-	UTIL_TraceLine( pev->origin, m_firePosition, dont_ignore_monsters, (pev->spawnflags & SF_CANNON_IGNOREGLASS) ? ignore_glass : dont_ignore_glass, pev->owner, &tr );
+	UTIL_TraceLine( pev->origin, m_firePosition, dont_ignore_monsters, glass, pev->owner, &tr );
 	FireAtPoint( tr );
 	pev->nextthink = gpGlobals->time + 0.1;
 
@@ -627,7 +635,10 @@ void CBeamCannon::MatchThink( void )
 			m_firePosition = pCannon->GetEndPos();
 
 			TraceResult tr;
-			UTIL_TraceLine( pev->origin, m_firePosition, dont_ignore_monsters, (pev->spawnflags & SF_CANNON_IGNOREGLASS) ? ignore_glass : dont_ignore_glass, pCannon->pev->owner, &tr );
+			IGNORE_GLASS glass = dont_ignore_glass;
+			if ( pev->spawnflags & SF_CANNON_IGNOREGLASS )
+				glass = ignore_glass;
+			UTIL_TraceLine( pev->origin, m_firePosition, dont_ignore_monsters, glass, pCannon->pev->owner, &tr );
 			FireAtPoint( tr );
 		}
 		else if ( IsOn() )
@@ -750,7 +761,7 @@ void CBeamCharge::ExpandThink( void )
 		pev->nextthink		= gpGlobals->time + 0.1;
 		m_lastTime			= gpGlobals->time;
 
-		if ( m_light.x || m_light.y || m_light.z )
+		if ( m_light != Vector( 0, 0, 0 ) )
 		{
 			MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 				WRITE_BYTE( TE_DLIGHT );
@@ -790,7 +801,7 @@ void CBeamCharge::ChargeThink( void )
 		pev->nextthink = 0;
 		SUB_UseTargets( this, USE_ON, 0 );
 		if ( pev->noise2 )
-			EMIT_SOUND_DYN( ENT(pev), CHAN_STATIC, STRING(pev->noise2), m_volume, ATTN_NORM, 0, PITCH_NORM );
+			EMIT_SOUND( ENT(pev), CHAN_STATIC, STRING(pev->noise2), m_volume, ATTN_NORM );
 		return;
 	}
 
@@ -800,7 +811,7 @@ void CBeamCharge::ChargeThink( void )
 	if ( m_iszBeamSpriteName )
 		RandomBeam();
 
-	if ( m_light.x || m_light.y || m_light.z )
+	if ( m_light != Vector( 0, 0, 0 ) )
 	{
 		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 			WRITE_BYTE( TE_DLIGHT );
@@ -862,7 +873,7 @@ void CBeamCharge::RandomBeam( void )
 			WRITE_BYTE( pev->rendercolor.x );	// sic: no noise byte, everything after shifts by one
 			WRITE_BYTE( pev->rendercolor.y );
 			WRITE_BYTE( pev->rendercolor.z );
-			WRITE_BYTE( min( (int)pev->renderamt + 128, 255 ) );
+			WRITE_BYTE( min( 255, (int)pev->renderamt + 128 ) );
 			WRITE_BYTE( 35 );
 		MESSAGE_END();
 	}
@@ -879,12 +890,15 @@ void CBeamCharge::CoolDown( void )
 
 	pev->scale = m_scale;
 	pev->renderamt = m_alpha;
-	Expand( (pev->spawnflags & SF_BEAMCHARGE_EXPANDFADE) ? m_scale / m_flCoolTime : -(m_scale / m_flCoolTime), m_alpha / m_flCoolTime );
+	if ( pev->spawnflags & SF_BEAMCHARGE_EXPANDFADE )
+		Expand( m_scale / m_flCoolTime, m_alpha / m_flCoolTime );
+	else
+		Expand( -m_scale / m_flCoolTime, m_alpha / m_flCoolTime );
 
 	if ( pev->noise2 )
 		STOP_SOUND( ENT(pev), CHAN_STATIC, STRING(pev->noise2) );
 	if ( pev->noise3 )
-		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, STRING(pev->noise3), m_volume, ATTN_NORM, 0, PITCH_NORM );
+		EMIT_SOUND( ENT(pev), CHAN_WEAPON, STRING(pev->noise3), m_volume, ATTN_NORM );
 
 	pev->effects = 0;
 }
@@ -901,7 +915,7 @@ void CBeamCharge::WarmUp( void )
 	Charge();
 
 	if ( pev->noise1 )
-		EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, STRING(pev->noise1), m_volume, ATTN_NORM, 0, PITCH_NORM );
+		EMIT_SOUND( ENT(pev), CHAN_WEAPON, STRING(pev->noise1), m_volume, ATTN_NORM );
 
 	pev->effects = 0;
 
@@ -912,9 +926,9 @@ void CBeamCharge::WarmUp( void )
 			WRITE_COORD( pev->origin.x );
 			WRITE_COORD( pev->origin.y );
 			WRITE_COORD( pev->origin.z );
-			WRITE_BYTE( min( (int)m_fxScale, 255 ) );	// radius
+			WRITE_BYTE( min( 255, (int)m_fxScale ) );	// radius
 			WRITE_BYTE( RANDOM_LONG( 160, 255 ) );	// count
-			WRITE_BYTE( min( (int)(m_flWarmTime * 10), 255 ) );	// life
+			WRITE_BYTE( min( 255, (int)(m_flWarmTime * 10) ) );	// life
 		MESSAGE_END();
 	}
 }
