@@ -889,7 +889,7 @@ public:
 	void Spawn( void );
 	void Precache( void );
 	int HeatSignature( void ) { return 3; }
-	const char *GetKillDesc( void ) { if ( m_iszKillDesc ) return STRING( m_iszKillDesc ); return "a rocket"; }
+	const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "a rocket"; return STRING( m_iszKillDesc ); }
 	void Killed( entvars_t *pevAttacker, int iGib );
 
 	static CRocket *CreateRocket( const Vector &vecOrigin, const Vector &vecAngles, edict_t *pOwner, const Vector &vecColor, int iszModel );	// names ours
