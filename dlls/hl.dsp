@@ -192,6 +192,10 @@ SOURCE=.\bigmomma.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\black_hole.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\bloater.cpp
 # End Source File
 # Begin Source File
@@ -244,7 +248,19 @@ SOURCE=.\crowbar.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\dd_sphere.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\ddisk.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\defaultai.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\displacer.cpp
 # End Source File
 # Begin Source File
 
@@ -260,6 +276,10 @@ SOURCE=.\egon.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\elemental.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\entity_link.cpp
 # End Source File
 # Begin Source File
@@ -272,11 +292,23 @@ SOURCE=.\fire.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\fireball.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\flamethrower.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\flyingmonster.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\flyingobject.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\freezethrower.cpp
 # End Source File
 # Begin Source File
 
@@ -356,6 +388,10 @@ SOURCE=.\headcrab.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\headmonster.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\healthkit.cpp
 # End Source File
 # Begin Source File
@@ -397,6 +433,10 @@ SOURCE=.\leech.cpp
 # Begin Source File
 
 SOURCE=.\lights.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\lpistol.cpp
 # End Source File
 # Begin Source File
 
@@ -488,6 +528,14 @@ SOURCE=.\rat.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\reflector.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\repulsor.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\roach.cpp
 # End Source File
 # Begin Source File
@@ -528,6 +576,14 @@ SOURCE=.\skill.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\sniper.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\softgun.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\sound.cpp
 # End Source File
 # Begin Source File
@@ -552,6 +608,10 @@ SOURCE=.\subs.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\sword.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\talkmonster.cpp
 # End Source File
 # Begin Source File
@@ -561,6 +621,10 @@ SOURCE=.\tempmonster.cpp
 # Begin Source File
 
 SOURCE=.\tentacle.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\teslacoil.cpp
 # End Source File
 # Begin Source File
 
@@ -585,6 +649,10 @@ SOURCE=.\util.cpp
 # Begin Source File
 
 SOURCE=..\game_shared\voice_gamemgr.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\vortex.cpp
 # End Source File
 # Begin Source File
 

@@ -62,6 +62,8 @@ enum decal_e
 	DECAL_SMALLSCORCH3,	// Small scorch mark
 	DECAL_MOMMABIRTH,	// Big momma birth splatter
 	DECAL_MOMMASPLAT,
+	DECAL_WATER1,		// names ours: the water elemental's splats
+	DECAL_WATER2,
 };
 
 typedef struct 
