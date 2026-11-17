@@ -103,11 +103,19 @@ SOURCE=..\dlls\crowbar.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\dlls\displacer.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\dlls\egon.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\ev_hldm.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\flamethrower.cpp
 # End Source File
 # Begin Source File
 
@@ -147,11 +155,19 @@ SOURCE=..\common\interface.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\dlls\lpistol.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\dlls\mp5.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=..\dlls\python.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\repulsor.cpp
 # End Source File
 # Begin Source File
 
@@ -167,7 +183,19 @@ SOURCE=..\dlls\shotgun.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\dlls\softgun.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\dlls\squeakgrenade.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\sword.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\teslacoil.cpp
 # End Source File
 # Begin Source File
 
@@ -192,6 +220,10 @@ SOURCE=..\game_shared\voice_status.cpp
 # Begin Source File
 
 SOURCE=..\game_shared\voice_vgui_tweakdlg.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\dlls\vortex.cpp
 # End Source File
 # End Group
 # Begin Source File
