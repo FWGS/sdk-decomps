@@ -41,6 +41,9 @@ extern Vector VecBModelOrigin( entvars_t* pevBModel );
 #define TURRET_MAXSPIN	5		// seconds turret barrel will spin w/o a target
 #define TURRET_MACHINE_VOLUME	0.5
 
+#define SF_MONSTER_TURRET_INVULNERABLE	128	// fgd "Invulnerable"
+#define SF_MONSTER_TURRET_ALLY			256	// name ours: not in the fgd; the turret counts as a player ally
+
 typedef enum
 {
 	TURRET_ANIM_NONE = 0,
@@ -66,15 +69,25 @@ public:
 	int BloodColor( void ) { return DONT_BLEED; }
 	void GibMonster( void ) {}	// UNDONE: Throw turret gibs?
 
+	// rockets seek a firing or spinning turret less
+	int		HeatSignature( void ) { return ( pev->sequence == TURRET_ANIM_FIRE || pev->sequence == TURRET_ANIM_SPIN ) ? 1 : 2; }
+	BOOL	CanBeRepulsed( bool fForce ) { return FALSE; }
+	BOOL	CanBeTeleported( void ) { return FALSE; }
+	// hand grenades aren't thrown at ceiling turrets
+	BOOL	CanBeGrenaded( int fLauncher ) { if ( !fLauncher && m_iOrientation ) return FALSE; return TRUE; }
+	BOOL	IsGrenadeTarget( void ) { return !m_iOrientation; }
+	int		GetOnState( void ) { if ( m_iOn ) return IsAlive(); return 0; }
+
 	// Think functions
 
-	void EXPORT ActiveThink(void);
-	void EXPORT SearchThink(void);
+	virtual void ActiveThink(void);
+	void EXPORT CallActiveThink(void);	// name ours: ActiveThink is virtual, SetThink takes this
+	void MonsterThink(void);			// the SDK's SearchThink, now run through CallMonsterThink
 	void EXPORT AutoSearchThink(void);
 	void EXPORT TurretDeath(void);
 
-	virtual void EXPORT SpinDownCall(void) { m_iSpin = 0; }
-	virtual void EXPORT SpinUpCall(void) { m_iSpin = 1; }
+	virtual void SpinDownCall(void) { m_iSpin = 0; }
+	virtual void SpinUpCall(void) { m_iSpin = 1; }
 
 	// void SpinDown(void);
 	// float EXPORT SpinDownCall( void ) { return SpinDown(); }
@@ -98,7 +111,7 @@ public:
 
 	// other functions
 	void SetTurretAnim(TURRET_ANIM anim);
-	int MoveTurret(void);
+	virtual int MoveTurret(void);
 	virtual void Shoot(Vector &vecSrc, Vector &vecDirToEnemy) { };
 
 	float m_flMaxSpin;		// Max time to spin the barrel w/o a target
@@ -122,7 +135,7 @@ public:
 	Vector m_vecLastSight;
 	float m_flLastSight;	// Last time we saw a target
 	float m_flMaxWait;		// Max time to seach w/o a target
-	int m_iSearchSpeed;		// Not Used!
+	float m_flSightRange;	// "range"; at least TURRET_RANGE
 
 	// movement
 	float	m_flStartYaw;
@@ -157,7 +170,7 @@ TYPEDESCRIPTION	CBaseTurret::m_SaveData[] =
 	DEFINE_FIELD( CBaseTurret, m_vecLastSight, FIELD_POSITION_VECTOR ),
 	DEFINE_FIELD( CBaseTurret, m_flLastSight, FIELD_TIME ),
 	DEFINE_FIELD( CBaseTurret, m_flMaxWait, FIELD_FLOAT ),
-	DEFINE_FIELD( CBaseTurret, m_iSearchSpeed, FIELD_INTEGER ),
+	DEFINE_FIELD( CBaseTurret, m_flSightRange, FIELD_FLOAT ),
 
 	DEFINE_FIELD( CBaseTurret, m_flStartYaw, FIELD_FLOAT ),
 	DEFINE_FIELD( CBaseTurret, m_vecCurAngles, FIELD_VECTOR ),
@@ -186,6 +199,11 @@ public:
 	// other functions
 	void Shoot(Vector &vecSrc, Vector &vecDirToEnemy);
 
+	const char *GetKillDesc( void ) { return "a machine-gun turret"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "shot"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+	int GetBattlePower( void );
+
 private:
 	int m_iStartSpin;
 
@@ -197,6 +215,14 @@ TYPEDESCRIPTION	CTurret::m_SaveData[] =
 
 IMPLEMENT_SAVERESTORE( CTurret, CBaseTurret );
 
+//=========================================================
+// GetBattlePower - the target ID's "battle power"
+//=========================================================
+int CTurret::GetBattlePower( void )
+{
+	return ( pev->max_health * 0.1 ) * ( gSkillData.monDmg12MM * 12.5 );
+}
+
 
 class CMiniTurret : public CBaseTurret
 {
@@ -205,6 +231,11 @@ public:
 	void Precache(void);
 	// other functions
 	void Shoot(Vector &vecSrc, Vector &vecDirToEnemy);
+
+	const char *GetKillDesc( void ) { return "a small machine-gun turret"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "shot"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+	int GetBattlePower( void );
 };
 
 
@@ -224,15 +255,14 @@ void CBaseTurret::KeyValue( KeyValueData *pkvd )
 		pkvd->fHandled = TRUE;
 
 	}
-	else if (FStrEq(pkvd->szKeyName, "searchspeed"))
-	{
-		m_iSearchSpeed = atoi(pkvd->szValue);
-		pkvd->fHandled = TRUE;
-
-	}
 	else if (FStrEq(pkvd->szKeyName, "turnrate"))
 	{
 		m_iBaseTurnRate = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "range"))
+	{
+		m_flSightRange = atof(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
 	else if (FStrEq(pkvd->szKeyName, "style") ||
@@ -255,6 +285,9 @@ void CBaseTurret::Spawn()
 	pev->frame			= 0;
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->takedamage		= DAMAGE_AIM;
+	if ( pev->spawnflags & SF_MONSTER_TURRET_INVULNERABLE )
+		pev->takedamage	= DAMAGE_NO;
+	pev->max_health		= pev->health;
 
 	SetBits (pev->flags, FL_MONSTER);
 	SetUse( TurretUse );
@@ -269,7 +302,10 @@ void CBaseTurret::Spawn()
 	SetBoneController( 0, 0 );
 	SetBoneController( 1, 0 );
 	m_flFieldOfView = VIEW_FIELD_FULL;
-	// m_flSightRange = TURRET_RANGE;
+	if ( m_flSightRange < TURRET_RANGE )
+		m_flSightRange = TURRET_RANGE;
+	m_flNextAttack = gpGlobals->time;
+	m_flDelay = 0;
 }
 
 
@@ -351,6 +387,11 @@ void CMiniTurret::Precache()
 	PRECACHE_SOUND("weapons/hks1.wav");
 	PRECACHE_SOUND("weapons/hks2.wav");
 	PRECACHE_SOUND("weapons/hks3.wav");
+}
+
+int CMiniTurret::GetBattlePower( void )
+{
+	return ( pev->max_health * 0.1 ) * ( gSkillData.monDmg12MM * 12.5 );
 }
 
 void CBaseTurret::Initialize(void)
@@ -472,7 +513,7 @@ void CBaseTurret::ActiveThink(void)
 	{
 		m_hEnemy = NULL;
 		m_flLastSight = gpGlobals->time + m_flMaxWait;
-		SetThink(SearchThink);
+		SetThink(CallMonsterThink);
 		return;
 	}
 	
@@ -489,7 +530,7 @@ void CBaseTurret::ActiveThink(void)
 			{	
 				m_hEnemy = NULL;
 				m_flLastSight = gpGlobals->time + m_flMaxWait;
-				SetThink(SearchThink);
+				SetThink(CallMonsterThink);
 				return;
 			}
 		}
@@ -507,7 +548,7 @@ void CBaseTurret::ActiveThink(void)
 	Vector vec = UTIL_VecToAngles(vecMidEnemy - vecMid);	
 
 	// Current enmey is not visible.
-	if (!fEnemyVisible || (flDistToEnemy > TURRET_RANGE))
+	if (!fEnemyVisible || (flDistToEnemy > m_flSightRange))
 	{
 		if (!m_flLastSight)
 			m_flLastSight = gpGlobals->time + 0.5;
@@ -518,7 +559,7 @@ void CBaseTurret::ActiveThink(void)
 			{
 				m_hEnemy = NULL;
 				m_flLastSight = gpGlobals->time + m_flMaxWait;
-				SetThink(SearchThink);
+				SetThink(CallMonsterThink);
 				return;
 			}
 		}
@@ -553,6 +594,180 @@ void CBaseTurret::ActiveThink(void)
 		GetAttachment( 0, vecSrc, vecAng );
 		SetTurretAnim(TURRET_ANIM_FIRE);
 		Shoot(vecSrc, gpGlobals->v_forward );
+	} 
+	else
+	{
+		SetTurretAnim(TURRET_ANIM_SPIN);
+	}
+
+	//move the gun
+	if (m_fBeserk)
+	{
+		if (RANDOM_LONG(0,9) == 0)
+		{
+			m_vecGoalAngles.y = RANDOM_FLOAT(0,360);
+			m_vecGoalAngles.x = RANDOM_FLOAT(0,90) - 90 * m_iOrientation;
+			TakeDamage(pev,pev,1, DMG_GENERIC); // don't beserk forever
+			return;
+		}
+	} 
+	else if (fEnemyVisible)
+	{
+		if (vec.y > 360)
+			vec.y -= 360;
+
+		if (vec.y < 0)
+			vec.y += 360;
+
+		//ALERT(at_console, "[%.2f]", vec.x);
+		
+		if (vec.x < -180)
+			vec.x += 360;
+
+		if (vec.x > 180)
+			vec.x -= 360;
+
+		// now all numbers should be in [1...360]
+		// pin to turret limitations to [-90...15]
+
+		if (m_iOrientation == 0)
+		{
+			if (vec.x > 90)
+				vec.x = 90;
+			else if (vec.x < m_iMinPitch)
+				vec.x = m_iMinPitch;
+		}
+		else
+		{
+			if (vec.x < -90)
+				vec.x = -90;
+			else if (vec.x > -m_iMinPitch)
+				vec.x = -m_iMinPitch;
+		}
+
+		// ALERT(at_console, "->[%.2f]\n", vec.x);
+
+		m_vecGoalAngles.y = vec.y;
+		m_vecGoalAngles.x = vec.x;
+
+	}
+
+	SpinUpCall();
+	MoveTurret();
+}
+
+
+void CBaseTurret::CallActiveThink(void)
+{
+	ActiveThink();
+}
+
+
+//=========================================================
+// The turrets that wait m_flDelay ("delay") between shots:
+// the TFC sentry guns and the sphere gun.
+//=========================================================
+class CTimedTurret : public CBaseTurret	// name ours
+{
+public:
+	void ActiveThink(void);
+};
+
+
+void CTimedTurret::ActiveThink(void)
+{
+	int fAttack = 0;
+	Vector vecDirToEnemy;
+
+	pev->nextthink = gpGlobals->time + 0.1;
+	StudioFrameAdvance( );
+
+	if ((!m_iOn) || (m_hEnemy == NULL))
+	{
+		m_hEnemy = NULL;
+		m_flLastSight = gpGlobals->time + m_flMaxWait;
+		SetThink(CallMonsterThink);
+		return;
+	}
+	
+	// if it's dead, look for something new
+	if ( !m_hEnemy->IsAlive() )
+	{
+		if (!m_flLastSight)
+		{
+			m_flLastSight = gpGlobals->time + 0.5; // continue-shooting timeout
+		}
+		else
+		{
+			if (gpGlobals->time > m_flLastSight)
+			{	
+				m_hEnemy = NULL;
+				m_flLastSight = gpGlobals->time + m_flMaxWait;
+				SetThink(CallMonsterThink);
+				return;
+			}
+		}
+	}
+
+	Vector vecMid = pev->origin + pev->view_ofs;
+	Vector vecMidEnemy = m_hEnemy->BodyTarget( vecMid );
+
+	// Look for our current enemy
+	int fEnemyVisible = FBoxVisible(pev, m_hEnemy->pev, vecMidEnemy );	
+
+	vecDirToEnemy = vecMidEnemy - vecMid;	// calculate dir and dist to enemy
+	float flDistToEnemy = vecDirToEnemy.Length();
+
+	Vector vec = UTIL_VecToAngles(vecMidEnemy - vecMid);	
+
+	// Current enmey is not visible.
+	if (!fEnemyVisible || (flDistToEnemy > m_flSightRange))
+	{
+		if (!m_flLastSight)
+			m_flLastSight = gpGlobals->time + 0.5;
+		else
+		{
+			// Should we look for a new target?
+			if (gpGlobals->time > m_flLastSight)
+			{
+				m_hEnemy = NULL;
+				m_flLastSight = gpGlobals->time + m_flMaxWait;
+				SetThink(CallMonsterThink);
+				return;
+			}
+		}
+		fEnemyVisible = 0;
+	}
+	else
+	{
+		m_vecLastSight = vecMidEnemy;
+	}
+
+	UTIL_MakeAimVectors(m_vecCurAngles);	
+
+	/*
+	ALERT( at_console, "%.0f %.0f : %.2f %.2f %.2f\n", 
+		m_vecCurAngles.x, m_vecCurAngles.y,
+		gpGlobals->v_forward.x, gpGlobals->v_forward.y, gpGlobals->v_forward.z );
+	*/
+	
+	Vector vecLOS = vecDirToEnemy; //vecMid - m_vecLastSight;
+	vecLOS = vecLOS.Normalize();
+
+	// Is the Gun looking at the target
+	if (DotProduct(vecLOS, gpGlobals->v_forward) <= 0.866) // 30 degree slop
+		fAttack = FALSE;
+	else
+		fAttack = TRUE;
+
+	// fire the gun, at most once every m_flDelay seconds
+	if (m_iSpin && ((fAttack) || (m_fBeserk)) && m_flNextAttack <= gpGlobals->time)
+	{
+		Vector vecSrc, vecAng;
+		GetAttachment( 0, vecSrc, vecAng );
+		SetTurretAnim(TURRET_ANIM_FIRE);
+		Shoot(vecSrc, gpGlobals->v_forward );
+		m_flNextAttack = gpGlobals->time + m_flDelay;
 	} 
 	else
 	{
@@ -670,7 +885,7 @@ void CBaseTurret::Deploy(void)
 
 		SetTurretAnim(TURRET_ANIM_SPIN);
 		pev->framerate = 0;
-		SetThink(SearchThink);
+		SetThink(CallMonsterThink);
 	}
 
 	m_flLastSight = gpGlobals->time + m_flMaxWait;
@@ -746,7 +961,7 @@ void CTurret::SpinUpCall(void)
 		{
 			pev->nextthink = gpGlobals->time + 0.1; // retarget delay
 			EMIT_SOUND(ENT(pev), CHAN_STATIC, "turret/tu_active2.wav", TURRET_MACHINE_VOLUME, ATTN_NORM);
-			SetThink(ActiveThink);
+			SetThink(CallActiveThink);
 			m_iStartSpin = 0;
 			m_iSpin = 1;
 		} 
@@ -758,7 +973,7 @@ void CTurret::SpinUpCall(void)
 
 	if (m_iSpin)
 	{
-		SetThink(ActiveThink);
+		SetThink(CallActiveThink);
 	}
 }
 
@@ -824,7 +1039,7 @@ void CBaseTurret::SetTurretAnim(TURRET_ANIM anim)
 // After a set amount of time, the barrel will spin down. After m_flMaxWait, the turret will
 // retact.
 //
-void CBaseTurret::SearchThink(void)
+void CBaseTurret::MonsterThink(void)
 {
 	// ensure rethink
 	SetTurretAnim(TURRET_ANIM_SPIN);
@@ -847,7 +1062,7 @@ void CBaseTurret::SearchThink(void)
 	// Acquire Target
 	if (m_hEnemy == NULL)
 	{
-		Look(TURRET_RANGE);
+		Look(m_flSightRange);
 		m_hEnemy = BestVisibleEnemy();
 	}
 
@@ -856,7 +1071,7 @@ void CBaseTurret::SearchThink(void)
 	{
 		m_flLastSight = 0;
 		m_flSpinUpTime = 0;
-		SetThink(ActiveThink);
+		SetThink(CallActiveThink);
 	}
 	else
 	{
@@ -905,7 +1120,7 @@ void CBaseTurret::AutoSearchThink(void)
 
 	if (m_hEnemy == NULL)
 	{
-		Look( TURRET_RANGE );
+		Look( m_flSightRange );
 		m_hEnemy = BestVisibleEnemy();
 	}
 
@@ -1037,7 +1252,7 @@ int CBaseTurret::TakeDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, flo
 		if (m_iOn && (1 || RANDOM_LONG(0, 0x7FFF) > 800))
 		{
 			m_fBeserk = 1;
-			SetThink(SearchThink);
+			SetThink(CallMonsterThink);
 		}
 	}
 
@@ -1132,7 +1347,11 @@ int CBaseTurret::MoveTurret(void)
 int	CBaseTurret::Classify ( void )
 {
 	if (m_iOn || m_iAutoStart)
+	{
+		if ( pev->spawnflags & SF_MONSTER_TURRET_ALLY )
+			return CLASS_PLAYER_ALLY;
 		return	CLASS_MACHINE;
+	}
 	return CLASS_NONE;
 }
 
@@ -1153,6 +1372,10 @@ public:
 	void EXPORT SentryTouch( CBaseEntity *pOther );
 	void EXPORT SentryDeath( void );
 
+	const char *GetKillDesc( void ) { return "a tripod-mounted machine gun"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "shot"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+	int GetBattlePower( void );
 };
 
 LINK_ENTITY_TO_CLASS( monster_sentry, CSentry );
@@ -1227,6 +1450,11 @@ int CSentry::TakeDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float f
 	}
 
 	return 1;
+}
+
+int CSentry::GetBattlePower( void )
+{
+	return ( pev->max_health * 0.1 ) * ( gSkillData.monDmg12MM * 12.5 );
 }
 
 
