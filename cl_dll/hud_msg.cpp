@@ -20,6 +20,7 @@
 #include "cl_util.h"
 #include "parsemsg.h"
 #include "r_efx.h"
+#include "triangleapi.h"
 
 #define MAX_CLIENTS 32
 
@@ -109,5 +110,26 @@ int CHud :: MsgFunc_Concuss( const char *pszName, int iSize, void *pbuf )
 		this->m_StatusIcons.EnableIcon("dmg_concuss",255,160,0);
 	else
 		this->m_StatusIcons.DisableIcon("dmg_concuss");
+	return 1;
+}
+
+// env_fog (name ours): the fog colour and distances, or off
+int CHud :: MsgFunc_Fog( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+	if ( !READ_BYTE() )
+	{
+		float fogOff[3] = { 0, 0, 0 };
+		gEngfuncs.pTriAPI->Fog( fogOff, 0, 1, FALSE );
+		return 1;
+	}
+
+	float fogColor[3];
+	fogColor[0] = READ_BYTE();
+	fogColor[1] = READ_BYTE();
+	fogColor[2] = READ_BYTE();
+	float flStart = READ_COORD();
+	float flEnd = READ_COORD();
+	gEngfuncs.pTriAPI->Fog( fogColor, flStart, flEnd, TRUE );
 	return 1;
 }
