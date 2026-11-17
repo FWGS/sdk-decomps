@@ -16,6 +16,7 @@
   their remaining time), goes out in water and fades after 20 seconds.
 
 */
+#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 
 #include "extdll.h"
 #include "util.h"
@@ -222,3 +223,5 @@ void FireSpread( const Vector &vecOrigin, float flDamage, entvars_t *pevOwner, e
 		pFire->pev->dmg = flDamage;
 	}
 }
+
+#endif

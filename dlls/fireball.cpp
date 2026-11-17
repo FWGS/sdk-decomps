@@ -18,7 +18,6 @@
   ammo_fireballclip gives 20 "ffuel".
 
 */
-#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 
 #include "extdll.h"
 #include "util.h"
@@ -420,5 +419,3 @@ class CFireBallAmmo : public CBasePlayerAmmo	// name ours
 	}
 };
 LINK_ENTITY_TO_CLASS( ammo_fireballclip, CFireBallAmmo );
-
-#endif
