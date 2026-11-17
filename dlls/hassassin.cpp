@@ -1993,6 +1993,8 @@ void CNAgent :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			{
 				CBaseEntity *pMine = CBaseEntity::Create( "vortex_mine", pev->origin + gpGlobals->v_forward * 34 + Vector( 0, 0, 32 ), g_vecZero, edict() );
 				pMine->pev->velocity = m_vecTossVelocity;
+				m_flNextGrenadeCheck = gpGlobals->time + 6;
+				m_fThrowGrenade = FALSE;
 			}
 			else if ( pev->weapons == 4 )
 			{
@@ -2014,6 +2016,8 @@ void CNAgent :: HandleAnimEvent( MonsterEvent_t *pEvent )
 					pRocket->pev->spawnflags |= 8;
 					pRocket->m_iszKillDesc = MAKE_STRING( "a powerball attack" );
 				}
+				m_flNextGrenadeCheck = gpGlobals->time + 6;
+				m_fThrowGrenade = FALSE;
 			}
 			else
 			{
@@ -2027,10 +2031,9 @@ void CNAgent :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				pDisk->m_hActivator = this;
 				pDisk->pev->nextthink += 0.4;
 				pDisk->m_iszKillDesc = MAKE_STRING( "a ringwave attack" );
+				m_flNextGrenadeCheck = gpGlobals->time + 6;
+				m_fThrowGrenade = FALSE;
 			}
-
-			m_flNextGrenadeCheck = gpGlobals->time + 6;// wait six seconds before even looking again to see if a grenade can be thrown.
-			m_fThrowGrenade = FALSE;
 		}
 		break;
 	case ASSASSIN_AE_JUMP:
