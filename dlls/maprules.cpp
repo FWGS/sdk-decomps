@@ -30,6 +30,8 @@
 #include "cbase.h"
 #include "player.h"
 
+extern int gmsgSciInfo;
+
 class CRuleEntity : public CBaseEntity
 {
 public:
@@ -138,7 +140,7 @@ public:
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void	KeyValue( KeyValueData *pkvd );
 
-	inline	int		Points( void ) { return pev->frags; }
+	int		Points( void );
 	inline	BOOL	AllowNegativeScore( void ) { return pev->spawnflags & SF_SCORE_NEGATIVE; }
 	inline	BOOL	AwardToTeam( void ) { return pev->spawnflags & SF_SCORE_TEAM; }
 
@@ -148,6 +150,15 @@ private:
 };
 
 LINK_ENTITY_TO_CLASS( game_score, CGameScore );
+
+
+// "points", or a random number from "points" to "points_max" if that is set
+int CGameScore::Points( void )
+{
+	if ( pev->weapons )
+		return RANDOM_LONG( pev->frags, pev->weapons );
+	return pev->frags;
+}
 
 
 void CGameScore::Spawn( void )
@@ -163,6 +174,11 @@ void CGameScore::KeyValue( KeyValueData *pkvd )
 		SetPoints( atoi(pkvd->szValue) );
 		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "points_max"))
+	{
+		pev->weapons = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
 	else
 		CRulePointEntity::KeyValue( pkvd );
 }
@@ -174,17 +190,38 @@ void CGameScore::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE us
 	if ( !CanFireForActivator( pActivator ) )
 		return;
 
-	// Only players can use this
-	if ( pActivator->IsPlayer() )
+	// The points go to the first player's scientist kills ("Total" on the kill board), spread
+	// over the four kinds: a quarter (at least 1) each, the rest to the last.
+	int iPoints = Points();
+	int iEach = iPoints / 4;
+	CBasePlayer *pPlayer = (CBasePlayer *)CBaseEntity::Instance( INDEXENT( 1 ) );
+	int iLeft = iPoints;
+
+	for ( int i = 0; i < 4; i++ )
 	{
-		if ( AwardToTeam() )
-		{
-			pActivator->AddPointsToTeam( Points(), AllowNegativeScore() );
-		}
-		else
-		{
-			pActivator->AddPoints( Points(), AllowNegativeScore() );
-		}
+		int iAdd = iEach < 1 ? 1 : iEach;
+		if ( i == 3 )
+			iAdd = iLeft;
+
+		pPlayer->m_iSciDeaths[i] += iAdd;
+		MESSAGE_BEGIN( MSG_ALL, gmsgSciInfo );
+			WRITE_BYTE( i );
+			WRITE_SHORT( pPlayer->m_iSciDeaths[i] );
+			WRITE_SHORT( pPlayer->m_iSciGibs[i] );
+		MESSAGE_END();
+
+		iLeft -= iAdd;
+		if ( iLeft < 1 )
+			break;
+	}
+
+	// the death notice
+	if ( !FStringNull( pev->message ) )
+	{
+		char szText[512];
+		sprintf( szText, STRING( pev->message ), iPoints );
+		strcat( szText, "\n" );
+		UTIL_ClientPrintAll( HUD_PRINTNOTIFY, szText );
 	}
 }
 
