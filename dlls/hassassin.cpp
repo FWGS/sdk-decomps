@@ -1381,7 +1381,7 @@ void CWallop :: ZapThink( void )
 	::RadiusDamage( pev->origin, pev, pevOwner, 10, pev->speed, CLASS_NONE, DMG_BLAST | DMG_NEVERGIB );
 
 	// up to three bolts a think
-	int c = ( 1 / gpGlobals->frametime ) / 3;
+	int c = (int)( 1 / gpGlobals->frametime ) / 3;
 	if ( c > 3 )
 		c = 3;
 
