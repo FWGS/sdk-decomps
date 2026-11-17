@@ -392,6 +392,10 @@ SOURCE=.\lights.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\lpistol.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\maprules.cpp
 # End Source File
 # Begin Source File
