@@ -2879,3 +2879,237 @@ void CLightFlak::Explode( void )
 
 	UTIL_Remove( this );
 }
+
+
+//=========================================================
+// Disruptor bolt (the sphere gun's; the alien grunt's psi
+// blast and others derive from it)
+//=========================================================
+LINK_ENTITY_TO_CLASS( magic_missile, CMagicMissile );
+
+void CMagicMissile::Spawn( void )
+{
+	Precache( );
+	pev->movetype = MOVETYPE_FLY;
+	pev->solid = SOLID_BBOX;
+	SET_MODEL( ENT(pev), "sprites/flare6.spr" );
+	pev->rendermode = kRenderTransAdd;
+	pev->renderamt = 255;
+	pev->scale = 0.5;
+
+	UTIL_SetOrigin( pev, pev->origin );
+	UTIL_SetSize( pev, Vector( 0, 0, 0 ), Vector( 0, 0, 0 ) );
+
+	SetTouch( HurtTouch );
+	SetThink( AnimateThink );
+	pev->nextthink = gpGlobals->time + 0.1;
+}
+
+void CMagicMissile::Precache( void )
+{
+	PRECACHE_MODEL( "sprites/flare6.spr" );
+}
+
+void CMagicMissile::HurtTouch( CBaseEntity *pOther )
+{
+	pev->velocity = g_vecZero;
+	pOther->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_ENERGYBEAM | DMG_NOGIB );
+	Expand( 10, 500 );
+}
+
+
+//=========================================================
+// Sphere gun - a pop-up turret that fires disruptor bolts
+//=========================================================
+class CSphereGun : public CTimedTurret	// name ours
+{
+public:
+	void Spawn( );
+	void Precache(void);
+	// other functions
+	void Shoot(Vector &vecSrc, Vector &vecDirToEnemy);
+	int MoveTurret(void);
+	void MonsterThink(void);
+
+	const char *GetKillDesc( void ) { return "a turret"; }
+	int GetBattlePower( void );
+};
+
+LINK_ENTITY_TO_CLASS( monster_spheregun, CSphereGun );
+
+void CSphereGun::Spawn()
+{
+	Precache( );
+	SET_MODEL(ENT(pev), "models/sp_turret.mdl");
+	pev->health			= 100;
+
+	CBaseTurret::Spawn( );
+	m_iRetractHeight = 16;
+	m_iDeployHeight = 32;
+	m_iMinPitch	= 15;
+	UTIL_SetSize(pev, Vector(-32, -32, -m_iRetractHeight), Vector(32, 32, m_iRetractHeight));
+
+	SetThink(Initialize);
+	pev->nextthink = gpGlobals->time + 0.3;
+	m_flDelay = 0.3;
+}
+
+
+void CSphereGun::Precache()
+{
+	PRECACHE_MODEL ("models/sp_turret.mdl");
+	CBaseTurret::Precache( );
+	PRECACHE_SOUND ("garg/gar_flameon1.wav");
+	UTIL_PrecacheOther( "magic_missile" );
+}
+
+int CSphereGun::GetBattlePower( void )
+{
+	return ( pev->max_health * 0.1 ) * 46.6667;
+}
+
+void CSphereGun::Shoot(Vector &vecSrc, Vector &vecDirToEnemy)
+{
+	CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 200, 1.0 );
+
+	CBaseEntity *pMissile = CBaseEntity::Create( "magic_missile", vecSrc, g_vecZero, edict() );
+	pMissile->pev->velocity = vecDirToEnemy * 2000;
+	pMissile->pev->dmg = 14;
+
+	EMIT_SOUND(ENT(pev), CHAN_BODY, "garg/gar_flameon1.wav", 0.5, 0.8);
+	pev->effects = pev->effects | EF_MUZZLEFLASH;
+}
+
+int CSphereGun::MoveTurret(void)
+{
+	int state = 0;
+
+	// a retracting sphere gun points its barrel down
+	if ( m_pfnThink == static_cast <void (CBaseEntity::*)(void)> (Retire) )
+		m_vecGoalAngles.x = -90;
+
+	// any x movement?
+
+	if (m_vecCurAngles.x != m_vecGoalAngles.x)
+	{
+		float flDir = m_vecGoalAngles.x > m_vecCurAngles.x ? 1 : -1 ;
+
+		m_vecCurAngles.x += 0.1 * m_fTurnRate * flDir;
+
+		// if we started below the goal, and now we're past, peg to goal
+		if (flDir == 1)
+		{
+			if (m_vecCurAngles.x > m_vecGoalAngles.x)
+				m_vecCurAngles.x = m_vecGoalAngles.x;
+		}
+		else
+		{
+			if (m_vecCurAngles.x < m_vecGoalAngles.x)
+				m_vecCurAngles.x = m_vecGoalAngles.x;
+		}
+
+		if (m_iOrientation == 0)
+			SetBoneController(1, 90 - m_vecCurAngles.x);
+		else
+			SetBoneController(1, m_vecCurAngles.x + 90);
+		state = 1;
+	}
+
+	if (m_vecCurAngles.y != m_vecGoalAngles.y)
+	{
+		float flDir = m_vecGoalAngles.y > m_vecCurAngles.y ? 1 : -1 ;
+		float flDist = fabs(m_vecGoalAngles.y - m_vecCurAngles.y);
+
+		if (flDist > 180)
+		{
+			flDist = 360 - flDist;
+			flDir = -flDir;
+		}
+		if (flDist > 30)
+		{
+			if (m_fTurnRate < m_iBaseTurnRate * 10)
+			{
+				m_fTurnRate += m_iBaseTurnRate;
+			}
+		}
+		else if (m_fTurnRate > 45)
+		{
+			m_fTurnRate -= m_iBaseTurnRate;
+		}
+		else
+		{
+			m_fTurnRate += m_iBaseTurnRate;
+		}
+
+		m_vecCurAngles.y += 0.1 * m_fTurnRate * flDir;
+
+		if (m_vecCurAngles.y < 0)
+			m_vecCurAngles.y += 360;
+		else if (m_vecCurAngles.y >= 360)
+			m_vecCurAngles.y -= 360;
+
+		if (flDist < (0.05 * m_iBaseTurnRate))
+			m_vecCurAngles.y = m_vecGoalAngles.y;
+
+		if (m_iOrientation == 0)
+			SetBoneController(0, m_vecCurAngles.y - pev->angles.y );
+		else
+			SetBoneController(0, pev->angles.y - 180 - m_vecCurAngles.y );
+		state = 1;
+	}
+
+	if (!state)
+		m_fTurnRate = m_iBaseTurnRate;
+
+	return state;
+}
+
+//
+// CBaseTurret::MonsterThink without the spin down and the idle sweep
+//
+void CSphereGun::MonsterThink(void)
+{
+	// ensure rethink
+	SetTurretAnim(TURRET_ANIM_SPIN);
+	StudioFrameAdvance( );
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	if (m_flSpinUpTime == 0 && m_flMaxSpin)
+		m_flSpinUpTime = gpGlobals->time + m_flMaxSpin;
+
+	Ping( );
+
+	// If we have a target and we're still healthy
+	if (m_hEnemy != NULL)
+	{
+		if (!m_hEnemy->IsAlive() )
+			m_hEnemy = NULL;// Dead enemy forces a search for new one
+	}
+
+
+	// Acquire Target
+	if (m_hEnemy == NULL)
+	{
+		Look(m_flSightRange);
+		m_hEnemy = BestVisibleEnemy();
+	}
+
+	// If we've found a target, spin up the barrel and start to attack
+	if (m_hEnemy != NULL)
+	{
+		m_flLastSight = 0;
+		m_flSpinUpTime = 0;
+		SetThink(CallActiveThink);
+	}
+	else
+	{
+		// Are we out of time, do we need to retract?
+ 		if (gpGlobals->time > m_flLastSight)
+		{
+			//Before we retrace, make sure that we are spun down.
+			m_flLastSight = 0;
+			m_flSpinUpTime = 0;
+			SetThink(Retire);
+		}
+	}
+}
