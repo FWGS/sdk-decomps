@@ -345,6 +345,10 @@ SOURCE=.\saytext.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\sphere.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\status_icons.cpp
 # End Source File
 # Begin Source File
