@@ -95,7 +95,7 @@ public:
 	static	TYPEDESCRIPTION m_SaveData[];
 	static CSprite *SpriteCreate( const char *pSpriteName, const Vector &origin, BOOL animate );
 
-private:
+protected:
 
 	float		m_lastTime;
 	float		m_maxFrame;
