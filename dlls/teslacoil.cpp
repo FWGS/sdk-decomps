@@ -149,18 +149,12 @@ void CChainLightning::LightningThink( void )
 			{
 				// nobody to jump to: strike somewhere at random
 				Vector vecDir = Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ) ) * 4096;
-				Vector vecEnd = vecDir + pev->origin;
+				UTIL_TraceLine( pev->origin, pev->origin + vecDir, dont_ignore_monsters, m_hOldEnemy[0].Get(), &tr );
 
-				UTIL_TraceLine( pev->origin, vecEnd, dont_ignore_monsters, m_hOldEnemy[0].Get(), &tr );
-
-				Vector vecDelta = tr.vecEndPos - pev->origin;
-				if ( vecDelta.Length() < 8 )
+				if ( ( tr.vecEndPos - pev->origin ).Length() < 8 )
 				{
 					// right against a wall: off it
-					Vector vecNormal = tr.vecPlaneNormal * 1024;
-					Vector vecBounce = vecNormal + tr.vecEndPos;
-
-					UTIL_TraceLine( tr.vecEndPos, vecBounce, dont_ignore_monsters, m_hOldEnemy[0].Get(), &tr );
+					UTIL_TraceLine( tr.vecEndPos, tr.vecEndPos + tr.vecPlaneNormal * 1024, dont_ignore_monsters, m_hOldEnemy[0].Get(), &tr );
 				}
 
 				UTIL_SetOrigin( pev, tr.vecEndPos );
@@ -173,38 +167,50 @@ void CChainLightning::LightningThink( void )
 			EMIT_SOUND( ENT(pev), CHAN_ITEM, "weapons/electro6.wav", RANDOM_FLOAT( 0.7, 0.8 ), ATTN_NORM );
 
 			pev->dmgtime = gpGlobals->time + 0.5;
+			pev->health -= 1;
 		}
 		else if ( pev->health == 0 )
 		{
 			// the last link lingers half a second more
 			pev->dmgtime = gpGlobals->time + 0.5;
+			pev->health -= 1;
 		}
 		else
 		{
 			SetThink( SUB_Remove );
 			return;
 		}
-
-		pev->health -= 1;
 	}
 
 	if ( pev->health == 5 )
 	{
 		UTIL_TraceLine( m_vecOldEnemy[0], pev->origin, dont_ignore_monsters, pev->owner, &tr );
-		if ( tr.pHit && CBaseEntity::Instance( tr.pHit )->pev->takedamage )
-			CBaseEntity::Instance( tr.pHit )->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_SHOCK | DMG_NEVERGIB );
+		if ( tr.pHit )
+		{
+			CBaseEntity *pEntity = CBaseEntity::Instance( tr.pHit );
+			if ( pEntity->pev->takedamage )
+				pEntity->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_SHOCK | DMG_NEVERGIB );
+		}
 
 		Zap( m_vecOldEnemy[0], pev->origin );
 	}
 	else if ( pev->health == 4 )
 	{
 		UTIL_TraceLine( m_vecOldEnemy[1], m_vecOldEnemy[0], dont_ignore_monsters, pev->owner, &tr );
-		if ( tr.pHit && CBaseEntity::Instance( tr.pHit )->pev->takedamage )
-			CBaseEntity::Instance( tr.pHit )->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_SHOCK | DMG_NEVERGIB );
+		if ( tr.pHit )
+		{
+			CBaseEntity *pEntity = CBaseEntity::Instance( tr.pHit );
+			if ( pEntity->pev->takedamage )
+				pEntity->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_SHOCK | DMG_NEVERGIB );
+		}
 
 		UTIL_TraceLine( m_vecOldEnemy[0], pev->origin, dont_ignore_monsters, m_hOldEnemy[0].Get(), &tr );
-		if ( tr.pHit && CBaseEntity::Instance( tr.pHit )->pev->takedamage )
-			CBaseEntity::Instance( tr.pHit )->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_SHOCK | DMG_NEVERGIB );
+		if ( tr.pHit )
+		{
+			CBaseEntity *pEntity = CBaseEntity::Instance( tr.pHit );
+			if ( pEntity->pev->takedamage )
+				pEntity->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_SHOCK | DMG_NEVERGIB );
+		}
 
 		Zap( m_vecOldEnemy[1], m_vecOldEnemy[0] );
 		Zap( m_vecOldEnemy[0], pev->origin );
@@ -212,12 +218,20 @@ void CChainLightning::LightningThink( void )
 	else if ( pev->health >= 0 )
 	{
 		UTIL_TraceLine( m_vecOldEnemy[1], m_vecOldEnemy[0], dont_ignore_monsters, m_hOldEnemy[1].Get(), &tr );
-		if ( tr.pHit && CBaseEntity::Instance( tr.pHit )->pev->takedamage )
-			CBaseEntity::Instance( tr.pHit )->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_SHOCK | DMG_NEVERGIB );
+		if ( tr.pHit )
+		{
+			CBaseEntity *pEntity = CBaseEntity::Instance( tr.pHit );
+			if ( pEntity->pev->takedamage )
+				pEntity->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_SHOCK | DMG_NEVERGIB );
+		}
 
 		UTIL_TraceLine( m_vecOldEnemy[0], pev->origin, dont_ignore_monsters, m_hOldEnemy[0].Get(), &tr );
-		if ( tr.pHit && CBaseEntity::Instance( tr.pHit )->pev->takedamage )
-			CBaseEntity::Instance( tr.pHit )->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_SHOCK | DMG_NEVERGIB );
+		if ( tr.pHit )
+		{
+			CBaseEntity *pEntity = CBaseEntity::Instance( tr.pHit );
+			if ( pEntity->pev->takedamage )
+				pEntity->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_SHOCK | DMG_NEVERGIB );
+		}
 
 		Zap( m_vecOldEnemy[1], m_vecOldEnemy[0] );
 		Zap( m_vecOldEnemy[0], pev->origin );
@@ -225,8 +239,12 @@ void CChainLightning::LightningThink( void )
 	else if ( pev->health == -1 )
 	{
 		UTIL_TraceLine( m_vecOldEnemy[0], pev->origin, dont_ignore_monsters, m_hOldEnemy[0].Get(), &tr );
-		if ( tr.pHit && CBaseEntity::Instance( tr.pHit )->pev->takedamage )
-			CBaseEntity::Instance( tr.pHit )->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_SHOCK | DMG_NEVERGIB );
+		if ( tr.pHit )
+		{
+			CBaseEntity *pEntity = CBaseEntity::Instance( tr.pHit );
+			if ( pEntity->pev->takedamage )
+				pEntity->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_SHOCK | DMG_NEVERGIB );
+		}
 
 		Zap( m_vecOldEnemy[0], pev->origin );
 	}
@@ -711,22 +729,23 @@ void CTeslaCoil::CallLightning( void )
 	// player "shoot" animation
 	m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
-	Vector anglesAim, vecSrc;
-
-	anglesAim = m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle;
-	vecSrc = m_pPlayer->GetGunPosition( );
+	Vector anglesAim( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
+	Vector vecSrc( m_pPlayer->GetGunPosition( ) );
 	UTIL_MakeVectors( anglesAim );
-	Vector vecAiming = gpGlobals->v_forward;
-	Vector vecEnd = vecSrc + vecAiming * 4096;
+	Vector vecAiming( gpGlobals->v_forward );
 
 	TraceResult tr;
-	UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, ENT( m_pPlayer->pev ), &tr );
+	UTIL_TraceLine( vecSrc, vecSrc + vecAiming * 4096, dont_ignore_monsters, m_pPlayer->edict(), &tr );
 
-	if ( tr.pHit && CBaseEntity::Instance( tr.pHit )->pev->takedamage )
+	if ( tr.pHit )
 	{
-		ClearMultiDamage( );
-		CBaseEntity::Instance( tr.pHit )->TraceAttack( m_pPlayer->pev, 50, Vector( 0, 0, -1 ), &tr, DMG_SHOCK );
-		ApplyMultiDamage( pev, m_pPlayer->pev );
+		CBaseEntity *pEntity = CBaseEntity::Instance( tr.pHit );
+		if ( pEntity->pev->takedamage )
+		{
+			ClearMultiDamage( );
+			pEntity->TraceAttack( m_pPlayer->pev, 50, Vector( 0, 0, -1 ), &tr, DMG_SHOCK );
+			ApplyMultiDamage( pev, m_pPlayer->pev );
+		}
 	}
 
 	CSoundEnt::InsertSound( bits_SOUND_COMBAT, tr.vecEndPos, 512, 3.0 );
