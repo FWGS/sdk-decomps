@@ -11,7 +11,7 @@
 
 #define MAX_PARTICLES	256
 
-struct particle_t	// name ours
+struct sysparticle_t	// name ours
 {
 	bool	active;
 	Vector	origin;
@@ -29,7 +29,7 @@ public:
 
 	void Draw( void );
 	void Think( float flFrametime, float flTime );
-	particle_t *AddParticle( const Vector &vecOrigin, const Vector &vecVelocity );	// name ours
+	sysparticle_t *AddParticle( const Vector &vecOrigin, const Vector &vecVelocity );	// name ours
 	Vector GetOrigin( const Vector &vecOffset );	// name ours
 	Vector GetVelocity( const Vector &vecAngles );	// name ours
 
@@ -42,7 +42,7 @@ public:
 	float		m_flDieTime;	// stop spawning (0: never); removed once its particles are gone
 	float		m_flScale;		// particle size at birth
 	Vector		m_vecColor;
-	particle_t	m_Particles[ MAX_PARTICLES ];
+	sysparticle_t	m_Particles[ MAX_PARTICLES ];
 	struct model_s *m_pSprite;
 	int			m_iFrames;
 	int			m_iLastParticle;

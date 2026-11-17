@@ -180,7 +180,7 @@ void CParticleSys::Think( float flFrametime, float flTime )
 	}
 }
 
-particle_t *CParticleSys::AddParticle( const Vector &vecOrigin, const Vector &vecVelocity )
+sysparticle_t *CParticleSys::AddParticle( const Vector &vecOrigin, const Vector &vecVelocity )
 {
 	int i = m_iLastParticle + 1;	// sic: 256 when the last one was 255
 
