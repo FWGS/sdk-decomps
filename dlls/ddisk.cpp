@@ -102,7 +102,7 @@ void CClipDisk::DiskTouch( CBaseEntity *pOther )
 			pevAttacker = m_hActivator->pev;
 
 		ClearMultiDamage();
-		pOther->TraceAttack( pevAttacker, pev->dmg, pev->velocity.Normalize(), &tr, DMG_ENERGYBEAM | DMG_NOGIB | 0x2000000 | 0x4000000 );
+		pOther->TraceAttack( pevAttacker, pev->dmg, pev->velocity.Normalize(), &tr, DMG_ENERGYBEAM | DMG_NOGIB | DMG_NOPUSH | DMG_HALVE );
 		ApplyMultiDamage( pev, pevAttacker );
 	}
 
