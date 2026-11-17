@@ -19,6 +19,13 @@
 
 #define DLLEXPORT __declspec( dllexport )
 
+void RenderAllSpheres( float flTime, float flFrametime );	// sphere.cpp
+void RenderParticles( void );						// effects.cpp
+void BloodSprayThink( float flTime, float flFrametime );	// bloodspray.cpp
+void RenderAllTractorbeams( void );						// tractorbeam.cpp
+void RainThink( float flTime );							// rain.cpp
+void CL_DamageTick( float flTime, float flFrametime );		// damagefx.cpp
+
 extern "C"
 {
 	void DLLEXPORT HUD_DrawNormalTriangles( void );
@@ -117,6 +124,18 @@ Render any triangles with transparent rendermode needs here
 */
 void DLLEXPORT HUD_DrawTransparentTriangles( void )
 {
+	static float flOldTime = gEngfuncs.GetClientTime();
+	float flTime = gEngfuncs.GetClientTime();
+	float flFrametime = flTime - flOldTime;
+
+	RenderAllSpheres( flTime, flFrametime );
+	RenderAllTractorbeams();
+	RenderParticles();
+	BloodSprayThink( flTime, flFrametime );
+	RainThink( flTime );
+	CL_DamageTick( flTime, flFrametime );
+
+	flOldTime = flTime;
 
 #if defined( TEST_IT )
 //	Draw_Triangles();

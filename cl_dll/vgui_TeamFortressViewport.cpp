@@ -1207,12 +1207,9 @@ void TeamFortressViewport::ShowScoreBoard( void )
 {
 	if (m_pScoreBoard)
 	{
-		// No Scoreboard in single-player
-		if ( gEngfuncs.GetMaxClients() > 1 )
-		{
-			m_pScoreBoard->Open();
-			UpdateCursorState();
-		}
+		// the mod: the scoreboard in single-player too
+		m_pScoreBoard->Open();
+		UpdateCursorState();
 	}
 }
 
@@ -2140,6 +2137,26 @@ int TeamFortressViewport::MsgFunc_ScoreInfo( const char *pszName, int iSize, voi
 			 g_PlayerExtraInfo[cl].teamnumber = 0;
 
 		UpdateOnPlayerInfo();
+	}
+
+	return 1;
+}
+
+// the mod: one scientist's deaths and gibs (name ours)
+int TeamFortressViewport::MsgFunc_SciInfo( const char *pszName, int iSize, void *pbuf )
+{
+	BEGIN_READ( pbuf, iSize );
+	short sci = READ_BYTE();
+	short deaths = READ_SHORT();
+	short gibs = READ_SHORT();
+
+	if ( sci >= 0 && sci < MAX_SCIENTISTS )
+	{
+		g_SciInfo[sci].gibs = gibs;
+		g_SciInfo[sci].deaths = deaths;
+
+		if ( m_pScoreBoard )
+			m_pScoreBoard->Update();
 	}
 
 	return 1;

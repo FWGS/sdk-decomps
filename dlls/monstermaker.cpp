@@ -21,12 +21,17 @@
 #include "util.h"
 #include "cbase.h"
 #include "monsters.h"
+#include "talkmonster.h"
 #include "saverestore.h"
 
 // Monstermaker spawnflags
 #define	SF_MONSTERMAKER_START_ON	1 // start active ( if has targetname )
+#define	SF_MONSTERMAKER_PVS			2 // name ours (fgd "PVS On/Off"): only make a monster while a client is in the maker's PVS
 #define	SF_MONSTERMAKER_CYCLIC		4 // drop one monster every time fired.
 #define SF_MONSTERMAKER_MONSTERCLIP	8 // Children are blocked by monsterclip
+#define SF_MONSTERMAKER_IGNOREPLAYER	128 // name ours (fgd "Ignore Player"): children get SF_MONSTER_IGNOREPLAYER
+#define SF_MONSTERMAKER_NOFADE		512 // name ours (fgd "Don't fade corpse"): children don't fade out
+#define SF_MONSTERMAKER_CHILDFLAGS	( 32 | SF_MONSTER_PREDISASTER | 1024 ) // name ours: passed on as they are (fgd "Insane Barney", "Pre-Disaster", "No Weapon Drops")
 
 //=========================================================
 // MonsterMaker - this ent creates monsters during the game.
@@ -41,7 +46,12 @@ public:
 	void EXPORT CyclicUse ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT MakerThink ( void );
 	void DeathNotice ( entvars_t *pevChild );// monster maker children use this to tell the monster maker that they have died.
-	void MakeMonster( void );
+	virtual void MakeMonster( void );
+
+	int		GetOnState( void ) { return m_fActive; }
+	int		ObjectCaps( void ) { return 0; }
+	int		HeatSignature( void ) { return 0; }
+	BOOL	CanBeTeleported( void ) { return FALSE; }
 
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
@@ -60,6 +70,8 @@ public:
 
 	BOOL m_fActive;
 	BOOL m_fFadeChildren;// should we make the children fadeout?
+
+	int m_iActivity;// keyvalue "tm_activity": a talkmonster child's m_iActive
 };
 
 LINK_ENTITY_TO_CLASS( monstermaker, CMonsterMaker );
@@ -73,6 +85,7 @@ TYPEDESCRIPTION	CMonsterMaker::m_SaveData[] =
 	DEFINE_FIELD( CMonsterMaker, m_iMaxLiveChildren, FIELD_INTEGER ),
 	DEFINE_FIELD( CMonsterMaker, m_fActive, FIELD_BOOLEAN ),
 	DEFINE_FIELD( CMonsterMaker, m_fFadeChildren, FIELD_BOOLEAN ),
+	DEFINE_FIELD( CMonsterMaker, m_iActivity, FIELD_INTEGER ),
 };
 
 
@@ -96,6 +109,11 @@ void CMonsterMaker :: KeyValue( KeyValueData *pkvd )
 		m_iszMonsterClassname = ALLOC_STRING( pkvd->szValue );
 		pkvd->fHandled = TRUE;
 	}
+	else if ( FStrEq(pkvd->szKeyName, "tm_activity") )
+	{
+		m_iActivity = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
 	else
 		CBaseMonster::KeyValue( pkvd );
 }
@@ -104,6 +122,12 @@ void CMonsterMaker :: KeyValue( KeyValueData *pkvd )
 void CMonsterMaker :: Spawn( )
 {
 	pev->solid = SOLID_NOT;
+
+	if ( FStringNull( m_iszMonsterClassname ) )
+	{
+		UTIL_Remove( this );
+		return;
+	}
 
 	m_cLiveChildren = 0;
 	Precache();
@@ -120,6 +144,7 @@ void CMonsterMaker :: Spawn( )
 
 		if ( FBitSet ( pev->spawnflags, SF_MONSTERMAKER_START_ON ) )
 		{// start making monsters as soon as monstermaker spawns
+			pev->nextthink = gpGlobals->time + m_flDelay;
 			m_fActive = TRUE;
 			SetThink ( MakerThink );
 		}
@@ -136,7 +161,17 @@ void CMonsterMaker :: Spawn( )
 			SetThink ( MakerThink );
 	}
 
-	if ( m_cNumMonsters == 1 )
+	// scientists get a random head
+	if ( FStrEq( STRING( m_iszMonsterClassname ), "monster_scientist" ) || FStrEq( STRING( m_iszMonsterClassname ), "monster_cleansuit_sci" ) )
+	{
+		pev->body = 1;
+	}
+	else
+	{
+		pev->body = 0;
+	}
+
+	if ( m_cNumMonsters == 1 || FBitSet( pev->spawnflags, SF_MONSTERMAKER_NOFADE ) )
 	{
 		m_fFadeChildren = FALSE;
 	}
@@ -162,6 +197,11 @@ void CMonsterMaker::MakeMonster( void )
 {
 	edict_t	*pent;
 	entvars_t		*pevCreate;
+
+	if ( FBitSet( pev->spawnflags, SF_MONSTERMAKER_PVS ) && FNullEnt( FIND_CLIENT_IN_PVS( edict() ) ) )
+	{// no client can see the maker
+		return;
+	}
 
 	if ( m_iMaxLiveChildren > 0 && m_cLiveChildren >= m_iMaxLiveChildren )
 	{// not allowed to make a new one yet. Too many live ones out right now.
@@ -198,13 +238,6 @@ void CMonsterMaker::MakeMonster( void )
 		return;
 	}
 	
-	// If I have a target, fire!
-	if ( !FStringNull ( pev->target ) )
-	{
-		// delay already overloaded for this entity, so can't call SUB_UseTargets()
-		FireTargets( STRING(pev->target), this, this, USE_TOGGLE, 0 );
-	}
-
 	pevCreate = VARS( pent );
 	pevCreate->origin = pev->origin;
 	pevCreate->angles = pev->angles;
@@ -214,8 +247,38 @@ void CMonsterMaker::MakeMonster( void )
 	if ( pev->spawnflags & SF_MONSTERMAKER_MONSTERCLIP )
 		SetBits( pevCreate->spawnflags, SF_MONSTER_HITMONSTERCLIP );
 
-	DispatchSpawn( ENT( pevCreate ) );
+	if ( pev->spawnflags & SF_MONSTERMAKER_IGNOREPLAYER )
+		SetBits( pevCreate->spawnflags, SF_MONSTER_IGNOREPLAYER );
+
+	SetBits( pevCreate->spawnflags, pev->spawnflags & SF_MONSTERMAKER_CHILDFLAGS );
+
+	pevCreate->weapons = pev->weapons;
+	pevCreate->renderfx = pev->renderfx;
+	pevCreate->rendermode = pev->rendermode;
+	pevCreate->renderamt = pev->renderamt;
+	pevCreate->rendercolor = pev->rendercolor;
+
+	if ( pev->body == 1 )
+		pevCreate->body = -1;// random head
+
 	pevCreate->owner = edict();
+
+	CBaseEntity *pEntity = CBaseEntity::Instance( pevCreate );
+	if ( pEntity )
+	{
+		CBaseMonster *pMonster = pEntity->MyMonsterPointer();
+		CTalkMonster *pTalkMonster = pEntity->MyTalkMonsterPointer();
+
+		if ( pTalkMonster )
+		{
+			pTalkMonster->m_iMyClass = m_iMyClass;
+			pTalkMonster->m_iActive = m_iActivity;
+		}
+		else if ( pMonster )
+		{
+			pMonster->m_iMyClass = m_iMyClass;
+		}
+	}
 
 	if ( !FStringNull( pev->netname ) )
 	{
@@ -223,8 +286,29 @@ void CMonsterMaker::MakeMonster( void )
 		pevCreate->targetname = pev->netname;
 	}
 
+	if ( !FStringNull( pev->message ) )
+	{
+		// and a message (overloaded too) as its target
+		pevCreate->target = pev->message;
+	}
+
+	DispatchSpawn( ENT( pevCreate ) );
+
+	if ( pev->health > 0 )
+	{
+		// custom health
+		pevCreate->health = pevCreate->max_health = pev->health;
+	}
+
 	m_cLiveChildren++;// count this monster
 	m_cNumMonsters--;
+
+	// If I have a target, fire!
+	if ( !FStringNull ( pev->target ) )
+	{
+		// delay already overloaded for this entity, so can't call SUB_UseTargets()
+		FireTargets( STRING(pev->target), this, this, USE_TOGGLE, 0 );
+	}
 
 	if ( m_cNumMonsters == 0 )
 	{
@@ -290,3 +374,136 @@ void CMonsterMaker :: DeathNotice ( entvars_t *pevChild )
 }
 
 
+//=========================================================
+// monstermaker_g - makes monster_generics with the model
+// named by "monstertype"
+//=========================================================
+class CGenericMonsterMaker : public CMonsterMaker	// name ours
+{
+public:
+	void Precache( void );
+	void MakeMonster( void );
+};
+
+LINK_ENTITY_TO_CLASS( monstermaker_g, CGenericMonsterMaker );
+
+void CGenericMonsterMaker :: Precache( void )
+{
+	PRECACHE_MODEL( (char *)STRING( m_iszMonsterClassname ) );
+}
+
+void CGenericMonsterMaker::MakeMonster( void )
+{
+	edict_t	*pent;
+	entvars_t		*pevCreate;
+
+	if ( FBitSet( pev->spawnflags, SF_MONSTERMAKER_PVS ) && FNullEnt( FIND_CLIENT_IN_PVS( edict() ) ) )
+	{// no client can see the maker
+		return;
+	}
+
+	if ( m_iMaxLiveChildren > 0 && m_cLiveChildren >= m_iMaxLiveChildren )
+	{// not allowed to make a new one yet. Too many live ones out right now.
+		return;
+	}
+
+	if ( !m_flGround )
+	{
+		// set altitude. Now that I'm activated, any breakables, etc should be out from under me. 
+		TraceResult tr;
+
+		UTIL_TraceLine ( pev->origin, pev->origin - Vector ( 0, 0, 2048 ), ignore_monsters, ENT(pev), &tr );
+		m_flGround = tr.vecEndPos.z;
+	}
+
+	Vector mins = pev->origin - Vector( 34, 34, 0 );
+	Vector maxs = pev->origin + Vector( 34, 34, 0 );
+	maxs.z = pev->origin.z;
+	mins.z = m_flGround;
+
+	CBaseEntity *pList[2];
+	int count = UTIL_EntitiesInBox( pList, 2, mins, maxs, FL_CLIENT|FL_MONSTER );
+	if ( count )
+	{
+		// don't build a stack of monsters!
+		return;
+	}
+
+	pent = CREATE_NAMED_ENTITY( MAKE_STRING( "monster_generic" ) );
+
+	if ( FNullEnt( pent ) )
+	{
+		ALERT ( at_console, "NULL Ent in MonsterMaker!\n" );
+		return;
+	}
+	
+	pevCreate = VARS( pent );
+	pevCreate->origin = pev->origin;
+	pevCreate->angles = pev->angles;
+	SetBits( pevCreate->spawnflags, SF_MONSTER_FALL_TO_GROUND );
+	pevCreate->model = m_iszMonsterClassname;
+
+	// Children hit monsterclip brushes
+	if ( pev->spawnflags & SF_MONSTERMAKER_MONSTERCLIP )
+		SetBits( pevCreate->spawnflags, SF_MONSTER_HITMONSTERCLIP );
+
+	if ( pev->spawnflags & SF_MONSTERMAKER_IGNOREPLAYER )
+		SetBits( pevCreate->spawnflags, SF_MONSTER_IGNOREPLAYER );
+
+	SetBits( pevCreate->spawnflags, pev->spawnflags & SF_MONSTERMAKER_CHILDFLAGS );
+
+	pevCreate->renderfx = pev->renderfx;
+	pevCreate->rendermode = pev->rendermode;
+	pevCreate->renderamt = pev->renderamt;
+	pevCreate->rendercolor = pev->rendercolor;
+
+	pevCreate->owner = edict();
+
+	CBaseEntity *pEntity = CBaseEntity::Instance( pevCreate );
+	if ( pEntity )
+	{
+		CBaseMonster *pMonster = pEntity->MyMonsterPointer();
+
+		if ( pMonster )
+		{
+			pMonster->m_iMyClass = m_iMyClass;
+		}
+	}
+
+	if ( !FStringNull( pev->netname ) )
+	{
+		// if I have a netname (overloaded), give the child monster that name as a targetname
+		pevCreate->targetname = pev->netname;
+	}
+
+	if ( !FStringNull( pev->message ) )
+	{
+		// and a message (overloaded too) as its target
+		pevCreate->target = pev->message;
+	}
+
+	DispatchSpawn( pent );
+
+	if ( pev->health > 0 )
+	{
+		// custom health
+		pevCreate->health = pevCreate->max_health = pev->health;
+	}
+
+	m_cLiveChildren++;// count this monster
+	m_cNumMonsters--;
+
+	// If I have a target, fire!
+	if ( !FStringNull ( pev->target ) )
+	{
+		// delay already overloaded for this entity, so can't call SUB_UseTargets()
+		FireTargets( STRING(pev->target), this, this, USE_TOGGLE, 0 );
+	}
+
+	if ( m_cNumMonsters == 0 )
+	{
+		// Disable this forever.  Don't kill it because it still gets death notices
+		SetThink( NULL );
+		SetUse( NULL );
+	}
+}
