@@ -209,7 +209,7 @@ void CFuncTurret :: Spawn( void )
 		m_maxRange = 8192;
 
 	pev->oldorigin = pev->origin;
-	pev->frags = -1;
+	m_flFieldOfView = -1;	// sees all around
 }
 
 
@@ -354,12 +354,10 @@ BOOL CFuncTurret :: OnControls( entvars_t *pevTest )
 	if ( m_pController->pev->button & (IN_JUMP | IN_FORWARD | IN_BACK | IN_MOVELEFT | IN_MOVERIGHT) )
 		return FALSE;
 
-	Vector offset = pevTest->origin - pev->origin;
+	if ( (m_vecControllerUsePos - pevTest->origin).Length() > 256 )
+		return FALSE;
 
-	if ( (m_vecControllerUsePos - pevTest->origin).Length() <= 256 )
-		return TRUE;
-
-	return FALSE;
+	return TRUE;
 }
 
 BOOL CFuncTurret :: StartControl( CBasePlayer *pController )
@@ -791,7 +789,7 @@ int CFuncTurret :: MoveTurret( void )
 	{
 		float flDir = m_vecGoalAngles.x > pev->angles.x ? 1 : -1 ;
 
-		pev->angles.x += m_pitchRate * flDir * 0.05;
+		pev->angles.x += flDir * m_pitchRate * 0.05;
 
 		// if we started below the goal, and now we're past, peg to goal
 		if (flDir == 1)
@@ -1177,7 +1175,7 @@ void CFuncManualTurret :: Spawn( void )
 
 	SetThink( ManualThink );
 	SetUse( ManualUse );
-	pev->nextthink = pev->ltime + 3;
+	pev->nextthink = pev->ltime + 3.0;
 
 	// the controllers go from 0 to 1: from one end of the range to the other
 	m_pitchCenter -= m_pitchRange;
@@ -1355,8 +1353,7 @@ void CInfoShootpoint :: Spawn( void )
 	pev->nextthink = 0;
 	m_fireLast = 0;
 
-	if ( m_fireNum < 1 )
-		m_fireNum = 1;
+	m_fireNum = m_fireNum < 1 ? 1 : m_fireNum;
 }
 
 
@@ -1492,7 +1489,7 @@ void CInfoShootpoint :: FireEffects( void )
 	{
 		CSprite *pSprite = CSprite::SpriteCreate( STRING(m_iszSpriteFlash), pev->origin, TRUE );
 		pSprite->AnimateAndDie( 60 );
-		pSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxNoDissipation );
+		pSprite->SetTransparency( kRenderGlow, 255, 255, 255, 255, kRenderFxNoDissipation );
 		pSprite->SetScale( m_spriteScale );
 
 		// Hack Hack, make it stick around for at least 100 ms.
@@ -1942,7 +1939,10 @@ void CFuncTurretControls::Spawn( void )
 void CInfoShootpoint :: ReportFire( void )
 {
 	if ( m_hLinked != NULL && FClassnameIs( m_hLinked.Get(), "func_turret" ) )
-		((CFuncTurret *)(CBaseEntity *)m_hLinked)->m_justFired++;
+	{
+		CFuncTurret *pTurret = (CFuncTurret *)(CBaseEntity *)m_hLinked;
+		pTurret->m_justFired++;
+	}
 }
 
 
@@ -2102,10 +2102,10 @@ void CBeamShootpoint :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_
 
 	if ( pev->nextthink != 0 )
 	{
-		if ( m_pfnThink == static_cast <void (CBaseEntity::*)(void)> (FireThink) )
-			pev->nextthink = 0;
-		else
+		if ( m_pfnThink != static_cast <void (CBaseEntity::*)(void)> (FireThink) )
 			pev->weapons = 1;	// stop when this beam is done
+		else
+			pev->nextthink = 0;
 	}
 	else if ( pev->weapons )
 	{
@@ -2178,10 +2178,7 @@ void CBeamShootpoint :: Fire( void )
 
 	if ( !m_pCharge || (m_pCharge->pev->effects & EF_NODRAW) )
 	{
-		if ( m_fireLast > gpGlobals->time )
-			pev->nextthink = m_fireLast;
-		else
-			pev->nextthink = gpGlobals->time;
+		pev->nextthink = m_fireLast > gpGlobals->time ? m_fireLast : gpGlobals->time;
 	}
 }
 
