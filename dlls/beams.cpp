@@ -1323,7 +1323,7 @@ void CBeamTurret::Shoot( const Vector &vecTarget )
 					x * m_spread * gpGlobals->v_right +
 					y * m_spread * gpGlobals->v_up;
 	m_point1 = pev->origin + vecShoot * flDist;
-	m_vecEnemyLKP = vecTarget;
+	m_vecLastPosition = vecTarget;
 
 	if ( m_type == BEAMTURRET_SLASH )
 	{
@@ -1333,7 +1333,8 @@ void CBeamTurret::Shoot( const Vector &vecTarget )
 		Vector vecEnd = vecCenter + gpGlobals->v_forward * -RANDOM_FLOAT( 0, pev->speed );
 		m_point2 = vecEnd - m_point1;
 		float flLength = m_point2.Length();
-		m_point2 = m_point2.Normalize() * ( flLength / m_duration ) * 0.05;
+		vecEnd = m_point2.Normalize();
+		m_point2 = vecEnd * ( flLength / m_duration ) * 0.05;
 	}
 
 	if ( pev->netname )
@@ -1412,9 +1413,9 @@ void CBeamTurret::BeamThink( void )
 		{
 			// between shots: aim again
 			if ( m_hEnemy != NULL )
-				m_vecEnemyLKP = m_hEnemy->BodyTarget( pev->origin );
+				m_vecLastPosition = m_hEnemy->BodyTarget( pev->origin );
 
-			Vector vecDir( m_vecEnemyLKP - pev->origin );
+			Vector vecDir( m_vecLastPosition - pev->origin );
 			float flDist = vecDir.Length();
 			Vector vecAim = vecDir;
 			vecAim = vecAim.Normalize();
