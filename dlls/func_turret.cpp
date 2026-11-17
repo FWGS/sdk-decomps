@@ -578,7 +578,7 @@ void CFuncTurret :: ActiveThink( void )
 	AdjustAnglesForBarrel( vec, flDistToEnemy );
 	vec.x = -vec.x;
 
-	if ( fabs( UTIL_AngleDistance( vec.x, pev->angles.x ) ) <= m_pitchTolerance && fabs( UTIL_AngleDiff( vec.y, pev->angles.y ) ) <= m_yawTolerance )
+	if ( (float)fabs( UTIL_AngleDistance( vec.x, pev->angles.x ) ) <= m_pitchTolerance && (float)fabs( UTIL_AngleDiff( vec.y, pev->angles.y ) ) <= m_yawTolerance )
 	{
 		if ( !m_isPFiring )
 		{
@@ -989,6 +989,7 @@ LINK_ENTITY_TO_CLASS( func_turret_ballistic, CFuncBallisticTurret );
 
 void CFuncBallisticTurret :: ActiveThink( void )
 {
+	int fAttack = 0;	// sic: unused, left from turret.cpp's ActiveThink
 	Vector vecDirToEnemy;
 
 	pev->nextthink = pev->ltime + 0.05;
