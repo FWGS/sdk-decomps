@@ -27,6 +27,8 @@
 #include	"weapons.h"
 #include	"soundent.h"
 #include	"game.h"
+#include	"effects.h"
+#include	"decals.h"
 
 extern DLL_GLOBAL int  g_iSkillLevel;
 
@@ -1042,6 +1044,638 @@ Schedule_t* CHAssassin :: GetScheduleOfType ( int Type )
 	}
 
 	return CBaseMonster :: GetScheduleOfType( Type );
+}
+
+
+//=========================================================
+// powerwave - the Nephilim agent's power wave, a slow rocket.
+// A living thing it touches that can be pushed is carried
+// along in front of it; anything else (or a second victim)
+// makes it blow up: 1000 damage to what it hit, its burden
+// gibbed, then an energy sphere like the mortar's.
+//=========================================================
+class CKamehameha : public CRocket
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	const char *GetKillDesc( void ) { return "Nepha Power Wave"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { if ( pev->weapons ) return "annihilated"; return DamageVerb( DMG_BLAST, fGibbed ); }
+
+	void EXPORT KameTouch( CBaseEntity *pOther );
+	void EXPORT KameThink( void );
+
+	int m_iTrail;	// name ours
+};
+LINK_ENTITY_TO_CLASS( powerwave, CKamehameha );
+
+void CKamehameha :: Spawn( void )
+{
+	Precache( );
+
+	SET_MODEL( ENT( pev ), "models/powerwave.mdl" );
+	UTIL_SetSize( pev, Vector( -16, 0, -16 ), Vector( 16, 16, 16 ) );
+	UTIL_SetOrigin( pev, pev->origin );
+
+	EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "ambience/rocketflame1.wav", 1.0, 0.1, 0, 80 );
+	EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, "ambience/rocketrumble1.wav", 1.0, ATTN_NONE, 0, PITCH_NORM );
+
+	if ( !pev->owner || pev->owner->v.movetype != MOVETYPE_TOSS )
+		BeamFollow( m_iTrail, 100, 10, Vector( 255, 255, 255 ), 255 );
+
+	SetThink( KameThink );
+	SetTouch( KameTouch );
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	UTIL_MakeVectors( pev->angles );
+
+	pev->speed = 2000;
+	pev->movetype = MOVETYPE_FLYMISSILE;
+	pev->solid = SOLID_BBOX;
+	pev->weapons = 0;	// not carrying anything
+	pev->rendermode = kRenderTransAdd;
+	pev->renderamt = 255;
+	pev->skin = 0;
+	pev->rendercolor = Vector( 128, 100, 0 );
+}
+
+void CKamehameha :: Precache( void )
+{
+	PRECACHE_MODEL( "models/powerwave.mdl" );
+	m_iTrail = PRECACHE_MODEL( "sprites/LRed.spr" );
+	PRECACHE_SOUND( "ambience/rocketflame1.wav" );
+	PRECACHE_SOUND( "ambience/rocketrumble1.wav" );
+	PRECACHE_SOUND( "weapons/mortarhit.wav" );
+}
+
+void CKamehameha :: KameTouch( CBaseEntity *pOther )
+{
+	int iClass = pOther->Classify();
+
+	if ( iClass == CLASS_PLAYER_BIOWEAPON || iClass == CLASS_ALIEN_BIOWEAPON )
+	{
+		ALERT( at_console, "contact with %s, kill it\n", STRING( pOther->pev->classname ) );
+		pOther->Killed( pev, GIB_NEVER );
+		return;
+	}
+
+	if ( pOther->pev->takedamage && iClass > 0 && pOther->pev->health <= 0 )
+	{
+		ALERT( at_console, "contact with %s, gib it\n", STRING( pOther->pev->classname ) );
+		pOther->Killed( pev, GIB_ALWAYS );
+		return;
+	}
+
+	if ( pOther->pev->takedamage && pOther->CanBeRepulsed( false ) && iClass > 0 && !( pOther->pev->flags & FL_GODMODE )
+		&& !( pev->weapons == 1 && m_hEnemy != NULL ) )
+	{
+		// carry it along
+		pev->weapons = 1;
+		m_hEnemy = pOther;
+		m_hEnemy->pev->solid = SOLID_NOT;
+		ALERT( at_console, "contact with %s, push it\n", STRING( pOther->pev->classname ) );
+		m_hEnemy->pev->velocity = pev->velocity;
+		m_hEnemy->pev->movetype = MOVETYPE_NOCLIP;
+		if ( m_hEnemy->IsPlayer() )
+			m_hEnemy->pev->flags |= FL_FLY;
+		pev->movedir = m_hEnemy->Center() - m_hEnemy->pev->origin;
+		UTIL_SetOrigin( m_hEnemy->pev, pev->origin - pev->movedir + pev->velocity.Normalize() * 16 );
+		m_hEnemy->pev->nextthink = 0;
+		return;
+	}
+
+	ALERT( at_console, "contact with %s, blow up\n", STRING( pOther->pev->classname ) );
+	EMIT_SOUND_DYN( ENT( pev ), CHAN_VOICE, "ambience/rocketflame1.wav", 0, 0, SND_STOP, PITCH_NORM );
+	EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, "ambience/rocketrumble1.wav", 0, 0, SND_STOP, PITCH_NORM );
+
+	UTIL_ScreenShakeAll( pev->origin, 255, 0.4, 4.0 );
+	EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, "weapons/mortarhit.wav", 1.0, ATTN_NONE, 0, PITCH_NORM );
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_DLIGHT );
+		WRITE_COORD( pev->origin.x );	// X
+		WRITE_COORD( pev->origin.y );	// Y
+		WRITE_COORD( pev->origin.z );	// Z
+		WRITE_BYTE( 100 );		// radius * 0.1
+		WRITE_BYTE( 255 );		// r
+		WRITE_BYTE( 255 );		// g
+		WRITE_BYTE( 128 );		// b
+		WRITE_BYTE( 40 );		// time * 10
+		WRITE_BYTE( 2 );		// decay * 0.1
+	MESSAGE_END( );
+
+	SetThink( NULL );
+	SetTouch( NULL );
+
+	entvars_t *pevOwner = pev;
+	if ( pev->owner )
+		pevOwner = VARS( pev->owner );
+
+	if ( pev->weapons && m_hEnemy != NULL )
+	{
+		// what it carries is blown apart
+		UTIL_SetOrigin( m_hEnemy->pev, pev->origin - ( m_hEnemy->Center() - m_hEnemy->pev->origin ) );
+		m_hEnemy->TakeDamage( pev, pevOwner, m_hEnemy->pev->health + 1000, DMG_ENERGYBEAM | DMG_ALWAYSGIB );
+	}
+
+	pev->weapons = 1;
+	pOther->TakeDamage( pev, pevOwner, 1000, DMG_ENERGYBEAM | DMG_ALWAYSGIB );
+	pev->weapons = 0;
+
+	TraceResult tr = UTIL_GetGlobalTrace( );
+	pev->owner = ENT( pevOwner );
+	pev->dmg = 250;
+	Explode( &tr, DMG_BLAST );
+
+	m_flDelay = 2;
+	pev->owner = ENT( pevOwner );
+
+	PLAYBACK_EVENT_FULL( 0, ENT( pev ), g_iBlastSphereEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, m_flDelay, 0.3, pev->dmg * 2, pev->dmg * 2.5, 1, 0 );
+	CSoundEnt::InsertSound ( bits_SOUND_DANGER, pev->origin, pev->dmg * 2, 5.0 );
+
+	pev->rendermode = kRenderTransColor;
+	pev->renderamt = 0;
+	SetThink( HurtThink );
+	pev->velocity = g_vecZero;
+	pev->movetype = MOVETYPE_NONE;
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	m_bitsDamageInflict = DMG_ENERGYBEAM;
+
+	pev->dmgtime = m_flDelay + gpGlobals->time;
+	pev->frags = pev->dmg * 2;	// largest radius
+	pev->speed = 1;				// radius
+	pev->dmg *= 0.25;
+}
+
+void CKamehameha :: KameThink( void )
+{
+	if ( pev->weapons == 1 && m_hEnemy != NULL )
+	{
+		// keep the burden in front
+		FlyThink( );
+		m_hEnemy->pev->velocity = pev->velocity;
+		UTIL_SetOrigin( m_hEnemy->pev, pev->origin - pev->movedir + pev->velocity.Normalize() * 16 );
+	}
+	else if ( m_hEnemy != NULL )
+		TargetThink( );
+	else
+		FlyThink( );
+}
+
+
+//=========================================================
+// wallop - the "pattern bomb": a pink energy sprite. What it
+// hits takes pev->dmg (140) radiation damage and, if it can be
+// pushed, flies off at 1400 units/s; it then sits there for two
+// seconds zapping lightning around (10 damage in pev->dmg units
+// every think). A large one (scale 0.5 and up) also throws a
+// blast_shower off the surface it hit.
+//=========================================================
+class CWallop : public CMagicMissile
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	const char *GetKillDesc( void ) { return "a pattern bomb"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return DamageVerb( DMG_ENERGYBEAM, TRUE ); }
+
+	void EXPORT WallopThink( void );
+	void EXPORT WallopTouch( CBaseEntity *pOther );
+	void EXPORT ZapThink( void );
+};
+LINK_ENTITY_TO_CLASS( wallop, CWallop );
+
+void CWallop :: Spawn( void )
+{
+	Precache( );
+
+	pev->solid = SOLID_BBOX;
+	SET_MODEL( ENT( pev ), "sprites/wallop.spr" );
+	pev->rendermode = kRenderTransAdd;
+	pev->renderamt = 255;
+	pev->movetype = MOVETYPE_FLY;
+
+	m_maxFrame = (float) MODEL_FRAMES( pev->modelindex ) - 1;
+	pev->framerate = 10;
+	TurnOn( );
+
+	SetThink( WallopThink );
+	SetTouch( WallopTouch );
+	pev->nextthink = gpGlobals->time;
+
+	pev->scale = 0.25;
+	pev->speed = 140;
+	pev->dmg = 140;
+	pev->dmgtime = 0;
+
+	UTIL_SetSize( pev, g_vecZero, g_vecZero );
+}
+
+void CWallop :: Precache( void )
+{
+	PRECACHE_MODEL( "sprites/wallop.spr" );
+	PRECACHE_SOUND( "doors/aliendoor1.wav" );
+}
+
+void CWallop :: WallopThink( void )
+{
+	// a large one zaps while it flies
+	if ( pev->scale < 0.5 )
+		AnimateThink( );
+	else
+		ZapThink( );
+}
+
+void CWallop :: WallopTouch( CBaseEntity *pOther )
+{
+	SetTouch( NULL );
+	SetThink( NULL );
+
+	TraceResult tr = UTIL_GetGlobalTrace( );
+
+	if ( pOther->pev->takedamage )
+	{
+		entvars_t *pevOwner = VARS( pev->owner );
+
+		ClearMultiDamage( );
+		pOther->TraceAttack( pevOwner, pev->dmg, pev->velocity.Normalize(), &tr, DMG_NOGIB | DMG_RADIATION );
+		if ( pOther->CanBeRepulsed( pev->scale >= 0.5 ) )
+		{
+			pOther->pev->velocity = pev->velocity.Normalize() * 1400 + Vector( 0, 0, 200 );
+		}
+		ApplyMultiDamage( pev, pevOwner );
+
+		if ( pOther->Classify() == CLASS_HUMAN_PASSIVE )
+		{
+			pOther->pev->rendercolor = Vector( 255, 0, 128 );
+		}
+		else if ( FBitSet( pOther->pev->flags, FL_MONSTER ) && !pOther->IsBSPModel() && pOther->pev->health <= 0 )
+		{
+			pOther->pev->renderfx = kRenderFxGlowShell;
+			pOther->pev->rendercolor = Vector( 255, 0, 128 );
+			if ( pOther->pev->rendermode == kRenderNormal )
+				pOther->pev->renderamt = 0;
+		}
+	}
+	else if ( !ENTINDEX( pOther->edict() ) )
+	{
+		// the world: vanish into the sky
+		Vector vecEnd = pev->origin + pev->velocity;
+		const char *pTextureName = TRACE_TEXTURE( ENT( pOther->pev ), pev->origin, vecEnd );
+		if ( pTextureName && !strcmp( pTextureName, "sky" ) )
+		{
+			SetThink( &CBaseEntity::SUB_Remove );
+			return;
+		}
+	}
+
+	if ( pOther->IsBSPModel() )
+		UTIL_DecalTrace( &tr, DECAL_SCORCH1 + RANDOM_LONG( 0, 1 ) );
+
+	EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, "doors/aliendoor1.wav", 1.0, 0.8, 0, PITCH_NORM );
+	CSoundEnt::InsertSound( bits_SOUND_WORLD, pev->origin, 1024, 2.0 );
+
+	if ( pOther->Shielded() )
+	{
+		SetThink( &CBaseEntity::SUB_Remove );
+		return;
+	}
+
+	// zap around for two seconds
+	pev->dmgtime = gpGlobals->time + 2;
+	SetThink( ZapThink );
+
+	if ( pev->scale >= 0.5 )
+	{
+		Vector vecDir = pev->velocity.Normalize();
+
+		if ( pOther->IsBSPModel() )
+		{
+			// off the wall
+			float n = -DotProduct( tr.vecPlaneNormal, vecDir );
+			vecDir = 2.0 * tr.vecPlaneNormal * n + vecDir;
+		}
+		else
+			vecDir = pev->velocity.Normalize();
+
+		CBaseEntity *pShower = CBaseEntity::Create( "blast_shower", pev->origin + vecDir * 8, g_vecZero, pev->owner );
+		pShower->pev->velocity = vecDir * 450;
+		pShower->pev->dmgtime = gpGlobals->time + 1;
+		pShower->pev->speed = 0.2;
+		pShower->pev->dmg = 100;
+		pShower->pev->enemy = pev->owner;
+		pShower->m_iszKillDesc = MAKE_STRING( "an explosion wave" );
+	}
+
+	pev->velocity = g_vecZero;
+	pev->speed = pev->dmg;	// ZapThink's radius
+}
+
+void CWallop :: ZapThink( void )
+{
+	AnimateThink( );
+
+	entvars_t *pevOwner = VARS( pev->owner );
+	::RadiusDamage( pev->origin, pev, pevOwner, 10, pev->speed, CLASS_NONE, DMG_BLAST | DMG_NEVERGIB );
+
+	// up to three bolts a think
+	int c = ( 1 / gpGlobals->frametime ) / 3;
+	if ( c > 3 )
+		c = 3;
+
+	for ( int i = 0; i < c; i++ )
+	{
+		Vector vecAim = Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ) ).Normalize();
+
+		TraceResult tr;
+		UTIL_TraceLine( pev->origin, pev->origin + vecAim * pev->speed * 2, dont_ignore_monsters, ENT( pev ), &tr );
+
+		if ( tr.flFraction > 0.2 )
+		{
+			MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+				WRITE_BYTE( TE_BEAMENTPOINT );
+				WRITE_SHORT( entindex() );
+				WRITE_COORD( tr.vecEndPos.x );
+				WRITE_COORD( tr.vecEndPos.y );
+				WRITE_COORD( tr.vecEndPos.z );
+				WRITE_SHORT( g_sModelIndexLightning );
+				WRITE_BYTE( 0 ); // frame start
+				WRITE_BYTE( 10 ); // framerate
+				WRITE_BYTE( RANDOM_LONG( 2, 4 ) ); // life
+				WRITE_BYTE( 20 );  // width
+				WRITE_BYTE( 36 );   // noise
+				WRITE_BYTE( 255 );   // r, g, b
+				WRITE_BYTE( 0 );   // r, g, b
+				WRITE_BYTE( 128 );   // r, g, b
+				WRITE_BYTE( 255 );	// brightness
+				WRITE_BYTE( 35 );		// speed
+			MESSAGE_END();
+		}
+	}
+
+	if ( pev->dmgtime != 0 && pev->dmgtime < gpGlobals->time )
+		SetThink( &CBaseEntity::SUB_Remove );
+}
+
+
+//=========================================================
+// vortex_mine - a glowing grenade that bounces about for
+// three seconds, then opens a vortex_blast of its damage
+// (300) where it lies.
+//=========================================================
+class CVortexMine : public CGrenade
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+
+	void EXPORT VortexThink( void );
+};
+LINK_ENTITY_TO_CLASS( vortex_mine, CVortexMine );
+
+void CVortexMine :: Spawn( void )
+{
+	pev->movetype = MOVETYPE_TOSS;
+	pev->solid = SOLID_BBOX;
+
+	SET_MODEL( ENT( pev ), "models/grenade.mdl" );
+	UTIL_SetSize( pev, Vector( 0, 0, 0 ), Vector( 0, 0, 0 ) );
+
+	pev->dmg = 300;
+	m_fRegisteredSound = FALSE;
+
+	pev->rendercolor = Vector( 255, 0, 128 );
+	pev->renderfx = kRenderFxGlowShell;
+	pev->gravity = 0.5;
+
+	SetThink( VortexThink );
+	pev->nextthink = gpGlobals->time + 3;
+	SetTouch( BounceTouch );
+}
+
+void CVortexMine :: Precache( void )
+{
+	PRECACHE_MODEL( "models/grenade.mdl" );
+	UTIL_PrecacheOther( "vortex_blast" );
+}
+
+void CVortexMine :: VortexThink( void )
+{
+	CBaseEntity *pBlast = CBaseEntity::Create( "vortex_blast", pev->origin, pev->angles, pev->owner );
+	pBlast->pev->dmg = pev->dmg;
+	pBlast->pev->movedir = Vector( 0, 0, -32 );
+	pBlast->pev->scale = pev->dmg / 250;
+
+	UTIL_Remove( this );
+}
+
+
+//=========================================================
+// slip_stream - a small red homing sprite rocket: 75 damage
+// on contact, then it is gone.
+//=========================================================
+class CSlipStream : public CRocket	// name ours
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+
+	void SlipTouch( CBaseEntity *pOther );	// name ours
+
+	int m_iTrail;	// name ours
+};
+LINK_ENTITY_TO_CLASS( slip_stream, CSlipStream );
+
+void CSlipStream :: Spawn( void )
+{
+	Precache( );
+
+	pev->movetype = MOVETYPE_FLY;
+	pev->solid = SOLID_BBOX;
+	pev->rendermode = kRenderTransAdd;
+	pev->renderamt = 0;
+
+	SET_MODEL( ENT( pev ), "sprites/lred.spr" );
+	UTIL_SetSize( pev, Vector( 0, 0, 0 ), Vector( 0, 0, 0 ) );
+	UTIL_SetOrigin( pev, pev->origin );
+
+	SetThink( TargetThink );
+	SetTouch( SlipTouch );
+
+	pev->speed = 1000;
+	m_flFieldOfView = VIEW_FIELD_FULL;
+	pev->nextthink = gpGlobals->time + 0.1;
+	m_flSeekTime = RANDOM_FLOAT( 0.5, 1 ) + gpGlobals->time;
+	pev->dmg = 75;
+
+	BeamFollow( m_iTrail, 20, 3, Vector( 255, 255, 255 ), 255 );
+}
+
+void CSlipStream :: Precache( void )
+{
+	m_iTrail = PRECACHE_MODEL( "sprites/lred.spr" );
+}
+
+void CSlipStream :: SlipTouch( CBaseEntity *pOther )
+{
+	SetThink( NULL );
+	SetTouch( NULL );
+
+	TraceResult tr = UTIL_GetGlobalTrace( );
+
+	if ( pOther->pev->takedamage )
+	{
+		entvars_t *pevOwner = VARS( pev->owner );
+
+		ClearMultiDamage( );
+		pOther->TraceAttack( pevOwner, pev->dmg, pev->velocity.Normalize(), &tr, DMG_NOGIB | DMG_ENERGYBEAM );
+		ApplyMultiDamage( pev, pevOwner );
+	}
+
+	if ( pOther->IsBSPModel() )
+		UTIL_GunshotDecalTrace( &tr, DECAL_GUNSHOT1 + RANDOM_LONG( 0, 4 ) );
+
+	UTIL_Remove( this );
+}
+
+
+//=========================================================
+// powerbeam - the beam an owner (pev->owner, m_hLinked)
+// fires from its attachment 0 through this entity's origin
+// until pev->dmgtime: 30 energy damage a tenth of a second,
+// sparks, and it burns through up to four walls.
+//=========================================================
+class CPowerBeam : public CBaseEntity
+{
+public:
+	void Spawn( void );
+	void Precache( void );
+	const char *GetKillDesc( void ) { return "a powerbeam attack"; }
+
+	int		Save( CSave &save );
+	int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	void EXPORT WeaponThink( void );
+
+	EHANDLE m_hLinked;
+	CBeam *m_pBeam;				// name ours
+	CBaseEntity *m_pSprite;		// name ours: removed with the beam, never set
+};
+LINK_ENTITY_TO_CLASS( powerbeam, CPowerBeam );
+
+TYPEDESCRIPTION	CPowerBeam::m_SaveData[] = 
+{
+	DEFINE_FIELD( CPowerBeam, m_hLinked, FIELD_EHANDLE ),
+};
+
+IMPLEMENT_SAVERESTORE( CPowerBeam, CBaseEntity );
+
+void CPowerBeam :: Spawn( void )
+{
+	Precache( );
+
+	if ( !pev->owner )
+	{
+		UTIL_Remove( this );
+		return;
+	}
+
+	m_hLinked = CBaseEntity::Instance( pev->owner );
+
+	pev->movetype = MOVETYPE_NOCLIP;
+	pev->solid = SOLID_NOT;
+	pev->effects = EF_NODRAW;
+
+	SetThink( WeaponThink );
+	pev->nextthink = gpGlobals->time + 0.1;
+}
+
+void CPowerBeam :: Precache( void )
+{
+	PRECACHE_MODEL( "sprites/nbeam.spr" );
+}
+
+void CPowerBeam :: WeaponThink( void )
+{
+	if ( m_hLinked == NULL || pev->dmgtime < gpGlobals->time )
+	{
+		UTIL_Remove( m_pSprite );
+		UTIL_Remove( m_pBeam );
+		UTIL_Remove( this );
+		return;
+	}
+
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	if ( !m_pBeam )
+	{
+		m_pBeam = CBeam::BeamCreate( "sprites/nbeam.spr", 80 );
+		m_pBeam->PointEntInit( pev->origin, ENTINDEX( m_hLinked->edict() ) );
+		m_pBeam->SetEndAttachment( 1 );
+		m_pBeam->SetBrightness( 255 );
+		m_pBeam->SetColor( 255, 255, 255 );
+		m_pBeam->SetScrollRate( 35 );
+		m_pBeam->pev->spawnflags |= SF_BEAM_TEMPORARY;
+	}
+
+	Vector vecSrc, vecDir;
+	edict_t *pentIgnore = m_hLinked->edict();
+
+	GET_ATTACHMENT( pentIgnore, 0, vecSrc, vecDir );
+	vecDir = ( pev->origin - vecSrc ).Normalize();
+
+	for ( int i = 0; i < 5; i++ )
+	{
+		Vector vecDest = vecSrc + vecDir * 4096;
+		TraceResult tr, beam_tr;
+
+		UTIL_TraceLine( vecSrc, vecDest, dont_ignore_monsters, pentIgnore, &tr );
+		if ( tr.fAllSolid )
+			return;
+
+		UTIL_Sparks( tr.vecEndPos );
+		m_pBeam->SetStartPos( tr.vecEndPos );
+
+		CBaseEntity *pEntity = CBaseEntity::Instance( tr.pHit );
+		if ( pEntity == NULL )
+			return;
+
+		if ( pEntity->IsBSPModel() )
+			UTIL_DecalTrace( &tr, DECAL_BIGSHOT1 + RANDOM_LONG( 0, 4 ) );
+
+		if ( pEntity->pev->takedamage )
+		{
+			ClearMultiDamage( );
+			pEntity->TraceAttack( m_hLinked->pev, 30, vecDir, &tr, DMG_ENERGYBEAM );
+			ApplyMultiDamage( pev, m_hLinked->pev );
+		}
+
+		if ( pEntity->Shielded() )
+			return;
+
+		if ( pEntity->IsBSPModel() )
+		{
+			// burn through the wall
+			UTIL_TraceLine( tr.vecEndPos + vecDir * 8, vecDest, ignore_monsters, pentIgnore, &beam_tr );
+			if ( beam_tr.fAllSolid )
+				return;
+
+			// trace backwards to find exit point
+			UTIL_TraceLine( beam_tr.vecEndPos, tr.vecEndPos, ignore_monsters, pentIgnore, &beam_tr );
+			UTIL_DecalTrace( &tr, DECAL_BIGSHOT1 + RANDOM_LONG( 0, 4 ) );	// sic: the entry point again
+			UTIL_Sparks( tr.vecEndPos );
+
+			vecSrc = beam_tr.vecEndPos;
+			pentIgnore = NULL;
+		}
+		else
+		{
+			vecSrc = tr.vecEndPos;
+			pentIgnore = tr.pHit;
+		}
+	}
 }
 
 #endif
