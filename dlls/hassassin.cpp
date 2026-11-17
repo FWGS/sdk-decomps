@@ -2348,6 +2348,8 @@ void CNAgent :: RunAI( void )
 //=========================================================
 void CNAgent :: StartTask ( Task_t *pTask )
 {
+	Vector vecResult;
+
 	switch ( pTask->iTask )
 	{
 	case TASK_AGENT_BLINK:
@@ -2357,7 +2359,12 @@ void CNAgent :: StartTask ( Task_t *pTask )
 			{
 				Vector vecOld = pev->origin;
 				UTIL_SetOrigin( pev, m_vecMoveGoal );
-				if ( WALK_MOVE( ENT(pev), 0, 0, WALKMOVE_NORMAL ) )
+				if ( !WALK_MOVE( ENT(pev), 0, 0, WALKMOVE_NORMAL ) )
+				{
+					// no room there
+					UTIL_SetOrigin( pev, vecOld );
+				}
+				else
 				{
 					// a spray of sparks where it was
 					MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecOld );
@@ -2378,7 +2385,6 @@ void CNAgent :: StartTask ( Task_t *pTask )
 					TaskComplete();
 					break;
 				}
-				UTIL_SetOrigin( pev, vecOld );
 			}
 			TaskFail();
 		}
@@ -2386,7 +2392,6 @@ void CNAgent :: StartTask ( Task_t *pTask )
 	case TASK_AGENT_FIND_COVER_FROM_ENEMY:
 		if ( m_hEnemy != NULL )
 		{
-			Vector vecResult;
 			if ( FindNodeInCover( m_hEnemy->pev->origin, m_hEnemy->pev->view_ofs, 0, CoverRadius(), vecResult ) )
 			{
 				m_vecMoveGoal = vecResult;
@@ -2399,11 +2404,11 @@ void CNAgent :: StartTask ( Task_t *pTask )
 	case TASK_AGENT_FIND_COVER_FROM_SOUND:
 		{
 			CSound *pBestSound = PBestSound();
+			float flMaxDist = pBestSound->m_iVolume * 2;	// sic: before the test for no sound
 			if ( pBestSound )
 			{
-				Vector vecResult;
-				if ( FindNodeInCover( pBestSound->m_vecOrigin, g_vecZero, pBestSound->m_iVolume, max( pBestSound->m_iVolume * 2, CoverRadius() ), vecResult )
-					|| FindNodeAway( pBestSound->m_vecOrigin, pBestSound->m_iVolume, max( pBestSound->m_iVolume * 2, CoverRadius() ), vecResult ) )
+				if ( FindNodeInCover( pBestSound->m_vecOrigin, g_vecZero, pBestSound->m_iVolume, max( flMaxDist, CoverRadius() ), vecResult )
+					|| FindNodeAway( pBestSound->m_vecOrigin, pBestSound->m_iVolume, max( flMaxDist, CoverRadius() ), vecResult ) )
 				{
 					m_vecMoveGoal = vecResult;
 					TaskComplete();
@@ -2420,7 +2425,6 @@ void CNAgent :: StartTask ( Task_t *pTask )
 			break;
 		}
 		{
-			Vector vecResult;
 			if ( FindEnemyNode( m_hEnemy->pev->origin, vecResult, pTask->flData, 512, 0 ) )
 			{
 				m_vecMoveGoal = vecResult;
@@ -2437,7 +2441,6 @@ void CNAgent :: StartTask ( Task_t *pTask )
 			break;
 		}
 		{
-			Vector vecResult;
 			if ( FindEnemyNode( m_hEnemy->pev->origin, vecResult, 0, 0, pTask->flData ) )
 			{
 				m_vecMoveGoal = vecResult;
