@@ -2863,7 +2863,8 @@ void CLightFlak::Explode( void )
 	for ( int i = 0; i < 3; i++ )
 	{
 		TraceResult tr;
-		Vector vecDir = Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -0.65, -1 ) ).Normalize();
+		Vector vecDir = Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -0.65, -1 ) );
+		vecDir = vecDir.Normalize();
 		UTIL_TraceLine( pev->origin, pev->origin + vecDir * 512, dont_ignore_monsters, ENT(pev), &tr );
 
 		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
