@@ -2814,6 +2814,7 @@ BOOL CNAgent :: CheckRangeAttack1 ( float flDot, float flDist )
 	{
 		if ( flDist <= flRange && flDot >= 0.5 )
 			return TRUE;
+		return FALSE;
 	}
 	else if ( !HasConditions( bits_COND_ENEMY_OCCLUDED ) && flDist <= flRange && flDot >= 0.5 )
 	{
