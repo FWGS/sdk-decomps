@@ -1679,20 +1679,17 @@ void CMultiBeam::RandomArea( void )
 		if ( pStart )
 			vecSrc = pStart->pev->origin;
 
-		Vector vecDir( Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ) ) * 4096 );
-		Vector vecEnd( vecSrc + vecDir );
-
-		TraceResult tr;
-		UTIL_TraceLine( vecSrc, vecEnd, ignore_monsters, ENT(pev), &tr );
+		Vector vecDir1 = Vector( RANDOM_FLOAT( -1.0, 1.0 ), RANDOM_FLOAT( -1.0, 1.0 ),RANDOM_FLOAT( -1.0, 1.0 ) );
+		TraceResult		tr;
+		UTIL_TraceLine( vecSrc, vecSrc + vecDir1 * 4096, ignore_monsters, ENT(pev), &tr );
 		if ( tr.fAllSolid )
 			continue;
 
 		vecSrc = tr.vecEndPos;
 		UTIL_MakeVectors( UTIL_VecToAngles( tr.vecPlaneNormal ) );
-		vecDir = UTIL_SpreadVector( Vector( 0.39285, 0.39285, 0.39285 ) );
-		vecEnd = vecSrc + vecDir * 4096;
-
-		UTIL_TraceLine( vecSrc, vecEnd, ignore_monsters, ENT(pev), &tr );
+		Vector vecDir2;
+		vecDir2 = UTIL_SpreadVector( Vector( 0.39285, 0.39285, 0.39285 ) );
+		UTIL_TraceLine( vecSrc, vecSrc + vecDir2 * 4096, ignore_monsters, ENT(pev), &tr );
 		if ( tr.fAllSolid )
 			continue;
 
@@ -1715,9 +1712,9 @@ void CMultiBeam::RandomPoint( void )
 		if ( pStart )
 			vecSrc = pStart->pev->origin;
 
-		Vector vecEnd = Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ) ) * 4096 + vecSrc;
-		TraceResult tr;
-		UTIL_TraceLine( vecSrc, vecEnd, ignore_monsters, ENT(pev), &tr );
+		Vector vecDir1 = Vector( RANDOM_FLOAT( -1.0, 1.0 ), RANDOM_FLOAT( -1.0, 1.0 ),RANDOM_FLOAT( -1.0, 1.0 ) );
+		TraceResult		tr;
+		UTIL_TraceLine( vecSrc, vecSrc + vecDir1 * 4096, ignore_monsters, ENT(pev), &tr );
 		if ( !tr.fAllSolid )
 		{
 			m_pBeams[i]->SetStartPos( vecSrc );
