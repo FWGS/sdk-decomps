@@ -590,10 +590,6 @@ SOURCE=.\xen.cpp
 
 SOURCE=.\zombie.cpp
 # End Source File
-# Begin Source File
-
-SOURCE=.\zz_linkstubs.cpp
-# End Source File
 # End Group
 # Begin Group "Header Files"
 

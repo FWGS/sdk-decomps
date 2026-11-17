@@ -29,15 +29,8 @@ extern DLL_GLOBAL int		g_iSkillLevel;
 #include "soundent.h"
 #include "decals.h"
 
-// Stand-ins until the files that define them have their declarations; names ours but CLaserPulse's.
-extern void UTIL_TraceToss( CBaseEntity *pEntity, edict_t *pentIgnore, TraceResult *ptr );	// util.cpp 0x100e3890: TRACE_TOSS
-
-class CLaserPulse : public CBaseEntity		// pulse.cpp (laser_pulse)
-{
-public:
-	static short PrecacheColor( int iColor );	// pulse.cpp 0x100b0530: a colour's glow and trail sprites
-	static CLaserPulse *Shoot( Vector vecOrigin, edict_t *pOwner, const Vector &vecColor, int iTrailLife, float flScale, int iColor );	// 0x100b0860
-};
+// defined in util.cpp, which util.h doesn't declare; name ours
+extern void UTIL_TraceToss( CBaseEntity *pEntity, edict_t *pentIgnore, TraceResult *ptr );
 
 #define SF_WAITFORTRIGGER	(0x04 | 0x40) // UNDONE: Fix!
 #define SF_NOWRECKAGE		0x08
