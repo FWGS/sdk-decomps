@@ -25,6 +25,7 @@
 #include	"weapons.h"
 #include	"soundent.h"
 #include	"hornet.h"
+#include	"effects.h"
 
 //=========================================================
 // monster-specific schedule types
@@ -82,6 +83,11 @@ public:
 		pev->absmin = pev->origin + Vector( -32, -32, 0 );
 		pev->absmax = pev->origin + Vector( 32, 32, 85 );
 	}
+	virtual BOOL FDirectFire( void ) { return pev->weapons == 1 || pev->weapons == 2; }	// name ours: hornets that don't track (pev->weapons: the hornet type)
+	const char *GetKillDesc( void ) { return "an alien grunt"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "whacked"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
+	int GetBattlePower( void );
 
 	Schedule_t* GetSchedule ( void );
 	Schedule_t* GetScheduleOfType ( int Type );
@@ -211,6 +217,19 @@ int CAGrunt :: ISoundMask ( void )
 			bits_SOUND_COMBAT	|
 			bits_SOUND_PLAYER	|
 			bits_SOUND_DANGER;
+}
+
+//=========================================================
+// GetBattlePower - the target ID's "battle power"
+//=========================================================
+int CAGrunt :: GetBattlePower( void )
+{
+	float flPower = gSkillData.monDmgHornet * 4;
+
+	if ( !FDirectFire() )
+		flPower = flPower * 1.25;
+
+	return flPower * ( pev->max_health * 0.1 );
 }
 
 //=========================================================
@@ -465,8 +484,9 @@ void CAGrunt :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			MESSAGE_END();
 
 			CBaseEntity *pHornet = CBaseEntity::Create( "hornet", vecArmPos, UTIL_VecToAngles( vecDirToEnemy ), edict() );
-			UTIL_MakeVectors ( pHornet->pev->angles );
+			UTIL_MakeAimVectors ( pHornet->pev->angles );
 			pHornet->pev->velocity = gpGlobals->v_forward * 300;
+			pHornet->pev->weapons = pev->weapons;	// the hornet type
 
 			CBaseMonster *pHornetMonster = pHornet->MyMonsterPointer();
 
@@ -579,6 +599,9 @@ void CAGrunt :: Spawn()
 	m_MonsterState		= MONSTERSTATE_NONE;
 	m_afCapability		= 0;
 	m_afCapability		|= bits_CAP_SQUAD;
+
+	if ( pev->weapons < 0 )
+		pev->weapons = RANDOM_LONG( 0, 5 );	// a random hornet type
 
 	m_HackedGunPos		= Vector( 24, 64, 48 );
 
@@ -884,6 +907,9 @@ IMPLEMENT_CUSTOM_SCHEDULES( CAGrunt, CSquadMonster );
 //=========================================================
 BOOL CAGrunt :: FCanCheckAttacks ( void )
 {
+	if ( FDirectFire() && !HasConditions( bits_COND_SEE_ENEMY ) )
+		return FALSE;
+
 	if ( !HasConditions( bits_COND_ENEMY_TOOFAR ) )
 	{
 		return TRUE;
@@ -1175,3 +1201,513 @@ Schedule_t* CAGrunt :: GetScheduleOfType ( int Type )
 	return CSquadMonster :: GetScheduleOfType( Type );
 }
 
+
+//=========================================================
+// psi_blast - the Nephilim grunt's telekinetic blast: a ring
+// that flies at its enemy, holds a scientist it hits still
+// for five seconds and tints him, and hurts anything else
+//=========================================================
+class CPsiBlast : public CMagicMissile
+{
+public:
+	const char *GetKillDesc( void ) { return "telekinetic energy"; }
+	void Spawn( void );
+	void Precache( void );
+	void EXPORT PsiTouch( CBaseEntity *pOther );
+	void EXPORT TrailThink( void );
+};
+LINK_ENTITY_TO_CLASS( psi_blast, CPsiBlast );
+
+void CPsiBlast::Spawn( void )
+{
+	Precache();
+
+	pev->movetype = MOVETYPE_FLY;
+	pev->solid = SOLID_BBOX;
+
+	SET_MODEL( ENT(pev), "sprites/psi_ring.spr" );
+	pev->rendermode = kRenderTransAdd;
+	pev->renderamt = 255;
+	pev->scale = 0.5;
+
+	UTIL_SetOrigin( pev, pev->origin );
+	UTIL_SetSize( pev, Vector( 0, 0, 0 ), Vector( 0, 0, 0 ) );
+
+	SetTouch( PsiTouch );
+	SetThink( TrailThink );
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	EMIT_SOUND( ENT(pev), CHAN_WEAPON, "weapons/mine_charge.wav", 1, ATTN_NORM );
+}
+
+void CPsiBlast::Precache( void )
+{
+	PRECACHE_MODEL( "sprites/psi_ring.spr" );
+	PRECACHE_SOUND( "weapons/mine_charge.wav" );
+}
+
+// the tint of a held scientist: somewhere between these two
+Vector g_vecPsiColor1( 255, 0, 255 );	// name ours
+Vector g_vecPsiColor2( 0, 255, 255 );	// name ours
+
+void CPsiBlast::PsiTouch( CBaseEntity *pOther )
+{
+	pev->velocity = g_vecZero;
+
+	if ( pOther->Classify() == CLASS_HUMAN_PASSIVE && pOther->IsAlive() )
+	{
+		// a scientist: hold him still
+		pOther->pev->nextthink = gpGlobals->time + 5;
+		pOther->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_PARALYZE | DMG_NEVERGIB );
+		pOther->pev->rendercolor = g_vecPsiColor1 + RANDOM_FLOAT( 0, 1 ) * ( g_vecPsiColor2 - g_vecPsiColor1 );
+	}
+	else if ( pev->dmg && pOther->pev->takedamage )
+	{
+		pOther->TakeDamage( pev, VARS( pev->owner ), pev->dmg, DMG_ENERGYBEAM | DMG_NEVERGIB );
+	}
+
+	Expand( 10, 500 );
+}
+
+void CPsiBlast::TrailThink( void )
+{
+	pev->nextthink = gpGlobals->time + 0.1;
+
+	CSprite *pSprite = CSprite::SpriteCreate( "sprites/psi_ring.spr", pev->origin, FALSE );
+	pSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxNone );
+	pSprite->SetScale( pev->scale );
+	pSprite->Expand( 0, 250 );
+}
+
+
+//=========================================================
+// monster_na_grunt - the Nephilim Alliance's alien grunt:
+// an energy shield instead of armor, flak or a laser pulse
+// instead of hornets (pev->weapons: 0 bio flak, 1 light flak,
+// 2 laser pulse), and a psi blast for scientists
+//=========================================================
+class CNAGrunt : public CAGrunt	// name ours
+{
+public:
+	BOOL FDirectFire( void ) { return TRUE; }
+	int Shielded( void ) { return 2; }
+	BOOL CanBeRepulsed( bool fForce ) { return pev->armorvalue <= 0 || fForce; }
+	const char *GetKillDesc( void ) { return "a Nephilim biomanipulated alien grunt"; }
+	const char *GetHudName( void ) { return "NephA Ent Xn-4006m"; }
+	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "disrupted"; }
+	const char *GetHitGroupDesc( int iHitGroup ) { return ""; }
+	int IRelationship( CBaseEntity *pTarget )
+	{
+		// a scientist held by my psi blast is no threat
+		if ( pTarget == m_hPsiTarget && pTarget->Classify() == CLASS_HUMAN_PASSIVE )
+			return R_DL;
+		return CSquadMonster::IRelationship( pTarget );
+	}
+	int GetBattlePower( void )
+	{
+		float flPower = 140;
+		if ( pev->weapons == 1 )
+			flPower = 200;	// the light flak
+		flPower *= 118.75f;
+		if ( Shielded() )
+			flPower += 1000;
+		return flPower;
+	}
+	int Classify( void ) { return 14; }	// the Nephilim Alliance (no CLASS_ define)
+
+	void ShootFlak( const Vector &vecSrc, const Vector &vecTarget );	// name ours
+	void HandleAnimEvent( MonsterEvent_t *pEvent );
+	void Spawn( void );
+	void Precache( void );
+	BOOL CheckRangeAttack1( float flDot, float flDist );
+	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
+	void MonsterThink( void );
+
+	EHANDLE m_hPsiTarget;	// name ours: the last enemy hit with a psi blast
+};
+LINK_ENTITY_TO_CLASS( monster_na_grunt, CNAGrunt );
+
+//=========================================================
+// ShootFlak - a flak burst at a random point within 96
+// units of the target
+//=========================================================
+void CNAGrunt::ShootFlak( const Vector &vecSrc, const Vector &vecTarget )
+{
+	Vector vecAngles = Vector( RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ) );
+	UTIL_MakeVectors( vecAngles );
+	Vector vecDest = vecTarget + gpGlobals->v_forward * RANDOM_FLOAT( 0, 96 );
+
+	CBaseEntity *pFlak;
+	if ( pev->weapons == 0 )
+		pFlak = CBaseEntity::Create( "bio_flak", vecSrc, g_vecZero, edict() );
+	else
+		pFlak = CBaseEntity::Create( "lght_flak", vecSrc, g_vecZero, edict() );
+	pFlak->pev->velocity = vecDest - vecSrc;
+	Vector vecUnused;	// sic: unused (VC6 then calls the copy constructor above out of line, as retail does)
+
+	// burst at the target point
+	float flTime = pFlak->pev->velocity.Length() / 2000;
+	pFlak->pev->nextthink = gpGlobals->time + max( 0.1, flTime );
+	pFlak->pev->velocity = pFlak->pev->velocity.Normalize() * 2000;
+
+	EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "turret/tu_fire1.wav", 1, 0.6, 0, 100 );
+}
+
+//=========================================================
+// HandleAnimEvent - catches the monster-specific messages
+// that occur when tagged animation frames are played.
+//=========================================================
+void CNAGrunt :: HandleAnimEvent( MonsterEvent_t *pEvent )
+{
+	switch( pEvent->event )
+	{
+	case AGRUNT_AE_HORNET1:
+	case AGRUNT_AE_HORNET2:
+	case AGRUNT_AE_HORNET3:
+	case AGRUNT_AE_HORNET4:
+	case AGRUNT_AE_HORNET5:
+		{
+			Vector vecArmPos, vecArmDir;
+			Vector vecDirToEnemy;
+			Vector angDir;
+			Vector vecTarget;
+
+			if ( m_hEnemy == NULL )
+				vecTarget = m_vecEnemyLKP;
+			else
+				vecTarget = m_hEnemy->BodyTarget( pev->origin );
+
+			vecDirToEnemy = vecTarget - pev->origin;
+			angDir = UTIL_VecToAngles( vecDirToEnemy );
+			vecDirToEnemy = vecDirToEnemy.Normalize();
+
+			pev->effects = EF_MUZZLEFLASH;
+
+			// make angles +-180
+			if (angDir.x > 180)
+			{
+				angDir.x = angDir.x - 360;
+			}
+
+			SetBlending( 0, angDir.x );
+			GetAttachment( 0, vecArmPos, vecArmDir );
+
+			vecArmPos = vecArmPos + vecDirToEnemy * 32;
+			MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecArmPos );
+				WRITE_BYTE( TE_SPRITE );
+				WRITE_COORD( vecArmPos.x );	// pos
+				WRITE_COORD( vecArmPos.y );	
+				WRITE_COORD( vecArmPos.z );	
+				WRITE_SHORT( iAgruntMuzzleFlash );		// model
+				WRITE_BYTE( 6 );				// size * 10
+				WRITE_BYTE( 128 );			// brightness
+			MESSAGE_END();
+
+			if ( pev->weapons == 2 )
+			{
+				CLaserPulse *pPulse = CLaserPulse::Shoot( vecArmPos, edict(), Vector( 255, 255, 255 ), 2, 0.25, 4 );
+				pPulse->pev->velocity = ( vecTarget - vecArmPos ).Normalize() * 2000;
+				TraceResult tr;	// sic: unused (it spends the inline budget retail's copies show)
+				pPulse->m_iszKillDesc = MAKE_STRING( "a hyperspace flux cannon" );
+				pPulse->pev->dmg = 25;
+				pPulse->pev->iuser2 = DMG_ENERGYBEAM | DMG_ALWAYSGIB;	// the pulse's damage type
+				EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "weapons/debris3.wav", 1, 0.3, 0, 100 );
+			}
+			else
+			{
+				ShootFlak( vecArmPos, vecTarget );
+			}
+		}
+		break;
+
+	case AGRUNT_AE_LEFT_PUNCH:
+		{
+			CBaseEntity *pHurt = CheckTraceHullAttack( AGRUNT_MELEE_DIST, 30, DMG_CLUB );
+			
+			if ( pHurt )
+			{
+				pHurt->pev->punchangle.y = -25;
+				pHurt->pev->punchangle.x = 8;
+
+				// OK to use gpGlobals without calling MakeVectors, cause CheckTraceHullAttack called it above.
+				if ( pHurt->IsPlayer() )
+				{
+					// this is a player. Knock him around.
+					pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_right * 250;
+				}
+				else if ( pHurt->pev->health <= 0 && !pHurt->IsBSPModel() )
+				{
+					// a corpse: make it glow
+					pHurt->pev->renderfx = kRenderFxGlowShell;
+					pHurt->pev->rendercolor = Vector( 255, 0, 128 );
+					if ( pHurt->pev->rendermode == kRenderNormal )
+						pHurt->pev->renderamt = 0;
+				}
+
+				EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pAttackHitSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackHitSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+
+				Vector vecArmPos, vecArmAng;
+				GetAttachment( 0, vecArmPos, vecArmAng );
+				SpawnBlood(vecArmPos, pHurt->BloodColor(), 25);// a little surface blood.
+			}
+			else
+			{
+				// Play a random attack miss sound
+				EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pAttackMissSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackMissSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+			}
+		}
+		break;
+
+	case AGRUNT_AE_RIGHT_PUNCH:
+		{
+			CBaseEntity *pHurt = CheckTraceHullAttack( AGRUNT_MELEE_DIST, 30, DMG_CLUB );
+
+			if ( pHurt )
+			{
+				pHurt->pev->punchangle.y = 25;
+				pHurt->pev->punchangle.x = 8;
+
+				// OK to use gpGlobals without calling MakeVectors, cause CheckTraceHullAttack called it above.
+				if ( pHurt->IsPlayer() )
+				{
+					// this is a player. Knock him around.
+					pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_right * -250;
+				}
+				else if ( pHurt->pev->health <= 0 && !pHurt->IsBSPModel() )
+				{
+					// a corpse: make it glow
+					pHurt->pev->renderfx = kRenderFxGlowShell;
+					pHurt->pev->rendercolor = Vector( 255, 0, 128 );
+					if ( pHurt->pev->rendermode == kRenderNormal )
+						pHurt->pev->renderamt = 0;
+				}
+
+				EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pAttackHitSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackHitSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+
+				Vector vecArmPos, vecArmAng;
+				GetAttachment( 0, vecArmPos, vecArmAng );
+				SpawnBlood(vecArmPos, pHurt->BloodColor(), 25);// a little surface blood.
+			}
+			else
+			{
+				// Play a random attack miss sound
+				EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pAttackMissSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackMissSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
+			}
+		}
+		break;
+
+	default:
+		CSquadMonster::HandleAnimEvent( pEvent );
+		break;
+	}
+}
+
+//=========================================================
+// Spawn
+//=========================================================
+void CNAGrunt :: Spawn()
+{
+	Precache( );
+
+	SET_MODEL(ENT(pev), "models/ngrunt.mdl");
+	UTIL_SetSize(pev, Vector(-32, -32, 0), Vector(32, 32, 64));
+
+	pev->solid			= SOLID_SLIDEBOX;
+	pev->movetype		= MOVETYPE_STEP;
+	m_bloodColor		= BLOOD_COLOR_RED;
+	pev->effects		= 0;
+	m_flDistTooFar		= 2048;
+	pev->health			= 200;
+	pev->armorvalue		= 750;	// the shield
+	pev->dmgtime		= gpGlobals->time + 15;	// the first psi blast
+	m_flFieldOfView		= -1;
+	m_MonsterState		= MONSTERSTATE_NONE;
+	m_afCapability		= 0;
+	m_afCapability		|= bits_CAP_SQUAD;
+
+	m_HackedGunPos		= Vector( 24, 64, 48 );
+
+	if ( pev->weapons == -1 )
+		pev->weapons = RANDOM_LONG( 0, 2 );	// a random gun
+
+	m_flNextSpeakTime	= m_flNextWordTime = gpGlobals->time + 10 + RANDOM_LONG(0, 10);
+
+	MonsterInit();
+}
+
+//=========================================================
+// Precache - precaches all resources this monster needs
+//=========================================================
+void CNAGrunt :: Precache()
+{
+	int i;
+
+	PRECACHE_MODEL("models/ngrunt.mdl");
+
+	for ( i = 0; i < ARRAYSIZE( pAttackHitSounds ); i++ )
+		PRECACHE_SOUND((char *)pAttackHitSounds[i]);
+
+	for ( i = 0; i < ARRAYSIZE( pAttackMissSounds ); i++ )
+		PRECACHE_SOUND((char *)pAttackMissSounds[i]);
+
+	for ( i = 0; i < ARRAYSIZE( pIdleSounds ); i++ )
+		PRECACHE_SOUND((char *)pIdleSounds[i]);
+
+	for ( i = 0; i < ARRAYSIZE( pDieSounds ); i++ )
+		PRECACHE_SOUND((char *)pDieSounds[i]);
+
+	for ( i = 0; i < ARRAYSIZE( pPainSounds ); i++ )
+		PRECACHE_SOUND((char *)pPainSounds[i]);
+
+	for ( i = 0; i < ARRAYSIZE( pAttackSounds ); i++ )
+		PRECACHE_SOUND((char *)pAttackSounds[i]);
+
+	for ( i = 0; i < ARRAYSIZE( pAlertSounds ); i++ )
+		PRECACHE_SOUND((char *)pAlertSounds[i]);
+
+	PRECACHE_SOUND( "turret/tu_fire1.wav" );
+
+	iAgruntMuzzleFlash = PRECACHE_MODEL( "sprites/muz4.spr" );
+
+	UTIL_PrecacheOther( "bio_flak" );
+	UTIL_PrecacheOther( "lght_flak" );
+	UTIL_PrecacheOther( "laser_pulse" );
+	CLaserPulse::PrecacheColor( 4 );
+	UTIL_PrecacheOther( "psi_blast" );
+}
+
+//=========================================================
+// CheckRangeAttack1 
+//=========================================================
+BOOL CNAGrunt :: CheckRangeAttack1 ( float flDot, float flDist )
+{
+	if ( gpGlobals->time < m_flNextHornetAttackCheck )
+	{
+		return m_fCanHornetAttack;
+	}
+
+	if ( HasConditions( bits_COND_SEE_ENEMY ) && flDist >= AGRUNT_MELEE_DIST && flDist <= 4096 && flDot >= 0.5 && NoFriendlyFire() )
+	{
+		TraceResult	tr;
+		Vector	vecArmPos, vecArmDir;
+
+		// verify that a shot fired from the gun will hit the enemy before the world.
+		UTIL_MakeVectors( pev->angles );
+		GetAttachment( 0, vecArmPos, vecArmDir );
+		UTIL_TraceLine( vecArmPos, m_hEnemy->BodyTarget(vecArmPos), dont_ignore_monsters, ENT(pev), &tr);
+
+		if ( tr.flFraction == 1.0 || tr.pHit == m_hEnemy->edict() )
+		{
+			m_flNextHornetAttackCheck = gpGlobals->time + RANDOM_FLOAT( 2, 5 );
+			m_fCanHornetAttack = TRUE;
+			return m_fCanHornetAttack;
+		}
+	}
+	
+	m_flNextHornetAttackCheck = gpGlobals->time + 0.2;// don't check for half second if this check wasn't successful
+	m_fCanHornetAttack = FALSE;
+	return m_fCanHornetAttack;
+}
+
+//=========================================================
+// TakeDamage - the shield takes the damage while it lasts;
+// once it is gone it stays down for a while
+//=========================================================
+int CNAGrunt :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
+{
+	int iRet = TRUE;
+
+	if ( pev->armorvalue > 0 )
+	{
+		pev->armorvalue -= flDamage;
+
+		// the shield lights up
+		pev->renderfx = kRenderFxGlowShell;
+		pev->renderamt = 255;
+		pev->rendercolor = Vector( 255, 0, 128 );
+
+		if ( flDamage > 15 )
+			SetConditions( bits_COND_LIGHT_DAMAGE );
+		if ( flDamage >= 75 )
+			SetConditions( bits_COND_HEAVY_DAMAGE );
+
+		CBaseMonster::TakeDamage( pevInflictor, pevAttacker, 0, 0 );
+	}
+	else
+	{
+		iRet = CBaseMonster::TakeDamage( pevInflictor, pevAttacker, flDamage, bitsDamageType );
+	}
+
+	if ( pev->armorvalue <= 0 )
+		pev->armortype = 5;	// the shield's down time
+
+	Remember( bits_MEMORY_PROVOKED );
+
+	return iRet;
+}
+
+//=========================================================
+// MonsterThink - the psi blast, the shield and the health
+// come back with time
+//=========================================================
+void CNAGrunt :: MonsterThink( void )
+{
+	CSquadMonster::MonsterThink();
+
+	if ( HasConditions( bits_COND_SEE_ENEMY ) && pev->dmgtime <= gpGlobals->time )
+	{
+		m_hPsiTarget = NULL;
+		m_flFieldOfView = 0.2;
+
+		if ( m_hEnemy->BloodColor() != DONT_BLEED && FInViewCone( m_hEnemy ) )
+		{
+			Vector vecSrc, vecDir;
+			GetAttachment( 1, vecSrc, vecDir );
+
+			CBaseEntity *pBlast = CBaseEntity::Create( "psi_blast", vecSrc, g_vecZero, edict() );
+			vecDir = m_hEnemy->BodyTarget( pev->origin ) - vecSrc;
+			pBlast->pev->velocity = vecDir.Normalize() * 700;
+			pBlast->pev->dmg = pev->health / 20;
+
+			pev->dmgtime = gpGlobals->time + 5;
+			m_hPsiTarget = m_hEnemy;
+		}
+
+		m_flFieldOfView = -1;
+	}
+
+	if ( pev->armortype > 0 )
+	{
+		// the shield is down
+		pev->renderfx = kRenderFxNone;
+		pev->armortype -= 0.1;
+		if ( pev->armortype <= 0 )
+		{
+			pev->armorvalue = 0;
+			pev->renderfx = kRenderFxGlowShell;
+			pev->renderamt = 255;
+			pev->rendercolor = Vector( 255, 0, 128 );
+		}
+	}
+	else if ( pev->armorvalue < 750 )
+	{
+		pev->armorvalue += 0.25;
+	}
+
+	if ( pev->health < 200 )
+		pev->health += 0.1;
+
+	if ( pev->renderfx == kRenderFxGlowShell )
+	{
+		// fade the glow out
+		pev->renderamt -= 10;
+		if ( pev->renderamt < 0 )
+		{
+			pev->renderfx = kRenderFxNone;
+			pev->renderamt = 0;
+			pev->rendercolor = g_vecZero;
+			return;
+		}
+		pev->rendercolor = Vector( pev->renderamt, 0, pev->renderamt * 0.5 );
+	}
+}

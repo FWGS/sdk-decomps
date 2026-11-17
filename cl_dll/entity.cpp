@@ -26,6 +26,9 @@ void Game_AddObjects( void );
 
 extern vec3_t v_origin;
 
+extern float g_flGravity;	// name ours
+void ThinkParticles( float flFrametime, float flTime );	// name ours
+
 int g_iAlive = 1;
 
 extern "C" 
@@ -138,6 +141,7 @@ void DLLEXPORT HUD_ProcessPlayerState( struct entity_state_s *dst, const struct 
 	memcpy( &dst->blending[0], &src->blending[0], 2 * sizeof( byte ) );
 
 	VectorCopy( src->basevelocity, dst->basevelocity );
+	VectorCopy( src->vuser1, dst->vuser1 );
 
 	dst->friction				= src->friction;
 	dst->gravity				= src->gravity;
@@ -598,10 +602,6 @@ void DLLEXPORT HUD_TempEntUpdate (
 	TEMPENTITY	*pTemp, *pnext, *pprev;
 	float		freq, gravity, gravitySlow, life, fastFreq;
 
-	// Nothing to simulate
-	if ( !*ppTempEntActive )		
-		return;
-
 	// in order to have tents collide with players, we have to run the player prediction code so
 	// that the client has the player list. We run this code once when we detect any COLLIDEALL 
 	// tent, then set this BOOL to true so the code doesn't get run again if there's more than
@@ -611,8 +611,15 @@ void DLLEXPORT HUD_TempEntUpdate (
 	// Store off the old count
 	gEngfuncs.pEventAPI->EV_PushPMStates();
 
+	g_flGravity = cl_gravity;
+	ThinkParticles( frametime, client_time );
+
 	// Now add in all of the players.
 	gEngfuncs.pEventAPI->EV_SetSolidPlayers ( -1 );	
+
+	// Nothing to simulate
+	if ( !*ppTempEntActive )		
+		goto finish;
 
 	// !!!BUGBUG	-- This needs to be time based
 	gTempEntFrame = (gTempEntFrame+1) & 31;

@@ -36,6 +36,10 @@ public:
 	void Precache( void );
 	int  Classify( void ) { return CLASS_ALIEN_MILITARY; };
 	int  BloodColor( void ) { return BLOOD_COLOR_YELLOW; }
+	int  HeatSignature( void ) { return -2; }
+	BOOL CanBeRepulsed( bool fForce ) { return FALSE; }
+	int  GetBattlePower( void ) { return -1; }
+	BOOL CanBeGrenaded( int fLauncher ) { return fLauncher; }
 	void Killed( entvars_t *pevAttacker, int iGib );
 	void GibMonster( void );
 
