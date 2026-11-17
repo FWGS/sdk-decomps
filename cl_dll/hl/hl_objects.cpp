@@ -28,6 +28,9 @@
 
 extern BEAM *pBeam;
 extern BEAM *pBeam2;
+extern int g_iBeamStyle;
+extern BEAM *g_pTeslaBeams[5];
+extern TEMPENTITY *g_pEgonFlare;
 void HUD_GetLastOrg( float *org );
 
 void UpdateBeams ( void )
@@ -37,6 +40,8 @@ void UpdateBeams ( void )
 	pmtrace_t tr;
 	cl_entity_t *pthisplayer = gEngfuncs.GetLocalPlayer();
 	int idx = pthisplayer->index;
+	float flTime = gEngfuncs.GetClientTime();
+	int i;
 		
 	// Get our exact viewangles from engine
 	gEngfuncs.GetViewAngles( (float *)angles );
@@ -66,13 +71,32 @@ void UpdateBeams ( void )
 	if ( pBeam )
 	{
 		pBeam->target = tr.endpos;
-		pBeam->die	  = gEngfuncs.GetClientTime() + 0.1; // We keep it alive just a little bit forward in the future, just in case.
+		pBeam->die	  = flTime + 0.1; // We keep it alive just a little bit forward in the future, just in case.
+
+		// the gluon gun's beam pulses in blue
+		if ( g_iBeamStyle == 1 )
+			pBeam->b = fabsf( sin( flTime * 10 ) ) * ( 80 / 255.0f ) + 144 / 255.0f;
 	}
 		
 	if ( pBeam2 )
 	{
 		pBeam2->target = tr.endpos;
-		pBeam2->die	   = gEngfuncs.GetClientTime() + 0.1; // We keep it alive just a little bit forward in the future, just in case.
+		pBeam2->die	   = flTime + 0.1; // We keep it alive just a little bit forward in the future, just in case.
+	}
+
+	for ( i = 0; i < 5; i++ )
+	{
+		if ( g_pTeslaBeams[i] )
+		{
+			g_pTeslaBeams[i]->target = tr.endpos;
+			g_pTeslaBeams[i]->die = flTime + 0.1;
+		}
+	}
+
+	if ( g_pEgonFlare )
+	{
+		g_pEgonFlare->entity.origin = tr.endpos;
+		g_pEgonFlare->die = flTime + 0.1;
 	}
 }
 
@@ -85,6 +109,6 @@ Add game specific, client-side objects here
 */
 void Game_AddObjects( void )
 {
-	if ( pBeam && pBeam2 )
+	if ( pBeam || pBeam2 || g_pTeslaBeams[0] )
 		UpdateBeams();
 }

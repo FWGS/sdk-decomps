@@ -640,6 +640,8 @@ public:
 #define DMG_SLOWFREEZE		(1 << 22)	// in a subzero freezer
 #define DMG_MORTAR			(1 << 23)	// Hit by air raid (done to distinguish grenade from mortar)
 #define DMG_FADE			(1 << 24)	// name ours: the victim fades out instead of dying normally (GIB_FADE)
+#define DMG_NOPUSH			(1 << 25)	// name ours: no knockback (energy disk, displacer ball)
+#define DMG_HALVE			(1 << 26)	// name ours: cuts the victim in half (energy disk, sword)
 #define DMG_SPLATTER		(1 << 31)	// name ours: gibs corpses
 
 // these are the damage types that are allowed to gib corpses
