@@ -652,6 +652,10 @@ SOURCE=..\game_shared\voice_gamemgr.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\volcano.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\vortex.cpp
 # End Source File
 # Begin Source File
@@ -689,6 +693,10 @@ SOURCE=.\animation.h
 # Begin Source File
 
 SOURCE=.\basemonster.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\beams.h
 # End Source File
 # Begin Source File
 
