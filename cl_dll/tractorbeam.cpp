@@ -216,13 +216,14 @@ void CTractorBeam::Render( void )
 		{
 			cl_entity_t *pOwner = gEngfuncs.GetEntityByIndex( pEnt->curstate.owner );
 			Vector vecEnd( origin );
-			VectorCopy( pOwner->attachment[0], origin );
+			memcpy( origin, pOwner->attachment[0], sizeof( origin ) );
 
-			Vector vecDir = vecEnd - Vector( origin );
+			Vector vecDir;
+			vecDir = vecEnd - Vector( origin );
 			flLength = vecDir.Length();
 
 			VectorAngles( vecDir.Normalize(), angles );
-			angles[2] = pEnt->angles.z;
+			angles[2] = pEnt->angles[2];
 		}
 
 		angles[0] = -angles[0];
