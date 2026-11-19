@@ -128,7 +128,7 @@ void CGib :: SpawnHeadGib( entvars_t *pevVictim )
 	if ( g_Language == LANGUAGE_GERMAN )
 		SpawnHeadGib(pevVictim, "models/germangibs.mdl" );// throw one head
 	else
-		SpawnHeadGib(pevVictim, "models/hgibs.mdl" );
+		SpawnHeadGib(pevVictim, "models/flesh.mdl" );
 }
 
 void CGib :: SpawnHeadGib( entvars_t *pevVictim, const char* szGibModel )
@@ -186,7 +186,7 @@ void CGib :: SpawnRandomGibs( entvars_t *pevVictim, int cGibs, int human )
 	if ( g_Language == LANGUAGE_GERMAN )
 		SpawnRandomGibs(pevVictim, cGibs, 1, "models/germangibs.mdl");
 	else if (human)
-		SpawnRandomGibs(pevVictim, cGibs, 1, "models/hgibs.mdl");
+		SpawnRandomGibs(pevVictim, cGibs, 1, "models/flesh.mdl");
 	else
 		SpawnRandomGibs(pevVictim, cGibs, 0, "models/agibs.mdl");
 }
@@ -1453,7 +1453,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 		pevAttacker = pev;  // the default attacker is ourselves
 
 	ClearMultiDamage();
-	gMultiDamage.type = DMG_BULLET | DMG_NEVERGIB;
+	gMultiDamage.type = DMG_BULLET;
 
 	for (ULONG iShot = 1; iShot <= cShots; iShot++)
 	{

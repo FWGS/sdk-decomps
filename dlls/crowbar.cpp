@@ -47,7 +47,7 @@ void CCrowbar::Spawn( )
 {
 	Precache( );
 	m_iId = WEAPON_CROWBAR;
-	SET_MODEL(ENT(pev), "models/w_crowbar.mdl");
+	SET_MODEL(ENT(pev), "models/w_say.mdl");
 	m_iClip = -1;
 
 	FallInit();// get ready to fall down.
@@ -56,8 +56,8 @@ void CCrowbar::Spawn( )
 
 void CCrowbar::Precache( void )
 {
-	PRECACHE_MODEL("models/v_crowbar.mdl");
-	PRECACHE_MODEL("models/w_crowbar.mdl");
+	PRECACHE_MODEL("models/v_say.mdl");
+	PRECACHE_MODEL("models/w_say.mdl");
 	PRECACHE_MODEL("models/p_crowbar.mdl");
 	PRECACHE_SOUND("weapons/cbar_hit1.wav");
 	PRECACHE_SOUND("weapons/cbar_hit2.wav");
@@ -88,7 +88,7 @@ int CCrowbar::GetItemInfo(ItemInfo *p)
 
 BOOL CCrowbar::Deploy( )
 {
-	return DefaultDeploy( "models/v_crowbar.mdl", "models/p_crowbar.mdl", CROWBAR_DRAW, "crowbar" );
+	return DefaultDeploy( "models/v_say.mdl", "models/p_crowbar.mdl", CROWBAR_DRAW, "crowbar" );
 }
 
 void CCrowbar::Holster( int skiplocal /* = 0 */ )
@@ -265,7 +265,7 @@ int CCrowbar::Swing( int fFirst )
 				m_pPlayer->m_iWeaponVolume = CROWBAR_BODYHIT_VOLUME;
 				if ( !pEntity->IsAlive() )
 				{
-					m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.25; //LRC: corrected half-life bug
+					m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.2; //LRC: corrected half-life bug
 					return TRUE;
 				}
 				else
@@ -307,7 +307,7 @@ int CCrowbar::Swing( int fFirst )
 
 		m_pPlayer->m_iWeaponVolume = flVol * CROWBAR_WALLHIT_VOLUME;
 #endif
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.25;
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.2;
 		
 		SetThink(&CCrowbar:: Smack );
 		SetNextThink( 0.2 );

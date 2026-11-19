@@ -44,7 +44,7 @@ void CGrenade::Explode( Vector vecSrc, Vector vecAim )
 	TraceResult tr;
 	UTIL_TraceLine ( pev->origin, pev->origin + Vector ( 0, 0, -32 ),  ignore_monsters, ENT(pev), & tr);
 
-	Explode( &tr, DMG_BLAST );
+	Explode( &tr, DMG_BLAST | DMG_ALWAYSGIB );
 }
 
 // UNDONE: temporary scorching for PreAlpha - find a less sleazy permenant solution.
@@ -78,9 +78,31 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 		{
 			WRITE_SHORT( g_sModelIndexWExplosion );
 		}
-		WRITE_BYTE( (pev->dmg - 50) * .60  ); // scale * 10
-		WRITE_BYTE( 15  ); // framerate
+		WRITE_BYTE( (pev->dmg - 25) * .25  ); // scale * 10
+		WRITE_BYTE( 38  ); // framerate
 		WRITE_BYTE( TE_EXPLFLAG_NONE );
+	MESSAGE_END();
+
+	// a white ring expanding from the blast
+	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_BEAMCYLINDER );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z + 1555 ); // reach damage radius over .1 seconds
+		WRITE_SHORT( g_sModelIndexShock );
+		WRITE_BYTE( 0 ); // startframe
+		WRITE_BYTE( 0 ); // framerate
+		WRITE_BYTE( 1 ); // life
+		WRITE_BYTE( 16 );  // width
+		WRITE_BYTE( 0 );   // noise
+		WRITE_BYTE( 128 );   // r, g, b
+		WRITE_BYTE( 128 );   // r, g, b
+		WRITE_BYTE( 128 );   // r, g, b
+		WRITE_BYTE( 255 ); // brightness
+		WRITE_BYTE( 0 );		// speed
 	MESSAGE_END();
 
 	CSoundEnt::InsertSound ( bits_SOUND_COMBAT, pev->origin, NORMAL_EXPLOSION_VOLUME, 3.0 );
@@ -94,7 +116,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 
 	RadiusDamage ( pev, pevOwner, pev->dmg, CLASS_NONE, bitsDamageType );
 
-	if ( RANDOM_FLOAT( 0 , 1 ) < 0.5 )
+	if ( RANDOM_FLOAT( 0 , 1 ) < 1.0 ) // sic: always
 	{
 		UTIL_DecalTrace( pTrace, DECAL_SCORCH1 );
 	}
@@ -113,13 +135,34 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 	}
 
 	pev->effects |= EF_NODRAW;
+	pev->effects |= EF_LIGHT;
+	SetThink(&CGrenade:: Smoke );
+	pev->velocity = g_vecZero;
+	SetNextThink( 1.0 );
+
+	pev->effects |= EF_NODRAW;
+	pev->effects |= EF_LIGHT;
+	SetThink(&CGrenade:: Smoke );
+	pev->velocity = g_vecZero;
+	SetNextThink( 0 );
+
+	pev->effects |= EF_NODRAW;
+	pev->effects |= EF_LIGHT;
+	SetThink(&CGrenade:: Smoke );
+	pev->velocity = g_vecZero;
+	SetNextThink( 0.2 );
+
+	pev->effects |= EF_NODRAW;
+	pev->effects |= EF_LIGHT;
 	SetThink(&CGrenade:: Smoke );
 	pev->velocity = g_vecZero;
 	SetNextThink( 0.3 );
 
 	if (iContents != CONTENTS_WATER)
 	{
-		int sparkCount = RANDOM_LONG(0,3);
+		UTIL_ScreenShake( pev->origin, 638, 0.2, 0.5, 1024 );
+
+		int sparkCount = RANDOM_LONG(3,6);
 		for ( int i = 0; i < sparkCount; i++ )
 			Create( "spark_shower", pev->origin, pTrace->vecPlaneNormal, NULL );
 	}
@@ -130,7 +173,7 @@ void CGrenade::Smoke( void )
 {
 	if (UTIL_PointContents ( pev->origin ) == CONTENTS_WATER)
 	{
-		UTIL_Bubbles( pev->origin - Vector( 64, 64, 64 ), pev->origin + Vector( 64, 64, 64 ), 100 );
+		UTIL_Bubbles( pev->origin - Vector( 256, 256, 256 ), pev->origin + Vector( 64, 64, 64 ), 100 );
 	}
 	else
 	{
@@ -140,8 +183,38 @@ void CGrenade::Smoke( void )
 			WRITE_COORD( pev->origin.y );
 			WRITE_COORD( pev->origin.z );
 			WRITE_SHORT( g_sModelIndexSmoke );
-			WRITE_BYTE( (pev->dmg - 50) * 0.80 ); // scale * 10
+			WRITE_BYTE( (pev->dmg - 40) * 0.60 ); // scale * 10
 			WRITE_BYTE( 12  ); // framerate
+		MESSAGE_END();
+
+		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+			WRITE_BYTE( TE_SMOKE );
+			WRITE_COORD( pev->origin.x );
+			WRITE_COORD( pev->origin.y );
+			WRITE_COORD( pev->origin.z );
+			WRITE_SHORT( g_sModelIndexSmoke );
+			WRITE_BYTE( (pev->dmg - 50) * 0.60 ); // scale * 10
+			WRITE_BYTE( 14  ); // framerate
+		MESSAGE_END();
+
+		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+			WRITE_BYTE( TE_SMOKE );
+			WRITE_COORD( pev->origin.x );
+			WRITE_COORD( pev->origin.y );
+			WRITE_COORD( pev->origin.z );
+			WRITE_SHORT( g_sModelIndexSmoke );
+			WRITE_BYTE( (pev->dmg - 35) ); // scale * 10
+			WRITE_BYTE( 7  ); // framerate
+		MESSAGE_END();
+
+		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+			WRITE_BYTE( TE_SMOKE );
+			WRITE_COORD( pev->origin.x );
+			WRITE_COORD( pev->origin.y );
+			WRITE_COORD( pev->origin.z );
+			WRITE_SHORT( g_sModelIndexSmoke );
+			WRITE_BYTE( (pev->dmg - 50) * 0.70 ); // scale * 10
+			WRITE_BYTE( 13  ); // framerate
 		MESSAGE_END();
 	}
 	UTIL_Remove( this );
@@ -177,7 +250,7 @@ void CGrenade::Detonate( void )
 	vecSpot = pev->origin + Vector ( 0 , 0 , 8 );
 	UTIL_TraceLine ( vecSpot, vecSpot + Vector ( 0, 0, -40 ),  ignore_monsters, ENT(pev), & tr);
 
-	Explode( &tr, DMG_BLAST );
+	Explode( &tr, DMG_BLAST | DMG_ALWAYSGIB );
 }
 
 
@@ -192,9 +265,9 @@ void CGrenade::ExplodeTouch( CBaseEntity *pOther )
 	pev->enemy = pOther->edict();
 
 	vecSpot = pev->origin - pev->velocity.Normalize() * 32;
-	UTIL_TraceLine( vecSpot, vecSpot + pev->velocity.Normalize() * 64, ignore_monsters, ENT(pev), &tr );
+	UTIL_TraceLine( vecSpot, vecSpot + pev->velocity.Normalize() * 96, ignore_monsters, ENT(pev), &tr );
 
-	Explode( &tr, DMG_BLAST );
+	Explode( &tr, DMG_BLAST | DMG_ALWAYSGIB );
 }
 
 
@@ -223,7 +296,7 @@ void CGrenade::BounceTouch( CBaseEntity *pOther )
 		return;
 
 	// only do damage if we're moving fairly fast
-	if (m_flNextAttack < gpGlobals->time && pev->velocity.Length() > 100)
+	if (m_flNextAttack < gpGlobals->time && pev->velocity.Length() > 250)
 	{
 		entvars_t *pevOwner = VARS( pev->owner );
 		if (pevOwner)
