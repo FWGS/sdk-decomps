@@ -250,7 +250,7 @@ int __MsgFunc_ScoreInfo(const char *pszName, int iSize, void *pbuf)
 int __MsgFunc_SciInfo(const char *pszName, int iSize, void *pbuf)
 {
 	if (gViewPort)
-		return gViewPort->MsgFunc_SciInfo( pszName, iSize, pbuf );
+		return gViewPort->MsgFunc_SciDeathInfo( pszName, iSize, pbuf );
 	return 0;
 }
 
