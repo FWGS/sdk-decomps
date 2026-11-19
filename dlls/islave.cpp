@@ -16,6 +16,7 @@
 // Alien slave monster
 //=========================================================
 
+#if 0
 #include	"extdll.h"
 #include	"util.h"
 #include	"cbase.h"
@@ -874,3 +875,4 @@ void CISlave :: ClearBeams( )
 
 	STOP_SOUND( ENT(pev), CHAN_WEAPON, "debris/zap4.wav" );
 }
+#endif

@@ -16,6 +16,7 @@
 // bullsquid - big, spotty tentacle-mouthed meanie.
 //=========================================================
 
+#if 0
 #include	"extdll.h"
 #include	"util.h"
 #include	"cbase.h"
@@ -1292,3 +1293,4 @@ MONSTERSTATE CBullsquid :: GetIdealState ( void )
 	return m_IdealMonsterState;
 }
 
+#endif

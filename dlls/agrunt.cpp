@@ -16,6 +16,7 @@
 // Agrunt - Dominant, warlike alien grunt monster
 //=========================================================
 
+#if 0
 #include	"extdll.h"
 #include	"util.h"
 #include	"cbase.h"
@@ -1216,3 +1217,4 @@ void CAGrunt::Killed( entvars_t *pevAttacker, int iGib )
 
 	CBaseMonster::Killed( pevAttacker, iGib );
 }
+#endif
