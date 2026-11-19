@@ -2351,50 +2351,50 @@ void CNAgent :: RunAI( void )
 //=========================================================
 void CNAgent :: StartTask ( Task_t *pTask )
 {
-	Vector vecResult;
-
 	switch ( pTask->iTask )
 	{
 	case TASK_AGENT_BLINK:
 		{
 			Vector vecDist = m_vecMoveGoal - pev->origin;
-			if ( vecDist.Length() >= 128 )
+			if ( vecDist.Length() < 128 )
 			{
-				Vector vecOld = pev->origin;
-				UTIL_SetOrigin( pev, m_vecMoveGoal );
-				if ( !WALK_MOVE( ENT(pev), 0, 0, WALKMOVE_NORMAL ) )
-				{
-					// no room there
-					UTIL_SetOrigin( pev, vecOld );
-				}
-				else
-				{
-					// a spray of sparks where it was
-					MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecOld );
-						WRITE_BYTE( TE_SPRAY );
-						WRITE_COORD( vecOld.x );
-						WRITE_COORD( vecOld.y );
-						WRITE_COORD( vecOld.z );
-						WRITE_COORD( 0 );
-						WRITE_COORD( 0 );
-						WRITE_COORD( 1 );
-						WRITE_SHORT( m_iShell );
-						WRITE_BYTE( 14 );	// count
-						WRITE_BYTE( 130 );	// speed
-						WRITE_BYTE( 128 );	// noise
-						WRITE_BYTE( kRenderTransAdd );
-					MESSAGE_END();
-					EMIT_SOUND_DYN( ENT(pev), CHAN_STATIC, "houndeye/he_blast1.wav", 1.0, 0.3, 0, PITCH_NORM );
-					TaskComplete();
-					break;
-				}
+				TaskFail();
+				break;
 			}
-			TaskFail();
+
+			Vector vecOld = pev->origin;
+			UTIL_SetOrigin( pev, m_vecMoveGoal );
+			if ( !WALK_MOVE( ENT(pev), 0, 0, WALKMOVE_NORMAL ) )
+			{
+				// no room there
+				UTIL_SetOrigin( pev, vecOld );
+				TaskFail();
+				break;
+			}
+
+			// a spray of sparks where it was
+			MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecOld );
+				WRITE_BYTE( TE_SPRAY );
+				WRITE_COORD( vecOld.x );
+				WRITE_COORD( vecOld.y );
+				WRITE_COORD( vecOld.z );
+				WRITE_COORD( 0 );
+				WRITE_COORD( 0 );
+				WRITE_COORD( 1 );
+				WRITE_SHORT( m_iShell );
+				WRITE_BYTE( 14 );	// count
+				WRITE_BYTE( 130 );	// speed
+				WRITE_BYTE( 128 );	// noise
+				WRITE_BYTE( kRenderTransAdd );
+			MESSAGE_END();
+			EMIT_SOUND_DYN( ENT(pev), CHAN_STATIC, "houndeye/he_blast1.wav", 1.0, 0.3, 0, PITCH_NORM );
+			TaskComplete();
 		}
 		break;
 	case TASK_AGENT_FIND_COVER_FROM_ENEMY:
 		if ( m_hEnemy != NULL )
 		{
+			Vector vecResult;
 			if ( FindNodeInCover( m_hEnemy->pev->origin, m_hEnemy->pev->view_ofs, 0, CoverRadius(), vecResult ) )
 			{
 				m_vecMoveGoal = vecResult;
@@ -2411,8 +2411,13 @@ void CNAgent :: StartTask ( Task_t *pTask )
 			int iMaxDist = pBestSound->m_iVolume * 2;	// sic: before the test for no sound
 			if ( pBestSound )
 			{
-				if ( FindNodeInCover( pBestSound->m_vecOrigin, g_vecZero, pBestSound->m_iVolume, max( iMaxDist, CoverRadius() ), vecResult )
-					|| FindNodeAway( pBestSound->m_vecOrigin, pBestSound->m_iVolume, max( iMaxDist, CoverRadius() ), vecResult ) )
+				if ( FindNodeInCover( pBestSound->m_vecOrigin, g_vecZero, pBestSound->m_iVolume, max( iMaxDist, CoverRadius() ), vecResult ) )
+				{
+					m_vecMoveGoal = vecResult;
+					TaskComplete();
+					break;
+				}
+				if ( FindNodeAway( pBestSound->m_vecOrigin, pBestSound->m_iVolume, max( iMaxDist, CoverRadius() ), vecResult ) )
 				{
 					m_vecMoveGoal = vecResult;
 					TaskComplete();
@@ -2429,6 +2434,7 @@ void CNAgent :: StartTask ( Task_t *pTask )
 			break;
 		}
 		{
+			Vector vecResult;
 			if ( FindEnemyNode( m_hEnemy->pev->origin, vecResult, pTask->flData, 512, 0 ) )
 			{
 				m_vecMoveGoal = vecResult;
@@ -2445,6 +2451,7 @@ void CNAgent :: StartTask ( Task_t *pTask )
 			break;
 		}
 		{
+			Vector vecResult;
 			if ( FindEnemyNode( m_hEnemy->pev->origin, vecResult, 0, 0, pTask->flData ) )
 			{
 				m_vecMoveGoal = vecResult;
