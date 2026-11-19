@@ -160,9 +160,9 @@ void CHudHealth::GetPainColor( int &r, int &g, int &b )
 	}
 	else
 	{
-		r = 170;
-		g = 209;
-		b = 116;
+		r = 255;
+		g = 6;
+		b = 6;
 	}
 #endif 
 }
