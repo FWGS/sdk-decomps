@@ -19,6 +19,10 @@
 #include "VGUI_Font.h"
 #include <VGUI_TextImage.h>
 
+// sic: a stand-in for text retail's file had more: VC6 emits the type information in an order that
+// follows its heap layout, and with this unused macro CommandButton's and ClassButton's come between
+// CMenuHandler_StringCommandClassSelect's and CMenuHandler_StringCommand's
+#define CLASSMENU_SIC "...................."
 #include "hud.h"
 #include "cl_util.h"
 #include "camera.h"
