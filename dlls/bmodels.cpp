@@ -284,7 +284,7 @@ public:
 	void EXPORT Think( void );
 };
 
-LINK_ENTITY_TO_CLASS( func_shine, CFuncShine );
+LINK_ENTITY_TO_CLASS( env_chrome, CFuncShine );
 
 extern int gmsgAddShine;
 void CFuncShine :: Spawn( void )
