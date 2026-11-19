@@ -18,6 +18,22 @@
 typedef enum { expRandom, expDirected} Explosions;
 typedef enum { matGlass = 0, matWood, matMetal, matFlesh, matCinderBlock, matCeilingTile, matComputer, matUnbreakableGlass, matRocks, matNone, matLastMaterial } Materials;
 
+// sic: an unused inline function, a stand-in for text retail's func_break.h had
+// and ours lacks in front of CBreakable's inline virtuals: its intermediate
+// code (6 to 9 statements fit) puts CBreakable::ObjectCaps and GetKillDesc at
+// the end of func_break.obj, where retail emits them
+inline void sic_il_func_break( int *p )
+{
+	p[0] = 0;
+	p[1] = 0;
+	p[2] = 0;
+	p[3] = 0;
+	p[4] = 0;
+	p[5] = 0;
+	p[6] = 0;
+	p[7] = 0;
+}
+
 #define	NUM_SHARDS 6 // this many shards spawned when breakable objects break;
 
 class CBreakable : public CBaseDelay
