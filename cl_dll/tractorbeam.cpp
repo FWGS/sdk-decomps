@@ -23,7 +23,7 @@ extern void VectorAngles( const float *forward, float *angles );
 
 // the cone's base: its centre and 16 points around it (sic: the circle is
 // slightly uneven, 0.92488 against 0.922879 and so on)
-Vector g_vecTractorCone[17] =
+static Vector g_vecTractorCone[17] =
 {
 	Vector( 0.0, 0.0, 0.0 ),
 	Vector( 0.924879, -1.0, 0.383684 ),
@@ -45,7 +45,7 @@ Vector g_vecTractorCone[17] =
 };
 
 // texture coordinates of the triangles' corners
-Vector2D g_vecTractorTex[50] =
+static Vector2D g_vecTractorTex[50] =
 {
 	Vector2D( -5.0, 0.0 ), Vector2D( -7.8125, 0.0 ), Vector2D( -8.124999, 0.647584 ), Vector2D( -7.5, 0.647584 ),
 	Vector2D( -6.5625, 0.0 ), Vector2D( -7.34375, 0.0 ), Vector2D( -8.437499, 0.0 ), Vector2D( -8.749999, 0.647584 ),
@@ -254,7 +254,7 @@ void CTractorBeam::Delete( int iEntity )
 	}
 }
 
-CTractorBeam *g_pTractorBeam = NULL;	// name ours
+static CTractorBeam *g_pTractorBeam = NULL;	// name ours
 
 // the first call only sets the list up
 void RenderAllTractorbeams( void )

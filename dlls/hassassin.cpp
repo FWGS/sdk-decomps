@@ -1191,7 +1191,7 @@ void CKamehameha :: KameTouch( CBaseEntity *pOther )
 	m_flDelay = 2;
 	pev->owner = ENT( pevOwner );
 
-	PLAYBACK_EVENT_FULL( 0, ENT( pev ), g_iBlastSphereEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, m_flDelay, 0.3, pev->dmg * 2, pev->dmg * 2.5, 1, 0 );
+	PLAYBACK_EVENT_FULL( 0, ENT( pev ), g_iSphereEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, m_flDelay, 0.3, pev->dmg * 2, pev->dmg * 2.5, 1, 0 );
 	CSoundEnt::InsertSound ( bits_SOUND_DANGER, pev->origin, pev->dmg * 2, 5.0 );
 
 	pev->rendermode = kRenderTransColor;

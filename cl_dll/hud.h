@@ -695,10 +695,10 @@ class TeamFortressViewport;
 
 extern CHud gHUD;
 
-// sic: a stand-in for declarations of the mod's headers that are not known. VC6 picks some
-// stack slots by the number of declarations a file has seen (an enum and its three values
-// count four): with it CMessageWindowPanel's and ScorePanel's constructors get retail's
-enum { HUD_SIC_1, HUD_SIC_2, HUD_SIC_3 };
+// sic: a stand-in for declarations of the mod's headers that are not known. VC6 picks some stack slots
+// by the number of declarations a file has seen (an enum and each value count one): with it, and the
+// project's browse information (/FR) as the IDE compiles, CMessageWindowPanel's and ScorePanel's get retail's
+enum { HUD_SIC_1, HUD_SIC_2, HUD_SIC_3, HUD_SIC_4, HUD_SIC_5, HUD_SIC_6, HUD_SIC_7, HUD_SIC_8, HUD_SIC_9, HUD_SIC_10, HUD_SIC_11, HUD_SIC_12, HUD_SIC_13, HUD_SIC_14, HUD_SIC_15, HUD_SIC_16 };
 extern TeamFortressViewport *gViewPort;
 
 extern int g_iPlayerClass;

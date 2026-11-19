@@ -48,10 +48,10 @@ class CSatchelCharge : public CGrenade
 	void Precache( void );
 	void BounceSound( void );
 
+public:
 	void EXPORT SatchelSlide( CBaseEntity *pOther );
 	void EXPORT SatchelThink( void );
 
-public:
 	void Deactivate( void );
 	void StartSatellite( void );	// name ours
 	void EXPORT SatelliteThink( void );

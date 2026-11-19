@@ -46,13 +46,13 @@ DLL_GLOBAL	short	g_sModelIndexWExplosion;// holds the index for the underwater e
 DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for the initial blood
 DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for splattered blood
-DLL_GLOBAL	short	g_sModelIndexFireExplosion;// sprites/fexplo.spr (names ours from here)
+DLL_GLOBAL	short	g_sModelIndexFireExplo;// sprites/fexplo.spr (names ours from here)
 DLL_GLOBAL	short	g_sModelIndexSmokePuff;// sprites/smoke.spr
 DLL_GLOBAL	short	g_sModelIndexLightning;// sprites/lgtning.spr
-DLL_GLOBAL	short	g_sModelIndexPlayerFlame;// sprites/playerflame.spr
+DLL_GLOBAL	short	g_sModelIndexFire;// sprites/playerflame.spr
 DLL_GLOBAL	int		g_iBloodSprayEvent;// events/bloodspray.sc
-DLL_GLOBAL	int		g_iBlastSphereEvent;// events/blastsphere.sc
-DLL_GLOBAL	int		g_iElectricEvent;// events/electric.sc
+DLL_GLOBAL	int		g_iSphereEvent;// events/blastsphere.sc
+DLL_GLOBAL	int		g_iShockEvent;// events/electric.sc
 
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
 AmmoInfo CBasePlayerItem::AmmoInfoArray[MAX_AMMO_SLOTS];
@@ -423,7 +423,7 @@ void W_Precache(void)
 	UTIL_PrecacheOther( "flame" );
 
 	g_sModelIndexFireball = PRECACHE_MODEL ("sprites/zerogxplode.spr");// fireball
-	g_sModelIndexFireExplosion = PRECACHE_MODEL ("sprites/fexplo.spr");
+	g_sModelIndexFireExplo = PRECACHE_MODEL ("sprites/fexplo.spr");
 	g_sModelIndexWExplosion = PRECACHE_MODEL ("sprites/WXplo1.spr");// underwater fireball
 	g_sModelIndexSmoke = PRECACHE_MODEL ("sprites/steam1.spr");// smoke
 	g_sModelIndexSmokePuff = PRECACHE_MODEL ("sprites/smoke.spr");
@@ -434,11 +434,11 @@ void W_Precache(void)
 	g_sModelIndexLaser = PRECACHE_MODEL( (char *)g_pModelNameLaser );
 	g_sModelIndexLaserDot = PRECACHE_MODEL("sprites/laserdot.spr");
 	g_sModelIndexLightning = PRECACHE_MODEL("sprites/lgtning.spr");
-	g_sModelIndexPlayerFlame = PRECACHE_MODEL("sprites/playerflame.spr");
+	g_sModelIndexFire = PRECACHE_MODEL("sprites/playerflame.spr");
 	PRECACHE_MODEL("sprites/xblood.spr");
 
 	g_iBloodSprayEvent = PRECACHE_EVENT( 1, "events/bloodspray.sc" );
-	g_iBlastSphereEvent = PRECACHE_EVENT( 1, "events/blastsphere.sc" );
+	g_iSphereEvent = PRECACHE_EVENT( 1, "events/blastsphere.sc" );
 
 	PRECACHE_SOUND("buttons/spark1.wav");
 	PRECACHE_SOUND("buttons/spark2.wav");
@@ -446,7 +446,7 @@ void W_Precache(void)
 	PRECACHE_SOUND("buttons/spark4.wav");
 	PRECACHE_SOUND("buttons/spark5.wav");
 	PRECACHE_SOUND("buttons/spark6.wav");
-	g_iElectricEvent = PRECACHE_EVENT( 1, "events/electric.sc" );
+	g_iShockEvent = PRECACHE_EVENT( 1, "events/electric.sc" );
 
 
 	// used by explosions

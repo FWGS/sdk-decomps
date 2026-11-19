@@ -83,7 +83,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 	MESSAGE_END();
 
 	if ( HasSpawnFlag( SF_GRENADE_BLASTSPHERE ) && iContents != CONTENTS_WATER )
-		PLAYBACK_EVENT_FULL( 0, ENT( pev ), g_iBlastSphereEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, 0.0, 0.5, pev->dmg * 2, pev->dmg * 2, 0, 0 );
+		PLAYBACK_EVENT_FULL( 0, ENT( pev ), g_iSphereEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, 0.0, 0.5, pev->dmg * 2, pev->dmg * 2, 0, 0 );
 
 	// Pull out of the wall a bit
 	if ( pTrace->flFraction != 1.0 )
@@ -186,7 +186,7 @@ void CGrenade::FireExplode( TraceResult *pTrace )
 	MESSAGE_END();
 
 	if ( HasSpawnFlag( SF_GRENADE_BLASTSPHERE ) )
-		PLAYBACK_EVENT_FULL( 0, ENT( pev ), g_iBlastSphereEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, 0.0, 0.5, pev->dmg * 2, pev->dmg * 2, 0, 0 );
+		PLAYBACK_EVENT_FULL( 0, ENT( pev ), g_iSphereEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, 0.0, 0.5, pev->dmg * 2, pev->dmg * 2, 0, 0 );
 
 	// Pull out of the wall a bit
 	if ( pTrace->flFraction != 1.0 )
@@ -205,7 +205,7 @@ void CGrenade::FireExplode( TraceResult *pTrace )
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
 		WRITE_COORD( pev->origin.z );
-		WRITE_SHORT( g_sModelIndexFireExplosion );
+		WRITE_SHORT( g_sModelIndexFireExplo );
 		WRITE_BYTE( iScale ); // scale * 10
 		WRITE_BYTE( 15  ); // framerate
 		WRITE_BYTE( TE_EXPLFLAG_NOPARTICLES );
@@ -264,7 +264,7 @@ void CGrenade::SphereBlast( void )
 	pev->solid = SOLID_NOT;// intangible
 	pev->takedamage = DAMAGE_NO;
 
-	PLAYBACK_EVENT_FULL( 0, ENT( pev ), g_iBlastSphereEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, m_flDelay, 0.3, pev->dmg * 2, pev->dmg * 2.5, 0, 0 );
+	PLAYBACK_EVENT_FULL( 0, ENT( pev ), g_iSphereEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, m_flDelay, 0.3, pev->dmg * 2, pev->dmg * 2.5, 0, 0 );
 	CSoundEnt::InsertSound ( bits_SOUND_DANGER, pev->origin, pev->dmg * 2, 5.0 );
 	EMIT_SOUND( ENT(pev), CHAN_VOICE, "doors/aliendoor1.wav", 1, ATTN_NORM );
 
@@ -341,7 +341,7 @@ void CGrenade::MortarBlast( void )
 		WRITE_BYTE( 2 );		// decay * 0.1
 	MESSAGE_END( );
 
-	PLAYBACK_EVENT_FULL( 0, ENT( pev ), g_iBlastSphereEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, m_flDelay, 0.3, pev->dmg * 2, pev->dmg * 2.5, 1, 0 );
+	PLAYBACK_EVENT_FULL( 0, ENT( pev ), g_iSphereEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, m_flDelay, 0.3, pev->dmg * 2, pev->dmg * 2.5, 1, 0 );
 	CSoundEnt::InsertSound ( bits_SOUND_DANGER, pev->origin, pev->dmg * 2, 5.0 );
 
 	pev->rendermode = kRenderTransColor;

@@ -28,6 +28,15 @@
 //=========================================================
 #define		HC_AE_JUMPATTACK	( 2 )
 
+// sic: retail's headcrab.obj has this table at the start of its data, and nothing refers to it: the
+// monsters a headcrab would turn into zombies.
+static char *s_pszZombieTypes[][2] =		// name ours
+{
+	{ "monster_scientist",		"monster_zombie" },
+	{ "monster_barney",			"monster_zombie_barney" },
+	{ "monster_human_grunt",	"monster_zombie_grunt" },
+};
+
 Task_t	tlHCRangeAttack1[] =
 {
 	{ TASK_STOP_MOVING,			(float)0		},

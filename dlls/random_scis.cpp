@@ -40,7 +40,7 @@ public:
 	int	ObjectCaps( void ) { return FCAP_DONT_SAVE; }
 	void DeathNotice( entvars_t *pevChild );
 
-	void EXPORT SpawnThink( void );		// name ours
+	void SpawnThink( void );			// name ours
 	void FindSpot( void );				// name ours
 
 	int		m_cScis;					// name ours: scientists alive
@@ -136,7 +136,7 @@ void CRandomScis :: DeathNotice( entvars_t *pevChild )
 
 
 // name ours: the next entity of the entity list after index iIndex
-static CBaseEntity *FindNextEntity( int iIndex )
+CBaseEntity *FindNextEntity( int iIndex )
 {
 	for ( int i = iIndex + 1; i < gpGlobals->maxEntities; i++ )
 	{

@@ -2070,6 +2070,7 @@ env_explosion of iDamage there.  Used by monsters. (name ours)
 */
 void CBaseEntity::FireBulletsExplosiveMonster( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker )
 {
+	static int tracerCount;	// sic: unused, as in the functions this was copied from
 	TraceResult tr;
 	Vector vecRight = gpGlobals->v_right;
 	Vector vecUp = gpGlobals->v_up;
@@ -2128,6 +2129,7 @@ of FireBulletsPlayer (the shotgun's explosive slugs). (name ours)
 */
 Vector CBaseEntity::FireBulletsExplosive( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker, int shared_rand )
 {
+	static int tracerCount;	// sic: unused, as in the functions this was copied from
 	TraceResult tr;
 	Vector vecRight = gpGlobals->v_right;
 	Vector vecUp = gpGlobals->v_up;
