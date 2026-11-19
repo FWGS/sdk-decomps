@@ -20,6 +20,7 @@ CFG=hl - Win32 Release
 !MESSAGE "hl - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
 !MESSAGE "hl - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
 !MESSAGE "hl - Win32 Profile" (based on "Win32 (x86) Dynamic-Link Library")
+!MESSAGE "hl - Win32 Release SIC1" (based on "Win32 (x86) Dynamic-Link Library")
 !MESSAGE 
 
 # Begin Project
@@ -139,6 +140,42 @@ SOURCE="$(InputPath)"
 
 # End Custom Build
 
+!ELSEIF  "$(CFG)" == "hl - Win32 Release SIC1"
+
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 0
+# PROP BASE Output_Dir ".\Release"
+# PROP BASE Intermediate_Dir ".\Release"
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 0
+# PROP Output_Dir ".\Releasehl"
+# PROP Intermediate_Dir ".\Releasehl"
+# PROP Ignore_Export_Lib 0
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /c
+# ADD CPP /nologo /G5 /MT /W3 /Zi /O2 /I "..\dlls" /I "..\engine" /I "..\common" /I "..\pm_shared" /I "..\game_shared" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "QUIVER" /D "VOXEL" /D "QUAKE2" /D "VALVE_DLL" /D "CLIENT_WEAPONS" /D "SIC1" /Fr /YX /FD /c
+# ADD BASE MTL /nologo /D "NDEBUG" /win32
+# ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
+# ADD BASE RSC /l 0x409 /d "NDEBUG"
+# ADD RSC /l 0x409 /d "NDEBUG"
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+LINK32=link.exe
+# ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /dll /machine:I386
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:windows /dll /incremental:no /map /debug /machine:I386 /def:".\hl.def" /out:".\Releasehl/spirit.dll"
+# SUBTRACT LINK32 /profile
+# Begin Custom Build
+TargetDir=.\Releasehl
+InputPath=.\Releasehl\spirit.dll
+SOURCE="$(InputPath)"
+
+"C:\games\half-life\spiritdev\dlls\spirit.dll" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	copy $(TargetDir)\spirit.dll "C:\games\half-life\spiritdev\dlls\spirit.dll"
+
+# End Custom Build
+
 !ENDIF 
 
 # Begin Target
@@ -146,6 +183,7 @@ SOURCE="$(InputPath)"
 # Name "hl - Win32 Release"
 # Name "hl - Win32 Debug"
 # Name "hl - Win32 Profile"
+# Name "hl - Win32 Release SIC1"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat;for;f90"
@@ -156,6 +194,19 @@ SOURCE=.\aflock.cpp
 # Begin Source File
 
 SOURCE=.\agrunt.cpp
+
+!IF  "$(CFG)" == "hl - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Profile"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Release SIC1"
+
+# SUBTRACT CPP /YX
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -192,6 +243,19 @@ SOURCE=.\barney.cpp
 # Begin Source File
 
 SOURCE=.\barneyzom.cpp
+
+!IF  "$(CFG)" == "hl - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Profile"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Release SIC1"
+
+# PROP Exclude_From_Build 1
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -232,6 +296,19 @@ SOURCE=.\controller.cpp
 # Begin Source File
 
 SOURCE=.\cremator.cpp
+
+!IF  "$(CFG)" == "hl - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Profile"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Release SIC1"
+
+# PROP Exclude_From_Build 1
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -488,6 +565,19 @@ SOURCE=.\scripted.cpp
 # Begin Source File
 
 SOURCE=.\scutspider.cpp
+
+!IF  "$(CFG)" == "hl - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Profile"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Release SIC1"
+
+# PROP Exclude_From_Build 1
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -576,6 +666,19 @@ SOURCE=.\xen.cpp
 # Begin Source File
 
 SOURCE=.\z_ghoul.cpp
+
+!IF  "$(CFG)" == "hl - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Profile"
+
+!ELSEIF  "$(CFG)" == "hl - Win32 Release SIC1"
+
+# PROP Exclude_From_Build 1
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
