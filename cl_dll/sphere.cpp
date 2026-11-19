@@ -378,7 +378,10 @@ void RenderSphere2( const Vector &vecOrigin, const Vector &vecDir, float flRadiu
 	{
 		vecVerts[i] = vecOrigin + g_vecSphereVerts[i] * flRadius;
 
-		float flDot = fabs( g_vecSphereVerts[i].x * vecDir.x + g_vecSphereVerts[i].y * vecDir.y + g_vecSphereVerts[i].z * vecDir.z );
+		// how much this vertex faces vecDir, summed y and z first
+		float flDot = g_vecSphereVerts[i].y * vecDir.y + g_vecSphereVerts[i].z * vecDir.z;
+		flDot += g_vecSphereVerts[i].x * vecDir.x;
+		flDot = fabs( flDot );
 
 		if ( flDot > SPHERE_SOLID )
 			vecColors[i] = vecColor1;
