@@ -17,8 +17,8 @@
 
 bool EV_IsInPVS( cl_entity_t *pEntity );
 
-int g_iFlameModel;		// name ours
-int g_iLightningModel;	// name ours
+static int g_iFlameModel;		// name ours
+static int g_iLightningModel;	// name ours
 
 //=========================================================
 // One flame sprite rising from vecOrigin

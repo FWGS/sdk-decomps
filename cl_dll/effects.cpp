@@ -22,7 +22,7 @@ bool EV_IsInPVS( cl_entity_t *pEntity );
 
 float g_flGravity;	// sv_gravity, from HUD_TempEntUpdate
 
-Vector g_vecParticleZero( 0, 0, 0 );
+static Vector g_vecParticleZero( 0, 0, 0 );
 
 CParticleStruct g_ParticleSystems;
 
@@ -37,7 +37,7 @@ CParticleSys::~CParticleSys()
 	m_pNext = NULL;
 }
 
-Vector g_vecParticleForward, g_vecParticleRight, g_vecParticleUp;
+static Vector g_vecParticleForward, g_vecParticleRight, g_vecParticleUp;
 
 //=========================================================
 // Draw the particles as camera-facing quads, then the
