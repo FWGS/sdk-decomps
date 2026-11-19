@@ -136,7 +136,7 @@ void CRandomScis :: DeathNotice( entvars_t *pevChild )
 
 
 // name ours: the next entity of the entity list after index iIndex
-static CBaseEntity *FindNextEntity( int iIndex )
+CBaseEntity *FindNextEntity( int iIndex )
 {
 	for ( int i = iIndex + 1; i < gpGlobals->maxEntities; i++ )
 	{
