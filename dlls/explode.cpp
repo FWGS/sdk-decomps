@@ -39,36 +39,52 @@ LINK_ENTITY_TO_CLASS( spark_shower, CShower );
 
 void CShower::Spawn( void )
 {
-	pev->velocity = RANDOM_FLOAT( 200, 300 ) * pev->angles;
-	pev->velocity.x += RANDOM_FLOAT(-100.f,100.f);
-	pev->velocity.y += RANDOM_FLOAT(-100.f,100.f);
+	pev->velocity = RANDOM_FLOAT( 150, 250 ) * pev->angles;
+	pev->velocity.x += RANDOM_FLOAT(-330.f,450.f);
+	pev->velocity.y += RANDOM_FLOAT(-40.f,560.f);
 	if ( pev->velocity.z >= 0 )
-		pev->velocity.z += 200;
+		pev->velocity.z += 250;
 	else
-		pev->velocity.z -= 200;
-	pev->movetype = MOVETYPE_BOUNCE;
-	pev->gravity = 0.5;
+		pev->velocity.z -= 250;
+	pev->movetype = MOVETYPE_BOUNCEMISSILE;
+	pev->effects |= EF_MUZZLEFLASH | EF_DIMLIGHT;
+	pev->gravity = 0.1;
 	SetNextThink( 0.1 );
 	pev->solid = SOLID_NOT;
-	SET_MODEL( edict(), "models/grenade.mdl");	// Need a model, just use the grenade, we don't draw it anyway
+	SET_MODEL( edict(), "models/shrapnel.mdl");
 	UTIL_SetSize(pev, g_vecZero, g_vecZero );
-	pev->effects |= EF_NODRAW;
-	pev->speed = RANDOM_FLOAT( 0.5, 1.5 );
+	pev->effects |= EF_DIMLIGHT;
+	pev->speed = RANDOM_FLOAT( 1.1, 4.5 );
 
 	pev->angles = g_vecZero;
+	pev->effects |= EF_MUZZLEFLASH | EF_DIMLIGHT;
 }
 
 
 void CShower::Think( void )
 {
 	UTIL_Sparks( pev->origin );
+	UTIL_Sparks( pev->origin );
+	UTIL_Sparks( pev->origin );
 
-	pev->speed -= 0.1;
+	pev->speed -= 0.6;
 	if ( pev->speed > 0 )
 		SetNextThink( 0.1 );
 	else
 		UTIL_Remove( this );
 	pev->flags &= ~FL_ONGROUND;
+
+	// leave a burning piece of wreckage behind
+	CBaseEntity *pWreck = Create( "cycler_wreckage", pev->origin, pev->angles, NULL );
+	UTIL_SetSize( pWreck->pev, Vector( -3, -3, -16 ), Vector( 3, 3, -16 ) );
+	pWreck->pev->frame = pev->frame = 5;
+	pWreck->pev->sequence = pev->sequence;
+	pWreck->pev->framerate = 0.4;
+	pWreck->pev->dmgtime = gpGlobals->time + 0.4;
+	pev->effects |= EF_DIMLIGHT;
+
+	UTIL_Sparks( pev->origin );
+	UTIL_Sparks( pev->origin );
 }
 
 void CShower::Touch( CBaseEntity *pOther )
@@ -121,7 +137,8 @@ void CEnvExplosion::KeyValue( KeyValueData *pkvd )
 void CEnvExplosion::Spawn( void )
 { 
 	pev->solid = SOLID_NOT;
-	pev->effects = EF_NODRAW;
+	pev->effects = EF_DIMLIGHT;
+	pev->effects |= EF_DIMLIGHT;
 
 	pev->movetype = MOVETYPE_NONE;
 	/*
@@ -195,6 +212,7 @@ void CEnvExplosion::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 	// draw fireball
 	if ( !( pev->spawnflags & SF_ENVEXPLOSION_NOFIREBALL ) )
 	{
+		pev->effects |= EF_DIMLIGHT;
 		MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
 			WRITE_BYTE( TE_EXPLOSION);
 			WRITE_COORD( pev->origin.x );
@@ -202,12 +220,13 @@ void CEnvExplosion::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 			WRITE_COORD( pev->origin.z );
 			WRITE_SHORT( g_sModelIndexFireball );
 			WRITE_BYTE( (BYTE)m_spriteScale ); // scale * 10
-			WRITE_BYTE( 15  ); // framerate
+			WRITE_BYTE( 38  ); // framerate
 			WRITE_BYTE( TE_EXPLFLAG_NONE );
 		MESSAGE_END();
 	}
 	else
 	{
+		pev->effects |= EF_DIMLIGHT;
 		MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pev->origin );
 			WRITE_BYTE( TE_EXPLOSION);
 			WRITE_COORD( pev->origin.x );
@@ -215,7 +234,7 @@ void CEnvExplosion::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 			WRITE_COORD( pev->origin.z );
 			WRITE_SHORT( g_sModelIndexFireball );
 			WRITE_BYTE( 0 ); // no sprite
-			WRITE_BYTE( 15  ); // framerate
+			WRITE_BYTE( 38  ); // framerate
 			WRITE_BYTE( TE_EXPLFLAG_NONE );
 		MESSAGE_END();
 	}
@@ -223,16 +242,16 @@ void CEnvExplosion::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 	// do damage
 	if ( !( pev->spawnflags & SF_ENVEXPLOSION_NODAMAGE ) )
 	{
-		RadiusDamage ( pev, pev, m_iMagnitude, CLASS_NONE, DMG_BLAST );
+		RadiusDamage ( pev, pev, m_iMagnitude, CLASS_NONE, DMG_ALWAYSGIB );
 	}
 
 	SetThink(&CEnvExplosion:: Smoke );
-	SetNextThink( 0.3 );
+	SetNextThink( 0.01 );
 
 	// draw sparks
 	if ( !( pev->spawnflags & SF_ENVEXPLOSION_NOSPARKS ) )
 	{
-		int sparkCount = RANDOM_LONG(0,3);
+		int sparkCount = RANDOM_LONG(1,5);
 
 		for ( int i = 0; i < sparkCount; i++ )
 		{
@@ -252,7 +271,7 @@ void CEnvExplosion::Smoke( void )
 			WRITE_COORD( pev->origin.z );
 			WRITE_SHORT( g_sModelIndexSmoke );
 			WRITE_BYTE( (BYTE)m_spriteScale ); // scale * 10
-			WRITE_BYTE( 12  ); // framerate
+			WRITE_BYTE( 10  ); // framerate
 		MESSAGE_END();
 	}
 	
