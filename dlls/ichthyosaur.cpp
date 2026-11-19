@@ -484,7 +484,7 @@ void CIchthyosaur :: Spawn()
 
 	pev->solid			= SOLID_BBOX;
 	pev->movetype		= MOVETYPE_FLY;
-	m_bloodColor		= BLOOD_COLOR_GREEN;
+	m_bloodColor		= BLOOD_COLOR_RED;
 	if (pev->health == 0)
 		pev->health			= gSkillData.ichthyosaurHealth;
 	pev->view_ofs		= Vector ( 0, 0, 16 );

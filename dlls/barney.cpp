@@ -663,13 +663,13 @@ void CBarney::TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir
 	{
 	case HITGROUP_CHEST:
 	case HITGROUP_STOMACH:
-		if (bitsDamageType & (DMG_BULLET | DMG_SLASH | DMG_BLAST))
+		if (bitsDamageType & (DMG_SLASH | DMG_BLAST | DMG_CLUB))
 		{
 			flDamage = flDamage / 2;
 		}
 		break;
 	case 10:
-		if (bitsDamageType & (DMG_BULLET | DMG_SLASH | DMG_CLUB))
+		if (bitsDamageType & (DMG_SLASH | DMG_CLUB))
 		{
 			flDamage -= 20;
 			if (flDamage <= 0)

@@ -417,7 +417,7 @@ void CWreckage::Spawn( void )
 	pev->effects		= 0;
 
 	pev->frame			= 0;
-	SetNextThink( 0.1 );
+	SetNextThink( 0 );
 
 	if (pev->model)
 	{
@@ -438,7 +438,7 @@ void CWreckage::Precache( )
 void CWreckage::Think( void )
 {
 	StudioFrameAdvance( );
-	SetNextThink( 0.2 );
+	SetNextThink( 0 );
 
 	if (pev->dmgtime)
 	{
@@ -465,7 +465,7 @@ void CWreckage::Think( void )
 		WRITE_COORD( VecSrc.y );
 		WRITE_COORD( VecSrc.z );
 		WRITE_SHORT( g_sModelIndexSmoke );
-		WRITE_BYTE( RANDOM_LONG(0,49) + 50 ); // scale * 10
-		WRITE_BYTE( RANDOM_LONG(0, 3) + 8  ); // framerate
+		WRITE_BYTE( RANDOM_LONG(0,5) + 5 ); // scale * 10
+		WRITE_BYTE( RANDOM_LONG(0, 12) + 22  ); // framerate
 	MESSAGE_END();
 }

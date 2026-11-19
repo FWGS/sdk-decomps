@@ -153,47 +153,47 @@ const char *CAGrunt::pAttackHitSounds[] =
 
 const char *CAGrunt::pAttackMissSounds[] = 
 {
-	"zombie/claw_miss1.wav",
-	"zombie/claw_miss2.wav",
+	"warrior/wr_strike2.wav",
+	"warrior/wr_strike2.wav",
 };
 
 const char *CAGrunt::pAttackSounds[] =
 {
-	"agrunt/ag_attack1.wav",
-	"agrunt/ag_attack2.wav",
-	"agrunt/ag_attack3.wav",
+	"warrior/wr_attack.wav",
+	"warrior/wr_attack2.wav",
+	"warrior/wr_attack3.wav",
 };
 
 const char *CAGrunt::pDieSounds[] =
 {
-	"agrunt/ag_die1.wav",
-	"agrunt/ag_die4.wav",
-	"agrunt/ag_die5.wav",
+	"warrior/wr_die.wav",
+	"warrior/wr_die2.wav",
+	"warrior/wr_die3.wav",
 };
 
 const char *CAGrunt::pPainSounds[] =
 {
-	"agrunt/ag_pain1.wav",
-	"agrunt/ag_pain2.wav",
-	"agrunt/ag_pain3.wav",
-	"agrunt/ag_pain4.wav",
-	"agrunt/ag_pain5.wav",
+	"warrior/wr_pain1.wav",
+	"warrior/wr_pain2.wav",
+	"warrior/wr_pain3.wav",
+	"warrior/wr_pain1.wav",
+	"warrior/wr_pain2.wav",
 };
 
 const char *CAGrunt::pIdleSounds[] =
 {
-	"agrunt/ag_idle1.wav",
-	"agrunt/ag_idle2.wav",
-	"agrunt/ag_idle3.wav",
-	"agrunt/ag_idle4.wav",
+	"warrior/null.wav",
+	"warrior/null.wav",
+	"warrior/null.wav",
+	"warrior/null.wav",
 };
 
 const char *CAGrunt::pAlertSounds[] =
 {
-	"agrunt/ag_alert1.wav",
-	"agrunt/ag_alert3.wav",
-	"agrunt/ag_alert4.wav",
-	"agrunt/ag_alert5.wav",
+	"warrior/wr_allert1.wav",
+	"warrior/wr_allert2.wav",
+	"warrior/wr_allert3.wav",
+	"warrior/wr_allert1.wav",
 };
 
 //=========================================================
@@ -498,16 +498,16 @@ void CAGrunt :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		switch (RANDOM_LONG(0,1))
 		{
 		// left foot
-		case 0:	EMIT_SOUND_DYN ( ENT(pev), CHAN_BODY, "player/pl_ladder2.wav", 1, ATTN_NORM, 0, 70 );	break;
-		case 1:	EMIT_SOUND_DYN ( ENT(pev), CHAN_BODY, "player/pl_ladder4.wav", 1, ATTN_NORM, 0, 70 );	break;
+		case 0:	EMIT_SOUND_DYN ( ENT(pev), CHAN_BODY, "warrior/wr_step1.wav", 1, ATTN_NORM, 0, 70 );	break;
+		case 1:	EMIT_SOUND_DYN ( ENT(pev), CHAN_BODY, "warrior/wr_step2.wav", 1, ATTN_NORM, 0, 70 );	break;
 		}
 		break;
 	case AGRUNT_AE_RIGHT_FOOT:
 		// right foot
 		switch (RANDOM_LONG(0,1))
 		{
-		case 0:	EMIT_SOUND_DYN ( ENT(pev), CHAN_BODY, "player/pl_ladder1.wav", 1, ATTN_NORM, 0, 70 );	break;
-		case 1:	EMIT_SOUND_DYN ( ENT(pev), CHAN_BODY, "player/pl_ladder3.wav", 1, ATTN_NORM, 0 ,70);	break;
+		case 0:	EMIT_SOUND_DYN ( ENT(pev), CHAN_BODY, "warrior/wr_step3.wav", 1, ATTN_NORM, 0, 70 );	break;
+		case 1:	EMIT_SOUND_DYN ( ENT(pev), CHAN_BODY, "warrior/wr_step4.wav", 1, ATTN_NORM, 0 ,70);	break;
 		}
 		break;
 

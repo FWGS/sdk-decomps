@@ -208,13 +208,7 @@ Schedule_t	slStopFollowing[] =
 
 Task_t	tlHeal[] =
 {
-	{ TASK_MOVE_TO_TARGET_RANGE,(float)50		},	// Move within 60 of target ent (client)
-	{ TASK_SET_FAIL_SCHEDULE,	(float)SCHED_TARGET_CHASE },	// If you fail, catch up with that guy! (change this to put syringe away and then chase)
-	{ TASK_FACE_IDEAL,			(float)0		},
-	{ TASK_SAY_HEAL,			(float)0		},
-	{ TASK_PLAY_SEQUENCE_FACE_TARGET,		(float)ACT_ARM	},			// Whip out the needle
-	{ TASK_HEAL,				(float)0	},	// Put it in the player
-	{ TASK_PLAY_SEQUENCE_FACE_TARGET,		(float)ACT_DISARM	},			// Put away the needle
+	{ TASK_GET_PATH_TO_LASTPOSITION,	(float)0	},	// sic: all that is left of the heal schedule
 };
 
 Schedule_t	slHeal[] =
@@ -428,7 +422,7 @@ void CScientist::DeclineFollowing( void )
 {
 	Talk( 10 );
 	m_hTalkTarget = m_hEnemy;
-	PlaySentence( m_szGrp[TLK_DECLINE], 2, VOL_NORM, ATTN_NORM ); //LRC
+	PlaySentence( "SC_POK", 2, VOL_NORM, ATTN_NORM );
 }
 
 
@@ -588,7 +582,7 @@ void CScientist :: RunTask( Task_t *pTask )
 //=========================================================
 int	CScientist :: Classify ( void )
 {
-	return m_iClass?m_iClass:CLASS_HUMAN_PASSIVE;
+	return	CLASS_HUMAN_PASSIVE;
 }
 
 
@@ -658,17 +652,13 @@ void CScientist :: Spawn( void )
 {
 	Precache( );
 
-	if (pev->model)
-		SET_MODEL(ENT(pev), STRING(pev->model)); //LRC
-	else
-		SET_MODEL(ENT(pev), "models/scientist.mdl");
+	SET_MODEL(ENT(pev), "models/scientist.mdl");
 	UTIL_SetSize(pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX);
 
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
 	m_bloodColor		= BLOOD_COLOR_RED;
-	if (pev->health == 0)
-		pev->health			= gSkillData.scientistHealth;
+	pev->health			= gSkillData.scientistHealth;
 	pev->view_ofs		= Vector ( 0, 0, 50 );// position of the eyes relative to monster's origin.
 	m_flFieldOfView		= VIEW_FIELD_WIDE; // NOTE: we need a wide field of view so scientists will notice player and say hello
 	m_MonsterState		= MONSTERSTATE_NONE;
@@ -698,10 +688,7 @@ void CScientist :: Spawn( void )
 //=========================================================
 void CScientist :: Precache( void )
 {
-	if (pev->model)
-		PRECACHE_MODEL((char*)STRING(pev->model)); //LRC
-	else
-		PRECACHE_MODEL("models/scientist.mdl");
+	PRECACHE_MODEL("models/scientist.mdl");
 	PRECACHE_SOUND("scientist/sci_pain1.wav");
 	PRECACHE_SOUND("scientist/sci_pain2.wav");
 	PRECACHE_SOUND("scientist/sci_pain3.wav");
@@ -725,44 +712,32 @@ void CScientist :: TalkInit()
 
 	m_szFriends[0] = "monster_scientist";
 	m_szFriends[1] = "monster_sitting_scientist";
-	m_szFriends[2] = "monster_barney";
+	m_szFriends[2] = "monster_scientist";
+	m_szFriends[3] = "monster_human_grunt"; // sic: one past the end of m_szFriends
 
 	// scientists speach group names (group names are in sentences.txt)
 
-	if (!m_iszSpeakAs)
-	{
-		m_szGrp[TLK_ANSWER]  =	"SC_ANSWER";
-		m_szGrp[TLK_QUESTION] =	"SC_QUESTION";
-		m_szGrp[TLK_IDLE] =		"SC_IDLE";
-		m_szGrp[TLK_STARE] =	"SC_STARE";
-		if (pev->spawnflags & SF_MONSTER_PREDISASTER)
-			m_szGrp[TLK_USE] =	"SC_PFOLLOW";
-		else
-			m_szGrp[TLK_USE] =	"SC_OK";
-		if (pev->spawnflags & SF_MONSTER_PREDISASTER)
-			m_szGrp[TLK_UNUSE] = "SC_PWAIT";
-		else
-			m_szGrp[TLK_UNUSE] = "SC_WAIT";
-		if (pev->spawnflags & SF_MONSTER_PREDISASTER)
-			m_szGrp[TLK_DECLINE] =	"SC_POK";
-		else
-			m_szGrp[TLK_DECLINE] =	"SC_NOTOK";
-		m_szGrp[TLK_STOP] =		"SC_STOP";
-		m_szGrp[TLK_NOSHOOT] =	"SC_SCARED";
-		m_szGrp[TLK_HELLO] =	"SC_HELLO";
+	m_szGrp[TLK_ANSWER]  =	"SC_ANSWER";
+	m_szGrp[TLK_QUESTION] =	"SC_QUESTION";
+	m_szGrp[TLK_IDLE] =		"SC_IDLE";
+	m_szGrp[TLK_STARE] =	"SC_STARE";
+	m_szGrp[TLK_USE] =		"SC_OK";
+	m_szGrp[TLK_UNUSE] =	"SC_WAIT";
+	m_szGrp[TLK_STOP] =		"SC_STOP";
+	m_szGrp[TLK_NOSHOOT] =	"SC_SCARED";
+	m_szGrp[TLK_HELLO] =	"SC_HELLO";
 
-		m_szGrp[TLK_PLHURT1] =	"!SC_CUREA";
-		m_szGrp[TLK_PLHURT2] =	"!SC_CUREB"; 
-		m_szGrp[TLK_PLHURT3] =	"!SC_CUREC";
+	m_szGrp[TLK_PLHURT1] =	"!SC_CUREA";
+	m_szGrp[TLK_PLHURT2] =	"!SC_CUREB";
+	m_szGrp[TLK_PLHURT3] =	"!SC_CUREC";
 
-		m_szGrp[TLK_PHELLO] =	"SC_PHELLO";
-		m_szGrp[TLK_PIDLE] =	"SC_PIDLE";
-		m_szGrp[TLK_PQUESTION] = "SC_PQUEST";
-		m_szGrp[TLK_SMELL] =	"SC_SMELL";
-	
-		m_szGrp[TLK_WOUND] =	"SC_WOUND";
-		m_szGrp[TLK_MORTAL] =	"SC_MORTAL";
-	}
+	m_szGrp[TLK_PHELLO] =	"SC_PHELLO";
+	m_szGrp[TLK_PIDLE] =	"SC_PIDLE";
+	m_szGrp[TLK_PQUESTION] = "SC_PQUEST";
+	m_szGrp[TLK_SMELL] =	"SC_SMELL";
+
+	m_szGrp[TLK_WOUND] =	"SC_WOUND";
+	m_szGrp[TLK_MORTAL] =	"SC_MORTAL";
 
 	// get voice for head
 	switch (pev->body % 3)
@@ -1098,7 +1073,7 @@ void CScientist::Heal( void )
 		return;
 
 	Vector target = m_hTargetEnt->pev->origin - pev->origin;
-	if ( target.Length() > 100 )
+	if ( target.Length() > 50 )
 		return;
 
 	m_hTargetEnt->TakeHealth( gSkillData.scientistHeal, DMG_GENERIC );
@@ -1231,14 +1206,8 @@ SITTING_ANIM_sitting3
 //
 void CSittingScientist :: Spawn( )
 {
-	if (pev->model)
-		PRECACHE_MODEL((char*)STRING(pev->model)); //LRC
-	else
-		PRECACHE_MODEL("models/scientist.mdl");
-	if (pev->model)
-		SET_MODEL(ENT(pev), STRING(pev->model)); //LRC
-	else
-		SET_MODEL(ENT(pev), "models/scientist.mdl");
+	PRECACHE_MODEL("models/scientist.mdl");
+	SET_MODEL(ENT(pev), "models/scientist.mdl");
 	Precache();
 	InitBoneControllers();
 
@@ -1247,15 +1216,14 @@ void CSittingScientist :: Spawn( )
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
 	pev->effects		= 0;
-	pev->health			= 50;
-	
+	pev->health			= 110;
+
 	m_bloodColor = BLOOD_COLOR_RED;
 	m_flFieldOfView		= VIEW_FIELD_WIDE; // indicates the width of this monster's forward view cone ( as a dotproduct result )
 
 	m_afCapability		= bits_CAP_HEAR | bits_CAP_TURN_HEAD;
 
-	if (!FBitSet(pev->spawnflags, SF_SITTINGSCI_POSTDISASTER)) //LRC- allow a sitter to be postdisaster.
-		SetBits(pev->spawnflags, SF_MONSTER_PREDISASTER); // predisaster only!
+	SetBits(pev->spawnflags, SF_MONSTER_PREDISASTER); // predisaster only!
 
 	if ( pev->body == -1 )
 	{// -1 chooses a random head
@@ -1270,7 +1238,7 @@ void CSittingScientist :: Spawn( )
 	ResetSequenceInfo( );
 	
 	SetThink(&CSittingScientist ::SittingThink);
-	SetNextThink( 0.1 );
+	pev->nextthink = gpGlobals->time + 0.1;
 
 	DROP_TO_FLOOR ( ENT(pev) );
 }
@@ -1286,7 +1254,7 @@ void CSittingScientist :: Precache( void )
 //=========================================================
 int	CSittingScientist :: Classify ( void )
 {
-	return m_iClass?m_iClass:CLASS_HUMAN_PASSIVE;
+	return	CLASS_HUMAN_PASSIVE;
 }
 
 
@@ -1397,7 +1365,7 @@ void CSittingScientist :: SittingThink( void )
 		pev->frame = 0;
 		SetBoneController( 0, m_headTurn );
 	}
-	SetNextThink( 0.1 );
+	pev->nextthink = gpGlobals->time + 0.1;
 }
 
 // prepare sitting scientist to answer a question
