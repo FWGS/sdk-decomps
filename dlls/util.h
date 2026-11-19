@@ -287,6 +287,7 @@ extern void			UTIL_DecalTrace( TraceResult *pTrace, int decalNumber );
 extern void			UTIL_PlayerDecalTrace( TraceResult *pTrace, int playernum, int decalNumber, BOOL bIsCustom );
 extern void			UTIL_GunshotDecalTrace( TraceResult *pTrace, int decalNumber );
 extern void			UTIL_Sparks( const Vector &position );
+extern void			UTIL_ExplosionSprite( const Vector &position );	// name ours
 extern void			UTIL_Ricochet( const Vector &position, float scale );
 extern void			UTIL_StringToVector( float *pVector, const char *pString );
 extern void			UTIL_StringToRandomVector( float *pVector, const char *pString ); //LRC
