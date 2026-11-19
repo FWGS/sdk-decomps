@@ -946,6 +946,26 @@ void CBeamCharge::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE u
 }
 
 
+// sic: an unused inline function, a stand-in for text retail's beams.cpp had
+// and ours lacks here (11 to 13 statements fit; with the one before
+// CBeamTurret::KeyValue it puts CBeam's inline virtuals where retail emits
+// them in beams.obj)
+inline void sic_il_beams( int *p )
+{
+	p[0] = 0;
+	p[1] = 0;
+	p[2] = 0;
+	p[3] = 0;
+	p[4] = 0;
+	p[5] = 0;
+	p[6] = 0;
+	p[7] = 0;
+	p[8] = 0;
+	p[9] = 0;
+	p[10] = 0;
+	p[11] = 0;
+}
+
 void CBeamCharge::KeyValue( KeyValueData *pkvd )
 {
 	if (FStrEq(pkvd->szKeyName, "beam_texture"))
@@ -1100,6 +1120,23 @@ void CBeamTurret::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE u
 	}
 }
 
+
+// sic: an unused inline function, a stand-in for text retail's beams.cpp had
+// and ours lacks here (4 to 16 statements fit, with the one before
+// CBeamCharge::KeyValue)
+inline void sic_il_beams2( int *p )
+{
+	p[0] = 0;
+	p[1] = 0;
+	p[2] = 0;
+	p[3] = 0;
+	p[4] = 0;
+	p[5] = 0;
+	p[6] = 0;
+	p[7] = 0;
+	p[8] = 0;
+	p[9] = 0;
+}
 
 void CBeamTurret::KeyValue( KeyValueData *pkvd )
 {
