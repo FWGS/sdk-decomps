@@ -297,8 +297,7 @@ void CEgon::IonCannon( void )
 
 		if ( m_hIonTargets[i] )
 		{
-			Vector vecTarget = m_hIonTargets[i]->pev->origin + m_vecIonTargetOfs[i];
-			Vector vecToTarget = (vecTarget - vecSrc).Normalize();
+			Vector vecToTarget = (m_hIonTargets[i]->pev->origin + m_vecIonTargetOfs[i] - vecSrc).Normalize();
 
 			if ( DotProduct( vecToTarget, gpGlobals->v_forward ) < 0 )
 				m_hIonTargets[i] = NULL;	// behind the player: let go
@@ -330,7 +329,7 @@ void CEgon::IonCannon( void )
 			{
 				m_hIonTargets[i] = pEntity;
 				m_vecIonTargetOfs[i] = tr.vecEndPos - pEntity->pev->origin;
-				Vector vecUnused, vecUnused2;	// sic: unused; their constructor calls keep the offset's return copy out of line, as retail
+				Vector vecUnused, vecUnused2, vecUnused3, vecUnused4;	// sic: unused; four or five keep the offset's return copy out of line and the x87 code as retail (two: other inlining; three or six: other x87 code)
 
 				ClearMultiDamage();
 				pEntity->TraceAttack( m_pPlayer->pev, gSkillData.plrDmgEgonNarrow, vecDir.Normalize(), &tr, DMG_SHOCK | DMG_NEVERGIB );

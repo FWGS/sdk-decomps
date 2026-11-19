@@ -2177,11 +2177,21 @@ void CTriggerTeleport :: TeleportTouch( CBaseEntity *pOther )
 	if (!UTIL_IsMasterTriggered(m_sMaster, pOther))
 		return;
  	
-	if ( !( pev->spawnflags & SF_TRIGGER_ALLOWMONSTERS ) && FBitSet( pOther->pev->flags, FL_MONSTER ) )
-		return;	// no monsters allowed!
+	if ( !( pev->spawnflags & SF_TRIGGER_ALLOWMONSTERS ) )
+	{// no monsters allowed!
+		if ( FBitSet( pOther->pev->flags, FL_MONSTER ) )
+		{
+			return;
+		}
+	}
 
-	if ( HasSpawnFlag( SF_TRIGGER_NOCLIENTS ) && pOther->IsPlayer() )
-		return;	// no clients allowed
+	if ( HasSpawnFlag( SF_TRIGGER_NOCLIENTS ) )
+	{// no clients allowed
+		if ( pOther->IsPlayer() )
+		{
+			return;
+		}
+	}
 	
 	CBaseEntity *pTarget = UTIL_RandomTargetname( STRING(pev->target) );
 	if ( !pTarget )
@@ -2202,7 +2212,9 @@ void CTriggerTeleport :: TeleportTouch( CBaseEntity *pOther )
 				pOther->pev->v_angle = vecAngles + pOther->pev->v_angle;
 			}
 			else
+			{
 				pOther->pev->angles = vecAngles + pOther->pev->angles;
+			}
 
 			Vector vecDir = vecAngles + UTIL_VecToAngles( pOther->pev->velocity );
 			UTIL_MakeAimVectors( vecDir );
@@ -2212,8 +2224,8 @@ void CTriggerTeleport :: TeleportTouch( CBaseEntity *pOther )
 			Vector vecFromLandmark = pOther->pev->origin - pLandmark->pev->origin;
 			vecDir = vecAngles + UTIL_VecToAngles( vecOffset );	// sic: the direction of vecOffset, not of vecFromLandmark
 			UTIL_MakeAimVectors( vecDir );
-			vecFromLandmark = gpGlobals->v_forward * vecFromLandmark.Length() - vecFromLandmark;
-			vecOffset = vecOffset + vecFromLandmark;
+			Vector vecRotated = gpGlobals->v_forward * vecFromLandmark.Length() - vecFromLandmark;
+			vecOffset = vecOffset + vecRotated;
 		}
 
 		vecOffset.z++;
@@ -2243,14 +2255,18 @@ void CTriggerTeleport :: TeleportTouch( CBaseEntity *pOther )
 			pOther->pev->v_angle = pTarget->pev->angles;
 		}
 		else
+		{
 			pOther->pev->angles = pTarget->pev->angles;
+		}
 
 		pOther->pev->fixangle = TRUE;
 		pOther->pev->velocity = pOther->pev->basevelocity = g_vecZero;
 	}
 
 	if ( !FStringNull( pev->netname ) )
+	{
 		FireTargets( STRING(pev->netname), pOther, this, USE_TOGGLE, 0 );
+	}
 }
 
 
