@@ -15,10 +15,6 @@
 //
 // $NoKeywords: $
 //=============================================================================
-// sic: stand-ins for text retail's file had more: VC6 emits the type information in an order that
-// follows its heap layout; with this unused macro and the one after the includes the types come out
-// in retail's order (each alone does not do it)
-#define VIEWPORT_SIC "........................................................................"
 #include<VGUI_Cursor.h>
 #include<VGUI_Frame.h>
 #include<VGUI_Label.h>
@@ -33,6 +29,10 @@
 #include<VGUI_TextPanel.h>
 #include<VGUI_LoweredBorder.h>
 #include<VGUI_LineBorder.h>
+// sic: stand-ins for text retail's file had more: VC6 emits the type information in an order that
+// follows its heap layout; with this unused macro and the one after the includes the types come out
+// in retail's order (each alone does not do it)
+#define VIEWPORT_SIC "............................................................"
 #include<VGUI_Scheme.h>
 #include<VGUI_Font.h>
 #include<VGUI_App.h>
@@ -58,7 +58,7 @@
 #include "vgui_ServerBrowser.h"
 #include "vgui_ScorePanel.h"
 // sic: see VIEWPORT_SIC
-#define VIEWPORT_SIC2 "........................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................"
+#define VIEWPORT_SIC2 "........................................................................................................................"
 
 extern int g_iVisibleMouse;
 class CCommandMenu;
@@ -89,8 +89,8 @@ int iNumberOfTeamColors = 5;
 int iTeamColors[5][3] =
 {
 	{ 255, 170, 0 },	// HL orange (default)
-	{ 125, 165, 210 },	// Blue
 	{ 200, 90, 70 },	// Red
+	{ 125, 165, 210 },	// Blue
 	{ 225, 205, 45 },	// Yellow
 	{ 145, 215, 140 },	// Green
 };

@@ -17,6 +17,9 @@
 //=============================================================================
 
 
+// sic: a stand-in for text retail's file had more: VC6 emits the type information in an order that
+// follows its heap layout, and with this unused macro CLabelHeader's comes before CTextImage2's
+#define SCOREPANEL_SIC "................"
 #include<VGUI_LineBorder.h>
 
 #include "hud.h"
