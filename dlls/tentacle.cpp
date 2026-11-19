@@ -58,7 +58,7 @@ public:
 	const char *GetKillDesc( void ) { return "a huge tentacle"; }
 	int GetBattlePower( void ) { return 15000; }
 	BOOL CanBeGrenaded( int fLauncher ) { return TRUE; }
-	BOOL IsGrenadeTarget( void ) { return TRUE; }
+	BOOL AllowsGrenades( void ) { return TRUE; }
 
 	void EXPORT Cycle( void );
 	void EXPORT CommandUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );

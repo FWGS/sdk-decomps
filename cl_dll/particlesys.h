@@ -51,16 +51,16 @@ public:
 	CParticleSys	*m_pPrev;
 };
 
-class CParticleSysManager	// name ours, and its members'
+class CParticleStruct
 {
 public:
-	CParticleSysManager();
-	~CParticleSysManager();
+	CParticleStruct();
+	~CParticleStruct();
 
-	void Remove( CParticleSys *pSystem );
-	void Clear( void );
+	void Delete( CParticleSys *pSystem );
+	void Reset( void );
 	CParticleSys *Create( int iEntity );
-	void Update( float flFrametime, float flTime );
+	void Think( float flFrametime, float flTime );
 	void Draw( void );
 	void Stop( int iEntity );
 
@@ -68,6 +68,6 @@ public:
 	CParticleSys	*m_pLast;
 };
 
-extern CParticleSysManager g_ParticleSystems;
+extern CParticleStruct g_ParticleSystems;
 
 #endif // PARTICLESYS_H

@@ -571,7 +571,6 @@ private:
 	int		m_iArmorType;		// 0 none, 1 "Armor", 2 "Shield"
 	int		m_iPower;			// battle power; 0 "???", below 0 not shown
 	int		m_iRelation;		// 0 "Friendly", 1 "Neutral", 2 "Target", 3 "Hostile"
-	int		m_iUnused2[6];		// no code uses them (CHud's layout gives the class 0x88 bytes)
 };
 
 //
@@ -652,6 +651,9 @@ public:
 	CHudStatusIcons m_StatusIcons;
 	CHudSpectator   m_Spectator;
 	CHudIdent		m_Ident;
+	Vector			m_vecUnused1;	// sic: names ours, no code uses them; they fill CHud's 24 bytes before
+	Vector			m_vecUnused2;	// m_scrinfo, and their constructors after m_Spectator's make VC6 call the
+								// vector constructor iterator for m_Spectator's m_vPlayerPos out of line
 
 	void Init( void );
 	void VidInit( void );
@@ -692,6 +694,11 @@ public:
 class TeamFortressViewport;
 
 extern CHud gHUD;
+
+// sic: a stand-in for declarations of the mod's headers that are not known. VC6 picks some
+// stack slots by the number of declarations a file has seen (an enum and its three values
+// count four): with it CMessageWindowPanel's and ScorePanel's constructors get retail's
+enum { HUD_SIC_1, HUD_SIC_2, HUD_SIC_3 };
 extern TeamFortressViewport *gViewPort;
 
 extern int g_iPlayerClass;

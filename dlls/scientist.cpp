@@ -130,7 +130,7 @@ public:
 		}
 	}
 	int GetBattlePower( void ) { return pev->max_health * 0.1; }
-	BOOL IsGrenadeTarget( void ) { return TRUE; }
+	BOOL AllowsGrenades( void ) { return TRUE; }
 	int TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType);
 	void TraceAttack( entvars_t *pevAttacker, float flDamage, Vector vecDir, TraceResult *ptr, int bitsDamageType);
 	virtual int FriendNumber( int arrayNumber );

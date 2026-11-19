@@ -1747,7 +1747,7 @@ LINK_ENTITY_TO_CLASS( info_shootpoint_grenade, CGrenadeShootpoint );
 
 void CGrenadeShootpoint :: SmokeTrail( short iEntIndex )
 {
-	if ( pev->rendercolor == Vector( 0, 0, 0 ) )
+	if ( pev->rendercolor == g_vecZero )
 		pev->rendercolor = Vector( 224, 224, 255 );
 
 	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
@@ -2722,7 +2722,7 @@ void CLaserProjector :: Think( void )
 		m_pSpot = CLaserSpot::CreateSpot();
 		if ( pev->scale > 0 )
 			m_pSpot->pev->scale = pev->scale;
-		if ( pev->rendercolor != Vector( 0, 0, 0 ) )
+		if ( pev->rendercolor != g_vecZero )
 			m_pSpot->pev->rendercolor = pev->rendercolor;
 	}
 

@@ -225,7 +225,7 @@ public:
 	const char *GetHitGroupDesc( int iHitGroup ) { if ( FlameIsOn() ) return ""; return HitGroupIn( iHitGroup ); }
 	int  HeatSignature( void ) { return 5; }
 	BOOL CanBeTeleported( void ) { return FALSE; }
-	BOOL IsGrenadeTarget( void ) { return TRUE; }
+	BOOL AllowsGrenades( void ) { return TRUE; }
 	int  GetBattlePower( void );
 
 	Schedule_t *GetScheduleOfType( int Type );
@@ -459,7 +459,7 @@ IMPLEMENT_CUSTOM_SCHEDULES( CGargantua, CBaseMonster );
 //=========================================================
 int CGargantua::GetBattlePower( void )
 {
-	return ( gSkillData.gargantuaDmgFire * 20 + gSkillData.gargantuaDmgStomp + gSkillData.gargantuaDmgSlash ) * ( pev->max_health * 0.5 );
+	return ( gSkillData.gargantuaDmgFire * 20 + gSkillData.gargantuaDmgSlash + gSkillData.gargantuaDmgStomp ) * ( pev->max_health * 0.5 );
 }
 
 
