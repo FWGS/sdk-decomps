@@ -182,6 +182,7 @@ float EV_HLDM_PlayTextureSound( int idx, pmtrace_t *ptr, float *vecSrc, float *v
 		rgsz[3] = "player/pl_tile4.wav";
 		cnt = 4;
 		break;
+#ifndef SIC1
 	case 'B':	// graves (materials.txt: RR_GRAVEFLOOR, RR_GRAVEWALL, RR_MAUSOLEUM1)
 		fvol = 1.0; fvolbar = 0.0;
 		rgsz[0] = "player/pl_grave1.wav";
@@ -190,6 +191,7 @@ float EV_HLDM_PlayTextureSound( int idx, pmtrace_t *ptr, float *vecSrc, float *v
 		rgsz[3] = "player/pl_grave4.wav";
 		cnt = 4;
 		break;
+#endif
 	case CHAR_TEX_SLOSH: fvol = 0.9; fvolbar = 0.0;
 		rgsz[0] = "player/pl_slosh1.wav";
 		rgsz[1] = "player/pl_slosh3.wav";
@@ -576,10 +578,18 @@ void EV_FireShotGunDouble( event_args_t *args )
 	{
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
+#ifdef SIC1
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( SHOTGUN_FIRE2, 2 );
+#else
 		gEngfuncs.pEventAPI->EV_WeaponAnimation( SHOTGUN_FIRE2, 5 );
+#endif
 		V_PunchAxis( 0, -25.0 );
 		gEngfuncs.pEventAPI->EV_PushPMStates();
+#ifdef SIC1
+		gEngfuncs.pEventAPI->EV_SetTraceHull( 2 );
+#else
 		gEngfuncs.pEventAPI->EV_SetTraceHull( 5 );	// sic: there is no hull 5
+#endif
 	}
 
 	for ( j = 0; j < 2; j++ )
@@ -632,7 +642,11 @@ void EV_FireShotGunSingle( event_args_t *args )
 	{
 		// Add muzzle flash to current weapon model
 		EV_MuzzleFlash();
+#ifdef SIC1
+		gEngfuncs.pEventAPI->EV_WeaponAnimation( SHOTGUN_FIRE, 2 );
+#else
 		gEngfuncs.pEventAPI->EV_WeaponAnimation( SHOTGUN_FIRE, 5 );
+#endif
 
 		V_PunchAxis( 0, -10.0 );
 	}
@@ -1155,7 +1169,11 @@ void EV_Crowbar( event_args_t *args )
 	VectorCopy( args->origin, origin );
 	
 	//Play Swing sound
+#ifdef SIC1
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/cbar_miss1.wav", 1, ATTN_NORM, 0, PITCH_NORM); 
+#else
 	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/fork_miss1.wav", 1, ATTN_NORM, 0, PITCH_NORM); 
+#endif
 
 	if ( EV_IsLocal( idx ) )
 	{
@@ -1228,8 +1246,13 @@ void EV_FireCrossbow2( event_args_t *args )
 
 	VectorMA( vecSrc, 8192, forward, vecEnd );
 
+#ifdef SIC1
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/xbow_fire1.wav", 1, ATTN_NORM, 0, 93 + gEngfuncs.pfnRandomLong(0,0xF) );
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_ITEM, "weapons/xbow_reload1.wav", gEngfuncs.pfnRandomFloat(0.95, 1.0), ATTN_NORM, 0, 93 + gEngfuncs.pfnRandomLong(0,0xF) );
+#else
 	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/flarefire1.wav", 1, ATTN_NORM, 0, 93 + gEngfuncs.pfnRandomLong(0,0xF) );
 	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_ITEM, "weapons/flarereload1.wav", gEngfuncs.pfnRandomFloat(0.95, 1.0), ATTN_NORM, 0, 93 + gEngfuncs.pfnRandomLong(0,0xF) );
+#endif
 
 	if ( EV_IsLocal( idx ) )
 	{
@@ -1258,15 +1281,25 @@ void EV_FireCrossbow2( event_args_t *args )
 			switch( gEngfuncs.pfnRandomLong(0,1) )
 			{
 			case 0:
+#ifdef SIC1
+				gEngfuncs.pEventAPI->EV_PlaySound( idx, tr.endpos, CHAN_BODY, "weapons/xbow_hitbod1.wav", 1, ATTN_NORM, 0, PITCH_NORM ); break;
+			case 1:
+				gEngfuncs.pEventAPI->EV_PlaySound( idx, tr.endpos, CHAN_BODY, "weapons/xbow_hitbod2.wav", 1, ATTN_NORM, 0, PITCH_NORM ); break;
+#else
 				gEngfuncs.pEventAPI->EV_PlaySound( idx, tr.endpos, CHAN_BODY, "weapons/flarehitbod1.wav", 1, ATTN_NORM, 0, PITCH_NORM ); break;
 			case 1:
 				gEngfuncs.pEventAPI->EV_PlaySound( idx, tr.endpos, CHAN_BODY, "weapons/flarehitbod2.wav", 1, ATTN_NORM, 0, PITCH_NORM ); break;
+#endif
 			}
 		}
 		//Stick to world but don't stick to glass, it might break and leave the bolt floating. It can still stick to other non-transparent breakables though.
 		else if ( pe->rendermode == kRenderNormal ) 
 		{
+#ifdef SIC1
+			gEngfuncs.pEventAPI->EV_PlaySound( 0, tr.endpos, CHAN_BODY, "weapons/xbow_hit1.wav", gEngfuncs.pfnRandomFloat(0.95, 1.0), ATTN_NORM, 0, PITCH_NORM );
+#else
 			gEngfuncs.pEventAPI->EV_PlaySound( 0, tr.endpos, CHAN_BODY, "weapons/flarehit1.wav", gEngfuncs.pfnRandomFloat(0.95, 1.0), ATTN_NORM, 0, PITCH_NORM );
+#endif
 		
 			//Not underwater, do some sparks...
 			if ( gEngfuncs.PM_PointContents( tr.endpos, NULL ) != CONTENTS_WATER)
@@ -1301,8 +1334,13 @@ void EV_FireCrossbow( event_args_t *args )
 	idx = args->entindex;
 	VectorCopy( args->origin, origin );
 	
+#ifdef SIC1
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/xbow_fire1.wav", 1, ATTN_NORM, 0, 93 + gEngfuncs.pfnRandomLong(0,0xF) );
+	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_ITEM, "weapons/xbow_reload1.wav", gEngfuncs.pfnRandomFloat(0.95, 1.0), ATTN_NORM, 0, 93 + gEngfuncs.pfnRandomLong(0,0xF) );
+#else
 	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/flarefire1.wav", 1, ATTN_NORM, 0, 93 + gEngfuncs.pfnRandomLong(0,0xF) );
 	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_ITEM, "weapons/flarereload1.wav", gEngfuncs.pfnRandomFloat(0.95, 1.0), ATTN_NORM, 0, 93 + gEngfuncs.pfnRandomLong(0,0xF) );
+#endif
 
 	//Only play the weapon anims if I shot it. 
 	if ( EV_IsLocal( idx ) )

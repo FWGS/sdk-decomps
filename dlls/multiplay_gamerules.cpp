@@ -137,7 +137,11 @@ void CHalfLifeMultiplay::RefreshSkillData( void )
 	gSkillData.suitchargerCapacity = 30;
 
 	// Crowbar whack
+#ifdef SIC1
+	gSkillData.plrDmgCrowbar = 25;
+#else
 	gSkillData.plrDmgFork = 25;
+#endif
 
 	// Glock Round
 	gSkillData.plrDmg9MM = 12;
@@ -146,7 +150,11 @@ void CHalfLifeMultiplay::RefreshSkillData( void )
 	gSkillData.plrDmg357 = 40;
 
 	// MP5 Round
+#ifdef SIC1
+	gSkillData.plrDmgMP5 = 12;
+#else
 	gSkillData.plrDmgMP18 = 12;
+#endif
 
 	// M203 grenade
 	gSkillData.plrDmgM203Grenade = 100;
@@ -155,7 +163,11 @@ void CHalfLifeMultiplay::RefreshSkillData( void )
 	gSkillData.plrDmgBuckshot = 20;// fewer pellets in deathmatch
 
 	// Crossbow
+#ifdef SIC1
+	gSkillData.plrDmgCrossbowClient = 20;
+#else
 	gSkillData.plrDmgFlareClient = 20;
+#endif
 
 	// RPG
 	gSkillData.plrDmgRPG = 120;
@@ -165,7 +177,11 @@ void CHalfLifeMultiplay::RefreshSkillData( void )
 	gSkillData.plrDmgEgonNarrow = 10;
 
 	// Hand Grendade
+#ifdef SIC1
+	gSkillData.plrDmgHandGrenade = 100;
+#else
 	gSkillData.plrDmgTNT = 100;
+#endif
 
 	// Satchel Charge
 	gSkillData.plrDmgSatchel = 120;
@@ -573,7 +589,11 @@ void CHalfLifeMultiplay :: PlayerSpawn( CBasePlayer *pPlayer )
 
 	if ( addDefault )
 	{
+#ifdef SIC1
+		pPlayer->GiveNamedItem( "weapon_crowbar" );
+#else
 		pPlayer->GiveNamedItem( "weapon_fork" );
+#endif
 		pPlayer->GiveNamedItem( "weapon_9mmhandgun" );
 		pPlayer->GiveAmmo( 68, "9mm", _9MM_MAX_CARRY );// 4 full reloads
 	}

@@ -29,7 +29,9 @@ struct skilldata_t
 	
 	float barneyHealth;
 
+#ifndef SIC1
 	float barneyzomHealth;			// name ours (sk_barneyzom_health)
+#endif
 
 	float bigmommaHealthFactor;		// Multiply each node's health by this
 	float bigmommaDmgSlash;			// melee attack damage
@@ -88,6 +90,7 @@ struct skilldata_t
 	float zombieDmgOneSlash;
 	float zombieDmgBothSlash;
 
+#ifndef SIC1
 	float crematorHealth;			// name ours (sk_cremator_health)
 	float crematorDmgOneSlash;		// name ours
 	float crematorDmgBothSlash;		// name ours
@@ -95,6 +98,7 @@ struct skilldata_t
 	float ghoulHealth;				// name ours (sk_ghoul_health)
 	float ghoulDmgOneSlash;			// name ours
 	float ghoulDmgBothSlash;		// name ours
+#endif
 
 	float turretHealth;
 	float miniturretHealth;
@@ -102,20 +106,37 @@ struct skilldata_t
 
 
 // Player Weapons
+#ifdef SIC1
+	float plrDmgCrowbar;
+#else
 	float plrDmgFork;				// name ours (sk_plr_fork, the crowbar's field)
+#endif
 	float plrDmg9MM;
 	float plrDmg357;
+#ifdef SIC1
+	float plrDmgMP5;
+#else
 	float plrDmgMP18;				// name ours (sk_plr_mp18_bullet, the MP5's field)
+#endif
 	float plrDmgM203Grenade;
 	float plrDmgBuckshot;
+#ifdef SIC1
+	float plrDmgCrossbowClient;
+	float plrDmgCrossbowMonster;
+#else
 	float plrDmgFlareClient;		// name ours (sk_plr_flare_client, the crossbow's field)
 	float plrDmgFlareMonster;		// name ours (sk_plr_flare_monster)
+#endif
 	float plrDmgRPG;
 	float plrDmgGauss;
 	float plrDmgEgonNarrow;
 	float plrDmgEgonWide;
 	float plrDmgHornet;
+#ifdef SIC1
+	float plrDmgHandGrenade;
+#else
 	float plrDmgTNT;				// name ours (sk_plr_tnt, the hand grenade's field)
+#endif
 	float plrDmgSatchel;
 	float plrDmgTripmine;
 	

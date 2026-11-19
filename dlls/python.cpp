@@ -46,7 +46,11 @@ int CPython::GetItemInfo(ItemInfo *p)
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = PYTHON_MAX_CLIP;
 	p->iFlags = 0;
+#ifdef SIC1
+	p->iSlot = 1;
+#else
 	p->iSlot = 4;
+#endif
 	p->iPosition = 1;
 	p->iId = m_iId = WEAPON_PYTHON;
 	p->iWeight = PYTHON_WEIGHT;
@@ -195,7 +199,11 @@ void CPython::PrimaryAttack()
 	Vector vecAiming = m_pPlayer->GetAutoaimVector( AUTOAIM_10DEGREES );
 
 	Vector vecDir;
+#ifdef SIC1
+	vecDir = m_pPlayer->FireBulletsPlayer( 1, vecSrc, vecAiming, VECTOR_CONE_1DEGREES, 8192, BULLET_PLAYER_357, 0, 0, m_pPlayer->pev, m_pPlayer->random_seed );
+#else
 	vecDir = m_pPlayer->FireBulletsPlayer( 1, vecSrc, vecAiming, VECTOR_CONE_3DEGREES, 8192, BULLET_PLAYER_357, 0, 0, m_pPlayer->pev, m_pPlayer->random_seed );
+#endif
 
     int flags;
 #if defined( CLIENT_WEAPONS )

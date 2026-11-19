@@ -26,14 +26,23 @@
 #define	CROWBAR_BODYHIT_VOLUME 128
 #define	CROWBAR_WALLHIT_VOLUME 512
 
+#ifdef SIC1
+LINK_ENTITY_TO_CLASS( weapon_crowbar, CCrowbar );
+#else
 LINK_ENTITY_TO_CLASS( weapon_fork, CCrowbar );
+#endif
 
 
 
 enum gauss_e {
 	CROWBAR_IDLE = 0,
+#ifdef SIC1
+	CROWBAR_DRAW,
+	CROWBAR_HOLSTER,
+#else
 	CROWBAR_HOLSTER,	// the fork model has these two the other way round
 	CROWBAR_DRAW,
+#endif
 	CROWBAR_ATTACK1HIT,
 	CROWBAR_ATTACK1MISS,
 	CROWBAR_ATTACK2MISS,
@@ -47,7 +56,11 @@ void CCrowbar::Spawn( )
 {
 	Precache( );
 	m_iId = WEAPON_CROWBAR;
+#ifdef SIC1
+	SET_MODEL(ENT(pev), "models/w_say.mdl");
+#else
 	SET_MODEL(ENT(pev), "models/w_fork.mdl");
+#endif
 	m_iClip = -1;
 
 	FallInit();// get ready to fall down.
@@ -56,15 +69,27 @@ void CCrowbar::Spawn( )
 
 void CCrowbar::Precache( void )
 {
+#ifdef SIC1
+	PRECACHE_MODEL("models/v_say.mdl");
+	PRECACHE_MODEL("models/w_say.mdl");
+	PRECACHE_MODEL("models/p_crowbar.mdl");
+	PRECACHE_SOUND("weapons/cbar_hit1.wav");
+	PRECACHE_SOUND("weapons/cbar_hit2.wav");
+#else
 	PRECACHE_MODEL("models/v_fork.mdl");
 	PRECACHE_MODEL("models/w_fork.mdl");
 	PRECACHE_MODEL("models/p_crowbar.mdl");
 	PRECACHE_SOUND("weapons/fork_hit1.wav");
 	PRECACHE_SOUND("weapons/fork_hit2.wav");
+#endif
 	PRECACHE_SOUND("weapons/cbar_hitbod1.wav");
 	PRECACHE_SOUND("weapons/cbar_hitbod2.wav");
 	PRECACHE_SOUND("weapons/cbar_hitbod3.wav");
+#ifdef SIC1
+	PRECACHE_SOUND("weapons/cbar_miss1.wav");
+#else
 	PRECACHE_SOUND("weapons/fork_miss1.wav");
+#endif
 
 	m_usCrowbar = PRECACHE_EVENT ( 1, "events/crowbar.sc" );
 }
@@ -88,7 +113,11 @@ int CCrowbar::GetItemInfo(ItemInfo *p)
 
 BOOL CCrowbar::Deploy( )
 {
+#ifdef SIC1
+	return DefaultDeploy( "models/v_say.mdl", "models/p_crowbar.mdl", CROWBAR_DRAW, "crowbar" );
+#else
 	return DefaultDeploy( "models/v_fork.mdl", "models/p_crowbar.mdl", CROWBAR_DRAW, "crowbar" );
+#endif
 }
 
 void CCrowbar::Holster( int skiplocal /* = 0 */ )
@@ -203,7 +232,11 @@ int CCrowbar::Swing( int fFirst )
 		if (fFirst)
 		{
 			// miss
+#ifdef SIC1
+			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.5;
+#else
 			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.9;
+#endif
 			
 			// player "shoot" animation
 			m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
@@ -235,12 +268,20 @@ int CCrowbar::Swing( int fFirst )
 		if ( (m_flNextPrimaryAttack + 1 < UTIL_WeaponTimeBase() ) || g_pGameRules->IsMultiplayer() )
 		{
 			// first swing does full damage
+#ifdef SIC1
+			pEntity->TraceAttack(m_pPlayer->pev, gSkillData.plrDmgCrowbar, gpGlobals->v_forward, &tr, DMG_CLUB ); 
+#else
 			pEntity->TraceAttack(m_pPlayer->pev, gSkillData.plrDmgFork, gpGlobals->v_forward, &tr, DMG_CLUB ); 
+#endif
 		}
 		else
 		{
 			// subsequent swings do half
+#ifdef SIC1
+			pEntity->TraceAttack(m_pPlayer->pev, gSkillData.plrDmgCrowbar / 2, gpGlobals->v_forward, &tr, DMG_CLUB ); 
+#else
 			pEntity->TraceAttack(m_pPlayer->pev, gSkillData.plrDmgFork / 2, gpGlobals->v_forward, &tr, DMG_CLUB ); 
+#endif
 		}	
 		ApplyMultiDamage( m_pPlayer->pev, m_pPlayer->pev );
 
@@ -265,7 +306,11 @@ int CCrowbar::Swing( int fFirst )
 				m_pPlayer->m_iWeaponVolume = CROWBAR_BODYHIT_VOLUME;
 				if ( !pEntity->IsAlive() )
 				{
+#ifdef SIC1
+					m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.2; //LRC: corrected half-life bug
+#else
 					m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.9; //LRC: corrected half-life bug
+#endif
 					return TRUE;
 				}
 				else
@@ -294,13 +339,25 @@ int CCrowbar::Swing( int fFirst )
 			switch( RANDOM_LONG(0,1) )
 			{
 			case 0:
+#ifdef SIC1
+				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/cbar_hit1.wav", fvolbar, ATTN_NORM, 0, 98 + RANDOM_LONG(0,3)); 
+#else
 				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/fork_hit1.wav", fvolbar, ATTN_NORM, 0, 98 + RANDOM_LONG(0,3)); 
+#endif
 				break;
 			case 1:
+#ifdef SIC1
+				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/cbar_hit2.wav", fvolbar, ATTN_NORM, 0, 98 + RANDOM_LONG(0,3)); 
+#else
 				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/fork_hit2.wav", fvolbar, ATTN_NORM, 0, 98 + RANDOM_LONG(0,3)); 
+#endif
 				break;
 			}
 
+#ifdef SIC1
+			// delay the decal a bit
+			m_trHit = tr;
+#else
 			// two puffs of dust; m_trHit is no longer set, so Smack has
 			// nothing to decal (sic)
 			MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, tr.vecEndPos );
@@ -322,14 +379,23 @@ int CCrowbar::Swing( int fFirst )
 				WRITE_BYTE( 2 ); // scale * 10
 				WRITE_BYTE( 55 ); // brightness
 			MESSAGE_END();
+#endif
 		}
 
 		m_pPlayer->m_iWeaponVolume = flVol * CROWBAR_WALLHIT_VOLUME;
 #endif
+#ifdef SIC1
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.2;
+#else
 		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.9;
+#endif
 		
 		SetThink(&CCrowbar:: Smack );
+#ifdef SIC1
+		SetNextThink( 0.2 );
+#else
 		SetNextThink( 0.9 );
+#endif
 
 		
 	}

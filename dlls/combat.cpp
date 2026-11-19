@@ -346,6 +346,7 @@ void CBaseMonster :: GibMonster( void )
 
 	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "common/bodysplat.wav", 1, ATTN_NORM);		
 
+#ifndef SIC1
 	// five clouds of blood
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_SPRITE );
@@ -396,13 +397,18 @@ void CBaseMonster :: GibMonster( void )
 		WRITE_BYTE( 3 ); // scale * 10
 		WRITE_BYTE( 255 ); // brightness
 	MESSAGE_END();
+#endif
 
 	if ( iszCustomGibs = HasCustomGibs() ) //LRC - monster_generic can have a custom gibset
 	{
 		if ( CVAR_GET_FLOAT("violence_hgibs") != 0 )
 		{
 			CGib::SpawnHeadGib( pev, STRING(iszCustomGibs) );
+#ifdef SIC1
+			CGib::SpawnRandomGibs( pev, 4, 1, STRING(iszCustomGibs) );
+#else
 			CGib::SpawnRandomGibs( pev, 10, 1, STRING(iszCustomGibs) );
+#endif
 		}
 		gibbed = TRUE;
 	}
@@ -412,7 +418,11 @@ void CBaseMonster :: GibMonster( void )
 		if ( CVAR_GET_FLOAT("violence_hgibs") != 0 )// Only the player will ever fail this test
 		{
 			CGib::SpawnHeadGib( pev );
+#ifdef SIC1
+			CGib::SpawnRandomGibs( pev, 4, 1 );	// throw some human gibs.
+#else
 			CGib::SpawnRandomGibs( pev, 10, 1 );	// throw some human gibs.
+#endif
 		}
 		gibbed = TRUE;
 	}
@@ -1685,7 +1695,11 @@ Vector CBaseEntity::FireBulletsPlayer ( ULONG cShots, Vector vecSrc, Vector vecD
 				break;
 
 			case BULLET_PLAYER_MP5:		
+#ifdef SIC1
+				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgMP5, vecDir, &tr, DMG_BULLET); 
+#else
 				pEntity->TraceAttack(pevAttacker, gSkillData.plrDmgMP18, vecDir, &tr, DMG_BULLET); 
+#endif
 				break;
 
 			case BULLET_PLAYER_BUCKSHOT:	

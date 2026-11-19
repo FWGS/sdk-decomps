@@ -47,6 +47,7 @@ DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for the initial blood
 DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for splattered blood
 DLL_GLOBAL	short	g_sModelIndexShock;// the explosions' shock ring (name ours)
+#ifndef SIC1
 // Survive in Catacombs 2's sprites (names ours)
 DLL_GLOBAL	short	g_sModelIndexWaterSplash;// the explosions' fireball under water
 DLL_GLOBAL	short	g_sModelIndexExpansion;
@@ -58,6 +59,7 @@ DLL_GLOBAL	short	g_sModelIndexZerog;
 DLL_GLOBAL	short	g_sModelIndexFireExplo;
 DLL_GLOBAL	short	g_sModelIndexSmallPuff;// the fork's wall hits
 DLL_GLOBAL	short	g_sModelIndexBloodCloud;// gibs' blood
+#endif
 
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
 AmmoInfo CBasePlayerItem::AmmoInfoArray[MAX_AMMO_SLOTS];
@@ -187,6 +189,9 @@ void DecalGunshot( TraceResult *pTrace, int iBulletType )
 		case BULLET_MONSTER_9MM:
 		case BULLET_PLAYER_MP5:
 		case BULLET_MONSTER_MP5:
+#ifdef SIC1
+		case BULLET_PLAYER_BUCKSHOT:
+#endif
 		case BULLET_PLAYER_357:
 		default:
 			// smoke and decal
@@ -196,10 +201,12 @@ void DecalGunshot( TraceResult *pTrace, int iBulletType )
 			// smoke and decal
 			UTIL_GunshotDecalTrace( pTrace, DamageDecal( pEntity, DMG_BULLET ) );
 			break;
+#ifndef SIC1
 		case BULLET_PLAYER_BUCKSHOT:
 			// wall decal
 			UTIL_DecalTrace( pTrace, DamageDecal( pEntity, DMG_CLUB ) );
 			break;
+#endif
 		case BULLET_PLAYER_CROWBAR:
 			// wall decal
 			UTIL_DecalTrace( pTrace, DamageDecal( pEntity, DMG_CLUB ) );
@@ -338,7 +345,11 @@ void W_Precache(void)
 	UTIL_PrecacheOther( "ammo_buckshot" );
 
 	// crowbar
+#ifdef SIC1
+	UTIL_PrecacheOtherWeapon( "weapon_crowbar" );
+#else
 	UTIL_PrecacheOtherWeapon( "weapon_fork" );
+#endif
 
 	// glock
 	UTIL_PrecacheOtherWeapon( "weapon_9mmhandgun" );
@@ -346,8 +357,13 @@ void W_Precache(void)
 	UTIL_PrecacheOther( "ammo_9mmbox" ); //LRC
 
 	// mp5
+#ifdef SIC1
+	UTIL_PrecacheOtherWeapon( "weapon_9mmAR" );
+	UTIL_PrecacheOther( "ammo_9mmAR" );
+#else
 	UTIL_PrecacheOtherWeapon( "weapon_mp18" );
 	UTIL_PrecacheOther( "ammo_bergmann" );
+#endif
 	UTIL_PrecacheOther( "ammo_ARgrenades" );
 
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
@@ -370,8 +386,13 @@ void W_Precache(void)
 
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 	// crossbow
+#ifdef SIC1
+	UTIL_PrecacheOtherWeapon( "weapon_crossbow" );
+	UTIL_PrecacheOther( "ammo_crossbow" );
+#else
 	UTIL_PrecacheOtherWeapon( "weapon_flaregun" );
 	UTIL_PrecacheOther( "ammo_flares" );
+#endif
 #endif
 
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
@@ -388,7 +409,11 @@ void W_Precache(void)
 #endif
 
 	// hand grenade
+#ifdef SIC1
+	UTIL_PrecacheOtherWeapon("weapon_handgrenade");
+#else
 	UTIL_PrecacheOtherWeapon("weapon_tnt");
+#endif
 
 #if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )
 	// squeak grenade
@@ -408,6 +433,12 @@ void W_Precache(void)
 	}
 #endif
 
+#ifdef SIC1
+	g_sModelIndexShock = PRECACHE_MODEL ("sprites/white.spr");// shock ring
+	g_sModelIndexFireball = PRECACHE_MODEL ("sprites/explosionfball2.spr");// fireball
+	g_sModelIndexWExplosion = PRECACHE_MODEL ("sprites/WXplo1.spr");// underwater fireball
+	g_sModelIndexSmoke = PRECACHE_MODEL ("sprites/smokeball.spr");// smoke
+#else
 	g_sModelIndexWaterSplash = PRECACHE_MODEL ("sprites/wexplosplash.spr");
 	g_sModelIndexExpansion = PRECACHE_MODEL ("sprites/expansion2.spr");
 	g_sModelIndexFog = PRECACHE_MODEL ("sprites/explosionfog.spr");
@@ -421,10 +452,15 @@ void W_Precache(void)
 	g_sModelIndexSmallPuff = PRECACHE_MODEL ("sprites/wallpuff.spr");
 	g_sModelIndexWExplosion = PRECACHE_MODEL ("sprites/WXplo1.spr");// underwater fireball
 	g_sModelIndexSmoke = PRECACHE_MODEL ("sprites/explodesmk.spr");// smoke
+#endif
 	g_sModelIndexBubbles = PRECACHE_MODEL ("sprites/bubble.spr");//bubbles
 	g_sModelIndexBloodSpray = PRECACHE_MODEL ("sprites/bloodspray.spr"); // initial blood
+#ifdef SIC1
+	g_sModelIndexBloodDrop = PRECACHE_MODEL ("sprites/blood.spr"); // splattered blood 
+#else
 	g_sModelIndexBloodDrop = PRECACHE_MODEL ("sprites/blood.spr"); // splattered blood
 	g_sModelIndexBloodCloud = PRECACHE_MODEL ("sprites/bloodcloud.spr");
+#endif
 
 	g_sModelIndexLaser = PRECACHE_MODEL( (char *)g_pModelNameLaser );
 	g_sModelIndexLaserDot = PRECACHE_MODEL("sprites/laserdot.spr");
@@ -432,16 +468,24 @@ void W_Precache(void)
 
 	// used by explosions
 	PRECACHE_MODEL ("models/shrapnel.mdl");
+#ifndef SIC1
 	PRECACHE_MODEL ("models/debri_land.mdl");
+#endif
 	PRECACHE_MODEL ("sprites/explode1.spr");
 
 	PRECACHE_SOUND ("weapons/debris1.wav");// explosion aftermaths
 	PRECACHE_SOUND ("weapons/debris2.wav");// explosion aftermaths
 	PRECACHE_SOUND ("weapons/debris3.wav");// explosion aftermaths
 
+#ifdef SIC1
+	PRECACHE_SOUND ("weapons/grenade_hit1.wav");//grenade
+	PRECACHE_SOUND ("weapons/grenade_hit2.wav");//grenade
+	PRECACHE_SOUND ("weapons/grenade_hit3.wav");//grenade
+#else
 	PRECACHE_SOUND ("weapons/tnthit1.wav");//grenade
 	PRECACHE_SOUND ("weapons/tnthit2.wav");//grenade
 	PRECACHE_SOUND ("weapons/tnthit3.wav");//grenade
+#endif
 
 	PRECACHE_SOUND ("weapons/bullet_hit1.wav");	// hit by bullet
 	PRECACHE_SOUND ("weapons/bullet_hit2.wav");	// hit by bullet

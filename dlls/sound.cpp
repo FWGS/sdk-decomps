@@ -1887,12 +1887,20 @@ float TEXTURETYPE_PlaySound(TraceResult *ptr,  Vector vecSrc, Vector vecEnd, int
 		rgsz[1] = "player/pl_grate4.wav";
 		cnt = 2;
 		break;
+#ifdef SIC1
+	case CHAR_TEX_TILE:	fvol = 0.8; fvolbar = 0.2;
+		rgsz[0] = "player/pl_tile1.wav";
+		rgsz[1] = "player/pl_tile3.wav";
+		rgsz[2] = "player/pl_tile2.wav";
+		rgsz[3] = "player/pl_tile4.wav";
+#else
 	case 'B':	// graves (materials.txt: RR_GRAVEFLOOR, RR_GRAVEWALL, RR_MAUSOLEUM1)
 	case CHAR_TEX_TILE:	fvol = 1.0; fvolbar = 0.0;	// sic: tiles sound like graves here (the client keeps pl_tile)
 		rgsz[0] = "player/pl_grave1.wav";
 		rgsz[1] = "player/pl_grave2.wav";
 		rgsz[2] = "player/pl_grave3.wav";
 		rgsz[3] = "player/pl_grave4.wav";
+#endif
 		cnt = 4;
 		break;
 	case CHAR_TEX_SLOSH: fvol = 0.9; fvolbar = 0.0;
