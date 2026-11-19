@@ -393,12 +393,12 @@ void CWaterElemental :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		case WATER_AE_SHOOT1:
 		case WATER_AE_SHOOT2:
 		{
-			Vector vecSrc, vecGunPos, vecGunAngles;
+			Vector vecGunPos, vecGunAngles;
 
 			GetAttachment( pEvent->event - 1, vecGunPos, vecGunAngles );
 			UTIL_MakeVectors( pev->angles );
 
-			vecSrc = Center();
+			Vector vecSrc = Center();
 			vecSrc.z = vecGunPos.z;
 			vecSrc = vecSrc + gpGlobals->v_forward * 16;
 
@@ -423,7 +423,7 @@ void CWaterElemental :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		case WATER_AE_SPRAY:
 		{
 			// five geysers in a row across the enemy's last known position, the outer ones later
-			Vector vecDir, vecSide;
+			Vector vecDir, vecSide, vecSrc, vecEnd;	// sic: vecSrc and vecEnd unused; their constructor calls keep the shot's last sum and product out of line, as retail
 
 			vecDir = Vector( pev->origin - m_vecEnemyLKP ).Normalize();
 			vecSide = CrossProduct( vecDir, Vector( 0, 0, 1 ) );
