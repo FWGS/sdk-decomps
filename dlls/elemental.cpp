@@ -147,7 +147,7 @@ void CWaterBlast::Touch( CBaseEntity *pOther )
 // CWaterSpray - a geyser of the spray attack: sprays for
 // ten seconds and throws up whatever stands in it
 //=========================================================
-class CWaterSpray : public CMagicMissile
+class CWaterSpray : public CSprite
 {
 public:
 	void Spawn( void );
@@ -169,7 +169,7 @@ TYPEDESCRIPTION	CWaterSpray::m_SaveData[] =
 	DEFINE_FIELD( CWaterSpray, m_flEndTime, FIELD_TIME ),
 };
 
-IMPLEMENT_SAVERESTORE( CWaterSpray, CMagicMissile );
+IMPLEMENT_SAVERESTORE( CWaterSpray, CSprite );
 
 void CWaterSpray::Spawn( void )
 {
