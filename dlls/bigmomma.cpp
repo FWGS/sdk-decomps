@@ -173,7 +173,7 @@ void MortarSpray( const Vector &position, const Vector &direction, int spriteMod
 
 // UNDONE:	
 //
-#define BIG_CHILDCLASS		"monster_babycrab"
+#define BIG_CHILDCLASS		"monster_scutspider"
 
 class CBigMomma : public CBaseMonster
 {
