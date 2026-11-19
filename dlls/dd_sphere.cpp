@@ -409,7 +409,7 @@ void CDCube::RunAttack( void )
 {
 	int i;
 
-	if ( !IsMoving() || pev->velocity == Vector( 0, 0, 0 ) )
+	if ( !IsMoving() || pev->velocity == g_vecZero )
 	{
 		pev->avelocity.y = 10;
 		m_flGroundSpeed = 100;
