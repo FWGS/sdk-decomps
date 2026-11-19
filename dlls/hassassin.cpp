@@ -2665,23 +2665,25 @@ attack:
 				if ( !m_pChargeSprite && min( 100, iPower ) > RANDOM_LONG( 0, 140 ) )
 				{
 					m_flChargeTime = gpGlobals->time;
-					m_flChargeScale = 0.5;
 					if ( pev->frags != 1 )
 					{
+						m_flChargeScale = 0.5;
 						m_pChargeSprite = CSprite::SpriteCreate( "sprites/wallop.spr", pev->origin, TRUE );
 						m_pChargeSprite->SetAttachment( edict(), 1 );
 						m_pChargeSprite->SetScale( 0.1 );
 						m_pChargeSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxDistort );
+						m_pChargeSprite->pev->spawnflags |= SF_SPRITE_TEMPORARY;
 					}
 					else
 					{
+						m_flChargeScale = 0.5;
 						m_pChargeSprite = CSprite::SpriteCreate( "sprites/n_charge.spr", pev->origin, TRUE );
 						m_pChargeSprite->SetAttachment( edict(), 1 );
 						m_pChargeSprite->pev->scale = 0.1;
 						m_pChargeSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxNone );
 						m_pChargeSprite->pev->framerate = 10;
+						m_pChargeSprite->pev->spawnflags |= SF_SPRITE_TEMPORARY;
 					}
-					m_pChargeSprite->pev->spawnflags |= SF_SPRITE_TEMPORARY;
 				}
 				return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
 			}
