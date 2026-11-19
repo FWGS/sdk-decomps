@@ -465,7 +465,7 @@ void CWreckage::Think( void )
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
 		WRITE_COORD( pev->origin.z );
-		WRITE_SHORT( g_sModelIndexSmokeTrail );
+		WRITE_SHORT( g_sModelIndexGreySmoke );
 		WRITE_BYTE( RANDOM_LONG(7,10) + 5 ); // scale * 10
 		WRITE_BYTE( 255 ); // brightness
 	MESSAGE_END();
@@ -549,7 +549,7 @@ void CBaloon::Think( void )
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
 		WRITE_COORD( pev->origin.z );
-		WRITE_SHORT( g_sModelIndexRicho );
+		WRITE_SHORT( g_sModelIndexBalloon );
 		WRITE_BYTE( RANDOM_LONG(2,3) + 2 ); // scale * 10
 		WRITE_BYTE( 200 ); // brightness
 	MESSAGE_END();

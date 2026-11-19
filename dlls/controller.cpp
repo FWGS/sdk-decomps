@@ -1213,7 +1213,7 @@ void CControllerHeadBall :: Spawn( void )
 	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
 		WRITE_BYTE( TE_BEAMFOLLOW );
 		WRITE_SHORT( entindex() );	// entity
-		WRITE_SHORT( g_sModelIndexSmokeTrail );	// model
+		WRITE_SHORT( g_sModelIndexGreySmoke );	// model
 		WRITE_BYTE( 5 ); // life
 		WRITE_BYTE( 5 );  // width
 		WRITE_BYTE( 20 );   // r, g, b
@@ -1416,7 +1416,7 @@ void CControllerZapBall :: Spawn( void )
 	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
 		WRITE_BYTE( TE_BEAMFOLLOW );
 		WRITE_SHORT( entindex() );	// entity
-		WRITE_SHORT( g_sModelIndexSmokeTrail );	// model
+		WRITE_SHORT( g_sModelIndexGreySmoke );	// model
 		WRITE_BYTE( 5 ); // life
 		WRITE_BYTE( 5 );  // width
 		WRITE_BYTE( 20 );   // r, g, b

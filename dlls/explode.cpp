@@ -74,7 +74,7 @@ void CShower::Think( void )
 	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
 		WRITE_BYTE( TE_BEAMFOLLOW );
 		WRITE_SHORT( entindex() );	// entity
-		WRITE_SHORT( g_sModelIndexSmokeTrail );	// model
+		WRITE_SHORT( g_sModelIndexGreySmoke );	// model
 		WRITE_BYTE( 5 ); // life
 		WRITE_BYTE( 2 );  // width
 		WRITE_BYTE( 255 );   // r, g, b

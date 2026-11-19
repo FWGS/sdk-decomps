@@ -308,7 +308,7 @@ int CCrowbar::Swing( int fFirst )
 				WRITE_COORD( tr.vecEndPos.x + 2 );
 				WRITE_COORD( tr.vecEndPos.y + 2 );
 				WRITE_COORD( tr.vecEndPos.z + 2 );
-				WRITE_SHORT( g_sModelIndexWallPuff );
+				WRITE_SHORT( g_sModelIndexSmallPuff );
 				WRITE_BYTE( 2 ); // scale * 10
 				WRITE_BYTE( 55 ); // brightness
 			MESSAGE_END();
@@ -318,7 +318,7 @@ int CCrowbar::Swing( int fFirst )
 				WRITE_COORD( tr.vecEndPos.x - 2 );
 				WRITE_COORD( tr.vecEndPos.y - 2 );
 				WRITE_COORD( tr.vecEndPos.z - 2 );
-				WRITE_SHORT( g_sModelIndexWallPuff );
+				WRITE_SHORT( g_sModelIndexSmallPuff );
 				WRITE_BYTE( 2 ); // scale * 10
 				WRITE_BYTE( 55 ); // brightness
 			MESSAGE_END();

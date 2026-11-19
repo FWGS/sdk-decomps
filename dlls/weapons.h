@@ -385,15 +385,15 @@ extern DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for blo
 extern DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for blood spray (bigger)
 extern DLL_GLOBAL	short	g_sModelIndexShock;// the explosions' shock ring (name ours)
 // Survive in Catacombs 2's sprites, precached by W_Precache (names ours)
-extern DLL_GLOBAL	short	g_sModelIndexWExploSplash;// sprites/wexplosplash.spr: the explosions' fireball under water
+extern DLL_GLOBAL	short	g_sModelIndexWaterSplash;// sprites/wexplosplash.spr: the explosions' fireball under water
 extern DLL_GLOBAL	short	g_sModelIndexExpansion;// sprites/expansion2.spr
-extern DLL_GLOBAL	short	g_sModelIndexExplosionFog;// sprites/explosionfog.spr
-extern DLL_GLOBAL	short	g_sModelIndexRicho;// sprites/richo2.spr
-extern DLL_GLOBAL	short	g_sModelIndexSmokeTrail;// sprites/smoke.spr: beam trails
-extern DLL_GLOBAL	short	g_sModelIndexExplodeFlash;// sprites/explodeflash.spr
-extern DLL_GLOBAL	short	g_sModelIndexZeroGExplode;// sprites/zerogxplode.spr
-extern DLL_GLOBAL	short	g_sModelIndexFExplo;// sprites/fexplo.spr
-extern DLL_GLOBAL	short	g_sModelIndexWallPuff;// sprites/wallpuff.spr
+extern DLL_GLOBAL	short	g_sModelIndexFog;// sprites/explosionfog.spr
+extern DLL_GLOBAL	short	g_sModelIndexBalloon;// sprites/richo2.spr
+extern DLL_GLOBAL	short	g_sModelIndexGreySmoke;// sprites/smoke.spr: beam trails
+extern DLL_GLOBAL	short	g_sModelIndexGlare;// sprites/explodeflash.spr
+extern DLL_GLOBAL	short	g_sModelIndexZerog;// sprites/zerogxplode.spr
+extern DLL_GLOBAL	short	g_sModelIndexFireExplo;// sprites/fexplo.spr
+extern DLL_GLOBAL	short	g_sModelIndexSmallPuff;// sprites/wallpuff.spr
 extern DLL_GLOBAL	short	g_sModelIndexBloodCloud;// sprites/bloodcloud.spr
 
 extern void ClearMultiDamage(void);

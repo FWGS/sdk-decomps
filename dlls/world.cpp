@@ -163,7 +163,7 @@ void CDecal :: TriggerDecal ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
 		WRITE_COORD( pev->origin.z );
-		WRITE_SHORT( g_sModelIndexWallPuff );
+		WRITE_SHORT( g_sModelIndexSmallPuff );
 		WRITE_BYTE( 2 ); // scale
 		WRITE_BYTE( 55 ); // brightness
 	MESSAGE_END();
@@ -173,7 +173,7 @@ void CDecal :: TriggerDecal ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
 		WRITE_COORD( pev->origin.z );
-		WRITE_SHORT( g_sModelIndexWallPuff );
+		WRITE_SHORT( g_sModelIndexSmallPuff );
 		WRITE_BYTE( 2 ); // scale
 		WRITE_BYTE( 55 ); // brightness
 	MESSAGE_END();

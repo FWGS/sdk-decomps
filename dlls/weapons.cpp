@@ -48,15 +48,15 @@ DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for the initia
 DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for splattered blood
 DLL_GLOBAL	short	g_sModelIndexShock;// the explosions' shock ring (name ours)
 // Survive in Catacombs 2's sprites (names ours)
-DLL_GLOBAL	short	g_sModelIndexWExploSplash;// the explosions' fireball under water
+DLL_GLOBAL	short	g_sModelIndexWaterSplash;// the explosions' fireball under water
 DLL_GLOBAL	short	g_sModelIndexExpansion;
-DLL_GLOBAL	short	g_sModelIndexExplosionFog;
-DLL_GLOBAL	short	g_sModelIndexRicho;
-DLL_GLOBAL	short	g_sModelIndexSmokeTrail;// trails of flares and balls
-DLL_GLOBAL	short	g_sModelIndexExplodeFlash;
-DLL_GLOBAL	short	g_sModelIndexZeroGExplode;
-DLL_GLOBAL	short	g_sModelIndexFExplo;
-DLL_GLOBAL	short	g_sModelIndexWallPuff;// the fork's wall hits
+DLL_GLOBAL	short	g_sModelIndexFog;
+DLL_GLOBAL	short	g_sModelIndexBalloon;
+DLL_GLOBAL	short	g_sModelIndexGreySmoke;// trails of flares and balls
+DLL_GLOBAL	short	g_sModelIndexGlare;
+DLL_GLOBAL	short	g_sModelIndexZerog;
+DLL_GLOBAL	short	g_sModelIndexFireExplo;
+DLL_GLOBAL	short	g_sModelIndexSmallPuff;// the fork's wall hits
 DLL_GLOBAL	short	g_sModelIndexBloodCloud;// gibs' blood
 
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
@@ -408,17 +408,17 @@ void W_Precache(void)
 	}
 #endif
 
-	g_sModelIndexWExploSplash = PRECACHE_MODEL ("sprites/wexplosplash.spr");
+	g_sModelIndexWaterSplash = PRECACHE_MODEL ("sprites/wexplosplash.spr");
 	g_sModelIndexExpansion = PRECACHE_MODEL ("sprites/expansion2.spr");
-	g_sModelIndexExplosionFog = PRECACHE_MODEL ("sprites/explosionfog.spr");
-	g_sModelIndexRicho = PRECACHE_MODEL ("sprites/richo2.spr");
-	g_sModelIndexSmokeTrail = PRECACHE_MODEL ("sprites/smoke.spr");
+	g_sModelIndexFog = PRECACHE_MODEL ("sprites/explosionfog.spr");
+	g_sModelIndexBalloon = PRECACHE_MODEL ("sprites/richo2.spr");
+	g_sModelIndexGreySmoke = PRECACHE_MODEL ("sprites/smoke.spr");
 	g_sModelIndexShock = PRECACHE_MODEL ("sprites/white.spr");// shock ring
 	g_sModelIndexFireball = PRECACHE_MODEL ("sprites/explodeball2.spr");// fireball
-	g_sModelIndexExplodeFlash = PRECACHE_MODEL ("sprites/explodeflash.spr");
-	g_sModelIndexZeroGExplode = PRECACHE_MODEL ("sprites/zerogxplode.spr");
-	g_sModelIndexFExplo = PRECACHE_MODEL ("sprites/fexplo.spr");
-	g_sModelIndexWallPuff = PRECACHE_MODEL ("sprites/wallpuff.spr");
+	g_sModelIndexGlare = PRECACHE_MODEL ("sprites/explodeflash.spr");
+	g_sModelIndexZerog = PRECACHE_MODEL ("sprites/zerogxplode.spr");
+	g_sModelIndexFireExplo = PRECACHE_MODEL ("sprites/fexplo.spr");
+	g_sModelIndexSmallPuff = PRECACHE_MODEL ("sprites/wallpuff.spr");
 	g_sModelIndexWExplosion = PRECACHE_MODEL ("sprites/WXplo1.spr");// underwater fireball
 	g_sModelIndexSmoke = PRECACHE_MODEL ("sprites/explodesmk.spr");// smoke
 	g_sModelIndexBubbles = PRECACHE_MODEL ("sprites/bubble.spr");//bubbles

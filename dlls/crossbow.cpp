@@ -80,7 +80,7 @@ void CCrossbowBolt::Spawn( )
 	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
 		WRITE_BYTE( TE_BEAMFOLLOW );
 		WRITE_SHORT( entindex() );	// entity
-		WRITE_SHORT( g_sModelIndexSmokeTrail );	// model
+		WRITE_SHORT( g_sModelIndexGreySmoke );	// model
 		WRITE_BYTE( 12 ); // life
 		WRITE_BYTE( 2 );  // width
 		WRITE_BYTE( 128 );   // r, g, b

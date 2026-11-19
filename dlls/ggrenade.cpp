@@ -76,7 +76,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 		}
 		else
 		{
-			WRITE_SHORT( g_sModelIndexWExploSplash );
+			WRITE_SHORT( g_sModelIndexWaterSplash );
 		}
 		WRITE_BYTE( (pev->dmg - 40) * .90  ); // scale * 10
 		WRITE_BYTE( 10  ); // framerate
@@ -89,7 +89,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
 		WRITE_COORD( pev->origin.z );
-		WRITE_SHORT( g_sModelIndexExplodeFlash );
+		WRITE_SHORT( g_sModelIndexGlare );
 		WRITE_BYTE( 140 ); // scale * 10
 		WRITE_BYTE( 255 ); // brightness
 	MESSAGE_END();
@@ -99,7 +99,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 		WRITE_COORD( pev->origin.x + 20 );
 		WRITE_COORD( pev->origin.y + 20 );
 		WRITE_COORD( pev->origin.z + 20 );
-		WRITE_SHORT( g_sModelIndexZeroGExplode );
+		WRITE_SHORT( g_sModelIndexZerog );
 		WRITE_BYTE( 25 ); // scale * 10
 		WRITE_BYTE( 255 ); // brightness
 	MESSAGE_END();
@@ -109,7 +109,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y + 20 );
 		WRITE_COORD( pev->origin.z - 30 );
-		WRITE_SHORT( g_sModelIndexZeroGExplode );
+		WRITE_SHORT( g_sModelIndexZerog );
 		WRITE_BYTE( 15 ); // scale * 10
 		WRITE_BYTE( 255 ); // brightness
 	MESSAGE_END();
@@ -119,7 +119,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 		WRITE_COORD( pev->origin.x + 20 );
 		WRITE_COORD( pev->origin.y + 20 );
 		WRITE_COORD( pev->origin.z - 30 );
-		WRITE_SHORT( g_sModelIndexZeroGExplode );
+		WRITE_SHORT( g_sModelIndexZerog );
 		WRITE_BYTE( 25 ); // scale * 10
 		WRITE_BYTE( 255 ); // brightness
 	MESSAGE_END();
@@ -129,7 +129,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 		WRITE_COORD( pev->origin.x - 20 );
 		WRITE_COORD( pev->origin.y - 20 );
 		WRITE_COORD( pev->origin.z - 30 );
-		WRITE_SHORT( g_sModelIndexZeroGExplode );
+		WRITE_SHORT( g_sModelIndexZerog );
 		WRITE_BYTE( 14 ); // scale * 10
 		WRITE_BYTE( 255 ); // brightness
 	MESSAGE_END();
@@ -139,7 +139,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y );
 		WRITE_COORD( pev->origin.z + 30 );
-		WRITE_SHORT( g_sModelIndexFExplo );
+		WRITE_SHORT( g_sModelIndexFireExplo );
 		WRITE_BYTE( 13 ); // scale * 10
 		WRITE_BYTE( 255 ); // brightness
 	MESSAGE_END();
@@ -149,7 +149,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 		WRITE_COORD( pev->origin.x );
 		WRITE_COORD( pev->origin.y + 20 );
 		WRITE_COORD( pev->origin.z - 30 );
-		WRITE_SHORT( g_sModelIndexFExplo );
+		WRITE_SHORT( g_sModelIndexFireExplo );
 		WRITE_BYTE( 12 ); // scale * 10
 		WRITE_BYTE( 255 ); // brightness
 	MESSAGE_END();
@@ -159,7 +159,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 		WRITE_COORD( pev->origin.x - 12 );
 		WRITE_COORD( pev->origin.y - 12 );
 		WRITE_COORD( pev->origin.z + 20 );
-		WRITE_SHORT( g_sModelIndexFExplo );
+		WRITE_SHORT( g_sModelIndexFireExplo );
 		WRITE_BYTE( 20 ); // scale * 10
 		WRITE_BYTE( 55 ); // brightness
 	MESSAGE_END();
@@ -169,7 +169,7 @@ void CGrenade::Explode( TraceResult *pTrace, int bitsDamageType )
 		WRITE_COORD( pev->origin.x + 12 );
 		WRITE_COORD( pev->origin.y - 22 );
 		WRITE_COORD( pev->origin.z - 13 );
-		WRITE_SHORT( g_sModelIndexFExplo );
+		WRITE_SHORT( g_sModelIndexFireExplo );
 		WRITE_BYTE( 15 ); // scale * 10
 		WRITE_BYTE( 55 ); // brightness
 	MESSAGE_END();
