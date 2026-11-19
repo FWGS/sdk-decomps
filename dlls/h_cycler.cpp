@@ -417,7 +417,7 @@ void CWreckage::Spawn( void )
 	pev->effects		= 0;
 
 	pev->frame			= 0;
-	SetNextThink( 0 );
+	SetNextThink( 0.1 );
 
 	if (pev->model)
 	{
@@ -459,13 +459,98 @@ void CWreckage::Think( void )
 	VecSrc.y = RANDOM_FLOAT( pev->absmin.y, pev->absmax.y );
 	VecSrc.z = RANDOM_FLOAT( pev->absmin.z, pev->absmax.z );
 
-	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, VecSrc );
-		WRITE_BYTE( TE_SMOKE );
-		WRITE_COORD( VecSrc.x );
-		WRITE_COORD( VecSrc.y );
-		WRITE_COORD( VecSrc.z );
-		WRITE_SHORT( g_sModelIndexSmoke );
-		WRITE_BYTE( RANDOM_LONG(0,5) + 5 ); // scale * 10
-		WRITE_BYTE( RANDOM_LONG(0, 12) + 22  ); // framerate
+	// sic: VecSrc is not used
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_SPRITE );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		WRITE_SHORT( g_sModelIndexSmokeTrail );
+		WRITE_BYTE( RANDOM_LONG(7,10) + 5 ); // scale * 10
+		WRITE_BYTE( 255 ); // brightness
+	MESSAGE_END();
+}
+
+
+class CBaloon : public CBaseMonster
+{
+	int		Save( CSave &save );
+	int		Restore( CRestore &restore );
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	void Spawn( void );
+	void Precache( void );
+	void Think( void );
+
+	int m_flStartTime;
+};
+TYPEDESCRIPTION	CBaloon::m_SaveData[] = 
+{
+	DEFINE_FIELD( CBaloon, m_flStartTime, FIELD_TIME ),
+};
+IMPLEMENT_SAVERESTORE( CBaloon, CBaseMonster );
+
+
+LINK_ENTITY_TO_CLASS( cycler_baloon, CBaloon );
+
+void CBaloon::Spawn( void )
+{
+	pev->solid			= SOLID_NOT;
+	pev->movetype		= MOVETYPE_NONE;
+	pev->takedamage		= 0;
+	pev->effects		= 0;
+
+	pev->frame			= 0;
+	SetNextThink( 0 );
+
+	if (pev->model)
+	{
+		PRECACHE_MODEL( (char *)STRING(pev->model) );
+		SET_MODEL( ENT(pev), STRING(pev->model) );
+	}
+	// pev->scale = 5.0;
+
+	m_flStartTime		= gpGlobals->time;
+}
+
+void CBaloon::Precache( )
+{
+	if ( pev->model )
+		PRECACHE_MODEL( (char *)STRING(pev->model) );
+}
+
+void CBaloon::Think( void )
+{
+	StudioFrameAdvance( );
+	SetNextThink( 0 );
+
+	if (pev->dmgtime)
+	{
+		if (pev->dmgtime < gpGlobals->time)
+		{
+			UTIL_Remove( this );
+			return;
+		}
+		else if (RANDOM_FLOAT( 0, pev->dmgtime - m_flStartTime ) > pev->dmgtime - gpGlobals->time)
+		{
+			return;
+		}
+	}
+	
+	Vector VecSrc;
+	
+	VecSrc.x = RANDOM_FLOAT( pev->absmin.x, pev->absmax.x );
+	VecSrc.y = RANDOM_FLOAT( pev->absmin.y, pev->absmax.y );
+	VecSrc.z = RANDOM_FLOAT( pev->absmin.z, pev->absmax.z );
+
+	// sic: VecSrc is not used
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_SPRITE );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		WRITE_SHORT( g_sModelIndexRicho );
+		WRITE_BYTE( RANDOM_LONG(2,3) + 2 ); // scale * 10
+		WRITE_BYTE( 200 ); // brightness
 	MESSAGE_END();
 }
