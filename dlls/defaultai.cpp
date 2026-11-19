@@ -239,11 +239,11 @@ Task_t tlActiveIdle[] =
 	{ TASK_WAIT_FOR_MOVEMENT,		(float)0	},
 	{ TASK_FACE_HINTNODE,			(float)0	},
 	{ TASK_PLAY_ACTIVE_IDLE,		(float)0	},
+	{ TASK_CLEAR_HINTNODE,			(float)0	},
 	{ TASK_GET_PATH_TO_LASTPOSITION,(float)0	},
 	{ TASK_WALK_PATH,				(float)0	},
 	{ TASK_WAIT_FOR_MOVEMENT,		(float)0	},
 	{ TASK_CLEAR_LASTPOSITION,		(float)0	},
-	{ TASK_CLEAR_HINTNODE,			(float)0	},
 };
 
 Schedule_t slActiveIdle[] =

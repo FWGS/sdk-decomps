@@ -459,7 +459,7 @@ IMPLEMENT_CUSTOM_SCHEDULES( CGargantua, CBaseMonster );
 //=========================================================
 int CGargantua::GetBattlePower( void )
 {
-	return ( gSkillData.gargantuaDmgFire * 20 + gSkillData.gargantuaDmgStomp + gSkillData.gargantuaDmgSlash ) * ( pev->max_health * 0.5 );
+	return ( gSkillData.gargantuaDmgFire * 20 + gSkillData.gargantuaDmgSlash + gSkillData.gargantuaDmgStomp ) * ( pev->max_health * 0.5 );
 }
 
 

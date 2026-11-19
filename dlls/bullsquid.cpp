@@ -297,7 +297,7 @@ int CBullsquid::IRelationship ( CBaseEntity *pTarget )
 //=========================================================
 int CBullsquid :: GetBattlePower( void )
 {
-	return ( pev->max_health * 0.1 ) * ( gSkillData.bullsquidDmgWhip + gSkillData.bullsquidDmgSpit );
+	return ( pev->max_health * 0.1 ) * ( gSkillData.bullsquidDmgSpit + gSkillData.bullsquidDmgWhip );
 }
 
 //=========================================================

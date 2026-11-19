@@ -524,7 +524,7 @@ void CRpg::SecondaryAttack()
 		switch ( m_mode )
 		{
 		case 1:
-			pszMode = "Laser-guided";
+			pszMode = "Laser guided";
 			break;
 		case 2:
 			pszMode = "Heatseeking";
