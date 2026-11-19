@@ -410,7 +410,6 @@ int CDCube::GetBattlePower( void )
 void CDCube::RunAttack( void )
 {
 	int i;
-	Vector vecSrc, vecDir, vecAngles, vecOffset;
 
 	if ( !IsMoving() || pev->velocity == Vector( 0, 0, 0 ) )
 	{
@@ -442,7 +441,7 @@ void CDCube::RunAttack( void )
 				if ( i < 4 )
 				{
 					UTIL_MakeVectors( pev->angles );
-					vecSrc = pev->origin + gpGlobals->v_forward * RANDOM_FLOAT( -56, 56 ) + gpGlobals->v_up * RANDOM_FLOAT( -56, 56 ) + gpGlobals->v_right * RANDOM_FLOAT( -56, 56 );
+					Vector vecSrc = pev->origin + gpGlobals->v_forward * RANDOM_FLOAT( -56, 56 ) + gpGlobals->v_up * RANDOM_FLOAT( -56, 56 ) + gpGlobals->v_right * RANDOM_FLOAT( -56, 56 );
 					Vector vecShootDir = ( m_hTargets[i]->BodyTarget( pev->origin ) - vecSrc ).Normalize();
 
 					CLaserPulse *pPulse = CLaserPulse::Shoot( vecSrc, edict(), Vector( 70, 140, 255 ), 0, 0.3, 0 );
@@ -454,9 +453,8 @@ void CDCube::RunAttack( void )
 				}
 				else if ( i < 6 )
 				{
-					Vector vecDir, vecOffset;
-					vecDir = ( m_hTargets[i]->BodyTarget( pev->origin ) - Center() ).Normalize();
-					vecAngles = UTIL_VecToAngles( vecDir );
+					Vector vecDir = ( m_hTargets[i]->BodyTarget( pev->origin ) - Center() ).Normalize();
+					Vector vecAngles = UTIL_VecToAngles( vecDir );
 					// which face of the cube looks at the target
 					int iFace = 0;
 					float flYaw = UTIL_AngleDiff( vecAngles.y, pev->angles.y );
@@ -499,7 +497,7 @@ void CDCube::RunAttack( void )
 						break;
 					}
 
-					vecOffset = gpGlobals->v_forward * 56 + gpGlobals->v_right * RANDOM_FLOAT( -48, 48 ) + gpGlobals->v_up * RANDOM_FLOAT( -48, 48 );
+					Vector vecOffset = gpGlobals->v_forward * 56 + gpGlobals->v_right * RANDOM_FLOAT( -48, 48 ) + gpGlobals->v_up * RANDOM_FLOAT( -48, 48 );
 
 					CBaseEntity *pBeam = CBaseEntity::Create( "beamweapon", vecOffset, m_hTargets[i]->BodyTarget( pev->origin ), edict() );
 					pBeam->pev->scale = 40;
@@ -509,8 +507,8 @@ void CDCube::RunAttack( void )
 				}
 				else
 				{
-					vecDir = ( m_hTargets[i]->BodyTarget( pev->origin ) - Center() ).Normalize();
-					vecAngles = UTIL_VecToAngles( vecDir );
+					Vector vecDir = ( m_hTargets[i]->BodyTarget( pev->origin ) - Center() ).Normalize();
+					Vector vecAngles = UTIL_VecToAngles( vecDir );
 					vecAngles = vecAngles + Vector( RANDOM_FLOAT( -90, 90 ), RANDOM_FLOAT( -90, 90 ), 0 );
 					UTIL_MakeVectors( vecAngles );
 
