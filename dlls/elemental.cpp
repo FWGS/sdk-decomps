@@ -393,16 +393,16 @@ void CWaterElemental :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		case WATER_AE_SHOOT1:
 		case WATER_AE_SHOOT2:
 		{
-			Vector vecGunPos, vecDir;
+			Vector vecGunPos, vecGunAngles;
 
-			GetAttachment( pEvent->event - 1, vecGunPos, vecDir );	// vecDir: the gun's angles, unused; it gets the aim below
+			GetAttachment( pEvent->event - 1, vecGunPos, vecGunAngles );
 			UTIL_MakeVectors( pev->angles );
 
 			Vector vecSrc = Center();
 			vecSrc.z = vecGunPos.z;
 			vecSrc = vecSrc + gpGlobals->v_forward * 16;
 
-			vecDir = ShootAtEnemy( vecSrc );
+			Vector vecDir = ShootAtEnemy( vecSrc );
 
 			CBaseEntity *pBlast = CBaseEntity::Create( "water_blast", vecGunPos, g_vecZero, edict() );
 
@@ -413,7 +413,7 @@ void CWaterElemental :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				y = RANDOM_FLOAT( -0.5, 0.5 ) + RANDOM_FLOAT( -0.5, 0.5 );
 			} while ( x*x+y*y > 1 );
 
-			pBlast->pev->velocity = ( vecDir + x * 0.1 * gpGlobals->v_right + y * 0.1 * gpGlobals->v_up ) * 800;
+			pBlast->pev->velocity = ( vecDir + ( x * 0.1 ) * gpGlobals->v_right + ( y * 0.1 ) * gpGlobals->v_up ) * 800;
 
 			EMIT_SOUND( ENT(pev), CHAN_VOICE, pAttackSounds[ RANDOM_LONG( 0, ARRAYSIZE( pAttackSounds ) - 1 ) ], 1.0, ATTN_NORM );
 			CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 600, 0.3 );
@@ -423,10 +423,10 @@ void CWaterElemental :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		case WATER_AE_SPRAY:
 		{
 			// five geysers in a row across the enemy's last known position, the outer ones later
-			Vector vecSide, vecSrc, vecEnd;	// sic: vecSrc and vecEnd unused; with two (or three) such constructor calls the shot's last sum and product stay out of line, as retail
+			Vector vecDir, vecSide, vecSrc, vecEnd;	// sic: vecSrc and vecEnd unused; their constructor calls keep the shot's last sum and product out of line, as retail
 
-			Vector vecDir = pev->origin - m_vecEnemyLKP;
-			vecSide = CrossProduct( vecDir.Normalize(), Vector( 0, 0, 1 ) );
+			vecDir = Vector( pev->origin - m_vecEnemyLKP ).Normalize();
+			vecSide = CrossProduct( vecDir, Vector( 0, 0, 1 ) );
 
 			SpawnSpray( m_vecEnemyLKP, 0 );
 			SpawnSpray( m_vecEnemyLKP + vecSide * 40, 1 );
@@ -434,8 +434,8 @@ void CWaterElemental :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			SpawnSpray( m_vecEnemyLKP - vecSide * 40, 1 );
 			SpawnSpray( m_vecEnemyLKP - vecSide * 80, 2 );
 
-			m_flNextSpray = gpGlobals->time + 6;
 			m_fCanSpray = FALSE;
+			m_flNextSpray = gpGlobals->time + 6;
 			pev->renderfx = kRenderFxNone;
 		}
 		break;
@@ -444,7 +444,7 @@ void CWaterElemental :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		{
 			if ( m_fGlowing )
 			{
-				PLAYBACK_EVENT_FULL( FEV_RELIABLE | FEV_GLOBAL, edict(), m_usRain, 0.0, pev->origin, pev->angles, 0.0, 0.0, 0, 0, 1, 0 );	// without the casts (two inline conversions): the inlining above is retail's with one of the two calls spelled so
+				PLAYBACK_EVENT_FULL( FEV_RELIABLE | FEV_GLOBAL, edict(), m_usRain, 0.0, (float *)&pev->origin, (float *)&pev->angles, 0.0, 0.0, 0, 0, 1, 0 );
 				m_fGlowing = FALSE;
 				STOP_SOUND( ENT(pev), CHAN_BODY, "ambience/sparks.wav" );
 			}
