@@ -647,7 +647,7 @@ public:
 	virtual int		Restore( CRestore &restore );
 	static	TYPEDESCRIPTION m_SaveData[];
 
-	virtual int		GetOnState( void ) { return pev->nextthink > 0; }
+	virtual int		GetEntityTriggerState( void ) { return pev->nextthink > 0; }
 
 	entvars_t	*m_pevCurrentTarget;
 	int			m_sounds;
@@ -2123,7 +2123,7 @@ public:
 	void EXPORT		Wait( void );
 	void			Stop( void );
 
-	int				GetOnState( void ) { return m_on; }
+	int				GetEntityTriggerState( void ) { return m_on; }
 	int				BloodColor( void ) { return DONT_BLEED; }
 	int				Classify( void ) { return CLASS_MACHINE; }
 	int				TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );

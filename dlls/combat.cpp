@@ -2121,13 +2121,13 @@ void CBaseEntity::FireBulletsExplosiveMonster( ULONG cShots, Vector vecSrc, Vect
 
 /*
 ================
-FireBulletsExplosive
+FireHeavyShotgunShells
 
 FireBulletsExplosiveMonster for players, with the random seed generator
 of FireBulletsPlayer (the shotgun's explosive slugs). (name ours)
 ================
 */
-Vector CBaseEntity::FireBulletsExplosive( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker, int shared_rand )
+Vector CBaseEntity::FireHeavyShotgunShells( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker, int shared_rand )
 {
 	static int tracerCount;	// sic: unused, as in the functions this was copied from
 	TraceResult tr;

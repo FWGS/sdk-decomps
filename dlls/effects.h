@@ -44,7 +44,7 @@ public:
 			flags = FCAP_DONT_SAVE;
 		return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | flags; 
 	}
-	int		GetOnState( void ) { return !FBitSet( pev->effects, EF_NODRAW ); }
+	int		GetEntityTriggerState( void ) { return !FBitSet( pev->effects, EF_NODRAW ); }
 	void EXPORT AnimateThink( void );
 	void EXPORT ExpandThink( void );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
@@ -192,7 +192,7 @@ public:
 		pev->dmgtime = gpGlobals->time - 1;
 		BeamDamage(ptr); 
 	}
-	int		GetOnState( void ) { return !FBitSet( pev->effects, EF_NODRAW ); }
+	int		GetEntityTriggerState( void ) { return !FBitSet( pev->effects, EF_NODRAW ); }
 };
 
 

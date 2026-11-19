@@ -102,7 +102,7 @@ public:
 	virtual int		Restore( CRestore &restore );
 	
 	static	TYPEDESCRIPTION m_SaveData[];
-	virtual int		GetOnState( void ) { return pev->speed != 0; }
+	virtual int		GetEntityTriggerState( void ) { return pev->speed != 0; }
 	virtual const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "a train"; return STRING( m_iszKillDesc ); }
 	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "run over"; }
 	virtual int	ObjectCaps( void ) { return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION) | FCAP_DIRECTIONAL_USE; }

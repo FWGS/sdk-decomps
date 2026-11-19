@@ -31,7 +31,7 @@
 // master_watcher: on when the entities it watches are on. Every keyvalue
 // that isn't "globalstate" names an entity to watch (UTIL_StripToken, as
 // multi_manager); a name starting with '!' wants that entity off. The
-// entities answer through GetOnState: 1 on, 0 off, -1 can't tell (ignored).
+// entities answer through GetEntityTriggerState: 1 on, 0 off, -1 can't tell (ignored).
 //
 class CWatchMaster : public CBaseDelay
 {
@@ -40,7 +40,7 @@ public:
 	void KeyValue( KeyValueData *pkvd );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	int	ObjectCaps( void ) { return FCAP_MASTER; }
-	int GetOnState( void ) { return IsTriggered( this ); }
+	int GetEntityTriggerState( void ) { return IsTriggered( this ); }
 	BOOL IsTriggered( CBaseEntity *pActivator );
 
 	virtual int		Save( CSave &save );
@@ -123,7 +123,7 @@ BOOL CWatchMaster :: IsTriggered( CBaseEntity *pActivator )
 		{
 			if ( pTarget != this )
 			{
-				int iState = pTarget->GetOnState();
+				int iState = pTarget->GetEntityTriggerState();
 
 				ALERT( at_console, "%s (%s) is %d\n", pszTarget, STRING( pTarget->pev->classname ), iState );
 
@@ -191,7 +191,7 @@ public:
 	void KeyValue( KeyValueData *pkvd );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	int	ObjectCaps( void ) { return FCAP_MASTER; }
-	int GetOnState( void ) { return IsTriggered( this ); }
+	int GetEntityTriggerState( void ) { return IsTriggered( this ); }
 	BOOL IsTriggered( CBaseEntity *pActivator );
 
 	virtual int		Save( CSave &save );
