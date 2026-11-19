@@ -17,7 +17,7 @@
 //=========================================================
 
 //LRC
-#define GAME_NAME "Spirit of Half-Life"
+#define GAME_NAME "SurviveInCatacombs"
 
 //#include "weapons.h"
 //#include "items.h"
