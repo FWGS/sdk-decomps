@@ -409,7 +409,7 @@ void CController :: Precache()
 	PRECACHE_SOUND_ARRAY( pPainSounds );
 	PRECACHE_SOUND_ARRAY( pDeathSounds );
 
-	PRECACHE_MODEL( "sprites/xspark4.spr");
+	PRECACHE_MODEL( "sprites/plasma1.spr");
 
 	UTIL_PrecacheOther( "controller_energy_ball" );
 	UTIL_PrecacheOther( "controller_head_ball" );
@@ -884,7 +884,7 @@ void CController :: RunAI( void )
 	{
 		if (m_pBall[i] == NULL)
 		{
-			m_pBall[i] = CSprite::SpriteCreate( "sprites/xspark4.spr", pev->origin, TRUE );
+			m_pBall[i] = CSprite::SpriteCreate( "sprites/plasma1.spr", pev->origin, TRUE );
 			m_pBall[i]->SetTransparency( kRenderGlow, 255, 255, 255, 255, kRenderFxNoDissipation );
 			m_pBall[i]->SetAttachment( edict(), (i + 3) );
 			m_pBall[i]->SetScale( 1.0 );
@@ -1195,7 +1195,7 @@ void CControllerHeadBall :: Spawn( void )
 	pev->movetype = MOVETYPE_FLY;
 	pev->solid = SOLID_BBOX;
 
-	SET_MODEL(ENT(pev), "sprites/xspark4.spr");
+	SET_MODEL(ENT(pev), "sprites/plasma1.spr");
 	pev->rendermode = kRenderTransAdd;
 	pev->rendercolor.x = 255;
 	pev->rendercolor.y = 255;
@@ -1220,9 +1220,9 @@ void CControllerHeadBall :: Spawn( void )
 
 void CControllerHeadBall :: Precache( void )
 {
-	PRECACHE_MODEL("sprites/xspark1.spr");
-	PRECACHE_SOUND("debris/zap4.wav");
-	PRECACHE_SOUND("weapons/electro4.wav");
+	PRECACHE_MODEL("sprites/plasma1.spr");
+	PRECACHE_SOUND("debris/zap1.wav");
+	PRECACHE_SOUND("debris/zap1.wav");
 }
 
 
@@ -1289,7 +1289,7 @@ void CControllerHeadBall :: HuntThink( void  )
 			WRITE_BYTE( 10 );		// speed
 		MESSAGE_END();
 
-		UTIL_EmitAmbientSound( ENT(pev), tr.vecEndPos, "weapons/electro4.wav", 0.5, ATTN_NORM, 0, RANDOM_LONG( 140, 160 ) );
+		UTIL_EmitAmbientSound( ENT(pev), tr.vecEndPos, "debris/zap1.wav", 0.5, ATTN_NORM, 0, RANDOM_LONG( 140, 160 ) );
 
 		m_flNextAttack = gpGlobals->time + 3.0;
 
@@ -1389,7 +1389,7 @@ void CControllerZapBall :: Spawn( void )
 	pev->movetype = MOVETYPE_FLY;
 	pev->solid = SOLID_BBOX;
 
-	SET_MODEL(ENT(pev), "sprites/xspark4.spr");
+	SET_MODEL(ENT(pev), "sprites/plasma1.spr");
 	pev->rendermode = kRenderTransAdd;
 	pev->rendercolor.x = 255;
 	pev->rendercolor.y = 255;
@@ -1411,7 +1411,7 @@ void CControllerZapBall :: Spawn( void )
 
 void CControllerZapBall :: Precache( void )
 {
-	PRECACHE_MODEL("sprites/xspark4.spr");
+	PRECACHE_MODEL("sprites/plasma1.spr");
 	// PRECACHE_SOUND("debris/zap4.wav");
 	// PRECACHE_SOUND("weapons/electro4.wav");
 }
@@ -1451,7 +1451,7 @@ void CControllerZapBall::ExplodeTouch( CBaseEntity *pOther )
 		pOther->TraceAttack(pevOwner, gSkillData.controllerDmgBall, pev->velocity.Normalize(), &tr, DMG_ENERGYBEAM ); 
 		ApplyMultiDamage( pevOwner, pevOwner );
 
-		UTIL_EmitAmbientSound( ENT(pev), tr.vecEndPos, "weapons/electro4.wav", 0.3, ATTN_NORM, 0, RANDOM_LONG( 90, 99 ) );
+		UTIL_EmitAmbientSound( ENT(pev), tr.vecEndPos, "debris/zap1.wav", 0.3, ATTN_NORM, 0, RANDOM_LONG( 90, 99 ) );
 
 	}
 
