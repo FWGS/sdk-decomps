@@ -19,10 +19,11 @@
 #include "VGUI_Font.h"
 #include <VGUI_TextImage.h>
 
-// sic: a stand-in for text retail's file had more: VC6 emits the type information in an order that
-// follows its heap layout, and with this unused macro CommandButton's and ClassButton's come between
-// CMenuHandler_StringCommandClassSelect's and CMenuHandler_StringCommand's
-#define CLASSMENU_SIC "...................."
+// sic: stand-ins for text retail's file had more: VC6 emits the type information in an order that
+// follows its heap layout, and with this unused macro and the one before the viewport's header
+// CommandButton's and ClassButton's come between CMenuHandler_StringCommandClassSelect's and
+// CMenuHandler_StringCommand's (neither alone does it)
+#define CLASSMENU_SIC "......"
 #include "hud.h"
 #include "cl_util.h"
 #include "camera.h"
@@ -35,6 +36,8 @@
 #include "parsemsg.h"
 
 #include "vgui_int.h"
+// sic: see CLASSMENU_SIC
+#define CLASSMENU_SIC2 "................................................................................................................................................................................................................................................................................................................................................................................................"
 #include "vgui_TeamFortressViewport.h"
 #include "vgui_ServerBrowser.h"
 
