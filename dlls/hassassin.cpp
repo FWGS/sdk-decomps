@@ -2596,41 +2596,45 @@ Schedule_t *CNAgent :: GetSchedule ( void )
 					return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
 
 				TraceResult tr;
-				Vector vecSrc;
+				BOOL fRoom = FALSE;	// name ours
 
 				if ( m_hEnemy->CanBeRepulsed( false ) )
 				{
 					// room behind the enemy to blow it away?
 					Vector vecDir;
-					vecSrc = Center();
+					Vector vecSrc = Center();
 					vecDir = ( m_hEnemy->Center() - vecSrc ).Normalize();
 					UTIL_TraceLine( vecSrc + vecDir * 64, vecSrc + vecDir * 600, dont_ignore_monsters, m_hEnemy->edict(), &tr );
 					if ( tr.flFraction >= 0.9 )
-						goto attack;
+						fRoom = TRUE;
 				}
 
-				// no: get some room first
-				BOOL fJump = FALSE;
-				Vector vecDir;
-				UTIL_VecToAngles( pev->angles );	// sic: meant to make the vectors
-				vecSrc = m_hEnemy->Center();
-				vecDir = ( gpGlobals->v_up - gpGlobals->v_forward ).Normalize();
-				UTIL_TraceLine( vecSrc, Center() + vecDir * 600, ignore_monsters, m_hEnemy->edict(), &tr );
-				if ( ( tr.vecEndPos - vecSrc ).Length() >= 480 )
-					fJump = CheckJump();
-
-				if ( WorldGraph.m_fGraphPresent && WorldGraph.m_fGraphPointersSet )
+				if ( !fRoom )
 				{
-					if ( fJump )
-						return GetScheduleOfType ( SCHED_MELEE_ATTACK1 );
-					return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
-				}
+					// no: get some room first
+					BOOL fJump = FALSE;
+					int iUnused0 = 0, iUnused1 = 0, iUnused2 = 0, iUnused3 = 0, iUnused4 = 0, iUnused5 = 0, iUnused6 = 0, iUnused7 = 0, iUnused8 = 0, iUnused9 = 0;	// sic: unused; 8 to 12 of them give retail's inlining (text retail had in this function)
+					Vector vecDir;
+					UTIL_VecToAngles( pev->angles );	// sic: meant to make the vectors
+					Vector vecSrc = m_hEnemy->Center();
+					vecDir = ( gpGlobals->v_up - gpGlobals->v_forward ).Normalize();
+					UTIL_TraceLine( vecSrc, Center() + vecDir * 600, ignore_monsters, m_hEnemy->edict(), &tr );
+					if ( ( tr.vecEndPos - vecSrc ).Length() >= 480 )
+						fJump = CheckJump();
 
-				if ( fJump && RANDOM_LONG( 0, 255 ) >= 128 )
-					return GetScheduleOfType ( SCHED_MELEE_ATTACK1 );
-				return GetScheduleOfType ( SCHED_AGENT_BLINK_NPW_COMBO );
+					if ( WorldGraph.m_fGraphPresent && WorldGraph.m_fGraphPointersSet )
+					{
+						if ( fJump )
+							return GetScheduleOfType ( SCHED_MELEE_ATTACK1 );
+						return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
+					}
+
+					if ( fJump && RANDOM_LONG( 0, 255 ) >= 128 )
+						return GetScheduleOfType ( SCHED_MELEE_ATTACK1 );
+					return GetScheduleOfType ( SCHED_AGENT_BLINK_NPW_COMBO );
+				}
 			}
-attack:
+
 		// jump player!
 			if ( HasConditions ( bits_COND_CAN_MELEE_ATTACK1 ) )
 			{
