@@ -20,6 +20,13 @@
 TEMPENTITY *g_pEgonFlare;
 BEAM *g_pTeslaBeams[5];
 
+// sic: an unused inline function, a stand-in for text retail's cl_effects.cpp
+// had before the end of EV_IsInPVS: its intermediate code places the VGUI
+// template members and copy functions this object emits where retail has them
+inline void sic_il_cl_effects( int *p )
+{
+}
+
 static void EV_FadeGrowCallback( TEMPENTITY *ent, float frametime, float currenttime );
 
 //=========================================================
