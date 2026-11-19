@@ -148,7 +148,7 @@ void CEnvExplosion::Spawn( void )
 	*/
 
 	float flSpriteScale;
-	flSpriteScale = ( m_iMagnitude - 50) * 0.6;
+	flSpriteScale = ( m_iMagnitude - 50) * 0.8;
 	
 	/*
 	if ( flSpriteScale > 50 )
