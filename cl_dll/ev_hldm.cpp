@@ -80,7 +80,7 @@ void EV_TeslaStop( struct event_args_s *args );
 void EV_TeslaSpecial( struct event_args_s *args );
 void EV_FireRepulsor( struct event_args_s *args );
 void EV_Sword( struct event_args_s *args );
-void EV_Electric( struct event_args_s *args );
+void EV_ElectricField( struct event_args_s *args );
 void EV_TractorBeam( struct event_args_s *args );
 }
 
@@ -2172,7 +2172,7 @@ void EV_Sword( event_args_t *args )
 // fparam1 units of the origin, light blue (one in five blue, one in five
 // white), each with a spark shower at a third point. The server precaches
 // events/electric.sc but nothing in it plays the event.
-void EV_Electric( event_args_t *args )
+void EV_ElectricField( event_args_t *args )
 {
 	int iBeamModelIndex = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/lgtning.spr" );
 
