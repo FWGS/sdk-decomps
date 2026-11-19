@@ -296,7 +296,7 @@ void CGrenade::BounceTouch( CBaseEntity *pOther )
 		return;
 
 	// only do damage if we're moving fairly fast
-	if (m_flNextAttack < gpGlobals->time && pev->velocity.Length() > 100)
+	if (m_flNextAttack < gpGlobals->time && pev->velocity.Length() > 250)
 	{
 		entvars_t *pevOwner = VARS( pev->owner );
 		if (pevOwner)
