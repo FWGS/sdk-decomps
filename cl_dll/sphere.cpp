@@ -20,7 +20,7 @@
 #define SPHERE_TEXCOORDS	108
 #define SPHERE_TRIS			180
 
-Vector g_vecSphereVerts[ SPHERE_VERTS ] =
+static Vector g_vecSphereVerts[ SPHERE_VERTS ] =
 {
 	Vector( 0.000000, -1.000000, 0.000000 ),
 	Vector( 0.360729, -0.932670, 0.000000 ),
@@ -116,7 +116,7 @@ Vector g_vecSphereVerts[ SPHERE_VERTS ] =
 	Vector( 0.592702, 0.805422, 0.000000 )
 };
 
-Vector2D g_vecSphereTexCoords[ SPHERE_TEXCOORDS ] =
+static Vector2D g_vecSphereTexCoords[ SPHERE_TEXCOORDS ] =
 {
 	Vector2D( 0.600000, 1.000000 ),
 	Vector2D( 0.500000, 0.882528 ),
@@ -360,9 +360,9 @@ void RenderSphere( const Vector &vecOrigin, float flRadius, const Vector &vecCol
 const float SPHERE_SOLID = 0.6;	// facing the view at least this much: vecColor1
 const float SPHERE_EDGE = 0.4;	// below this: vecColor2 fading out
 
-float g_flSphereBlend = 1 / ( SPHERE_SOLID - SPHERE_EDGE );
-Vector g_vecSphereUnused( 0, 0, 0 );	// sic: never read
-float g_flSphereFade = 1 / SPHERE_EDGE;
+static float g_flSphereBlend = 1 / ( SPHERE_SOLID - SPHERE_EDGE );
+static Vector g_vecSphereUnused( 0, 0, 0 );	// sic: never read
+static float g_flSphereFade = 1 / SPHERE_EDGE;
 
 //=========================================================
 // A shell, inside out: vecColor1 where it faces vecDir,
@@ -551,7 +551,7 @@ void CSphere::Create( const Vector &vecOrigin, const Vector &vecColor, float flM
 	pSphere->framedir = ( pSphere->frame > m_iFrames * 0.5 ) ? -1 : 1;
 }
 
-CSphere *g_pSpheres;
+static CSphere *g_pSpheres;
 
 void RenderAllSpheres( float flTime, float flFrametime )
 {
