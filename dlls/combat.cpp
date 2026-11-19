@@ -1453,7 +1453,7 @@ void CBaseEntity::FireBullets(ULONG cShots, Vector vecSrc, Vector vecDirShooting
 		pevAttacker = pev;  // the default attacker is ourselves
 
 	ClearMultiDamage();
-	gMultiDamage.type = DMG_BULLET | DMG_NEVERGIB;
+	gMultiDamage.type = DMG_BULLET;
 
 	for (ULONG iShot = 1; iShot <= cShots; iShot++)
 	{
