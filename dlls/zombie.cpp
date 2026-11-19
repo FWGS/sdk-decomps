@@ -199,8 +199,8 @@ void CZombie :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			{
 				if ( pHurt->pev->flags & (FL_MONSTER|FL_CLIENT) )
 				{
-					pHurt->pev->punchangle.z = -18;
-					pHurt->pev->punchangle.x = 5;
+					pHurt->pev->punchangle.z = -25;
+					pHurt->pev->punchangle.x = 15;
 					pHurt->pev->velocity = pHurt->pev->velocity - gpGlobals->v_right * 100;
 				}
 				// Play a random attack hit sound
@@ -223,8 +223,8 @@ void CZombie :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			{
 				if ( pHurt->pev->flags & (FL_MONSTER|FL_CLIENT) )
 				{
-					pHurt->pev->punchangle.z = 18;
-					pHurt->pev->punchangle.x = 5;
+					pHurt->pev->punchangle.z = 25;
+					pHurt->pev->punchangle.x = 15;
 					pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_right * 100;
 				}
 				EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pAttackHitSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackHitSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
@@ -245,7 +245,7 @@ void CZombie :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			{
 				if ( pHurt->pev->flags & (FL_MONSTER|FL_CLIENT) )
 				{
-					pHurt->pev->punchangle.x = 5;
+					pHurt->pev->punchangle.x = 10;
 					pHurt->pev->velocity = pHurt->pev->velocity + gpGlobals->v_forward * -100;
 				}
 				EMIT_SOUND_DYN ( ENT(pev), CHAN_WEAPON, pAttackHitSounds[ RANDOM_LONG(0,ARRAYSIZE(pAttackHitSounds)-1) ], 1.0, ATTN_NORM, 0, 100 + RANDOM_LONG(-5,5) );
