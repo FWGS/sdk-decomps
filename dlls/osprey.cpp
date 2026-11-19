@@ -22,8 +22,6 @@
 #include "effects.h"
 #include "customentity.h"
 
-extern void UTIL_TraceToss( CBaseEntity *pEntity, edict_t *pentIgnore, TraceResult *ptr );
-
 typedef struct 
 {
 	int isValid;

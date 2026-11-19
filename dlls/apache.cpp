@@ -29,9 +29,6 @@ extern DLL_GLOBAL int		g_iSkillLevel;
 #include "soundent.h"
 #include "decals.h"
 
-// defined in util.cpp, which util.h doesn't declare; name ours
-extern void UTIL_TraceToss( CBaseEntity *pEntity, edict_t *pentIgnore, TraceResult *ptr );
-
 #define SF_WAITFORTRIGGER	(0x04 | 0x40) // UNDONE: Fix!
 #define SF_NOWRECKAGE		0x08
 
