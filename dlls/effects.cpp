@@ -2055,6 +2055,13 @@ CBaseEntity *CGibShooter :: CreateGib ( Vector vecPos, Vector vecVel )
 	pGib->pev->origin = vecPos;
 	pGib->pev->velocity = vecVel;
 
+	// sic: this gib is spawned again as agibs.mdl just below
+	if (m_iBloodColor == BLOOD_COLOR_YELLOW)
+	{
+		pGib->Spawn( "models/agibs2.mdl" );
+		pGib->m_bloodColor = BLOOD_COLOR_YELLOW;
+	}
+
 	if (m_iBloodColor == BLOOD_COLOR_YELLOW)
 	{
 		pGib->Spawn( "models/agibs.mdl" );
@@ -4639,4 +4646,137 @@ void CParticle::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE use
 		pev->body = !pev->body;
 		//ALERT(at_console, "Setting body %d\n", pev->body);
 	}
+}
+
+
+//=========================================================
+// explo_debris - a burning piece of debris thrown by
+// env_explosion, trailing smoke (class name ours)
+//=========================================================
+class CExploDebris : public CBaseEntity
+{
+	void Spawn( void );
+	void Think( void );
+	void Touch( CBaseEntity *pOther );
+	int ObjectCaps( void ) { return FCAP_DONT_SAVE; }
+};
+
+LINK_ENTITY_TO_CLASS( explo_debris, CExploDebris );
+
+void CExploDebris::Spawn( void )
+{
+	pev->velocity = RANDOM_FLOAT( 200, 300 ) * pev->angles;
+	pev->velocity.x += RANDOM_FLOAT(-100.f,100.f);
+	pev->velocity.y += RANDOM_FLOAT(-100.f,100.f);
+	if ( pev->velocity.z >= 0 )
+		pev->velocity.z += 200;
+	else
+		pev->velocity.z -= 200;
+	pev->movetype = MOVETYPE_BOUNCE;
+	pev->gravity = 0.5;
+	pev->nextthink = gpGlobals->time + 0.1;
+	pev->solid = SOLID_NOT;
+	SET_MODEL( edict(), "models/debri_land.mdl");
+	UTIL_SetSize(pev, g_vecZero, g_vecZero );
+	pev->effects |= EF_DIMLIGHT;
+	pev->speed = RANDOM_FLOAT( 0.5, 1.5 );
+
+	pev->angles = g_vecZero;
+}
+
+
+void CExploDebris::Think( void )
+{
+	pev->speed -= 0.1;
+	if ( pev->speed > 0 )
+		pev->nextthink = gpGlobals->time + 0.1;
+	else
+		UTIL_Remove( this );
+	pev->flags &= ~FL_ONGROUND;
+
+	// smoke trail
+	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
+		WRITE_BYTE( TE_BEAMFOLLOW );
+		WRITE_SHORT( entindex() );	// entity
+		WRITE_SHORT( g_sModelIndexSmokeTrail );	// model
+		WRITE_BYTE( 3 ); // life
+		WRITE_BYTE( 2 );  // width
+		WRITE_BYTE( 155 );   // r, g, b
+		WRITE_BYTE( 155 );   // r, g, b
+		WRITE_BYTE( 128 );   // r, g, b
+		WRITE_BYTE( 255 );	// brightness
+	MESSAGE_END();
+}
+
+void CExploDebris::Touch( CBaseEntity *pOther )
+{
+	if ( pev->flags & FL_ONGROUND )
+		pev->velocity = pev->velocity * 0.1;
+	else
+		pev->velocity = pev->velocity * 0.6;
+
+	if ( (pev->velocity.x*pev->velocity.x+pev->velocity.y*pev->velocity.y) < 10.0 )
+		pev->speed = 0;
+}
+
+
+//=========================================================
+// explode_ball - a flying ball of flame thrown by
+// env_explosion (class name ours)
+//=========================================================
+class CExplodeBall : public CBaseEntity
+{
+	void Spawn( void );
+	void Think( void );
+	void Touch( CBaseEntity *pOther );
+	int ObjectCaps( void ) { return FCAP_DONT_SAVE; }
+};
+
+LINK_ENTITY_TO_CLASS( explode_ball, CExplodeBall );
+
+void CExplodeBall::Spawn( void )
+{
+	pev->velocity = RANDOM_FLOAT( 150, 250 ) * pev->angles;
+	pev->velocity.x += RANDOM_FLOAT(-330.f,1050.f);
+	pev->velocity.y += RANDOM_FLOAT(-1050.f,330.f);
+	if ( pev->velocity.z >= 0 )
+		pev->velocity.z += 360;
+	else
+		pev->velocity.z -= 950;
+	pev->movetype = MOVETYPE_FLY;
+	pev->effects |= EF_MUZZLEFLASH | EF_DIMLIGHT;
+	pev->gravity = 20.5;
+	SetNextThink( 0 );
+	pev->solid = SOLID_NOT;
+	SET_MODEL( edict(), "models/shrapnel.mdl");
+	UTIL_SetSize(pev, g_vecZero, g_vecZero );
+	pev->effects |= EF_DIMLIGHT;
+	pev->speed = RANDOM_FLOAT( 5.5, 6 );
+
+	pev->angles = g_vecZero;
+	pev->effects |= EF_MUZZLEFLASH | EF_DIMLIGHT;
+}
+
+
+void CExplodeBall::Think( void )
+{
+	UTIL_ExplosionSprite( pev->origin );
+
+	pev->speed -= 1.9;
+	if ( pev->speed > 0 )
+		SetNextThink( 0.09 );
+	else
+		UTIL_Remove( this );
+	pev->flags &= ~FL_ONGROUND;
+}
+
+void CExplodeBall::Touch( CBaseEntity *pOther )
+{
+	if ( pev->flags & FL_ONGROUND )
+		pev->velocity = pev->velocity * 0.6;
+	else
+		pev->velocity = pev->velocity * 0.6;
+
+	if ( (pev->velocity.x*pev->velocity.x+pev->velocity.y*pev->velocity.y) < 40.0 )
+		pev->speed = 20;
 }
