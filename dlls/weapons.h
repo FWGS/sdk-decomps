@@ -490,13 +490,13 @@ extern DLL_GLOBAL	short	g_sModelIndexWExplosion;// holds the index for the under
 extern DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 extern DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for blood drops
 extern DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for blood spray (bigger)
-extern DLL_GLOBAL	short	g_sModelIndexFireExplosion;// sprites/fexplo.spr (names ours from here)
+extern DLL_GLOBAL	short	g_sModelIndexFireExplo;// sprites/fexplo.spr (names ours from here)
 extern DLL_GLOBAL	short	g_sModelIndexSmokePuff;// sprites/smoke.spr
 extern DLL_GLOBAL	short	g_sModelIndexLightning;// sprites/lgtning.spr
-extern DLL_GLOBAL	short	g_sModelIndexPlayerFlame;// sprites/playerflame.spr
+extern DLL_GLOBAL	short	g_sModelIndexFire;// sprites/playerflame.spr
 extern DLL_GLOBAL	int	g_iBloodSprayEvent;// events/bloodspray.sc (name ours; W_Precache sets it)
-extern DLL_GLOBAL	int		g_iBlastSphereEvent;// events/blastsphere.sc
-extern DLL_GLOBAL	int		g_iElectricEvent;// events/electric.sc
+extern DLL_GLOBAL	int		g_iSphereEvent;// events/blastsphere.sc
+extern DLL_GLOBAL	int		g_iShockEvent;// events/electric.sc
 
 extern void ClearMultiDamage(void);
 extern void ApplyMultiDamage(entvars_t* pevInflictor, entvars_t* pevAttacker );

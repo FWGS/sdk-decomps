@@ -36,7 +36,7 @@ public:
 	void EXPORT BurnThink( void );
 	void EXPORT BoulderTouch( CBaseEntity *pOther );
 
-	int		m_iTrail;	// name ours: the trail model, g_sModelIndexFireExplosion when burning, 0 for none
+	int		m_iTrail;	// name ours: the trail model, g_sModelIndexFireExplo when burning, 0 for none
 };
 LINK_ENTITY_TO_CLASS( volcano_boulder, CBoulder );
 
@@ -68,7 +68,7 @@ void CBoulder::Spawn( void )
 		pev->spawnflags |= 1;
 	}
 
-	if ( m_iTrail == g_sModelIndexFireExplosion )
+	if ( m_iTrail == g_sModelIndexFireExplo )
 	{
 		SetThink( &CBoulder::BurnThink );
 		pev->nextthink = gpGlobals->time + 0.1;
@@ -111,7 +111,7 @@ void CBoulder::Precache( void )
 
 	float flRand = RANDOM_FLOAT( 0, 1 );
 	if ( flRand > 0.75 )
-		m_iTrail = g_sModelIndexFireExplosion;
+		m_iTrail = g_sModelIndexFireExplo;
 	else if ( flRand < 0.5 )
 		m_iTrail = 0;
 }
@@ -119,7 +119,7 @@ void CBoulder::Precache( void )
 
 void CBoulder::BurnThink( void )
 {
-	if ( m_iTrail == g_sModelIndexFireExplosion && pev->dmgtime >= gpGlobals->time )
+	if ( m_iTrail == g_sModelIndexFireExplo && pev->dmgtime >= gpGlobals->time )
 	{
 		pev->nextthink = gpGlobals->time + 0.1;
 

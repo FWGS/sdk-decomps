@@ -131,7 +131,7 @@ void CBaseFlyingObject :: DyingThink( void )
 				WRITE_COORD( vecSpot.x );
 				WRITE_COORD( vecSpot.y );
 				WRITE_COORD( vecSpot.z + pev->size.z * 0.5 );
-				WRITE_SHORT( g_sModelIndexFireExplosion );
+				WRITE_SHORT( g_sModelIndexFireExplo );
 				WRITE_BYTE( iScale ); // scale * 10
 				WRITE_BYTE( 255 ); // brightness
 			MESSAGE_END();
@@ -143,7 +143,7 @@ void CBaseFlyingObject :: DyingThink( void )
 				WRITE_COORD( vecSpot.x );
 				WRITE_COORD( vecSpot.y );
 				WRITE_COORD( vecSpot.z );
-				WRITE_SHORT( g_sModelIndexFireExplosion );
+				WRITE_SHORT( g_sModelIndexFireExplo );
 				WRITE_BYTE( iScale ); // scale * 10
 				WRITE_BYTE( 10 ); // framerate
 				WRITE_BYTE( TE_EXPLFLAG_NOPARTICLES );
