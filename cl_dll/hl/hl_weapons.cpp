@@ -48,6 +48,25 @@ static CBasePlayerWeapon *g_pWpns[ 32 ];
 vec3_t previousorigin;
 
 // HLDM Weapon placeholder entities.
+// sic: an unused inline function, a stand-in for text retail's hl_weapons.cpp had
+// and ours lacks before the weapons (10 statements fit, with 37 or 38 in the one
+// before PrintState's end): it keeps CBaseEntity's inline virtuals between this
+// file's functions where retail emits them, given the intermediate code cbase.h
+// has in front of CBaseEntity
+inline void sic_il_hl_weapons_top( int *p )
+{
+	p[0] = 0;
+	p[1] = 0;
+	p[2] = 0;
+	p[3] = 0;
+	p[4] = 0;
+	p[5] = 0;
+	p[6] = 0;
+	p[7] = 0;
+	p[8] = 0;
+	p[9] = 0;
+}
+
 CGlock g_Glock;
 CCrowbar g_Crowbar;
 CPython g_Python;
@@ -644,6 +663,8 @@ inline void sic_il_hl_weapons( int *p )
 	p[33] = 0;
 	p[34] = 0;
 	p[35] = 0;
+	p[36] = 0;
+	p[37] = 0;
 }
 
 /*
