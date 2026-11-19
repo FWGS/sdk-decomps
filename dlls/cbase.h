@@ -161,7 +161,7 @@ public:
 	virtual BOOL	CanBeTractored( void ) { return CanBeRepulsed( false ); }	// by the repulsor's tractor beam
 	virtual float	TractorBeamRadius( void );				// name ours
 	virtual BOOL	CanBeGrenaded( int fLauncher ) { return pev->movetype <= MOVETYPE_STEP || pev->waterlevel > 0; }
-	virtual BOOL	IsGrenadeTarget( void ) { return FALSE; }	// name ours
+	virtual BOOL	AllowsGrenades( void ) { return FALSE; }	// name ours
 	virtual void	BuildFinished( CBaseEntity *pBuilder ) {}	// name ours
 	virtual int		GetOnState( void ) { return -1; }	// name ours; master_watcher: 1 on, 0 off, -1 can't tell
 	virtual const char *GetKillDesc( void ) { return STRING( pev->classname ); }

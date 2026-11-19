@@ -2306,7 +2306,7 @@ Schedule_t *CHGrunt :: GetSchedule( void )
 			else if ( HasConditions ( bits_COND_CAN_RANGE_ATTACK2 ) && OccupySlot( bits_SLOTS_HGRUNT_GRENADE ) )
 			{
 				// shoot a grenade if you can; throw one only at what wants grenades
-				if ( FBitSet( pev->weapons, HGRUNT_GRENADELAUNCHER) || m_hEnemy->IsGrenadeTarget() )
+				if ( FBitSet( pev->weapons, HGRUNT_GRENADELAUNCHER) || m_hEnemy->AllowsGrenades() )
 					return GetScheduleOfType( SCHED_RANGE_ATTACK2 );
 			}
 // can shoot

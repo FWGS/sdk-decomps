@@ -77,7 +77,7 @@ public:
 	BOOL	CanBeTeleported( void ) { return FALSE; }
 	// hand grenades aren't thrown at ceiling turrets
 	BOOL	CanBeGrenaded( int fLauncher ) { if ( !fLauncher && m_iOrientation ) return FALSE; return TRUE; }
-	BOOL	IsGrenadeTarget( void ) { return !m_iOrientation; }
+	BOOL	AllowsGrenades( void ) { return !m_iOrientation; }
 	int		GetOnState( void ) { if ( m_iOn ) return IsAlive(); return 0; }
 
 	// Think functions
