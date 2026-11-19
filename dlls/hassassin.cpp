@@ -2589,11 +2589,12 @@ Schedule_t *CNAgent :: GetSchedule ( void )
 					return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
 
 				TraceResult tr;
-				Vector vecSrc, vecDir;
+				Vector vecSrc;
 
 				if ( m_hEnemy->CanBeRepulsed( false ) )
 				{
 					// room behind the enemy to blow it away?
+					Vector vecDir;
 					vecSrc = Center();
 					vecDir = ( m_hEnemy->Center() - vecSrc ).Normalize();
 					UTIL_TraceLine( vecSrc + vecDir * 64, vecSrc + vecDir * 600, dont_ignore_monsters, m_hEnemy->edict(), &tr );
@@ -2603,6 +2604,7 @@ Schedule_t *CNAgent :: GetSchedule ( void )
 
 				// no: get some room first
 				BOOL fJump = FALSE;
+				Vector vecDir;
 				UTIL_VecToAngles( pev->angles );	// sic: meant to make the vectors
 				vecSrc = m_hEnemy->Center();
 				vecDir = ( gpGlobals->v_up - gpGlobals->v_forward ).Normalize();
