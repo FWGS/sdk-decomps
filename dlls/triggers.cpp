@@ -2619,6 +2619,56 @@ void CTriggerMonsterJump :: Touch( CBaseEntity *pOther )
 }
 
 
+// mp3 player, killar
+#define SF_REMOVE_ON_FIRE 1
+
+class CTargetFMODAudio : public CPointEntity
+{
+public:
+     void Spawn( void );
+
+     void Use( CBaseEntity *pActivator, CBaseEntity *pCaller,
+          USE_TYPE useType, float value );
+
+     BOOL m_bPlaying;
+};
+
+LINK_ENTITY_TO_CLASS( trigger_mp3audio, CTargetFMODAudio );
+
+void CTargetFMODAudio :: Spawn( void )
+{
+     pev->solid = SOLID_NOT;
+     pev->movetype = MOVETYPE_NONE;
+
+     m_bPlaying = FALSE; // start out not playing
+}
+
+void CTargetFMODAudio::Use( CBaseEntity *pActivator, CBaseEntity *pCaller,
+     USE_TYPE useType, float value )
+{
+     char command[64];
+
+     if (!pActivator->IsPlayer()) // activator should be a player
+          return;
+
+     if (!m_bPlaying) // if we're not playing, start playing!
+          m_bPlaying = TRUE;
+     else
+     {     // if we're already playing, stop the mp3
+          m_bPlaying = FALSE;
+          CLIENT_COMMAND(pActivator->edict(), "stopmp3\n");
+          return;
+     }
+
+     // issue the play/loop command
+     sprintf(command, "playmp3 %s\n", STRING(pev->message));
+
+     CLIENT_COMMAND(pActivator->edict(), command);
+
+     // remove if set
+     if (FBitSet(pev->spawnflags, SF_REMOVE_ON_FIRE))
+          UTIL_Remove(this);
+}
 //=====================================
 //
 // trigger_cdaudio - starts/stops cd audio tracks
