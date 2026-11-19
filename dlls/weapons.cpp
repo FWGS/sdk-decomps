@@ -47,6 +47,9 @@ DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
 DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for the initial blood
 DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for splattered blood
 DLL_GLOBAL	short	g_sModelIndexShock;// the explosions' shock ring (name ours)
+DLL_GLOBAL	short	g_sModelIndexSmokeTrail;// sprites/smoke.spr, for beam trails (name ours)
+DLL_GLOBAL	short	g_sModelIndexExpansion;// sprites/expansion2.spr (name ours)
+DLL_GLOBAL	short	g_sModelIndexBloodCloud;// sprites/bloodcloud.spr (name ours)
 
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
 AmmoInfo CBasePlayerItem::AmmoInfoArray[MAX_AMMO_SLOTS];
