@@ -158,6 +158,26 @@ void CDecal :: TriggerDecal ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE
 			WRITE_SHORT( (int)VARS(trace.pHit)->modelindex );
 	MESSAGE_END();
 
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY );
+		WRITE_BYTE( TE_SPRITE );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		WRITE_SHORT( g_sModelIndexWallPuff );
+		WRITE_BYTE( 2 ); // scale
+		WRITE_BYTE( 55 ); // brightness
+	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY );
+		WRITE_BYTE( TE_SPRITE );
+		WRITE_COORD( pev->origin.x );
+		WRITE_COORD( pev->origin.y );
+		WRITE_COORD( pev->origin.z );
+		WRITE_SHORT( g_sModelIndexWallPuff );
+		WRITE_BYTE( 2 ); // scale
+		WRITE_BYTE( 55 ); // brightness
+	MESSAGE_END();
+
 	SetThink(&CDecal :: SUB_Remove );
 	SetNextThink( 0.1 );
 }
