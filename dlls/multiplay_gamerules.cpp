@@ -137,7 +137,7 @@ void CHalfLifeMultiplay::RefreshSkillData( void )
 	gSkillData.suitchargerCapacity = 30;
 
 	// Crowbar whack
-	gSkillData.plrDmgCrowbar = 25;
+	gSkillData.plrDmgFork = 25;
 
 	// Glock Round
 	gSkillData.plrDmg9MM = 12;
@@ -146,7 +146,7 @@ void CHalfLifeMultiplay::RefreshSkillData( void )
 	gSkillData.plrDmg357 = 40;
 
 	// MP5 Round
-	gSkillData.plrDmgMP5 = 12;
+	gSkillData.plrDmgMP18 = 12;
 
 	// M203 grenade
 	gSkillData.plrDmgM203Grenade = 100;
@@ -155,7 +155,7 @@ void CHalfLifeMultiplay::RefreshSkillData( void )
 	gSkillData.plrDmgBuckshot = 20;// fewer pellets in deathmatch
 
 	// Crossbow
-	gSkillData.plrDmgCrossbowClient = 20;
+	gSkillData.plrDmgFlareClient = 20;
 
 	// RPG
 	gSkillData.plrDmgRPG = 120;
@@ -165,7 +165,7 @@ void CHalfLifeMultiplay::RefreshSkillData( void )
 	gSkillData.plrDmgEgonNarrow = 10;
 
 	// Hand Grendade
-	gSkillData.plrDmgHandGrenade = 100;
+	gSkillData.plrDmgTNT = 100;
 
 	// Satchel Charge
 	gSkillData.plrDmgSatchel = 120;

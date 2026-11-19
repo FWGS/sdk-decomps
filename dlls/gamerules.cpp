@@ -146,6 +146,9 @@ void CGameRules::RefreshSkillData ( void )
 	// Barney
 	gSkillData.barneyHealth = GetSkillCvar( "sk_barney_health");
 
+	// Barney zombie
+	gSkillData.barneyzomHealth = GetSkillCvar( "sk_barneyzom_health");
+
 	// Big Momma
 	gSkillData.bigmommaHealthFactor = GetSkillCvar( "sk_bigmomma_health_factor" );
 	gSkillData.bigmommaDmgSlash = GetSkillCvar( "sk_bigmomma_dmg_slash" );
@@ -219,6 +222,16 @@ void CGameRules::RefreshSkillData ( void )
 	gSkillData.zombieDmgOneSlash = GetSkillCvar( "sk_zombie_dmg_one_slash");
 	gSkillData.zombieDmgBothSlash = GetSkillCvar( "sk_zombie_dmg_both_slash");
 
+	// Cremator
+	gSkillData.crematorHealth = GetSkillCvar( "sk_cremator_health");
+	gSkillData.crematorDmgOneSlash = GetSkillCvar( "sk_cremator_dmg_one_slash");
+	gSkillData.crematorDmgBothSlash = GetSkillCvar( "sk_cremator_dmg_both_slash");
+
+	// Ghoul
+	gSkillData.ghoulHealth = GetSkillCvar( "sk_ghoul_health");
+	gSkillData.ghoulDmgOneSlash = GetSkillCvar( "sk_ghoul_dmg_one_slash");
+	gSkillData.ghoulDmgBothSlash = GetSkillCvar( "sk_ghoul_dmg_both_slash");
+
 	//Turret
 	gSkillData.turretHealth = GetSkillCvar( "sk_turret_health");
 
@@ -231,7 +244,7 @@ void CGameRules::RefreshSkillData ( void )
 // PLAYER WEAPONS
 
 	// Crowbar whack
-	gSkillData.plrDmgCrowbar = GetSkillCvar( "sk_plr_crowbar");
+	gSkillData.plrDmgFork = GetSkillCvar( "sk_plr_fork");
 
 	// Glock Round
 	gSkillData.plrDmg9MM = GetSkillCvar( "sk_plr_9mm_bullet");
@@ -240,7 +253,7 @@ void CGameRules::RefreshSkillData ( void )
 	gSkillData.plrDmg357 = GetSkillCvar( "sk_plr_357_bullet");
 
 	// MP5 Round
-	gSkillData.plrDmgMP5 = GetSkillCvar( "sk_plr_9mmAR_bullet");
+	gSkillData.plrDmgMP18 = GetSkillCvar( "sk_plr_mp18_bullet");
 
 	// M203 grenade
 	gSkillData.plrDmgM203Grenade = GetSkillCvar( "sk_plr_9mmAR_grenade");
@@ -249,8 +262,8 @@ void CGameRules::RefreshSkillData ( void )
 	gSkillData.plrDmgBuckshot = GetSkillCvar( "sk_plr_buckshot");
 
 	// Crossbow
-	gSkillData.plrDmgCrossbowClient = GetSkillCvar( "sk_plr_xbow_bolt_client");
-	gSkillData.plrDmgCrossbowMonster = GetSkillCvar( "sk_plr_xbow_bolt_monster");
+	gSkillData.plrDmgFlareClient = GetSkillCvar( "sk_plr_flare_client");
+	gSkillData.plrDmgFlareMonster = GetSkillCvar( "sk_plr_flare_monster");
 
 	// RPG
 	gSkillData.plrDmgRPG = GetSkillCvar( "sk_plr_rpg");
@@ -263,7 +276,7 @@ void CGameRules::RefreshSkillData ( void )
 	gSkillData.plrDmgEgonWide = GetSkillCvar( "sk_plr_egon_wide");
 
 	// Hand Grendade
-	gSkillData.plrDmgHandGrenade = GetSkillCvar( "sk_plr_hand_grenade");
+	gSkillData.plrDmgTNT = GetSkillCvar( "sk_plr_tnt");
 
 	// Satchel Charge
 	gSkillData.plrDmgSatchel = GetSkillCvar( "sk_plr_satchel");
