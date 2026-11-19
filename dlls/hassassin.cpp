@@ -1055,6 +1055,133 @@ Schedule_t* CHAssassin :: GetScheduleOfType ( int Type )
 // makes it blow up: 1000 damage to what it hit, its burden
 // gibbed, then an energy sphere like the mortar's.
 //=========================================================
+// sic: an unused inline function, a stand-in for intermediate code retail's
+// hassassin.cpp had and ours lacks somewhere between CHAssassin::ISoundMask and
+// CPowerBeam::Precache: about 9.1 to 9.6 KB (116 to 121 of these statements
+// fit), which puts CRocket::GetKillDesc, needed since the slip stream's
+// factory, between CPowerBeam::Spawn and Precache, where retail emits it
+inline void sic_il_hassassin( float *p )
+{
+	p[0] = p[1] * 2 + p[2];
+	p[1] = p[2] * 2 + p[3];
+	p[2] = p[3] * 2 + p[4];
+	p[3] = p[4] * 2 + p[5];
+	p[4] = p[5] * 2 + p[6];
+	p[5] = p[6] * 2 + p[7];
+	p[6] = p[7] * 2 + p[8];
+	p[7] = p[8] * 2 + p[9];
+	p[8] = p[9] * 2 + p[10];
+	p[9] = p[10] * 2 + p[11];
+	p[10] = p[11] * 2 + p[12];
+	p[11] = p[12] * 2 + p[13];
+	p[12] = p[13] * 2 + p[14];
+	p[13] = p[14] * 2 + p[15];
+	p[14] = p[15] * 2 + p[16];
+	p[15] = p[16] * 2 + p[17];
+	p[16] = p[17] * 2 + p[18];
+	p[17] = p[18] * 2 + p[19];
+	p[18] = p[19] * 2 + p[20];
+	p[19] = p[20] * 2 + p[21];
+	p[20] = p[21] * 2 + p[22];
+	p[21] = p[22] * 2 + p[23];
+	p[22] = p[23] * 2 + p[24];
+	p[23] = p[24] * 2 + p[25];
+	p[24] = p[25] * 2 + p[26];
+	p[25] = p[26] * 2 + p[27];
+	p[26] = p[27] * 2 + p[28];
+	p[27] = p[28] * 2 + p[29];
+	p[28] = p[29] * 2 + p[30];
+	p[29] = p[30] * 2 + p[31];
+	p[30] = p[31] * 2 + p[32];
+	p[31] = p[32] * 2 + p[33];
+	p[32] = p[33] * 2 + p[34];
+	p[33] = p[34] * 2 + p[35];
+	p[34] = p[35] * 2 + p[36];
+	p[35] = p[36] * 2 + p[37];
+	p[36] = p[37] * 2 + p[38];
+	p[37] = p[38] * 2 + p[39];
+	p[38] = p[39] * 2 + p[40];
+	p[39] = p[40] * 2 + p[41];
+	p[40] = p[41] * 2 + p[42];
+	p[41] = p[42] * 2 + p[43];
+	p[42] = p[43] * 2 + p[44];
+	p[43] = p[44] * 2 + p[45];
+	p[44] = p[45] * 2 + p[46];
+	p[45] = p[46] * 2 + p[47];
+	p[46] = p[47] * 2 + p[48];
+	p[47] = p[48] * 2 + p[49];
+	p[48] = p[49] * 2 + p[50];
+	p[49] = p[50] * 2 + p[51];
+	p[50] = p[51] * 2 + p[52];
+	p[51] = p[52] * 2 + p[53];
+	p[52] = p[53] * 2 + p[54];
+	p[53] = p[54] * 2 + p[55];
+	p[54] = p[55] * 2 + p[56];
+	p[55] = p[56] * 2 + p[57];
+	p[56] = p[57] * 2 + p[58];
+	p[57] = p[58] * 2 + p[59];
+	p[58] = p[59] * 2 + p[60];
+	p[59] = p[60] * 2 + p[61];
+	p[60] = p[61] * 2 + p[62];
+	p[61] = p[62] * 2 + p[63];
+	p[62] = p[63] * 2 + p[64];
+	p[63] = p[64] * 2 + p[65];
+	p[64] = p[65] * 2 + p[66];
+	p[65] = p[66] * 2 + p[67];
+	p[66] = p[67] * 2 + p[68];
+	p[67] = p[68] * 2 + p[69];
+	p[68] = p[69] * 2 + p[70];
+	p[69] = p[70] * 2 + p[71];
+	p[70] = p[71] * 2 + p[72];
+	p[71] = p[72] * 2 + p[73];
+	p[72] = p[73] * 2 + p[74];
+	p[73] = p[74] * 2 + p[75];
+	p[74] = p[75] * 2 + p[76];
+	p[75] = p[76] * 2 + p[77];
+	p[76] = p[77] * 2 + p[78];
+	p[77] = p[78] * 2 + p[79];
+	p[78] = p[79] * 2 + p[80];
+	p[79] = p[80] * 2 + p[81];
+	p[80] = p[81] * 2 + p[82];
+	p[81] = p[82] * 2 + p[83];
+	p[82] = p[83] * 2 + p[84];
+	p[83] = p[84] * 2 + p[85];
+	p[84] = p[85] * 2 + p[86];
+	p[85] = p[86] * 2 + p[87];
+	p[86] = p[87] * 2 + p[88];
+	p[87] = p[88] * 2 + p[89];
+	p[88] = p[89] * 2 + p[90];
+	p[89] = p[90] * 2 + p[91];
+	p[90] = p[91] * 2 + p[92];
+	p[91] = p[92] * 2 + p[93];
+	p[92] = p[93] * 2 + p[94];
+	p[93] = p[94] * 2 + p[95];
+	p[94] = p[95] * 2 + p[96];
+	p[95] = p[96] * 2 + p[97];
+	p[96] = p[97] * 2 + p[98];
+	p[97] = p[98] * 2 + p[99];
+	p[98] = p[99] * 2 + p[100];
+	p[99] = p[100] * 2 + p[101];
+	p[100] = p[101] * 2 + p[102];
+	p[101] = p[102] * 2 + p[103];
+	p[102] = p[103] * 2 + p[104];
+	p[103] = p[104] * 2 + p[105];
+	p[104] = p[105] * 2 + p[106];
+	p[105] = p[106] * 2 + p[107];
+	p[106] = p[107] * 2 + p[108];
+	p[107] = p[108] * 2 + p[109];
+	p[108] = p[109] * 2 + p[110];
+	p[109] = p[110] * 2 + p[111];
+	p[110] = p[111] * 2 + p[112];
+	p[111] = p[112] * 2 + p[113];
+	p[112] = p[113] * 2 + p[114];
+	p[113] = p[114] * 2 + p[115];
+	p[114] = p[115] * 2 + p[116];
+	p[115] = p[116] * 2 + p[117];
+	p[116] = p[117] * 2 + p[118];
+	p[117] = p[118] * 2 + p[119];
+}
+
 class CKamehameha : public CRocket
 {
 public:
@@ -2596,41 +2723,45 @@ Schedule_t *CNAgent :: GetSchedule ( void )
 					return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
 
 				TraceResult tr;
-				Vector vecSrc;
+				BOOL fRoom = FALSE;	// name ours
 
 				if ( m_hEnemy->CanBeRepulsed( false ) )
 				{
 					// room behind the enemy to blow it away?
 					Vector vecDir;
-					vecSrc = Center();
+					Vector vecSrc = Center();
 					vecDir = ( m_hEnemy->Center() - vecSrc ).Normalize();
 					UTIL_TraceLine( vecSrc + vecDir * 64, vecSrc + vecDir * 600, dont_ignore_monsters, m_hEnemy->edict(), &tr );
 					if ( tr.flFraction >= 0.9 )
-						goto attack;
+						fRoom = TRUE;
 				}
 
-				// no: get some room first
-				BOOL fJump = FALSE;
-				Vector vecDir;
-				UTIL_VecToAngles( pev->angles );	// sic: meant to make the vectors
-				vecSrc = m_hEnemy->Center();
-				vecDir = ( gpGlobals->v_up - gpGlobals->v_forward ).Normalize();
-				UTIL_TraceLine( vecSrc, Center() + vecDir * 600, ignore_monsters, m_hEnemy->edict(), &tr );
-				if ( ( tr.vecEndPos - vecSrc ).Length() >= 480 )
-					fJump = CheckJump();
-
-				if ( WorldGraph.m_fGraphPresent && WorldGraph.m_fGraphPointersSet )
+				if ( !fRoom )
 				{
-					if ( fJump )
-						return GetScheduleOfType ( SCHED_MELEE_ATTACK1 );
-					return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
-				}
+					// no: get some room first
+					BOOL fJump = FALSE;
+					int iUnused0 = 0, iUnused1 = 0, iUnused2 = 0, iUnused3 = 0, iUnused4 = 0, iUnused5 = 0, iUnused6 = 0, iUnused7 = 0, iUnused8 = 0, iUnused9 = 0;	// sic: unused; 8 to 12 of them give retail's inlining (text retail had in this function)
+					Vector vecDir;
+					UTIL_VecToAngles( pev->angles );	// sic: meant to make the vectors
+					Vector vecSrc = m_hEnemy->Center();
+					vecDir = ( gpGlobals->v_up - gpGlobals->v_forward ).Normalize();
+					UTIL_TraceLine( vecSrc, Center() + vecDir * 600, ignore_monsters, m_hEnemy->edict(), &tr );
+					if ( ( tr.vecEndPos - vecSrc ).Length() >= 480 )
+						fJump = CheckJump();
 
-				if ( fJump && RANDOM_LONG( 0, 255 ) >= 128 )
-					return GetScheduleOfType ( SCHED_MELEE_ATTACK1 );
-				return GetScheduleOfType ( SCHED_AGENT_BLINK_NPW_COMBO );
+					if ( WorldGraph.m_fGraphPresent && WorldGraph.m_fGraphPointersSet )
+					{
+						if ( fJump )
+							return GetScheduleOfType ( SCHED_MELEE_ATTACK1 );
+						return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
+					}
+
+					if ( fJump && RANDOM_LONG( 0, 255 ) >= 128 )
+						return GetScheduleOfType ( SCHED_MELEE_ATTACK1 );
+					return GetScheduleOfType ( SCHED_AGENT_BLINK_NPW_COMBO );
+				}
 			}
-attack:
+
 		// jump player!
 			if ( HasConditions ( bits_COND_CAN_MELEE_ATTACK1 ) )
 			{

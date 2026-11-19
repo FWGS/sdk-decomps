@@ -126,11 +126,7 @@ void CBlackHole::SuckThink( void )
 		// a random beam
 		pev->dmgtime = gpGlobals->time + RANDOM_FLOAT( 0.2, 2 );
 
-		Vector vecDir;
-		vecDir[0] = RANDOM_FLOAT( -1, 1 );
-		vecDir[1] = RANDOM_FLOAT( -1, 1 );
-		vecDir[2] = RANDOM_FLOAT( -1, 1 );
-		vecDir = vecDir * RANDOM_FLOAT( 512, 1024 );
+		Vector vecDir = Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ) ) * RANDOM_FLOAT( 512, 1024 );
 
 		CBeam *pBeam = CBeam::BeamCreate( "sprites/obeam1.spr", RANDOM_LONG( 20, 40 ) );
 		pBeam->PointEntInit( pev->origin + vecDir, ENTINDEX( edict() ) );
