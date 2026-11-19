@@ -182,6 +182,14 @@ float EV_HLDM_PlayTextureSound( int idx, pmtrace_t *ptr, float *vecSrc, float *v
 		rgsz[3] = "player/pl_tile4.wav";
 		cnt = 4;
 		break;
+	case 'B':	// graves (materials.txt: RR_GRAVEFLOOR, RR_GRAVEWALL, RR_MAUSOLEUM1)
+		fvol = 1.0; fvolbar = 0.0;
+		rgsz[0] = "player/pl_grave1.wav";
+		rgsz[1] = "player/pl_grave2.wav";
+		rgsz[2] = "player/pl_grave3.wav";
+		rgsz[3] = "player/pl_grave4.wav";
+		cnt = 4;
+		break;
 	case CHAR_TEX_SLOSH: fvol = 0.9; fvolbar = 0.0;
 		rgsz[0] = "player/pl_slosh1.wav";
 		rgsz[1] = "player/pl_slosh3.wav";
