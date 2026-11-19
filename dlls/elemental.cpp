@@ -588,28 +588,31 @@ BOOL CWaterElemental :: CheckRangeAttack1 ( float flDot, float flDist )
 //=========================================================
 BOOL CWaterElemental :: CheckRangeAttack2 ( float flDot, float flDist )
 {
-	if ( m_flGroundSpeed == 0 )
+	if ( m_flGroundSpeed != 0 )
 	{
-		if ( gpGlobals->time < m_flNextSpray )
-			return m_fCanSpray;
+		m_fCanSpray = FALSE;
+		return FALSE;
+	}
 
-		if ( HasConditions( bits_COND_SEE_ENEMY | bits_COND_ENEMY_OCCLUDED ) && flDist < 2048 && flDot >= 0.5 )
+	if ( gpGlobals->time < m_flNextSpray )
+		return m_fCanSpray;
+
+	if ( HasConditions( bits_COND_SEE_ENEMY | bits_COND_ENEMY_OCCLUDED ) && flDist < 2048 && flDot >= 0.5 )
+	{
+		if ( !FBitSet( m_hEnemy->pev->flags, FL_ONGROUND ) )
 		{
-			if ( !FBitSet( m_hEnemy->pev->flags, FL_ONGROUND ) )
+			TraceResult tr;
+			UTIL_TraceLine( m_hEnemy->pev->origin, m_hEnemy->pev->origin - Vector( 0, 0, 80 ), ignore_monsters, ENT(pev), &tr );
+
+			if ( tr.flFraction >= 1 )
 			{
-				TraceResult tr;
-				UTIL_TraceLine( m_hEnemy->pev->origin, m_hEnemy->pev->origin - Vector( 0, 0, 80 ), ignore_monsters, ENT(pev), &tr );
-
-				if ( tr.flFraction >= 1 )
-				{
-					m_fCanSpray = FALSE;
-					return FALSE;
-				}
+				m_fCanSpray = FALSE;
+				return FALSE;
 			}
-
-			m_fCanSpray = TRUE;
-			return TRUE;
 		}
+
+		m_fCanSpray = TRUE;
+		return TRUE;
 	}
 
 	m_fCanSpray = FALSE;
