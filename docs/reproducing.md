@@ -10,13 +10,21 @@ reproduced for the first five mods in this repository, and what to look at
 when a rebuild "differs from retail". Counter-Strike adds Visual C++ 5.0,
 PDBs written by hundreds of links, releases that continue an earlier
 release's build, and a packed client format; its page,
-[counter-strike.md](counter-strike.md), describes those. How the code itself was matched is in
+[counter-strike.md](counter-strike.md), describes those. Scientist
+Slaughterhouse adds a client linked incrementally from the Debug
+configuration, whose image records a history of links, the compile times
+of its anonymous namespaces, the full source paths the IDE passed, browse
+information, and an order of RTTI records that follows the lengths of the
+compiler's own paths; its page,
+[scientist-slaughterhouse.md](scientist-slaughterhouse.md), describes
+those. How the code itself was matched is in
 [vc6-notes.md](vc6-notes.md). The compilers are described in
 [compilers.md](compilers.md), the toolchain folder and Wine prefix in
 [setup.md](setup.md), and each mod's own details in
 [point-of-view.md](point-of-view.md), [t2def.md](t2def.md),
 [wanted.md](wanted.md), [gunman-chronicles.md](gunman-chronicles.md),
-[they-hunger.md](they-hunger.md) and [counter-strike.md](counter-strike.md).
+[they-hunger.md](they-hunger.md), [counter-strike.md](counter-strike.md)
+and [scientist-slaughterhouse.md](scientist-slaughterhouse.md).
 
 Terms used below:
 
@@ -626,3 +634,6 @@ lines).
 | Gunman server and client | per-file `/Fp` (and one `/YX"schedule.h"`) in the project files | five server and four client objects show other `.pch` states; the history that gave them is not found |
 | Point of View, Gunman, Wanted | placeholder objects | the count is retail's; names, contents and places are not |
 | all other DLLs | LINK on the VC6 CD's `MSVCRT.DLL` (T2DEF's client: Service Pack 4's) | gives retail's import order and kept copies; which runtime the original linkers ran on is not known |
+| Scientist Slaughterhouse server | 1,431 links at the final time between the first and the last; the last session (`flyingobject.h` and `game.h` edited, six sources recompiled once or twice) | only the count and the two end times are known; the session is one history that gives each object retail's `.pch` state |
+| Scientist Slaughterhouse client | 456 relinks that only raise the PDB's age; the session before the full link; an earlier text of `sword.cpp` until the full link (shipped in `tools/release/scientist-slaughterhouse/`) | the PDB's creation, the full link's and the last link's times and the age are retail's; the July `sword.cpp` is a guess that gives its two data contributions of retail's sizes |
+| Scientist Slaughterhouse, both | the compiler at `C:\Microsoft Visual Studio\VC98` and `TMP` at `C:\DOCUME~1\ADMINI~1\LOCALS~1\Temp` | the install root fits the source tree's path (`...\MyProjects\Source Code`), the `TMP` path is a guess (Windows 2000's and XP's for the Administrator); only the lengths reach the image, through the client's RTTI order, and the source's stand-in pads are tuned to them |

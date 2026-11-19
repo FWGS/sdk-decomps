@@ -4,6 +4,10 @@ These are the rules we learned about Visual C++ 6 (VC6) while rebuilding five
 Half-Life mods: first function by function, then whole images byte for byte.
 Counter-Strike, the sixth, taught more, about Visual C++ 5.0 and VC6's
 service packs; [counter-strike.md](counter-strike.md) has those.
+Scientist Slaughterhouse, the seventh, added VC6's incremental linking,
+the order of its RTTI records and C2's block layout;
+[scientist-slaughterhouse.md](scientist-slaughterhouse.md) has the mod's
+side of them.
 None of this is documented by Microsoft. It is written as a field guide for
 someone matching their own VC6 binary: each rule comes with its evidence, an
 example, and how to use it.
@@ -18,7 +22,7 @@ the parts of the image that are not code.
 
 Most rules are for VC6 RTM (the first release, without service packs)
 Professional, `C2.DLL` 12.00.8168, with `/O2`, which built Point of View,
-Wanted!, Gunman Chronicles and They Hunger, and for LINK 6.00.8168. T2DEF's server was
+Wanted!, Gunman Chronicles, They Hunger and Scientist Slaughterhouse, and for LINK 6.00.8168. T2DEF's server was
 built by the Standard edition, which ignores `/O2` and gives `/Od` code; its
 client by Service Pack 4's Standard edition. Identify your compiler from the
 Rich header before anything else ([compilers.md](compilers.md)).
@@ -44,7 +48,8 @@ Commit ids are from the mod branches
 ([point-of-view](../../../tree/point-of-view), [t2def](../../../tree/t2def),
 [wanted](../../../tree/wanted),
 [gunman-chronicles](../../../tree/gunman-chronicles),
-[they-hunger](../../../tree/they-hunger)). `git show <id>` shows
+[they-hunger](../../../tree/they-hunger),
+[scientist-slaughterhouse](../../../tree/scientist-slaughterhouse)). `git show <id>` shows
 the change; most commit messages hold the sweep of variants behind it.
 
 ## How sure each rule is
@@ -71,7 +76,9 @@ Each rule carries one of three marks:
 - [Text that compiles to nothing still counts](#text-that-compiles-to-nothing-still-counts)
 - [Where header inline functions land](#where-header-inline-functions-land)
 - [Section order and COMDAT placement](#section-order-and-comdat-placement)
+- [The order of RTTI records](#the-order-of-rtti-records)
 - [LINK's identical-code folding](#links-identical-code-folding)
+- [Incremental linking](#incremental-linking)
 - [`.bss` order](#bss-order)
 - [What leaves no trace](#what-leaves-no-trace)
 - [A working order](#a-working-order)
@@ -182,6 +189,19 @@ product 53, `DotProduct( a, b )` 19.
   budget but split it further. A subscript is a natural way to add a site
   where the shares need one: Wanted's `CBot::Wander` writes `vecCell[2] += 1`
   (`ab51ea6`); five of Gunman's homing rockets use subscripts (`7617548`).
+- **A constructor's member constructors are sites.** Scientist
+  Slaughterhouse's `CHud` constructor (`bdfba9d`) calls the vector
+  constructor iterator for a member's array out of line: with a budget of
+  1,000 and only one member constructor after it, the share (70) covers the
+  iterator (49); with at least one more member constructor after it, it
+  doesn't. Two `Vector` members at the end of the class, which also fill
+  24 bytes no code touches, give retail's call, and with it the exception
+  frame and the fourteen destructors retail emits before the deleting
+  destructors.
+- **Braces as budget.** `CTriggerTeleport::TeleportTouch` (`55ffef2`)
+  needed its size S between 858 and 866: the SDK's nested filter `if`s
+  brought it to 852, and any three of five brace pairs around one-statement
+  arms to retail's decisions.
 - **Inline functions move IL into a nested list.** A small inline function
   that wraps a few statements gets one share and spends it on its own sites,
   instead of each site getting a share of the caller's list. Wanted's
@@ -247,6 +267,21 @@ compiler; Wanted `15d6a91`).
 4. **Large frames.** Over 128 bytes, slots are sorted by density
    (count × 1000 / size) with a quicksort that is not stable.
 5. Slot 0 is nearest `esp`.
+
+In a large frame, ties of rule 4 can follow the
+[symbol numbers](#reloads-at-a-loop-end-symbol-numbers) (**Observed**,
+Scientist Slaughterhouse `dba54d2`). `CScientist::DeathMessage` has more
+than 128 bytes of locals and three string pointers with two
+references each; the three slots came out in the order in which they were
+created, which was the order in which each reached its second reference:
+the order of two reloads after `if ( hInflictor )`, which follows the
+number of symbols declared before the function, modulo 64. An unused enum
+right before it gives retail's slots with 5 to 28 or 31 to 50 constants
+(0 to 4, 29, 30, 51 to 68 don't); no other function of the file changes.
+The stack slots of two SDK functions of the client also follow their
+file's declaration count (`CMessageWindowPanel`'s and `ScorePanel`'s
+constructors, `bdfba9d`), and so do `CVoiceVGUITweakDlg::Open`'s
+(`780ca2a`).
 
 **Lever:** to add references without changing code, write a statement in
 both branches of an `if`; VC6 merges the copies afterwards, but the
@@ -382,6 +417,23 @@ numbers C1XX gives the symbols of the file.
   | `#define`, `#pragma`, comments | 0 |
 
   `/Zi` and `/YX` change nothing.
+- **Generated constructors count.** An empty inline constructor
+  `CLaserPulse() {}` in a class derived from `CGrenade` makes C1XX generate
+  the implicit constructors of the whole base chain where the class is
+  declared, and that raised the count for the functions after it by 34
+  (Scientist Slaughterhouse, `1a33030`, `dba54d2`).
+- **Browse information changes the count.** With `/FR`, as the IDE
+  compiles a project that has it, `#define`s count as declarations too
+  (Scientist Slaughterhouse `cfbcf72`: two unused macros in `hud.h` meant
+  two fewer enum constants). The windows move with it: the client's
+  `CMessageWindowPanel` constructor took retail's slots with an enum of 3
+  values in a plain build, and with 14 to 18 values compiled as the IDE
+  compiles (full source paths and `/FR`; `bdfba9d`, `53f21b3`). Compile
+  the way the original was compiled before you sweep.
+- **A natural count.** In Scientist Slaughterhouse's `nodes.cpp` (SDK
+  2.2b text), `CGraph::LinkVisibleNodes` and `CTestHull::BuildNodeGraph`
+  both came out as retail's once `util.h` declared two of the mod's helpers
+  that its callers had declared `extern` themselves (`2e2597a`).
 - **One function, one mapping.** `CGraph::LinkVisibleNodes` (SDK
   `nodes.cpp`) has three reloads at a loop end that go through five
   arrangements per period of 64. The mapping from count to arrangement is
@@ -458,6 +510,32 @@ already kept. A loser is spilled to its memory home. Wanted's `CheckAhead`
 gets retail's spill from `?:` inside the `Vector` arguments, which makes each
 wrapped value a new value.
 
+More of the same pass, read from `C2.DLL` while matching Scientist
+Slaughterhouse's `CRocket::FlyThink` (**Exact** as read; the consequence
+below was checked in small test functions only):
+
+- **Priorities** (with `/O2`, 0x1075d826): each definition adds 4 (2 for
+  a 4-byte value), each use 1 (0 for 4 bytes), a last use that loads 2 (1);
+  each reload subtracts 2 (1) and each store 4 (2); all are weighted by
+  2^(loop depth), and a value loses the weight once more for each edge out
+  of a block at whose end it is live but into whose successor it is not.
+  Candidates whose priority falls below 1 are dropped unless they live
+  across a call (0x1075de99). So a `float` earns little from its uses: +2
+  per definition, -1 per reload, -2 per store, -1 per edge it dies on.
+- **Across calls:** the candidates that live across a call while the x87
+  stack is not empty are split first, by a data-flow pass shared with the
+  integer registers (0x10723b3e, up to 32 symbols at a time as bit
+  masks), then re-priced, sorted and accepted one by one under the
+  last-in-first-out check; a rejected one is split again in the next
+  round.
+- **Reloads on an edge** (0x10711a56): when a block needs a value in a
+  register that a predecessor doesn't leave there, the reload goes at the
+  end of the predecessor, or, on a critical edge, into a new block
+  inserted right before the successor (0x10713cd3), shared by every edge
+  that needs the same reloads. In a test, a `float` live across a call,
+  not used in a compare block, redefined in one arm and used after the
+  join got such a block, `fld x`, placed right before the join.
+
 ## x87 operand order
 
 ### The bit-vector walk
@@ -495,9 +573,32 @@ between them:
   Uninitialised locals and dead stores don't count.
 - Addresses play no part: a copy of `C2.DLL` patched to a 256 KB memory
   block, and either C runtime, change nothing.
-- A likely mechanism (**Model**): C2 allocates its symbol records 32 to a
-  memory block, each with a fixed entity number, so one block is one word of
-  the bit vector; freed records go on per-kind lists and keep their numbers.
+- **The mechanism** (**Exact**, read from `C2.DLL`; Scientist
+  Slaughterhouse `9af64eb`). The entity numbers are C2's symbol records.
+  The allocator (0x10702677) takes a record of each kind from its own list
+  (locals, `$T` temporaries and their field records from the arena at
+  `DAT_1079bc5c` with the free list `DAT_1079bc60`; other kinds from
+  others). A list grows by blocks of 32 records (0x107072c6), which take
+  the next 32 numbers of a counter that is reset for every function
+  (0x10731dcb, which also pre-allocates numbers 0 to 127 for four kinds,
+  32 each). A freed record (0x1070596a; a temporary goes back with its
+  field records) keeps its number when it is reused. Field records are
+  made on demand (0x10705656). So one block is one word of the bit vector,
+  and the numbers a function's late entities get depend on the order in
+  which earlier inline expansions allocated and freed temporaries.
+- **Periodic in earlier expansions.** In Scientist Slaughterhouse's
+  `CWaterElemental::HandleAnimEvent`, k dead `Vector( 0, 0, 0 )` expansions
+  between `Vector vecDir = a - b;` and the statement with
+  `vecDir.Normalize()` gave retail's operand order for k = 1 and 2, ours
+  for 3 and 4, retail's again for 5 and 6 (with other inlining) and ours
+  for 7 and 8: period 4. The same statements before `vecDir`'s line
+  changed nothing. The natural text that gives retail's order is a
+  copy-initialised local, `Vector vecUp = Vector( 0, 0, 1 );`, passed to
+  the `CrossProduct` (`const Vector vecUp` and `1.0` also work); direct
+  initialisation `Vector vecUp( 0, 0, 1 );` and
+  `Vector vecUp; vecUp = Vector( 0, 0, 1 );` don't. Of 15 kinds of dead
+  statement tried at each of 50 statement boundaries of the function, only
+  `Vector( f, f, f )` at that one boundary changed the order.
 
 **How to use it.** Read the order of retail's terms in an inlined
 `Length()` or of the multiplies in `Normalize()`, then:
@@ -560,10 +661,51 @@ All **Observed** unless marked:
   becomes `fadd st, st`. A division by a constant becomes a multiply by a
   constant named after its extended value, so `avelocity / 10` and
   `avelocity * 0.1` load two different constants (Gunman `0dc77a5`).
-- **Not solved:** whether an inline function's parameter counts as dying at
-  its last multiply (`fmul m`, or `fld m; fmul st(1)` and a later
-  `fstp st(0)`). Earlier inline expansions in the function set it with fixed
-  periods. This is the 4 bytes left in Wanted's `CBot::Wander`.
+- **`fmul m` against `fld m; fmul st(1)` ... `fstp st(0)`** is an operand
+  order, not a question of where a value dies (**Exact** for the
+  mechanism, read from `C2.DLL`; one retail function, Scientist
+  Slaughterhouse `9af64eb`). C2's x87 allocator (driver 0x1075d424) walks
+  each block backwards, prices the candidates, accepts those that nest
+  last-in-first-out (0x1075e75b), and for each accepted value inserts an
+  explicit pop, `fstp st(0)`, right after the instruction at which the
+  stack depth first returns to zero after the value's last use
+  (0x1075eb9d). The rewrite to `st(i)` (0x1075e071) then deletes an
+  `fld` of a value already on top together with its pop when the pop
+  follows before the depth returns to zero. So a product written by C2 as
+  `fld x; fmul flLen` keeps `fld m; fmul st(1)` and the late
+  `fstp st(0)`, and the same product as `fld flLen; fmul x` fuses into
+  `fmul m`. Which of the two C2 writes follows the commutative operand
+  order of [the bit-vector walk](#the-bit-vector-walk): the operand walked
+  first becomes the memory operand. The 4 bytes left in Wanted's
+  `CBot::Wander` are this form; that function was not retried.
+- **How a sum is consumed decides its y order** (**Observed**, two
+  functions; Scientist Slaughterhouse `d1924e7`, `55ffef2`). In an inlined
+  `Vector::operator+`, the order of the two y operands (x and z stayed put)
+  depended on what happened to the sum afterwards: going into a new
+  copy-initialised vector, or straight into a larger expression, gave one
+  order; assigned to an existing local that was then reused, the other.
+  Retail's was the first in both functions: `CEgon::IonCannon` (origin
+  plus stored offset, written into the direction expression) and
+  `CTriggerTeleport::TeleportTouch` (the turned offset in a new local
+  `vecRotated` instead of written back). Text before the statement,
+  unused ints, extra `TraceResult`s and component reads did not move it.
+- **A file-scope `const float` is a variable, and comes first**
+  (**Observed**, three functions; Scientist Slaughterhouse `a6803a9`,
+  `c826ef6`, `ba3a6f9`). `const float CABLE_STEP = 5;` at file scope is
+  kept in the object's own `.rdata`, not as a shared `__real@` constant,
+  and in a commutative x87 operation its value is loaded first:
+  `fld [CABLE_STEP]; fadd [mem]`. Retail's `.rdata` showed it first: three
+  float constants sat inside three objects' own data, and the functions
+  that read them were near misses (two of them only in this operand
+  order). A constant in an object's `.rdata` block rather than among the
+  `__real@` constants is a file-scope `const` variable.
+- **A rare order from a named, assigned vector** (**Observed**, one
+  function; Scientist Slaughterhouse `CCrossbowBolt::LaserNet`). Retail's
+  inlined length there sums z, x, y, an order that occurs once among the
+  78 inlined `Length` sums of the server. It came only from
+  `Vector vecDist; vecDist = a - b;` (assignment, not initialisation),
+  `sqrt( DotProduct( vecDist, vecDist ) )` and an unused read of
+  `vecDist.z`; with `.Length()` and any unused reads it never came.
 
 ## Member reads through a local pointer
 
@@ -648,6 +790,83 @@ All **Observed**, each in one or more retail functions.
   loop: constant propagation stops through it and the loops around it are
   not rotated. Gunman's `CHudAmmo::DrawWList` needs one (`84d8397`, marked
   `// sic`).
+
+### Block order and the block mover
+
+**Exact** as read from `C2.DLL` (Scientist Slaughterhouse); reproduced in
+small tests, in one retail function that needed it (`CRocket::FlyThink`,
+`c7f292c`) and in one that already matched (the game rules'
+`DeathNotice`).
+
+C2 decides the order of a function's basic blocks in three steps:
+
+1. **Reverse postorder**, once, early, after inlining (driver 0x107050a3;
+   0x107040a9 walks the flow graph depth first, visiting a block's jump
+   target before its fall-through successor; 0x1072ac58 relinks every
+   block in reverse postorder, entry first; 0x107274ae and 0x10727726 add
+   a `jmp` where a block's fall-through successor is no longer next). For
+   an `if`/`else` this is the source order. Without a loop, every block
+   comes before the blocks it jumps to.
+2. **The branch optimiser** (0x107375e4, run up to 17 times after register
+   allocation by 0x107375bf): it deletes dead code after a `jmp`, deletes
+   a jump to the next label (0x107140ec), threads jumps through
+   conditional jumps whose outcome is known (0x1073cca8), merges the heads
+   of two successors, and cross-jumps identical tails (0x1073d4a0,
+   0x1073d175, 0x1074f6ac). A jump to the next label survives only if its
+   tuple carries flag 8 (set at 0x10702db0 for IL opcodes 0x187 to 0x18c:
+   exception-state jumps, `__try` scopes, indirect and table jumps, and
+   `return`, which is a jump to the function's exit label). An inlined
+   `return` keeps that opcode (0x10751ad3), so every `return` of an inline
+   function but the last is such a jump (the last one too when the exit
+   label isn't next); ordinary `goto`s, `?:`, `&&`, `||`, `break` never
+   are.
+3. **The block mover** (0x10738b9f, driver 0x10758287, right after the
+   second run of the branch optimiser). Part 1: for `X; jmp L` followed by
+   a label M, where L comes later and the instruction right before L is an
+   unconditional `jmp` or a `ret` (L is not fallen into), the blocks from M
+   to just before L are moved after the first `jmp` or `ret` that ends L's
+   chain, and X's jump is deleted, so X falls into L. Part 2: a `jmp L` to
+   a chain whose predecessor jumps elsewhere is replaced by the chain; or,
+   if the chain up to its `jmp` or `ret` costs 20 or less (0x107352ae), the
+   chain is copied in place of the jump: the tail duplication seen in
+   retail code.
+
+**The tell.** An arm of an `if` that retail places after a later block's
+closing `jmp`, jumping back, came out of part 1. Reverse postorder can't
+put it there, and with a single test the jump that part 1 needs is gone:
+the branch optimiser has deleted it as a jump to the next label.
+
+**The lever: a repeated test.** Scientist Slaughterhouse's
+`CRocket::FlyThink` clamps a speed to 300 and retail lays the "less than"
+arm after the bubble-trail call, jumping back into the multiply. Every
+single clamp (ternaries both ways, `if` clamps, `if`/`else` into a local,
+inline helpers with one or two returns) gave our order or other code. The
+source clamps twice:
+
+```cpp
+flSpeed = min( flSpeed, 300 );
+pev->velocity = gpGlobals->v_forward * min( flSpeed, 300 );
+```
+
+After the first test the second one's outcome is known on both paths: the
+branch optimiser threads each path past it and its compare goes; the two
+arms now end in jumps to different labels, and part 1 moves the arm that
+is jumped over after the block's closing `jmp`. `if ( flSpeed >= 300 )
+flSpeed = 300;` as the first clamp gives the same code; `>` leaves a second
+compare. The mod's game-rules `DeathNotice` shows the same move for its two
+`pevInflictor` tests (`if ( !pKiller ) { if ( pevInflictor ) ... }` then
+`if ( !pevInflictor ) ...`); a test copy without the second test doesn't
+move.
+
+**Other routes measured.** A dead back edge into the arm also works: with
+the clamp written so that the arm is the compare block's fall-through, a
+dead `if ( 0 ) goto label;` into it at the end of the block is still an
+edge when the blocks are ordered in reverse postorder and is folded only
+afterwards; that gave retail's `FlyThink` as well. Identical tails written
+in both arms of an inner `if`/`else` give the same shape through
+cross-jumping, in a test; in `FlyThink` the arms never compiled to
+identical tails. An inline helper whose non-last `return` falls on the arm
+fires part 1 too, but keeps the helper's own compare.
 
 ## Text that compiles to nothing still counts
 
@@ -773,6 +992,65 @@ functions defined later can take). With one compile, three small inline
 functions and the stand-in of the previous section do. That decided the
 session.
 
+**One queue for the whole project** (**Exact** for 126 of 130 objects;
+Scientist Slaughterhouse's server, `a6cbc83`). Measured on every object of
+a release build, the rule works as one priority queue:
+
+- the own items start at their IL offsets x, measured with `/Bk` in a
+  compile without `/YX`;
+- a deferred item's position is v = x + B when the file created the
+  `.pch` (B is the IL offset where the `.pch` region ends; a marker
+  function placed right after the last `#include` inside the `.pch`
+  measures it), v = x + B − 1,012 when the file reused the `.pch` (1,011 to
+  1,013 fit), and v = x for headers outside the `.pch` and the `.cpp`'s own
+  inline and `static` functions;
+- before own item i, every needed item with v below x_i is emitted, lowest
+  v first; an emitted item's references, in its code and through its
+  vtable, become needed at once; exported inlines and items nothing refers
+  to (the vector constructor iterator) are needed from the start; after
+  the last own item, everything needed, by v.
+
+With each object's `.pch` state from a replay of the build, this gave the
+order of 126 of the 130 objects with code (the other four differ only in
+static initialisers whose position the measurement doesn't read). Against
+retail it was wrong for exactly the objects whose text or history
+differed, and for those it said how much IL was missing and between which
+items: 340 to 390 bytes between `vector.h`'s operators and
+`CBaseEntity::CanBeGrenaded`, 200 to 300 in front of `CBreakable`'s inline virtuals, 9.1
+to 9.6 KB in `hassassin.cpp`, two separate amounts in `beams.cpp` that no
+single insertion could give (`a6cbc83`, `9572855`, `960fb70`, `b620502`).
+
+**Reuse is a history.** A file compiled twice in a row reuses the `.pch`
+it built itself, which moves every `.pch` item 1,012 bytes earlier
+relative to its own functions. Two of Scientist Slaughterhouse's server
+objects (`aflock.obj`, `bigmomma.obj`) and the client's `hl_weapons.obj`
+show that state; for `hl_weapons.obj` the incremental link kept both
+states in the image (the last full link's order and the last relink's).
+
+**Implicit constructors** (**Observed** in both DLLs of one mod;
+`1a33030`). An inline user constructor in a class makes C1XX generate the
+implicit constructors of its bases where the class is declared, so in a
+header inside the `.pch` they get the header's IL positions; without one,
+they are generated where an object is first constructed, among the file's
+own IL. In Scientist Slaughterhouse that put `CBaseEntity`'s out-of-line
+constructor at the end of the server's `agrunt.obj` only without the
+constructor, and `CBaseEntity::Respawn` in the client's `hl_weapons.obj`
+where retail has it only with it: the two DLLs' `weapons.h` differed.
+
+**Precompiled-header details** (**Observed**):
+
+- A file with a conditional before its includes builds the `.pch` from its
+  own list, and the next file doesn't reuse that `.pch`: `apache.cpp`'s
+  `#ifndef OEM_BUILD` and `barnacle.cpp`; `fire.cpp`'s
+  `#if !defined( OEM_BUILD ) && !defined( HLDEMO_BUILD )` and
+  `fireball.cpp` (`06cd04b`).
+- With sources handed to CL by full path, as the IDE does, a `.pch` built
+  by a source in `dlls\` was never reused by `cl_dll\hl\hl_weapons.cpp`
+  (the headers' paths differ).
+- `/FR` changes where lazily placed inlines land (Scientist
+  Slaughterhouse's client: `hl_weapons.obj`, `cl_effects.obj`; `8873f38`,
+  `3ef4948`). Build with the project's own browse settings.
+
 Consequences:
 
 - Base classes' inlines come first, since they sit earlier in the `.pch`.
@@ -859,6 +1137,24 @@ Across objects:
   `.dsp`'s files sorted by name, so a mod's new files sort into the gaps
   their code fills; Gunman's own block is in insertion order instead. Library
   members come after, in load order.
+- **The project's order** is by file name alone, the directory ignored,
+  compared in lower case, so `_` and `.` sort before letters: in Valve's
+  `hl.dsp`, `wpn_shared\hl_wpn_glock.cpp` sits between `hgrunt` and
+  `hornet`, `..\pm_shared\pm_*.c` between `player` and `python`,
+  `h_export` before `handgrenade`; in `cl_dll.dsp`,
+  `GameStudioModelRenderer` between `flashlight` and `geiger`, and
+  `studio_util` before `StudioModelRenderer`. Scientist Slaughterhouse's
+  31 new server files and 16 new client files sort into retail's object
+  order by this rule.
+- **Library members follow the names the code calls** (**Observed**;
+  Scientist Slaughterhouse `4aa4cf2`). Calling `strnicmp` goes through
+  `OLDNAMES.LIB`'s alias and pulls LIBCMT's `strnicmp.obj` in a later pass
+  over the library, after `stricmp.obj`; calling `_strnicmp` pulls it in
+  the first pass, between `isctype.obj` and `chkstk.obj`, with
+  `tolower.obj`. The code is the same; the order of the library block is
+  not. The library members present are evidence too: LIBCMT's
+  `strtok.obj`, which only `teamplay_gamerules.cpp` pulls in, is missing
+  from Scientist Slaughterhouse's server, and so is the file's code.
 - An inline function emitted by several objects stays with the first in
   link order. Adding one header to one file can move kilobytes:
   `vgui_TeamFortressViewport.h` in Gunman's `ev_hldm.cpp` moved 14 KB of VGUI
@@ -867,6 +1163,79 @@ Across objects:
   definition in link order, even when that object's use of it is in a dead
   function. A constant in the wrong object's block is evidence of dead code
   (Gunman's double 3.0, `6e7096e`).
+
+## The order of RTTI records
+
+**Exact** (read from `C1XX.DLL`; the keys read back from a `.pch` gave the
+object's order exactly in a 30-class test and in Scientist
+Slaughterhouse's `cdll_int.cpp`).
+
+With `/GR`, the type descriptors and the other RTTI records of a file
+come out at the end of the translation unit (0x10442ada), when C1XX emits
+the vtables it still owes: 0x10443a66 walks a list of classes, and for
+each emits its pending vtables (0x10442b5a, 0x10442d49) and, with `/GR`,
+creates its complete-object locator and the records behind it
+(0x104b4b87), appended to vectors that are written out afterwards
+(0x104b5122). The list (`DAT_104d16c4`) is a sorted set: a class with
+virtual functions is inserted when it is complete (0x1041aba7, insert
+0x10413887, binary search 0x104137f2) keyed by the low 14 bits of its
+symbol's address. So vtables come out in ascending key order, and the
+type descriptors in the object in descending key order; classes whose
+vtables were emitted earlier come first.
+
+The symbols live in C1XX's own arenas (descriptors at 0x104e4550; bump
+allocation 0x104010e5, commit 0x10406c22), reserved with
+`VirtualAlloc(MEM_RESERVE | MEM_TOP_DOWN)` (0x10494aa8) in 64 KB regions.
+The key is therefore an arena offset, the same wherever the system puts
+the arena, and it moves with everything C1XX allocated before the class:
+
+- identifiers, declarations, macro definitions with their text;
+- the full path of every header it opens, twice (as spelled and in lower
+  case), at the `#include`;
+- the path of its temporary file, once, early; command-line macros, early.
+
+Only lengths matter: with made-up paths of the same lengths, all 22
+objects of a client with two or more type descriptors came out in the
+same orders. `/FR`, the C runtime's heap, Wine's address-space layout and
+the size of the Unix environment don't enter. Secondary arenas take chunks
+out of the main one, up to the next page boundary (minus 0x10) after at
+least 0x1000 bytes, and the main arena resumes after them (**Model**: the
+rule was measured, the code not located), so a shift is absorbed up to a
+chunk and becomes 4 KB when it crosses a page.
+
+**What it means.** A `/GR` build depends on the lengths of the compiler's
+include path and of `TMP` on the machine that builds it. Two host paths
+for the same toolchain gave two Scientist Slaughterhouse clients 5,086
+bytes apart (9 objects' RTTI order). Fix the paths inside the Wine prefix
+(the compiler as `C:\...\VC98\BIN\CL.EXE` with `INCLUDE` and `LIB` under
+it, `TMP` and `TEMP` in the prefix's `HKCU\Environment`) before matching
+anything; then the build is the same from any host path. A client without
+`/GR` doesn't depend on them (They Hunger's rebuilt identical through a
+longer toolchain path).
+
+**How to use it.** When an object's type descriptors are out of order:
+
+1. Read the keys: they are in the `.pch` of the file (or compare orders
+   over a sweep).
+2. An unused macro whose body is a string of N characters, placed before
+   a class, moves that class's key by N (in steps of 4) up to the next
+   chunk boundary. Sweep N and the macro's position; for single source
+   files the windows that worked were 5 to about 190 characters wide, and a header
+   shared by many objects may need thousands of characters (Scientist
+   Slaughterhouse's `hud.h`: 8,800 before one class, window about 8,370 to
+   9,260; 3,200 before another). Some orders need two macros at two
+   places; no single one gives them.
+3. Prefer macros to enums: enum constants move the IL numbering too and
+   change other orders.
+4. Under `/FR` the macros count as declarations
+   ([Reloads at a loop end](#reloads-at-a-loop-end-symbol-numbers)): check
+   the functions that follow the declaration count after every macro.
+
+Retail's text had more of something before those classes; how much is
+measured, what it was is not. Scientist Slaughterhouse's client needed
+ten such macros in seven files (`f858c2d`, `21a4bdc`, `bca2cf1`,
+`5fdd4ec`, `79ebc33`, `cfbcf72`, `39e1267`, `55d32cb`, `e69c478`,
+`876965f`).
 
 ## LINK's identical-code folding
 
@@ -972,6 +1341,161 @@ of the classes carries about 63 bits and each freely placed entry about 11,
 so such a fit would be one of very many and not evidence. The array retail
 sorted differed in entries the image doesn't show. That is where we stopped.
 
+## Incremental linking
+
+**Exact** for LINK 6.00.8168 on the VC6 CD's runtime, unless marked:
+derived from SDK client builds and checked on Scientist Slaughterhouse's
+client, which is one fresh incremental link plus one relink.
+
+A link is incremental when it has `/debug` and no `/incremental:no` (the
+Debug configurations; Valve's Release `hl.dsp` too). `/map` doesn't turn
+it off in LINK 6.00 (it did in LINK 5.00). Objects compiled with `/ZI`
+add a `.textbss` group; `/Zi` ones don't. Such an image starts its
+`.text` with `int3`s and a table of `jmp`s.
+
+**The fresh layout.**
+
+- `.text` begins with 5 bytes of `int3`, then the incremental-link thunk
+  table (ILT): one `jmp rel32` per external function defined in an object
+  on the command line, inline COMDATs and unreferenced ones included, and
+  one per alias (a `??_E`/`??_G` pair has two). `static` functions and
+  library members get none; calls to them are direct.
+- Then a reserve of 5 bytes of `int3` per thunk. The first function starts
+  at the ILT's end plus 5 × N, rounded up to 16.
+- The objects' code in link order, each object's sections in section-table
+  order. **Each contribution starts at the previous one's start + size +
+  size / 4 (integer division), rounded up to 16.** `/O2` functions are
+  already padded to 16 with `nop`s by C2, so every slot ends in at least 16
+  bytes of `int3`. This placed every public function of two SDK builds
+  (2,359 and 2,121) and 2,575 of the 2,579 blocks of Scientist
+  Slaughterhouse's retail client.
+- The library code follows, laid out as in a normal link; then an `int3`
+  reserve whose size LINK computes (**Observed**: 32,945 and 32,577 bytes
+  in two links, about 1.73 bytes less per added thunk; the formula wasn't
+  derived), then `.text$x`.
+- `.data`, `.rdata`, `.bss` and the RTTI data use the same rule with a
+  fifth: start + size + size / 5, then the contribution's alignment.
+  `.idata` becomes a section of its own, and `.reloc`'s virtual size
+  exceeds its directory (room to grow).
+- The export directory's and the debug directory's time stamps are those
+  of the last **full** link; the COFF header's is that of the last link.
+
+**The thunk table's order is LINK's hash table** (read from `LINK.EXE`:
+lookup and insert 0x4320e0, split 0x432220, create 0x431f40, the image's
+table created at 0x434de4). LINK keeps every external symbol in one linear
+hash table (Larson's) with 1,024 initial buckets and walks it bucket by
+bucket, each chain newest first:
+
+```python
+def ilt_hash(name):                      # the decorated name
+    h = 0
+    for c in name.encode('latin-1'):
+        if c >= 128:
+            c -= 256                     # signed char
+        h = (h + c * 0x40001 + (h ^ (h >> 1))) & 0xffffffff
+    return h % 0x1eca9d3b
+
+def table_shape(total):                  # every external symbol of the link
+    p, maxp, size = 0, 1024, 1024
+    while 16 * total >= 49 * size:      # load factor above 3: split bucket p
+        p += 1
+        size += 1
+        if p == maxp:
+            p, maxp = 0, 2 * maxp
+    return p, maxp
+
+def bucket(name, p, maxp):
+    h = ilt_hash(name)
+    b = h % maxp
+    return h % (2 * maxp) if b < p else b
+```
+
+The thunks are in order of (bucket, insertion index descending). Symbols
+are inserted object by object in link order, each object's defined
+externals in COFF symbol order and then its undefined ones; a name keeps
+its first index; library symbols come last and only add to the total.
+Checked on 400 random names, the split thresholds, and every thunk of two
+SDK builds (2,144 of 2,144 and 2,382 of 2,382).
+
+What it means: **every external name decides the order of the thunks**,
+and with them every call, vtable entry and export, which all point at
+thunks. The table's shape follows the total symbol count: one bucket off
+and everything after it moves. A retail slot whose neighbours' names are
+known gives a window of buckets (one to eight of 2,048 for the names we
+had to find) that the
+missing name must hash into, and the shape gives the count (Scientist
+Slaughterhouse's client: 7,256 to 7,261 external symbols; ours had 7,273
+with the same functions, imports, library members, literals, constants and
+RTTI classes, so fifteen of the mod's file-private globals became
+`static`, `bcba432`). Making a global `static` changes the count, not its
+`.bss` place.
+
+**Anonymous namespaces** are named `?%<source path as given to CL><number>`,
+and the number comes from the compile time (**Exact**: it reproduces the
+five names of an SDK build and the five in Scientist Slaughterhouse's
+retail client):
+
+```python
+import zlib
+
+def anon_number(path, t):            # t: compile time, seconds since 1970 (UTC)
+    s = (t ^ (zlib.crc32(path.encode('latin-1')) ^ 0xffffffff)) & 0xffffffff
+    r = []
+    for _ in range(2):               # the C runtime's rand()
+        s = (s * 214013 + 2531011) & 0xffffffff
+        r.append((s >> 16) & 0x7fff)
+    return f"{r[1]}{r[0]}"
+```
+
+The directory, contents and options don't enter; the path string does,
+case-sensitively. The names reach the image through the thunk table's hash
+and through the RTTI names of classes in the namespace
+(`.?AVHandler@?%C:\...\vgui_ConsolePanel.cpp977723309@@`). A number gives
+one second in a span of years, so the original compile seconds can be
+read back and replayed. Two SDK builds 48 minutes apart had only 265 of
+2,144 thunks in the same slots.
+
+**Relinks.**
+
+- LINK relinks an object only when **both** its file time (whole seconds)
+  and its COFF time stamp changed. Two compiles in one second look
+  unchanged, and so does every object under libfaketime's default
+  `stat` faking (set `NO_FAKE_STAT=1`). A link with nothing changed
+  rewrites the COFF time stamp but not the PDB age.
+- A changed object's code is matched with its old contributions **by
+  position** in section order, not by name. A contribution that fits its
+  old slot (start to the next occupied byte) stays; one that doesn't goes
+  to the first gap in address order that is large enough (another
+  function's padding, a hole, the reserve after the library code), and its
+  old slot becomes `int3`. They are processed in index order.
+- An added function shifts the later indices, gets a new thunk appended to
+  the table, and the reserve shrinks by 5. A removed function's thunk
+  stays, pointing at its old address. Recompiling a file with an anonymous
+  namespace renames its symbols: their old thunks go stale, new ones are
+  appended. Data that grows moves first-fit inside its group.
+- A full link gives exactly the fresh layout. LINK falls back to one for an
+  added or removed object (LNK6008, LNK6009), changed options (LNK6003),
+  changed exports (LNK6005), a string COMDAT that changed owner (LNK6025),
+  some `.bss` changes (LNK6015, not characterised), or exhausted padding
+  (LNK6013), and when the `.ilk` is missing. The undocumented `/test`
+  prints the reason (and exits with 6) without changing the image.
+- **The age.** A new PDB starts at 1; each relink that relinks something
+  adds 1, each full link 1 (2 when padding ran out); a link with nothing
+  changed adds 0.
+
+**Reading a history from an image.** Scientist Slaughterhouse's client:
+the reserve is exactly a fresh link's for its 2,481 thunks (no function
+added after the last full link) and no thunk is stale (none removed); the
+time stamps give the PDB's creation, the last full link and the last link;
+the age (459) counts the links; `HUD_InitClientWeapons` sits in another
+object's padding and its old slot holds a 16-byte function and a hole,
+which is what a relink of an object whose two functions swapped places
+leaves; two `.data` contributions of `sword.obj` sit at fresh-link places
+and two strings further on, which is what a relink of an object with two
+more strings leaves. A script replays it: a fresh link creating the PDB,
+age-only relinks, a full link from an earlier state of the changed
+objects, a relink.
+
 ## `.bss` order
 
 **Exact** (3,072 test names, 42 random sets, every object of Wanted's
@@ -988,6 +1512,15 @@ the globals around it whose names are known give a window of buckets its
 name must hash into (They Hunger `e90c20f`: five windows for five objects,
 and no naming scheme that fits them all). The details, a Python version and
 the examples are in [reproducing.md](reproducing.md#bss-order).
+
+Unreferenced function statics take their place too, in an object with
+other `.bss`: Scientist Slaughterhouse's `combat.obj` has three dwords no
+code reads after `FireBullets`' tracer counter: the unused
+`static int tracerCount;` of the SDK's `FireBulletsPlayer` and of two
+functions the mod copied from it (`5213d17`). In an
+incremental link each object's `.bss` is laid out by the same hash inside
+its contribution (Scientist Slaughterhouse's client: `aedd24b`,
+`874334a`, `99311f1`, `ffc82b1`, `dc71527`, `587539b`).
 
 ## What leaves no trace
 
@@ -1026,6 +1559,15 @@ and the order of both. It doesn't keep:
 - **The front end's version** when only the back end stamps the object
   (T2DEF's client: was `/Ob0` in the project, or did Service Pack 4's own
   front end not inline?).
+- **The build machine's paths**, except in a `/GR` build, whose RTTI order
+  follows the lengths of the compiler's include path and of `TMP`
+  ([The order of RTTI records](#the-order-of-rtti-records)), and the
+  source paths CL was given, which reach `__FILE__`, anonymous namespaces
+  and the PDB path.
+- **Compile times**, except through anonymous namespaces' names
+  ([Incremental linking](#incremental-linking)). An incremental link keeps
+  more of the history than a full one: the last full link's time, the
+  relinked functions' new places, and data a relink added.
 
 ## A working order
 

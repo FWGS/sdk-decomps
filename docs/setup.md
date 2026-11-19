@@ -29,13 +29,15 @@ in [rebuild/](rebuild/README.md).
   tags.
 - Disk space: about 1.8 GB for the downloads, 1 GB of temporary space while
   unpacking a disc, 560 MB for the compilers, 340 MB for the Wine prefix,
-  and up to 400 MB for each build folder (a server build copies the prefix).
+  and up to 450 MB for each build folder (a server build copies the prefix;
+  Scientist Slaughterhouse's, with both DLLs, 444 MB).
 
 The discs and the retail DLLs are not in this repository (copyright). The
 discs are on the Internet Archive; where each mod's retail files come from
 is in that mod's page ([Point of View](point-of-view.md), [T2DEF](t2def.md),
 [Wanted!](wanted.md), [Gunman Chronicles](gunman-chronicles.md),
-[They Hunger](they-hunger.md)).
+[They Hunger](they-hunger.md), [Scientist
+Slaughterhouse](scientist-slaughterhouse.md)).
 
 ## The toolchain folder
 
@@ -61,7 +63,7 @@ $VC_TOOLCHAINS/
 
 | Tree | Builds |
 |---|---|
-| `vc6` | Point of View, Wanted!, Gunman Chronicles and They Hunger, server and client; Counter-Strike Beta 5.0 (leak) to 7.1 |
+| `vc6` | Point of View, Wanted!, Gunman Chronicles, They Hunger and Scientist Slaughterhouse, server and client; Counter-Strike Beta 5.0 (leak) to 7.1 |
 | `vc6std` | the T2DEF server |
 | `vc6sp4std` | the T2DEF client |
 | `vc6sp4` | Counter-Strike 1.0, 1.0b and 1.1 |
@@ -71,7 +73,7 @@ $VC_TOOLCHAINS/
 
 The first five mods need only the first three trees: steps 2.1 to 2.3 and
 the matching lines of step 3. Counter-Strike needs `vc6`, `vc6sp4` and the
-three trees of steps 2.4 to 2.6.
+three trees of steps 2.4 to 2.6. Scientist Slaughterhouse needs only `vc6`.
 
 The wrapper `tools/vc5.sh` runs Visual C++ 5.0 from `vc5/` and
 `tools/vc4.sh` Visual C++ 4.x from `vc4/`, in the same folder. Only
@@ -492,6 +494,14 @@ and the note that its SHA-256 is the one the release's commit message
 records: those two clients are not identical
 ([counter-strike.md](counter-strike.md)).
 
+Scientist Slaughterhouse's script takes about a quarter of an hour: its
+server replays the 1,433 links that wrote retail's PDB, its client the
+history of an incrementally linked build. In its copy of the prefix it also
+lays out the compiler at `C:\Microsoft Visual Studio\VC98` and sets `TMP`
+and `TEMP`, because the order of the client's RTTI records depends on the
+lengths of those paths
+([scientist-slaughterhouse.md](scientist-slaughterhouse.md)).
+
 To compare byte for byte with your own copy of the retail files, set
 `RETAIL` to the mod's folder in the game, the one with `dlls/` and
 `cl_dlls/`:
@@ -526,7 +536,10 @@ tools/vc6.sh LINK /nologo /dll ...
 ```
 
 Pass paths outside the current folder as `Z:\...` (Wine's drive `Z:` is
-the Linux root). `VC_WINEPREFIX` selects another Wine prefix.
+the Linux root). `VC_WINEPREFIX` selects another Wine prefix. `VC6_ROOT`
+runs the tree `vc6` as `VC6_ROOT\VC98\BIN\*.EXE` from a layout made inside
+the prefix, so that no path of the host reaches the compiler (`vc6.sh` has
+the details).
 `tools/build_dsp.py` builds a whole `.dsp` project the way the Visual C++ 6
 IDE does; its docstring has the details.
 
@@ -580,6 +593,24 @@ cloned as the pages say; those of Point of View, T2DEF and Gunman
 Chronicles, which need the mods' installers, were copied in. All 27
 Counter-Strike tags one after another took 45 minutes.
 
+Scientist Slaughterhouse was added on 2026-11-19, with Wine 11.0,
+libfaketime 0.9.12, Python 3.14.10 and 7-Zip 26.04. The pages in
+[rebuild/](rebuild/README.md) were followed as written: the shared page
+into a new, empty toolchain folder and a new Wine prefix (downloads already
+on disk, so the `curl` lines were skipped and the files checked by
+SHA-256), then the Scientist Slaughterhouse page from a fresh clone of the
+repository (its installer linked into `$DL`). The seven trees came out
+`ok`, and both DLLs identical to retail (SHA-256 and `cmp`). In two runs
+the shared page took 50 seconds, the Scientist Slaughterhouse page 14 and
+18 minutes, each beside another server build.
+`build_dsp.py` and `vc6.sh` gained options for it that are off by default
+(`release/common.sh` is unchanged), so the other six mods' scripts were run
+again the same day from a fresh clone of their branches and of the 27
+Counter-Strike tags, with a toolchain folder made by the shared page: every
+DLL that is identical to retail came out identical (SHA-256 and `cmp`),
+the Wanted! server, the Gunman Chronicles client and the Counter-Strike 1.4
+and 1.5 clients with their known hashes.
+
 Not tested:
 - **Other Wine versions.** The T2DEF server is linked on Wine's builtin
   `msvcrt.dll`, and its import table depends on how that `qsort` orders
@@ -592,7 +623,7 @@ Not tested:
 
 `tools/vc5.sh` and `tools/vc4.sh` also run Visual C++ 5.0 with Service
 Pack 3 and Visual C++ 4.x, which were used to identify the compilers of
-other mods. None of the six mods needs them (Visual C++ 5.0 as on the CD,
+other mods. None of the seven mods needs them (Visual C++ 5.0 as on the CD,
 `vc5/rtm`, is step 2.6). Layout and sources, briefly:
 
 | Tree | Contents | Source (archive.org item / file, SHA-1) |

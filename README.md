@@ -1,10 +1,10 @@
 # Half-Life mods, rebuilt byte for byte
 
-This repository holds C++ source for the game DLLs of six Half-Life mods,
+This repository holds C++ source for the game DLLs of seven Half-Life mods,
 reconstructed from the shipped binaries. Each tree compiles with the original
-compiler back into the retail files: Visual C++ 6.0 for five mods, and for
+compiler back into the retail files: Visual C++ 6.0 for six mods, and for
 Counter-Strike, from its first beta in 1999 to version 1.5 in 2002, the five
-compilers it went through. Of the 50 distinct DLLs, 46 rebuild identical to
+compilers it went through. Of the 52 distinct DLLs, 48 rebuild identical to
 the retail ones, byte for byte. That includes the headers, time stamps,
 debug record and padding, so the SHA-256 matches.
 
@@ -17,7 +17,14 @@ Verified with fresh release builds, by SHA-256 and `cmp` against the retail
 files: Counter-Strike on 2026-11-14, every tag. The shared build tools
 changed for it, so the other five mods' DLLs were rebuilt the same day from
 fresh clones of their branches: the eight identical ones byte for byte
-again, and the two others with their known hashes.
+again, and the two others with their known hashes. Scientist
+Slaughterhouse on 2026-11-19: both DLLs from a fresh clone of the
+repository, following [its rebuild page](docs/rebuild/scientist-slaughterhouse.md)
+as written. The shared build tools gained options for it that are off by
+default; the other six mods' DLLs, rebuilt the same day with the changed
+tools from fresh clones of their branches and tags, came out as before:
+every identical one byte for byte, the four others with their known
+hashes.
 
 | Mod | Branch | Server DLL | Client DLL | Details |
 |---|---|---|---|---|
@@ -27,10 +34,11 @@ again, and the two others with their known hashes.
 | Gunman Chronicles | [`gunman-chronicles`](../../tree/gunman-chronicles) | `gunman.dll`: **identical** | `client.dll`: 152,034 of 565,248 bytes differ | [docs/gunman-chronicles.md](docs/gunman-chronicles.md) |
 | They Hunger (episodes 1 to 3) | [`they-hunger`](../../tree/they-hunger) | `einar.dll`: **identical** | `client.dll`: **identical** | [docs/they-hunger.md](docs/they-hunger.md) |
 | Counter-Strike, Beta 1.0 to 1.5 (27 tags) | [`counter-strike`](../../tree/counter-strike) | `mp.dll`: **all 23 identical** | `client.dll`: **15 of 17 identical**; 1.4 and 1.5 not | [docs/counter-strike.md](docs/counter-strike.md) |
+| Scientist Slaughterhouse 1.0 | [`scientist-slaughterhouse`](../../tree/scientist-slaughterhouse) | `hl.dll`: **identical** | `client.dll`: **identical** | [docs/scientist-slaughterhouse.md](docs/scientist-slaughterhouse.md) |
 
-SHA-256 of the retail files of the first five mods, which the identical
-builds reproduce (Counter-Strike's 40 are in
-[its page](docs/counter-strike.md#status)):
+SHA-256 of the retail files of the first five mods and Scientist
+Slaughterhouse, which the identical builds reproduce (Counter-Strike's 40
+are in [its page](docs/counter-strike.md#status)):
 
 | File | SHA-256 |
 |---|---|
@@ -42,6 +50,8 @@ builds reproduce (Counter-Strike's 40 are in
 | Gunman Chronicles `gunman.dll` | `e6e8d4497f11787889f12e7356157cbce98d380570805ca55faef3c07ce088f0` |
 | They Hunger `einar.dll` | `0b9c21c87dab0eec02b323eaab434cf77a2f69982bbf0a3f3f6a316fa95159d3` |
 | They Hunger `client.dll` | `09e8de1a62f4f1fae32b040678fc5b97fe5ba8f20ec44db14b29aedcf37db105` |
+| Scientist Slaughterhouse `hl.dll` | `8e4c150e8d8d57f13bbf7f6b5a5e4ebc37258838ccb7708c760bb7b3c139d4ae` |
+| Scientist Slaughterhouse `client.dll` | `1e4f2d5c2a6d92ac84f8bdf1fb46abbffabcb78107909aa44c2a75f84baf1365` |
 
 What the four remaining DLLs still lack:
 
@@ -76,7 +86,11 @@ explains each part.
 Counter-Strike's betas add Visual C++ 5.0, whose code depends on how many
 declarations a file has seen, and releases built on top of an earlier
 release's build folder; [docs/counter-strike.md](docs/counter-strike.md)
-explains what that took.
+explains what that took. Scientist Slaughterhouse's client was linked
+incrementally, so its layout records a history of links, and the order of
+its RTTI records follows the lengths of the compiler's own paths;
+[docs/scientist-slaughterhouse.md](docs/scientist-slaughterhouse.md)
+explains those.
 
 Where the binary doesn't say what the source was, the trees contain a marked
 stand-in. Examples: a function nothing calls, an empty object file, a
@@ -118,7 +132,7 @@ VC_TOOLCHAINS=/path/to/toolchains tools/release/counter-strike.sh cstrike-1.0 ..
 - [docs/setup.md](docs/setup.md): setting up the compilers under Wine.
 - [docs/reproducing.md](docs/reproducing.md): what a DLL holds besides its code, and how each part is rebuilt.
 - [docs/vc6-notes.md](docs/vc6-notes.md): what we learned about Visual C++ 6.0's compiler and linker while matching.
-- Per mod: [Point of View](docs/point-of-view.md), [T2DEF](docs/t2def.md), [Wanted!](docs/wanted.md), [Gunman Chronicles](docs/gunman-chronicles.md), [They Hunger](docs/they-hunger.md), [Counter-Strike](docs/counter-strike.md).
+- Per mod: [Point of View](docs/point-of-view.md), [T2DEF](docs/t2def.md), [Wanted!](docs/wanted.md), [Gunman Chronicles](docs/gunman-chronicles.md), [They Hunger](docs/they-hunger.md), [Counter-Strike](docs/counter-strike.md), [Scientist Slaughterhouse](docs/scientist-slaughterhouse.md).
 
 ## Thanks
 

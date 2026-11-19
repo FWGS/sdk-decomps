@@ -1,7 +1,7 @@
 # Compilers
 
-The ten DLLs of the first five mods were built with Microsoft Visual C++ 6.0
-(VC6), in three variants: the Professional edition as first released, the
+The ten DLLs of the first five mods and Scientist Slaughterhouse's two were
+built with Microsoft Visual C++ 6.0 (VC6), in three variants: the Professional edition as first released, the
 Standard edition as first released, and the Standard edition with Service
 Pack 4. Counter-Strike's 40 DLLs, from 1999 to 2002, span five compilers:
 Visual C++ 5.0 as first released, then VC6 as first released, with Service
@@ -33,6 +33,8 @@ stamps its objects as Standard edition objects.
 | Gunman Chronicles `client.dll` | the same | | | | | the same | the CD's `MSVCRT.DLL` (not pinned) | `vc6` |
 | They Hunger `einar.dll` | the same | | | | | the CD's `LIBCMT.LIB` | the CD's `MSVCRT.DLL` | `vc6` |
 | They Hunger `client.dll` | the same | | | | | the same | the same | `vc6` |
+| Scientist Slaughterhouse `hl.dll` | the same | | | | | the CD's `LIBCMT.LIB` | the CD's `MSVCRT.DLL` | `vc6`, run as `C:\Microsoft Visual Studio\VC98` (`VC6_ROOT`) |
+| Scientist Slaughterhouse `client.dll` | the same | | | | | the CD's `LIBCMTD.LIB` (a Debug build) | the same | the same |
 
 All but two of these DLLs rebuild byte for byte with the tree named. The
 Wanted! server and the Gunman Chronicles client don't yet; their remaining
@@ -89,8 +91,8 @@ inside a C runtime library carry the stamp of the compiler Microsoft built
 that library with: 8168 in the VC6 CD's `LIBCMT.LIB`, 8797 in SP4's. That is
 how the C runtime library is identified.
 
-The ten retail files (read from the files themselves; product ID, build,
-count):
+The twelve retail files (read from the files themselves; product ID,
+build, count):
 
 | DLL | Compiler objects | C runtime and libraries | Linker |
 |---|---|---|---|
@@ -104,9 +106,11 @@ count):
 | Gunman `client.dll` | C 8168 ×128, C++ 8168 ×78 | MASM ×32, AliasObj ×2, Linker 5.12 ×9, Import0 ×636 | 6.00 8168 ×3 |
 | They Hunger `einar.dll` | C 8168 ×122, C++ 8168 ×100 | MASM ×30, AliasObj ×3, Linker 5.12 ×3, Import0 ×74 | 6.00 8168 ×1 |
 | They Hunger `client.dll` | C 8168 ×128, C++ 8168 ×61 | MASM ×30, AliasObj ×2, Linker 5.12 ×9, Import0 ×636 | 6.00 8168 ×3 |
+| Scientist Slaughterhouse `hl.dll` | C 8168 ×125, C++ 8168 ×131 | MASM ×31, AliasObj ×3, Linker 5.12 ×3, Import0 ×75 | 6.00 8168 ×1 |
+| Scientist Slaughterhouse `client.dll` | C 8168 ×139, C++ 8168 ×105 | MASM ×33, AliasObj ×3, Linker 6.00 **8447** ×2, Linker 5.12 ×9, Import0 ×646 | 6.00 8168 ×1 |
 
 How to read it:
-- **Edition.** Eight DLLs have only Professional stamps (0x0a, 0x0b). In the
+- **Edition.** Ten DLLs have only Professional stamps (0x0a, 0x0b). In the
   T2DEF DLLs the mod's own sources carry Standard stamps (0x15, 0x16); the
   Professional-stamped objects there (C 8168 ×127 and C++ 8168 ×3 in the
   server) are the C runtime library's, which Microsoft compiled with the
@@ -123,7 +127,9 @@ How to read it:
   Packs 3 to 6, and SP4's `LINK.EXE` is 6.00.8447. In the clients, two of
   the three Linker 6.00 objects are `vgui.lib`'s import objects: SDK 2.0's
   `vgui.lib` (which SDK 2.1 ships unchanged) was made with build 8168, SDK
-  2.2's (T2DEF) with 8447.
+  2.2's (T2DEF, Scientist Slaughterhouse) with 8447; Scientist
+  Slaughterhouse's client, linked by the CD's LINK, shows the two as their
+  own entry.
 - **Object counts.** Every object counts, including empty ones and alias
   objects. LINK also sizes the header from the number of objects, so one
   object too few moves the PE header. The mods' pages list the placeholder
@@ -142,8 +148,8 @@ How to read it:
 - **Standard edition.** The T2DEF server's code is `/Od` code (every
   function has a frame pointer, no optimisation) although `hl.dsp` says
   `/O2`. With the Standard back end the project's own flags give it.
-- **Rebuilding.** Each variant was confirmed by rebuilding: eight of the
-  ten DLLs are byte-identical. The Wanted! server differs inside one
+- **Rebuilding.** Each variant was confirmed by rebuilding: ten of the
+  twelve DLLs are byte-identical. The Wanted! server differs inside one
   function only. The Gunman Chronicles client differs in which copies of
   identical functions LINK keeps, which moves much of its code, and in the
   code of three functions.
@@ -172,6 +178,8 @@ objects come out identical with either runtime.
 | Gunman `client.dll` | not pinned | Most of the client's remaining differences are the copies LINK keeps of folded functions, and with the current sources neither runtime's `qsort` gives retail's copies. Its build uses the CD's runtime, as the server's does. |
 | They Hunger `einar.dll` | VC6 CD's | Rebuilds identical on it (`/debug`, so no folding; one import DLL). Whether the builtin gives the same import order is not recorded. |
 | They Hunger `client.dll` | VC6 CD's | Rebuilds identical on it. On the builtin, functions change places inside two import lists (14 of `vgui.dll`'s 542 thunks, 11 of KERNEL32's 65); the build we tried it on differed from retail in 216,849 bytes. |
+| Scientist Slaughterhouse `hl.dll` | VC6 CD's | Rebuilds identical on it (`/debug`, so no folding; one import DLL). Whether the builtin gives the same is not recorded. |
+| Scientist Slaughterhouse `client.dll` | VC6 CD's | Rebuilds identical on it (linked incrementally, so no folding). Whether the builtin gives the same is not recorded. |
 
 ## Counter-Strike
 

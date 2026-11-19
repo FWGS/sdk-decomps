@@ -7,7 +7,8 @@ the retail builds had. Do these shared steps once, then follow a mod's page:
 
 [Point of View](point-of-view.md) · [T2DEF](t2def.md) · [Wanted!](wanted.md) ·
 [Gunman Chronicles](gunman-chronicles.md) · [They Hunger](they-hunger.md) ·
-[Counter-Strike](counter-strike.md)
+[Counter-Strike](counter-strike.md) ·
+[Scientist Slaughterhouse](scientist-slaughterhouse.md)
 
 Background (why each step is needed): [setup.md](../setup.md),
 [compilers.md](../compilers.md), [reproducing.md](../reproducing.md).
