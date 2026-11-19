@@ -58,7 +58,6 @@ public:
 	BOOL CheckRangeAttack1 ( float flDot, float flDist );	// balls
 	BOOL CheckRangeAttack2 ( float flDot, float flDist );	// head
 	BOOL CheckMeleeAttack1 ( float flDot, float flDist );	// block, throw
-	Schedule_t* GetSchedule ( void );
 	Schedule_t* GetScheduleOfType ( int Type );
 	void StartTask ( Task_t *pTask );
 	void RunTask ( Task_t *pTask );
@@ -735,43 +734,6 @@ void CController :: RunTask ( Task_t *pTask )
 		CSquadMonster :: RunTask ( pTask );
 		break;
 	}
-}
-
-
-//=========================================================
-// GetSchedule - Decides which type of schedule best suits
-// the monster's current state and conditions. Then calls
-// monster's member function to get a pointer to a schedule
-// of the proper type.
-//=========================================================
-Schedule_t *CController :: GetSchedule ( void )
-{
-	switch	( m_MonsterState )
-	{
-	case MONSTERSTATE_IDLE:
-		break;
-
-	case MONSTERSTATE_ALERT:
-		break;
-
-	case MONSTERSTATE_COMBAT:
-		{
-			Vector vecTmp = Intersect( Vector( 0, 0, 0 ), Vector( 100, 4, 7 ), Vector( 2, 10, -3 ), 20.0 );
-
-			// dead enemy
-			if ( HasConditions ( bits_COND_LIGHT_DAMAGE ) )
-			{
-				// m_iFrustration++;
-			}
-			if ( HasConditions ( bits_COND_HEAVY_DAMAGE ) )
-			{
-				// m_iFrustration++;
-			}
-		}
-		break;
-	}
-
-	return CSquadMonster :: GetSchedule();
 }
 
 
