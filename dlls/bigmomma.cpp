@@ -26,6 +26,33 @@
 #include	"weapons.h"
 #include	"game.h"
 
+// sic: an unused inline function, a stand-in for text retail's bigmomma.cpp had
+// and ours lacks: its intermediate code puts CPointEntity::ObjectCaps before
+// VecCheckSplatToss, where retail has it
+inline void sic_il_bigmomma( int *p )
+{
+	p[0] = 0;
+	p[1] = 0;
+	p[2] = 0;
+	p[3] = 0;
+	p[4] = 0;
+	p[5] = 0;
+	p[6] = 0;
+	p[7] = 0;
+	p[8] = 0;
+	p[9] = 0;
+	p[10] = 0;
+	p[11] = 0;
+	p[12] = 0;
+	p[13] = 0;
+	p[14] = 0;
+	p[15] = 0;
+	p[16] = 0;
+	p[17] = 0;
+	p[18] = 0;
+	p[19] = 0;
+}
+
 #define SF_INFOBM_RUN		0x0001
 #define SF_INFOBM_WAIT		0x0002
 
