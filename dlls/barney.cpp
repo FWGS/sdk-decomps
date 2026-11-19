@@ -366,7 +366,7 @@ void CBarney :: BarneyFirePistol ( void )
 
 	if (pev->frags)
 	{
-		FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_2DEGREES, 1024, BULLET_PLAYER_357);
+		FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_5DEGREES, 1024, BULLET_PLAYER_357);
 		if (RANDOM_LONG(0, 1))
 			EMIT_SOUND_DYN( ENT(pev), CHAN_WEAPON, "weapons/357_shot1.wav", 1, ATTN_NORM, 0, 100 );
 		else
@@ -374,7 +374,7 @@ void CBarney :: BarneyFirePistol ( void )
 	}
 	else
 	{
-		FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_2DEGREES, 1024, BULLET_MONSTER_9MM );
+		FireBullets(1, vecShootOrigin, vecShootDir, VECTOR_CONE_5DEGREES, 1024, BULLET_MONSTER_9MM );
 
 		int pitchShift = RANDOM_LONG( 0, 20 );
 	
