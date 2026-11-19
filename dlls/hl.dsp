@@ -191,6 +191,10 @@ SOURCE=.\barney.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\barneyzom.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\bigmomma.cpp
 # End Source File
 # Begin Source File
@@ -224,6 +228,10 @@ SOURCE=.\combat.cpp
 # Begin Source File
 
 SOURCE=.\controller.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\cremator.cpp
 # End Source File
 # Begin Source File
 
@@ -479,6 +487,10 @@ SOURCE=.\scripted.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\scutspider.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\shotgun.cpp
 # End Source File
 # Begin Source File
@@ -560,6 +572,10 @@ SOURCE=.\world.cpp
 # Begin Source File
 
 SOURCE=.\xen.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\z_ghoul.cpp
 # End Source File
 # Begin Source File
 
