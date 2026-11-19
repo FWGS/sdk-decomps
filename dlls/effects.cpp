@@ -1950,7 +1950,7 @@ void CGibShooter :: Precache ( void )
 	}
 	else
 	{
-		m_iGibModelIndex = PRECACHE_MODEL ("models/hgibs.mdl");
+		m_iGibModelIndex = PRECACHE_MODEL ("models/flesh.mdl");
 	}
 }
 
@@ -2062,12 +2062,12 @@ CBaseEntity *CGibShooter :: CreateGib ( Vector vecPos, Vector vecVel )
 	}
 	else if (m_iBloodColor)
 	{
-		pGib->Spawn( "models/hgibs.mdl" );
+		pGib->Spawn( "models/flesh.mdl" );
 		pGib->m_bloodColor = m_iBloodColor;
 	}
 	else
 	{
-		pGib->Spawn( "models/hgibs.mdl" );
+		pGib->Spawn( "models/flesh.mdl" );
 		pGib->m_bloodColor = BLOOD_COLOR_RED;
 	}
 
