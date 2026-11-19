@@ -1531,6 +1531,16 @@ void UTIL_BloodDrips( const Vector &origin, const Vector &direction, int color, 
 		WRITE_BYTE( color );								// color index into host_basepal
 		WRITE_BYTE( min( max( 3, amount / 10 ), 16 ) );		// size
 	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, origin );
+		WRITE_BYTE( TE_SPRITE );
+		WRITE_COORD( origin.x );
+		WRITE_COORD( origin.y );
+		WRITE_COORD( origin.z );
+		WRITE_SHORT( g_sModelIndexBloodCloud );
+		WRITE_BYTE( 2 ); // scale
+		WRITE_BYTE( -200 ); // brightness (sic: sent as 56)
+	MESSAGE_END();
 }				
 
 Vector UTIL_RandomBloodVector( void )
@@ -1684,6 +1694,20 @@ void UTIL_Sparks( const Vector &position )
 		WRITE_COORD( position.x );
 		WRITE_COORD( position.y );
 		WRITE_COORD( position.z );
+	MESSAGE_END();
+}
+
+// name ours
+void UTIL_ExplosionSprite( const Vector &position )
+{
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, position );
+		WRITE_BYTE( TE_SPRITE );
+		WRITE_COORD( position.x );
+		WRITE_COORD( position.y );
+		WRITE_COORD( position.z );
+		WRITE_SHORT( g_sModelIndexExpansion );
+		WRITE_BYTE( 30 ); // scale
+		WRITE_BYTE( 255 ); // brightness
 	MESSAGE_END();
 }
 

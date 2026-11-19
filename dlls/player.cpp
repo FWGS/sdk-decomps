@@ -3708,29 +3708,17 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 		gEvilImpulse101 = TRUE;
 		GiveNamedItem( "item_suit" );
 		GiveNamedItem( "item_battery" );
-		GiveNamedItem( "weapon_crowbar" );
-		GiveNamedItem( "weapon_9mmhandgun" );
-		GiveNamedItem( "ammo_9mmclip" );
+		GiveNamedItem( "weapon_fork" );
 		GiveNamedItem( "weapon_shotgun" );
 		GiveNamedItem( "ammo_buckshot" );
-		GiveNamedItem( "weapon_9mmAR" );
-		GiveNamedItem( "ammo_9mmAR" );
-		GiveNamedItem( "ammo_ARgrenades" );
-		GiveNamedItem( "weapon_handgrenade" );
-		GiveNamedItem( "weapon_tripmine" );
+		GiveNamedItem( "weapon_bergmann" );
+		GiveNamedItem( "ammo_bergmann" );
+		GiveNamedItem( "ammo_flares" );
+		GiveNamedItem( "weapon_tnt" );
 #ifndef OEM_BUILD
 		GiveNamedItem( "weapon_357" );
 		GiveNamedItem( "ammo_357" );
-		GiveNamedItem( "weapon_crossbow" );
-		GiveNamedItem( "ammo_crossbow" );
-		GiveNamedItem( "weapon_egon" );
-		GiveNamedItem( "weapon_gauss" );
-		GiveNamedItem( "ammo_gaussclip" );
-		GiveNamedItem( "weapon_rpg" );
-		GiveNamedItem( "ammo_rpgclip" );
-		GiveNamedItem( "weapon_satchel" );
-		GiveNamedItem( "weapon_snark" );
-		GiveNamedItem( "weapon_hornetgun" );
+		GiveNamedItem( "weapon_flaregun" );
 #endif
 		gEvilImpulse101 = FALSE;
 		break;

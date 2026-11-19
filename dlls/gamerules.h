@@ -17,7 +17,7 @@
 //=========================================================
 
 //LRC
-#define GAME_NAME "SurviveInCatacombs"
+#define GAME_NAME "Survive In Catacombs 2"
 
 //#include "weapons.h"
 //#include "items.h"

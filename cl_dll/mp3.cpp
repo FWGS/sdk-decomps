@@ -10,7 +10,7 @@ int CMP3::Initialize()
 	char fmodlib[256];
 	
 	m_iIsPlaying = 0;
-	sprintf( fmodlib, "%s/fmod.dll", gEngfuncs.pfnGetGameDirectory());
+	sprintf( fmodlib, "%s/Cl_dlls/fmod.dll", gEngfuncs.pfnGetGameDirectory());
 	// replace forward slashes with backslashes
 	for( int i=0; i < 256; i++ )
 		if( fmodlib[i] == '/' ) fmodlib[i] = '\\';
@@ -37,7 +37,7 @@ int CMP3::Initialize()
 		}
 	} else
 	{
-		gEngfuncs.Con_Printf("Fatal Error: SicMp3Player:FMOD.DLL knihovna nebyla nalezena!\n");
+		gEngfuncs.Con_Printf("Fatal Error: AudioPlayer:FMOD.DLL knihovna nebyla nalezena!\n");
 		return 0;
 	}
 	return 1;
@@ -79,7 +79,7 @@ int CMP3::PlayMP3( const char *pszSong )
 
 	char song[256];
 
-	sprintf( song, "%s/sound/mp3/%s", gEngfuncs.pfnGetGameDirectory(), pszSong);
+	sprintf( song, "%s/aud_sic/%s", gEngfuncs.pfnGetGameDirectory(), pszSong);
 
 	// leave out the FSOUND_LOOP_NORMAL to play the mp3 only once
 	m_Stream = SOF( song, FSOUND_NORMAL, 1 );
@@ -90,7 +90,7 @@ int CMP3::PlayMP3( const char *pszSong )
 
 	}else{
 		
-		gEngfuncs.Con_Printf("ERROR: SicMp3Player: nelze otevrit soubor %s\n",song);
+		gEngfuncs.Con_Printf("ERROR: AudioPlayer: nelze otevrit soubor %s\n",song);
 		m_iIsPlaying = 0;
 		return 0;
 
