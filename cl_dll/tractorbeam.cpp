@@ -23,7 +23,7 @@ extern void VectorAngles( const float *forward, float *angles );
 
 // the cone's base: its centre and 16 points around it (sic: the circle is
 // slightly uneven, 0.92488 against 0.922879 and so on)
-static Vector g_vecTractorCone[17] =
+static Vector s_vecConeVerts[17] =
 {
 	Vector( 0.0, 0.0, 0.0 ),
 	Vector( 0.924879, -1.0, 0.383684 ),
@@ -125,8 +125,8 @@ void DrawGravityFieldCone( float *origin, float *angles, float flLength, float f
 
 	for ( int i = 1; i < 17; i++ )
 	{
-		vecVerts[i].x = flRadius * g_vecTractorCone[i].x;
-		vecVerts[i].y = flRadius * g_vecTractorCone[i].z;
+		vecVerts[i].x = flRadius * s_vecConeVerts[i].x;
+		vecVerts[i].y = flRadius * s_vecConeVerts[i].z;
 		vecVerts[i].z = flLength;
 		vecVerts[i] = mat * vecVerts[i];
 	}
