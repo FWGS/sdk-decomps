@@ -32,7 +32,7 @@ int CMP3::Initialize()
 		if( !(SCL && SOP && SBS && SDRV && INIT && SOF && SPLAY && CLOSE) )
 		{
 			FreeLibrary( m_hFMod );
-			gEngfuncs.Con_Printf("Fatal Error: SicMp3Player:FMOD funkce nelze nahrát!\n");
+			gEngfuncs.Con_Printf("Fatal Error: AudioPlayer:FMOD funkce nelze nahrát!\n");
 			return 0;
 		}
 	} else
