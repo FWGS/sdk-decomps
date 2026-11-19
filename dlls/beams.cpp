@@ -361,7 +361,7 @@ void CBeamCannon::StartFxThink( void )
 	if ( m_pStartSprite )
 		UTIL_SetOrigin( m_pStartSprite->pev, pev->origin );
 
-	if ( m_startLight != Vector( 0, 0, 0 ) )
+	if ( m_startLight != g_vecZero )
 	{
 		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 			WRITE_BYTE( TE_DLIGHT );
@@ -401,7 +401,7 @@ void CBeamCannon::FireAtPoint( TraceResult &tr )
 
 	BeamDamage( &tr );
 
-	if ( m_startLight != Vector( 0, 0, 0 ) )
+	if ( m_startLight != g_vecZero )
 	{
 		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 			WRITE_BYTE( TE_DLIGHT );
@@ -417,7 +417,7 @@ void CBeamCannon::FireAtPoint( TraceResult &tr )
 		MESSAGE_END( );
 	}
 
-	if ( m_endLight != Vector( 0, 0, 0 ) )
+	if ( m_endLight != g_vecZero )
 	{
 		Vector vecEnd = GetEndPos();
 		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecEnd );
@@ -761,7 +761,7 @@ void CBeamCharge::ExpandThink( void )
 		pev->nextthink		= gpGlobals->time + 0.1;
 		m_lastTime			= gpGlobals->time;
 
-		if ( m_light != Vector( 0, 0, 0 ) )
+		if ( m_light != g_vecZero )
 		{
 			MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 				WRITE_BYTE( TE_DLIGHT );
@@ -811,7 +811,7 @@ void CBeamCharge::ChargeThink( void )
 	if ( m_iszBeamSpriteName )
 		RandomBeam();
 
-	if ( m_light != Vector( 0, 0, 0 ) )
+	if ( m_light != g_vecZero )
 	{
 		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 			WRITE_BYTE( TE_DLIGHT );

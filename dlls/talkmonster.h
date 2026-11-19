@@ -151,7 +151,7 @@ public:
 	void EXPORT		FollowerUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	
 	virtual void	SetAnswerQuestion( CTalkMonster *pSpeaker );
-	virtual float	GetHoldDistance( void ) { return CBaseEntity::GetHoldDistance() * 0.5; }
+	virtual float	TractorBeamRadius( void ) { return CBaseEntity::TractorBeamRadius() * 0.5; }
 	virtual CTalkMonster *MyTalkMonsterPointer( void ) { return this; }
 	virtual int		FriendNumber( int arrayNumber )	{ return arrayNumber; }
 
