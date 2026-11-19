@@ -150,7 +150,7 @@ void CMonsterMaker :: Spawn( )
 
 	if ( m_cNumMonsters == 1 || (m_cNumMonsters != -1 && pev->spawnflags & SF_MONSTERMAKER_LEAVECORPSE ))
 	{
-		m_fFadeChildren = FALSE;
+		m_fFadeChildren = TRUE; // sic: both arms alike, children always fade
 	}
 	else
 	{
