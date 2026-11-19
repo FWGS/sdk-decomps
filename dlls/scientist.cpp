@@ -208,13 +208,7 @@ Schedule_t	slStopFollowing[] =
 
 Task_t	tlHeal[] =
 {
-	{ TASK_MOVE_TO_TARGET_RANGE,(float)50		},	// Move within 60 of target ent (client)
-	{ TASK_SET_FAIL_SCHEDULE,	(float)SCHED_TARGET_CHASE },	// If you fail, catch up with that guy! (change this to put syringe away and then chase)
-	{ TASK_FACE_IDEAL,			(float)0		},
-	{ TASK_SAY_HEAL,			(float)0		},
-	{ TASK_PLAY_SEQUENCE_FACE_TARGET,		(float)ACT_ARM	},			// Whip out the needle
-	{ TASK_HEAL,				(float)0	},	// Put it in the player
-	{ TASK_PLAY_SEQUENCE_FACE_TARGET,		(float)ACT_DISARM	},			// Put away the needle
+	{ TASK_GET_PATH_TO_LASTPOSITION,	(float)0	},	// sic: all that is left of the heal schedule
 };
 
 Schedule_t	slHeal[] =
@@ -1079,7 +1073,7 @@ void CScientist::Heal( void )
 		return;
 
 	Vector target = m_hTargetEnt->pev->origin - pev->origin;
-	if ( target.Length() > 100 )
+	if ( target.Length() > 50 )
 		return;
 
 	m_hTargetEnt->TakeHealth( gSkillData.scientistHeal, DMG_GENERIC );
