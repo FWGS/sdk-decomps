@@ -413,9 +413,9 @@ void CWaterElemental :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				y = RANDOM_FLOAT( -0.5, 0.5 ) + RANDOM_FLOAT( -0.5, 0.5 );
 			} while ( x*x+y*y > 1 );
 
-			pBlast->pev->velocity = ( vecDir + gpGlobals->v_right * ( x * 0.1 ) + gpGlobals->v_up * ( y * 0.1 ) ) * 800;
+			pBlast->pev->velocity = ( vecDir + ( x * 0.1 ) * gpGlobals->v_right + ( y * 0.1 ) * gpGlobals->v_up ) * 800;
 
-			EMIT_SOUND_DYN( ENT(pev), CHAN_VOICE, pAttackSounds[ RANDOM_LONG( 0, ARRAYSIZE( pAttackSounds ) - 1 ) ], 1.0, ATTN_NORM, 0, PITCH_NORM );
+			EMIT_SOUND( ENT(pev), CHAN_VOICE, pAttackSounds[ RANDOM_LONG( 0, ARRAYSIZE( pAttackSounds ) - 1 ) ], 1.0, ATTN_NORM );
 			CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 600, 0.3 );
 		}
 		break;
@@ -423,8 +423,10 @@ void CWaterElemental :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		case WATER_AE_SPRAY:
 		{
 			// five geysers in a row across the enemy's last known position, the outer ones later
-			Vector vecDir = ( pev->origin - m_vecEnemyLKP ).Normalize();
-			Vector vecSide = CrossProduct( vecDir, Vector( 0, 0, 1 ) );
+			Vector vecDir, vecSide;
+
+			vecDir = Vector( pev->origin - m_vecEnemyLKP ).Normalize();
+			vecSide = CrossProduct( vecDir, Vector( 0, 0, 1 ) );
 
 			SpawnSpray( m_vecEnemyLKP, 0 );
 			SpawnSpray( m_vecEnemyLKP + vecSide * 40, 1 );
