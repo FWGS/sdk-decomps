@@ -1316,7 +1316,7 @@ void CBeamTurret::Shoot( const Vector &vecTarget )
 {
 	Vector vecDir( vecTarget - pev->origin );
 	float flDist = vecDir.Length();
-	Vector vecAim = vecDir;
+	Vector vecAim( vecDir );
 	vecAim = vecAim.Normalize();
 	UTIL_MakeAimVectors( UTIL_VecToAngles( vecAim ) );
 
@@ -1328,18 +1328,19 @@ void CBeamTurret::Shoot( const Vector &vecTarget )
 		z = x*x+y*y;
 	} while (z > 1);
 
-	Vector vecShoot = vecAim +
+	Vector vecShoot( vecAim +
 					x * m_spread * gpGlobals->v_right +
-					y * m_spread * gpGlobals->v_up;
+					y * m_spread * gpGlobals->v_up );
 	m_point1 = pev->origin + vecShoot * flDist;
 	m_vecLastPosition = vecTarget;
 
 	if ( m_type == BEAMTURRET_SLASH )
 	{
-		Vector vecCenter = m_point1;
-		UTIL_MakeVectors( Vector( RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ) ) );
+		Vector vecCenter( m_point1 );
+		Vector vecAngles = Vector( RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ) );
+		UTIL_MakeVectors( vecAngles );
 		m_point1 = vecCenter + gpGlobals->v_forward * RANDOM_FLOAT( 0, pev->speed );
-		Vector vecEnd = vecCenter + gpGlobals->v_forward * -RANDOM_FLOAT( 0, pev->speed );
+		Vector vecEnd( vecCenter + gpGlobals->v_forward * -RANDOM_FLOAT( 0, pev->speed ) );
 		m_point2 = vecEnd - m_point1;
 		float flLength = m_point2.Length();
 		vecEnd = m_point2.Normalize();
