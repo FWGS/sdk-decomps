@@ -2,8 +2,8 @@
 // rain.cpp
 //
 // Purpose: rain and water streams (events/rain.sc, env_rain and the water
-//          monster), moved clientside in 0.8a. Names ours but EV_Rain and
-//          rain_t::Think.
+//          monster), moved clientside in 0.8a. Names ours but EV_Rain,
+//          rain_t::Think, CRainVolume's, RainEffectThink and RainEffectVidInit.
 //
 // $NoKeywords: $
 //=============================================================================
@@ -107,10 +107,10 @@ struct rain_t
 	bool	m_bDown;
 };
 
-class CRainEffect
+class CRainVolume
 {
 public:
-	CRainEffect();
+	CRainVolume();
 
 	void Initialize( void );
 	void Think( float flTime );
@@ -120,14 +120,14 @@ public:
 	rain_t	m_Rain[ MAX_RAIN ];
 };
 
-CRainEffect g_Rain;
+CRainVolume g_Rain;
 
-CRainEffect::CRainEffect()
+CRainVolume::CRainVolume()
 {
 	Initialize();
 }
 
-void CRainEffect::Initialize( void )
+void CRainVolume::Initialize( void )
 {
 	memset( this, 0, sizeof( *this ) );
 }
@@ -146,7 +146,7 @@ void rain_t::Think( float flTime )
 	RainParticles( pEnt, m_flSpeed, m_iType, m_iCount, m_flLife, m_bDown );
 }
 
-void CRainEffect::Think( float flTime )
+void CRainVolume::Think( float flTime )
 {
 	for ( int i = 0; i < MAX_RAIN; i++ )
 	{
@@ -155,7 +155,7 @@ void CRainEffect::Think( float flTime )
 	}
 }
 
-void CRainEffect::Start( int iEntity, int iType, float flSpeed, float flLife, int iCount, float flInterval, bool bDown )
+void CRainVolume::Start( int iEntity, int iType, float flSpeed, float flLife, int iCount, float flInterval, bool bDown )
 {
 	rain_t *pRain = &m_Rain[0];
 
@@ -182,7 +182,7 @@ void CRainEffect::Start( int iEntity, int iType, float flSpeed, float flLife, in
 	pRain->m_flNextTime = gEngfuncs.GetClientTime();
 }
 
-void CRainEffect::End( int iEntity )
+void CRainVolume::End( int iEntity )
 {
 	for ( int i = 0; i < MAX_RAIN; i++ )
 	{
@@ -194,12 +194,12 @@ void CRainEffect::End( int iEntity )
 	}
 }
 
-void RainThink( float flTime )
+void RainEffectThink( float flTime )
 {
 	g_Rain.Think( flTime );
 }
 
-void RainVidInit( void )
+void RainEffectVidInit( void )
 {
 	g_Rain.Initialize();
 }

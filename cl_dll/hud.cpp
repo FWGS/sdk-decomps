@@ -93,7 +93,7 @@ void SphereVidInit( void );
 void TractorbeamVidInit( void );
 void ParticleVidInit( void );
 void BloodSprayVidInit( void );
-void RainVidInit( void );
+void RainEffectVidInit( void );
 void CL_DamageFXReset( void );
 
 //DECLARE_MESSAGE(m_Logo, Logo)
@@ -522,7 +522,7 @@ void CHud :: VidInit( void )
 	TractorbeamVidInit();
 	ParticleVidInit();
 	BloodSprayVidInit();
-	RainVidInit();
+	RainEffectVidInit();
 	CL_DamageFXReset();
 
 	float fogColor[3] = { 0, 0, 0 };

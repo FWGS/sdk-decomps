@@ -2300,7 +2300,7 @@ void CBaseMonster :: MakeDamageBloodDecal ( int cCount, float flNoise, TraceResu
 // Resurrect - play the death animation backwards and get
 // up again.
 //=========================================================
-void CBaseMonster :: Resurrect( CBaseEntity *pActivator )
+void CBaseMonster :: Resurrect( CBaseMonster *pActivator )
 {
 	ResetSequenceInfo();
 	pev->frame = 255;

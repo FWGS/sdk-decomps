@@ -45,7 +45,7 @@ public:
 	const char *GetHudName( void ) { return "Alien slave"; }
 	const char *GetKillDesc( void ) { return "an alien slave"; }
 	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { if ( m_iBeams > 0 ) return DamageVerb( DMG_SHOCK, fGibbed ); return DamageVerb( DMG_SLASH, fGibbed ); }
-	float GetHoldDistance( void ) { return CBaseEntity::GetHoldDistance() * 0.5; }
+	float TractorBeamRadius( void ) { return CBaseEntity::TractorBeamRadius() * 0.5; }
 
 	void Spawn( void );
 	void Precache( void );
