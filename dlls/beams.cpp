@@ -1294,8 +1294,7 @@ void CBeamTurret::ActiveThink( void )
 	}
 
 	UTIL_MakeAimVectors( pev->angles );
-	Vector vecLOS = vecDirToEnemy;
-	vecLOS = vecLOS.Normalize();
+	Vector vecLOS = vecDirToEnemy.Normalize();
 
 	// Is the Gun looking at the target
 	if ( DotProduct( vecLOS, gpGlobals->v_forward ) < m_flFiringArc )
