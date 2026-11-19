@@ -447,7 +447,14 @@ void CSniperRifle::WeaponSpecial( void )
 		if ( m_hBox->pev->skin > SNIPERBOX_MINIROCKET )
 			m_hBox->pev->skin = SNIPERBOX_ANTIMISSILE;
 
-		ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Building a %s box", SniperBoxName( m_hBox->pev->skin ) );
+		const char *pszType;
+		switch ( m_hBox->pev->skin )
+		{
+		case SNIPERBOX_ANTIGRENADE:	pszType = "Anti-grenade"; break;
+		case SNIPERBOX_MINIROCKET:	pszType = "Minirocket"; break;
+		default:					pszType = "Anti-missile"; break;
+		}
+		ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Building a %s box", pszType );
 		return;
 	}
 
@@ -460,23 +467,15 @@ void CSniperRifle::WeaponSpecial( void )
 		if ( m_pPlayer->pev->flags & FL_DUCKING )
 			vecSrc = vecSrc - Vector( 0, 0, -18 );
 
-		Vector vecEnd = vecSrc + gpGlobals->v_forward * 64;
 		TraceResult tr;
 
-		UTIL_TraceLine( vecSrc + gpGlobals->v_forward * 20, vecEnd, dont_ignore_monsters, NULL, &tr );
+		UTIL_TraceLine( vecSrc + gpGlobals->v_forward * 20, vecSrc + gpGlobals->v_forward * 64, dont_ignore_monsters, NULL, &tr );
 
 		if ( !tr.fAllSolid && !tr.fStartSolid && tr.flFraction > 0.25 )
 		{
 			m_hBox = CBaseEntity::Create( "monster_sniper_box", tr.vecEndPos - gpGlobals->v_forward * 16, g_vecZero, NULL );
 			m_hBox->pev->skin = pev->weapons;
-			const char *pszType;
-			switch ( m_hBox->pev->skin )
-			{
-			case SNIPERBOX_ANTIGRENADE:	pszType = "Anti-grenade"; break;
-			case SNIPERBOX_MINIROCKET:	pszType = "Minirocket"; break;
-			default:					pszType = "Anti-missile"; break;
-			}
-			ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Building a %s box", pszType );
+			ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Building a %s box", SniperBoxName( m_hBox->pev->skin ) );
 			m_hBox->Install( m_pPlayer );
 			EMIT_SOUND( m_hBox->edict(), CHAN_VOICE, "weapons/building.wav", 1, ATTN_NORM );
 

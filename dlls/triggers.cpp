@@ -2177,21 +2177,11 @@ void CTriggerTeleport :: TeleportTouch( CBaseEntity *pOther )
 	if (!UTIL_IsMasterTriggered(m_sMaster, pOther))
 		return;
  	
-	if ( !( pev->spawnflags & SF_TRIGGER_ALLOWMONSTERS ) )
-	{// no monsters allowed!
-		if ( FBitSet( pOther->pev->flags, FL_MONSTER ) )
-		{
-			return;
-		}
-	}
+	if ( !( pev->spawnflags & SF_TRIGGER_ALLOWMONSTERS ) && FBitSet( pOther->pev->flags, FL_MONSTER ) )
+		return;	// no monsters allowed!
 
-	if ( HasSpawnFlag( SF_TRIGGER_NOCLIENTS ) )
-	{// no clients allowed
-		if ( pOther->IsPlayer() )
-		{
-			return;
-		}
-	}
+	if ( HasSpawnFlag( SF_TRIGGER_NOCLIENTS ) && pOther->IsPlayer() )
+		return;	// no clients allowed
 	
 	CBaseEntity *pTarget = UTIL_RandomTargetname( STRING(pev->target) );
 	if ( !pTarget )
@@ -2200,8 +2190,7 @@ void CTriggerTeleport :: TeleportTouch( CBaseEntity *pOther )
 	CBaseEntity *pLandmark = UTIL_FindEntityByTargetname( NULL, STRING(m_iszLandmark) );
 	if ( pLandmark )
 	{
-		Vector vecOffset;
-		vecOffset = pTarget->pev->origin - pLandmark->pev->origin;
+		Vector vecOffset = pTarget->pev->origin - pLandmark->pev->origin;
 
 		if ( pLandmark->pev->angles != pTarget->pev->angles )
 		{
@@ -2215,8 +2204,7 @@ void CTriggerTeleport :: TeleportTouch( CBaseEntity *pOther )
 			else
 				pOther->pev->angles = vecAngles + pOther->pev->angles;
 
-			Vector vecDir;
-			vecDir = vecAngles + UTIL_VecToAngles( pOther->pev->velocity );
+			Vector vecDir = vecAngles + UTIL_VecToAngles( pOther->pev->velocity );
 			UTIL_MakeAimVectors( vecDir );
 			pOther->pev->velocity = gpGlobals->v_forward * pOther->pev->velocity.Length();
 
@@ -2224,7 +2212,8 @@ void CTriggerTeleport :: TeleportTouch( CBaseEntity *pOther )
 			Vector vecFromLandmark = pOther->pev->origin - pLandmark->pev->origin;
 			vecDir = vecAngles + UTIL_VecToAngles( vecOffset );	// sic: the direction of vecOffset, not of vecFromLandmark
 			UTIL_MakeAimVectors( vecDir );
-			vecOffset = vecOffset + ( vecFromLandmark.Length() * gpGlobals->v_forward - vecFromLandmark );
+			vecFromLandmark = gpGlobals->v_forward * vecFromLandmark.Length() - vecFromLandmark;
+			vecOffset = vecOffset + vecFromLandmark;
 		}
 
 		vecOffset.z++;

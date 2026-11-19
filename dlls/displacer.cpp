@@ -364,6 +364,7 @@ void CDisplacer::WeaponIdle( void )
 #ifndef CLIENT_DLL
 			Vector anglesAim = m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle;
 			UTIL_MakeVectors( anglesAim );
+			float flUnused = anglesAim.x;	// sic: never used (with flUnused2 below: retail's x87 operand order and inlining)
 
 			Vector vecSrc = m_pPlayer->GetGunPosition( ) + gpGlobals->v_up * -8 + gpGlobals->v_forward * 8;
 
@@ -400,7 +401,9 @@ void CDisplacer::WeaponIdle( void )
 			{
 				if ( pEntity != m_pPlayer && pEntity->pev->size.z >= 32 && pEntity->pev->takedamage && m_pPlayer->IRelationship( pEntity ) >= R_DL )
 				{
-					float flDot = DotProduct( ( pEntity->Center( ) - vecSrc ).Normalize( ), gpGlobals->v_forward );
+					Vector vecDir = ( pEntity->Center( ) - vecSrc ).Normalize( );
+					float flDot = DotProduct( vecDir, gpGlobals->v_forward );
+					float flUnused2 = vecDir.x;	// sic: never used
 
 					if ( flDot > VIEW_FIELD_ULTRA_NARROW && flDot > flBest )
 					{

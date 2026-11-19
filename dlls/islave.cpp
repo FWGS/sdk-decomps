@@ -1352,9 +1352,8 @@ void CNSlave :: ZapBeam( int side )
 	}
 	else
 	{
-		Vector vecHalf = 0.5 * ( g_vecNSlaveZap - tr.vecEndPos );
-		Vector vecMid;
-		vecMid = vecHalf + tr.vecEndPos;
+		Vector vecHalf, vecMid;	// sic: vecHalf is unused; its constructor is one more inline site, which gives VC6 retail's inlining budget above
+		vecMid = 0.5 * ( g_vecNSlaveZap - tr.vecEndPos ) + tr.vecEndPos;
 		CGrenade *pGrenade = CGrenade::ShootExplosion( pev, vecMid, 0.5, Vector( 0, 0, -1 ) );
 		pGrenade->pev->dmg = 50;
 		pGrenade->m_iszKillDesc = MAKE_STRING( "a hyperspace flux reaction" );

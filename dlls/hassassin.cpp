@@ -1150,7 +1150,7 @@ void CKamehameha :: KameTouch( CBaseEntity *pOther )
 	STOP_SOUND( ENT( pev ), CHAN_WEAPON, "ambience/rocketrumble1.wav" );
 
 	UTIL_ScreenShakeAll( pev->origin, 255, 0.4, 4.0 );
-	EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, "weapons/mortarhit.wav", 1.0, ATTN_NONE, 0, PITCH_NORM );
+	EMIT_SOUND( ENT( pev ), CHAN_WEAPON, "weapons/mortarhit.wav", 1.0, ATTN_NONE );
 
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_DLIGHT );
@@ -1175,7 +1175,8 @@ void CKamehameha :: KameTouch( CBaseEntity *pOther )
 	if ( pev->weapons && m_hEnemy != NULL )
 	{
 		// what it carries is blown apart
-		UTIL_SetOrigin( m_hEnemy->pev, pev->origin - ( m_hEnemy->Center() - m_hEnemy->pev->origin ) );
+		Vector vecDir = m_hEnemy->Center() - m_hEnemy->pev->origin;
+		UTIL_SetOrigin( m_hEnemy->pev, pev->origin - vecDir );
 		m_hEnemy->TakeDamage( pev, pevOwner, m_hEnemy->pev->health + 1000, DMG_ENERGYBEAM | DMG_ALWAYSGIB );
 	}
 
@@ -1191,7 +1192,7 @@ void CKamehameha :: KameTouch( CBaseEntity *pOther )
 	m_flDelay = 2;
 	pev->owner = ENT( pevOwner );
 
-	PLAYBACK_EVENT_FULL( 0, ENT( pev ), g_iSphereEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, m_flDelay, 0.3, pev->dmg * 2, pev->dmg * 2.5, 1, 0 );
+	PLAYBACK_EVENT_FULL( 0, ENT( pev ), g_iSphereEvent, 0.0, pev->origin, pev->angles, m_flDelay, 0.3, pev->dmg * 2, pev->dmg * 2.5, 1, 0 );
 	CSoundEnt::InsertSound ( bits_SOUND_DANGER, pev->origin, pev->dmg * 2, 5.0 );
 
 	pev->rendermode = kRenderTransColor;
@@ -2350,50 +2351,50 @@ void CNAgent :: RunAI( void )
 //=========================================================
 void CNAgent :: StartTask ( Task_t *pTask )
 {
-	Vector vecResult;
-
 	switch ( pTask->iTask )
 	{
 	case TASK_AGENT_BLINK:
 		{
 			Vector vecDist = m_vecMoveGoal - pev->origin;
-			if ( vecDist.Length() >= 128 )
+			if ( vecDist.Length() < 128 )
 			{
-				Vector vecOld = pev->origin;
-				UTIL_SetOrigin( pev, m_vecMoveGoal );
-				if ( !WALK_MOVE( ENT(pev), 0, 0, WALKMOVE_NORMAL ) )
-				{
-					// no room there
-					UTIL_SetOrigin( pev, vecOld );
-				}
-				else
-				{
-					// a spray of sparks where it was
-					MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecOld );
-						WRITE_BYTE( TE_SPRAY );
-						WRITE_COORD( vecOld.x );
-						WRITE_COORD( vecOld.y );
-						WRITE_COORD( vecOld.z );
-						WRITE_COORD( 0 );
-						WRITE_COORD( 0 );
-						WRITE_COORD( 1 );
-						WRITE_SHORT( m_iShell );
-						WRITE_BYTE( 14 );	// count
-						WRITE_BYTE( 130 );	// speed
-						WRITE_BYTE( 128 );	// noise
-						WRITE_BYTE( kRenderTransAdd );
-					MESSAGE_END();
-					EMIT_SOUND_DYN( ENT(pev), CHAN_STATIC, "houndeye/he_blast1.wav", 1.0, 0.3, 0, PITCH_NORM );
-					TaskComplete();
-					break;
-				}
+				TaskFail();
+				break;
 			}
-			TaskFail();
+
+			Vector vecOld = pev->origin;
+			UTIL_SetOrigin( pev, m_vecMoveGoal );
+			if ( !WALK_MOVE( ENT(pev), 0, 0, WALKMOVE_NORMAL ) )
+			{
+				// no room there
+				UTIL_SetOrigin( pev, vecOld );
+				TaskFail();
+				break;
+			}
+
+			// a spray of sparks where it was
+			MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, vecOld );
+				WRITE_BYTE( TE_SPRAY );
+				WRITE_COORD( vecOld.x );
+				WRITE_COORD( vecOld.y );
+				WRITE_COORD( vecOld.z );
+				WRITE_COORD( 0 );
+				WRITE_COORD( 0 );
+				WRITE_COORD( 1 );
+				WRITE_SHORT( m_iShell );
+				WRITE_BYTE( 14 );	// count
+				WRITE_BYTE( 130 );	// speed
+				WRITE_BYTE( 128 );	// noise
+				WRITE_BYTE( kRenderTransAdd );
+			MESSAGE_END();
+			EMIT_SOUND_DYN( ENT(pev), CHAN_STATIC, "houndeye/he_blast1.wav", 1.0, 0.3, 0, PITCH_NORM );
+			TaskComplete();
 		}
 		break;
 	case TASK_AGENT_FIND_COVER_FROM_ENEMY:
 		if ( m_hEnemy != NULL )
 		{
+			Vector vecResult;
 			if ( FindNodeInCover( m_hEnemy->pev->origin, m_hEnemy->pev->view_ofs, 0, CoverRadius(), vecResult ) )
 			{
 				m_vecMoveGoal = vecResult;
@@ -2410,8 +2411,13 @@ void CNAgent :: StartTask ( Task_t *pTask )
 			int iMaxDist = pBestSound->m_iVolume * 2;	// sic: before the test for no sound
 			if ( pBestSound )
 			{
-				if ( FindNodeInCover( pBestSound->m_vecOrigin, g_vecZero, pBestSound->m_iVolume, max( iMaxDist, CoverRadius() ), vecResult )
-					|| FindNodeAway( pBestSound->m_vecOrigin, pBestSound->m_iVolume, max( iMaxDist, CoverRadius() ), vecResult ) )
+				if ( FindNodeInCover( pBestSound->m_vecOrigin, g_vecZero, pBestSound->m_iVolume, max( iMaxDist, CoverRadius() ), vecResult ) )
+				{
+					m_vecMoveGoal = vecResult;
+					TaskComplete();
+					break;
+				}
+				if ( FindNodeAway( pBestSound->m_vecOrigin, pBestSound->m_iVolume, max( iMaxDist, CoverRadius() ), vecResult ) )
 				{
 					m_vecMoveGoal = vecResult;
 					TaskComplete();
@@ -2428,6 +2434,7 @@ void CNAgent :: StartTask ( Task_t *pTask )
 			break;
 		}
 		{
+			Vector vecResult;
 			if ( FindEnemyNode( m_hEnemy->pev->origin, vecResult, pTask->flData, 512, 0 ) )
 			{
 				m_vecMoveGoal = vecResult;
@@ -2444,6 +2451,7 @@ void CNAgent :: StartTask ( Task_t *pTask )
 			break;
 		}
 		{
+			Vector vecResult;
 			if ( FindEnemyNode( m_hEnemy->pev->origin, vecResult, 0, 0, pTask->flData ) )
 			{
 				m_vecMoveGoal = vecResult;
@@ -2588,11 +2596,12 @@ Schedule_t *CNAgent :: GetSchedule ( void )
 					return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
 
 				TraceResult tr;
-				Vector vecSrc, vecDir;
+				Vector vecSrc;
 
 				if ( m_hEnemy->CanBeRepulsed( false ) )
 				{
 					// room behind the enemy to blow it away?
+					Vector vecDir;
 					vecSrc = Center();
 					vecDir = ( m_hEnemy->Center() - vecSrc ).Normalize();
 					UTIL_TraceLine( vecSrc + vecDir * 64, vecSrc + vecDir * 600, dont_ignore_monsters, m_hEnemy->edict(), &tr );
@@ -2602,6 +2611,7 @@ Schedule_t *CNAgent :: GetSchedule ( void )
 
 				// no: get some room first
 				BOOL fJump = FALSE;
+				Vector vecDir;
 				UTIL_VecToAngles( pev->angles );	// sic: meant to make the vectors
 				vecSrc = m_hEnemy->Center();
 				vecDir = ( gpGlobals->v_up - gpGlobals->v_forward ).Normalize();
@@ -2655,23 +2665,25 @@ attack:
 				if ( !m_pChargeSprite && min( 100, iPower ) > RANDOM_LONG( 0, 140 ) )
 				{
 					m_flChargeTime = gpGlobals->time;
-					m_flChargeScale = 0.5;
 					if ( pev->frags != 1 )
 					{
+						m_flChargeScale = 0.5;
 						m_pChargeSprite = CSprite::SpriteCreate( "sprites/wallop.spr", pev->origin, TRUE );
 						m_pChargeSprite->SetAttachment( edict(), 1 );
 						m_pChargeSprite->SetScale( 0.1 );
 						m_pChargeSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxDistort );
+						m_pChargeSprite->pev->spawnflags |= SF_SPRITE_TEMPORARY;
 					}
 					else
 					{
+						m_flChargeScale = 0.5;
 						m_pChargeSprite = CSprite::SpriteCreate( "sprites/n_charge.spr", pev->origin, TRUE );
 						m_pChargeSprite->SetAttachment( edict(), 1 );
 						m_pChargeSprite->pev->scale = 0.1;
 						m_pChargeSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxNone );
 						m_pChargeSprite->pev->framerate = 10;
+						m_pChargeSprite->pev->spawnflags |= SF_SPRITE_TEMPORARY;
 					}
-					m_pChargeSprite->pev->spawnflags |= SF_SPRITE_TEMPORARY;
 				}
 				return GetScheduleOfType ( SCHED_RANGE_ATTACK1 );
 			}
