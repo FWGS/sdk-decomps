@@ -29,6 +29,8 @@ struct skilldata_t
 	
 	float barneyHealth;
 
+	float barneyzomHealth;			// name ours (sk_barneyzom_health)
+
 	float bigmommaHealthFactor;		// Multiply each node's health by this
 	float bigmommaDmgSlash;			// melee attack damage
 	float bigmommaDmgBlast;			// mortar attack damage
@@ -86,26 +88,34 @@ struct skilldata_t
 	float zombieDmgOneSlash;
 	float zombieDmgBothSlash;
 
+	float crematorHealth;			// name ours (sk_cremator_health)
+	float crematorDmgOneSlash;		// name ours
+	float crematorDmgBothSlash;		// name ours
+
+	float ghoulHealth;				// name ours (sk_ghoul_health)
+	float ghoulDmgOneSlash;			// name ours
+	float ghoulDmgBothSlash;		// name ours
+
 	float turretHealth;
 	float miniturretHealth;
 	float sentryHealth;
 
 
 // Player Weapons
-	float plrDmgCrowbar;
+	float plrDmgFork;				// name ours (sk_plr_fork, the crowbar's field)
 	float plrDmg9MM;
 	float plrDmg357;
-	float plrDmgMP5;
+	float plrDmgMP18;				// name ours (sk_plr_mp18_bullet, the MP5's field)
 	float plrDmgM203Grenade;
 	float plrDmgBuckshot;
-	float plrDmgCrossbowClient;
-	float plrDmgCrossbowMonster;
+	float plrDmgFlareClient;		// name ours (sk_plr_flare_client, the crossbow's field)
+	float plrDmgFlareMonster;		// name ours (sk_plr_flare_monster)
 	float plrDmgRPG;
 	float plrDmgGauss;
 	float plrDmgEgonNarrow;
 	float plrDmgEgonWide;
 	float plrDmgHornet;
-	float plrDmgHandGrenade;
+	float plrDmgTNT;				// name ours (sk_plr_tnt, the hand grenade's field)
 	float plrDmgSatchel;
 	float plrDmgTripmine;
 	
