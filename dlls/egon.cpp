@@ -321,13 +321,16 @@ void CEgon::IonCannon( void )
 
 		if ( pev->dmgtime < gpGlobals->time )
 		{
-			m_pIonSprites[i*2]->pev->frame = RANDOM_LONG( 0, m_pIonSprites[i*2]->Frames() );
-			m_pIonSprites[i*2+1]->pev->frame = RANDOM_LONG( 0, m_pIonSprites[i*2+1]->Frames() );
+			CSprite *pSprite = m_pIonSprites[i*2];
+			pSprite->pev->frame = RANDOM_LONG( 0, pSprite->Frames() );
+			pSprite = m_pIonSprites[i*2+1];
+			pSprite->pev->frame = RANDOM_LONG( 0, pSprite->Frames() );
 
 			if ( pEntity->pev->takedamage )
 			{
 				m_hIonTargets[i] = pEntity;
 				m_vecIonTargetOfs[i] = tr.vecEndPos - pEntity->pev->origin;
+				Vector vecUnused, vecUnused2;	// sic: unused; their constructor calls keep the offset's return copy out of line, as retail
 
 				ClearMultiDamage();
 				pEntity->TraceAttack( m_pPlayer->pev, gSkillData.plrDmgEgonNarrow, vecDir.Normalize(), &tr, DMG_SHOCK | DMG_NEVERGIB );
