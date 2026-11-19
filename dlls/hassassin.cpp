@@ -2405,12 +2405,13 @@ void CNAgent :: StartTask ( Task_t *pTask )
 		break;
 	case TASK_AGENT_FIND_COVER_FROM_SOUND:
 		{
+			Vector vecResult;
 			CSound *pBestSound = PBestSound();
-			float flMaxDist = pBestSound->m_iVolume * 2;	// sic: before the test for no sound
+			int iMaxDist = pBestSound->m_iVolume * 2;	// sic: before the test for no sound
 			if ( pBestSound )
 			{
-				if ( FindNodeInCover( pBestSound->m_vecOrigin, g_vecZero, pBestSound->m_iVolume, max( flMaxDist, CoverRadius() ), vecResult )
-					|| FindNodeAway( pBestSound->m_vecOrigin, pBestSound->m_iVolume, max( flMaxDist, CoverRadius() ), vecResult ) )
+				if ( FindNodeInCover( pBestSound->m_vecOrigin, g_vecZero, pBestSound->m_iVolume, max( iMaxDist, CoverRadius() ), vecResult )
+					|| FindNodeAway( pBestSound->m_vecOrigin, pBestSound->m_iVolume, max( iMaxDist, CoverRadius() ), vecResult ) )
 				{
 					m_vecMoveGoal = vecResult;
 					TaskComplete();
