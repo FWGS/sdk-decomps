@@ -522,7 +522,17 @@ void CSatchel::WeaponSpecial( void )
 	{
 		pev->weapons = !pev->weapons;
 #ifndef CLIENT_DLL
-		ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "%s selected", pev->weapons != 1 ? "Satchel Charge" : "Satellite Rain" );
+		char *pszMode;
+		switch ( pev->weapons )
+		{
+		case 1:
+			pszMode = "Satellite Rain";
+			break;
+		default:
+			pszMode = "Satchel Charge";
+			break;
+		}
+		ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "%s selected", pszMode );
 #endif
 	}
 }

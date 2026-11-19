@@ -63,6 +63,8 @@ static Vector s_vecIonBeamOfs[5] =
 	Vector( -16, 0, 8 ),
 };
 
+const float ION_SPREAD = 15;	// name ours: degrees between the ion beams
+
 LINK_ENTITY_TO_CLASS( weapon_egon, CEgon );
 
 void CEgon::Spawn( )
@@ -279,7 +281,6 @@ void CEgon::IonCannon( void )
 	UpdateEffect( g_vecZero, g_vecZero, 0 );
 
 	CBeam *pBeam = m_pBeam;
-	float flSpread = 15;
 
 	for ( int i = 0; i < m_iBeamCount * 2 + 1; i++ )
 	{
@@ -287,9 +288,9 @@ void CEgon::IonCannon( void )
 		Vector vecAngles = m_pPlayer->pev->v_angle;
 
 		if ( i % 2 )
-			vecAngles.y -= min( i, 2 ) * flSpread;
+			vecAngles.y -= min( i, 2 ) * ION_SPREAD;
 		else if ( i )
-			vecAngles.y += (i * flSpread) / 2;
+			vecAngles.y += (i * ION_SPREAD) / 2;
 
 		UTIL_MakeVectors( vecAngles );
 		Vector vecDir = gpGlobals->v_forward * 2048;
