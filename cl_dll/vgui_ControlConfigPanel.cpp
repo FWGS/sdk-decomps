@@ -7,7 +7,7 @@
 
 // sic: a stand-in for text retail's file had more: VC6 emits the type information in an order that
 // follows its heap layout, and with this unused macro FooTablePanel's comes before ControlConfigPanel's
-#define CONTROLCONFIG_SIC	"......................................................"
+#define CONTROLCONFIG_SIC	"..........................................................................................................."
 #include<stdio.h>
 #include"vgui_ControlConfigPanel.h"
 #include<VGUI_HeaderPanel.h>
