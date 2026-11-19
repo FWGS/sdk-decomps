@@ -281,12 +281,12 @@ void CController :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				WRITE_COORD( vecStart.x );		// origin
 				WRITE_COORD( vecStart.y );
 				WRITE_COORD( vecStart.z );
-				WRITE_COORD( 1 );	// radius
-				WRITE_BYTE( 255 );	// R
-				WRITE_BYTE( 192 );	// G
-				WRITE_BYTE( 64 );	// B
-				WRITE_BYTE( 20 );	// life * 10
-				WRITE_COORD( -32 ); // decay
+				WRITE_COORD( 1024 );	// radius
+				WRITE_BYTE( 20 );	// R
+				WRITE_BYTE( 255 );	// G
+				WRITE_BYTE( 225 );	// B
+				WRITE_BYTE( 10 );	// life * 10
+				WRITE_COORD( 32 ); // decay
 			MESSAGE_END();
 
 			m_iBall[0] = 192;
@@ -310,10 +310,10 @@ void CController :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				WRITE_COORD( 0 );		// origin
 				WRITE_COORD( 0 );
 				WRITE_COORD( 0 );
-				WRITE_COORD( 32 );	// radius
-				WRITE_BYTE( 255 );	// R
-				WRITE_BYTE( 192 );	// G
-				WRITE_BYTE( 64 );	// B
+				WRITE_COORD( 512 );	// radius
+				WRITE_BYTE( 20 );	// R
+				WRITE_BYTE( 255 );	// G
+				WRITE_BYTE( 225 );	// B
 				WRITE_BYTE( 10 );	// life * 10
 				WRITE_COORD( 32 ); // decay
 			MESSAGE_END();
@@ -377,7 +377,7 @@ void CController :: Spawn()
 	if (pev->model)
 		SET_MODEL(ENT(pev), STRING(pev->model)); //LRC
 	else
-		SET_MODEL(ENT(pev), "models/controller.mdl");
+		SET_MODEL(ENT(pev), "models/ghostskeleton.mdl");
 	UTIL_SetSize( pev, Vector( -32, -32, 0 ), Vector( 32, 32, 64 ));
 
 	pev->solid			= SOLID_SLIDEBOX;
@@ -401,7 +401,7 @@ void CController :: Precache()
 	if (pev->model)
 		PRECACHE_MODEL((char*)STRING(pev->model)); //LRC
 	else
-		PRECACHE_MODEL("models/controller.mdl");
+		PRECACHE_MODEL("models/ghostskeleton.mdl");
 
 	PRECACHE_SOUND_ARRAY( pAttackSounds );
 	PRECACHE_SOUND_ARRAY( pIdleSounds );
@@ -410,6 +410,7 @@ void CController :: Precache()
 	PRECACHE_SOUND_ARRAY( pDeathSounds );
 
 	PRECACHE_MODEL( "sprites/plasma1.spr");
+	PRECACHE_MODEL( "sprites/xspark1.spr");
 
 	UTIL_PrecacheOther( "controller_energy_ball" );
 	UTIL_PrecacheOther( "controller_head_ball" );
@@ -909,12 +910,12 @@ void CController :: RunAI( void )
 			WRITE_COORD( vecStart.x );		// origin
 			WRITE_COORD( vecStart.y );
 			WRITE_COORD( vecStart.z );
-			WRITE_COORD( m_iBallCurrent[i] / 8 );	// radius
-			WRITE_BYTE( 255 );	// R
-			WRITE_BYTE( 192 );	// G
-			WRITE_BYTE( 64 );	// B
+			WRITE_COORD( m_iBallCurrent[i] / 256 );	// radius
+			WRITE_BYTE( 20 );	// R
+			WRITE_BYTE( 255 );	// G
+			WRITE_BYTE( 225 );	// B
 			WRITE_BYTE( 5 );	// life * 10
-			WRITE_COORD( 0 ); // decay
+			WRITE_COORD( 64 ); // decay
 		MESSAGE_END();
 	}
 }
@@ -1195,19 +1196,31 @@ void CControllerHeadBall :: Spawn( void )
 	pev->movetype = MOVETYPE_FLY;
 	pev->solid = SOLID_BBOX;
 
-	SET_MODEL(ENT(pev), "sprites/plasma1.spr");
-	pev->rendermode = kRenderTransAdd;
+	SET_MODEL(ENT(pev), "sprites/xspark1.spr");
+	pev->rendermode = kRenderGlow;
 	pev->rendercolor.x = 255;
 	pev->rendercolor.y = 255;
 	pev->rendercolor.z = 255;
 	pev->renderamt = 255;
-	pev->scale = 2.0;
+	pev->scale = 4.0;
 
 	UTIL_SetSize(pev, Vector( 0, 0, 0), Vector(0, 0, 0));
 	UTIL_SetOrigin( this, pev->origin );
 
 	SetThink(&CControllerHeadBall :: HuntThink );
 	SetTouch(&CControllerHeadBall :: BounceTouch );
+
+	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
+		WRITE_BYTE( TE_BEAMFOLLOW );
+		WRITE_SHORT( entindex() );	// entity
+		WRITE_SHORT( g_sModelIndexSmokeTrail );	// model
+		WRITE_BYTE( 5 ); // life
+		WRITE_BYTE( 5 );  // width
+		WRITE_BYTE( 20 );   // r, g, b
+		WRITE_BYTE( 255 );   // r, g, b
+		WRITE_BYTE( 225 );   // r, g, b
+		WRITE_BYTE( 255 );	// brightness
+	MESSAGE_END();
 
 	m_vecIdeal = Vector( 0, 0, 0 );
 
@@ -1220,9 +1233,9 @@ void CControllerHeadBall :: Spawn( void )
 
 void CControllerHeadBall :: Precache( void )
 {
-	PRECACHE_MODEL("sprites/plasma1.spr");
-	PRECACHE_SOUND("debris/zap1.wav");
-	PRECACHE_SOUND("debris/zap1.wav");
+	PRECACHE_MODEL("sprites/xspark1.spr");
+	PRECACHE_SOUND("controller/lightning.wav");
+	PRECACHE_SOUND("controller/lightning.wav");
 }
 
 
@@ -1238,12 +1251,12 @@ void CControllerHeadBall :: HuntThink( void  )
 		WRITE_COORD( pev->origin.x );		// origin
 		WRITE_COORD( pev->origin.y );
 		WRITE_COORD( pev->origin.z );
-		WRITE_COORD( pev->renderamt / 16 );	// radius
-		WRITE_BYTE( 255 );	// R
+		WRITE_COORD( pev->renderamt / 256 );	// radius
+		WRITE_BYTE( 20 );	// R
 		WRITE_BYTE( 255 );	// G
-		WRITE_BYTE( 255 );	// B
-		WRITE_BYTE( 2 );	// life * 10
-		WRITE_COORD( 0 ); // decay
+		WRITE_BYTE( 225 );	// B
+		WRITE_BYTE( 5 );	// life * 10
+		WRITE_COORD( 10 ); // decay
 	MESSAGE_END();
 
 	// check world boundaries
@@ -1281,15 +1294,15 @@ void CControllerHeadBall :: HuntThink( void  )
 			WRITE_BYTE( 10 ); // framerate
 			WRITE_BYTE( 3 ); // life
 			WRITE_BYTE( 20 );  // width
-			WRITE_BYTE( 0 );   // noise
+			WRITE_BYTE( 40 );   // noise
+			WRITE_BYTE( 20 );   // r, g, b
 			WRITE_BYTE( 255 );   // r, g, b
-			WRITE_BYTE( 255 );   // r, g, b
-			WRITE_BYTE( 255 );   // r, g, b
+			WRITE_BYTE( 225 );   // r, g, b
 			WRITE_BYTE( 255 );	// brightness
 			WRITE_BYTE( 10 );		// speed
 		MESSAGE_END();
 
-		UTIL_EmitAmbientSound( ENT(pev), tr.vecEndPos, "debris/zap1.wav", 0.5, ATTN_NORM, 0, RANDOM_LONG( 140, 160 ) );
+		UTIL_EmitAmbientSound( ENT(pev), tr.vecEndPos, "controller/lightning.wav", 0.5, ATTN_NORM, 0, RANDOM_LONG( 140, 160 ) );
 
 		m_flNextAttack = gpGlobals->time + 3.0;
 
@@ -1400,6 +1413,18 @@ void CControllerZapBall :: Spawn( void )
 	UTIL_SetSize(pev, Vector( 0, 0, 0), Vector(0, 0, 0));
 	UTIL_SetOrigin( this, pev->origin );
 
+	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
+		WRITE_BYTE( TE_BEAMFOLLOW );
+		WRITE_SHORT( entindex() );	// entity
+		WRITE_SHORT( g_sModelIndexSmokeTrail );	// model
+		WRITE_BYTE( 5 ); // life
+		WRITE_BYTE( 5 );  // width
+		WRITE_BYTE( 20 );   // r, g, b
+		WRITE_BYTE( 255 );   // r, g, b
+		WRITE_BYTE( 225 );   // r, g, b
+		WRITE_BYTE( 255 );	// brightness
+	MESSAGE_END();
+
 	SetThink(&CControllerZapBall :: AnimateThink );
 	SetTouch(&CControllerZapBall :: ExplodeTouch );
 
@@ -1451,7 +1476,7 @@ void CControllerZapBall::ExplodeTouch( CBaseEntity *pOther )
 		pOther->TraceAttack(pevOwner, gSkillData.controllerDmgBall, pev->velocity.Normalize(), &tr, DMG_ENERGYBEAM ); 
 		ApplyMultiDamage( pevOwner, pevOwner );
 
-		UTIL_EmitAmbientSound( ENT(pev), tr.vecEndPos, "debris/zap1.wav", 0.3, ATTN_NORM, 0, RANDOM_LONG( 90, 99 ) );
+		UTIL_EmitAmbientSound( ENT(pev), tr.vecEndPos, "controller/lightning.wav", 0.3, ATTN_NORM, 0, RANDOM_LONG( 90, 99 ) );
 
 	}
 
