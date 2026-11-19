@@ -137,7 +137,7 @@ void CLaserSpecial::SpecialTouch( CBaseEntity *pOther )
 		default:
 			SetTouch( PinballTouch );
 			SetThink( PinballThink );
-			pev->velocity = Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ) ).Normalize( ) * 1000;
+			pev->velocity = Vector( Vector( RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ), RANDOM_FLOAT( -1, 1 ) ).Normalize( ) ) * 1000;
 			pOther->pev->movetype = MOVETYPE_NOCLIP;
 			pOther->pev->solid = SOLID_NOT;
 			pOther->pev->nextthink = 0;
