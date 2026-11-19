@@ -22,4 +22,9 @@ bool IsTweakDlgOpen();
 CMenuPanel* GetVoiceTweakDlg();
 
 
+// sic: a stand-in for a declaration that is not known (see hud.h's): with it
+// CVoiceVGUITweakDlg::Open gets retail's stack slots
+enum { TWEAK_SIC_1 };
+
+
 #endif // VOICE_VGUI_TWEAKDLG_H

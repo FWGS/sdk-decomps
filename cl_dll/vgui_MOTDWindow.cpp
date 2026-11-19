@@ -32,6 +32,10 @@
 #include "vgui_TeamFortressViewport.h"
 #include "vgui_ServerBrowser.h"
 
+// sic: a stand-in for declarations that are not known, as in hud.h: with it CMessageWindowPanel's
+// constructor gets retail's stack slots
+enum { MOTD_SIC_1, MOTD_SIC_2, MOTD_SIC_3 };
+
 #define MOTD_TITLE_X		XRES(16)
 #define MOTD_TITLE_Y		YRES(16)
 
