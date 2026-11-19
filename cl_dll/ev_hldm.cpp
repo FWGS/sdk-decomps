@@ -79,7 +79,7 @@ void EV_TeslaFire( struct event_args_s *args );
 void EV_TeslaStop( struct event_args_s *args );
 void EV_TeslaSpecial( struct event_args_s *args );
 void EV_FireRepulsor( struct event_args_s *args );
-void EV_Sword( struct event_args_s *args );
+void EV_DoMeleeAttack( struct event_args_s *args );
 void EV_ElectricField( struct event_args_s *args );
 void EV_TractorBeam( struct event_args_s *args );
 }
@@ -1409,7 +1409,7 @@ int g_iBeamStyle;	// name ours: what UpdateBeams animates (0 antimatter pulveriz
 
 extern TEMPENTITY *g_pEgonFlare;
 extern BEAM *g_pTeslaBeams[5];
-void EV_FadeGrowTempEnt( TEMPENTITY *pTemp, float flUnused, float flScaleSpeed );
+void AttachGrowEffect( TEMPENTITY *pTemp, float flUnused, float flScaleSpeed );
 
 void EV_EgonFire( event_args_t *args )
 {
@@ -1525,7 +1525,7 @@ void EV_EgonStop( event_args_t *args )
 
 		if ( g_pEgonFlare )
 		{
-			EV_FadeGrowTempEnt( g_pEgonFlare, 10, 500 );
+			AttachGrowEffect( g_pEgonFlare, 10, 500 );
 			g_pEgonFlare = NULL;
 		}
 	}
@@ -2156,7 +2156,7 @@ void EV_FireRepulsor( event_args_t *args )
 //======================
 // the swing; Deploy and Holster send the event with iparam1 1 and -1 for the
 // blade's glow, which only the server shows
-void EV_Sword( event_args_t *args )
+void EV_DoMeleeAttack( event_args_t *args )
 {
 	if ( !args->iparam1 )
 		gEngfuncs.pEventAPI->EV_PlaySound( args->entindex, args->origin, CHAN_WEAPON, "weapons/cbar_miss1.wav", 1.0, ATTN_NORM, 0, 100 );

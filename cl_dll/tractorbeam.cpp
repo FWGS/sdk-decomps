@@ -102,7 +102,7 @@ Vector Matrix::operator*( const Vector &v )
 // A cone flLength long and flRadius wide at the base, from
 // origin along angles; random flicker in brightness and alpha
 //=========================================================
-void DrawTractorCone( float *origin, float *angles, float flLength, float flRadius, unsigned char *color, float flAlpha )	// name ours
+void DrawGravityFieldCone( float *origin, float *angles, float flLength, float flRadius, unsigned char *color, float flAlpha )	// name ours
 {
 	Vector forward, right, up;
 	gEngfuncs.pfnAngleVectors( angles, forward, right, up );
@@ -229,7 +229,7 @@ void CTractorBeam::Render( void )
 		angles[0] = -angles[0];
 
 		gEngfuncs.pTriAPI->SpriteTexture( pEnt->model, pEnt->curstate.frame );
-		DrawTractorCone( origin, angles, flLength, pEnt->curstate.fuser1, &pEnt->curstate.rendercolor.r, pEnt->curstate.fuser2 );
+		DrawGravityFieldCone( origin, angles, flLength, pEnt->curstate.fuser1, &pEnt->curstate.rendercolor.r, pEnt->curstate.fuser2 );
 	}
 }
 

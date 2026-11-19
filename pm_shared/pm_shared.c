@@ -2574,7 +2574,7 @@ void PM_NoClip()
 }
 
 // name ours: noclip (with FL_FLY) moving along the velocity it has, the movement keys ignored
-void PM_NoClipVelocity( void )
+void PM_Physics_LockMovement( void )
 {
 	VectorMA( pmove->origin, pmove->frametime, pmove->velocity, pmove->origin );
 }
@@ -3197,7 +3197,7 @@ void PM_PlayerMove ( qboolean server )
 
 	case MOVETYPE_NOCLIP:
 		if ( pmove->flags & FL_FLY )
-			PM_NoClipVelocity();
+			PM_Physics_LockMovement();
 		else
 			PM_NoClip();
 		break;

@@ -34,7 +34,7 @@ static void EV_FadeGrowCallback( TEMPENTITY *ent, float frametime, float current
 // fade at its curstate.fuser2 per second until it is gone;
 // flUnused is never read (sic)
 //=========================================================
-void EV_FadeGrowTempEnt( TEMPENTITY *pTemp, float flUnused, float flScaleSpeed )
+void AttachGrowEffect( TEMPENTITY *pTemp, float flUnused, float flScaleSpeed )
 {
 	if ( pTemp && flScaleSpeed > 0 )
 	{
