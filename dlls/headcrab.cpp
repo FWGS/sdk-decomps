@@ -156,7 +156,7 @@ const char *CHeadCrab::pBiteSounds[] =
 //=========================================================
 int	CHeadCrab :: Classify ( void )
 {
-	return m_iClass?m_iClass:CLASS_ALIEN_PREY;
+	return m_iClass?m_iClass:CLASS_ALIEN_MONSTER;
 }
 
 //=========================================================
