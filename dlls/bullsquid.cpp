@@ -91,7 +91,7 @@ void CSquidSpit:: Spawn( void )
 	pev->rendermode = kRenderTransAlpha;
 	pev->renderamt = 255;
 
-	SET_MODEL(ENT(pev), "sprites/bigspit.spr");
+	SET_MODEL(ENT(pev), "models/gibspit.mdl");
 	pev->frame = 0;
 	pev->scale = 0.5;
 
@@ -713,9 +713,9 @@ void CBullsquid :: Precache()
 	else
 		PRECACHE_MODEL("models/bullsquid.mdl");
 	
-	PRECACHE_MODEL("sprites/bigspit.spr");// spit projectile.
+	PRECACHE_MODEL("models/gibspit.mdl");// spit projectile.
 	
-	iSquidSpitSprite = PRECACHE_MODEL("sprites/tinyspit.spr");// client side spittle.
+	iSquidSpitSprite = PRECACHE_MODEL("models/gibspit2.mdl");// client side spittle.
 
 	PRECACHE_SOUND("zombie/claw_miss2.wav");// because we use the basemonster SWIPE animation event
 
