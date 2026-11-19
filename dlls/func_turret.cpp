@@ -2485,83 +2485,91 @@ void CCannonShootpoint :: Precache( void )
 
 void CCannonShootpoint :: Fire( void )
 {
+	Vector vecDir;
+
 	LinkThink();
 
 	pev->nextthink = gpGlobals->time + m_fireRate;
 
-	if ( m_bulletType >= 18 && m_bulletType <= 19 )
+	switch ( m_bulletType )
 	{
-		if ( pev->speed <= 0 )
-			pev->speed = 800;
-
-		UTIL_MakeVectors( pev->angles );
-		Vector vecDir = ShootSpread( gpGlobals->v_forward, m_spread );
-
-		CBaseEntity *pShell = CBaseEntity::Create( "cshell", pev->origin, UTIL_VecToAngles( vecDir ), pev->owner );
-		pShell->pev->velocity = vecDir * pev->speed;
-		if ( pev->dmg > 0 )
-			pShell->pev->dmg = pev->dmg;
-		if ( m_iTrail )
-			SmokeTrail( ENTINDEX( pShell->edict() ) );
-		if ( HasSpawnFlag( SF_GRENADE_INWARHEAD ) )
-			pShell->pev->spawnflags |= 3;
-		if ( HasSpawnFlag( SF_GRENADE_BLASTSPHERE ) )
-			pShell->pev->spawnflags |= 8;
-
-		if ( m_bulletType == 19 )
+	case 18:
+	case 19:
 		{
-			pShell->pev->movetype = MOVETYPE_TOSS;
-			pShell->SetThink( &CCannonShell::ArcThink );
-			pShell->pev->nextthink = gpGlobals->time + 0.1;
+			if ( pev->speed <= 0 )
+				pev->speed = 800;
+
+			UTIL_MakeVectors( pev->angles );
+			vecDir = ShootSpread( gpGlobals->v_forward, m_spread );
+
+			CBaseEntity *pShell = CBaseEntity::Create( "cshell", pev->origin, UTIL_VecToAngles( vecDir ), pev->owner );
+			pShell->pev->velocity = vecDir * pev->speed;
+			if ( pev->dmg > 0 )
+				pShell->pev->dmg = pev->dmg;
+			if ( m_iTrail )
+				SmokeTrail( ENTINDEX( pShell->edict() ) );
+			if ( HasSpawnFlag( SF_GRENADE_INWARHEAD ) )
+				pShell->pev->spawnflags |= 3;
+			if ( HasSpawnFlag( SF_GRENADE_BLASTSPHERE ) )
+				pShell->pev->spawnflags |= 8;
+
+			if ( m_bulletType == 19 )
+			{
+				pShell->pev->movetype = MOVETYPE_TOSS;
+				pShell->SetThink( &CCannonShell::ArcThink );
+				pShell->pev->nextthink = gpGlobals->time + 0.1;
+			}
 		}
-	}
-	else
-	{
-		if ( pev->dmg <= 0 )
-			pev->dmg = 100;
-
-		UTIL_MakeVectors( pev->angles );
-		Vector vecDir = ShootSpread( gpGlobals->v_forward, m_spread );
-
-		TraceResult tr;
-		UTIL_TraceLine( pev->origin, pev->origin + vecDir * 8192, dont_ignore_monsters, pev->owner, &tr );
-
-		CBaseEntity *pShell = CBaseEntity::Create( "cshell", tr.vecEndPos, pev->angles, pev->owner );
-		if ( pev->dmg > 0 )
-			pShell->pev->dmg = pev->dmg;
-
-		if ( m_iTrail )
+		break;
+	default:
 		{
-			if ( pev->rendercolor == Vector( 0, 0, 0 ) )
-				pev->rendercolor = Vector( 224, 224, 255 );
+			if ( pev->dmg <= 0 )
+				pev->dmg = 100;
 
-			MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
-				WRITE_BYTE( TE_BEAMPOINTS );
-				WRITE_COORD( pev->origin.x );
-				WRITE_COORD( pev->origin.y );
-				WRITE_COORD( pev->origin.z );
-				WRITE_COORD( tr.vecEndPos.x );
-				WRITE_COORD( tr.vecEndPos.y );
-				WRITE_COORD( tr.vecEndPos.z );
-				WRITE_SHORT( m_iTrail );
-				WRITE_BYTE( 0 ); // framerate
-				WRITE_BYTE( 10 ); // framerate
-				WRITE_BYTE( 5 ); // life
-				WRITE_BYTE( 30 );  // width
-				WRITE_BYTE( 0 );   // noise
-				WRITE_BYTE( pev->rendercolor.x );   // r, g, b
-				WRITE_BYTE( pev->rendercolor.y );   // r, g, b
-				WRITE_BYTE( pev->rendercolor.z );   // r, g, b
-				WRITE_BYTE( 224 );	// brightness
-				WRITE_BYTE( 0 );		// speed
-			MESSAGE_END();
+			UTIL_MakeVectors( pev->angles );
+			vecDir = ShootSpread( gpGlobals->v_forward, m_spread );
+
+			TraceResult tr;
+			UTIL_TraceLine( pev->origin, pev->origin + vecDir * 8192, dont_ignore_monsters, pev->owner, &tr );
+
+			CBaseEntity *pShell = CBaseEntity::Create( "cshell", tr.vecEndPos, pev->angles, pev->owner );
+			if ( pev->dmg > 0 )
+				pShell->pev->dmg = pev->dmg;
+
+			if ( m_iTrail )
+			{
+				if ( pev->rendercolor == Vector( 0, 0, 0 ) )
+					pev->rendercolor = Vector( 224, 224, 255 );
+
+				MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
+					WRITE_BYTE( TE_BEAMPOINTS );
+					WRITE_COORD( pev->origin.x );
+					WRITE_COORD( pev->origin.y );
+					WRITE_COORD( pev->origin.z );
+					WRITE_COORD( tr.vecEndPos.x );
+					WRITE_COORD( tr.vecEndPos.y );
+					WRITE_COORD( tr.vecEndPos.z );
+					WRITE_SHORT( m_iTrail );
+					WRITE_BYTE( 0 ); // framerate
+					WRITE_BYTE( 10 ); // framerate
+					WRITE_BYTE( 5 ); // life
+					WRITE_BYTE( 30 );  // width
+					WRITE_BYTE( 0 );   // noise
+					WRITE_BYTE( pev->rendercolor.x );   // r, g, b
+					WRITE_BYTE( pev->rendercolor.y );   // r, g, b
+					WRITE_BYTE( pev->rendercolor.z );   // r, g, b
+					WRITE_BYTE( 224 );	// brightness
+					WRITE_BYTE( 0 );		// speed
+				MESSAGE_END();
+			}
+
+			pShell->pev->velocity = vecDir * 1000;
+			if ( HasSpawnFlag( SF_GRENADE_INWARHEAD ) )
+				pShell->pev->spawnflags |= 3;
+			if ( HasSpawnFlag( SF_GRENADE_BLASTSPHERE ) )
+				pShell->pev->spawnflags |= 8;
 		}
-
-		pShell->pev->velocity = vecDir * 1000;
-		if ( HasSpawnFlag( SF_GRENADE_INWARHEAD ) )
-			pShell->pev->spawnflags |= 3;
-		if ( HasSpawnFlag( SF_GRENADE_BLASTSPHERE ) )
-			pShell->pev->spawnflags |= 8;
+		break;
 	}
 
 	FireEffects();

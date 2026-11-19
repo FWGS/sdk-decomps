@@ -26,6 +26,8 @@
 #include	"monsters.h"
 #include	"trains.h"
 
+const float CABLE_STEP = 5;	// name ours: how far the cable moves each think
+
 class CCraneMonster : public CBaseMonster
 {
 public:
@@ -280,9 +282,9 @@ void CCraneMonster::Pickup( void )
 	if ( pev->weapons )
 	{
 		// raising
-		if ( pev->frags > 5 )
+		if ( pev->frags > CABLE_STEP )
 		{
-			SetCableLength( pev->frags - 5 );
+			SetCableLength( pev->frags - CABLE_STEP );
 			CarryLoad();
 		}
 		else
@@ -295,10 +297,10 @@ void CCraneMonster::Pickup( void )
 			return;
 		}
 	}
-	else if ( m_flFloor - 5 > pev->frags )
+	else if ( m_flFloor - CABLE_STEP > pev->frags )
 	{
 		// lowering
-		SetCableLength( pev->frags + 5 );
+		SetCableLength( pev->frags + CABLE_STEP );
 	}
 	else if ( pev->framerate != -1 )
 	{
@@ -351,10 +353,10 @@ void CCraneMonster::Drop( void )
 
 	if ( pev->weapons )
 	{
-		if ( m_flFloor - 5 > pev->frags )
+		if ( m_flFloor - CABLE_STEP > pev->frags )
 		{
 			// lowering
-			SetCableLength( pev->frags + 5 );
+			SetCableLength( pev->frags + CABLE_STEP );
 			CarryLoad();
 		}
 		else
@@ -392,9 +394,9 @@ void CCraneMonster::Drop( void )
 			pev->framerate = -1;
 		}
 
-		if ( pev->frags > 5 )
+		if ( pev->frags > CABLE_STEP )
 		{
-			SetCableLength( pev->frags - 5 );
+			SetCableLength( pev->frags - CABLE_STEP );
 		}
 		else
 		{

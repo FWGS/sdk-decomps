@@ -1294,8 +1294,7 @@ void CBeamTurret::ActiveThink( void )
 	}
 
 	UTIL_MakeAimVectors( pev->angles );
-	Vector vecLOS = vecDirToEnemy;
-	vecLOS = vecLOS.Normalize();
+	Vector vecLOS = vecDirToEnemy.Normalize();
 
 	// Is the Gun looking at the target
 	if ( DotProduct( vecLOS, gpGlobals->v_forward ) < m_flFiringArc )
@@ -1402,6 +1401,7 @@ void CBeamTurret::BeamThink( void )
 		m_point1 = m_point1 + m_point2;
 	}
 
+	float flEndTime = m_startTime + m_duration, flShotEndTime = m_shotStartTime + m_shotDur;	// sic: unused, but their size gives VC6 retail's inlining budget for the aim below
 	if ( m_startTime + m_duration < gpGlobals->time )
 	{
 		if ( m_pBeam->m_pfnThink == &CBeamCannon::StartFxThink )
