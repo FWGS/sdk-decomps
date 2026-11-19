@@ -151,7 +151,7 @@ void CSquidSpit :: Touch ( CBaseEntity *pOther )
 
 		// make a splat on the wall
 		UTIL_TraceLine( pev->origin, pev->origin + pev->velocity * 10, dont_ignore_monsters, ENT( pev ), &tr );
-		UTIL_DecalTrace(&tr, DECAL_SPIT1 + RANDOM_LONG(0,1));
+		UTIL_DecalTrace(&tr, DECAL_BLOOD3 + RANDOM_LONG(0,1));
 
 		// make some flecks
 		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, tr.vecEndPos );
@@ -163,14 +163,14 @@ void CSquidSpit :: Touch ( CBaseEntity *pOther )
 			WRITE_COORD( tr.vecPlaneNormal.y);	
 			WRITE_COORD( tr.vecPlaneNormal.z);	
 			WRITE_SHORT( iSquidSpitSprite );	// model
-			WRITE_BYTE ( 5 );			// count
-			WRITE_BYTE ( 30 );			// speed
-			WRITE_BYTE ( 80 );			// noise ( client will divide by 100 )
+			WRITE_BYTE ( 3 );			// count
+			WRITE_BYTE ( 20 );			// speed
+			WRITE_BYTE ( 4 );			// noise ( client will divide by 100 )
 		MESSAGE_END();
 	}
 	else
 	{
-		pOther->TakeDamage ( pev, pev, gSkillData.bullsquidDmgSpit, DMG_GENERIC );
+		pOther->TakeDamage ( pev, pev, gSkillData.bullsquidDmgSpit, DMG_POISON );
 	}
 
 	SetThink(&CSquidSpit :: SUB_Remove );
@@ -429,7 +429,7 @@ int CBullsquid :: ISoundMask ( void )
 //=========================================================
 int	CBullsquid :: Classify ( void )
 {
-	return m_iClass?m_iClass:CLASS_ALIEN_PREDATOR;
+	return m_iClass?m_iClass:CLASS_ALIEN_MONSTER;
 }
 
 //=========================================================
@@ -571,9 +571,9 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				WRITE_COORD( vecSpitDir.y);	
 				WRITE_COORD( vecSpitDir.z);	
 				WRITE_SHORT( iSquidSpitSprite );	// model
-				WRITE_BYTE ( 15 );			// count
-				WRITE_BYTE ( 210 );			// speed
-				WRITE_BYTE ( 25 );			// noise ( client will divide by 100 )
+				WRITE_BYTE ( 4 );			// count
+				WRITE_BYTE ( 140 );			// speed
+				WRITE_BYTE ( 4 );			// noise ( client will divide by 100 )
 			MESSAGE_END();
 
 			CSquidSpit::Shoot( pev, vecSpitOffset, vecSpitDir * 900 );
@@ -583,7 +583,7 @@ void CBullsquid :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		case BSQUID_AE_BITE:
 		{
 			// SOUND HERE!
-			CBaseEntity *pHurt = CheckTraceHullAttack( 70, gSkillData.bullsquidDmgBite, DMG_SLASH );
+			CBaseEntity *pHurt = CheckTraceHullAttack( 70, gSkillData.bullsquidDmgBite, DMG_SLASH | DMG_ALWAYSGIB );
 			
 			if ( pHurt )
 			{
@@ -690,7 +690,7 @@ void CBullsquid :: Spawn()
 
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
-	m_bloodColor		= BLOOD_COLOR_GREEN;
+	m_bloodColor		= BLOOD_COLOR_RED;
 	pev->effects		= 0;
 	if (pev->health == 0)
 		pev->health			= gSkillData.bullsquidHealth;
