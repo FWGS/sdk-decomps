@@ -226,7 +226,6 @@ int CDSphere::GetBattlePower( void )
 void CDSphere::RunAttack( void )
 {
 	int i;
-	Vector vecDir, vecAngles;
 
 	if ( !IsMoving() )
 	{
@@ -255,12 +254,11 @@ void CDSphere::RunAttack( void )
 
 				if ( m_hTargets[i] != NULL )
 				{
-					vecDir = ( m_hTargets[i]->BodyTarget( pev->origin ) - Center() ).Normalize();
-					vecAngles = UTIL_VecToAngles( vecDir );
+					Vector vecDir = ( m_hTargets[i]->BodyTarget( pev->origin ) - Center() ).Normalize();
+					Vector vecAngles = UTIL_VecToAngles( vecDir );
 
 					if ( i != 0 )
 					{
-						Vector vecSrc, vecEnd;	// sic: unused; they keep Normalize's Vector( 0, 0, 1 ) out of line, as retail
 						UTIL_MakeVectors( vecAngles + Vector( RANDOM_FLOAT( -80, 80 ), RANDOM_FLOAT( -80, 80 ), 0 ) );
 
 						CLaserPulse *pPulse = CLaserPulse::Shoot( pev->origin + gpGlobals->v_forward * 20, edict(), Vector( 70, 140, 255 ), 0, 0.25, 0 );
