@@ -66,8 +66,8 @@ void CShotgun::Precache( void )
 	PRECACHE_SOUND ("weapons/dbarrel1.wav");//shotgun
 	PRECACHE_SOUND ("weapons/sbarrel1.wav");//shotgun
 
-	PRECACHE_SOUND ("weapons/reload1.wav");	// shotgun reload
-	PRECACHE_SOUND ("weapons/reload3.wav");	// shotgun reload
+	PRECACHE_SOUND ("weapons/shotgload.wav");	// shotgun reload
+	PRECACHE_SOUND ("weapons/shotgload.wav");	// shotgun reload
 
 //	PRECACHE_SOUND ("weapons/sshell1.wav");	// shotgun reload - played on client
 //	PRECACHE_SOUND ("weapons/sshell3.wav");	// shotgun reload - played on client
