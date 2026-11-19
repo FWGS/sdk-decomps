@@ -55,7 +55,7 @@ public:
 	BOOL	CanBeRepulsed( bool fForce ) { return FALSE; }
 	BOOL	CanBeTeleported( void ) { return FALSE; }
 	BOOL	CanBeTractored( void ) { return FALSE; }
-	float	GetHoldDistance( void ) { return 0; }
+	float	TractorBeamRadius( void ) { return 0; }
 	int		GetBattlePower( void ) { return 550; }
 	BOOL	CanBeGrenaded( int fLauncher ) { return fLauncher; }
 	void Killed( entvars_t *pevAttacker, int iGib );
@@ -837,7 +837,7 @@ public:
 	BOOL	CanBeRepulsed( bool fForce ) { return fForce; }
 	BOOL	CanBeTeleported( void ) { return m_iLiveChildren <= 0; }
 	BOOL	CanBeTractored( void ) { return TRUE; }
-	float	GetHoldDistance( void ) { return 64; }
+	float	TractorBeamRadius( void ) { return 64; }
 	int		ObjectCaps( void ) { return CBaseMonster :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
 	void DeathNotice( entvars_t *pevChild );
 	void Killed( entvars_t *pevAttacker, int iGib );

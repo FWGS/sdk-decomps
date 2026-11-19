@@ -92,7 +92,7 @@ public:
 	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "shot"; }
 	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
 	BOOL CanBeGrenaded( int fLauncher ) { return TRUE; }
-	float GetHoldDistance( void ) { return CBaseMonster::GetHoldDistance() * 0.5; }
+	float TractorBeamRadius( void ) { return CBaseMonster::TractorBeamRadius() * 0.5; }
 	int TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType )
 	{
 		// a hit uncloaks her

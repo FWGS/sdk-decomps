@@ -151,5 +151,3 @@ int CHudIdent::MsgFunc_IdentUpdate(const char *pszName,  int iSize, void *pbuf )
 
 	return 1;
 }
-
-Vector g_vecIdentUnused;	// sic: name ours; nothing uses it (retail's empty initializer pair at the end of the file)
