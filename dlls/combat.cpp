@@ -346,12 +346,63 @@ void CBaseMonster :: GibMonster( void )
 
 	EMIT_SOUND(ENT(pev), CHAN_WEAPON, "common/bodysplat.wav", 1, ATTN_NORM);		
 
+	// five clouds of blood
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_SPRITE );
+		WRITE_COORD( pev->origin.x + 10 );
+		WRITE_COORD( pev->origin.y + 8 );
+		WRITE_COORD( pev->origin.z + 5 );
+		WRITE_SHORT( g_sModelIndexBloodCloud );
+		WRITE_BYTE( 2 ); // scale * 10
+		WRITE_BYTE( 255 ); // brightness
+	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_SPRITE );
+		WRITE_COORD( pev->origin.x - 3 );
+		WRITE_COORD( pev->origin.y - 16 );
+		WRITE_COORD( pev->origin.z + 7 );
+		WRITE_SHORT( g_sModelIndexBloodCloud );
+		WRITE_BYTE( 2 ); // scale * 10
+		WRITE_BYTE( 255 ); // brightness
+	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_SPRITE );
+		WRITE_COORD( pev->origin.x + 3 );
+		WRITE_COORD( pev->origin.y + 10 );
+		WRITE_COORD( pev->origin.z + 4 );
+		WRITE_SHORT( g_sModelIndexBloodCloud );
+		WRITE_BYTE( 2 ); // scale * 10
+		WRITE_BYTE( 255 ); // brightness
+	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_SPRITE );
+		WRITE_COORD( pev->origin.x - 5 );
+		WRITE_COORD( pev->origin.y - 12 );
+		WRITE_COORD( pev->origin.z + 15 );
+		WRITE_SHORT( g_sModelIndexBloodCloud );
+		WRITE_BYTE( 2 ); // scale * 10
+		WRITE_BYTE( 255 ); // brightness
+	MESSAGE_END();
+
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
+		WRITE_BYTE( TE_SPRITE );
+		WRITE_COORD( pev->origin.x + 3 );
+		WRITE_COORD( pev->origin.y + 6 );
+		WRITE_COORD( pev->origin.z + 17 );
+		WRITE_SHORT( g_sModelIndexBloodCloud );
+		WRITE_BYTE( 3 ); // scale * 10
+		WRITE_BYTE( 255 ); // brightness
+	MESSAGE_END();
+
 	if ( iszCustomGibs = HasCustomGibs() ) //LRC - monster_generic can have a custom gibset
 	{
 		if ( CVAR_GET_FLOAT("violence_hgibs") != 0 )
 		{
 			CGib::SpawnHeadGib( pev, STRING(iszCustomGibs) );
-			CGib::SpawnRandomGibs( pev, 4, 1, STRING(iszCustomGibs) );
+			CGib::SpawnRandomGibs( pev, 10, 1, STRING(iszCustomGibs) );
 		}
 		gibbed = TRUE;
 	}
@@ -361,7 +412,7 @@ void CBaseMonster :: GibMonster( void )
 		if ( CVAR_GET_FLOAT("violence_hgibs") != 0 )// Only the player will ever fail this test
 		{
 			CGib::SpawnHeadGib( pev );
-			CGib::SpawnRandomGibs( pev, 4, 1 );	// throw some human gibs.
+			CGib::SpawnRandomGibs( pev, 10, 1 );	// throw some human gibs.
 		}
 		gibbed = TRUE;
 	}
