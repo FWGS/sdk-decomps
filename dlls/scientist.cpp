@@ -743,8 +743,8 @@ void CScientist :: TalkInit()
 	switch (pev->body % 3)
 	{
 	default:
-	case HEAD_GLASSES:	m_voicePitch = 105; break;	//glasses
-	case HEAD_EINSTEIN: m_voicePitch = 100; break;	//einstein
+	case HEAD_GLASSES:	m_voicePitch = 95; break;	//glasses
+	case HEAD_EINSTEIN: m_voicePitch = 90; break;	//einstein
 	case HEAD_LUTHER:	m_voicePitch = 95;  break;	//luther
 	case HEAD_SLICK:	m_voicePitch = 100;  break;//slick
 	}
