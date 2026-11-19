@@ -80,7 +80,7 @@ public:
 
 	int		HeatSignature( void ) { return 0; }
 	BOOL	CanBeRepulsed( bool fForce ) { return FALSE; }
-	int		GetOnState( void ) { return IsActive() || m_pController; }
+	int		GetEntityTriggerState( void ) { return IsActive() || m_pController; }
 	const char *GetKillDesc( void );
 	int		ObjectCaps( void ) { return CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
 	BOOL	IsAlive( void ) { return pev->health > 0 || pev->max_health == 0; }	// no max_health: never dies
@@ -1259,7 +1259,7 @@ public:
 	void	KeyValue( KeyValueData *pkvd );
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	int		ObjectCaps( void ) { return CBaseLinked :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
-	int		GetOnState( void ) { return pev->nextthink != 0; }
+	int		GetEntityTriggerState( void ) { return pev->nextthink != 0; }
 
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
@@ -2681,7 +2681,7 @@ public:
 	void	Spawn( void );
 	void	Precache( void );
 	int		ObjectCaps( void ) { return CBaseLinked :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
-	int		GetOnState( void ) { return pev->nextthink != 0; }
+	int		GetEntityTriggerState( void ) { return pev->nextthink != 0; }
 	void	Think( void );
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 

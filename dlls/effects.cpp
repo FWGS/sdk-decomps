@@ -43,7 +43,7 @@ public:
 	
 	void	EXPORT FizzThink( void );
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	int		GetOnState( void ) { return m_state; }
+	int		GetEntityTriggerState( void ) { return m_state; }
 
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
@@ -386,7 +386,7 @@ public:
 	void	Zap( const Vector &vecSrc, const Vector &vecDest );
 	void	EXPORT StrikeUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void	EXPORT ToggleUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	int		GetOnState( void ) { return m_active; }
+	int		GetEntityTriggerState( void ) { return m_active; }
 	
 	inline BOOL ServerSide( void )
 	{
@@ -1385,7 +1385,7 @@ public:
 	void	KeyValue( KeyValueData *pkvd );
 	void EXPORT ShootThink( void );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	int		GetOnState( void ) { return pev->nextthink > 0; }
+	int		GetEntityTriggerState( void ) { return pev->nextthink > 0; }
 
 	virtual CGib *CreateGib( void );
 
@@ -2701,7 +2701,7 @@ public:
 	
 	void	EXPORT RainThink( void );
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	int		GetOnState( void ) { return m_state; }
+	int		GetEntityTriggerState( void ) { return m_state; }
 
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
@@ -2876,7 +2876,7 @@ public:
 	void	Spawn( void );
 	void	KeyValue( KeyValueData *pkvd );
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	int		GetOnState( void ) { return m_on; }
+	int		GetEntityTriggerState( void ) { return m_on; }
 
 	void	SendFog( CBaseEntity *pPlayer );	// name ours
 

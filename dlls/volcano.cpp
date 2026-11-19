@@ -162,7 +162,7 @@ public:
 	void	Precache( void );
 	void	KeyValue( KeyValueData *pkvd );
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	int		GetOnState( void ) { if ( pev->nextthink > 0 ) return 1; return 0; }
+	int		GetEntityTriggerState( void ) { if ( pev->nextthink > 0 ) return 1; return 0; }
 
 	void EXPORT ShootThink( void );
 

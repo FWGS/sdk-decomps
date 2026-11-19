@@ -333,7 +333,7 @@ struct sci_info_t
 	short gibs;		// times gibbed
 };
 
-extern sci_info_t			g_SciInfo[MAX_SCIENTISTS];
+extern sci_info_t			g_ScientistInfo[MAX_SCIENTISTS];
 
 
 //

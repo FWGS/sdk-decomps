@@ -360,9 +360,9 @@ void RenderSphere( const Vector &vecOrigin, float flRadius, const Vector &vecCol
 const float SPHERE_SOLID = 0.6;	// facing the view at least this much: vecColor1
 const float SPHERE_EDGE = 0.4;	// below this: vecColor2 fading out
 
-static float g_flSphereBlend = 1 / ( SPHERE_SOLID - SPHERE_EDGE );
+static float g_flSphereColorGradient = 1 / ( SPHERE_SOLID - SPHERE_EDGE );
 static Vector g_vecSphereUnused( 0, 0, 0 );	// sic: never read
-static float g_flSphereFade = 1 / SPHERE_EDGE;
+static float g_flSphereEdgeFadeScale = 1 / SPHERE_EDGE;
 
 //=========================================================
 // A shell, inside out: vecColor1 where it faces vecDir,
@@ -387,11 +387,11 @@ void RenderSphere2( const Vector &vecOrigin, const Vector &vecDir, float flRadiu
 			vecColors[i] = vecColor1;
 		else if ( flDot >= SPHERE_EDGE )
 		{
-			float flBlend = ( flDot - SPHERE_EDGE ) * g_flSphereBlend;
+			float flBlend = ( flDot - SPHERE_EDGE ) * g_flSphereColorGradient;
 			vecColors[i] = vecColor2 + flBlend * ( vecColor1 - vecColor2 );
 		}
 		else
-			vecColors[i] = flDot * g_flSphereFade * vecColor2;
+			vecColors[i] = flDot * g_flSphereEdgeFadeScale * vecColor2;
 	}
 
 	gEngfuncs.pTriAPI->Begin( TRI_TRIANGLES );
@@ -554,27 +554,27 @@ void CSphere::Create( const Vector &vecOrigin, const Vector &vecColor, float flM
 	pSphere->framedir = ( pSphere->frame > m_iFrames * 0.5 ) ? -1 : 1;
 }
 
-static CSphere *g_pSpheres;
+static CSphere *g_pSpheresManager;
 
 void RenderAllSpheres( float flTime, float flFrametime )
 {
 	static CSphere s_Spheres;
 
-	if ( g_pSpheres )
-		g_pSpheres->Render( flTime, flFrametime );
+	if ( g_pSpheresManager )
+		g_pSpheresManager->Render( flTime, flFrametime );
 	else
-		g_pSpheres = &s_Spheres;
+		g_pSpheresManager = &s_Spheres;
 }
 
 void SphereVidInit( void )
 {
-	if ( g_pSpheres )
+	if ( g_pSpheresManager )
 	{
-		g_pSpheres->m_pSprite = NULL;
-		g_pSpheres->m_pWhite = NULL;
+		g_pSpheresManager->m_pSprite = NULL;
+		g_pSpheresManager->m_pWhite = NULL;
 
 		for ( int i = 0; i < MAX_SPHERES; i++ )
-			g_pSpheres->m_Spheres[i].alpha = 0;
+			g_pSpheresManager->m_Spheres[i].alpha = 0;
 	}
 }
 
@@ -594,7 +594,7 @@ extern "C" void EV_BlastSphere( event_args_t *args )
 	vecColor.z = pEnt->curstate.rendercolor.b;
 
 	if ( args->bparam1 )
-		g_pSpheres->Create( args->origin, Vector( 255, 255, 64 ), args->iparam1 - 40, args->iparam2 + 100, args->fparam1, args->fparam2, 1 );
+		g_pSpheresManager->Create( args->origin, Vector( 255, 255, 64 ), args->iparam1 - 40, args->iparam2 + 100, args->fparam1, args->fparam2, 1 );
 
-	g_pSpheres->Create( args->origin, vecColor, args->iparam1, args->iparam2, args->fparam1, args->fparam2, 0 );
+	g_pSpheresManager->Create( args->origin, vecColor, args->iparam1, args->iparam2, args->fparam1, args->fparam2, 0 );
 }

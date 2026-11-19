@@ -824,7 +824,7 @@ void CBaseMonster :: StartTask ( Task_t *pTask )
 				m_flMoveWaitFinished = gpGlobals->time + pTask->flData;
 				TaskComplete();
 			}
-			else if ( pBestSound && FindRetreat( pBestSound->m_vecOrigin, pBestSound->m_iVolume, CoverRadius() ) )
+			else if ( pBestSound && FindBackwardRoute( pBestSound->m_vecOrigin, pBestSound->m_iVolume, CoverRadius() ) )
 			{
 				// or at least get away from it
 				m_flMoveWaitFinished = gpGlobals->time + pTask->flData;

@@ -157,7 +157,7 @@ void CShotgun::PrimaryAttack()
 	if ( pev->weapons == 1 )
 	{
 		// explosive rounds: one slug
-		vecDir = m_pPlayer->FireBulletsExplosive( 1, vecSrc, vecAiming, VECTOR_CONE_1DEGREES, 2048, gSkillData.plrDmgBuckshot * 6, m_pPlayer->pev, m_pPlayer->random_seed );
+		vecDir = m_pPlayer->FireHeavyShotgunShells( 1, vecSrc, vecAiming, VECTOR_CONE_1DEGREES, 2048, gSkillData.plrDmgBuckshot * 6, m_pPlayer->pev, m_pPlayer->random_seed );
 	}
 	else if ( pev->weapons == 2 )
 	{
@@ -254,7 +254,7 @@ void CShotgun::SecondaryAttack( void )
 	if ( pev->weapons == 1 )
 	{
 		// explosive rounds: six slugs
-		vecDir = m_pPlayer->FireBulletsExplosive( 6, vecSrc, vecAiming, VECTOR_CONE_15DEGREES, 2048, gSkillData.plrDmgBuckshot * 2, m_pPlayer->pev, m_pPlayer->random_seed );
+		vecDir = m_pPlayer->FireHeavyShotgunShells( 6, vecSrc, vecAiming, VECTOR_CONE_15DEGREES, 2048, gSkillData.plrDmgBuckshot * 2, m_pPlayer->pev, m_pPlayer->random_seed );
 	}
 	else if ( pev->weapons == 2 )
 	{

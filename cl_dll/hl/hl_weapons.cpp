@@ -319,12 +319,12 @@ Vector CBaseEntity::FireBulletsPlayer ( ULONG cShots, Vector vecSrc, Vector vecD
 
 /*
 =====================
-CBaseEntity :: FireBulletsExplosive
+CBaseEntity :: FireHeavyShotgunShells
 
 Only produces the random direction vector for the shotgun's explosive slugs
 =====================
 */
-Vector CBaseEntity::FireBulletsExplosive( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker, int shared_rand )
+Vector CBaseEntity::FireHeavyShotgunShells( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker, int shared_rand )
 {
 	float x, y, z;
 

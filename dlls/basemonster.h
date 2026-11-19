@@ -238,7 +238,7 @@ public:
 		
 		BOOL FindLateralCover ( const Vector &vecThreat, const Vector &vecViewOffset );
 		virtual BOOL FindCover ( Vector vecThreat, Vector vecViewOffset, float flMinDist, float flMaxDist );
-		virtual BOOL FindRetreat ( Vector vecThreat, float flMinDist, float flMaxDist );	// name ours
+		virtual BOOL FindBackwardRoute ( Vector vecThreat, float flMinDist, float flMaxDist );	// name ours
 		BOOL FindNodeInCover ( Vector vecThreat, Vector vecViewOffset, float flMinDist, float flMaxDist, Vector &vecResult );	// name ours
 		BOOL FindNodeAway ( Vector vecThreat, float flMinDist, float flMaxDist, Vector &vecResult );	// name ours
 		BOOL FindEnemyNode ( const Vector &vecEnemy, Vector &vecResult, float flMinDist, float flMaxEnemyDist, float flMinEnemyDist );	// name ours
@@ -339,7 +339,7 @@ public:
 	virtual BOOL	CanBeTeleported( void ) { return !IsBSPModel(); }
 	virtual const char *GetHudName( void ) { return GetKillDesc(); }	// target ID name
 	virtual int		GetBattlePower( void ) { return 0; }				// target ID "battle power"
-	virtual int		GetOnState( void ) { return IsAlive(); }
+	virtual int		GetEntityTriggerState( void ) { return IsAlive(); }
 	virtual void	CheckTimeBasedDamage( void );
 	virtual void	Resurrect( CBaseMonster *pActivator );
 	virtual float	MovementSpeed( void );

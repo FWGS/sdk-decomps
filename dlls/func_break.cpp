@@ -1025,7 +1025,7 @@ class CBreakRespawn : public CBreakable
 public:
 	void	Spawn( void );
 	void	KeyValue( KeyValueData* pkvd);
-	virtual int		GetOnState( void ) { return !FBitSet( pev->effects, EF_NODRAW ); }
+	virtual int		GetEntityTriggerState( void ) { return !FBitSet( pev->effects, EF_NODRAW ); }
 	virtual int		ObjectCaps( void ) { return (CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION); }
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );

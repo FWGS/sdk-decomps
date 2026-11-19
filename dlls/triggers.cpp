@@ -287,7 +287,7 @@ public:
 	BOOL		HasTarget( string_t targetname );
 	
 	int ObjectCaps( void ) { return CBaseToggle::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
-	int GetOnState( void ) { return m_pfnUse == NULL; }	// on while it fires its targets
+	int GetEntityTriggerState( void ) { return m_pfnUse == NULL; }	// on while it fires its targets
 
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );
@@ -710,7 +710,7 @@ public:
 	void EXPORT ToggleUse ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void InitTrigger( void );
 
-	int		GetOnState( void ) { return pev->solid != SOLID_NOT; }
+	int		GetEntityTriggerState( void ) { return pev->solid != SOLID_NOT; }
 	virtual int	ObjectCaps( void ) { return CBaseToggle :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
 };
 
@@ -2923,7 +2923,7 @@ public:
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT TriggerThink( void );
 
-	int		GetOnState( void ) { return pev->nextthink != 0; }
+	int		GetEntityTriggerState( void ) { return pev->nextthink != 0; }
 	int		ObjectCaps( void ) { return 0; }
 
 	virtual int		Save( CSave &save );
@@ -2966,7 +2966,7 @@ void CTriggerLoop::Spawn( void )
 
 void CTriggerLoop::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	int iOn = GetOnState();
+	int iOn = GetEntityTriggerState();
 	if ( !ShouldToggle( useType, iOn ) )
 		return;
 

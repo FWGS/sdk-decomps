@@ -48,7 +48,7 @@ public:
 	void DeathNotice ( entvars_t *pevChild );// monster maker children use this to tell the monster maker that they have died.
 	virtual void MakeMonster( void );
 
-	int		GetOnState( void ) { return m_fActive; }
+	int		GetEntityTriggerState( void ) { return m_fActive; }
 	int		ObjectCaps( void ) { return 0; }
 	int		HeatSignature( void ) { return 0; }
 	BOOL	CanBeTeleported( void ) { return FALSE; }

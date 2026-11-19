@@ -62,7 +62,7 @@ public:
 		pev->absmax = pev->origin + Vector(300, 300, 8);
 	}
 
-	int GetOnState( void ) { if ( pev->nextthink ) return IsAlive(); return 0; }
+	int GetEntityTriggerState( void ) { if ( pev->nextthink ) return IsAlive(); return 0; }
 	int HeatSignature( void ) { return 6; }
 	BOOL CanBeRepulsed( bool fForce ) { if ( fForce && pev->movetype ) return TRUE; return FALSE; }
 	BOOL CanBeGrenaded( int fLauncher ) { return fLauncher; }

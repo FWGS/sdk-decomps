@@ -91,7 +91,7 @@ public:
 	void	TurnOff( void );
 	void	TurnOn( void );
 	BOOL	IsOn( void );
-	virtual int	GetOnState( void ) { return IsOn(); }
+	virtual int	GetEntityTriggerState( void ) { return IsOn(); }
 };
 
 LINK_ENTITY_TO_CLASS( func_wall_toggle, CFuncWallToggle );
@@ -315,7 +315,7 @@ public:
 	void RampPitchVol (int fUp );
 	void Blocked( CBaseEntity *pOther );
 	virtual int	ObjectCaps( void ) { return CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
-	virtual int	GetOnState( void ) { return m_pfnThink == static_cast <void (CBaseEntity::*)(void)> (Rotate) && pev->avelocity != g_vecZero; }
+	virtual int	GetEntityTriggerState( void ) { return m_pfnThink == static_cast <void (CBaseEntity::*)(void)> (Rotate) && pev->avelocity != g_vecZero; }
 	virtual const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "a rotating object"; return STRING( m_iszKillDesc ); }
 	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { if ( FBitSet( pev->spawnflags, SF_BRUSH_HURT ) ) return DamageVerb( DMG_SLASH, fGibbed ); return DamageVerb( DMG_CRUSH, fGibbed ); }
 	virtual int		Save( CSave &save );
@@ -772,7 +772,7 @@ public:
 	void	Touch( CBaseEntity *pOther );
 	void	EXPORT RopeTouch ( CBaseEntity *pOther );// this touch func makes the pendulum a rope
 	virtual int	ObjectCaps( void ) { return CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
-	virtual int	GetOnState( void ) { return pev->speed != 0; }
+	virtual int	GetEntityTriggerState( void ) { return pev->speed != 0; }
 	virtual const char *GetKillDesc( void ) { return "a swinging object"; }
 	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "crushed"; }
 	virtual int		Save( CSave &save );
@@ -1018,7 +1018,7 @@ public:
 	int		TakeDamage( entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType );
 
 	virtual int	Shielded( void ) { return 1; }
-	virtual int	GetOnState( void ) { return pev->solid != SOLID_NOT; }
+	virtual int	GetEntityTriggerState( void ) { return pev->solid != SOLID_NOT; }
 	virtual const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return "contact with an energy barrier"; return STRING( m_iszKillDesc ); }
 	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "annihilated"; }
 	virtual int	DamageDecal( int bitsDamageType ) { return -1; }

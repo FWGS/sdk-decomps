@@ -2143,7 +2143,7 @@ int TeamFortressViewport::MsgFunc_ScoreInfo( const char *pszName, int iSize, voi
 }
 
 // the mod: one scientist's deaths and gibs (name ours)
-int TeamFortressViewport::MsgFunc_SciInfo( const char *pszName, int iSize, void *pbuf )
+int TeamFortressViewport::MsgFunc_SciDeathInfo( const char *pszName, int iSize, void *pbuf )
 {
 	BEGIN_READ( pbuf, iSize );
 	short sci = READ_BYTE();
@@ -2152,8 +2152,8 @@ int TeamFortressViewport::MsgFunc_SciInfo( const char *pszName, int iSize, void 
 
 	if ( sci >= 0 && sci < MAX_SCIENTISTS )
 	{
-		g_SciInfo[sci].gibs = gibs;
-		g_SciInfo[sci].deaths = deaths;
+		g_ScientistInfo[sci].gibs = gibs;
+		g_ScientistInfo[sci].deaths = deaths;
 
 		if ( m_pScoreBoard )
 			m_pScoreBoard->Update();

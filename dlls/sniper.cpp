@@ -103,7 +103,7 @@ public:
 	void EXPORT AMTouch( CBaseEntity *pOther );
 };
 
-// the sniper box: a player builds it with the rifle (BuildFinished: pev->enemy is the builder),
+// the sniper box: a player builds it with the rifle (Install: pev->enemy is the builder),
 // or a map places it (pev->weapons the type, -1 random)
 class CAntiMissileBox : public CBaseMonster
 {
@@ -116,7 +116,7 @@ public:
 			return FCAP_DONT_SAVE;
 		return CBaseMonster::ObjectCaps();
 	}
-	void BuildFinished( CBaseEntity *pBuilder )
+	void Install( CBaseMonster *pBuilder )
 	{
 		if ( pBuilder )
 			pev->enemy = pBuilder->edict();
@@ -477,7 +477,7 @@ void CSniperRifle::WeaponSpecial( void )
 			default:					pszType = "Anti-missile"; break;
 			}
 			ClientPrint( m_pPlayer->pev, HUD_PRINTCENTER, "Building a %s box", pszType );
-			m_hBox->BuildFinished( m_pPlayer );
+			m_hBox->Install( m_pPlayer );
 			EMIT_SOUND( m_hBox->edict(), CHAN_VOICE, "weapons/building.wav", 1, ATTN_NORM );
 
 			m_flNextPrimaryAttack = gpGlobals->time + 0.3;
@@ -622,7 +622,7 @@ bool CAntiMissileBox::IsTargeted( CBaseEntity *pTarget )
 }
 
 
-// a box being placed falls (BuildFinished) until it lands on the world
+// a box being placed falls (Install) until it lands on the world
 void CAntiMissileBox::StopTouch( CBaseEntity *pOther )
 {
 	if ( !pOther->entindex() )

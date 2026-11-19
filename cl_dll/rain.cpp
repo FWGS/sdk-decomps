@@ -21,7 +21,7 @@
 // box, along its forward vector (or straight down from 200
 // units lower, sic: the direction is up), at flSpeed
 //=========================================================
-void RainParticles( cl_entity_t *pEnt, float flSpeed, int iType, int iCount, float flLife, bool bDown )
+void EmitFallingDrops( cl_entity_t *pEnt, float flSpeed, int iType, int iCount, float flLife, bool bDown )
 {
 	Vector vecForward, vecRight, vecUp;
 
@@ -143,7 +143,7 @@ void rain_t::Think( float flTime )
 	}
 
 	m_flNextTime = flTime + m_flInterval;
-	RainParticles( pEnt, m_flSpeed, m_iType, m_iCount, m_flLife, m_bDown );
+	EmitFallingDrops( pEnt, m_flSpeed, m_iType, m_iCount, m_flLife, m_bDown );
 }
 
 void CRainVolume::Think( float flTime )

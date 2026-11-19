@@ -26,7 +26,7 @@ void Game_AddObjects( void );
 
 extern vec3_t v_origin;
 
-extern float g_flGravity;	// name ours
+extern float g_flCurrentGravity;	// name ours
 void ThinkParticles( float flFrametime, float flTime );	// name ours
 
 int g_iAlive = 1;
@@ -611,7 +611,7 @@ void DLLEXPORT HUD_TempEntUpdate (
 	// Store off the old count
 	gEngfuncs.pEventAPI->EV_PushPMStates();
 
-	g_flGravity = cl_gravity;
+	g_flCurrentGravity = cl_gravity;
 	ThinkParticles( frametime, client_time );
 
 	// Now add in all of the players.
