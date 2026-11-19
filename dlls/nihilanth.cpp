@@ -692,7 +692,11 @@ void CNihilanth :: NextActivity( )
 			m_pBall = CSprite::SpriteCreate( "sprites/tele1.spr", pev->origin, TRUE );
 			if (m_pBall)
 			{
+#ifdef SIC1
+				m_pBall->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxNoDissipation );
+#else
 				m_pBall->SetTransparency( kRenderGlow, 255, 255, 255, 0, kRenderFxNoDissipation );
+#endif
 				m_pBall->SetAttachment( edict(), 1 );
 				m_pBall->SetScale( 4.0 );
 				m_pBall->pev->framerate = 10.0;
@@ -1298,7 +1302,11 @@ void CNihilanthHVR :: Spawn( void )
 {
 	Precache( );
 
+#ifdef SIC1
+	pev->rendermode = kRenderTransAdd;
+#else
 	pev->rendermode = kRenderGlow;
+#endif
 	pev->renderamt = 255;
 	pev->scale = 3.0;
 }

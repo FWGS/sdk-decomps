@@ -293,7 +293,11 @@ void CHGrunt :: GibMonster ( void )
 		}
 		else
 		{
+#ifdef SIC1
+			pGun = DropItem( "weapon_9mmAR", vecGunPos, vecGunAngles );
+#else
 			pGun = DropItem( "weapon_mp18", vecGunPos, vecGunAngles );
+#endif
 		}
 		if ( pGun )
 		{
@@ -871,7 +875,11 @@ void CHGrunt :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			}
 			else
 			{
+#ifdef SIC1
+				 DropItem( "weapon_9mmAR", vecGunPos, vecGunAngles );
+#else
 				 DropItem( "weapon_mp18", vecGunPos, vecGunAngles );
+#endif
 			}
 			if (FBitSet( pev->weapons, HGRUNT_GRENADELAUNCHER ))
 			{

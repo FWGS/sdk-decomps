@@ -1248,7 +1248,9 @@ void CFurniture :: Spawn( )
 	pev->solid		= SOLID_BBOX;
 	pev->health		= 80000;
 	pev->takedamage = DAMAGE_AIM;
+#ifndef SIC1
 	m_bloodColor	= DONT_BLEED;
+#endif
 	pev->effects		= 0;
 	pev->yaw_speed		= 0;
 	pev->sequence		= 0;
