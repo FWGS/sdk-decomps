@@ -35,14 +35,14 @@ enum handgrenade_e {
 };
 
 
-LINK_ENTITY_TO_CLASS( weapon_handgrenade, CHandGrenade );
+LINK_ENTITY_TO_CLASS( weapon_tnt, CHandGrenade );
 
 
 void CHandGrenade::Spawn( )
 {
 	Precache( );
 	m_iId = WEAPON_HANDGRENADE;
-	SET_MODEL(ENT(pev), "models/w_grenade.mdl");
+	SET_MODEL(ENT(pev), "models/w_tnt.mdl");
 
 #ifndef CLIENT_DLL
 	pev->dmg = gSkillData.plrDmgTNT;
@@ -56,8 +56,8 @@ void CHandGrenade::Spawn( )
 
 void CHandGrenade::Precache( void )
 {
-	PRECACHE_MODEL("models/w_grenade.mdl");
-	PRECACHE_MODEL("models/v_grenade.mdl");
+	PRECACHE_MODEL("models/w_tnt.mdl");
+	PRECACHE_MODEL("models/v_tnt.mdl");
 	PRECACHE_MODEL("models/p_grenade.mdl");
 }
 
@@ -69,8 +69,8 @@ int CHandGrenade::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = WEAPON_NOCLIP;
-	p->iSlot = 4;
-	p->iPosition = 0;
+	p->iSlot = 0;
+	p->iPosition = 2;
 	p->iId = m_iId = WEAPON_HANDGRENADE;
 	p->iWeight = HANDGRENADE_WEIGHT;
 	p->iFlags = ITEM_FLAG_LIMITINWORLD | ITEM_FLAG_EXHAUSTIBLE;
@@ -82,7 +82,7 @@ int CHandGrenade::GetItemInfo(ItemInfo *p)
 BOOL CHandGrenade::Deploy( )
 {
 	m_flReleaseThrow = -1;
-	return DefaultDeploy( "models/v_grenade.mdl", "models/p_grenade.mdl", HANDGRENADE_DRAW, "crowbar" );
+	return DefaultDeploy( "models/v_tnt.mdl", "models/p_grenade.mdl", HANDGRENADE_DRAW, "crowbar" );
 }
 
 BOOL CHandGrenade::CanHolster( void )
@@ -112,13 +112,21 @@ void CHandGrenade::Holster( int skiplocal /* = 0 */ )
 
 void CHandGrenade::PrimaryAttack()
 {
+	// don't light it underwater
+	if (m_pPlayer->pev->waterlevel == 3 && m_pPlayer->pev->watertype > CONTENT_FLYFIELD)
+	{
+		PlayEmptySound( );
+		m_flNextPrimaryAttack = 0.15;
+		return;
+	}
+
 	if ( !m_flStartThrow && m_pPlayer->m_rgAmmo[ m_iPrimaryAmmoType ] > 0 )
 	{
 		m_flStartThrow = gpGlobals->time;
 		m_flReleaseThrow = 0;
 
 		SendWeaponAnim( HANDGRENADE_PINPULL );
-		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 0.5;
+		m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.2;
 	}
 }
 
@@ -150,8 +158,8 @@ void CHandGrenade::WeaponIdle( void )
 
 		Vector vecThrow = gpGlobals->v_forward * flVel + m_pPlayer->pev->velocity;
 
-		// alway explode 3 seconds after the pin was pulled
-		float time = m_flStartThrow - gpGlobals->time + 2.0;
+		// explode 2 to 4 seconds after the fuse was lit
+		float time = m_flStartThrow - gpGlobals->time + RANDOM_LONG( 2, 4 );
 		if (time < 0)
 			time = 0;
 
@@ -221,7 +229,7 @@ void CHandGrenade::WeaponIdle( void )
 		else 
 		{
 			iAnim = HANDGRENADE_FIDGET;
-			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 75.0 / 30.0;
+			m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 175.75 / 30.0;
 		}
 
 		SendWeaponAnim( iAnim );

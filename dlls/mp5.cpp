@@ -37,8 +37,8 @@ enum mp5_e
 
 
 
-LINK_ENTITY_TO_CLASS( weapon_mp5, CMP5 );
-LINK_ENTITY_TO_CLASS( weapon_9mmAR, CMP5 );
+LINK_ENTITY_TO_CLASS( weapon_bergmann, CMP5 );
+LINK_ENTITY_TO_CLASS( weapon_mp18, CMP5 );
 
 
 //=========================================================
@@ -50,9 +50,9 @@ int CMP5::SecondaryAmmoIndex( void )
 
 void CMP5::Spawn( )
 {
-	pev->classname = MAKE_STRING("weapon_9mmAR"); // hack to allow for old names
+	pev->classname = MAKE_STRING("weapon_mp18"); // hack to allow for old names
 	Precache( );
-	SET_MODEL(ENT(pev), "models/w_9mmAR.mdl");
+	SET_MODEL(ENT(pev), "models/w_bergmann.mdl");
 	m_iId = WEAPON_MP5;
 
 	m_iDefaultAmmo = MP5_DEFAULT_GIVE;
@@ -63,15 +63,15 @@ void CMP5::Spawn( )
 
 void CMP5::Precache( void )
 {
-	PRECACHE_MODEL("models/v_9mmAR.mdl");
-	PRECACHE_MODEL("models/w_9mmAR.mdl");
+	PRECACHE_MODEL("models/v_bergmann.mdl");
+	PRECACHE_MODEL("models/w_bergmann.mdl");
 	PRECACHE_MODEL("models/p_9mmAR.mdl");
 
 	m_iShell = PRECACHE_MODEL ("models/shell.mdl");// brass shellTE_MODEL
 
 	PRECACHE_MODEL("models/grenade.mdl");	// grenade
 
-	PRECACHE_MODEL("models/w_9mmARclip.mdl");
+	PRECACHE_MODEL("models/w_bergmann_clip.mdl");
 	PRECACHE_SOUND("items/9mmclip1.wav");              
 
 	PRECACHE_SOUND("items/clipinsert1.wav");
@@ -98,8 +98,8 @@ int CMP5::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = "ARgrenades";
 	p->iMaxAmmo2 = M203_GRENADE_MAX_CARRY;
 	p->iMaxClip = MP5_MAX_CLIP;
-	p->iSlot = 2;
-	p->iPosition = 0;
+	p->iSlot = 4;
+	p->iPosition = 3;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_MP5;
 	p->iWeight = MP5_WEIGHT;
@@ -121,7 +121,7 @@ int CMP5::AddToPlayer( CBasePlayer *pPlayer )
 
 BOOL CMP5::Deploy( )
 {
-	return DefaultDeploy( "models/v_9mmAR.mdl", "models/p_9mmAR.mdl", MP5_DEPLOY, "mp5" );
+	return DefaultDeploy( "models/v_bergmann.mdl", "models/p_9mmAR.mdl", MP5_DEPLOY, "mp5" );
 }
 
 
@@ -169,7 +169,7 @@ void CMP5::PrimaryAttack()
 	else
 	{
 		// single player spread
-		vecDir = m_pPlayer->FireBulletsPlayer( 1, vecSrc, vecAiming, VECTOR_CONE_3DEGREES, 8192, BULLET_PLAYER_MP5, 2, 0, m_pPlayer->pev, m_pPlayer->random_seed );
+		vecDir = m_pPlayer->FireBulletsPlayer( 1, vecSrc, vecAiming, VECTOR_CONE_2DEGREES, 8192, BULLET_PLAYER_MP5, 2, 0, m_pPlayer->pev, m_pPlayer->random_seed );
 	}
 
   int flags;
@@ -185,10 +185,10 @@ void CMP5::PrimaryAttack()
 		// HEV suit - indicate out of ammo condition
 		m_pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0);
 
-	m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.07;
+	m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.12;
 
 	if ( m_flNextPrimaryAttack < UTIL_WeaponTimeBase() )
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.07;
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.12;
 
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + UTIL_SharedRandomFloat( m_pPlayer->random_seed, 10, 15 );
 }
@@ -290,12 +290,12 @@ class CMP5AmmoClip : public CBasePlayerAmmo
 	void Spawn( void )
 	{ 
 		Precache( );
-		SET_MODEL(ENT(pev), "models/w_9mmARclip.mdl");
+		SET_MODEL(ENT(pev), "models/w_bergmann_clip.mdl");
 		CBasePlayerAmmo::Spawn( );
 	}
 	void Precache( void )
 	{
-		PRECACHE_MODEL ("models/w_9mmARclip.mdl");
+		PRECACHE_MODEL ("models/w_bergmann_clip.mdl");
 		PRECACHE_SOUND("items/9mmclip1.wav");
 	}
 	BOOL AddAmmo( CBaseEntity *pOther ) 
@@ -309,7 +309,7 @@ class CMP5AmmoClip : public CBasePlayerAmmo
 	}
 };
 LINK_ENTITY_TO_CLASS( ammo_mp5clip, CMP5AmmoClip );
-LINK_ENTITY_TO_CLASS( ammo_9mmAR, CMP5AmmoClip );
+LINK_ENTITY_TO_CLASS( ammo_bergmann, CMP5AmmoClip );
 
 
 

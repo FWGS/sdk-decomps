@@ -126,10 +126,10 @@ public:
 //#define CROWBAR_MAX_CLIP		WEAPON_NOCLIP
 #define GLOCK_MAX_CLIP			15
 #define PYTHON_MAX_CLIP			6
-#define MP5_MAX_CLIP			50
+#define MP5_MAX_CLIP			32
 #define MP5_DEFAULT_AMMO		25
-#define SHOTGUN_MAX_CLIP		10
-#define CROSSBOW_MAX_CLIP		5
+#define SHOTGUN_MAX_CLIP		2
+#define CROSSBOW_MAX_CLIP		1
 #define RPG_MAX_CLIP			1
 #define GAUSS_MAX_CLIP			WEAPON_NOCLIP
 #define EGON_MAX_CLIP			WEAPON_NOCLIP
@@ -143,15 +143,15 @@ public:
 // the default amount of ammo that comes with each gun when it spawns
 #define GLOCK_DEFAULT_GIVE			15
 #define PYTHON_DEFAULT_GIVE			6
-#define MP5_DEFAULT_GIVE			50
+#define MP5_DEFAULT_GIVE			32
 #define MP5_DEFAULT_AMMO			25
 #define MP5_M203_DEFAULT_GIVE		0
-#define SHOTGUN_DEFAULT_GIVE		10
-#define CROSSBOW_DEFAULT_GIVE		5
+#define SHOTGUN_DEFAULT_GIVE		1
+#define CROSSBOW_DEFAULT_GIVE		1
 #define RPG_DEFAULT_GIVE			1
 #define GAUSS_DEFAULT_GIVE			20
 #define EGON_DEFAULT_GIVE			20
-#define HANDGRENADE_DEFAULT_GIVE	1
+#define HANDGRENADE_DEFAULT_GIVE	5
 #define SATCHEL_DEFAULT_GIVE		1
 #define TRIPMINE_DEFAULT_GIVE		1
 #define SNARK_DEFAULT_GIVE			5
@@ -165,7 +165,7 @@ public:
 #define AMMO_CHAINBOX_GIVE		200
 #define AMMO_M203BOX_GIVE		2
 #define AMMO_BUCKSHOTBOX_GIVE	12
-#define AMMO_CROSSBOWCLIP_GIVE	CROSSBOW_MAX_CLIP
+#define AMMO_CROSSBOWCLIP_GIVE	10
 #define AMMO_RPGCLIP_GIVE		RPG_MAX_CLIP
 #define AMMO_URANIUMBOX_GIVE	20
 #define AMMO_SNARKBOX_GIVE		5
@@ -384,6 +384,17 @@ extern DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles 
 extern DLL_GLOBAL	short	g_sModelIndexBloodDrop;// holds the sprite index for blood drops
 extern DLL_GLOBAL	short	g_sModelIndexBloodSpray;// holds the sprite index for blood spray (bigger)
 extern DLL_GLOBAL	short	g_sModelIndexShock;// the explosions' shock ring (name ours)
+// Survive in Catacombs 2's sprites, precached by W_Precache (names ours)
+extern DLL_GLOBAL	short	g_sModelIndexWExploSplash;// sprites/wexplosplash.spr: the explosions' fireball under water
+extern DLL_GLOBAL	short	g_sModelIndexExpansion;// sprites/expansion2.spr
+extern DLL_GLOBAL	short	g_sModelIndexExplosionFog;// sprites/explosionfog.spr
+extern DLL_GLOBAL	short	g_sModelIndexRicho;// sprites/richo2.spr
+extern DLL_GLOBAL	short	g_sModelIndexSmokeTrail;// sprites/smoke.spr: beam trails
+extern DLL_GLOBAL	short	g_sModelIndexExplodeFlash;// sprites/explodeflash.spr
+extern DLL_GLOBAL	short	g_sModelIndexZeroGExplode;// sprites/zerogxplode.spr
+extern DLL_GLOBAL	short	g_sModelIndexFExplo;// sprites/fexplo.spr
+extern DLL_GLOBAL	short	g_sModelIndexWallPuff;// sprites/wallpuff.spr
+extern DLL_GLOBAL	short	g_sModelIndexBloodCloud;// sprites/bloodcloud.spr
 
 extern void ClearMultiDamage(void);
 extern void ApplyMultiDamage(entvars_t* pevInflictor, entvars_t* pevAttacker );

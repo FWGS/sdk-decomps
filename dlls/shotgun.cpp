@@ -66,8 +66,8 @@ void CShotgun::Precache( void )
 	PRECACHE_SOUND ("weapons/dbarrel1.wav");//shotgun
 	PRECACHE_SOUND ("weapons/sbarrel1.wav");//shotgun
 
-	PRECACHE_SOUND ("weapons/shotgload.wav");	// shotgun reload
-	PRECACHE_SOUND ("weapons/shotgload.wav");	// shotgun reload
+	PRECACHE_SOUND ("weapons/reload2.wav");	// shotgun reload
+	PRECACHE_SOUND ("weapons/reload3.wav");	// shotgun reload
 
 //	PRECACHE_SOUND ("weapons/sshell1.wav");	// shotgun reload - played on client
 //	PRECACHE_SOUND ("weapons/sshell3.wav");	// shotgun reload - played on client
@@ -100,8 +100,8 @@ int CShotgun::GetItemInfo(ItemInfo *p)
 	p->pszAmmo2 = NULL;
 	p->iMaxAmmo2 = -1;
 	p->iMaxClip = SHOTGUN_MAX_CLIP;
-	p->iSlot = 2;
-	p->iPosition = 1;
+	p->iSlot = 4;
+	p->iPosition = 2;
 	p->iFlags = 0;
 	p->iId = m_iId = WEAPON_SHOTGUN;
 	p->iWeight = SHOTGUN_WEIGHT;
@@ -135,9 +135,16 @@ void CShotgun::PrimaryAttack()
 	}
 
 	m_pPlayer->m_iWeaponVolume = LOUD_GUN_VOLUME;
+// the client's compilation has the normal flash (both attacks)
+#ifdef CLIENT_DLL
 	m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
+#else
+	m_pPlayer->m_iWeaponFlash = BRIGHT_GUN_FLASH;
+#endif
 
 	m_iClip--;
+
+	m_pPlayer->pev->effects = (int)(m_pPlayer->pev->effects) | EF_MUZZLEFLASH;
 
 	int flags;
 #if defined( CLIENT_WEAPONS )
@@ -176,7 +183,7 @@ void CShotgun::PrimaryAttack()
 		m_pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0);
 
 	if (m_iClip != 0)
-		m_flPumpTime = gpGlobals->time + 0.5;
+		m_flPumpTime = gpGlobals->time + 0.02;
 
 	m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.75;
 	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 0.75;
@@ -206,10 +213,16 @@ void CShotgun::SecondaryAttack( void )
 	}
 
 	m_pPlayer->m_iWeaponVolume = LOUD_GUN_VOLUME;
+// the client's compilation has the normal flash (both attacks)
+#ifdef CLIENT_DLL
 	m_pPlayer->m_iWeaponFlash = NORMAL_GUN_FLASH;
+#else
+	m_pPlayer->m_iWeaponFlash = BRIGHT_GUN_FLASH;
+#endif
 
 	m_iClip -= 2;
 
+	m_pPlayer->pev->effects = (int)(m_pPlayer->pev->effects) | EF_MUZZLEFLASH;
 
 	int flags;
 #if defined( CLIENT_WEAPONS )
@@ -250,7 +263,7 @@ void CShotgun::SecondaryAttack( void )
 		m_pPlayer->SetSuitUpdate("!HEV_AMO0", FALSE, 0);
 
 	if (m_iClip != 0)
-		m_flPumpTime = gpGlobals->time + 0.95;
+		m_flPumpTime = gpGlobals->time + 1.0;
 
 	m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 1.5;
 	m_flNextSecondaryAttack = UTIL_WeaponTimeBase() + 1.5;
@@ -292,9 +305,9 @@ void CShotgun::Reload( void )
 		m_fInSpecialReload = 2;
 
 		if (RANDOM_LONG(0,1))
-			EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/shotgload.wav", 1, ATTN_NORM, 0, 85 + RANDOM_LONG(0,0x1f));
+			EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/reload2.wav", 1, ATTN_NORM, 0, 85 + RANDOM_LONG(0,0x1f));
 		else
-			EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/shotgload.wav", 1, ATTN_NORM, 0, 85 + RANDOM_LONG(0,0x1f));
+			EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/reload3.wav", 1, ATTN_NORM, 0, 85 + RANDOM_LONG(0,0x1f));
 
 		SendWeaponAnim( SHOTGUN_RELOAD );
 
@@ -332,7 +345,7 @@ void CShotgun::WeaponIdle( void )
 		}
 		else if (m_fInSpecialReload != 0)
 		{
-			if (m_iClip != 10 && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType])
+			if (m_iClip != 2 && m_pPlayer->m_rgAmmo[m_iPrimaryAmmoType])
 			{
 				Reload( );
 			}
