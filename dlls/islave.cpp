@@ -534,7 +534,7 @@ void CISlave :: Spawn()
 
 	pev->solid			= SOLID_SLIDEBOX;
 	pev->movetype		= MOVETYPE_STEP;
-	m_bloodColor		= BLOOD_COLOR_GREEN;
+	m_bloodColor		= BLOOD_COLOR_RED;
 	pev->effects		= 0;
 	if (pev->health == 0)
 		pev->health			= gSkillData.slaveHealth;
@@ -766,9 +766,9 @@ void CISlave :: ArmBeam( int side )
 	m_pBeam[m_iBeams]->PointEntInit( tr.vecEndPos, entindex( ) );
 	m_pBeam[m_iBeams]->SetEndAttachment( side < 0 ? 2 : 1 );
 	// m_pBeam[m_iBeams]->SetColor( 180, 255, 96 );
-	m_pBeam[m_iBeams]->SetColor( 96, 128, 16 );
-	m_pBeam[m_iBeams]->SetBrightness( 64 );
-	m_pBeam[m_iBeams]->SetNoise( 80 );
+	m_pBeam[m_iBeams]->SetColor( 0, 160, 255 );
+	m_pBeam[m_iBeams]->SetBrightness( 255 );
+	m_pBeam[m_iBeams]->SetNoise( 180 );
 	m_iBeams++;
 }
 
@@ -778,7 +778,7 @@ void CISlave :: ArmBeam( int side )
 //=========================================================
 void CISlave :: BeamGlow( )
 {
-	int b = m_iBeams * 32;
+	int b = m_iBeams * 48;
 	if (b > 255)
 		b = 255;
 
@@ -812,9 +812,9 @@ void CISlave :: WackBeam( int side, CBaseEntity *pEntity )
 
 	m_pBeam[m_iBeams]->PointEntInit( pEntity->Center(), entindex( ) );
 	m_pBeam[m_iBeams]->SetEndAttachment( side < 0 ? 2 : 1 );
-	m_pBeam[m_iBeams]->SetColor( 180, 255, 96 );
+	m_pBeam[m_iBeams]->SetColor( 0, 160, 255 );
 	m_pBeam[m_iBeams]->SetBrightness( 255 );
-	m_pBeam[m_iBeams]->SetNoise( 80 );
+	m_pBeam[m_iBeams]->SetNoise( 180 );
 	m_iBeams++;
 }
 
@@ -842,9 +842,9 @@ void CISlave :: ZapBeam( int side )
 
 	m_pBeam[m_iBeams]->PointEntInit( tr.vecEndPos, entindex( ) );
 	m_pBeam[m_iBeams]->SetEndAttachment( side < 0 ? 2 : 1 );
-	m_pBeam[m_iBeams]->SetColor( 180, 255, 96 );
+	m_pBeam[m_iBeams]->SetColor( 0, 160, 255 );
 	m_pBeam[m_iBeams]->SetBrightness( 255 );
-	m_pBeam[m_iBeams]->SetNoise( 20 );
+	m_pBeam[m_iBeams]->SetNoise( 50 );
 	m_iBeams++;
 
 	pEntity = CBaseEntity::Instance(tr.pHit);
