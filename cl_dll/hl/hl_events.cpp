@@ -58,7 +58,7 @@ void EV_TeslaFire( struct event_args_s *args );
 void EV_TeslaStop( struct event_args_s *args );
 void EV_TeslaSpecial( struct event_args_s *args );
 void EV_FireRepulsor( struct event_args_s *args );
-void EV_Sword( struct event_args_s *args );
+void EV_DoMeleeAttack( struct event_args_s *args );
 }
 
 /*
@@ -110,5 +110,5 @@ void Game_HookEvents( void )
 	gEngfuncs.pfnHookEvent( "events/teslastop.sc",				EV_TeslaStop );
 	gEngfuncs.pfnHookEvent( "events/teslaspecial.sc",			EV_TeslaSpecial );
 	gEngfuncs.pfnHookEvent( "events/repulsor.sc",				EV_FireRepulsor );
-	gEngfuncs.pfnHookEvent( "events/sword.sc",					EV_Sword );
+	gEngfuncs.pfnHookEvent( "events/sword.sc",					EV_DoMeleeAttack );
 }

@@ -333,7 +333,7 @@ struct sci_info_t
 	short gibs;		// times gibbed
 };
 
-extern sci_info_t			g_SciInfo[MAX_SCIENTISTS];
+extern sci_info_t			g_ScientistInfo[MAX_SCIENTISTS];
 
 
 //
@@ -696,9 +696,12 @@ class TeamFortressViewport;
 extern CHud gHUD;
 
 // sic: a stand-in for declarations of the mod's headers that are not known. VC6 picks some stack slots
-// by the number of declarations a file has seen (an enum and each value count one): with it, and the
-// project's browse information (/FR) as the IDE compiles, CMessageWindowPanel's and ScorePanel's get retail's
-enum { HUD_SIC_1, HUD_SIC_2, HUD_SIC_3, HUD_SIC_4, HUD_SIC_5, HUD_SIC_6, HUD_SIC_7, HUD_SIC_8, HUD_SIC_9, HUD_SIC_10, HUD_SIC_11, HUD_SIC_12, HUD_SIC_13, HUD_SIC_14, HUD_SIC_15, HUD_SIC_16 };
+// and the order of some inline functions and their type information by what a file has declared before
+// (an enum and each value count one; with the project's browse information (/FR) as the IDE compiles,
+// macros too, and the names' lengths matter): with it, the server browser's and the viewport's type
+// information get retail's order (CMessageWindowPanel's constructor and CVoiceVGUITweakDlg::Open with
+// their own)
+enum { HUD_SIC_1, HUD_SIC_2, HUD_SIC_3, HUD_SIC_4, HUD_SIC_5, HUD_SIC_6, HUD_SIC_7, HUD_SIC_8, HUD_SIC_9, HUD_SIC_10, HUD_SIC_11, HUD_SIC_12 };
 extern TeamFortressViewport *gViewPort;
 
 extern int g_iPlayerClass;

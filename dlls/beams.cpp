@@ -1022,7 +1022,7 @@ public:
 	void	Spawn( void );
 	void	KeyValue( KeyValueData *pkvd );
 	BOOL	CanBeRepulsed( bool fForce ) { return FALSE; }
-	int		GetOnState( void ) { return m_on; }
+	int		GetEntityTriggerState( void ) { return m_on; }
 	int		Classify( void ) { return CLASS_NONE; }
 	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	int		IRelationship( CBaseEntity *pTarget );
@@ -1472,7 +1472,7 @@ public:
 	void	Precache( void );
 	void	KeyValue( KeyValueData *pkvd );
 	void	Killed( entvars_t *pevAttacker, int iGib ) { ClearBeams(); CBeamCannon::Killed( pevAttacker, iGib ); }
-	int		GetOnState( void ) { return pev->nextthink != 0; }
+	int		GetEntityTriggerState( void ) { return pev->nextthink != 0; }
 	void	Think( void );
 	void	RandomArea( void );
 	void	RandomPoint( void );

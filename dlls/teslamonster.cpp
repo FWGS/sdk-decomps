@@ -52,7 +52,7 @@ public:
 	BOOL CanBeTeleported( void ) { return FALSE; }
 	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return fGibbed ? "gibbed" : "electrocuted"; }
 	const char *GetKillDesc( void ) { return "a tesla coil"; }
-	int  GetOnState( void ) { return m_on; }
+	int  GetEntityTriggerState( void ) { return m_on; }
 	int  GetBattlePower( void );
 	int  TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, float flDamage, int bitsDamageType );
 	void Killed( entvars_t *pevAttacker, int iGib );

@@ -2417,13 +2417,13 @@ BOOL CBaseMonster :: FindCover ( Vector vecThreat, Vector vecViewOffset, float f
 }
 
 //=========================================================
-// FindRetreat - FindCover for a node more than 90 degrees
+// FindBackwardRoute - FindCover for a node more than 90 degrees
 // off the threat's direction, without the visibility test:
 // the first one in range that is no farther from me than
 // from the threat (by path length) and that I can run to.
 // name ours
 //=========================================================
-BOOL CBaseMonster :: FindRetreat ( Vector vecThreat, float flMinDist, float flMaxDist )
+BOOL CBaseMonster :: FindBackwardRoute ( Vector vecThreat, float flMinDist, float flMaxDist )
 {
 	int i;
 	int iMyHullIndex;

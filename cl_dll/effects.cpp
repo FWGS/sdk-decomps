@@ -20,7 +20,7 @@
 
 bool EV_IsInPVS( cl_entity_t *pEntity );
 
-float g_flGravity;	// sv_gravity, from HUD_TempEntUpdate
+float g_flCurrentGravity;	// sv_gravity, from HUD_TempEntUpdate
 
 static Vector g_vecParticleZero( 0, 0, 0 );
 
@@ -37,7 +37,7 @@ CParticleSys::~CParticleSys()
 	m_pNext = NULL;
 }
 
-static Vector g_vecParticleForward, g_vecParticleRight, g_vecParticleUp;
+static Vector g_forward, g_right, g_up;
 
 //=========================================================
 // Draw the particles as camera-facing quads, then the
@@ -70,23 +70,23 @@ void CParticleSys::Draw( void )
 		gEngfuncs.pTriAPI->Begin( TRI_QUADS );
 
 		gEngfuncs.pTriAPI->TexCoord2f( 0, 0 );
-		VectorMA( m_Particles[i].origin, m_Particles[i].size, g_vecParticleUp, vecCorner );
-		VectorMA( vecCorner, -m_Particles[i].size, g_vecParticleRight, vecCorner );
+		VectorMA( m_Particles[i].origin, m_Particles[i].size, g_up, vecCorner );
+		VectorMA( vecCorner, -m_Particles[i].size, g_right, vecCorner );
 		gEngfuncs.pTriAPI->Vertex3fv( vecCorner );
 
 		gEngfuncs.pTriAPI->TexCoord2f( 0, 1 );
-		VectorMA( m_Particles[i].origin, m_Particles[i].size, g_vecParticleUp, vecCorner );
-		VectorMA( vecCorner, m_Particles[i].size, g_vecParticleRight, vecCorner );
+		VectorMA( m_Particles[i].origin, m_Particles[i].size, g_up, vecCorner );
+		VectorMA( vecCorner, m_Particles[i].size, g_right, vecCorner );
 		gEngfuncs.pTriAPI->Vertex3fv( vecCorner );
 
 		gEngfuncs.pTriAPI->TexCoord2f( 1, 1 );
-		VectorMA( m_Particles[i].origin, -m_Particles[i].size, g_vecParticleUp, vecCorner );
-		VectorMA( vecCorner, m_Particles[i].size, g_vecParticleRight, vecCorner );
+		VectorMA( m_Particles[i].origin, -m_Particles[i].size, g_up, vecCorner );
+		VectorMA( vecCorner, m_Particles[i].size, g_right, vecCorner );
 		gEngfuncs.pTriAPI->Vertex3fv( vecCorner );
 
 		gEngfuncs.pTriAPI->TexCoord2f( 1, 0 );
-		VectorMA( m_Particles[i].origin, -m_Particles[i].size, g_vecParticleUp, vecCorner );
-		VectorMA( vecCorner, -m_Particles[i].size, g_vecParticleRight, vecCorner );
+		VectorMA( m_Particles[i].origin, -m_Particles[i].size, g_up, vecCorner );
+		VectorMA( vecCorner, -m_Particles[i].size, g_right, vecCorner );
 		gEngfuncs.pTriAPI->Vertex3fv( vecCorner );
 
 		gEngfuncs.pTriAPI->End();
@@ -140,7 +140,7 @@ void CParticleSys::Think( float flFrametime, float flTime )
 			continue;
 
 		if ( m_iType == 1 )
-			m_Particles[i].velocity.z -= g_flGravity * flFrametime * 0.1;
+			m_Particles[i].velocity.z -= g_flCurrentGravity * flFrametime * 0.1;
 
 		pmtrace_t tr;
 		Vector vecEnd = m_Particles[i].origin + m_Particles[i].velocity * flFrametime;
@@ -175,12 +175,12 @@ void CParticleSys::Think( float flFrametime, float flTime )
 	m_flSpawn += flFrametime * 50;
 	if ( m_flSpawn >= 1 )
 	{
-		AddParticle( GetOrigin( m_vecOffset ), GetVelocity( m_vecAngles ) );
+		AddNewParticle( CalcMuzzlePos( m_vecOffset ), GetMuzzleVel( m_vecAngles ) );
 		m_flSpawn -= 1;
 	}
 }
 
-sysparticle_t *CParticleSys::AddParticle( const Vector &vecOrigin, const Vector &vecVelocity )
+flame_t *CParticleSys::AddNewParticle( Vector &vecOrigin, Vector &vecVelocity )
 {
 	int i = m_iLastParticle + 1;	// sic: 256 when the last one was 255
 
@@ -209,7 +209,7 @@ sysparticle_t *CParticleSys::AddParticle( const Vector &vecOrigin, const Vector 
 // The spawn point: m_vecOffset along the owner's view
 // (a player's eyes), or the offset itself without an owner
 //=========================================================
-Vector CParticleSys::GetOrigin( const Vector &vecOffset )
+Vector CParticleSys::CalcMuzzlePos( const Vector &vecOffset )
 {
 	if ( m_iEntity < 0 )
 		return vecOffset;
@@ -253,7 +253,7 @@ Vector CParticleSys::GetOrigin( const Vector &vecOffset )
 // The spawn velocity: m_flSpeed along the owner's view
 // turned by vecAngles
 //=========================================================
-Vector CParticleSys::GetVelocity( const Vector &vecDir )
+Vector CParticleSys::GetMuzzleVel( const Vector &vecDir )
 {
 	Vector vecAngles = vecDir;
 
@@ -362,7 +362,7 @@ void CParticleStruct::Draw( void )
 
 	Vector vecAngles;
 	gEngfuncs.GetViewAngles( vecAngles );
-	gEngfuncs.pfnAngleVectors( vecAngles, g_vecParticleForward, g_vecParticleRight, g_vecParticleUp );
+	gEngfuncs.pfnAngleVectors( vecAngles, g_forward, g_right, g_up );
 
 	gEngfuncs.pTriAPI->RenderMode( kRenderTransAdd );
 	m_pFirst->Draw();

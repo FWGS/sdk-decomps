@@ -78,7 +78,7 @@ public:
 	// hand grenades aren't thrown at ceiling turrets
 	BOOL	CanBeGrenaded( int fLauncher ) { if ( !fLauncher && m_iOrientation ) return FALSE; return TRUE; }
 	BOOL	AllowsGrenades( void ) { return !m_iOrientation; }
-	int		GetOnState( void ) { if ( m_iOn ) return IsAlive(); return 0; }
+	int		GetEntityTriggerState( void ) { if ( m_iOn ) return IsAlive(); return 0; }
 
 	// Think functions
 

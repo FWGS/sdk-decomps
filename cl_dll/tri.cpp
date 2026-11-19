@@ -24,7 +24,7 @@ void RenderParticles( void );						// effects.cpp
 void BloodSprayThink( float flTime, float flFrametime );	// bloodspray.cpp
 void RenderAllTractorbeams( void );						// tractorbeam.cpp
 void RainEffectThink( float flTime );							// rain.cpp
-void CL_DamageTick( float flTime, float flFrametime );		// damagefx.cpp
+void CL_HurtEffectUpdate( float flTime, float flFrametime );		// damagefx.cpp
 
 extern "C"
 {
@@ -133,7 +133,7 @@ void DLLEXPORT HUD_DrawTransparentTriangles( void )
 	RenderParticles();
 	BloodSprayThink( flTime, flFrametime );
 	RainEffectThink( flTime );
-	CL_DamageTick( flTime, flFrametime );
+	CL_HurtEffectUpdate( flTime, flFrametime );
 
 	flOldTime = flTime;
 

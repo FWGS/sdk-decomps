@@ -44,7 +44,7 @@ public:
 	void KeyValue( KeyValueData *pkvd );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void Think( void );
-	int GetOnState( void ) { return m_pPlayer != NULL; }
+	int GetEntityTriggerState( void ) { return m_pPlayer != NULL; }
 
 	virtual int		Save( CSave &save );
 	virtual int		Restore( CRestore &restore );

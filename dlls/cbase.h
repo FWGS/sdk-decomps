@@ -162,8 +162,8 @@ public:
 	virtual float	TractorBeamRadius( void );				// name ours
 	virtual BOOL	CanBeGrenaded( int fLauncher ) { return pev->movetype <= MOVETYPE_STEP || pev->waterlevel > 0; }
 	virtual BOOL	AllowsGrenades( void ) { return FALSE; }	// name ours
-	virtual void	BuildFinished( CBaseEntity *pBuilder ) {}	// name ours
-	virtual int		GetOnState( void ) { return -1; }	// name ours; master_watcher: 1 on, 0 off, -1 can't tell
+	virtual void	Install( CBaseMonster *pBuilder ) {}	// name ours
+	virtual int		GetEntityTriggerState( void ) { return -1; }	// name ours; master_watcher: 1 on, 0 off, -1 can't tell
 	virtual const char *GetKillDesc( void ) { return STRING( pev->classname ); }
 	virtual const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return fGibbed ? "gibbed" : "killed"; }
 	virtual const char *GetHitGroupDesc( int iHitGroup ) { return ""; }
@@ -262,7 +262,7 @@ public:
 	void		FireBullets( ULONG	cShots, Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iBulletType, int iTracerFreq = 4, int iDamage = 0, entvars_t *pevAttacker = NULL  );
 	Vector		FireBulletsPlayer( ULONG	cShots, Vector  vecSrc, Vector	vecDirShooting,	Vector	vecSpread, float flDistance, int iBulletType, int iTracerFreq = 4, int iDamage = 0, entvars_t *pevAttacker = NULL, int shared_rand = 0 );
 	void		FireBulletsExplosiveMonster( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker = NULL );	// name ours: explosive bullets of monsters (the grunt's shotgun)
-	Vector		FireBulletsExplosive( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker = NULL, int shared_rand = 0 );	// name ours: the shotgun's explosive slugs (combat.cpp; the client's in hl_weapons.cpp)
+	Vector		FireHeavyShotgunShells( ULONG cShots, Vector vecSrc, Vector vecDirShooting, Vector vecSpread, float flDistance, int iDamage, entvars_t *pevAttacker = NULL, int shared_rand = 0 );	// name ours: the shotgun's explosive slugs (combat.cpp; the client's in hl_weapons.cpp)
 
 	virtual CBaseEntity *Respawn( void ) { return NULL; }
 
@@ -444,7 +444,7 @@ public:
 	void KeyValue( KeyValueData *pkvd );
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	int	ObjectCaps( void ) { return (CPointEntity::ObjectCaps() | FCAP_MASTER); }
-	int	GetOnState( void ) { return IsTriggered( this ); }
+	int	GetEntityTriggerState( void ) { return IsTriggered( this ); }
 	BOOL IsTriggered( CBaseEntity *pActivator );
 	void EXPORT Register( void );
 	virtual int		Save( CSave &save );
@@ -556,7 +556,7 @@ public:
 	static	TYPEDESCRIPTION m_SaveData[];
 
 	virtual const char *GetKillDesc( void ) { if ( !m_iszKillDesc ) return STRING( pev->classname ); return STRING( m_iszKillDesc ); }
-	virtual int		GetOnState( void ) { return GetToggleState() == TS_AT_TOP; }
+	virtual int		GetEntityTriggerState( void ) { return GetToggleState() == TS_AT_TOP; }
 	virtual int		GetToggleState( void ) { return m_toggle_state; }
 	virtual float	GetDelay( void ) { return m_flWait; }
 

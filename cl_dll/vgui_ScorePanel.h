@@ -287,7 +287,7 @@ public:
 	void SortTeams( void );
 	void SortPlayers( int iTeam, char *team );
 	void RebuildTeams( void );
-	void AddScientists( void );	// name ours
+	void AddScientistEntries( void );	// name ours
 
 	void FillGrid();
 

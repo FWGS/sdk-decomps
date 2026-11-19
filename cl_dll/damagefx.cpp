@@ -17,17 +17,17 @@
 
 bool EV_IsInPVS( cl_entity_t *pEntity );
 
-static int g_iFlameModel;		// name ours
-static int g_iLightningModel;	// name ours
+static int g_sprFlame;		// name ours
+static int g_sprLightning;	// name ours
 
 //=========================================================
 // One flame sprite rising from vecOrigin
 //=========================================================
-bool FX_BodyFlame( float *origin )	// name ours
+bool FX_EmitSpriteFlame( float *origin )	// name ours
 {
 	Vector vecVelocity( 0.0f, 0.0f, gEngfuncs.pfnRandomFloat( 40, 80 ) );
 
-	TEMPENTITY *pTemp = gEngfuncs.pEfxAPI->R_TempSprite( origin, vecVelocity, 0.8, g_iFlameModel, kRenderTransAdd, kRenderFxNone, 255, 5, FTENT_SPRANIMATE );
+	TEMPENTITY *pTemp = gEngfuncs.pEfxAPI->R_TempSprite( origin, vecVelocity, 0.8, g_sprFlame, kRenderTransAdd, kRenderFxNone, 255, 5, FTENT_SPRANIMATE );
 
 	if ( pTemp )
 	{
@@ -69,7 +69,7 @@ void FX_Sparks( Vector &vecOrigin, int iCount, float flRadius )	// name ours
 		else if ( iColor == 4 )
 			vecColor = Vector( 1, 1, 1 );
 
-		gEngfuncs.pEfxAPI->R_BeamPoints( vecStart, vecEnd, g_iLightningModel, gEngfuncs.pfnRandomFloat( 0.2, 0.5 ), 2, 3, 0.5, 0, 0, 10, vecColor.x, vecColor.y, vecColor.z );
+		gEngfuncs.pEfxAPI->R_BeamPoints( vecStart, vecEnd, g_sprLightning, gEngfuncs.pfnRandomFloat( 0.2, 0.5 ), 2, 3, 0.5, 0, 0, 10, vecColor.x, vecColor.y, vecColor.z );
 
 		vecAngles[0] = gEngfuncs.pfnRandomFloat( -180, 180 );
 		vecAngles[1] = gEngfuncs.pfnRandomFloat( -180, 180 );
@@ -143,8 +143,8 @@ void CDamageFX::Think( float flTime, float flFrametime )
 
 	m_flAccum -= 0.1;
 
-	g_iFlameModel = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/playerflame.spr" );
-	g_iLightningModel = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/lgtning.spr" );
+	g_sprFlame = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/playerflame.spr" );
+	g_sprLightning = gEngfuncs.pEventAPI->EV_FindModelIndex( "sprites/lgtning.spr" );
 
 	for ( int i = 0; i < MAX_DAMAGEFX; i++ )
 	{
@@ -166,7 +166,7 @@ void CDamageFX::Think( float flTime, float flFrametime )
 			vecFlame.x = gEngfuncs.pfnRandomFloat( pEnt->curstate.mins.x, pEnt->curstate.maxs.x );
 			vecFlame.y = gEngfuncs.pfnRandomFloat( pEnt->curstate.mins.y, pEnt->curstate.maxs.y );
 			vecFlame.z = gEngfuncs.pfnRandomFloat( pEnt->curstate.mins.z, pEnt->curstate.maxs.z );
-			FX_BodyFlame( pEnt->origin + vecFlame );
+			FX_EmitSpriteFlame( pEnt->origin + vecFlame );
 			pFX->m_iBurn--;
 		}
 
@@ -212,7 +212,7 @@ void CDamageFX::Start( int iEntity, int iBurn, int iShock )
 	pFX->m_iShock = iShock;
 }
 
-void CL_DamageTick( float flTime, float flFrametime )	// name ours
+void CL_HurtEffectUpdate( float flTime, float flFrametime )	// name ours
 {
 	g_DamageFX.Think( flTime, flFrametime );
 }

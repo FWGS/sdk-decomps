@@ -11,7 +11,7 @@
 
 #define MAX_PARTICLES	256
 
-struct sysparticle_t	// name ours
+struct flame_t	// name ours
 {
 	bool	active;
 	Vector	origin;
@@ -29,9 +29,9 @@ public:
 
 	void Draw( void );
 	void Think( float flFrametime, float flTime );
-	sysparticle_t *AddParticle( const Vector &vecOrigin, const Vector &vecVelocity );	// name ours
-	Vector GetOrigin( const Vector &vecOffset );	// name ours
-	Vector GetVelocity( const Vector &vecAngles );	// name ours
+	flame_t *AddNewParticle( Vector &vecOrigin, Vector &vecVelocity );	// name ours
+	Vector CalcMuzzlePos( const Vector &vecOffset );	// name ours
+	Vector GetMuzzleVel( const Vector &vecAngles );	// name ours
 
 	Vector		m_vecOffset;	// spawn point: forward, right, up of the owner's view
 	Vector		m_vecAngles;	// spawn direction, added to the owner's view angles
@@ -42,7 +42,7 @@ public:
 	float		m_flDieTime;	// stop spawning (0: never); removed once its particles are gone
 	float		m_flScale;		// particle size at birth
 	Vector		m_vecColor;
-	sysparticle_t	m_Particles[ MAX_PARTICLES ];
+	flame_t	m_Particles[ MAX_PARTICLES ];
 	struct model_s *m_pSprite;
 	int			m_iFrames;
 	int			m_iLastParticle;
