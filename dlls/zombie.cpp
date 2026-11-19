@@ -32,7 +32,7 @@
 #define	ZOMBIE_AE_ATTACK_LEFT		0x02
 #define	ZOMBIE_AE_ATTACK_BOTH		0x03
 
-#define ZOMBIE_FLINCH_DELAY			2		// at most one flinch every n secs
+#define ZOMBIE_FLINCH_DELAY			5		// at most one flinch every n secs
 
 class CZombie : public CBaseMonster
 {
