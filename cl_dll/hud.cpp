@@ -29,7 +29,7 @@
 #include "hud_servers.h"
 #include "vgui_int.h"
 #include "vgui_TeamFortressViewport.h"
-
+#include "mp3.h"
 #include "demo.h"
 #include "demo_api.h"
 #include "vgui_scorepanel.h"
@@ -165,6 +165,11 @@ int __MsgFunc_GameMode(const char *pszName, int iSize, void *pbuf )
 	return gHUD.MsgFunc_GameMode( pszName, iSize, pbuf );
 }
 
+int __MsgFunc_PlayMP3(const char *pszName, int iSize, void *pbuf )
+{
+	return gHUD.MsgFunc_PlayMP3( pszName, iSize, pbuf );
+}
+
 // TFFree Command Menu
 void __CmdFunc_OpenCommandMenu(void)
 {
@@ -205,6 +210,11 @@ void __CmdFunc_ToggleServerBrowser( void )
 	{
 		gViewPort->ToggleServerBrowser();
 	}
+}
+
+void __CmdFunc_StopMP3( void )
+{
+	gMP3.StopMP3();
 }
 
 // TFFree Command Menu Message Handlers
@@ -325,6 +335,11 @@ void CHud :: Init( void )
 	HOOK_MESSAGE( AddShine ); //LRC
 	HOOK_MESSAGE( SetSky ); //LRC
 
+	//KILLAR: MP3
+	HOOK_MESSAGE( PlayMP3 );
+	gMP3.Initialize();
+	HOOK_COMMAND( "stopmp3", StopMP3 );
+
 	// TFFree CommandMenu
 	HOOK_COMMAND( "+commandmenu", OpenCommandMenu );
 	HOOK_COMMAND( "-commandmenu", CloseCommandMenu );
@@ -356,7 +371,7 @@ void CHud :: Init( void )
 
 	m_iLogo = 0;
 	m_iFOV = 0;
-	m_iHUDColor = 0x00FFA000; //255,160,0 -- LRC
+	m_iHUDColor = 0x00FF1010; //255,16,16
 
 	CVAR_CREATE( "zoom_sensitivity_ratio", "1.2", 0 );
 	default_fov = CVAR_CREATE( "default_fov", "90", 0 );
@@ -417,6 +432,7 @@ CHud :: ~CHud()
 	delete [] m_rghSprites;
 	delete [] m_rgrcRects;
 	delete [] m_rgszSpriteNames;
+	gMP3.Shutdown();
 
 	if ( m_pHudList )
 	{
