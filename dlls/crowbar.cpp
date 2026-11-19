@@ -26,14 +26,14 @@
 #define	CROWBAR_BODYHIT_VOLUME 128
 #define	CROWBAR_WALLHIT_VOLUME 512
 
-LINK_ENTITY_TO_CLASS( weapon_crowbar, CCrowbar );
+LINK_ENTITY_TO_CLASS( weapon_fork, CCrowbar );
 
 
 
 enum gauss_e {
 	CROWBAR_IDLE = 0,
+	CROWBAR_HOLSTER,	// the fork model has these two the other way round
 	CROWBAR_DRAW,
-	CROWBAR_HOLSTER,
 	CROWBAR_ATTACK1HIT,
 	CROWBAR_ATTACK1MISS,
 	CROWBAR_ATTACK2MISS,
@@ -47,7 +47,7 @@ void CCrowbar::Spawn( )
 {
 	Precache( );
 	m_iId = WEAPON_CROWBAR;
-	SET_MODEL(ENT(pev), "models/w_say.mdl");
+	SET_MODEL(ENT(pev), "models/w_fork.mdl");
 	m_iClip = -1;
 
 	FallInit();// get ready to fall down.
@@ -56,15 +56,15 @@ void CCrowbar::Spawn( )
 
 void CCrowbar::Precache( void )
 {
-	PRECACHE_MODEL("models/v_say.mdl");
-	PRECACHE_MODEL("models/w_say.mdl");
+	PRECACHE_MODEL("models/v_fork.mdl");
+	PRECACHE_MODEL("models/w_fork.mdl");
 	PRECACHE_MODEL("models/p_crowbar.mdl");
-	PRECACHE_SOUND("weapons/cbar_hit1.wav");
-	PRECACHE_SOUND("weapons/cbar_hit2.wav");
+	PRECACHE_SOUND("weapons/fork_hit1.wav");
+	PRECACHE_SOUND("weapons/fork_hit2.wav");
 	PRECACHE_SOUND("weapons/cbar_hitbod1.wav");
 	PRECACHE_SOUND("weapons/cbar_hitbod2.wav");
 	PRECACHE_SOUND("weapons/cbar_hitbod3.wav");
-	PRECACHE_SOUND("weapons/cbar_miss1.wav");
+	PRECACHE_SOUND("weapons/fork_miss1.wav");
 
 	m_usCrowbar = PRECACHE_EVENT ( 1, "events/crowbar.sc" );
 }
@@ -88,7 +88,7 @@ int CCrowbar::GetItemInfo(ItemInfo *p)
 
 BOOL CCrowbar::Deploy( )
 {
-	return DefaultDeploy( "models/v_say.mdl", "models/p_crowbar.mdl", CROWBAR_DRAW, "crowbar" );
+	return DefaultDeploy( "models/v_fork.mdl", "models/p_crowbar.mdl", CROWBAR_DRAW, "crowbar" );
 }
 
 void CCrowbar::Holster( int skiplocal /* = 0 */ )
@@ -203,7 +203,7 @@ int CCrowbar::Swing( int fFirst )
 		if (fFirst)
 		{
 			// miss
-			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.5;
+			m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.9;
 			
 			// player "shoot" animation
 			m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
@@ -265,7 +265,7 @@ int CCrowbar::Swing( int fFirst )
 				m_pPlayer->m_iWeaponVolume = CROWBAR_BODYHIT_VOLUME;
 				if ( !pEntity->IsAlive() )
 				{
-					m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.2; //LRC: corrected half-life bug
+					m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.9; //LRC: corrected half-life bug
 					return TRUE;
 				}
 				else
@@ -294,23 +294,42 @@ int CCrowbar::Swing( int fFirst )
 			switch( RANDOM_LONG(0,1) )
 			{
 			case 0:
-				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/cbar_hit1.wav", fvolbar, ATTN_NORM, 0, 98 + RANDOM_LONG(0,3)); 
+				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/fork_hit1.wav", fvolbar, ATTN_NORM, 0, 98 + RANDOM_LONG(0,3)); 
 				break;
 			case 1:
-				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/cbar_hit2.wav", fvolbar, ATTN_NORM, 0, 98 + RANDOM_LONG(0,3)); 
+				EMIT_SOUND_DYN(ENT(m_pPlayer->pev), CHAN_ITEM, "weapons/fork_hit2.wav", fvolbar, ATTN_NORM, 0, 98 + RANDOM_LONG(0,3)); 
 				break;
 			}
 
-			// delay the decal a bit
-			m_trHit = tr;
+			// two puffs of dust; m_trHit is no longer set, so Smack has
+			// nothing to decal (sic)
+			MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, tr.vecEndPos );
+				WRITE_BYTE( TE_SPRITE );
+				WRITE_COORD( tr.vecEndPos.x + 2 );
+				WRITE_COORD( tr.vecEndPos.y + 2 );
+				WRITE_COORD( tr.vecEndPos.z + 2 );
+				WRITE_SHORT( g_sModelIndexWallPuff );
+				WRITE_BYTE( 2 ); // scale * 10
+				WRITE_BYTE( 55 ); // brightness
+			MESSAGE_END();
+
+			MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, tr.vecEndPos );
+				WRITE_BYTE( TE_SPRITE );
+				WRITE_COORD( tr.vecEndPos.x - 2 );
+				WRITE_COORD( tr.vecEndPos.y - 2 );
+				WRITE_COORD( tr.vecEndPos.z - 2 );
+				WRITE_SHORT( g_sModelIndexWallPuff );
+				WRITE_BYTE( 2 ); // scale * 10
+				WRITE_BYTE( 55 ); // brightness
+			MESSAGE_END();
 		}
 
 		m_pPlayer->m_iWeaponVolume = flVol * CROWBAR_WALLHIT_VOLUME;
 #endif
-		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.2;
+		m_flNextPrimaryAttack = UTIL_WeaponTimeBase() + 0.9;
 		
 		SetThink(&CCrowbar:: Smack );
-		SetNextThink( 0.2 );
+		SetNextThink( 0.9 );
 
 		
 	}
