@@ -16,7 +16,7 @@ VC5_CRT are passed on to vc6.sh and vc5.sh. Needs only Python 3's standard
 library, and libfaketime's faketime for --link-time.
 
 Flags that only affect IDE bookkeeping (/FD minimal rebuild, /Fr /FR browse
-info, /Gm) are dropped; they don't change generated code. /YX (automatic
+info, /Gm) are dropped (but see --browse-info below). /YX (automatic
 precompiled headers) is kept, with one .pch in OUTDIR: it changes the code
 layout. With VC6, inline functions that only a vtable or a compiler-made
 constructor needs, from headers inside the .pch, go to the end of the object
@@ -45,6 +45,44 @@ link needs to give a retail file; vc42, vc41, vc40 for Visual C++ 4.x), and
 whose objects come from two compilers. --linker picks the linker and its
 libraries (default: --compiler's). Each compiler gets its own .pch (the
 IDE's vc60.pch, vc50.pch), replayed over its own files in project order.
+
+The following options, all opt-in, reproduce an incrementally linked build
+and the IDE's way of compiling (Scientist Slaughterhouse's client):
+
+--browse-info keeps the project's /Fr or /FR, with the .sbr files written to
+OUTDIR as the IDE does (/FR"Debug/"). Browse information is not only IDE
+bookkeeping: it adds to the front end's intermediate code, so it can move
+where VC6 emits the inline functions it places lazily (measured on
+Scientist Slaughterhouse's hl_weapons.cpp: CBaseEntity::Respawn moves by two
+functions). /FD and /Gm stay dropped.
+
+--incremental links incrementally, as the IDE's Debug configurations do:
+the project's /incremental option is replaced by /incremental:yes, and the
+.ilk and .pdb stay in OUTDIR, so the next run relinks only the objects that
+changed (LINK 6.00 keeps the old layout and moves what no longer fits) or
+does a full link when LINK decides to. LINK relinks an object only when
+both its file time (whole seconds) and its COFF time stamp differ from the
+ones it recorded: a recompiled object that would repeat either (two
+compiles in one second) gets the old value + 1. With --link-time, LINK sees
+the files' real times (libfaketime's NO_FAKE_STAT), or it would see no
+object change at all. OUTDIR/link.json records the last LINK command (tool,
+working folder, arguments), for scripts that relink without compiling.
+--fresh-link deletes the .ilk first (a full link into the old .pdb, age +
+1); --new-pdb deletes the .pdb too (age 1, a new signature).
+
+--compile-time a.cpp='YYYY-MM-DD hh:mm:ss',... compiles those sources with
+the clock frozen at that UTC time (libfaketime). VC6 names an anonymous
+namespace after the compile time and the source's path
+(?%C:\\...\\a.cpp<number>), and in an incrementally linked image those names
+decide the order of the thunk table.
+
+--full-source-paths hands CL each source as the IDE does: by its full
+normalised path in the project's own spelling (.\\x.cpp becomes
+C:\\...\\cl_dll\\x.cpp through --drive), not by the .dsp's relative path. CL
+puts that path into __FILE__ (assert messages) and into the names of
+anonymous namespaces, and a header included relatively gets it as its
+prefix; nothing else in the code changes. The /YX .pch stubs are named the
+same way.
 """
 import argparse
 import json
@@ -84,6 +122,14 @@ def wineprefix():
 
 
 IDE_ONLY = re.compile(r"^/(FD|Fr|FR|Gm)(\S*)$", re.I)
+BROWSE = re.compile(r"^/(Fr|FR)(\S*)$")
+
+
+def ide_only(flag, browse_info=False):
+    """A flag dropped as IDE bookkeeping; with --browse-info the project's /Fr or /FR stays."""
+    return bool(IDE_ONLY.match(flag)) and not (browse_info and BROWSE.match(flag))
+
+
 PCH = re.compile(r"^/(YX|Yc|Yu|Fp)(\S*)$", re.I)
 
 
@@ -293,9 +339,19 @@ def pch_states(entries):
 
 
 LINK_TIME = None  # --link-time: LINK runs under libfaketime, frozen at this UTC time
+INCREMENTAL = False  # --incremental: LINK must see the objects' real file times
+FULL_SOURCE_PATHS = False  # --full-source-paths: CL gets C:\...\dir\x.cpp, not .\x.cpp
 
 
-def run(args, cwd, log, tool="vc6"):
+def cl_source(dspdir, rel):
+    """The source path CL is given: the .dsp's own spelling, or with --full-source-paths the full
+    normalised path the IDE passes (os.path.normpath keeps the spelling; winpath applies --drive)."""
+    if not FULL_SOURCE_PATHS:
+        return rel
+    return winpath(os.path.normpath(os.path.join(dspdir, rel.replace("\\", "/"))))
+
+
+def run(args, cwd, log, tool="vc6", cl_time=None):
     log.write("$ " + ("" if tool == "vc6" else f"[{tool}] ") + " ".join(args) + "\n")
     log.flush()
     # Capture through a file, not a pipe: Wine's background services inherit
@@ -305,11 +361,33 @@ def run(args, cwd, log, tool="vc6"):
         if LINK_TIME and args and args[0] == "LINK":
             cmd = ["faketime", "-f", LINK_TIME] + cmd  # absolute: the clock stays frozen
             env = dict(os.environ, TZ="UTC", FAKETIME_DONT_FAKE_MONOTONIC="1")
+            if INCREMENTAL:
+                env["NO_FAKE_STAT"] = "1"  # faked file times would hide every object change from LINK
+        if cl_time and args and args[0] == "CL":
+            cmd = ["faketime", "-f", cl_time] + cmd
+            env = dict(os.environ, TZ="UTC", FAKETIME_DONT_FAKE_MONOTONIC="1", NO_FAKE_STAT="1")
         p = subprocess.run(cmd, cwd=cwd, stdin=subprocess.DEVNULL, stdout=tmp, stderr=subprocess.STDOUT, env=env)
         tmp.seek(0)
         text = tmp.read().decode("latin-1")
     log.write(text)
     return p.returncode, text
+
+
+def obj_times(path):
+    """An object's (file time in whole seconds, COFF time stamp): what LINK compares. None if missing."""
+    try:
+        with open(path, "rb") as f:
+            head = f.read(8)
+        return int(os.stat(path).st_mtime), int.from_bytes(head[4:8], "little")
+    except (OSError, ValueError):
+        return None
+
+
+def set_obj_times(path, second, stamp):
+    with open(path, "r+b") as f:
+        f.seek(4)
+        f.write(int(stamp).to_bytes(4, "little"))
+    os.utime(path, (second, second))
 
 
 def main():
@@ -331,14 +409,34 @@ def main():
                     help="write paths under PATH as D:\\... (the Wine prefix, VC_WINEPREFIX, must map D: to PATH)")
     ap.add_argument("--link-time", metavar="'YYYY-MM-DD hh:mm:ss'",
                     help="run LINK with the clock frozen at this UTC time (libfaketime), for retail's time stamps")
+    ap.add_argument("--browse-info", action="store_true",
+                    help="keep the project's /Fr or /FR (browse information, .sbr files in OUTDIR): it can change "
+                         "where VC6 places inline functions")
+    ap.add_argument("--incremental", action="store_true",
+                    help="link with /incremental:yes, keeping the .ilk and .pdb in OUTDIR between runs")
+    ap.add_argument("--fresh-link", action="store_true", help="with --incremental: delete the .ilk first (full link)")
+    ap.add_argument("--new-pdb", action="store_true", help="with --incremental: delete the .ilk and the .pdb first")
+    ap.add_argument("--compile-time", default="", metavar="a.cpp='YYYY-MM-DD hh:mm:ss',...",
+                    help="compile these sources with the clock frozen at that UTC time (anonymous namespace names)")
+    ap.add_argument("--full-source-paths", action="store_true",
+                    help="pass CL each source by its full normalised path, as the IDE does (__FILE__, anonymous "
+                         "namespace names)")
     a = ap.parse_args()
     # the wrappers run in the project's folder: pass them absolute paths
     for var in ("VC_TOOLCHAINS", "VC_WINEPREFIX"):
         if os.environ.get(var):
             os.environ[var] = os.path.abspath(os.environ[var])
     wineprefix()  # stops here when VC_TOOLCHAINS is not set
-    global LINK_TIME
+    global LINK_TIME, INCREMENTAL, FULL_SOURCE_PATHS
     LINK_TIME = a.link_time
+    INCREMENTAL = a.incremental
+    FULL_SOURCE_PATHS = a.full_source_paths
+    if (a.fresh_link or a.new_pdb) and not a.incremental:
+        ap.error("--fresh-link and --new-pdb need --incremental")
+    cl_times = {}
+    for item in filter(None, (e.strip() for e in a.compile_time.split(","))):
+        fname, _, when = item.partition("=")
+        cl_times[fname.strip().lower()] = when.strip().strip("'\"")
     for d in a.drive:
         letter, _, root = d.partition("=")
         if len(letter) != 2 or letter[1] != ":" or not root:
@@ -357,10 +455,12 @@ def main():
     out = os.path.abspath(a.outdir)
     os.makedirs(out, exist_ok=True)
     cpp, link, sources = parse_dsp(a.dsp, a.config)
-    cpp = [f for f in cpp if not IDE_ONLY.match(f) and f.lower() != "/c"]
+    cpp = [f for f in cpp if not ide_only(f, a.browse_info) and f.lower() != "/c"]
     cpp = apply(cpp, split_flags(a.cpp_add), split_flags(a.cpp_sub))
     if a.no_pch:
         cpp = [f for f in cpp if not PCH.match(f)]
+    if a.browse_info:  # the .sbr files go to OUTDIR, as the IDE's /FR"Debug/"
+        cpp = [f"{f[:3]}{winpath(out)}\\" if BROWSE.match(f) else f for f in cpp]
 
     # Keep one wineserver alive across the many CL invocations; starting it for
     # every source file dominates build time otherwise.
@@ -380,7 +480,7 @@ def main():
         if src["exclude"] or os.path.basename(src["path"].replace("\\", "/")).lower() in excluded:
             log.write(f"# excluded: {src['path']}\n")
             continue
-        flags = [f for f in apply(cpp, src["add"], src["sub"]) if not IDE_ONLY.match(f)]
+        flags = [f for f in apply(cpp, src["add"], src["sub"]) if not ide_only(f, a.browse_info)]
         if a.no_pch:
             flags = [f for f in flags if not PCH.match(f)]
         src_path = find_ci(dspdir, src["path"]) or os.path.join(dspdir, src["path"].replace("\\", "/"))
@@ -433,7 +533,8 @@ def main():
         try:
             run(["CL", "/c"] + maker_flags + [f"/Fp{winpath(pch_file[tool])}",
                  f"/Fo{winpath(os.path.join(out, '_yx_stub.obj'))}",
-                 f"/Fd{winpath(os.path.join(out, TOOLS[tool][1] + '.pdb'))}", stub_rel.replace("/", "\\")],
+                 f"/Fd{winpath(os.path.join(out, TOOLS[tool][1] + '.pdb'))}",
+                 cl_source(dspdir, stub_rel.replace("/", "\\"))],
                 dspdir, log, tool)
         finally:
             os.remove(stub)
@@ -450,7 +551,8 @@ def main():
         need = [found[0], list(found[1])] if found else None
         # what the .pch holds when this file compiles is part of its build
         key = ("" if tool == "vc6" else f"[{tool}] ") + " ".join(flags) + \
-            (f" [pch {' '.join(need[1])}]" if pkey and need else "") + (" [own pch]" if src.get("own_pch") else "")
+            (f" [pch {' '.join(need[1])}]" if pkey and need else "") + (" [own pch]" if src.get("own_pch") else "") + \
+            (" [full source path]" if FULL_SOURCE_PATHS else "")
         deps = dependencies(src_path, incdirs, dep_cache)
         newest = max(os.path.getmtime(d) for d in deps)
         if os.path.exists(obj) and stamps.get(obj_name) == key and os.path.getmtime(obj) >= newest:
@@ -467,8 +569,18 @@ def main():
             if os.path.exists(src["own_pch"]):
                 os.remove(src["own_pch"])
             pch = [f"/Fp{winpath(src['own_pch'])}"]
+        old_times = obj_times(obj) if a.incremental else None
+        # cl_time only when given: release scripts may wrap run() with the four-argument form
+        when = cl_times.get(os.path.basename(src_path).lower())
         rc, text = run(["CL", "/c"] + flags + pch + [f"/Fo{winpath(obj)}",
-                       f"/Fd{winpath(os.path.join(out, TOOLS[tool][1] + '.pdb'))}", src["path"]], dspdir, log, tool)
+                       f"/Fd{winpath(os.path.join(out, TOOLS[tool][1] + '.pdb'))}", cl_source(dspdir, src["path"])],
+                       dspdir, log, tool, **({"cl_time": when} if when else {}))
+        if a.incremental and rc == 0 and old_times is not None and os.path.exists(obj):
+            new_times = obj_times(obj)
+            if new_times is not None and (new_times[0] <= old_times[0] or new_times[1] <= old_times[1]):
+                fixed = (max(new_times[0], old_times[0] + 1), max(new_times[1], old_times[1] + 1))
+                set_obj_times(obj, *fixed)  # else LINK takes it for the object it already has
+                log.write(f"# {obj_name}: file time, time stamp {new_times} -> {fixed}\n")
         if pkey:
             after = states[tool][i + 1]
             have[tool] = [after[0], list(after[1])] if after else None
@@ -493,9 +605,23 @@ def main():
     pdbs = [f for f in link if re.match(r"^/pdb:", f, re.I) and f.lower() != "/pdb:none"]
     pdb = os.path.splitext(os.path.basename(pdbs[0].split(":", 1)[1].strip('"').replace("\\", "/")))[0] if pdbs else name
     link = [f for f in link if not re.match(r"^/(out|map|pdb|implib):", f, re.I) and f.lower() != "/map"]
+    if a.incremental:
+        link = [f for f in link if not re.match(r"^/incremental(:|$)", f, re.I)] + ["/incremental:yes"]
+        for ext in ([".ilk"] if a.fresh_link else []) + ([".ilk", ".pdb"] if a.new_pdb else []):
+            f = os.path.join(out, (pdb if ext == ".pdb" else name) + ext)
+            if os.path.exists(f):
+                os.remove(f)
     link += [f"/out:{winpath(os.path.join(out, name + '.dll'))}", f"/map:{winpath(os.path.join(out, name + '.map'))}",
              f"/pdb:{winpath(os.path.join(out, pdb + '.pdb'))}", f"/implib:{winpath(os.path.join(out, name + '.lib'))}"]
-    rc, text = run(["LINK"] + link + [winpath(o) for o in objs], dspdir, log, a.linker or a.compiler)
+    link_args = link + [winpath(o) for o in objs]
+    rc, text = run(["LINK"] + link_args, dspdir, log, a.linker or a.compiler)
+    if a.incremental:
+        # the exact argument list (paths may hold spaces), for relinks without compiling
+        json.dump({"tool": a.linker or a.compiler, "cwd": dspdir, "args": link_args},
+                  open(os.path.join(out, "link.json"), "w"), indent=0)
+        why = [l.strip() for l in text.splitlines() if "LNK60" in l or "performing full link" in l]
+        kind = "full link" if why or "Creating library" in text else "incremental relink (or nothing to relink)"
+        print(f"LINK: {kind}" + (f" ({'; '.join(why)})" if why else ""))
     log.close()
     print(f"compiled {compiled} of {len(objs) + len(failed)} sources ({len(failed)} failed); link rc={rc}; "
           f"output {out}/{name}.dll")

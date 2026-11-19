@@ -22,6 +22,16 @@
 #                  <tree>/nativecrt, which loads the MSVCRT.DLL shipped with that
 #                  release instead of Wine's builtin msvcrt (docs/compilers.md);
 #                  wine: run the unpatched VC98/BIN on Wine's builtin msvcrt.
+#   VC6_ROOT       (opt-in, tree vc6 only) a DOS path inside the prefix, such
+#                  as 'C:\Microsoft Visual Studio', under which the caller has
+#                  laid out VC98\BIN, VC98\INCLUDE and VC98\LIB (links to
+#                  vc6/nativecrt, vc6/VC98/INCLUDE, vc6/VC98/LIB). The program
+#                  then runs as VC6_ROOT\VC98\BIN\TOOL.EXE, with INCLUDE and
+#                  LIB under VC6_ROOT, and no path of the host reaches the
+#                  compiler. The front end keeps the full path of every header
+#                  it opens in its memory, and their lengths move the addresses
+#                  that decide the order of the RTTI records (Scientist
+#                  Slaughterhouse's client). Unset: the tree's own paths, Z:\...
 set -eu
 
 : "${VC_TOOLCHAINS:?vc6.sh: set VC_TOOLCHAINS to the toolchain folder (docs/setup.md)}"
@@ -56,4 +66,13 @@ wine) ;;
 *) echo "vc6.sh: VC6_CRT must be native or wine" >&2; exit 2 ;;
 esac
 
+if [ -n "${VC6_ROOT:-}" ]; then
+	[ "$tree" = vc6 ] || { echo "vc6.sh: VC6_ROOT is for the tree vc6 only" >&2; exit 2; }
+	[ "${VC6_CRT:-native}" = native ] || { echo "vc6.sh: VC6_ROOT runs what its VC98\\BIN holds; VC6_CRT=wine does not apply" >&2; exit 2; }
+	case "$VC6_ROOT" in [A-Za-z]:\\*) ;; *) echo "vc6.sh: VC6_ROOT must be a DOS path (C:\\...)" >&2; exit 2 ;; esac
+	root=${VC6_ROOT%\\}
+	export INCLUDE="$root\\VC98\\INCLUDE"
+	export LIB="$root\\VC98\\LIB"
+	exec wine "$root\\VC98\\BIN\\$tool" "$@"
+fi
 exec wine "$bin/$tool" "$@"
