@@ -139,7 +139,7 @@ public:
 	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return "shot"; }
 	const char *GetHitGroupDesc( int iHitGroup ) { return HitGroupIn( iHitGroup ); }
 	BOOL CanBeGrenaded( int fLauncher ) { return fLauncher || CBaseEntity::CanBeGrenaded( fLauncher ); }
-	float GetHoldDistance( void ) { return CBaseEntity::GetHoldDistance() * 0.5; }
+	float TractorBeamRadius( void ) { return CBaseEntity::TractorBeamRadius() * 0.5; }
 
 	void Spawn( void );
 	void Precache( void );
@@ -2306,7 +2306,7 @@ Schedule_t *CHGrunt :: GetSchedule( void )
 			else if ( HasConditions ( bits_COND_CAN_RANGE_ATTACK2 ) && OccupySlot( bits_SLOTS_HGRUNT_GRENADE ) )
 			{
 				// shoot a grenade if you can; throw one only at what wants grenades
-				if ( FBitSet( pev->weapons, HGRUNT_GRENADELAUNCHER) || m_hEnemy->IsGrenadeTarget() )
+				if ( FBitSet( pev->weapons, HGRUNT_GRENADELAUNCHER) || m_hEnemy->AllowsGrenades() )
 					return GetScheduleOfType( SCHED_RANGE_ATTACK2 );
 			}
 // can shoot

@@ -790,7 +790,7 @@ void CBaseEntity :: BeamFollow( short sModelIndex, int iLife, int iWidth, const 
 }
 
 // Half the smallest extent, sic: y is compared at half size.
-float CBaseEntity :: GetHoldDistance( void )
+float CBaseEntity :: TractorBeamRadius( void )
 {
 	if ( !CanBeTractored() )
 		return 0;
