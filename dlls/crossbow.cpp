@@ -108,7 +108,10 @@ void CCrossbowBolt::LaserNet( void )
 	{
 		if ( pOther != this && pOther->pev->frags == 4 && pOther->pev->speed == 0 && pOther->pev->nextthink - gpGlobals->time >= 1 )
 		{
-			float flDist = ( pOther->pev->origin - pev->origin ).Length();
+			Vector vecDist;
+			vecDist = pOther->pev->origin - pev->origin;
+			float flDist = sqrt( DotProduct( vecDist, vecDist ) );
+			float flUnused = vecDist.z;	// sic: never used; with the assignment and DotProduct above it gives retail's term order (z, x, y) in the length
 			if ( flDist < flRange )
 			{
 				TraceResult tr;
