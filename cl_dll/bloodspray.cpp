@@ -48,8 +48,8 @@ bool XBlood( Vector &origin, const Vector &vecDir, int iCount, float flScale, fl
 	{
 		Vector vecVelocity( gEngfuncs.pfnRandomFloat( -0.3, 0.3 ), gEngfuncs.pfnRandomFloat( -0.3, 0.3 ), gEngfuncs.pfnRandomFloat( -0.3, 0.3 ) );
 		float flVel = gEngfuncs.pfnRandomFloat( 0.75, 1.25 ) * flSpeed;
-		Vector vecSpray = vecDir + vecVelocity;
-		vecVelocity = vecSpray.Normalize() * flVel;
+		Vector vecSpray = ( vecDir + vecVelocity ).Normalize();
+		vecVelocity = vecSpray * flVel;
 
 		if ( bDecal )
 		{

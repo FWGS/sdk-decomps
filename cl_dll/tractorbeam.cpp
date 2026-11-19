@@ -4,8 +4,8 @@
 // Purpose: the tractor beam's cone (events/tractorbeam.sc): a sprite-textured
 //          cone of 16 triangles from the beam's source to the entity. The
 //          names CTractorBeam (Create, Delete, Render), TractorBeamCreate,
-//          TractorBeamDelete and Matrix are retail's (their ILT buckets fit);
-//          the rest are ours.
+//          TractorBeamDelete and Matrix with its operator* are retail's
+//          (their ILT buckets fit); the rest are ours.
 //
 
 #include "hud.h"
@@ -80,7 +80,7 @@ class Matrix
 {
 public:
 	Matrix();
-	Vector Transform( const Vector &v );	// name ours
+	Vector operator*( const Vector &v );
 
 	float m[4][4];
 };
@@ -91,7 +91,7 @@ Matrix::Matrix()
 	m[0][1] = m[0][2] = m[0][3] = m[1][0] = m[1][2] = m[1][3] = m[2][0] = m[2][1] = m[2][3] = m[3][0] = m[3][1] = m[3][2] = 0;
 }
 
-Vector Matrix::Transform( const Vector &v )
+Vector Matrix::operator*( const Vector &v )
 {
 	return Vector( v.x * m[0][0] + v.y * m[1][0] + v.z * m[2][0] + m[3][0],
 				   v.x * m[0][1] + v.y * m[1][1] + v.z * m[2][1] + m[3][1],
@@ -128,7 +128,7 @@ void DrawTractorCone( float *origin, float *angles, float flLength, float flRadi
 		vecVerts[i].x = flRadius * g_vecTractorCone[i].x;
 		vecVerts[i].y = flRadius * g_vecTractorCone[i].z;
 		vecVerts[i].z = flLength;
-		vecVerts[i] = mat.Transform( vecVerts[i] );
+		vecVerts[i] = mat * vecVerts[i];
 	}
 
 	VectorCopy( origin, vecVerts[0] );
@@ -136,30 +136,25 @@ void DrawTractorCone( float *origin, float *angles, float flLength, float flRadi
 	gEngfuncs.pTriAPI->Begin( TRI_TRIANGLES );
 	gEngfuncs.pTriAPI->Color4ub( color[0], color[1], color[2], flAlpha );
 
-	const int *pVert = s_iTractorVerts;
-	const int *pTex = s_iTractorTexs;
-
-	while ( pTex < &s_iTractorTexs[48] )
+	i = 0;
+	while ( i < 48 )
 	{
 		gEngfuncs.pTriAPI->Brightness( 1 );
-		gEngfuncs.pTriAPI->TexCoord2f( g_vecTractorTex[*pTex].x, g_vecTractorTex[*pTex].y );
-		gEngfuncs.pTriAPI->Vertex3fv( vecVerts[*pVert] );
-		pTex++;
-		pVert++;
+		gEngfuncs.pTriAPI->TexCoord2f( g_vecTractorTex[ s_iTractorTexs[i] ].x, g_vecTractorTex[ s_iTractorTexs[i] ].y );
+		gEngfuncs.pTriAPI->Vertex3fv( vecVerts[ s_iTractorVerts[i] ] );
+		i++;
 
 		gEngfuncs.pTriAPI->Brightness( gEngfuncs.pfnRandomFloat( 0, 1 ) < 0.8 );
 		gEngfuncs.pTriAPI->Color4ub( color[0], color[1], color[2], gEngfuncs.pfnRandomFloat( 0, flAlpha ) );
-		gEngfuncs.pTriAPI->TexCoord2f( g_vecTractorTex[*pTex].x, g_vecTractorTex[*pTex].y );
-		gEngfuncs.pTriAPI->Vertex3fv( vecVerts[*pVert] );
-		pTex++;
-		pVert++;
+		gEngfuncs.pTriAPI->TexCoord2f( g_vecTractorTex[ s_iTractorTexs[i] ].x, g_vecTractorTex[ s_iTractorTexs[i] ].y );
+		gEngfuncs.pTriAPI->Vertex3fv( vecVerts[ s_iTractorVerts[i] ] );
+		i++;
 
 		gEngfuncs.pTriAPI->Brightness( gEngfuncs.pfnRandomFloat( 0, 1 ) < 0.8 );
 		gEngfuncs.pTriAPI->Color4ub( color[0], color[1], color[2], gEngfuncs.pfnRandomFloat( 0, flAlpha ) );
-		gEngfuncs.pTriAPI->TexCoord2f( g_vecTractorTex[*pTex].x, g_vecTractorTex[*pTex].y );
-		gEngfuncs.pTriAPI->Vertex3fv( vecVerts[*pVert] );
-		pTex++;
-		pVert++;
+		gEngfuncs.pTriAPI->TexCoord2f( g_vecTractorTex[ s_iTractorTexs[i] ].x, g_vecTractorTex[ s_iTractorTexs[i] ].y );
+		gEngfuncs.pTriAPI->Vertex3fv( vecVerts[ s_iTractorVerts[i] ] );
+		i++;
 	}
 
 	gEngfuncs.pTriAPI->End();
@@ -221,13 +216,14 @@ void CTractorBeam::Render( void )
 		{
 			cl_entity_t *pOwner = gEngfuncs.GetEntityByIndex( pEnt->curstate.owner );
 			Vector vecEnd( origin );
-			VectorCopy( pOwner->attachment[0], origin );
+			memcpy( origin, pOwner->attachment[0], sizeof( origin ) );
 
-			Vector vecDir = vecEnd - Vector( origin );
+			Vector vecDir;
+			vecDir = vecEnd - Vector( origin );
 			flLength = vecDir.Length();
 
 			VectorAngles( vecDir.Normalize(), angles );
-			angles[2] = pEnt->angles.z;
+			angles[2] = pEnt->angles[2];
 		}
 
 		angles[0] = -angles[0];

@@ -67,7 +67,7 @@ public:
 	BOOL CanBeRepulsed( bool fForce ) { if ( fForce && pev->movetype ) return TRUE; return FALSE; }
 	BOOL CanBeGrenaded( int fLauncher ) { return fLauncher; }
 	BOOL CanBeTractored( void ) { return TRUE; }
-	float GetHoldDistance( void ) { if ( CanBeTractored() ) return 64; return 0; }
+	float TractorBeamRadius( void ) { if ( CanBeTractored() ) return 64; return 0; }
 	const char *GetHudName( void ) { return "Apache"; }
 	const char *GetKillDesc( void ) { return pev->health <= 0 ? "" : "an assault helicopter"; }
 	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return pev->health <= 0 ? "was blown up by a crashing assault helicopter" : "shot"; }

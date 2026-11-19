@@ -341,7 +341,7 @@ public:
 	virtual int		GetBattlePower( void ) { return 0; }				// target ID "battle power"
 	virtual int		GetOnState( void ) { return IsAlive(); }
 	virtual void	CheckTimeBasedDamage( void );
-	virtual void	Resurrect( CBaseEntity *pActivator );	// name ours
+	virtual void	Resurrect( CBaseMonster *pActivator );
 	virtual float	MovementSpeed( void );
 	void EXPORT		ResurrectThink( void );
 	bool			ReadyToResurrect( CBaseEntity *pActivator );	// name ours

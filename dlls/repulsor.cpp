@@ -427,7 +427,7 @@ void CRepulsor::WeaponSpecial( void )
 			else if ( pev->frags > 1440 )
 				pev->frags = 1440;
 
-			m_pTractorBeam->pev->fuser1 = m_hTarget->GetHoldDistance();
+			m_pTractorBeam->pev->fuser1 = m_hTarget->TractorBeamRadius();
 			if ( m_pTractorBeam->pev->fuser1 < 4 )
 				m_pTractorBeam->pev->fuser1 = 4;
 

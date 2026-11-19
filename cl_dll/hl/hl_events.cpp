@@ -47,7 +47,7 @@ void EV_SoftFire( struct event_args_s *args );
 void EV_FlamerFire( struct event_args_s *args );
 void EV_FlamerStop( struct event_args_s *args );
 void EV_BloodSpray( struct event_args_s *args );
-void EV_Electric( struct event_args_s *args );
+void EV_ElectricField( struct event_args_s *args );
 void EV_Rain( struct event_args_s *args );
 void EV_BlastSphere( struct event_args_s *args );
 void EV_TractorBeam( struct event_args_s *args );
@@ -99,7 +99,7 @@ void Game_HookEvents( void )
 	gEngfuncs.pfnHookEvent( "events/flamefire.sc",				EV_FlamerFire );
 	gEngfuncs.pfnHookEvent( "events/flamestop.sc",				EV_FlamerStop );
 	gEngfuncs.pfnHookEvent( "events/bloodspray.sc",				EV_BloodSpray );
-	gEngfuncs.pfnHookEvent( "events/electric.sc",				EV_Electric );
+	gEngfuncs.pfnHookEvent( "events/electric.sc",				EV_ElectricField );
 	gEngfuncs.pfnHookEvent( "events/rain.sc",					EV_Rain );
 	gEngfuncs.pfnHookEvent( "events/blastsphere.sc",			EV_BlastSphere );
 	gEngfuncs.pfnHookEvent( "events/tractorbeam.sc",			EV_TractorBeam );

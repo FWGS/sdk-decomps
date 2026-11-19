@@ -24,7 +24,7 @@ float g_flGravity;	// sv_gravity, from HUD_TempEntUpdate
 
 Vector g_vecParticleZero( 0, 0, 0 );
 
-CParticleSysManager g_ParticleSystems;
+CParticleStruct g_ParticleSystems;
 
 CParticleSys::CParticleSys()
 {
@@ -165,7 +165,7 @@ void CParticleSys::Think( float flFrametime, float flTime )
 	if ( m_flDieTime != 0 && m_flDieTime <= flTime )
 	{
 		if ( !bAlive )
-			g_ParticleSystems.Remove( this );
+			g_ParticleSystems.Delete( this );
 		return;
 	}
 
@@ -289,7 +289,7 @@ Vector CParticleSys::GetVelocity( const Vector &vecDir )
 	return vecForward * m_flSpeed;
 }
 
-void CParticleSysManager::Remove( CParticleSys *pSystem )
+void CParticleStruct::Delete( CParticleSys *pSystem )
 {
 	if ( !pSystem )
 		return;
@@ -309,23 +309,23 @@ void CParticleSysManager::Remove( CParticleSys *pSystem )
 	delete pSystem;
 }
 
-CParticleSysManager::CParticleSysManager()
+CParticleStruct::CParticleStruct()
 {
 	memset( this, 0, sizeof( *this ) );
 }
 
-CParticleSysManager::~CParticleSysManager()
+CParticleStruct::~CParticleStruct()
 {
-	Clear();
+	Reset();
 }
 
-void CParticleSysManager::Clear( void )
+void CParticleStruct::Reset( void )
 {
 	delete m_pFirst;
 	m_pFirst = m_pLast = NULL;
 }
 
-CParticleSys *CParticleSysManager::Create( int iEntity )
+CParticleSys *CParticleStruct::Create( int iEntity )
 {
 	CParticleSys *pSystem = new CParticleSys;
 
@@ -349,13 +349,13 @@ CParticleSys *CParticleSysManager::Create( int iEntity )
 	return pSystem;
 }
 
-void CParticleSysManager::Update( float flFrametime, float flTime )
+void CParticleStruct::Think( float flFrametime, float flTime )
 {
 	if ( m_pFirst )
 		m_pFirst->Think( flFrametime, flTime );
 }
 
-void CParticleSysManager::Draw( void )
+void CParticleStruct::Draw( void )
 {
 	if ( !m_pFirst )
 		return;
@@ -371,7 +371,7 @@ void CParticleSysManager::Draw( void )
 //=========================================================
 // The owner stopped firing: its systems spawn no more
 //=========================================================
-void CParticleSysManager::Stop( int iEntity )
+void CParticleStruct::Stop( int iEntity )
 {
 	if ( !m_pFirst || iEntity < 0 )
 		return;
@@ -390,10 +390,10 @@ void RenderParticles( void )
 
 void ThinkParticles( float flFrametime, float flTime )
 {
-	g_ParticleSystems.Update( flFrametime, flTime );
+	g_ParticleSystems.Think( flFrametime, flTime );
 }
 
 void ParticleVidInit( void )
 {
-	g_ParticleSystems.Clear();
+	g_ParticleSystems.Reset();
 }
