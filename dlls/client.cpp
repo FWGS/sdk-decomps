@@ -373,6 +373,7 @@ called each time a player uses a "cmd" command
 ============
 */
 extern float g_flWeaponCheat;
+extern int gmsgPlayMP3;
 
 // Use CMD_ARGV,  CMD_ARGV, and CMD_ARGC to get pointers the character string command.
 void ClientCommand( edict_t *pEntity )
@@ -448,6 +449,12 @@ void ClientCommand( edict_t *pEntity )
 	else if ( FStrEq(pcmd, "fullupdate" ) )
 	{
 		GetClassPtr((CBasePlayer *)pev)->ForceClientDllUpdate(); 
+	}
+	else if ( FStrEq(pcmd, "playmp3" ) )
+	{
+		MESSAGE_BEGIN( MSG_ONE, gmsgPlayMP3, NULL, ENT(pev) );
+			WRITE_STRING( (char *)CMD_ARGV(1) );
+		MESSAGE_END();
 	}
 	else if ( FStrEq(pcmd, "give" ) )
 	{
