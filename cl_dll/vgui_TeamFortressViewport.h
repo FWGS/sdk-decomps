@@ -493,8 +493,6 @@ public:
 // handlers in vgui_TeamFortressViewport.obj where retail has them
 inline void sic_il_vgui_TeamFortressViewport( int *p )
 {
-	p[0] = 0;
-	p[1] = 0;
 }
 
 class CMenuHandler_PopupSubMenuInput : public InputSignal
