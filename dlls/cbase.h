@@ -159,7 +159,7 @@ public:
 	virtual BOOL	CanBeRepulsed( bool fForce ) { return FALSE; }
 	virtual BOOL	CanBeTeleported( void ) { return FALSE; }	// by the displacer
 	virtual BOOL	CanBeTractored( void ) { return CanBeRepulsed( false ); }	// by the repulsor's tractor beam
-	virtual float	GetHoldDistance( void );				// name ours
+	virtual float	TractorBeamRadius( void );				// name ours
 	virtual BOOL	CanBeGrenaded( int fLauncher ) { return pev->movetype <= MOVETYPE_STEP || pev->waterlevel > 0; }
 	virtual BOOL	IsGrenadeTarget( void ) { return FALSE; }	// name ours
 	virtual void	BuildFinished( CBaseEntity *pBuilder ) {}	// name ours

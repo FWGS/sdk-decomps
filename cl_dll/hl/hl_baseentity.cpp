@@ -55,7 +55,7 @@ int CBaseEntity::ShouldToggle( USE_TYPE useType, BOOL currentState ) { return 0;
 int	CBaseEntity :: DamageDecal( int bitsDamageType ) { return -1; }
 CBaseEntity * CBaseEntity::Create( char *szName, const Vector &vecOrigin, const Vector &vecAngles, edict_t *pentOwner ) { return NULL; }
 void CBaseEntity::SUB_Remove( void ) { }
-float CBaseEntity::GetHoldDistance( void ) { return 0; }
+float CBaseEntity::TractorBeamRadius( void ) { return 0; }
 float CBaseEntity::MovementSpeed( void ) { return 0; }
 
 // CBaseDelay Stubs
