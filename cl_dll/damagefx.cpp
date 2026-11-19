@@ -212,7 +212,7 @@ void CDamageFX::Start( int iEntity, int iBurn, int iShock )
 	pFX->m_iShock = iShock;
 }
 
-void CL_DamageTick( float flTime, float flFrametime )	// name ours
+void CL_HurtEffectUpdate( float flTime, float flFrametime )	// name ours
 {
 	g_DamageFX.Think( flTime, flFrametime );
 }
