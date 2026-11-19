@@ -133,6 +133,26 @@ public:
 //
 // Base Entity.  All entity types derive from this
 //
+// sic: an unused inline function, a stand-in for text retail's headers had and
+// ours lack between vector.h's operators and CBaseEntity's inline virtuals:
+// its intermediate code (10 or 11 statements fit) puts the header inline
+// functions where retail emits them in aflock.obj, bigmomma.obj, buttons.obj
+// and func_break.obj
+inline void sic_il_cbase( int *p )
+{
+	p[0] = 0;
+	p[1] = 0;
+	p[2] = 0;
+	p[3] = 0;
+	p[4] = 0;
+	p[5] = 0;
+	p[6] = 0;
+	p[7] = 0;
+	p[8] = 0;
+	p[9] = 0;
+	p[10] = 0;
+}
+
 class CBaseEntity 
 {
 public:

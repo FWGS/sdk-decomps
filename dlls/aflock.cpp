@@ -657,32 +657,6 @@ void CFlockingFlyer :: FlockLeaderThink( void )
 	return;
 }
 
-// sic: an unused inline function, a stand-in for text retail's aflock.cpp had
-// here: its intermediate code puts CBaseEntity's inline virtuals between the
-// squad functions at the end of aflock.obj where retail has them
-inline void sic_il_aflock( int *p )
-{
-	p[0] = 0;
-	p[1] = 0;
-	p[2] = 0;
-	p[3] = 0;
-	p[4] = 0;
-	p[5] = 0;
-	p[6] = 0;
-	p[7] = 0;
-	p[8] = 0;
-	p[9] = 0;
-	p[10] = 0;
-	p[11] = 0;
-	p[12] = 0;
-	p[13] = 0;
-	p[14] = 0;
-	p[15] = 0;
-	p[16] = 0;
-	p[17] = 0;
-	p[18] = 0;
-	p[19] = 0;
-}
 
 //=========================================================
 // follower boids execute this code when flocking
