@@ -2055,12 +2055,14 @@ CBaseEntity *CGibShooter :: CreateGib ( Vector vecPos, Vector vecVel )
 	pGib->pev->origin = vecPos;
 	pGib->pev->velocity = vecVel;
 
+#ifndef SIC1
 	// sic: this gib is spawned again as agibs.mdl just below
 	if (m_iBloodColor == BLOOD_COLOR_YELLOW)
 	{
 		pGib->Spawn( "models/agibs2.mdl" );
 		pGib->m_bloodColor = BLOOD_COLOR_YELLOW;
 	}
+#endif
 
 	if (m_iBloodColor == BLOOD_COLOR_YELLOW)
 	{
@@ -4649,6 +4651,7 @@ void CParticle::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE use
 }
 
 
+#ifndef SIC1
 //=========================================================
 // explo_debris - a burning piece of debris thrown by
 // env_explosion, trailing smoke (class name ours)
@@ -4780,3 +4783,4 @@ void CExplodeBall::Touch( CBaseEntity *pOther )
 	if ( (pev->velocity.x*pev->velocity.x+pev->velocity.y*pev->velocity.y) < 40.0 )
 		pev->speed = 20;
 }
+#endif

@@ -160,9 +160,15 @@ void CHudHealth::GetPainColor( int &r, int &g, int &b )
 	}
 	else
 	{
+#ifdef SIC1
+		r = 170;
+		g = 209;
+		b = 116;
+#else
 		r = 255;
 		g = 6;
 		b = 6;
+#endif
 	}
 #endif 
 }

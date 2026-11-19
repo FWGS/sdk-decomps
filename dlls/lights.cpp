@@ -415,7 +415,11 @@ void CLightDynamic::Spawn( void )
 {
 	Precache( );
 
+#ifdef SIC1
+	SET_MODEL(ENT(pev), "sprites/null.spr");
+#else
 	SET_MODEL(ENT(pev), "dlight/light_glow.spr");
+#endif
 	pev->solid			= SOLID_NOT;
 	pev->movetype		= MOVETYPE_NONE;
 
@@ -428,7 +432,11 @@ void CLightDynamic::Spawn( void )
 
 void CLightDynamic :: Precache( void )
 {
+#ifdef SIC1
+	PRECACHE_MODEL("sprites/null.spr");
+#else
 	PRECACHE_MODEL("dlight/light_glow.spr");
+#endif
 }
 
 void CLightDynamic::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )

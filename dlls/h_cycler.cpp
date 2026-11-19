@@ -417,7 +417,11 @@ void CWreckage::Spawn( void )
 	pev->effects		= 0;
 
 	pev->frame			= 0;
+#ifdef SIC1
+	SetNextThink( 0 );
+#else
 	SetNextThink( 0.1 );
+#endif
 
 	if (pev->model)
 	{
@@ -459,6 +463,16 @@ void CWreckage::Think( void )
 	VecSrc.y = RANDOM_FLOAT( pev->absmin.y, pev->absmax.y );
 	VecSrc.z = RANDOM_FLOAT( pev->absmin.z, pev->absmax.z );
 
+#ifdef SIC1
+	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, VecSrc );
+		WRITE_BYTE( TE_SMOKE );
+		WRITE_COORD( VecSrc.x );
+		WRITE_COORD( VecSrc.y );
+		WRITE_COORD( VecSrc.z );
+		WRITE_SHORT( g_sModelIndexSmoke );
+		WRITE_BYTE( RANDOM_LONG(0,5) + 5 ); // scale * 10
+		WRITE_BYTE( RANDOM_LONG(0, 12) + 22  ); // framerate
+#else
 	// sic: VecSrc is not used
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_SPRITE );
@@ -468,10 +482,12 @@ void CWreckage::Think( void )
 		WRITE_SHORT( g_sModelIndexGreySmoke );
 		WRITE_BYTE( RANDOM_LONG(7,10) + 5 ); // scale * 10
 		WRITE_BYTE( 255 ); // brightness
+#endif
 	MESSAGE_END();
 }
 
 
+#ifndef SIC1
 class CBaloon : public CBaseMonster
 {
 	int		Save( CSave &save );
@@ -554,3 +570,4 @@ void CBaloon::Think( void )
 		WRITE_BYTE( 200 ); // brightness
 	MESSAGE_END();
 }
+#endif

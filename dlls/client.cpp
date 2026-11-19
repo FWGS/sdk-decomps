@@ -771,10 +771,12 @@ void ClientPrecache( void )
 	PRECACHE_SOUND("player/pl_tile4.wav");
 	PRECACHE_SOUND("player/pl_tile5.wav");
 
+#ifndef SIC1
 	PRECACHE_SOUND("player/pl_grave1.wav");
 	PRECACHE_SOUND("player/pl_grave2.wav");
 	PRECACHE_SOUND("player/pl_grave3.wav");
 	PRECACHE_SOUND("player/pl_grave4.wav");
+#endif
 
 	PRECACHE_SOUND("player/pl_swim1.wav");		// breathe bubbles
 	PRECACHE_SOUND("player/pl_swim2.wav");

@@ -1532,6 +1532,7 @@ void UTIL_BloodDrips( const Vector &origin, const Vector &direction, int color, 
 		WRITE_BYTE( min( max( 3, amount / 10 ), 16 ) );		// size
 	MESSAGE_END();
 
+#ifndef SIC1
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, origin );
 		WRITE_BYTE( TE_SPRITE );
 		WRITE_COORD( origin.x );
@@ -1541,6 +1542,7 @@ void UTIL_BloodDrips( const Vector &origin, const Vector &direction, int color, 
 		WRITE_BYTE( 2 ); // scale
 		WRITE_BYTE( -200 ); // brightness (sic: sent as 56)
 	MESSAGE_END();
+#endif
 }				
 
 Vector UTIL_RandomBloodVector( void )
@@ -1697,6 +1699,7 @@ void UTIL_Sparks( const Vector &position )
 	MESSAGE_END();
 }
 
+#ifndef SIC1
 // name ours
 void UTIL_ExplosionSprite( const Vector &position )
 {
@@ -1711,6 +1714,7 @@ void UTIL_ExplosionSprite( const Vector &position )
 	MESSAGE_END();
 }
 
+#endif
 
 void UTIL_Ricochet( const Vector &position, float scale )
 {

@@ -17,7 +17,11 @@
 //=========================================================
 
 //LRC
+#ifdef SIC1
+#define GAME_NAME "SurviveInCatacombs"
+#else
 #define GAME_NAME "Survive In Catacombs 2"
+#endif
 
 //#include "weapons.h"
 //#include "items.h"

@@ -40,6 +40,18 @@ LINK_ENTITY_TO_CLASS( spark_shower, CShower );
 void CShower::Spawn( void )
 {
 	pev->velocity = RANDOM_FLOAT( 150, 250 ) * pev->angles;
+#ifdef SIC1
+	pev->velocity.x += RANDOM_FLOAT(-330.f,450.f);
+	pev->velocity.y += RANDOM_FLOAT(-40.f,560.f);
+	if ( pev->velocity.z >= 0 )
+		pev->velocity.z += 250;
+	else
+		pev->velocity.z -= 250;
+	pev->movetype = MOVETYPE_BOUNCEMISSILE;
+	pev->effects |= EF_MUZZLEFLASH | EF_DIMLIGHT;
+	pev->gravity = 0.1;
+	SetNextThink( 0.1 );
+#else
 	pev->velocity.x += RANDOM_FLOAT(-330.f,1050.f);
 	pev->velocity.y += RANDOM_FLOAT(-1050.f,330.f);
 	if ( pev->velocity.z >= 0 )
@@ -50,11 +62,16 @@ void CShower::Spawn( void )
 	pev->effects |= EF_MUZZLEFLASH | EF_DIMLIGHT;
 	pev->gravity = 20.5;
 	SetNextThink( 0 );
+#endif
 	pev->solid = SOLID_NOT;
 	SET_MODEL( edict(), "models/shrapnel.mdl");
 	UTIL_SetSize(pev, g_vecZero, g_vecZero );
 	pev->effects |= EF_DIMLIGHT;
+#ifdef SIC1
+	pev->speed = RANDOM_FLOAT( 1.1, 4.5 );
+#else
 	pev->speed = RANDOM_FLOAT( 5.5, 6 );
+#endif
 
 	pev->angles = g_vecZero;
 	pev->effects |= EF_MUZZLEFLASH | EF_DIMLIGHT;
@@ -63,13 +80,34 @@ void CShower::Spawn( void )
 
 void CShower::Think( void )
 {
+#ifdef SIC1
+	UTIL_Sparks( pev->origin );
+	UTIL_Sparks( pev->origin );
+	UTIL_Sparks( pev->origin );
+
+	pev->speed -= 0.6;
+#else
 	pev->speed -= 0.7;
+#endif
 	if ( pev->speed > 0 )
 		SetNextThink( 0.1 );
 	else
 		UTIL_Remove( this );
 	pev->flags &= ~FL_ONGROUND;
 
+#ifdef SIC1
+	// leave a burning piece of wreckage behind
+	CBaseEntity *pWreck = Create( "cycler_wreckage", pev->origin, pev->angles, NULL );
+	UTIL_SetSize( pWreck->pev, Vector( -3, -3, -16 ), Vector( 3, 3, -16 ) );
+	pWreck->pev->frame = pev->frame = 5;
+	pWreck->pev->sequence = pev->sequence;
+	pWreck->pev->framerate = 0.4;
+	pWreck->pev->dmgtime = gpGlobals->time + 0.4;
+	pev->effects |= EF_DIMLIGHT;
+
+	UTIL_Sparks( pev->origin );
+	UTIL_Sparks( pev->origin );
+#else
 	// smoke trail
 	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
 		WRITE_BYTE( TE_BEAMFOLLOW );
@@ -82,19 +120,29 @@ void CShower::Think( void )
 		WRITE_BYTE( 128 );   // r, g, b
 		WRITE_BYTE( 255 );	// brightness
 	MESSAGE_END();
+#endif
 }
 
 void CShower::Touch( CBaseEntity *pOther )
 {
 	if ( pev->flags & FL_ONGROUND )
+#ifdef SIC1
+		pev->velocity = pev->velocity * 0.1;
+#else
 		pev->velocity = pev->velocity * 0.6;
+#endif
 	else
 		pev->velocity = pev->velocity * 0.6;
 
+#ifdef SIC1
+	if ( (pev->velocity.x*pev->velocity.x+pev->velocity.y*pev->velocity.y) < 10.0 )
+		pev->speed = 0;
+#else
 	if ( (pev->velocity.x*pev->velocity.x+pev->velocity.y*pev->velocity.y) < 40.0 )
 		pev->speed = 20;
 
 	pOther->TakeHealth( 15, DMG_BURN );	// sic: heals what it touches
+#endif
 }
 
 class CEnvExplosion : public CBaseMonster
@@ -148,7 +196,11 @@ void CEnvExplosion::Spawn( void )
 	*/
 
 	float flSpriteScale;
+#ifdef SIC1
+	flSpriteScale = ( m_iMagnitude - 50) * 0.6;
+#else
 	flSpriteScale = ( m_iMagnitude - 50) * 0.8;
+#endif
 	
 	/*
 	if ( flSpriteScale > 50 )
@@ -219,10 +271,15 @@ void CEnvExplosion::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 			WRITE_COORD( pev->origin.z );
 			WRITE_SHORT( g_sModelIndexFireball );
 			WRITE_BYTE( (BYTE)m_spriteScale ); // scale * 10
+#ifdef SIC1
+			WRITE_BYTE( 38  ); // framerate
+#else
 			WRITE_BYTE( 15  ); // framerate
+#endif
 			WRITE_BYTE( TE_EXPLFLAG_NONE );
 		MESSAGE_END();
 
+#ifndef SIC1
 		MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 			WRITE_BYTE( TE_SPRITE );
 			WRITE_COORD( pev->origin.x + 20 );
@@ -232,6 +289,7 @@ void CEnvExplosion::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 			WRITE_BYTE( (BYTE)m_spriteScale ); // scale * 10
 			WRITE_BYTE( 255 ); // brightness
 		MESSAGE_END();
+#endif
 	}
 	else
 	{
@@ -243,7 +301,11 @@ void CEnvExplosion::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 			WRITE_COORD( pev->origin.z );
 			WRITE_SHORT( g_sModelIndexFireball );
 			WRITE_BYTE( 0 ); // no sprite
+#ifdef SIC1
+			WRITE_BYTE( 38  ); // framerate
+#else
 			WRITE_BYTE( 15  ); // framerate
+#endif
 			WRITE_BYTE( TE_EXPLFLAG_NONE );
 		MESSAGE_END();
 	}
@@ -260,12 +322,18 @@ void CEnvExplosion::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 	// draw sparks
 	if ( !( pev->spawnflags & SF_ENVEXPLOSION_NOSPARKS ) )
 	{
+#ifdef SIC1
+		int sparkCount = RANDOM_LONG(1,5);
+#else
 		int sparkCount = RANDOM_LONG(13,16);
+#endif
 
 		for ( int i = 0; i < sparkCount; i++ )
 		{
 			Create( "spark_shower", pev->origin, tr.vecPlaneNormal, NULL );
+#ifndef SIC1
 			Create( "explo_debris", pev->origin, tr.vecPlaneNormal, NULL );
+#endif
 		}
 	}
 }

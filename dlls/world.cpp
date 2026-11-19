@@ -158,6 +158,7 @@ void CDecal :: TriggerDecal ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE
 			WRITE_SHORT( (int)VARS(trace.pHit)->modelindex );
 	MESSAGE_END();
 
+#ifndef SIC1
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY );
 		WRITE_BYTE( TE_SPRITE );
 		WRITE_COORD( pev->origin.x );
@@ -177,6 +178,7 @@ void CDecal :: TriggerDecal ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE
 		WRITE_BYTE( 2 ); // scale
 		WRITE_BYTE( 55 ); // brightness
 	MESSAGE_END();
+#endif
 
 	SetThink(&CDecal :: SUB_Remove );
 	SetNextThink( 0.1 );
