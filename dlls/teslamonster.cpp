@@ -47,7 +47,7 @@ public:
 	int  BloodColor( void ) { return DONT_BLEED; }
 	void GibMonster( void ) {}
 	BOOL CanBeGrenaded( int fLauncher ) { return TRUE; }
-	BOOL IsGrenadeTarget( void ) { return TRUE; }
+	BOOL AllowsGrenades( void ) { return TRUE; }
 	BOOL CanBeRepulsed( bool fForce ) { return FALSE; }
 	BOOL CanBeTeleported( void ) { return FALSE; }
 	const char *GetKillVerb( BOOL fGibbed, int &iHitGroup ) { return fGibbed ? "gibbed" : "electrocuted"; }

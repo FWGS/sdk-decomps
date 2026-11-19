@@ -4,8 +4,8 @@
 // Purpose: the tractor beam's cone (events/tractorbeam.sc): a sprite-textured
 //          cone of 16 triangles from the beam's source to the entity. The
 //          names CTractorBeam (Create, Delete, Render), TractorBeamCreate,
-//          TractorBeamDelete and Matrix are retail's (their ILT buckets fit);
-//          the rest are ours.
+//          TractorBeamDelete and Matrix with its operator* are retail's
+//          (their ILT buckets fit); the rest are ours.
 //
 
 #include "hud.h"
@@ -80,7 +80,7 @@ class Matrix
 {
 public:
 	Matrix();
-	Vector Transform( const Vector &v );	// name ours
+	Vector operator*( const Vector &v );
 
 	float m[4][4];
 };
@@ -91,7 +91,7 @@ Matrix::Matrix()
 	m[0][1] = m[0][2] = m[0][3] = m[1][0] = m[1][2] = m[1][3] = m[2][0] = m[2][1] = m[2][3] = m[3][0] = m[3][1] = m[3][2] = 0;
 }
 
-Vector Matrix::Transform( const Vector &v )
+Vector Matrix::operator*( const Vector &v )
 {
 	return Vector( v.x * m[0][0] + v.y * m[1][0] + v.z * m[2][0] + m[3][0],
 				   v.x * m[0][1] + v.y * m[1][1] + v.z * m[2][1] + m[3][1],
@@ -128,7 +128,7 @@ void DrawTractorCone( float *origin, float *angles, float flLength, float flRadi
 		vecVerts[i].x = flRadius * g_vecTractorCone[i].x;
 		vecVerts[i].y = flRadius * g_vecTractorCone[i].z;
 		vecVerts[i].z = flLength;
-		vecVerts[i] = mat.Transform( vecVerts[i] );
+		vecVerts[i] = mat * vecVerts[i];
 	}
 
 	VectorCopy( origin, vecVerts[0] );

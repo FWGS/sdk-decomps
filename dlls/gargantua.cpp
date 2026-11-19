@@ -225,7 +225,7 @@ public:
 	const char *GetHitGroupDesc( int iHitGroup ) { if ( FlameIsOn() ) return ""; return HitGroupIn( iHitGroup ); }
 	int  HeatSignature( void ) { return 5; }
 	BOOL CanBeTeleported( void ) { return FALSE; }
-	BOOL IsGrenadeTarget( void ) { return TRUE; }
+	BOOL AllowsGrenades( void ) { return TRUE; }
 	int  GetBattlePower( void );
 
 	Schedule_t *GetScheduleOfType( int Type );
