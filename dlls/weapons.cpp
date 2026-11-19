@@ -50,6 +50,7 @@ DLL_GLOBAL	short	g_sModelIndexShock;// the explosions' shock ring (name ours)
 DLL_GLOBAL	short	g_sModelIndexSmokeTrail;// sprites/smoke.spr, for beam trails (name ours)
 DLL_GLOBAL	short	g_sModelIndexExpansion;// sprites/expansion2.spr (name ours)
 DLL_GLOBAL	short	g_sModelIndexBloodCloud;// sprites/bloodcloud.spr (name ours)
+DLL_GLOBAL	short	g_sModelIndexRicho;// sprites/richo2.spr (name ours)
 
 ItemInfo CBasePlayerItem::ItemInfoArray[MAX_WEAPONS];
 AmmoInfo CBasePlayerItem::AmmoInfoArray[MAX_AMMO_SLOTS];

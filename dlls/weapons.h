@@ -387,6 +387,7 @@ extern DLL_GLOBAL	short	g_sModelIndexShock;// the explosions' shock ring (name o
 extern DLL_GLOBAL	short	g_sModelIndexSmokeTrail;// sprites/smoke.spr, for beam trails (name ours)
 extern DLL_GLOBAL	short	g_sModelIndexExpansion;// sprites/expansion2.spr (name ours)
 extern DLL_GLOBAL	short	g_sModelIndexBloodCloud;// sprites/bloodcloud.spr (name ours)
+extern DLL_GLOBAL	short	g_sModelIndexRicho;// sprites/richo2.spr (name ours)
 
 extern void ClearMultiDamage(void);
 extern void ApplyMultiDamage(entvars_t* pevInflictor, entvars_t* pevAttacker );
