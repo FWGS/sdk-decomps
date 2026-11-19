@@ -488,6 +488,15 @@ public:
 	virtual void actionPerformed(Panel* panel);
 };
 
+// sic: an unused inline function, a stand-in for text retail's header had
+// before this class: its intermediate code places the class's empty inline
+// handlers in vgui_TeamFortressViewport.obj where retail has them
+inline void sic_il_vgui_TeamFortressViewport( int *p )
+{
+	p[0] = 0;
+	p[1] = 0;
+}
+
 class CMenuHandler_PopupSubMenuInput : public InputSignal
 {
 private:
