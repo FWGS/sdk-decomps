@@ -82,11 +82,14 @@ void CBeamWeapon::Spawn( void )
 
 	Vector vecTarget = pev->angles;
 
-	UTIL_MakeVectors( Vector( RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ) ) );
+	Vector vecAngles = Vector( RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ), RANDOM_FLOAT( -180, 180 ) );
+	UTIL_MakeVectors( vecAngles );
 	m_point1 = vecTarget + gpGlobals->v_forward * RANDOM_FLOAT( 0, 128 );
 	Vector vecEnd = vecTarget + gpGlobals->v_forward * -RANDOM_FLOAT( 0, 128 );
 	m_point2 = vecEnd - m_point1;
-	m_point2 = m_point2.Normalize() * m_point2.Length() * 0.1;
+	float flLength = m_point2.Length();
+	vecEnd = m_point2.Normalize();
+	m_point2 = vecEnd * flLength * 0.1;
 
 	m_hLinked = CBaseEntity::Instance( pev->owner );
 
