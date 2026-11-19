@@ -175,6 +175,7 @@ int gmsgSetSky = 0;		//LRC
 int gmsgHUDColor = 0;	//LRC
 int gmsgAddShine = 0;   // LRC
 int gmsgParticle = 0; // LRC
+int gmsgPlayMP3 = 0; //Killar
 int gmsgShowGameTitle = 0;
 int gmsgCurWeapon = 0;
 int gmsgHealth = 0;
@@ -262,6 +263,7 @@ void LinkUserMessages( void )
 
 	gmsgStatusText = REG_USER_MSG("StatusText", -1);
 	gmsgStatusValue = REG_USER_MSG("StatusValue", 3); 
+	gmsgPlayMP3 = REG_USER_MSG("PlayMP3", -1);	//Killar
 
 }
 
@@ -2651,8 +2653,8 @@ void CBasePlayer :: UpdatePlayerSound ( void )
 
 	// keep track of virtual muzzle flash
 	m_iWeaponFlash -= 256 * gpGlobals->frametime;
-	if (m_iWeaponFlash < 0)
-		m_iWeaponFlash = 0;
+	if (m_iWeaponFlash < 1)
+		m_iWeaponFlash = 2;
 
 	//UTIL_MakeVectors ( pev->angles );
 	//gpGlobals->v_forward.z = 0;

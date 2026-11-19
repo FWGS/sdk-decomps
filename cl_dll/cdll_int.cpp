@@ -22,6 +22,7 @@
 #include "cl_util.h"
 #include "netadr.h"
 #include "vgui_schememanager.h"
+#include "mp3.h"
 
 extern "C"
 {
@@ -38,6 +39,7 @@ extern "C"
 
 cl_enginefunc_t gEngfuncs;
 CHud gHUD;
+CMP3 gMP3;
 TeamFortressViewport *gViewPort = NULL;
 
 void InitInput (void);

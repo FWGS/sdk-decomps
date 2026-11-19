@@ -15,7 +15,7 @@
 //
 //  hud_msg.cpp
 //
-
+#include "mp3.h" //Killar MP3
 #include "hud.h"
 #include "cl_util.h"
 #include "parsemsg.h"
@@ -240,8 +240,17 @@ int CHud :: MsgFunc_Concuss( const char *pszName, int iSize, void *pbuf )
 	BEGIN_READ( pbuf, iSize );
 	m_iConcussionEffect = READ_BYTE();
 	if (m_iConcussionEffect)
-		this->m_StatusIcons.EnableIcon("dmg_concuss",255,160,0);
+		this->m_StatusIcons.EnableIcon("dmg_concuss",170,209,116);
 	else
 		this->m_StatusIcons.DisableIcon("dmg_concuss");
+	return 1;
+}
+
+int CHud :: MsgFunc_PlayMP3( const char *pszName, int iSize, void *pbuf ) //Killar MP3
+{
+	BEGIN_READ( pbuf, iSize );
+
+	gMP3.PlayMP3( READ_STRING() );
+
 	return 1;
 }

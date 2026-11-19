@@ -154,15 +154,15 @@ void CHudHealth::GetPainColor( int &r, int &g, int &b )
 	r = 255 - g;
 	b = 0;
 #else
-	if (m_iHealth > 25)
+	if (m_iHealth > 100)
 	{
 		UnpackRGB(r,g,b, gHUD.m_iHUDColor);
 	}
 	else
 	{
-		r = 250;
-		g = 0;
-		b = 0;
+		r = 170;
+		g = 209;
+		b = 116;
 	}
 #endif 
 }

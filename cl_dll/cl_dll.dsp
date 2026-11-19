@@ -165,6 +165,10 @@ SOURCE=..\common\interface.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\mp3.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\dlls\mp5.cpp
 # End Source File
 # Begin Source File
