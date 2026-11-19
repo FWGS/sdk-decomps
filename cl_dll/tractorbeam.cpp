@@ -136,30 +136,25 @@ void DrawTractorCone( float *origin, float *angles, float flLength, float flRadi
 	gEngfuncs.pTriAPI->Begin( TRI_TRIANGLES );
 	gEngfuncs.pTriAPI->Color4ub( color[0], color[1], color[2], flAlpha );
 
-	const int *pVert = s_iTractorVerts;
-	const int *pTex = s_iTractorTexs;
-
-	while ( pTex < &s_iTractorTexs[48] )
+	i = 0;
+	while ( i < 48 )
 	{
 		gEngfuncs.pTriAPI->Brightness( 1 );
-		gEngfuncs.pTriAPI->TexCoord2f( g_vecTractorTex[*pTex].x, g_vecTractorTex[*pTex].y );
-		gEngfuncs.pTriAPI->Vertex3fv( vecVerts[*pVert] );
-		pTex++;
-		pVert++;
+		gEngfuncs.pTriAPI->TexCoord2f( g_vecTractorTex[ s_iTractorTexs[i] ].x, g_vecTractorTex[ s_iTractorTexs[i] ].y );
+		gEngfuncs.pTriAPI->Vertex3fv( vecVerts[ s_iTractorVerts[i] ] );
+		i++;
 
 		gEngfuncs.pTriAPI->Brightness( gEngfuncs.pfnRandomFloat( 0, 1 ) < 0.8 );
 		gEngfuncs.pTriAPI->Color4ub( color[0], color[1], color[2], gEngfuncs.pfnRandomFloat( 0, flAlpha ) );
-		gEngfuncs.pTriAPI->TexCoord2f( g_vecTractorTex[*pTex].x, g_vecTractorTex[*pTex].y );
-		gEngfuncs.pTriAPI->Vertex3fv( vecVerts[*pVert] );
-		pTex++;
-		pVert++;
+		gEngfuncs.pTriAPI->TexCoord2f( g_vecTractorTex[ s_iTractorTexs[i] ].x, g_vecTractorTex[ s_iTractorTexs[i] ].y );
+		gEngfuncs.pTriAPI->Vertex3fv( vecVerts[ s_iTractorVerts[i] ] );
+		i++;
 
 		gEngfuncs.pTriAPI->Brightness( gEngfuncs.pfnRandomFloat( 0, 1 ) < 0.8 );
 		gEngfuncs.pTriAPI->Color4ub( color[0], color[1], color[2], gEngfuncs.pfnRandomFloat( 0, flAlpha ) );
-		gEngfuncs.pTriAPI->TexCoord2f( g_vecTractorTex[*pTex].x, g_vecTractorTex[*pTex].y );
-		gEngfuncs.pTriAPI->Vertex3fv( vecVerts[*pVert] );
-		pTex++;
-		pVert++;
+		gEngfuncs.pTriAPI->TexCoord2f( g_vecTractorTex[ s_iTractorTexs[i] ].x, g_vecTractorTex[ s_iTractorTexs[i] ].y );
+		gEngfuncs.pTriAPI->Vertex3fv( vecVerts[ s_iTractorVerts[i] ] );
+		i++;
 	}
 
 	gEngfuncs.pTriAPI->End();
