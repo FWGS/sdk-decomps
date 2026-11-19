@@ -2593,7 +2593,7 @@ public:
 	void	Spawn( void );
 	void	Precache( void );
 	void	Fire( void );
-	void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	void	EXPORT Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	unsigned short m_usFlameFire;	// names ours
 	unsigned short m_usFlameStop;
