@@ -5,6 +5,10 @@
 // $NoKeywords: $
 //=============================================================================
 
+// sic: a stand-in for text retail's file had more: VC6 emits the type information in an order that
+// follows its heap layout, and with this unused macro ServerBrowser's comes between StopHandler's and
+// RefreshHandler's
+#define SERVERBROWSER_SIC ".............."
 #include<VGUI_HeaderPanel.h>
 #include<VGUI_TablePanel.h>
 #include<VGUI_LineBorder.h>
