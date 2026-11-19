@@ -1150,7 +1150,7 @@ void CKamehameha :: KameTouch( CBaseEntity *pOther )
 	STOP_SOUND( ENT( pev ), CHAN_WEAPON, "ambience/rocketrumble1.wav" );
 
 	UTIL_ScreenShakeAll( pev->origin, 255, 0.4, 4.0 );
-	EMIT_SOUND_DYN( ENT( pev ), CHAN_WEAPON, "weapons/mortarhit.wav", 1.0, ATTN_NONE, 0, PITCH_NORM );
+	EMIT_SOUND( ENT( pev ), CHAN_WEAPON, "weapons/mortarhit.wav", 1.0, ATTN_NONE );
 
 	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, pev->origin );
 		WRITE_BYTE( TE_DLIGHT );
@@ -1175,7 +1175,8 @@ void CKamehameha :: KameTouch( CBaseEntity *pOther )
 	if ( pev->weapons && m_hEnemy != NULL )
 	{
 		// what it carries is blown apart
-		UTIL_SetOrigin( m_hEnemy->pev, pev->origin - ( m_hEnemy->Center() - m_hEnemy->pev->origin ) );
+		Vector vecDir = m_hEnemy->Center() - m_hEnemy->pev->origin;
+		UTIL_SetOrigin( m_hEnemy->pev, pev->origin - vecDir );
 		m_hEnemy->TakeDamage( pev, pevOwner, m_hEnemy->pev->health + 1000, DMG_ENERGYBEAM | DMG_ALWAYSGIB );
 	}
 
@@ -1191,7 +1192,7 @@ void CKamehameha :: KameTouch( CBaseEntity *pOther )
 	m_flDelay = 2;
 	pev->owner = ENT( pevOwner );
 
-	PLAYBACK_EVENT_FULL( 0, ENT( pev ), g_iSphereEvent, 0.0, (float *)&pev->origin, (float *)&pev->angles, m_flDelay, 0.3, pev->dmg * 2, pev->dmg * 2.5, 1, 0 );
+	PLAYBACK_EVENT_FULL( 0, ENT( pev ), g_iSphereEvent, 0.0, pev->origin, pev->angles, m_flDelay, 0.3, pev->dmg * 2, pev->dmg * 2.5, 1, 0 );
 	CSoundEnt::InsertSound ( bits_SOUND_DANGER, pev->origin, pev->dmg * 2, 5.0 );
 
 	pev->rendermode = kRenderTransColor;
