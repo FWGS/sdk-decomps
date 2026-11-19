@@ -2652,7 +2652,7 @@ attack:
 
 				// the stronger the enemy, the likelier a charged attack
 				int iPower = m_hEnemy->pev->armorvalue + m_hEnemy->pev->health;
-				if ( !m_pChargeSprite && min( iPower, 100 ) > RANDOM_LONG( 0, 140 ) )
+				if ( !m_pChargeSprite && min( 100, iPower ) > RANDOM_LONG( 0, 140 ) )
 				{
 					m_flChargeTime = gpGlobals->time;
 					m_flChargeScale = 0.5;
@@ -2667,7 +2667,7 @@ attack:
 					{
 						m_pChargeSprite = CSprite::SpriteCreate( "sprites/n_charge.spr", pev->origin, TRUE );
 						m_pChargeSprite->SetAttachment( edict(), 1 );
-						m_pChargeSprite->SetScale( 0.1 );
+						m_pChargeSprite->pev->scale = 0.1;
 						m_pChargeSprite->SetTransparency( kRenderTransAdd, 255, 255, 255, 255, kRenderFxNone );
 						m_pChargeSprite->pev->framerate = 10;
 					}
