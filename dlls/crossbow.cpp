@@ -451,9 +451,9 @@ void CCrossbow::SecondaryAttack()
 		m_pPlayer->pev->fov = m_pPlayer->m_iFOV = 0; // 0 means reset to default fov
 		m_fInZoom = 0;
 	}
-	else if ( m_pPlayer->pev->fov != 20 )
+	else if ( m_pPlayer->pev->fov != 8 )
 	{
-		m_pPlayer->pev->fov = m_pPlayer->m_iFOV = 20;
+		m_pPlayer->pev->fov = m_pPlayer->m_iFOV = 8;
 		m_fInZoom = 1;
 	}
 	
