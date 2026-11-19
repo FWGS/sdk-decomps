@@ -32,6 +32,8 @@
 #define AMMO_SNIPERCLIP_GIVE	5
 #define SNIPERBOX_ROCKETS		5		// rockets a box costs
 
+const float SNIPER_DAMAGE_RATE = 25;	// name ours: the aimed shot's damage per second of aiming
+
 // v_m40a1.mdl's sequences
 enum sniper_e {
 	SNIPER_DRAW = 0,
@@ -375,7 +377,7 @@ void CSniperRifle::WeaponIdle( void )
 		m_pPlayer->SetAnimation( PLAYER_ATTACK1 );
 
 		Vector vecSrc = m_pPlayer->GetGunPosition( );
-		m_pPlayer->FireBullets( 1, vecSrc, vecAiming, g_vecZero, 8192, BULLET_PLAYER_SNIPER, 0, flAimTime * 25 );
+		m_pPlayer->FireBullets( 1, vecSrc, vecAiming, g_vecZero, 8192, BULLET_PLAYER_SNIPER, 0, flAimTime * SNIPER_DAMAGE_RATE );
 
 		EMIT_SOUND( ENT(m_pPlayer->pev), CHAN_WEAPON, "weapons/sniper_fire.wav", 1, ATTN_NORM );
 
