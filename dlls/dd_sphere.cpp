@@ -109,22 +109,21 @@ void CBeamWeapon::WeaponThink( void )
 		pev->nextthink = gpGlobals->time + 0.05;
 
 		UTIL_MakeVectors( m_hLinked->pev->angles );
-		pev->origin = m_hLinked->pev->origin + gpGlobals->v_forward * m_vecRelativePos.x + gpGlobals->v_right * m_vecRelativePos.y + gpGlobals->v_up * -m_vecRelativePos.z;
+		SetStartPos( m_hLinked->pev->origin + gpGlobals->v_forward * m_vecRelativePos.x + gpGlobals->v_right * m_vecRelativePos.y + gpGlobals->v_up * ( -m_vecRelativePos.z ) );
 
 		if ( pev->dmgtime > gpGlobals->time )
 			return;
 
 		pev->dmgtime = gpGlobals->time + 0.1;
 
-		Vector vecDir;
 		TraceResult tr;
 
-		m_point1 = m_point2 + m_point1;
-		vecDir = ( m_point1 - pev->origin ).Normalize();
+		m_point1 = m_point1 + m_point2;
+		Vector vecDir = ( m_point1 - pev->origin ).Normalize();
 		Vector vecEnd = pev->origin + vecDir * 4096;
 
 		UTIL_TraceLine( pev->origin, vecEnd, dont_ignore_monsters, pev->owner, &tr );
-		pev->angles = tr.vecEndPos;
+		SetEndPos( tr.vecEndPos );
 
 		if ( tr.pHit )
 		{
@@ -144,9 +143,7 @@ void CBeamWeapon::WeaponThink( void )
 		}
 	}
 	else
-	{
 		UTIL_Remove( this );
-	}
 }
 
 
