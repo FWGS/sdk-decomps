@@ -393,7 +393,7 @@ void CMiniTurret::Precache()
 
 int CMiniTurret::GetBattlePower( void )
 {
-	return ( pev->max_health * 0.1 ) * ( gSkillData.monDmg12MM * 12.5 );
+	return ( pev->max_health * 0.1 ) * ( gSkillData.monDmg9MM * 12.5 );
 }
 
 void CBaseTurret::Initialize(void)
@@ -1468,7 +1468,7 @@ int CSentry::TakeDamage(entvars_t *pevInflictor, entvars_t *pevAttacker, float f
 
 int CSentry::GetBattlePower( void )
 {
-	return ( pev->max_health * 0.1 ) * ( gSkillData.monDmg12MM * 12.5 );
+	return ( pev->max_health * 0.1 ) * ( gSkillData.monDmgMP5 * 12.5 );
 }
 
 

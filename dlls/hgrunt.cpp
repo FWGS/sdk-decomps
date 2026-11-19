@@ -300,7 +300,7 @@ int CHGrunt :: GetBattlePower( void )
 	if ( FBitSet( pev->weapons, HGRUNT_9MMAR ) )
 		flPower = gSkillData.monDmgMP5 * 6;
 	else
-		flPower = gSkillData.hgruntShotgunPellets * gSkillData.plrDmgBuckshot * 3;
+		flPower = gSkillData.plrDmgBuckshot * gSkillData.hgruntShotgunPellets * 3;
 
 	flPower = flPower * 1.25 + gSkillData.hgruntDmgKick;
 
@@ -876,7 +876,7 @@ void CHGrunt :: Shotgun ( void )
 	if ( FBitSet( pev->weapons, HGRUNT_BLASTGUN ) )
 	{
 		// one slug with all the pellets' damage
-		FireBulletsExplosiveMonster( 1, vecShootOrigin, vecShootDir, VECTOR_CONE_3DEGREES, 2048, gSkillData.hgruntShotgunPellets * gSkillData.plrDmgBuckshot, pev );
+		FireBulletsExplosiveMonster( 1, vecShootOrigin, vecShootDir, VECTOR_CONE_3DEGREES, 2048, gSkillData.plrDmgBuckshot * gSkillData.hgruntShotgunPellets, pev );
 	}
 	else if ( FBitSet( pev->weapons, HGRUNT_MULTIBLAST ) )
 	{
