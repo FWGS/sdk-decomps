@@ -18,6 +18,9 @@
 // this implementation handles the linking of the engine to the DLL
 //
 
+// sic: a stand-in for text retail's file had more: with it (and hud.h's HUD_SIC_DEATHNOTICE) the HUD
+// classes' type information comes out in retail's order
+#define CDLL_INT_SIC "........................................................................................................................................................................................................"
 #include "hud.h"
 #include "cl_util.h"
 #include "netadr.h"
