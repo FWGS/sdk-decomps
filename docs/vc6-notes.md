@@ -1062,6 +1062,13 @@ Consequences:
   `.pch` the next file finds.
 - `/Zi` on or off changes the order too (in They Hunger's client
   `hl_weapons.cpp` it moves the cursor by 400 to 450 bytes).
+- So does browse information (`/Fr`, `/FR`, above), which adds to the IL.
+  In Survive in Catacombs it decides where `CBasePlayer::IsAlive` lands in
+  `client.obj` and where four header inlines land in the client's
+  `hl_weapons.obj`. It changes code inside functions too: the registers and
+  reloads of `CClassMenuPanel`'s constructor, and the order of
+  `FireBulletsPlayer`'s two random-seed calls
+  ([reproducing.md](reproducing.md#browse-information-fr-fr)).
 - **A creating file pins the headers.** In an object whose file creates the
   `.pch`, every header inline's place depends on the IL of all header
   inlines before it. In They Hunger's server, 71 bytes more inline IL at

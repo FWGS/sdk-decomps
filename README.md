@@ -1,15 +1,16 @@
 # Half-Life mods, rebuilt byte for byte
 
-This repository holds C++ source for the game DLLs of seven Half-Life mods,
+This repository holds C++ source for the game DLLs of nine Half-Life mods,
 reconstructed from the shipped binaries. Each tree compiles with the original
-compiler back into the retail files: Visual C++ 6.0 for six mods, and for
+compiler back into the retail files: Visual C++ 6.0 for eight mods, and for
 Counter-Strike, from its first beta in 1999 to version 1.5 in 2002, the five
-compilers it went through. Of the 52 distinct DLLs, 48 rebuild identical to
+compilers it went through. Of the 56 distinct DLLs, 52 rebuild identical to
 the retail ones, byte for byte. That includes the headers, time stamps,
 debug record and padding, so the SHA-256 matches.
 
-Each mod lives on its own branch. `main` holds this summary, the
-documentation and the build tools.
+Each mod lives on its own branch; Survive in Catacombs and its sequel share
+one tree, which builds both. `main` holds this summary, the documentation
+and the build tools.
 
 ## Status
 
@@ -24,7 +25,9 @@ as written. The shared build tools gained options for it that are off by
 default; the other six mods' DLLs, rebuilt the same day with the changed
 tools from fresh clones of their branches and tags, came out as before:
 every identical one byte for byte, the four others with their known
-hashes.
+hashes. Survive in Catacombs 1 and 2 on 2026-11-19 too: all four DLLs
+from a fresh clone of the repository, following
+[their rebuild page](docs/rebuild/survive-in-catacombs.md) as written.
 
 | Mod | Branch | Server DLL | Client DLL | Details |
 |---|---|---|---|---|
@@ -35,10 +38,11 @@ hashes.
 | They Hunger (episodes 1 to 3) | [`they-hunger`](../../tree/they-hunger) | `einar.dll`: **identical** | `client.dll`: **identical** | [docs/they-hunger.md](docs/they-hunger.md) |
 | Counter-Strike, Beta 1.0 to 1.5 (27 tags) | [`counter-strike`](../../tree/counter-strike) | `mp.dll`: **all 23 identical** | `client.dll`: **15 of 17 identical**; 1.4 and 1.5 not | [docs/counter-strike.md](docs/counter-strike.md) |
 | Scientist Slaughterhouse 1.0 | [`scientist-slaughterhouse`](../../tree/scientist-slaughterhouse) | `hl.dll`: **identical** | `client.dll`: **identical** | [docs/scientist-slaughterhouse.md](docs/scientist-slaughterhouse.md) |
+| Survive in Catacombs 1 and 2 (one tree) | [`sic`](../../tree/sic) | `sic.dll`, `bloodbath.dll`: **both identical** | `client.dll`: **both identical** | [docs/survive-in-catacombs.md](docs/survive-in-catacombs.md) |
 
-SHA-256 of the retail files of the first five mods and Scientist
-Slaughterhouse, which the identical builds reproduce (Counter-Strike's 40
-are in [its page](docs/counter-strike.md#status)):
+SHA-256 of the retail files of the first five mods, Scientist
+Slaughterhouse and Survive in Catacombs, which the identical builds
+reproduce (Counter-Strike's 40 are in [its page](docs/counter-strike.md#status)):
 
 | File | SHA-256 |
 |---|---|
@@ -52,6 +56,10 @@ are in [its page](docs/counter-strike.md#status)):
 | They Hunger `client.dll` | `09e8de1a62f4f1fae32b040678fc5b97fe5ba8f20ec44db14b29aedcf37db105` |
 | Scientist Slaughterhouse `hl.dll` | `8e4c150e8d8d57f13bbf7f6b5a5e4ebc37258838ccb7708c760bb7b3c139d4ae` |
 | Scientist Slaughterhouse `client.dll` | `1e4f2d5c2a6d92ac84f8bdf1fb46abbffabcb78107909aa44c2a75f84baf1365` |
+| Survive in Catacombs `sic.dll` | `eab217809f7c656acb7678b2035a4dc7f82a08db276febaceef72dfa55509359` |
+| Survive in Catacombs `client.dll` | `0cb9fd2beed7c6ed327545a280826ecaaa5269ae3539c9a0602522cca3e6527a` |
+| Survive in Catacombs 2 `bloodbath.dll` | `673f7e4ef7c75fdf551c87470f6e4f8a5a66f16fe98bfb44ca6436d14c88ba57` |
+| Survive in Catacombs 2 `client.dll` | `76cc187b538b7fa0ae6bea5842e1484369fb64c6d7184851fb77de96cedbe21a` |
 
 What the four remaining DLLs still lack:
 
@@ -90,7 +98,10 @@ explains what that took. Scientist Slaughterhouse's client was linked
 incrementally, so its layout records a history of links, and the order of
 its RTTI records follows the lengths of the compiler's own paths;
 [docs/scientist-slaughterhouse.md](docs/scientist-slaughterhouse.md)
-explains those.
+explains those. Survive in Catacombs' builds need the projects' browse
+information, which changes code, and one tree builds both games;
+[docs/survive-in-catacombs.md](docs/survive-in-catacombs.md) explains
+those.
 
 Where the binary doesn't say what the source was, the trees contain a marked
 stand-in. Examples: a function nothing calls, an empty object file, a
@@ -125,6 +136,14 @@ git worktree add ../cs-1.0 cstrike-1.0
 VC_TOOLCHAINS=/path/to/toolchains tools/release/counter-strike.sh cstrike-1.0 ../cs-1.0 ../cs-1.0-build
 ```
 
+Survive in Catacombs' script takes the game, `1` or `2`, first: one
+checkout of its branch builds both games.
+
+```sh
+git worktree add ../sic sic
+VC_TOOLCHAINS=/path/to/toolchains tools/release/sic.sh 2 ../sic ../sic2-build
+```
+
 ## Documentation
 
 - [docs/rebuild/](docs/rebuild/README.md): step by step, with exact commands, how to rebuild each mod's DLLs and check them.
@@ -132,7 +151,7 @@ VC_TOOLCHAINS=/path/to/toolchains tools/release/counter-strike.sh cstrike-1.0 ..
 - [docs/setup.md](docs/setup.md): setting up the compilers under Wine.
 - [docs/reproducing.md](docs/reproducing.md): what a DLL holds besides its code, and how each part is rebuilt.
 - [docs/vc6-notes.md](docs/vc6-notes.md): what we learned about Visual C++ 6.0's compiler and linker while matching.
-- Per mod: [Point of View](docs/point-of-view.md), [T2DEF](docs/t2def.md), [Wanted!](docs/wanted.md), [Gunman Chronicles](docs/gunman-chronicles.md), [They Hunger](docs/they-hunger.md), [Counter-Strike](docs/counter-strike.md), [Scientist Slaughterhouse](docs/scientist-slaughterhouse.md).
+- Per mod: [Point of View](docs/point-of-view.md), [T2DEF](docs/t2def.md), [Wanted!](docs/wanted.md), [Gunman Chronicles](docs/gunman-chronicles.md), [They Hunger](docs/they-hunger.md), [Counter-Strike](docs/counter-strike.md), [Scientist Slaughterhouse](docs/scientist-slaughterhouse.md), [Survive in Catacombs 1 and 2](docs/survive-in-catacombs.md).
 
 ## Thanks
 

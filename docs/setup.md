@@ -23,6 +23,9 @@ in [rebuild/](rebuild/README.md).
 - Python 3. Tested: 3.14. The tools use only the standard library.
 - 7-Zip (`7z`), to unpack the downloads and read the disc images, and
   `cabextract` for the two Service Pack 5 downloads (tested: 1.11).
+- libarchive's `bsdtar`, only to unpack Survive in Catacombs' retail files:
+  they come in RAR archives, which not every build of 7-Zip can unpack
+  (tested: 3.8.10).
 - GNU coreutils (`cp`, `sha256sum`, `timeout`), `cmp`, `git`, and a POSIX
   shell for the scripts. Counter-Strike's script takes earlier releases'
   sources from the repository by tag, so it needs `git` and a clone with the
@@ -37,7 +40,8 @@ discs are on the Internet Archive; where each mod's retail files come from
 is in that mod's page ([Point of View](point-of-view.md), [T2DEF](t2def.md),
 [Wanted!](wanted.md), [Gunman Chronicles](gunman-chronicles.md),
 [They Hunger](they-hunger.md), [Scientist
-Slaughterhouse](scientist-slaughterhouse.md)).
+Slaughterhouse](scientist-slaughterhouse.md),
+[Survive in Catacombs](survive-in-catacombs.md)).
 
 ## The toolchain folder
 
@@ -63,7 +67,7 @@ $VC_TOOLCHAINS/
 
 | Tree | Builds |
 |---|---|
-| `vc6` | Point of View, Wanted!, Gunman Chronicles, They Hunger and Scientist Slaughterhouse, server and client; Counter-Strike Beta 5.0 (leak) to 7.1 |
+| `vc6` | Point of View, Wanted!, Gunman Chronicles, They Hunger, Scientist Slaughterhouse and Survive in Catacombs 1 and 2, server and client; Counter-Strike Beta 5.0 (leak) to 7.1 |
 | `vc6std` | the T2DEF server |
 | `vc6sp4std` | the T2DEF client |
 | `vc6sp4` | Counter-Strike 1.0, 1.0b and 1.1 |
@@ -73,7 +77,8 @@ $VC_TOOLCHAINS/
 
 The first five mods need only the first three trees: steps 2.1 to 2.3 and
 the matching lines of step 3. Counter-Strike needs `vc6`, `vc6sp4` and the
-three trees of steps 2.4 to 2.6. Scientist Slaughterhouse needs only `vc6`.
+three trees of steps 2.4 to 2.6. Scientist Slaughterhouse and Survive in
+Catacombs need only `vc6`.
 
 The wrapper `tools/vc5.sh` runs Visual C++ 5.0 from `vc5/` and
 `tools/vc4.sh` Visual C++ 4.x from `vc4/`, in the same folder. Only
@@ -350,6 +355,8 @@ VC6's LINK's does ([compilers.md](compilers.md#counter-strike)).
 instead. `tools/vc5.sh` has the opposite default: it runs `nativecrt` only
 with `VC5_CRT=native`; the release script asks for that itself. The T2DEF server needs that: its import table has the order
 Wine's builtin gives, not the 1998 runtime's ([compilers.md](compilers.md)).
+So do Survive in Catacombs 2's two DLLs; `sic.sh` sets `VC6_CRT=wine` for
+them.
 
 Now check the trees. `tools/check_toolchains.sh` compares a digest of all
 files of each tree with the trees that built the retail-identical DLLs:
@@ -473,6 +480,10 @@ Gunman Chronicles client are not identical yet, so their scripts end with
 `differs from retail` and exit code 1 (the mods' pages give the hashes they
 produce). They Hunger's server takes longer than the others, about five
 minutes here: its script replays 102 more compiles and 73 links.
+
+Survive in Catacombs' script takes the game first, `1` or `2`: one
+checkout of branch `sic` builds both games (`sic.sh 1 ../sic ../build-sic1`,
+`sic.sh 2 ../sic ../build-sic2`).
 
 Counter-Strike's script takes the release's tag first, because some
 releases continue an earlier release's build and the script takes that
@@ -611,10 +622,27 @@ DLL that is identical to retail came out identical (SHA-256 and `cmp`),
 the Wanted! server, the Gunman Chronicles client and the Counter-Strike 1.4
 and 1.5 clients with their known hashes.
 
+Survive in Catacombs 1 and 2 were added on 2026-11-19, with Wine 11.0,
+libfaketime 0.9.12, Python 3.14.10 and libarchive's `bsdtar` 3.8.10. Their
+scripts use `build_dsp.py --browse-info`, one of the options that came with
+Scientist Slaughterhouse; no shared tool changed for them. The shared page
+of [rebuild/](rebuild/README.md), with the tree `vc6` only, was followed as
+written into a new, empty toolchain folder and a new Wine prefix (the VC6
+download already on disk, so its `curl` line was skipped), then the Survive
+in Catacombs page from the fresh clone that page makes: all four DLLs came
+out identical (SHA-256 and `cmp`), from the branch's head and from the two
+historical commits, in one and a half to two and a half minutes per game.
+Done three times: once with the page's `curl` lines run as written (both
+archives downloaded, `sha256sum -c` printed `OK` for each), and twice with
+the two archives copied in beforehand and only those two lines skipped, the
+second time with these pages' final commands. They Hunger's page, followed the same
+way each time, gave its two DLLs byte for byte again.
+
 Not tested:
-- **Other Wine versions.** The T2DEF server is linked on Wine's builtin
-  `msvcrt.dll`, and its import table depends on how that `qsort` orders
-  equal elements. Only Wine 11.0's was tested; another version could order
+- **Other Wine versions.** The T2DEF server and Survive in Catacombs 2's
+  two DLLs are linked on Wine's builtin `msvcrt.dll`, and their import
+  tables (and the second game's client's kept copies of identical
+  functions) depend on how that `qsort` orders equal elements. Only Wine 11.0's was tested; another version could order
   them differently. The other DLLs link on the discs' own runtime and
   shouldn't depend on Wine's, but were not tested elsewhere either.
 - A Wine that is not a WoW64 build, other libfaketime versions, Windows.
@@ -623,7 +651,7 @@ Not tested:
 
 `tools/vc5.sh` and `tools/vc4.sh` also run Visual C++ 5.0 with Service
 Pack 3 and Visual C++ 4.x, which were used to identify the compilers of
-other mods. None of the seven mods needs them (Visual C++ 5.0 as on the CD,
+other mods. None of the nine mods needs them (Visual C++ 5.0 as on the CD,
 `vc5/rtm`, is step 2.6). Layout and sources, briefly:
 
 | Tree | Contents | Source (archive.org item / file, SHA-1) |
@@ -658,4 +686,5 @@ its LINK 5.10 was rebuilt with it.
 - `warning LNK4070: /OUT:hl.dll directive in .EXP differs from output
   filename` in Gunman Chronicles' and T2DEF's server logs is expected: their
   `.def` files say `LIBRARY hl` and the output is `gunman.dll`/`t2def.dll`,
-  as in retail.
+  as in retail. Likewise `/OUT:spirit.dll` in Survive in Catacombs 2's
+  (`LIBRARY spirit`, output `bloodbath.dll`).

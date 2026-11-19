@@ -8,7 +8,8 @@ the retail builds had. Do these shared steps once, then follow a mod's page:
 [Point of View](point-of-view.md) · [T2DEF](t2def.md) · [Wanted!](wanted.md) ·
 [Gunman Chronicles](gunman-chronicles.md) · [They Hunger](they-hunger.md) ·
 [Counter-Strike](counter-strike.md) ·
-[Scientist Slaughterhouse](scientist-slaughterhouse.md)
+[Scientist Slaughterhouse](scientist-slaughterhouse.md) ·
+[Survive in Catacombs 1 and 2](survive-in-catacombs.md)
 
 Background (why each step is needed): [setup.md](../setup.md),
 [compilers.md](../compilers.md), [reproducing.md](../reproducing.md).
@@ -17,7 +18,9 @@ Background (why each step is needed): [setup.md](../setup.md),
 
 Wine (tested: 11.0, a WoW64 build), libfaketime's `faketime` (0.9.12),
 Python 3 (3.14), 7-Zip's `7z`, `cabextract`, `git`, `curl` and GNU
-coreutils. Package names vary by distribution.
+coreutils; for Survive in Catacombs' retail files also libarchive's
+`bsdtar` (3.8.10), which unpacks their RAR archives. Package names vary by
+distribution.
 
 ## 2. Set the folders and get the repository
 

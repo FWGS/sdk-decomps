@@ -17,14 +17,17 @@ of its anonymous namespaces, the full source paths the IDE passed, browse
 information, and an order of RTTI records that follows the lengths of the
 compiler's own paths; its page,
 [scientist-slaughterhouse.md](scientist-slaughterhouse.md), describes
-those. How the code itself was matched is in
+those. Survive in Catacombs 1 and 2 need browse information in all four
+DLLs ([below](#browse-information-fr-fr)) and add one tree that builds two
+games ([survive-in-catacombs.md](survive-in-catacombs.md)). How the code itself was matched is in
 [vc6-notes.md](vc6-notes.md). The compilers are described in
 [compilers.md](compilers.md), the toolchain folder and Wine prefix in
 [setup.md](setup.md), and each mod's own details in
 [point-of-view.md](point-of-view.md), [t2def.md](t2def.md),
 [wanted.md](wanted.md), [gunman-chronicles.md](gunman-chronicles.md),
-[they-hunger.md](they-hunger.md), [counter-strike.md](counter-strike.md)
-and [scientist-slaughterhouse.md](scientist-slaughterhouse.md).
+[they-hunger.md](they-hunger.md), [counter-strike.md](counter-strike.md),
+[scientist-slaughterhouse.md](scientist-slaughterhouse.md) and
+[survive-in-catacombs.md](survive-in-catacombs.md).
 
 Terms used below:
 
@@ -52,6 +55,7 @@ Terms used below:
 - [The Rich header and the object count](#the-rich-header-and-the-object-count)
 - [Import table order](#import-table-order)
 - [Precompiled header state: full builds and build sessions](#precompiled-header-state-full-builds-and-build-sessions)
+- [Browse information (`/Fr`, `/FR`)](#browse-information-fr-fr)
 - [Export name, output name and PDB name](#export-name-output-name-and-pdb-name)
 - [`.bss` order](#bss-order)
 - [The `.reloc` size](#the-reloc-size)
@@ -299,17 +303,24 @@ linker had:
 | Wanted server and client, Point of View client, They Hunger server | retail's order | not recorded | |
 | They Hunger client | retail's order | functions change places inside two DLLs' lists: 14 of `vgui.dll`'s 542 thunks, 11 of KERNEL32's 65 | a 1998-style `qsort` |
 | T2DEF client | links on Service Pack 4's own `MSVCRT.DLL`: retail's order | not recorded | |
+| Survive in Catacombs server | retail's order | not recorded | a 1998-style `qsort` |
+| Survive in Catacombs client | retail's order | the import thunks in another order: 299,634 bytes differ | a 1998-style `qsort` |
+| Survive in Catacombs 2 server | `CreateDirectoryA` (slot 0) and `LCMapStringA` (slot 37) of KERNEL32's 75 swapped (15 bytes) | retail's order | some later `msvcrt`, which breaks ties like Wine's |
+| Survive in Catacombs 2 client | 298,770 bytes differ: the order inside all five DLLs' lists, 492 export addresses, the kept copies | retail's order | the same |
 
-So T2DEF's server builds with its tools on Wine's builtin runtime, T2DEF's
-client on Service Pack 4's `MSVCRT.DLL` (6.00.8797), and the other eight DLLs
-on the VC6 CD's. The same `qsort` also decides which copy of
-identical functions LINK keeps ([vc6-notes.md](vc6-notes.md#links-identical-code-folding)).
-Only Wine 11.0 was tested; another Wine version could break ties in its
-builtin differently, which would change T2DEF's server.
+So T2DEF's server and Survive in Catacombs 2's two DLLs build with their
+tools' LINK on Wine's builtin runtime, T2DEF's client on Service Pack 4's
+`MSVCRT.DLL` (6.00.8797), and the other ten DLLs on the VC6 CD's.
+Survive in Catacombs 2's tree had moved to another drive since the first
+game, which fits a new machine. The same `qsort` also
+decides which copy of identical functions LINK keeps
+([vc6-notes.md](vc6-notes.md#links-identical-code-folding)). Only Wine 11.0
+was tested; another Wine version could break ties in its builtin
+differently, which would change those three DLLs.
 
 ## Precompiled header state: full builds and build sessions
 
-All five mods' projects use `/YX`, the VC6 IDE's automatic precompiled
+All the mods' projects use `/YX`, the VC6 IDE's automatic precompiled
 header. All files of a project share one `vc60.pch`. Before each file the
 compiler compares the `.pch` with the file's list of `#include`s and reuses,
 shrinks or rebuilds it. So each file sees whatever `.pch` the previous
@@ -336,7 +347,12 @@ What VC6 does with the shared `.pch`, measured with real compiles:
   there: Valve's `#if !defined( OEM_BUILD )` before `squeakgrenade.cpp`'s
   includes makes VC6 rebuild the `.pch`.
 - A file with no `#include` leaves an empty `.pch` that every later file
-  reuses.
+  reuses (Survive in Catacombs 2's emptied `agrunt.cpp`, the project's second
+  source: every source up to `player.cpp` reuses it, which places three
+  objects' inline functions as retail has them). A file whose first
+  directive is `#pragma hdrstop` and whose code is all inside a conditional
+  that is off does the same: the pragma ends the `.pch` region before the
+  conditional (Survive in Catacombs' one tree for both games).
 - A `.pch` is reused only with the same `/Fd` PDB (`vc60.pdb`); otherwise
   VC6 rebuilds it without a word.
 - A `.pch` is stale once a header inside it has a newer time stamp, and the
@@ -364,7 +380,7 @@ an incremental build after a header edit once lost 6 of Point of View's
 server functions that a full build of the same tree matched. Use full
 builds for anything you compare.
 
-**Replayed build sessions** (T2DEF, Wanted and They Hunger servers). After the full
+**Replayed build sessions** (T2DEF, Wanted, They Hunger and Survive in Catacombs servers). After the full
 build, the release script recompiles a short list of files with plain
 `CL /c`, the project's flags, and the same `/Fp` and `/Fd` as the build, so
 the real compiler decides each `.pch` from the one the previous compile
@@ -411,6 +427,15 @@ left. No model is involved. Then come the links (previous section).
   first file found no usable `.pch`. One more object, `hl_wpn_glock.obj`,
   fits in no state and needs IL that compiled to no code (an unused inline
   function in `weapons.h`, `0aab512`).
+- **Survive in Catacombs 1 and 2:** the same kind of header edit, once.
+  `weapons.h` gets a new time stamp and its dependents are recompiled in
+  project order (51 sources in the first game, 49 in the second), the first
+  of them finding the `.pch` `zombie.cpp` left, which doesn't hold
+  `weapons.h`. That gives `barney.obj`, `h_cycler.obj` and
+  `handgrenade.obj` their inline functions where retail has them, and keeps
+  every other recompiled object as retail has it. An edit of `effects.h`
+  gives the same images; both mods changed `weapons.h`, neither `effects.h`
+  ([survive-in-catacombs.md](survive-in-catacombs.md)).
 
 **Per-file `.pch` stand-ins** (Gunman). Five server objects show other
 states in retail: `ggrenade`, `demoman`, `banditgrunt` and `friendlygunman`
@@ -429,6 +454,32 @@ for build history: Gunman's own project didn't have them, and retail's PDB
 Point of View needs neither: a full build gives every object, including
 `ammo.obj`, whose file creates the client's `.pch`.
 
+## Browse information (`/Fr`, `/FR`)
+
+Spirit of Half-Life's projects, on which both Survive in Catacombs games
+are built, ask for browse information: `/Fr` in the server's Release
+configuration, `/FR` in the client's. Its author's build logs, shipped with
+its source, show the IDE passing them with the output folder
+(`/Fr".\Releasehl/"`, `/FR".\Release/"`). Scientist Slaughterhouse's
+client needs its project's `/FR` too
+([scientist-slaughterhouse.md](scientist-slaughterhouse.md)). Other mods'
+projects have the option as well, and they rebuild identical without it;
+their scripts leave it out. But it is not only bookkeeping for the IDE: it adds to the compiler
+front end's intermediate code, and so it can move where VC6 emits the
+header inline functions it places lazily
+([vc6-notes.md](vc6-notes.md#where-header-inline-functions-land)), and
+change register choice and instruction order inside functions.
+
+Survive in Catacombs' four DLLs are retail's only with it. Without it, in
+the first game's server, `CBasePlayer::IsAlive` lands elsewhere in
+`client.obj`, `FireBulletsPlayer` makes its two random-seed calls in the
+other order and 4 bytes of `.data` differ: 857 bytes in all, with the build
+session above; in its client, `CClassMenuPanel`'s constructor gets other
+registers and four functions of `hl_weapons.obj` differ: 1,812 bytes.
+`build_dsp.py --browse-info` keeps the project's option and writes the
+`.sbr` files to the output folder, as the IDE does; without it the option
+is dropped.
+
 ## Export name, output name and PDB name
 
 The export directory names the DLL. That name comes from the `.def` file's
@@ -437,7 +488,9 @@ The export directory names the DLL. That name comes from the `.def` file's
 `wanted.dll`, `gunman.dll` and `einar.dll`. When `/out` names another file, LINK warns
 `LNK4070: /OUT:hl.dll directive in .EXP differs from output filename`; that
 is expected. T2DEF's base, Spirit of Half-Life, said `LIBRARY spirit`;
-retail's export name gave `LIBRARY hl` (`3c83e84`).
+retail's export name gave `LIBRARY hl` (`3c83e84`). Survive in Catacombs'
+servers, also built on Spirit of Half-Life, kept it: both export as
+`spirit.dll`.
 
 The output file name itself is not written into the image, except through
 the PDB's name: LINK names the PDB after the output unless the link line has
@@ -456,6 +509,10 @@ the PDB's name: LINK names the PDB after the output unless the link line has
   afterwards.
 - **They Hunger:** the same: linked as `hl.dll`, the project's own output
   name, and renamed to `einar.dll`.
+- **Survive in Catacombs:** linked as `spirit.dll` (so `spirit.pdb`), the
+  project's own output name, and shipped renamed `sic.dll`. Survive in
+  Catacombs 2's project links `bloodbath.dll`, as shipped, so
+  `bloodbath.pdb`.
 
 The export list itself comes from the source (`EXPORT` members, the `.def`
 file). One detail that surprises: VC6 exports a string literal (`??_C@...`)
@@ -623,7 +680,7 @@ lines).
 | DLL | Stand-in | What is known |
 |---|---|---|
 | all servers | the tree under the root, except the folders the PDB path names | only the PDB path is attested |
-| all | Wine 11.0, a fresh win64 prefix | other versions not tested; T2DEF's server depends on Wine's builtin `qsort` |
+| all | Wine 11.0, a fresh win64 prefix | other versions not tested; T2DEF's server and Survive in Catacombs 2's DLLs depend on Wine's builtin `qsort` |
 | Point of View, Gunman servers | a fresh PDB at the final link | follows from age 1 and the signature |
 | T2DEF server | 13 relinks at the PDB's creation time; the session before the final link; `sound.cpp` as the session's first file | only the count, the creation time and the final time are known; six other files work in `sound.cpp`'s place |
 | T2DEF server | tools on Wine's builtin `msvcrt.dll` | T2DEF's linker broke `qsort` ties like it; which runtime it was is unknown |
@@ -632,6 +689,9 @@ lines).
 | They Hunger server | 71 links at the final time between the first and the last | only the count and the two end times are known |
 | They Hunger server | the last builds: `weapons.h`'s 51 dependents recompiled twice | known: five objects were compiled against fuller `.pch` states than a full build gives, and the last build's first file found no usable `.pch`; the first of the two rebuilds only makes the `.pch` stale for the second |
 | Gunman server and client | per-file `/Fp` (and one `/YX"schedule.h"`) in the project files | five server and four client objects show other `.pch` states; the history that gave them is not found |
+| Survive in Catacombs servers | 4 (first game) and 6 (second) links at the final time between the first and the last | only the count and the two end times are known |
+| Survive in Catacombs servers | the last build: `weapons.h`'s dependents recompiled once | known: `barney.obj`, `h_cycler.obj` and `handgrenade.obj` (in the second game also the other dependents the empty `.pch` had moved) were last compiled in `.pch` states a full build doesn't give; an `effects.h` edit gives the same image |
+| Survive in Catacombs 2 server and client | LINK on Wine's builtin `msvcrt.dll` | its `qsort` breaks ties as the original linker's did; which runtime that was is unknown |
 | Point of View, Gunman, Wanted | placeholder objects | the count is retail's; names, contents and places are not |
 | all other DLLs | LINK on the VC6 CD's `MSVCRT.DLL` (T2DEF's client: Service Pack 4's) | gives retail's import order and kept copies; which runtime the original linkers ran on is not known |
 | Scientist Slaughterhouse server | 1,431 links at the final time between the first and the last; the last session (`flyingobject.h` and `game.h` edited, six sources recompiled once or twice) | only the count and the two end times are known; the session is one history that gives each object retail's `.pch` state |

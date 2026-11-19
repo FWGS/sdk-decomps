@@ -6,7 +6,11 @@ Standard edition as first released, and the Standard edition with Service
 Pack 4. Counter-Strike's 40 DLLs, from 1999 to 2002, span five compilers:
 Visual C++ 5.0 as first released, then VC6 as first released, with Service
 Pack 4, with Service Pack 5, and with Service Pack 5 and the Processor Pack;
-[Counter-Strike](#counter-strike) has them. This page says which variant
+[Counter-Strike](#counter-strike) has them. Survive in Catacombs 1 and 2's
+four DLLs (2004) were built with VC6 Professional as first released, like
+four of the first five mods and Scientist Slaughterhouse
+([Survive in Catacombs](#survive-in-catacombs)).
+This page says which variant
 built which DLL, how that is known, where each variant comes from, and which
 files of it matter. [setup.md](setup.md) turns the discs into the toolchain
 folder.
@@ -180,6 +184,34 @@ objects come out identical with either runtime.
 | They Hunger `client.dll` | VC6 CD's | Rebuilds identical on it. On the builtin, functions change places inside two import lists (14 of `vgui.dll`'s 542 thunks, 11 of KERNEL32's 65); the build we tried it on differed from retail in 216,849 bytes. |
 | Scientist Slaughterhouse `hl.dll` | VC6 CD's | Rebuilds identical on it (`/debug`, so no folding; one import DLL). Whether the builtin gives the same is not recorded. |
 | Scientist Slaughterhouse `client.dll` | VC6 CD's | Rebuilds identical on it (linked incrementally, so no folding). Whether the builtin gives the same is not recorded. |
+
+## Survive in Catacombs
+
+Both games' DLLs were built with VC6 Professional as first released: the
+Rich headers show only build 8168 for the compiler objects and the linker,
+and the trees rebuild them byte for byte with the tree `vc6`. They differ in
+the runtime LINK ran on.
+
+| DLL | Compiler objects | C runtime and libraries | Linker | Runtime LINK ran on |
+|---|---|---|---|---|
+| Survive in Catacombs `sic.dll` (built as `spirit.dll`) | C 8168 ×127, C++ 8168 ×104 | MASM ×32, AliasObj ×2, Linker 5.12 ×3, Import0 ×75 | 6.00 8168 ×1 | the VC6 CD's `MSVCRT.DLL` |
+| Survive in Catacombs `client.dll` | C 8168 ×135, C++ 8168 ×94 | MASM ×33, AliasObj ×3, Linker 6.00 8447 ×2 (`vgui.lib`'s import objects), Linker 5.12 ×9, Import0 ×645 | 6.00 8168 ×1 | the VC6 CD's |
+| Survive in Catacombs 2 `bloodbath.dll` | C 8168 ×127, C++ 8168 ×108 | as the first game's server | 6.00 8168 ×1 | Wine 11.0's builtin `msvcrt.dll`, standing in for the unknown one |
+| Survive in Catacombs 2 `client.dll` | the same Rich header as the first game's client | | | Wine 11.0's builtin |
+
+Evidence for the runtimes (LINK's `qsort`, [above](#the-runtime-link-ran-on)):
+- **The first game:** both DLLs rebuild identical on the CD's runtime. On
+  Wine's builtin the client's import thunks come out in another order
+  (299,634 bytes differ).
+- **The second game:** on the CD's runtime `CreateDirectoryA` and
+  `LCMapStringA` trade places among the server's 75 KERNEL32 thunks (15
+  bytes), and in the client the order inside all five import lists, 492
+  export addresses and the copies LINK keeps of identical functions differ
+  (298,770 bytes). Wine's builtin gives both retail files. Its `qsort` leaves
+  equal keys where they are, as the second game's linker's did; the CD's
+  swaps the first and the middle one. The tree had moved from `F:` to `C:`
+  between the games, which fits a new machine, but which runtime it had is
+  not known. The compiles don't depend on the runtime.
 
 ## Counter-Strike
 
