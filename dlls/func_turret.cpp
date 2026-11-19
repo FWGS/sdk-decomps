@@ -2501,6 +2501,7 @@ void CCannonShootpoint :: Fire( void )
 
 			UTIL_MakeVectors( pev->angles );
 			vecDir = ShootSpread( gpGlobals->v_forward, m_spread );
+			float flUnused = vecDir.x;	// sic: never used; a direct read of vecDir.x gives retail's x87 operand order in vecDir * pev->speed
 
 			CBaseEntity *pShell = CBaseEntity::Create( "cshell", pev->origin, UTIL_VecToAngles( vecDir ), pev->owner );
 			pShell->pev->velocity = vecDir * pev->speed;
