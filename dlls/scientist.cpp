@@ -1862,6 +1862,10 @@ void CScientist :: FadeMonster( void )
 }
 
 
+// sic: unused. The number of symbols declared before DeathMessage decides the order of two reloads in it,
+// and with it the stack slots of pszVerb and pszWeapon; 5 to 28 or 31 to 50 constants here give retail's
+enum { eUnused0, eUnused1, eUnused2, eUnused3, eUnused4, eUnused5, eUnused6, eUnused7, eUnused8, eUnused9, eUnused10, eUnused11, eUnused12, eUnused13, eUnused14, eUnused15, eUnused16 };
+
 //=========================================================
 // DeathMessage - the killer scores, the scoreboard counts
 // the head, and everybody hears how it happened

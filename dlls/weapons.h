@@ -1540,7 +1540,14 @@ private:
 class CLaserPulse : public CGrenade
 {
 public:
-	CLaserPulse() {}	// sic: an empty constructor (special_laser's factory calls CBaseEntity's out of line)
+#ifdef CLIENT_DLL
+	// sic: only the client's copy has a constructor; the two DLLs saw different text. The client's
+	// hl_weapons.obj needs the implicit constructors of CGrenade and its bases generated here, inside its
+	// precompiled header (generated at its CBasePlayer global instead, they move CBaseEntity::Respawn out of
+	// place); the server's agrunt.obj, whose agrunt.cpp includes this file and uses this class, emits
+	// CBaseEntity's constructor after its last function, which it does only if nothing generated it here
+	CLaserPulse() {}
+#endif
 	void Spawn( void );
 	void Precache( void );
 	const char *GetKillDesc( void ) { return !m_iszKillDesc ? "a pulse laser" : STRING( m_iszKillDesc ); }

@@ -147,7 +147,7 @@ void CWaterBlast::Touch( CBaseEntity *pOther )
 // CWaterSpray - a geyser of the spray attack: sprays for
 // ten seconds and throws up whatever stands in it
 //=========================================================
-class CWaterSpray : public CMagicMissile
+class CWaterSpray : public CSprite
 {
 public:
 	void Spawn( void );
@@ -169,7 +169,7 @@ TYPEDESCRIPTION	CWaterSpray::m_SaveData[] =
 	DEFINE_FIELD( CWaterSpray, m_flEndTime, FIELD_TIME ),
 };
 
-IMPLEMENT_SAVERESTORE( CWaterSpray, CMagicMissile );
+IMPLEMENT_SAVERESTORE( CWaterSpray, CSprite );
 
 void CWaterSpray::Spawn( void )
 {
@@ -393,16 +393,16 @@ void CWaterElemental :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		case WATER_AE_SHOOT1:
 		case WATER_AE_SHOOT2:
 		{
-			Vector vecGunPos, vecGunAngles;
+			Vector vecGunPos, vecDir;
 
-			GetAttachment( pEvent->event - 1, vecGunPos, vecGunAngles );
+			GetAttachment( pEvent->event - 1, vecGunPos, vecDir );	// vecDir: the gun's angles, unused; it gets the aim below
 			UTIL_MakeVectors( pev->angles );
 
 			Vector vecSrc = Center();
 			vecSrc.z = vecGunPos.z;
 			vecSrc = vecSrc + gpGlobals->v_forward * 16;
 
-			Vector vecDir = ShootAtEnemy( vecSrc );
+			vecDir = ShootAtEnemy( vecSrc );
 
 			CBaseEntity *pBlast = CBaseEntity::Create( "water_blast", vecGunPos, g_vecZero, edict() );
 
@@ -413,7 +413,7 @@ void CWaterElemental :: HandleAnimEvent( MonsterEvent_t *pEvent )
 				y = RANDOM_FLOAT( -0.5, 0.5 ) + RANDOM_FLOAT( -0.5, 0.5 );
 			} while ( x*x+y*y > 1 );
 
-			pBlast->pev->velocity = ( vecDir + ( x * 0.1 ) * gpGlobals->v_right + ( y * 0.1 ) * gpGlobals->v_up ) * 800;
+			pBlast->pev->velocity = ( vecDir + x * 0.1 * gpGlobals->v_right + y * 0.1 * gpGlobals->v_up ) * 800;
 
 			EMIT_SOUND( ENT(pev), CHAN_VOICE, pAttackSounds[ RANDOM_LONG( 0, ARRAYSIZE( pAttackSounds ) - 1 ) ], 1.0, ATTN_NORM );
 			CSoundEnt::InsertSound( bits_SOUND_COMBAT, pev->origin, 600, 0.3 );
@@ -423,10 +423,11 @@ void CWaterElemental :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		case WATER_AE_SPRAY:
 		{
 			// five geysers in a row across the enemy's last known position, the outer ones later
-			Vector vecDir, vecSide, vecSrc, vecEnd;	// sic: vecSrc and vecEnd unused; their constructor calls keep the shot's last sum and product out of line, as retail
+			Vector vecSide, vecSrc, vecEnd;	// sic: vecSrc and vecEnd unused; with two (or three) such constructor calls the shot's last sum and product stay out of line, as retail
 
-			vecDir = Vector( pev->origin - m_vecEnemyLKP ).Normalize();
-			vecSide = CrossProduct( vecDir, Vector( 0, 0, 1 ) );
+			Vector vecDir = pev->origin - m_vecEnemyLKP;
+			Vector vecUp = Vector( 0, 0, 1 );	// a copy-initialised local, not a temporary in the call: the Normalize below then keeps retail's x87 operand order
+			vecSide = CrossProduct( vecDir.Normalize(), vecUp );
 
 			SpawnSpray( m_vecEnemyLKP, 0 );
 			SpawnSpray( m_vecEnemyLKP + vecSide * 40, 1 );
@@ -434,8 +435,8 @@ void CWaterElemental :: HandleAnimEvent( MonsterEvent_t *pEvent )
 			SpawnSpray( m_vecEnemyLKP - vecSide * 40, 1 );
 			SpawnSpray( m_vecEnemyLKP - vecSide * 80, 2 );
 
-			m_fCanSpray = FALSE;
 			m_flNextSpray = gpGlobals->time + 6;
+			m_fCanSpray = FALSE;
 			pev->renderfx = kRenderFxNone;
 		}
 		break;
@@ -444,7 +445,7 @@ void CWaterElemental :: HandleAnimEvent( MonsterEvent_t *pEvent )
 		{
 			if ( m_fGlowing )
 			{
-				PLAYBACK_EVENT_FULL( FEV_RELIABLE | FEV_GLOBAL, edict(), m_usRain, 0.0, (float *)&pev->origin, (float *)&pev->angles, 0.0, 0.0, 0, 0, 1, 0 );
+				PLAYBACK_EVENT_FULL( FEV_RELIABLE | FEV_GLOBAL, edict(), m_usRain, 0.0, pev->origin, pev->angles, 0.0, 0.0, 0, 0, 1, 0 );	// without the casts (two inline conversions): the inlining above is retail's with one of the two calls spelled so
 				m_fGlowing = FALSE;
 				STOP_SOUND( ENT(pev), CHAN_BODY, "ambience/sparks.wav" );
 			}

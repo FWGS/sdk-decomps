@@ -287,7 +287,7 @@ void CRocket :: FlyThink( void  )
 	if (pev->waterlevel == 3)
 	{
 		// go slow underwater
-		pev->velocity = gpGlobals->v_forward * ( flSpeed < 300 ? flSpeed : ( flSpeed = 300 ) );	// near miss: retail puts the first arm after the function body
+		pev->velocity = gpGlobals->v_forward * ( flSpeed < 300 ? flSpeed : ( flSpeed = 300 ) );	// near miss: retail lays the flSpeed arm after the underwater block, jumping back
 		UTIL_BubbleTrail( pev->origin - pev->velocity * 0.1, pev->origin, 4 );
 	}
 	else
