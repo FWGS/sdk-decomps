@@ -341,7 +341,7 @@ void CCrossbowBolt::ZapThink( void )
 		WRITE_COORD( tr.vecEndPos.x );
 		WRITE_COORD( tr.vecEndPos.y );
 		WRITE_COORD( tr.vecEndPos.z );
-		WRITE_SHORT( g_sModelIndexLaserDot );
+		WRITE_SHORT( g_sModelIndexLightning );
 		WRITE_BYTE( 0 ); // framestart
 		WRITE_BYTE( RANDOM_LONG( 8, 12 ) ); // framerate
 		WRITE_BYTE( 3 ); // life
