@@ -602,6 +602,50 @@ void UTIL_ParticleLine( CBasePlayer *player, float *start, float *end, float lif
 	gEngfuncs.pEfxAPI->R_ParticleLine( start, end, r, g, b, life );
 }
 
+// sic: an unused inline function, a stand-in for text retail's hl_weapons.cpp
+// had before the end of PrintState: its intermediate code decides where VC6
+// emits CBaseEntity::Respawn, before HUD_InitClientWeapons when this file
+// reuses the precompiled header it built itself, after it when it builds one
+inline void sic_il_hl_weapons( int *p )
+{
+	p[0] = 0;
+	p[1] = 0;
+	p[2] = 0;
+	p[3] = 0;
+	p[4] = 0;
+	p[5] = 0;
+	p[6] = 0;
+	p[7] = 0;
+	p[8] = 0;
+	p[9] = 0;
+	p[10] = 0;
+	p[11] = 0;
+	p[12] = 0;
+	p[13] = 0;
+	p[14] = 0;
+	p[15] = 0;
+	p[16] = 0;
+	p[17] = 0;
+	p[18] = 0;
+	p[19] = 0;
+	p[20] = 0;
+	p[21] = 0;
+	p[22] = 0;
+	p[23] = 0;
+	p[24] = 0;
+	p[25] = 0;
+	p[26] = 0;
+	p[27] = 0;
+	p[28] = 0;
+	p[29] = 0;
+	p[30] = 0;
+	p[31] = 0;
+	p[32] = 0;
+	p[33] = 0;
+	p[34] = 0;
+	p[35] = 0;
+}
+
 /*
 =====================
 CBasePlayerWeapon::PrintState
