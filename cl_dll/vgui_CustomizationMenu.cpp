@@ -40,6 +40,17 @@
 #include <VGUI_TextImage.h>
 #include <ctype.h>
 
+// sic: a stand-in, names ours, nothing uses it. Retail's file declared more
+// before its functions than ours does (declarations whose text is unknown).
+// VC6 numbers every symbol it declares, string literals included, and its
+// back end recycles the register-candidate slots of "Dml Title Text" and
+// "Dml Text" in the order of those numbers modulo 64. That decides which of
+// this and iRow ShowBeamgun reloads first after its inner loop: 24 to 34
+// more symbols give retail's order. This enum declares 29 (28 constants and
+// the enum). The count is relative to the placeholders below, which declare
+// symbols too.
+enum { SIC_CUSTMENU_0, SIC_CUSTMENU_1, SIC_CUSTMENU_2, SIC_CUSTMENU_3, SIC_CUSTMENU_4, SIC_CUSTMENU_5, SIC_CUSTMENU_6, SIC_CUSTMENU_7, SIC_CUSTMENU_8, SIC_CUSTMENU_9, SIC_CUSTMENU_10, SIC_CUSTMENU_11, SIC_CUSTMENU_12, SIC_CUSTMENU_13, SIC_CUSTMENU_14, SIC_CUSTMENU_15, SIC_CUSTMENU_16, SIC_CUSTMENU_17, SIC_CUSTMENU_18, SIC_CUSTMENU_19, SIC_CUSTMENU_20, SIC_CUSTMENU_21, SIC_CUSTMENU_22, SIC_CUSTMENU_23, SIC_CUSTMENU_24, SIC_CUSTMENU_25, SIC_CUSTMENU_26, SIC_CUSTMENU_27 };
+
 // sic: placeholders, ours: functions retail was linked with and dropped
 // (nothing calls them); their text is unknown. They give LINK's
 // identical-copy sort the (size, relocations) keys with which it keeps
