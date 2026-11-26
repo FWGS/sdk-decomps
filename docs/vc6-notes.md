@@ -383,8 +383,9 @@ both branches with their own copy of the same two statements (`f9d9a24`).
 
 ### Reloads at a loop end: symbol numbers
 
-**Exact** as a black-box rule (They Hunger `0ffe1b9`, `2b0dedb`); why C2
-orders the reloads this way was not read from its code.
+**Exact** as a black-box rule (They Hunger `0ffe1b9`, `2b0dedb`). The
+mechanism behind it was read from C2's code later
+([below](#why-the-candidate-table)).
 
 In a few long functions the order in which C2 reloads two or three
 registers at one point (the end of a loop, in the two `nodes.cpp` functions
@@ -448,10 +449,8 @@ numbers C1XX gives the symbols of the file.
   They Hunger's two projects with 0 to 63 extra symbols in front (6,400 and
   3,400 compiles). In the server only `LinkVisibleNodes` and
   `BuildNodeGraph` change, in the client only the constructors of
-  `CClassMenuPanel` and `CMessageWindowPanel`. Gunman's
-  `CCustomizationMenu::ShowBeamgun`, which differs from retail in the
-  order of two reloads after a loop, does not follow the count either (0
-  to 63 extra symbols).
+  `CClassMenuPanel` and `CMessageWindowPanel`. In Gunman's client,
+  `CCustomizationMenu::ShowBeamgun` follows it (`f23da9f`).
 - **Where the symbols are declared matters a little** when inline functions
   with compiler-made symbols of their own come between them and the
   function. For `CClassMenuPanel`'s constructor, 5 to 39 or 46 to 59 extra
@@ -476,6 +475,55 @@ order of reloads at a loop end, and no text inside it moves that:
    in the image decides, use a marked unused enum where no other file sees
    it, and say so. Wanted's `nodes.cpp` has one for the same two functions
    (`d19fb1d`).
+
+### Why: the candidate table
+
+**Exact** for C2 12.00.8168: read from `C2.DLL` and watched in a running
+compile, with a scripted debugger on the compiler (Gunman `f23da9f`).
+
+Before register assignment C2 makes a *candidate* of every constant
+operand and of every address of a global that a function uses: string
+literals, global variables, vtables. The candidates sit in a hash table of
+64 buckets. A constant goes to bucket `value % 64`; an address goes to
+the bucket of its symbol's number, `% 64`. Each new candidate takes a
+lifetime record with the next free number.
+
+One loop then walks the buckets from 0 to 63, each chain newest first, and
+releases the records of the candidates that are not worth a register, a
+string used once for example. A released record keeps its number. The
+lifetimes of the function's own symbols are created after that, in symbol
+order (`this`, the parameters, the locals), and they take records from
+the released ones, last released first, before any new number is used.
+
+So the order in which a function's unused candidates are released decides
+which numbers its first variables get, and the reloads at a loop end
+follow those numbers: when two variables swapped numbers, their reloads
+swapped. The release order is the order of the candidates' buckets:
+
+- For an address the bucket is the symbol number modulo 64. That is the
+  rule above: every declaration before the symbol shifts its number, and
+  with 64 buckets the outcome repeats every 64.
+- For a constant the bucket is its value modulo 64. A new constant that
+  reaches the final code can change the order too; a folded one can't.
+- Text that compiles to nothing adds no candidate, which is why dead
+  locals, names and parentheses never move these reloads.
+
+Two consequences for the sweep:
+
+- A string literal gets its number where the file first uses it. The extra
+  declarations must come before that point. If an earlier function of the
+  file already uses the string, declarations placed right before the
+  function under study change nothing. Gunman's `ShowBeamgun` showed it:
+  a sweep right before the function was flat, the same sweep after the
+  file's includes gave retail's code for 24 to 34 symbols.
+- The window can be predicted. In `ShowBeamgun` the released candidates
+  were `"Dml Title Text"` and `"Dml Text"`, with symbol numbers 8605 and
+  8360, so buckets 29 and 40. They change places when
+  `(29 + N) % 64 > (40 + N) % 64`, that is for N = 24 to 34, which is
+  what the sweep found.
+
+The rule that leads from the numbers to the order of the reloads was not
+worked out.
 
 ### Other levers
 

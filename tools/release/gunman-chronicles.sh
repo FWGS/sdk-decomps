@@ -18,7 +18,7 @@
 #    signature;
 #  - LINK with the clock frozen at retail's link time, 2000-11-10 22:46:15
 #    UTC (libfaketime), which sets the COFF, export and debug time stamps.
-# Client (client.dll): not yet identical to retail (docs/gunman-chronicles.md).
+# Client (client.dll): identical to retail.
 # No debug directory, so only the link time matters, 2000-11-12 19:45:26
 # UTC. A full build into OUT/client in the toolchain's own Wine prefix.
 set -eu

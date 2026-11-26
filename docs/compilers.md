@@ -40,10 +40,9 @@ stamps its objects as Standard edition objects.
 | Scientist Slaughterhouse `hl.dll` | the same | | | | | the CD's `LIBCMT.LIB` | the CD's `MSVCRT.DLL` | `vc6`, run as `C:\Microsoft Visual Studio\VC98` (`VC6_ROOT`) |
 | Scientist Slaughterhouse `client.dll` | the same | | | | | the CD's `LIBCMTD.LIB` (a Debug build) | the same | the same |
 
-All but two of these DLLs rebuild byte for byte with the tree named. The
-Wanted! server and the Gunman Chronicles client don't yet; their remaining
-differences are in the code, not in the toolchain ([wanted](wanted.md),
-[gunman-chronicles](gunman-chronicles.md)).
+All but one of these DLLs rebuild byte for byte with the tree named. The
+Wanted! server doesn't yet; its remaining difference is in the code, not
+in the toolchain ([wanted](wanted.md)).
 
 What the evidence pins and what it doesn't:
 - The Rich header (next section) records the back end's edition and build,
@@ -152,11 +151,9 @@ How to read it:
 - **Standard edition.** The T2DEF server's code is `/Od` code (every
   function has a frame pointer, no optimisation) although `hl.dsp` says
   `/O2`. With the Standard back end the project's own flags give it.
-- **Rebuilding.** Each variant was confirmed by rebuilding: ten of the
-  twelve DLLs are byte-identical. The Wanted! server differs inside one
-  function only. The Gunman Chronicles client differs in four bytes of one
-  function, and keeps retail's copies of identical functions with the help
-  of fitted placeholder functions.
+- **Rebuilding.** Each variant was confirmed by rebuilding: eleven of
+  the twelve DLLs are byte-identical. The Wanted! server differs inside
+  one function only.
 
 ### The runtime LINK ran on
 

@@ -104,8 +104,8 @@ Retail's values for the ten DLLs of the first five mods:
 | C++ objects in the Rich header | 62 | 80 (Standard edition) | 61 | 78 | 61 |
 | Placeholder objects needed | 1 | 0 | 0 | 1 | 0 |
 | Identical-code folding | yes | yes | yes | yes | yes |
-| Dead functions added to the source (dropped by LINK) | 1 | 0 | 1 | 57 placeholders, fitted by search | 0 invented; two dead stubs of SDK 2.2b's stub file are needed |
-| Rebuild | identical | identical | identical | 4 bytes differ | identical |
+| Dead functions added to the source (dropped by LINK) | 1 | 0 | 1 | 57 placeholders, fitted by search (and an unused enum for the symbol count) | 0 invented; two dead stubs of SDK 2.2b's stub file are needed |
+| Rebuild | identical | identical | identical | identical | identical |
 
 Fix these parts after the code and data match, not before. Most of them are
 cheap and independent of each other, but a time stamp or a PDB path is

@@ -6,49 +6,45 @@ in two DLLs in the game's `rewolf` folder: the server `dlls\gunman.dll`
 and the client `cl_dlls\client.dll`. The branch
 [`gunman-chronicles`](../../../tree/gunman-chronicles) holds C++ source
 reconstructed from them. It starts from Valve's Half-Life SDK history
-(tag `v2.0`, 2000-06-05) and adds 512 commits.
+(tag `v2.0`, 2000-06-05) and adds 514 commits.
 
-File and line references below are to the branch at commit `6119524`.
+File and line references below are to the branch at commit `44166ef`.
 
 ## Status
 
-Verified on 2026-11-26 with fresh release builds of `6119524`, by SHA-256
+Verified on 2026-11-26 with fresh release builds of `44166ef`, by SHA-256
 and `cmp` against the retail files.
 
 | DLL | Size | Retail SHA-256 | Release build |
 |---|---|---|---|
 | `gunman.dll` (server) | 1,388,603 bytes | `e6e8d4497f11787889f12e7356157cbce98d380570805ca55faef3c07ce088f0` | **identical** |
-| `client.dll` | 565,248 bytes | `4d2918498fb0d3aa40ede643beabea235925c0eaa6742130a686968686a51aed` | `96ef8769b4872ebbfe7f6c71ab5b8650a80cce19c48039a8839174b85b82062f`: 4 bytes differ |
+| `client.dll` | 565,248 bytes | `4d2918498fb0d3aa40ede643beabea235925c0eaa6742130a686968686a51aed` | **identical** |
 
-The server is identical byte for byte: headers, time stamps, PDB record,
-every section and the padding. It was first identical at `d4b4311`.
+Both files are identical byte for byte: headers, time stamps, the server's
+PDB record, every section and the padding. The server was first identical
+at `d4b4311`, the client at `f23da9f`.
 
-### What the client's differing bytes are
+### What the client's identity rests on
 
-The four bytes are in one function, `CCustomizationMenu::ShowBeamgun` in
-[`cl_dll/vgui_CustomizationMenu.cpp`](../../../blob/gunman-chronicles/cl_dll/vgui_CustomizationMenu.cpp#L888),
-at file offsets `0x3df5d`, `0x3df5f`, `0x3df61` and `0x3df63`. After its
-inner loop the function reloads two values from the stack. Retail reloads
-`this` first and the row number second; our build reloads them the other
-way round. The two instructions are the same, only swapped
-([what is left](#what-is-left-in-the-client-and-why)).
+Read the client's result with one caveat. Two things in the client decide
+bytes of the image and leave no trace of their own in it:
 
-Everything else in the file is retail's: the headers, the link time, the
-missing debug directory, the Rich header and PE header offset, the import
-and export tables, `.rdata`, `.data`, `.reloc` and every other byte of
-`.text`.
+- **Dead functions.** The client is linked without `/debug`, so the linker
+  folds identical functions: when several functions compile to the same
+  bytes, LINK keeps one copy and points every caller at it. Which copy it
+  keeps depends on a sort over all functions in the link, including
+  functions that nothing calls and that LINK then drops. Retail was linked
+  with dead functions that left nothing in the image. The branch holds 57
+  [placeholder functions](#placeholder-functions) whose sizes, relocation
+  counts and places were found by a search.
+- **The number of declarations.** In one function the order of two
+  instructions follows the count of symbols the source file declared. An
+  unused enum, [the symbol-count stand-in](#the-symbol-count-stand-in),
+  supplies a count that works.
 
-Read this result with one caveat. The client is linked without `/debug`,
-so the linker folds identical functions: when several functions compile to
-the same bytes, LINK keeps one copy and points every caller at it. Which
-copy it keeps depends on a sort over all functions in the link, including
-functions that nothing calls and that LINK then drops. Retail was linked
-with dead functions that left nothing in the image. To make the sort come
-out as retail's, the branch holds 57 placeholder functions whose sizes,
-relocation counts and places were found by a search
-([placeholder functions](#placeholder-functions)). They show that the
-known code plus some set of dead functions gives retail's file. They are
-not Gunman's dead code.
+Both are fits. They show that the known code, with some set of dead
+functions and some number of declarations, gives retail's file. They are
+not Gunman's dead code or Gunman's declarations.
 
 ## The retail files
 
@@ -118,10 +114,9 @@ DLL the script prints the path of the built file, its SHA-256, retail's
 SHA-256 and `identical to retail` or `differs from retail`. With `RETAIL`
 set it also runs `cmp` and prints how many bytes differ.
 
-Expected: the server `e6e8d449…ce088f0`, identical to retail; the client
-`96ef8769…062f`, which differs (with `RETAIL`: 4 of 565248 bytes).
-The exit code is 0 only if every DLL built is identical, so today `server`
-exits 0 and `client` or `both` exit 1.
+Expected: the server `e6e8d449…ce088f0` and the client `4d291849…51aed`,
+both identical to retail. The exit code is 0 only if every DLL built is
+identical, so all three arguments exit 0.
 
 The built files are `OUT/wineprefix/drive_c/Gunman/Source/dlls/Releasehl/gunman.dll`
 and `OUT/client/client.dll`; the compiler output is in `OUT/server.log`
@@ -216,8 +211,8 @@ Two more things decide the bytes and are not in the PE header:
 
 ## What in the source and build is not known from retail
 
-Every server function compiles to retail's bytes at retail's address, but
-its source text is only one spelling that does so. This section lists
+Every function of both DLLs compiles to retail's bytes at retail's
+address, but its source text is only one spelling that does so. This section lists
 what exists for another reason: stand-ins for facts the binaries don't
 hold, lines that steer the compiler, and retail's own oddities kept on
 purpose. The commit messages hold the full reasoning and the experiments.
@@ -233,10 +228,10 @@ git grep -n -i placeholder gunman-chronicles
   steer code generation, 5 are `.bss` placeholders, 2 mark unused `const`
   globals, and 183 mark retail behaviour. Files marked "both" below are
   also compiled into the client.
-- `cl_dll/`: 74 `// sic` lines. 15 steer code generation, 16 introduce
+- `cl_dll/`: 75 `// sic` lines. 15 steer code generation, 16 introduce
   blocks of placeholder functions, 2 mark what those displaced (the stub
-  order and the removed `EV_FireShotGunDouble`), 5 mark `.bss` stand-ins,
-  and 36 mark retail behaviour.
+  order and the removed `EV_FireShotGunDouble`), 1 is the symbol-count
+  stand-in, 5 mark `.bss` stand-ins, and 36 mark retail behaviour.
 - The placeholder search also finds the three placeholder objects, their
   project lines and the placeholder functions. Its other hits are Valve's comments
   (`dlls/player.cpp:4880`, `cl_dll/hl/hl_weapons.cpp:58`).
@@ -319,7 +314,7 @@ carries its key as `// key (size, relocations)`:
 | [`cl_dll/statusbar.cpp:254`](../../../blob/gunman-chronicles/cl_dll/statusbar.cpp#L254) | 5, at the end | (16, 1), (16, 0), (912, 6), (336, 4), (16, 1) |
 | [`cl_dll/train.cpp:87`](../../../blob/gunman-chronicles/cl_dll/train.cpp#L87) | 5, at the end | (16, 1), (16, 0), (32, 1), (128, 2), (16, 1) |
 | [`cl_dll/util.cpp:135`](../../../blob/gunman-chronicles/cl_dll/util.cpp#L135) | 2, at the end | (48, 0), (1264, 59) with 59 absolute addresses |
-| [`cl_dll/vgui_CustomizationMenu.cpp:43`](../../../blob/gunman-chronicles/cl_dll/vgui_CustomizationMenu.cpp#L43) | 4, at the top | (16, 0), (1184, 40) with 10 absolute addresses, (16, 2), (16, 1) |
+| [`cl_dll/vgui_CustomizationMenu.cpp:54`](../../../blob/gunman-chronicles/cl_dll/vgui_CustomizationMenu.cpp#L54) | 4, at the top | (16, 0), (1184, 40) with 10 absolute addresses, (16, 2), (16, 1) |
 | [`cl_dll/vgui_HudDeathNotice.cpp:42`](../../../blob/gunman-chronicles/cl_dll/vgui_HudDeathNotice.cpp#L42), [`321`](../../../blob/gunman-chronicles/cl_dll/vgui_HudDeathNotice.cpp#L321) | 1 at the top, 9 at the end | (16, 0); (96, 12), (80, 7), (112, 14), (656, 1), (16, 1), (32, 4), (800, 1), (480, 5), (80, 6) |
 | [`cl_dll/vgui_teammenu.cpp:391`](../../../blob/gunman-chronicles/cl_dll/vgui_teammenu.cpp#L391) | 1, at the end | (16, 1) |
 | [`cl_dll/view.cpp:1025`](../../../blob/gunman-chronicles/cl_dll/view.cpp#L1025) | 3, at the end | (16, 1), (48, 0), (16, 3) |
@@ -364,6 +359,30 @@ probably had handlers for some of them. No SDK handler fits the gaps in
 `ev_hldm.cpp`: SDK 2.0's are 2,189 to 9,505 bytes of intermediate code,
 too big for the early gaps; SDK 2.1's `EV_StopPreviousGauss` fits the
 first gap but moves two strings into `.data` early.
+
+### The symbol-count stand-in
+
+[`cl_dll/vgui_CustomizationMenu.cpp:43-52`](../../../blob/gunman-chronicles/cl_dll/vgui_CustomizationMenu.cpp#L43-L52)
+has an unused `enum` of 28 constants after the file's includes
+(`f23da9f`). It is there for one thing: the order of two instructions in
+`CCustomizationMenu::ShowBeamgun`.
+
+VC6's front end numbers every symbol a file declares, in order: variables,
+prototypes, enum constants, classes and their members, and each string
+literal where the file first uses it. Its back end uses those numbers when
+it prepares register assignment ([how](#showbeamgun)). In `ShowBeamgun`
+the numbers of two string literals, modulo 64, decide whether `this` or
+the row number is reloaded first after the inner loop. Retail's order
+needs 24 to 34 more symbols, modulo 64, declared before those strings than
+the file otherwise has. The enum declares 29, the middle of that window.
+No other function changes with the count.
+
+What retail declared there is not in the image. Gunman's headers and this
+file are our text: a class with more members, a few more prototypes or one
+more included header would supply the count as well. The count also
+depends on the placeholder functions that follow the enum, since they
+declare symbols too. So the enum stands in for an unknown number of
+unknown declarations, as the one in Wanted!'s `nodes.cpp` does.
 
 ### Build stand-ins
 
@@ -445,8 +464,8 @@ for their effect on the code, so they are listed here.
 | [`cl_dll/tri.cpp`](../../../blob/gunman-chronicles/cl_dll/tri.cpp#L631-L634) | 631-634 | `DrawSprites` | A discarded `vecOrigin[0];` | Pays for the copy-initialised origin's extra inline unit, which keeps retail's inlining of the corners | `2622033` |
 | [`cl_dll/tri.cpp`](../../../blob/gunman-chronicles/cl_dll/tri.cpp#L719-L725) | 719-725 | `DrawFlames` | `CEffectList::Remove` called through a member-function pointer | VC6 turns it into a plain call of the out-of-line copy. Retail inlines the operators after it as if the call were no inline candidate, which a direct call always is | `94e5f64` |
 | [`cl_dll/tri.cpp`](../../../blob/gunman-chronicles/cl_dll/tri.cpp#L731-L736) | 731-736 | `DrawFlames` | `flScale * 1` | VC6 loads the scale once and multiplies on the x87 stack, as retail does; the plain variable is used from memory. (The redundant first type test on line 735 is retail's own) | `e33134a` |
-| [`cl_dll/vgui_CustomizationMenu.cpp`](../../../blob/gunman-chronicles/cl_dll/vgui_CustomizationMenu.cpp#L252-L258) | 252-258, 291 | `CCustomizationMenu::CCustomizationMenu` | Dead zero initialisations of five locals and a named `TextImage *pImage` | VC6 numbers locals by first reference; six more before `iWide` give retail's frame layout and centring order | `bb0c6fe` |
-| [`cl_dll/vgui_CustomizationMenu.cpp`](../../../blob/gunman-chronicles/cl_dll/vgui_CustomizationMenu.cpp#L556-L558) | 556-558 | `CCustomizationMenu::CCustomizationMenu` | A third of `iLaunchTall` in its own local `iThird` | Both rows compute into `ecx` and share retail's single store | `bb0c6fe` |
+| [`cl_dll/vgui_CustomizationMenu.cpp`](../../../blob/gunman-chronicles/cl_dll/vgui_CustomizationMenu.cpp#L263-L269) | 263-269, 302 | `CCustomizationMenu::CCustomizationMenu` | Dead zero initialisations of five locals and a named `TextImage *pImage` | VC6 numbers locals by first reference; six more before `iWide` give retail's frame layout and centring order | `bb0c6fe` |
+| [`cl_dll/vgui_CustomizationMenu.cpp`](../../../blob/gunman-chronicles/cl_dll/vgui_CustomizationMenu.cpp#L567-L569) | 567-569 | `CCustomizationMenu::CCustomizationMenu` | A third of `iLaunchTall` in its own local `iThird` | Both rows compute into `ecx` and share retail's single store | `bb0c6fe` |
 | [`cl_dll/vgui_HudID.cpp`](../../../blob/gunman-chronicles/cl_dll/vgui_HudID.cpp#L165) | 165 | `CIDPanel::paint` | Three discarded `forward[0]; forward[1]; forward[2];` after the trace | Retail calls the end point's two return copies out of line; with exactly three inline candidates after the trace VC6 does the same | `207af35` |
 
 ### Behaviour kept from retail
@@ -549,7 +568,7 @@ overwrites every index, so nothing reads it.
 | [`tri.cpp`](../../../blob/gunman-chronicles/cl_dll/tri.cpp) | 466 (turns the copy, not the effect in the list) |
 | [`vgui_AmmoPanel.cpp`](../../../blob/gunman-chronicles/cl_dll/vgui_AmmoPanel.cpp) | 116 (only ever shows the first three) |
 | [`vgui_ClassMenu.cpp`](../../../blob/gunman-chronicles/cl_dll/vgui_ClassMenu.cpp) | 101 (string built, never used) |
-| [`vgui_CustomizationMenu.cpp`](../../../blob/gunman-chronicles/cl_dll/vgui_CustomizationMenu.cpp) | 209 (tables never used); 275 (`"Dml Sel"`, not `"Dml Title Text"`); 303 (the shell count shows its title until `ShowShotgun` sets it); 388, 444, 505, 545 (the first title replaces the panel made above); 627 (file never freed); 893 (scheme handle never used) |
+| [`vgui_CustomizationMenu.cpp`](../../../blob/gunman-chronicles/cl_dll/vgui_CustomizationMenu.cpp) | 220 (tables never used); 286 (`"Dml Sel"`, not `"Dml Title Text"`); 314 (the shell count shows its title until `ShowShotgun` sets it); 399, 455, 516, 556 (the first title replaces the panel made above); 638 (file never freed); 904 (scheme handle never used) |
 | [`vgui_HudDeathNotice.cpp`](../../../blob/gunman-chronicles/cl_dll/vgui_HudDeathNotice.cpp) | 150 (`"d_gauss_bolt"` tested twice) |
 | [`vgui_HudID.cpp`](../../../blob/gunman-chronicles/cl_dll/vgui_HudID.cpp) | 58 (file loaded and dropped); 112 (team info indexed by player) |
 | [`vgui_ScorePanel.cpp`](../../../blob/gunman-chronicles/cl_dll/vgui_ScorePanel.cpp) | 292 (buffer short for a line of the config text); 295 (title built, never used) |
@@ -659,6 +678,7 @@ the way.
 | `d4b4311` | 0 |
 | `fd0e4f5` | 0 (verified 2026-11-01) |
 | `6119524` | 0 (verified 2026-11-26) |
+| `44166ef` | 0 (verified 2026-11-26) |
 
 Between `d4b4311` and `fd0e4f5` the client work changed three files that
 the server compiles too (`dlls/beamgun.cpp`, `dlls/beamgun.h`,
@@ -667,7 +687,7 @@ and `6119524` six weapon files and their headers gained the client's empty
 `UpdateOwner` ([below](#the-six-updateowner-functions)), in the half of an
 `#ifndef CLIENT_DLL` block that the server does not compile.
 
-## What is left in the client, and why
+## How the client became identical
 
 Earlier work gave the client retail's file-level facts (placeholder
 object, import order), the weapon objects' `.pch` states and the order of
@@ -683,35 +703,9 @@ constructor, `CHudAmmo::DrawWList`, `SelectSlot`, `CIDPanel::paint`,
 | `fd0e4f5` | 152,034 |
 | `29d5c94` | 327,556 (six functions added that retail has; the placeholders of that time no longer fitted) |
 | `6119524` | 4 |
+| `44166ef` | 0 |
 
-One function is left. Three things closed the rest; they follow it.
-
-### One function: `ShowBeamgun`
-
-At the exit of an inner loop, retail's `CCustomizationMenu::ShowBeamgun`
-reloads `this` (`mov ebp, [esp+0x38]`) and then the row number
-(`mov edx, [esp+0x4c]`). Ours reloads the row number first. Nothing else
-in the function differs. What is known about the order:
-
-- It is the register allocator's, not the instruction scheduler's. The
-  processor options `/G3`, `/G4` and `/G5` change scheduling and leave it
-  alone, and the block is only nine instructions long.
-- It follows the parameters' stack positions and moves only with the
-  function's live constants (ranked by value modulo 64) and its address
-  temporaries. Dead locals, copies, names, parentheses, declaration order,
-  other integer types for the parameters, inline helpers and other
-  spellings of the loop and of its tests never move it.
-- A real use of the row number between `HideAll()` and the loop gives
-  retail's order, and changes other code.
-- The number of symbols declared before the function, which decides such
-  reloads in a few other functions
-  ([vc6-notes.md](vc6-notes.md#reloads-at-a-loop-end-symbol-numbers)),
-  does not move this one (0 to 63 extra symbols).
-
-About 1,500 variants found no spelling. Retail's order is the usual one,
-so ours probably comes from one intermediate temporary or constant more
-or fewer that leaves no trace in the code: retail's source differed in a
-way the bytes don't show.
+Four things closed the rest.
 
 ### The six `UpdateOwner` functions
 
@@ -826,8 +820,8 @@ Three things made it work:
   header, where retail has 78, and moved the PE header.
 
 The result was checked with a second implementation of the sort and then
-in the real link. All 85 groups keep retail's copy, and the file differs
-from retail's only in `ShowBeamgun`'s four bytes.
+in the real link. All 85 groups keep retail's copy, and the file then
+differed from retail's only in four bytes of `ShowBeamgun`.
 
 What this shows: the known code is complete, in the sense that with it
 and some set of dead functions retail's linker writes retail's file. What
@@ -836,6 +830,45 @@ groups carries about 63 bits and each freely placed entry about 11, so 57
 of them can fit almost any outcome. The
 [placeholder functions](#placeholder-functions) are marked as ours for
 that reason.
+
+### `ShowBeamgun`
+
+After the kept copies, four bytes were left. At the exit of an inner loop,
+retail's `CCustomizationMenu::ShowBeamgun` reloads `this`
+(`mov ebp, [esp+0x38]`) and then the row number (`mov edx, [esp+0x4c]`);
+ours reloaded the row number first. About 1,500 variants of the function's
+text had not moved that order. It moved only with constants that reach the
+final code, by their value modulo 64, and with address temporaries. That
+pattern is a hash table, so the compiler's back end, `C2.DLL`, was read
+for one and then watched in a running compile:
+
+- Before it assigns registers, the back end makes a candidate of every
+  constant and every address of a global that the function uses, string
+  literals included. The candidates sit in a table of 64 buckets: a
+  constant in bucket value mod 64, an address in the bucket of its
+  symbol's number mod 64. Each new candidate takes a record with the next
+  free number.
+- It then walks the buckets in order and releases the records of the
+  candidates that are not worth a register, a string used once for
+  example. The function's own variables get their records next, in
+  declaration order (`this`, then the parameters), and reuse the released
+  ones, last released first.
+- `ShowBeamgun` has two such candidates, `"Dml Title Text"` and
+  `"Dml Text"`. Their symbol numbers put them in buckets 29 and 40, so
+  "Title" was released first, and `this` got record 1 and the last
+  parameter record 2. Retail has the two the other way round.
+- Symbol numbers grow with every declaration in the file. N more
+  declarations before the strings' first use move the buckets to
+  (29 + N) mod 64 and (40 + N) mod 64, which come in the other order for
+  N = 24 to 34. A sweep of N from 0 to 63 found exactly that window, and
+  no other function of the object changed for any N.
+
+[The stand-in enum](#the-symbol-count-stand-in) declares 29 symbols
+(`f23da9f`), and with it the client is identical. An earlier sweep had put
+its declarations right before `ShowBeamgun`, after the strings already had
+their numbers, and saw nothing. The same mechanism is behind the rule
+found on other mods, that reloads at a loop end follow symbol numbers
+modulo 64 ([vc6-notes.md](vc6-notes.md#why-the-candidate-table)).
 
 ## Checking it yourself
 
@@ -867,9 +900,9 @@ cmp "$G/dlls/gunman.dll" "$B/wineprefix/drive_c/Gunman/Source/dlls/Releasehl/gun
 cmp -l "$G/cl_dlls/client.dll" "$B/client/client.dll" | wc -l
 ```
 
-Expected: `identical`, and `4`.
+Expected: `identical`, and `0`.
 
-To see where the client's bytes differ, save this script (standard
+To see where a build differs when it does, save this script (standard
 library only) as `secdiff.py`. It counts the differing bytes per section:
 
 ```python
@@ -887,10 +920,8 @@ for name, lo, hi in spans:
 ```
 
 Run as `python3 secdiff.py "$G/cl_dlls/client.dll" "$B/client/client.dll"`. Expected:
-`headers 0`, `.text 4`, `.rdata 0`, `.data 0`, `.reloc 0`.
-For the server every line is 0.
+every line 0, for the server as well.
 
 The tools used during the work to match functions one by one and to
 compare the images section by section are not part of this repository.
-The file hashes are the proof for the server; for the client, the numbers
-above say how far it is.
+The file hashes are the proof.

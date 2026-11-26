@@ -4,7 +4,7 @@ This repository holds C++ source for the game DLLs of nine Half-Life mods,
 reconstructed from the shipped binaries. Each tree compiles with the original
 compiler back into the retail files: Visual C++ 6.0 for eight mods, and for
 Counter-Strike, from its first beta in 1999 to version 1.5 in 2002, the five
-compilers it went through. Of the 56 distinct DLLs, 52 rebuild identical to
+compilers it went through. Of the 56 distinct DLLs, 53 rebuild identical to
 the retail ones, byte for byte. That includes the headers, time stamps,
 debug record and padding, so the SHA-256 matches.
 
@@ -28,13 +28,15 @@ every identical one byte for byte, the four others with their known
 hashes. Survive in Catacombs 1 and 2 on 2026-11-19 too: all four DLLs
 from a fresh clone of the repository, following
 [their rebuild page](docs/rebuild/survive-in-catacombs.md) as written.
+Gunman Chronicles on 2026-11-26, when its client became identical: both
+DLLs from a fresh clone of its branch.
 
 | Mod | Branch | Server DLL | Client DLL | Details |
 |---|---|---|---|---|
 | Point of View 1.1 | [`point-of-view`](../../tree/point-of-view) | `hl.dll`: **identical** | `client.dll`: **identical** | [docs/point-of-view.md](docs/point-of-view.md) |
 | T2DEF (Todesangst 2) 1.1 | [`t2def`](../../tree/t2def) | `t2def.dll`: **identical** | `client.dll`: **identical** | [docs/t2def.md](docs/t2def.md) |
 | Wanted! 1.5 | [`wanted`](../../tree/wanted) | `wanted.dll`: 810 of 1,122,380 bytes differ | `client.dll`: **identical** | [docs/wanted.md](docs/wanted.md) |
-| Gunman Chronicles | [`gunman-chronicles`](../../tree/gunman-chronicles) | `gunman.dll`: **identical** | `client.dll`: 4 of 565,248 bytes differ | [docs/gunman-chronicles.md](docs/gunman-chronicles.md) |
+| Gunman Chronicles | [`gunman-chronicles`](../../tree/gunman-chronicles) | `gunman.dll`: **identical** | `client.dll`: **identical** | [docs/gunman-chronicles.md](docs/gunman-chronicles.md) |
 | They Hunger (episodes 1 to 3) | [`they-hunger`](../../tree/they-hunger) | `einar.dll`: **identical** | `client.dll`: **identical** | [docs/they-hunger.md](docs/they-hunger.md) |
 | Counter-Strike, Beta 1.0 to 1.5 (27 tags) | [`counter-strike`](../../tree/counter-strike) | `mp.dll`: **all 23 identical** | `client.dll`: **15 of 17 identical**; 1.4 and 1.5 not | [docs/counter-strike.md](docs/counter-strike.md) |
 | Scientist Slaughterhouse 1.0 | [`scientist-slaughterhouse`](../../tree/scientist-slaughterhouse) | `hl.dll`: **identical** | `client.dll`: **identical** | [docs/scientist-slaughterhouse.md](docs/scientist-slaughterhouse.md) |
@@ -52,6 +54,7 @@ reproduce (Counter-Strike's 40 are in [its page](docs/counter-strike.md#status))
 | T2DEF `client.dll` | `cbd18f9318fe5a626bb35318f70db6a340300d8c6874f8b64e7bdb53f5e91762` |
 | Wanted! `client.dll` | `584813e7ec904ec6fa596fa1360d3da37bfc87cfb1b1785886b8d868d793e479` |
 | Gunman Chronicles `gunman.dll` | `e6e8d4497f11787889f12e7356157cbce98d380570805ca55faef3c07ce088f0` |
+| Gunman Chronicles `client.dll` | `4d2918498fb0d3aa40ede643beabea235925c0eaa6742130a686968686a51aed` |
 | They Hunger `einar.dll` | `0b9c21c87dab0eec02b323eaab434cf77a2f69982bbf0a3f3f6a316fa95159d3` |
 | They Hunger `client.dll` | `09e8de1a62f4f1fae32b040678fc5b97fe5ba8f20ec44db14b29aedcf37db105` |
 | Scientist Slaughterhouse `hl.dll` | `8e4c150e8d8d57f13bbf7f6b5a5e4ebc37258838ccb7708c760bb7b3c139d4ae` |
@@ -61,24 +64,23 @@ reproduce (Counter-Strike's 40 are in [its page](docs/counter-strike.md#status))
 | Survive in Catacombs 2 `bloodbath.dll` | `673f7e4ef7c75fdf551c87470f6e4f8a5a66f16fe98bfb44ca6436d14c88ba57` |
 | Survive in Catacombs 2 `client.dll` | `76cc187b538b7fa0ae6bea5842e1484369fb64c6d7184851fb77de96cedbe21a` |
 
-What the four remaining DLLs still lack:
+What the three remaining DLLs still lack:
 
 - **Wanted! `wanted.dll`:** every function but one is identical at retail's
   address. In `CBot::Wander` the compiler emits one floating-point multiply
   in a 4-byte-shorter form than retail's, and the rest of that function
   shifts behind it.
-- **Gunman Chronicles `client.dll`:** four bytes differ, all in one
-  function: after a loop, `CCustomizationMenu::ShowBeamgun` reloads two
-  registers in the other order than retail's. The rest is identical, with
-  one caveat. Which copy of identical functions the linker keeps depends
-  on dead code that the retail binary doesn't record, and the tree gets
-  retail's result with 57 placeholder functions that were fitted by
-  search, not recovered from evidence.
 - **Counter-Strike 1.4 and 1.5 `client.dll`:** these ship in the engine's
   packed format, not as PE files; the rebuilt DLL is packed the same way and
   compared. 18 functions differ from retail in the order of their
   instructions only, and no compiler tried gives that order, so the files
   are not identical. The work on them stopped there.
+
+One identical DLL comes with a caveat. Gunman Chronicles' `client.dll`
+matches with the help of 57 placeholder functions and one unused enum.
+They stand in for dead code and declarations that the retail binary
+doesn't record, and they were fitted by search, not recovered from
+evidence ([details](docs/gunman-chronicles.md#what-the-clients-identity-rests-on)).
 
 ## What "identical" takes
 

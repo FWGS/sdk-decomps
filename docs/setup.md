@@ -475,10 +475,9 @@ client: .../build-pov/client/client.dll
 
 The exit code is 0 only if every DLL built is identical to retail. The
 other scripts work the same way: `t2def.sh`, `wanted.sh`,
-`gunman-chronicles.sh` and `they-hunger.sh`. The Wanted! server and the
-Gunman Chronicles client are not identical yet, so their scripts end with
-`differs from retail` and exit code 1 (the mods' pages give the hashes they
-produce). They Hunger's server takes longer than the others, about five
+`gunman-chronicles.sh` and `they-hunger.sh`. The Wanted! server is not
+identical yet, so its script ends with `differs from retail` and exit code
+1 (its page gives the hash it produces). They Hunger's server takes longer than the others, about five
 minutes here: its script replays 102 more compiles and 73 links.
 
 Survive in Catacombs' script takes the game first, `1` or `2`: one
