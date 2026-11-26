@@ -83,3 +83,58 @@ int CHudTrain::MsgFunc_Train(const char *pszName,  int iSize, void *pbuf)
 
 	return 1;
 }
+
+// sic: placeholders, ours: functions retail was linked with and dropped
+// (nothing calls them); their text is unknown. They give LINK's
+// identical-copy sort the (size, relocations) keys with which it keeps
+// retail's copies (see Unknown_W1_1 in ev_hldm.cpp): a fit, not evidence.
+struct cl_enginefuncs_s;
+extern struct cl_enginefuncs_s gEngfuncs;
+void InitInput( void );
+
+// key (16, 1)
+void Unknown_end_train_1( void )
+{
+	InitInput();
+}
+
+// key (16, 0)
+void Unknown_end_train_2( void )
+{
+}
+
+// key (32, 1)
+int Unknown_end_train_3( int *p )
+{
+	InitInput();
+	p[0] = 1;
+	return 0;
+}
+
+// key (128, 2)
+int Unknown_end_train_4( int *p )
+{
+	InitInput();
+	InitInput();
+	p[0] = 1;
+	p[1] = 2;
+	p[2] = 3;
+	p[3] = 4;
+	p[4] = 5;
+	p[5] = 6;
+	p[6] = 7;
+	p[7] = 8;
+	p[8] = 9;
+	p[9] = 10;
+	p[10] = 11;
+	p[11] = 12;
+	p[12] = 13;
+	p[13] = 14;
+	return 0;
+}
+
+// key (16, 1)
+void Unknown_end_train_5( void )
+{
+	InitInput();
+}

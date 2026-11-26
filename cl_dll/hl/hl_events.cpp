@@ -107,3 +107,32 @@ void Game_HookEvents( void )
 	gEngfuncs.pfnHookEvent( "events/cleanup.sc",					EV_Cleanup );
 	gEngfuncs.pfnHookEvent( "events/spurtblood.sc",					EV_SpurtBlood );
 }
+
+// sic: placeholders, ours: functions retail was linked with and dropped
+// (nothing calls them); their text is unknown. They give LINK's
+// identical-copy sort the (size, relocations) keys with which it keeps
+// retail's copies (see Unknown_W1_1 in ev_hldm.cpp): a fit, not evidence.
+struct cl_enginefuncs_s;
+extern struct cl_enginefuncs_s gEngfuncs;
+void InitInput( void );
+
+// key (96, 12)
+int Unknown_end_hl_events_1( int *p )
+{
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+	p[0] = 1;
+	p[1] = 2;
+	p[2] = 3;
+	return 0;
+}
