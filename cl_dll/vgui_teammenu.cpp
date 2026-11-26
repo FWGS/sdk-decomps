@@ -387,3 +387,17 @@ void CTeamMenuPanel::SetActiveInfo( int iInput )
 
 	m_pScrollPanel->validate();
 }
+
+// sic: placeholders, ours: functions retail was linked with and dropped
+// (nothing calls them); their text is unknown. They give LINK's
+// identical-copy sort the (size, relocations) keys with which it keeps
+// retail's copies (see Unknown_W1_1 in ev_hldm.cpp): a fit, not evidence.
+struct cl_enginefuncs_s;
+extern struct cl_enginefuncs_s gEngfuncs;
+void InitInput( void );
+
+// key (16, 1)
+void Unknown_end_vgui_teammenu_1( void )
+{
+	InitInput();
+}

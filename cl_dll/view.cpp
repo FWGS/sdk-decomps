@@ -1021,3 +1021,35 @@ void V_Move( int mx, int my )
 }
 
 #endif
+
+// sic: placeholders, ours: functions retail was linked with and dropped
+// (nothing calls them); their text is unknown. They give LINK's
+// identical-copy sort the (size, relocations) keys with which it keeps
+// retail's copies (see Unknown_W1_1 in ev_hldm.cpp): a fit, not evidence.
+struct cl_enginefuncs_s;
+extern struct cl_enginefuncs_s gEngfuncs;
+void InitInput( void );
+
+// key (16, 1)
+void Unknown_end_view_1( void )
+{
+	InitInput();
+}
+
+// key (48, 0)
+int Unknown_end_view_2( int *p )
+{
+	p[0] = 1;
+	p[1] = 2;
+	p[2] = 3;
+	p[3] = 4;
+	return 0;
+}
+
+// key (16, 3)
+void Unknown_end_view_3( void )
+{
+	InitInput();
+	InitInput();
+	InitInput();
+}

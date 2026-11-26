@@ -347,9 +347,13 @@ void DrawShocks( void )
 
 		ShockCorner( vecPoint2, vecOrigin, right, flScale );
 
-		vecPoint3.x = ( right.x - up.x ) * flScale + vecOrigin.x;
-		vecPoint3.y = ( right.y - up.y ) * flScale + vecOrigin.y;
-		vecPoint3.z = ( right.z + up.z ) * flScale + vecOrigin.z;
+		// sic: functional casts, not parentheses. C2 schedules a block 81
+		// instructions at a time, and a parenthesised float expression is
+		// one of them although it leaves no code; with three more the load
+		// of pTriAPI for RenderMode lands three x87 instructions early
+		vecPoint3.x = float( right.x - up.x ) * flScale + vecOrigin.x;
+		vecPoint3.y = float( right.y - up.y ) * flScale + vecOrigin.y;
+		vecPoint3.z = float( right.z + up.z ) * flScale + vecOrigin.z;
 
 		vecPoint4.x = vecOrigin.x - up.x * flScale;
 		vecPoint4.y = vecOrigin.y - up.y * flScale;
@@ -636,9 +640,13 @@ void DrawSprites( void )
 
 		vecPoint2 = vecOrigin + right * flScale;
 
-		vecPoint3.x = ( right.x - up.x ) * flScale + vecOrigin.x;
-		vecPoint3.y = ( right.y - up.y ) * flScale + vecOrigin.y;
-		vecPoint3.z = ( right.z + up.z ) * flScale + vecOrigin.z;
+		// sic: functional casts, not parentheses. C2 schedules a block 81
+		// instructions at a time, and a parenthesised float expression is
+		// one of them although it leaves no code; with three more the load
+		// of pTriAPI for RenderMode lands three x87 instructions early
+		vecPoint3.x = float( right.x - up.x ) * flScale + vecOrigin.x;
+		vecPoint3.y = float( right.y - up.y ) * flScale + vecOrigin.y;
+		vecPoint3.z = float( right.z + up.z ) * flScale + vecOrigin.z;
 
 		vecPoint4.x = vecOrigin.x - up.x * flScale;
 		vecPoint4.y = vecOrigin.y - up.y * flScale;

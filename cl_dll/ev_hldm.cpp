@@ -887,20 +887,30 @@ void EV_TankMGuns( event_args_t *args )
 	EV_HLDM_FireBullets( idx, forward, right, up, 2, vecSrc, vecAiming, vecSpread, 8192, BULLET_PLAYER_MP5, 3, &tracerCount[idx-1] );
 }
 
-// sic: placeholder, ours. Retail compiled a handler here that nothing calls
-// (LINK dropped it); its text is unknown. Evidence: the .pch inlines VC6
+// sic: placeholders, ours. Retail compiled functions here that nothing calls
+// (LINK dropped them); their text is unknown. Evidence: the .pch inlines VC6
 // emits lazily in this file need 89 to 578 more IL bytes before
-// EV_TurretBullets' end and 819 to 975 by EV_MonsterSentry's (this body
-// 187, EV_GunmanUnknown2 689); .reloc's VirtualSize counts the absolute
-// fixups of dead functions too and is 160 bytes larger in retail (80
-// fixups: these three placeholders 2 + 5 + 62 and EV_FireShotGunDouble 11).
-// The body only gives LINK's identical-copy sort a (size, relocations) key,
-// (48, 2), chosen with the kept-copy model; nothing runs it.
-void EV_GunmanUnknown1( event_args_t *args )
+// EV_TurretBullets' end and 819 to 975 by EV_MonsterSentry's; .reloc's
+// VirtualSize counts the absolute fixups of dead functions too and is 160
+// bytes larger in retail (80 fixups, spread over the placeholders of this
+// file and of other client files). The bodies only give LINK's identical-copy
+// sort their (size, relocations) keys, found with the kept-copy model
+// (one fit among many, not evidence); nothing runs them.
+void InitInput( void );
+
+// key (32, 4)
+void Unknown_W1_1( void )
 {
-	args->iparam1 = 1;
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 0, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 1, 2 );
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+}
+
+// key (16, 1)
+void Unknown_W1_2( void )
+{
+	InitInput();
 }
 
 void EV_TurretBullets( event_args_t *args )
@@ -955,30 +965,30 @@ void EV_MonsterSentry( event_args_t *args )
 	EV_HLDM_FireBullets( idx, forward, right, up, 1, origin, angles, vecSpread, 2048, BULLET_PLAYER_MP5, 1, &tracerCount[idx-1] );
 }
 
-// sic: placeholder, ours, for a second dead handler (see EV_GunmanUnknown1):
-// 689 IL bytes, key (192, 5), 5 absolute fixups.
-void EV_GunmanUnknown2( event_args_t *args )
+// sic: placeholders, ours (see Unknown_W1_1)
+// key (16, 0)
+void Unknown_W2_1( int *p )
 {
-	args->iparam1 = 1;
-	args->iparam2 = 6;
-	args->bparam1 = 11;
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 0, 2 );
-	args->iparam1 = 2;
-	args->iparam2 = 7;
-	args->bparam1 = 12;
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 1, 2 );
-	args->iparam1 = 3;
-	args->iparam2 = 8;
-	args->bparam1 = 13;
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 2, 2 );
-	args->iparam1 = 4;
-	args->iparam2 = 9;
-	args->bparam1 = 14;
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 3, 2 );
-	args->iparam1 = 5;
-	args->iparam2 = 10;
-	args->bparam1 = 15;
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 4, 2 );
+	int unused1 = p[0] + p[1] * 2;
+	int unused2 = p[1] + p[2] * 3;
+	int unused3 = p[2] + p[3] * 4;
+	int unused4 = p[3] + p[4] * 5;
+	int unused5 = p[4] + p[5] * 6;
+	int unused6 = p[5] + p[6] * 7;
+	int unused7 = p[6] + p[7] * 8;
+	int unused8 = p[7] + p[8] * 9;
+	int unused9 = p[8] + p[9] * 10;
+	int unused10 = p[9] + p[10] * 11;
+	int unused11 = p[10] + p[11] * 12;
+	int unused12 = p[11] + p[12] * 13;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
+	;
 }
 
 void EV_MonsterShotgun( event_args_t *args )
@@ -1229,74 +1239,151 @@ void EV_MinigunHeat( event_args_t *args )
 	}
 }
 
-// sic: placeholder, ours, for a dead handler that used the double 3.0:
-// retail's __real@8@4000c000000000000000 is ev_hldm.obj's (it sits among
+// sic: placeholders, ours (see Unknown_W1_1). One of them uses the double
+// 3.0: retail's __real@8@4000c000000000000000 is ev_hldm.obj's (it sits among
 // this file's constants, after Font's vtable and before EV_FireGauss's),
-// though only CGaussPistol::ChargeSniper uses it in the image. Key (816, 62)
-// with 62 absolute fixups (see EV_GunmanUnknown1).
-void EV_GunmanUnknown3( event_args_t *args )
+// though only CGaussPistol::ChargeSniper uses it in the image.
+// key (48, 0)
+int Unknown_W3_1( int *p )
 {
-	gEngfuncs.pfnRandomFloat( 0, args->fparam1 * 3.0 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 0, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 1, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 2, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 3, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 4, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 5, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 6, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 7, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 8, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 9, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 10, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 11, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 12, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 13, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 14, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 15, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 16, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 17, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 18, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 19, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 20, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 21, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 22, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 23, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 24, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 25, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 26, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 27, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 28, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 29, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 30, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 31, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 32, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 33, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 34, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 35, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 36, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 37, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 38, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 39, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 40, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 41, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 42, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 43, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 44, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 45, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 46, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 47, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 48, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 49, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 50, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 51, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 52, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 53, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 54, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 55, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 56, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 57, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 58, 2 );
-	gEngfuncs.pEventAPI->EV_WeaponAnimation( 59, 2 );
+	p[0] = 1;
+	p[1] = 2;
+	p[2] = 3;
+	p[3] = 4;
+	return 0;
+}
+
+// key (32, 3)
+int Unknown_W3_2( int *p )
+{
+	InitInput();
+	InitInput();
+	InitInput();
+	p[0] = 1;
+	return 0;
+}
+
+// key (16, 2)
+void Unknown_W3_3( void )
+{
+	InitInput();
+	InitInput();
+}
+
+// key (16, 1)
+void Unknown_W3_4( void )
+{
+	InitInput();
+}
+
+// key (16, 0)
+void Unknown_W3_5( void )
+{
+}
+
+// key (32, 1)
+int Unknown_W3_6( int *p )
+{
+	InitInput();
+	p[0] = 1;
+	return 0;
+}
+
+// key (240, 11), 11 absolute
+double Unknown_W3_7( int *p )
+{
+	p[2] = 1;
+	p[3] = 2;
+	p[4] = 3;
+	p[5] = 4;
+	p[6] = 5;
+	p[7] = 6;
+	p[8] = 7;
+	p[9] = 8;
+	p[10] = 9;
+	p[11] = 10;
+	p[12] = 11;
+	p[13] = 12;
+	p[14] = 13;
+	p[15] = 14;
+	p[16] = 15;
+	p[17] = 16;
+	p[18] = 17;
+	p[19] = 18;
+	p[20] = 19;
+	p[21] = 20;
+	p[22] = 21;
+	p[23] = 22;
+	return *(float *)p * 3.0 + ((int *)&gEngfuncs)[1] + ((int *)&gEngfuncs)[2] + ((int *)&gEngfuncs)[3] + ((int *)&gEngfuncs)[4] + ((int *)&gEngfuncs)[5] + ((int *)&gEngfuncs)[6] + ((int *)&gEngfuncs)[7] + ((int *)&gEngfuncs)[8] + ((int *)&gEngfuncs)[9] + ((int *)&gEngfuncs)[10];
+}
+
+// key (192, 10)
+int Unknown_W3_8( int *p )
+{
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
+	p[0] = 1;
+	p[1] = 2;
+	p[2] = 3;
+	p[3] = 4;
+	p[4] = 5;
+	p[5] = 6;
+	p[6] = 7;
+	p[7] = 8;
+	p[8] = 9;
+	p[9] = 10;
+	p[10] = 11;
+	p[11] = 12;
+	p[12] = 13;
+	p[13] = 14;
+	p[14] = 15;
+	p[15] = 16;
+	p[16] = 17;
+	p[17] = 18;
+	return 0;
+}
+
+// key (16, 1)
+void Unknown_W3_9( void )
+{
+	InitInput();
+}
+
+// key (16, 0)
+void Unknown_W3_10( void )
+{
+}
+
+// key (32, 0)
+int Unknown_W3_11( int *p )
+{
+	p[0] = 1;
+	p[1] = 2;
+	return 0;
+}
+
+// key (32, 3)
+int Unknown_W3_12( int *p )
+{
+	InitInput();
+	InitInput();
+	InitInput();
+	p[0] = 1;
+	return 0;
+}
+
+// key (16, 1)
+void Unknown_W3_13( void )
+{
+	InitInput();
 }
 
 void EV_FireMP5( event_args_t *args )
@@ -1411,78 +1498,9 @@ void EV_FirePython( event_args_t *args )
 	}
 }
 
-// SDK 2.0's EV_FireShotGunDouble. events/shotgun2.sc ships with the game but
-// Game_HookEvents doesn't hook it, so nothing calls this and LINK drops it.
-// It isn't in the SDK's place (before EV_FireShotGunSingle): its IL there
-// would move the .pch inlines VC6 emits after EV_FireShotGunSingle and
-// EV_FireGWShotgun. Where after EV_MinigunHeat it was is not shown: any
-// place from there to EV_TrainPitchAdjust gives the same kept copies.
-void EV_FireShotGunDouble( event_args_t *args )
-{
-	int idx;
-	vec3_t origin;
-	vec3_t angles;
-	vec3_t velocity;
-
-	int i, j;
-	vec3_t ShellVelocity;
-	vec3_t ShellOrigin;
-	int shell;
-	vec3_t vecSrc, vecAiming;
-	vec3_t vecSpread;
-	vec3_t up, right, forward;
-	float flSpread = 0.01;
-
-	idx = args->entindex;
-	VectorCopy( args->origin, origin );
-	VectorCopy( args->angles, angles );
-	VectorCopy( args->velocity, velocity );
-
-	AngleVectors( angles, forward, right, up );
-
-	shell = gEngfuncs.pEventAPI->EV_FindModelIndex ("models/shotgunshell.mdl");// brass shell
-
-	if ( EV_IsLocal( idx ) )
-	{
-		// Add muzzle flash to current weapon model
-		EV_MuzzleFlash();
-		gEngfuncs.pEventAPI->EV_WeaponAnimation( SHOTGUN_FIRE2, 2 );
-	}
-
-	for ( j = 0; j < 2; j++ )
-	{
-		EV_GetDefaultShellInfo( args, origin, velocity, ShellVelocity, ShellOrigin, forward, right, up, 32, -12, 6 );
-
-		EV_EjectBrass ( ShellOrigin, ShellVelocity, angles[ YAW ], shell, TE_BOUNCE_SHOTSHELL ); 
-	}
-
-	gEngfuncs.pEventAPI->EV_PlaySound( idx, origin, CHAN_WEAPON, "weapons/dbarrel1.wav", gEngfuncs.pfnRandomFloat(0.98, 1.0), ATTN_NORM, 0, 85 + gEngfuncs.pfnRandomLong( 0, 0x1f ) );
-
-	EV_GetGunPosition( args, vecSrc, origin );
-	VectorCopy( forward, vecAiming );
-
-	if ( gEngfuncs.GetMaxClients() > 1 )
-	{
-		for ( i = 0; i < 3; i++ )
-		{
-			vecSpread[0] = 0.17365;
-			vecSpread[1] = 0.04362;
-			vecSpread[2] = 0.00;
-		}
-
-		EV_HLDM_FireBullets( idx, forward, right, up, 8, vecSrc, vecAiming, vecSpread, 2048, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1] );
-	}
-	else
-	{
-		EV_HLDM_FireBullets( idx, forward, right, up, 12, vecSrc, vecAiming, VECTOR_CONE_10DEGREES, 2048, BULLET_PLAYER_BUCKSHOT, 0, &tracerCount[idx-1] );
-	}
-
-	if ( EV_IsLocal( idx ) )
-	{
-		V_PunchAxis( 0, -10.0 );
-	}
-}
-
+// sic: SDK 2.0's EV_FireShotGunDouble is not here. events/shotgun2.sc ships with
+// the game but Game_HookEvents doesn't hook it; the placeholders above were
+// fitted without it, and nothing in retail's image needs the function.
 #define SND_CHANGE_PITCH	(1<<7)		// duplicated in protocol.h change sound pitch
 
 void EV_SpinGauss( event_args_t *args )

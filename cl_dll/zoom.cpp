@@ -26,6 +26,19 @@
 #include <string.h>
 #include <stdio.h>
 
+// sic: placeholders, ours: functions retail was linked with and dropped
+// (nothing calls them); their text is unknown. They give LINK's
+// identical-copy sort the (size, relocations) keys with which it keeps
+// retail's copies (see Unknown_W1_1 in ev_hldm.cpp): a fit, not evidence.
+struct cl_enginefuncs_s;
+extern struct cl_enginefuncs_s gEngfuncs;
+void InitInput( void );
+
+// key (16, 0)
+void Unknown_top_zoom_1( void )
+{
+}
+
 extern cvar_t *sensitivity;
 extern float g_lastFOV;
 
@@ -254,4 +267,33 @@ int CHudZoom::Draw(float flTime)
 	gHUD.m_flMouseSensitivity = 1;
 
 	return 1;
+}
+
+// sic: placeholders, ours: functions retail was linked with and dropped
+// (nothing calls them); their text is unknown. They give LINK's
+// identical-copy sort the (size, relocations) keys with which it keeps
+// retail's copies (see Unknown_W1_1 in ev_hldm.cpp): a fit, not evidence.
+struct cl_enginefuncs_s;
+extern struct cl_enginefuncs_s gEngfuncs;
+void InitInput( void );
+
+// key (16, 1)
+void Unknown_end_zoom_1( void )
+{
+	InitInput();
+}
+
+// key (16, 1)
+void Unknown_end_zoom_2( void )
+{
+	InitInput();
+}
+
+// key (32, 4)
+void Unknown_end_zoom_3( void )
+{
+	InitInput();
+	InitInput();
+	InitInput();
+	InitInput();
 }
