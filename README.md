@@ -34,7 +34,7 @@ from a fresh clone of the repository, following
 | Point of View 1.1 | [`point-of-view`](../../tree/point-of-view) | `hl.dll`: **identical** | `client.dll`: **identical** | [docs/point-of-view.md](docs/point-of-view.md) |
 | T2DEF (Todesangst 2) 1.1 | [`t2def`](../../tree/t2def) | `t2def.dll`: **identical** | `client.dll`: **identical** | [docs/t2def.md](docs/t2def.md) |
 | Wanted! 1.5 | [`wanted`](../../tree/wanted) | `wanted.dll`: 810 of 1,122,380 bytes differ | `client.dll`: **identical** | [docs/wanted.md](docs/wanted.md) |
-| Gunman Chronicles | [`gunman-chronicles`](../../tree/gunman-chronicles) | `gunman.dll`: **identical** | `client.dll`: 152,034 of 565,248 bytes differ | [docs/gunman-chronicles.md](docs/gunman-chronicles.md) |
+| Gunman Chronicles | [`gunman-chronicles`](../../tree/gunman-chronicles) | `gunman.dll`: **identical** | `client.dll`: 4 of 565,248 bytes differ | [docs/gunman-chronicles.md](docs/gunman-chronicles.md) |
 | They Hunger (episodes 1 to 3) | [`they-hunger`](../../tree/they-hunger) | `einar.dll`: **identical** | `client.dll`: **identical** | [docs/they-hunger.md](docs/they-hunger.md) |
 | Counter-Strike, Beta 1.0 to 1.5 (27 tags) | [`counter-strike`](../../tree/counter-strike) | `mp.dll`: **all 23 identical** | `client.dll`: **15 of 17 identical**; 1.4 and 1.5 not | [docs/counter-strike.md](docs/counter-strike.md) |
 | Scientist Slaughterhouse 1.0 | [`scientist-slaughterhouse`](../../tree/scientist-slaughterhouse) | `hl.dll`: **identical** | `client.dll`: **identical** | [docs/scientist-slaughterhouse.md](docs/scientist-slaughterhouse.md) |
@@ -67,11 +67,13 @@ What the four remaining DLLs still lack:
   address. In `CBot::Wander` the compiler emits one floating-point multiply
   in a 4-byte-shorter form than retail's, and the rest of that function
   shifts behind it.
-- **Gunman Chronicles `client.dll`:** all but three functions compile to
-  retail's code. About a third of the code sits 16 to 128 bytes away from
-  retail's addresses. The linker's identical-code folding keeps a different
-  copy of some identical functions. Which copy it keeps depends on dead code
-  that the retail binary doesn't record.
+- **Gunman Chronicles `client.dll`:** four bytes differ, all in one
+  function: after a loop, `CCustomizationMenu::ShowBeamgun` reloads two
+  registers in the other order than retail's. The rest is identical, with
+  one caveat. Which copy of identical functions the linker keeps depends
+  on dead code that the retail binary doesn't record, and the tree gets
+  retail's result with 57 placeholder functions that were fitted by
+  search, not recovered from evidence.
 - **Counter-Strike 1.4 and 1.5 `client.dll`:** these ship in the engine's
   packed format, not as PE files; the rebuilt DLL is packed the same way and
   compared. 18 functions differ from retail in the order of their

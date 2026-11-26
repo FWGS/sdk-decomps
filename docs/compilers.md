@@ -154,9 +154,9 @@ How to read it:
   `/O2`. With the Standard back end the project's own flags give it.
 - **Rebuilding.** Each variant was confirmed by rebuilding: ten of the
   twelve DLLs are byte-identical. The Wanted! server differs inside one
-  function only. The Gunman Chronicles client differs in which copies of
-  identical functions LINK keeps, which moves much of its code, and in the
-  code of three functions.
+  function only. The Gunman Chronicles client differs in four bytes of one
+  function, and keeps retail's copies of identical functions with the help
+  of fitted placeholder functions.
 
 ### The runtime LINK ran on
 

@@ -73,6 +73,7 @@ Each rule carries one of three marks:
 - [x87 operand order](#x87-operand-order)
 - [Member reads through a local pointer](#member-reads-through-a-local-pointer)
 - [Tail merging and block layout](#tail-merging-and-block-layout)
+- [The scheduler's 81-instruction chunks](#the-schedulers-81-instruction-chunks)
 - [Text that compiles to nothing still counts](#text-that-compiles-to-nothing-still-counts)
 - [Where header inline functions land](#where-header-inline-functions-land)
 - [Section order and COMDAT placement](#section-order-and-comdat-placement)
@@ -447,7 +448,10 @@ numbers C1XX gives the symbols of the file.
   They Hunger's two projects with 0 to 63 extra symbols in front (6,400 and
   3,400 compiles). In the server only `LinkVisibleNodes` and
   `BuildNodeGraph` change, in the client only the constructors of
-  `CClassMenuPanel` and `CMessageWindowPanel`.
+  `CClassMenuPanel` and `CMessageWindowPanel`. Gunman's
+  `CCustomizationMenu::ShowBeamgun`, which differs from retail in the
+  order of two reloads after a loop, does not follow the count either (0
+  to 63 extra symbols).
 - **Where the symbols are declared matters a little** when inline functions
   with compiler-made symbols of their own come between them and the
   function. For `CClassMenuPanel`'s constructor, 5 to 39 or 46 to 59 extra
@@ -868,6 +872,48 @@ cross-jumping, in a test; in `FlyThink` the arms never compiled to
 identical tails. An inline helper whose non-last `return` falls on the arm
 fires part 1 too, but keeps the helper's own compare.
 
+## The scheduler's 81-instruction chunks
+
+**Model** for C2 12.00.8168 with `/O2`. The chunk size and the hoisting
+were measured on small test functions and predicted the fix for the two
+functions they were found for (Gunman's `DrawShocks` and `DrawSprites`,
+`7bd4f25`). The list of text that counts is surely not complete.
+
+The symptom: a function has retail's instructions, but the set-up of an
+indirect call (`mov reg, [table]` and a `push`) sits two or three x87
+instructions earlier or later than in retail, or a `push` and a `mov`
+before one call are swapped. Dead code doesn't move it.
+
+- **C2 schedules at most 81 instructions at a time,** counted from the
+  last label (any jump target). A call counts as one instruction. A longer
+  block is cut every 81.
+- **Inside a chunk an independent integer instruction is hoisted** to just
+  after the chunk's first x87 arithmetic instruction. It never crosses the
+  chunk's start. So the place where such a load lands marks the start of a
+  chunk.
+- **Some source text counts as an instruction and leaves no code:**
+
+  | Text | Counts as |
+  |---|---|
+  | a pair of parentheses around a float expression of more than one operand, `( a - b ) * s`; also inside inline functions and macros | 1 (`( a )` 0, `( ( a - b ) )` 2) |
+  | a float argument of more than one operand to an inlined call, as in `Vector( x * f, y * f, z * f )` | 1 each, so 3 for an inlined `Vector` operator |
+  | a float temporary that is used once and substituted forward; a compound assignment the compiler merges | 1 |
+  | a functional cast `float( a - b )`; an inline `float f( float a, float b ) { return a - b; }`; a discarded inline call; a plain copy | 0 |
+
+**How to use it.** Count the instructions from the label to where the
+hoisted load lands, in retail and in your build. If retail's chunk starts
+n instructions later, the block has n such constructs too many before that
+point: drop parentheses or write them as functional casts. If it starts
+earlier, the block has too few.
+
+Gunman's two functions each had three too many: their chunks started 141
+and 138 instructions after the label, retail's 144 and 141. The three
+parenthesised differences of one quad corner were the only three both
+functions shared, and as `float( right.x - up.x )` both functions are
+retail's. Before the rule was known, about 400 variants with dead code and
+220 combinations of redundant parentheses had moved nothing: dead code is
+not in the instruction stream, and more parentheses went the wrong way.
+
 ## Text that compiles to nothing still counts
 
 Statements the optimiser deletes, comments and blank lines, unused inline
@@ -882,8 +928,8 @@ dials.
 
 Neither reaches the scheduler: dead code leaves nothing in the instruction
 stream, so it can't move where a call's set-up lands inside a long basic
-block. That is why two of Gunman's client functions (`DrawShocks`,
-`DrawSprites`) stay a few lines off.
+block. Some live text does, without leaving code of its own:
+[the scheduler's chunks](#the-schedulers-81-instruction-chunks).
 
 IL costs, measured with `/Bk` (**Exact** for the objects measured; the
 numbers from different files disagree in detail, so measure your own):
@@ -1337,16 +1383,34 @@ Examples:
   36,169 bytes in the model. With all three right, every kept copy is
   retail's.
 
-**Why the image can't always tell.** In Gunman's client, 24 of 84 classes of
-identical functions keep another copy than retail's. Searches over single
+**Why the image can't always tell.** In Gunman's client, our link kept
+retail's copy in 45 of the 85 groups that show it. Searches over single
 dead entries of any key at any place (6.8 million arrays), deletions of the
 client's real dead code (1.3 million subsets of 32 candidate functions),
 free reordering of the invisible entries inside their objects, and the
 alternative `.pch` states of every file found none that gives retail's
-copies. A fit with invented entries could be found, but the outcome
-of the classes carries about 63 bits and each freely placed entry about 11,
-so such a fit would be one of very many and not evidence. The array retail
-sorted differed in entries the image doesn't show. That is where we stopped.
+copies. The array retail sorted differed in entries the image doesn't show.
+
+A fit with invented entries was then made (Gunman `6b5c736`): 57 dead
+placeholder functions and another order of the stub file's dead stubs give
+all 85. It shows that such an array exists, not what retail's was. The
+outcome of the groups carries about 63 bits and each freely placed entry
+about 11, so the fit is one of very many, and the placeholders are marked
+as ours. What made the search converge:
+
+- **Score exact positions, not the number of groups right.** A count
+  stalled at 82 of 85 on arrays nowhere near a solution. The part of the
+  sort above the first pivot depends almost only on the larger entries, so
+  it can be solved alone. Here it fixed which instantiation several copies
+  of one template's methods had to come from, and those were then scored
+  exactly.
+- **Treat the order of an object's dead entries as a variable** where the
+  image doesn't show it (here the stub file's).
+- **Keep the image's other limits:** the total of absolute fixups, the
+  constants, the IL windows, and the object count in the Rich header. A
+  placeholder in an object of its own changes that count.
+- **Check twice:** with a second implementation of the sort, then in the
+  real link, entry by entry against the intended array.
 
 ## Incremental linking
 

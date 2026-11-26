@@ -1,7 +1,7 @@
 # Rebuilding Gunman Chronicles
 
-The server rebuilds identical to retail; the client does not yet (152,034
-of its 565,248 bytes differ). Needs the [shared steps](README.md) with the
+The server rebuilds identical to retail; the client does not yet (4 of
+its 565,248 bytes differ). Needs the [shared steps](README.md) with the
 tree `vc6`. Background: [gunman-chronicles.md](../gunman-chronicles.md).
 
 1. Get the retail files (optional, for `cmp`): the game's `rewolf` folder
@@ -35,5 +35,5 @@ tree `vc6`. Background: [gunman-chronicles.md](../gunman-chronicles.md).
 
 4. Expected: the server `identical to retail` and `cmp …: no difference`;
    the client `differs from retail` with SHA-256
-   `8a768990776ac6072c4d65c113d5998d69ea6eaa9ccef9a36acbec22396920b3` and
-   `152034 of 565248 bytes differ`. Exit code 1 because of the client.
+   `96ef8769b4872ebbfe7f6c71ab5b8650a80cce19c48039a8839174b85b82062f` and
+   `4 of 565248 bytes differ`. Exit code 1 because of the client.

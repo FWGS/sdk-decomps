@@ -104,8 +104,8 @@ Retail's values for the ten DLLs of the first five mods:
 | C++ objects in the Rich header | 62 | 80 (Standard edition) | 61 | 78 | 61 |
 | Placeholder objects needed | 1 | 0 | 0 | 1 | 0 |
 | Identical-code folding | yes | yes | yes | yes | yes |
-| Dead functions added to the source (dropped by LINK) | 1 | 0 | 1 | 3, plus one handler from SDK 2.0 | 0 invented; two dead stubs of SDK 2.2b's stub file are needed |
-| Rebuild | identical | identical | identical | 152,034 bytes differ | identical |
+| Dead functions added to the source (dropped by LINK) | 1 | 0 | 1 | 57 placeholders, fitted by search | 0 invented; two dead stubs of SDK 2.2b's stub file are needed |
+| Rebuild | identical | identical | identical | 4 bytes differ | identical |
 
 Fix these parts after the code and data match, not before. Most of them are
 cheap and independent of each other, but a time stamp or a PDB path is
@@ -597,8 +597,8 @@ code that is not in the image:
 - **Wanted client:** equal, so its dead placeholder (a 16-byte empty
   function, `HUD_WeaponsUnknown`, `5f7d773`) needs none.
 - **Gunman client:** 160 bytes short with the live fixups equal: 80 dir32
-  fixups in dead code, now in three placeholder event handlers and one SDK
-  handler (`1eeeef3`, `6e7096e`).
+  fixups in dead code, now in three of the client's 57 placeholder
+  functions (`6b5c736`).
 - **They Hunger client:** equal (0x8824), with our guess for the dead
   weapon-prediction code of the five guns in place: 15 absolute fixups, two
   per `HUD_PrepEntity` line and one per `case`. So retail's dead code had
